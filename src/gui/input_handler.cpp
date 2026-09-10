@@ -2499,9 +2499,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
 // THE ADDRESSED-CELL WRITE AND ITS DAMAGE, spelled once for the walk: the
 // bright cell moves, and the flag cache keys the axis (fp_addressed_cell,
-// waveform_cache.cpp), so the marker lane must be damaged even where the
-// SELECTION stood still — which on a same-marker step is every time. This is
-// the marker press's own write (run_marker_click_act, input_pointer.cpp),
+// waveform_cache.cpp), so the marker lane must be damaged wherever the axis
+// moves — including where the MEMBERSHIP stood still, which on a same-marker
+// step is every time (that arm's collapse re-seats the same singleton). This
+// is the marker press's own write (run_marker_click_act, input_pointer.cpp),
 // guard included: a write that changes nothing damages nothing.
 void GuiInputHandler::write_addressed_cell(MarkerCell cell) {
     if (app.addressed_cell == cell) return;
@@ -2531,16 +2532,31 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     const MarkerWalkStep step = marker_walk_step(app, audio, forward);
     if (step.marker < 0) return;
 
-    // A STEP BETWEEN THE CELLS OF ONE MARKER IS AN AXIS WRITE AND NOTHING ELSE
-    // (architect 2026-09-10, the purple cells joining the walk): the focus has
-    // not moved, so there is nothing to select, the playhead is already sitting
-    // on this marker — it is what made it the seat — and moving it would be a
-    // movement in the music that hides the trim overlay for no reason. THE
-    // CENTER ON NEXT MARKER LAMP AND `frame` GOVERN MARKER-TO-MARKER STEPS
-    // ALONE for the same reason: there is no new marker to frame, and a
-    // recentre here would move the camera under a user reading the cell he just
-    // stepped onto.
+    // A STEP BETWEEN THE CELLS OF ONE MARKER IS A COLLAPSE AND AN AXIS WRITE,
+    // AND NOTHING ELSE (architect 2026-09-10, the purple cells joining the
+    // walk; the collapse the same day, the cells being "a separate system"
+    // that "is by design targeting each marker individually"): the focus has
+    // not moved, so there is no OTHER marker to select, the playhead is
+    // already sitting on this one — it is what made it the seat — and moving
+    // it would be a movement in the music that hides the trim overlay for no
+    // reason. THE CENTER ON NEXT MARKER LAMP AND `frame` GOVERN
+    // MARKER-TO-MARKER STEPS ALONE for the same reason: there is no new marker
+    // to frame, and a recentre here would move the camera under a user reading
+    // the cell he just stepped onto.
+    //
+    // THE COLLAPSE IS WHAT KEEPS A BOUND AXIS SINGLETON, which every road onto
+    // one now does (the plain cell press and the bound editor's open both
+    // single-select already): a walk that stepped onto a cell while a 2+
+    // selection stood would address a bound the arrows could only step for one
+    // marker of it. set_single_selection on the seat is the cheapest spelling
+    // of that — it is a no-op on the store's membership when the seat is
+    // already the singleton, and it damages the top strip either way, which
+    // this arm owes for the moved bright cell in any case. It runs BEFORE the
+    // axis write for the family's own reason: the seat resets the axis to the
+    // payload (Selection::seat_focus), so the cell is written behind it, as
+    // the marker press and the two cell editors' opens write theirs.
     if (step.same_marker) {
+        selection.set_single_selection(step.marker);
         write_addressed_cell(step.cell);
         return;
     }

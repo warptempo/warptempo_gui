@@ -56,10 +56,13 @@ struct GuiPhaseResetMarkersOps {
     // the HOP domain: it steps one bound of the focused reset's iteration
     // bracket — `side` Lower or Upper, the addressed cell the dispatch forks
     // on (AppState::addressed_cell) — by `delta_hops` through the same arrow
-    // ladder, with a 2+ selection taking the all-or-nothing group arm. Its
-    // predicates are the shared four (app_state.h, the bound step's block,
-    // each forking on the live column inside its own body). IT RECORDS NOTHING,
-    // the warp twin's own ruling (architect 2026-09-10): no undo entry, no
+    // ladder. IT IS A SINGLETON BODY AND HAS NO GROUP ARM, the warp twin's own
+    // ruling (architect 2026-09-10): every road onto a bound axis
+    // single-selects and every mutator that grows a selection reseats the
+    // payload, so a 2+ selection with a bound addressed does not exist. Its
+    // predicates are the shared three (app_state.h, the bound step's block,
+    // each forking on the live column inside its own body). IT RECORDS NOTHING
+    // either, the warp twin's ruling of that same day: no undo entry, no
     // coalescing kind and no dirty re-derive, so no `synthesized_repeat`
     // either. Its write goes through phase_iter_bound_step_write
     // (app_state.h), which is where a pair landing on two zeroes clears back
@@ -67,9 +70,4 @@ struct GuiPhaseResetMarkersOps {
     // trigger, no re-land, no damage but the top strip's. Never stops
     // playback, for the tempo step's own reason.
     GuiOpRefusal adjust_iter_bound_hops(MarkerCell side, int delta_hops);
-
-   private:
-    // Group bound step (2+ selection): all-or-nothing over the survivors, the
-    // warp twin's shape (adjust_iter_bound_cents_group).
-    GuiOpRefusal adjust_iter_bound_hops_group(MarkerCell side, int delta_hops);
 };

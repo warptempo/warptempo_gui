@@ -2404,7 +2404,12 @@ enum class RedesignButton {
     // the button carries none. ITS FACE READS THE SWEEP'S OWN VERDICT
     // (bpm_sweep_plan, below) — the whole ten-arm ladder bare `m` refuses on,
     // extracted rather than mirrored so the face and the card are one
-    // decision — under the READ-ONLY LOCK, which drops the chord. Its glyph is
+    // decision — under the READ-ONLY LOCK, which drops the chord, and, since
+    // 2026-09-10, UNDER THE ITERATION LOCK, which ranks ahead of the ladder:
+    // bare `m` was that mode's second exit until the architect ruled the swap
+    // out ("we should card the exit, because it is still one button
+    // automatically affecting the other"), and it is refused with the lock's
+    // own card now. Its glyph is
     // Breeze's music-note-16th, the flagged quaver, back from the deletion
     // with the button.
     //
@@ -2416,10 +2421,13 @@ enum class RedesignButton {
     // and the LIVE COLUMN IS STABLE from there, the W/P switch being one of
     // the acts the lock refuses, so there is no other column to see it lit
     // from and no column for a tooltip to name.
-    // ITS GATE IS THE READ-ONLY LOCK ALONE since 2026-09-09 — the lamp is
-    // admitted in BOTH COLUMNS and both audio views, the toggle being MODE
-    // STATE rather than authoring (the record is at the `i` arm,
-    // input_key_dispatch.cpp). Its glyph is mathmode, the italic f beside a
+    // ITS GATES ARE THE READ-ONLY LOCK — the PIECE's, either tab's bit — AND
+    // THE ADD TO SELECTION LAMP (2026-09-10, the lamp exclusions' evening):
+    // the lamp is admitted in BOTH COLUMNS and both audio views, the toggle
+    // being MODE STATE rather than authoring (the record is at the `i` arm,
+    // input_key_dispatch.cpp), and what refuses it is a locked tab or a lit
+    // sticky ctrl, which takes away the plain click the bound cells are
+    // addressed by. Its glyph is mathmode, the italic f beside a
     // multiplication cross.
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
@@ -2919,9 +2927,15 @@ enum class RedesignButton {
     // LOCK LEAVES IT LIT — a selection is navigation, not authored content,
     // the same reasoning that keeps the trim gestures legal on a locked tab,
     // so bare `k` is on read_only_key_blocked's allowlist and this button is
-    // not one of the ones the lock greys (that membership's one authoritative
-    // statement is the read-only arm's own case list in
+    // not one of the ones the READ-ONLY lock greys (that membership's one
+    // authoritative statement is the read-only arm's own case list in
     // redesign_button_enabled, which is why no count of it is restated here).
+    // THE ITERATION LOCK IS A DIFFERENT ANSWER since 2026-09-10 (architect,
+    // that evening: NO SILENT SWAPS ANYWHERE): bare `k` joined that gate's
+    // delta (a) and this button joined iteration_lock_greys, because the mode
+    // takes away the PLAIN flag click the bound cells are addressed by — and
+    // THE VALUE DRAG LAMP excludes it too, in that pair's own words, each
+    // button greying on the other's bit and neither toggle clearing anything.
     // It keeps the group's Icon* naming: a roster
     // id names the button, not the lane it sits in.
     IconAddToSelection,
@@ -2951,14 +2965,21 @@ enum class RedesignButton {
     // IT WEARS THE SELECTED FACE, being a mode, off the live bit its own chord
     // flips — the roster's standing rule and its neighbour's exactly.
     //
-    // ITS GATES ARE ITS NEIGHBOUR'S, with one addition of its own: the `h`
+    // ITS GATES ARE ITS NEIGHBOUR'S, with one addition and one subtraction:
+    // the `h`
     // view GREYS it through the derived partition (bare `x` is neither the
     // mode's vocabulary nor on its allowlist), the READ-ONLY LOCK LEAVES IT
     // LIT (turning the mode on authors nothing, and the target rule refuses
     // every locked cell for itself) — and so does the ITERATION LOCK, which is
     // the addition: this lamp is the ROAD to the bound cells, so it is not in
     // iteration_lock_greys and bare `x` passes iteration_lock_key_blocked
-    // through the base list.
+    // through the base list. THE SUBTRACTION IS ITS NEIGHBOUR ITSELF
+    // (architect 2026-09-10, that evening: NO SILENT SWAPS ANYWHERE): the two
+    // lamps cannot stand together — Add to selection makes a plain flag press
+    // a membership toggle that arms nothing, so this mode's drag could never
+    // begin — so bare `x` refuses on kAddToSelectionLitCard and this face
+    // greys on that bit, while bare `k` refuses on kValueDragLitCard and its
+    // face greys on this one. Neither toggle clears the other.
     IconValueDrag,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
     // cluster, behind a separator and ahead of the four arrows): previous
@@ -8467,11 +8488,26 @@ struct AppState {
     // (GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
     MarkerCell addressed_cell = MarkerCell::Payload;
 
-    // BPM mode. Toggled by plain `m` in warp view. Mutually
-    // exclusive with iteration_mode_enabled (toggling one ON forces the
-    // other OFF). Session-only. The BPM owner is identified at runtime
+    // BPM mode. Entered by plain `m` in warp view. MUTUALLY EXCLUSIVE WITH
+    // iteration_mode_enabled BY REFUSAL, NOT BY A SWAP (architect 2026-09-10,
+    // that evening: "we should card the exit, because it is still one button
+    // automatically affecting the other" — NO SILENT SWAPS ANYWHERE): bare `m`
+    // is REFUSED while grid iterations stands, at the keyboard gate with the
+    // lock's own card and on the BPM Iterations button's greyed face
+    // (iteration_lock_key_blocked, iteration_lock_greys), so this bit can only
+    // be set with the lamp dark. It forced the other bit OFF from its birth
+    // until that ruling, enter_bpm_mode running the iteration wipe on its way
+    // in; that block is deleted and bare `i` is grid iterations' one exit.
+    //
+    // THE MODE IS EXACTLY ITS EDITOR SESSION, which is what makes the pair's
+    // OTHER direction need no arm at all: this bit is set by enter_bpm_mode,
+    // whose one caller opens the BPM editor in the same press, and cleared by
+    // exit_bpm_mode, which every close road reaches — so while it stands a
+    // modal dialog editor stands with it and owns the keyboard, and no bare
+    // key, `i` included, reaches any dispatch. Session-only. The BPM owner is
+    // identified at runtime
     // by walking markers for bpm_owner=true; at most one marker holds
-    // the flag at a time, maintained as an invariant by the toggle.
+    // the flag at a time, maintained as an invariant by the entry.
     bool bpm_mode_enabled = false;
 
     // One entry in the flat list of valid renders under
@@ -10340,18 +10376,21 @@ inline bool marker_paints_iter_cells(const AppState& app, char column,
 // (AppState::addressed_cell) is Lower or Upper; a Payload axis is the tempo
 // step and a Measure axis refuses whole (addressed_cell_step_refusal below).
 // Its predicates mirror the tempo step's above one for one —
-// the stable-state refusals, the landing owner, the group verdict, the
+// the stable-state refusals, the landing owner, the
 // directional face, the kind refusal — and each has the same readers: the act,
 // the Up/Down buttons' face, their tooltip and the card. What differs is the
-// subject (a bound in the bracket's own domain, not the base tempo) and the
+// subject (a bound in the bracket's own domain, not the base tempo), the
 // eligibility (the sweep's own — a label ref, a pass or a disabled owner has
-// no live bound to step).
+// no live bound to step) and THE ABSENCE OF A GROUP: the tempo step's group
+// verdict has no bound twin since 2026-09-10, a bound axis implying a
+// singleton selection by construction (the argument is at
+// adjust_iter_bound_cents, warpmarkers_ops.cpp).
 //
 // THERE ARE TWO BODIES AND THEY FORK AT THESE PREDICATES (2026-09-09):
 // GuiWarpMarkersOps::adjust_iter_bound_cents in the CENT domain
 // (warpmarkers_ops.cpp) and GuiPhaseResetMarkersOps::adjust_iter_bound_hops in
 // the HOP domain (phaseresetmarkers_ops.cpp), the phase-reset column having
-// grown an iteration bracket of its own. Each of the four predicates below
+// grown an iteration bracket of its own. Each of the three predicates below
 // forks on app.active_markers_view INSIDE ITS OWN BODY, so the Up/Down
 // dispatch, redesign_button_enabled, redesign_button_tooltip and the Return
 // arm keep ONE switch each and none of them learns a second column.
@@ -10544,55 +10583,34 @@ inline void phase_iter_bound_step_write(GuiPhaseResetMarker& m,
     m.iter_end_hops   = new_hi;
 }
 
-// THE GROUP BOUND STEP'S WALL SCAN, the tempo scan's shape over the sweep's
-// own eligibility: an INELIGIBLE member (iter_popup_eligible_marker false — a
-// label ref, a pass, a disabled owner) is SKIPPED, not walled, exactly as the
-// tempo scan skips a disabled member; the SURVIVORS take the step together or
-// not at all (GROUP RIGIDITY, argued at adjust_tempo_cents_group) — `Walled`
-// when one cannot take the WHOLE step inside its walls, `Steps` when every
-// survivor can, `Empty` when nothing survives. Defined in warpmarkers_ops.cpp
-// beside its tempo sibling; the act forks its sentence on the verdict and the
-// face reads the boolean wrapper.
-//
-// IT FORKS ON THE COLUMN inside its own body and takes `audio` for the phase
-// arm alone, whose walls are the hop window's (a fact about the live map and
-// the piece's length). `delta` is read as CENTS on the warp column and as
-// HOPS on the phase one — the arrows hand the same signed magnitude to both
-// and each domain reads it as its own unit, which is the whole of what the
-// step ladder means on either.
-enum class IterBoundStepGroupVerdict { Steps, Walled, Empty };
-IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
-                                                        const GuiAudio& audio,
-                                                        MarkerCell side,
-                                                        int64_t delta);
-inline bool iter_bound_step_group_actionable(const AppState& a,
-                                             const GuiAudio& audio,
-                                             MarkerCell side,
-                                             int64_t delta) {
-    return iter_bound_step_group_verdict(a, audio, side, delta) ==
-           IterBoundStepGroupVerdict::Steps;
-}
-
 // WOULD A BOUND STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
-// Up/Down face with a bound addressed, forking exactly where the act forks: a
-// 2+ selection takes the group scan (grey AND card, the group pairing), a
-// singleton compares iter_bound_step_landing against the focused marker's
-// resting bound — silent at the key when walled, the grey being the whole
-// cue, as the tempo step's bracket end is. An INELIGIBLE singleton answers
-// TRUE: its refusal is a fact about the marker's kind, carded by the act
-// through iter_bound_step_kind_refusal below. Defined in warpmarkers_ops.cpp.
-// The twin rule costs nothing here either: the singleton's clamped landing
+// Up/Down face with a bound addressed: it compares iter_bound_step_landing
+// against the focused marker's resting bound — silent at the key when walled,
+// the grey being the whole cue, as the tempo step's bracket end is. An
+// INELIGIBLE focus answers TRUE: its refusal is a fact about the marker's
+// kind, carded by the act through iter_bound_step_kind_refusal below. Defined
+// in warpmarkers_ops.cpp.
+//
+// THE FOCUS IS THE WHOLE SUBJECT, where the tempo step's own directional half
+// forks on the selection's size (architect 2026-09-10): a bound axis implies
+// a SINGLETON selection by construction — every road onto one single-selects
+// and every mutator that grows a selection reseats the payload — so the group
+// scan this used to call, the group arm it faced and the verdict enum they
+// shared are all deleted rather than kept as belts (the argument is at
+// adjust_iter_bound_cents, warpmarkers_ops.cpp).
+// The twin rule costs nothing here either: the clamped landing
 // equals the resting value iff the bound rests on a wall, the same for one
-// cent, three or ten, and the group scan walls a superset as the step grows.
-// It forks on the column in its own body too; `audio` serves the phase arm's
+// cent, three or ten.
+// It forks on the column in its own body; `audio` serves the phase arm's
 // landing, whose window is the hop window's.
 bool iter_bound_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           MarkerCell side,
                                           int64_t delta);
 
-// WOULD A SINGLETON BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
-// would card with, or nullptr: on the WARP column a marker without a tempo of
+// WOULD A BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
+// would card with, or nullptr (it said SINGLETON while there was a group arm
+// to say it against; there is one subject now): on the WARP column a marker without a tempo of
 // its own (a pass or a label ref) has no bracket to step and a disabled marker
 // has no range at all (the disable cleared it, architect 2026-09-10); on the
 // PHASE-RESET column every reset is a carrier, so the one refusal there is the
@@ -11499,11 +11517,14 @@ inline bool any_tab_read_only(const AppState& a) {
 //     (kIterationLockUndoHint / kIterationLockRedoHint) — a user who pressed
 //     Ctrl+Z is asking about undo. They are the lock's members with a sentence
 //     of their own, so they take their own fork.
-//   * GRID ITERATIONS and BPM ITERATIONS, the two exit roads, and SAVE,
+//   * GRID ITERATIONS, the mode's ONE exit road since 2026-09-10 (BPM
+//     ITERATIONS was the other and is a MEMBER now, its swap ruled out), and
+//     SAVE,
 //     RENDER, the trim family, playback, the zoom and magnification family,
 //     the audio-view lamp, THE A/B TAB SWITCH, the two single-tab walk
-//     buttons (bare Tab and Shift+Tab step the cells, the mode's own surface)
-//     and Copy resolved value, every one of
+//     buttons (bare Tab and Shift+Tab step the cells, the mode's own surface),
+//     Copy resolved value and THE VALUE DRAG LAMP (the road to the bound
+//     cells), every one of
 //     which the lock ADMITS (the allowlist's two deltas are stated once at
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
 //     The tab switch left this list for one afternoon on 2026-09-10, as a
@@ -11556,6 +11577,29 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // lock direction would need the face to fork on a state the mode
         // makes unreachable.
         case RedesignButton::IconReadOnly:
+        // ADD TO SELECTION (architect 2026-09-10, that evening: NO SILENT
+        // SWAPS — "every mutual exclusion is a refusal with a card, a greyed
+        // button and the reason in its tooltip, the lock's own shape"). Bare
+        // `k` is delta (a)'s fourth member: the sticky ctrl turns a PLAIN flag
+        // click into a membership toggle, and a plain click is exactly how a
+        // bound cell is addressed, so the mode would take away the one press
+        // this mode's own surface needs. It is the padlock's shape in what it
+        // protects — the sticky ctrl writes no store and pushes nothing — and
+        // unconditional here for the padlock's reason too: the chord TOGGLES,
+        // and forking on the direction would need a face to fork on a state
+        // the pair makes unreachable (bare `i` refuses to light while this
+        // lamp stands).
+        case RedesignButton::IconAddToSelection:
+        // BPM ITERATIONS (architect 2026-09-10, that evening: "we should card
+        // the exit, because it is still one button automatically affecting the
+        // other"). It was the mode's SECOND EXIT until then — admitted by the
+        // gate, entering BPM iterations and wiping every bracket on its way —
+        // and the swap is what he ruled out, not the sequence: `m` refuses
+        // here and at the gate, enter_bpm_mode's forced iter-off is deleted,
+        // and bare `i` is the one road out of the mode. (The other direction
+        // is not this predicate's: bare `i` refuses while BPM iterations
+        // stands, at that button's own arm.)
+        case RedesignButton::IconBpm:
         // THE VIEW BAR'S THREE (architect 2026-09-10): bare 1/2/3 run the `t`
         // and `p` handlers, so the W/P delta blocks all three unconditionally
         // — iteration_lock_key_blocked's first test is a flat four-chord list
@@ -12627,6 +12671,40 @@ static_assert(
 inline constexpr const char* kIterationLockCard =
     "Turn off grid iterations first";
 
+// THE TWO LAMP-EXCLUSION SENTENCES (architect 2026-09-10: NO SILENT SWAPS
+// ANYWHERE — "every mutual exclusion is a refusal with a card, a greyed button
+// and the reason in its tooltip, the lock's own shape"). Three pairs of lamps
+// cannot stand together, and each of the four refusals says the way OUT in the
+// lock's own words: bare `k` under grid iterations takes kIterationLockCard at
+// the keyboard gate, and the other three take one of these two.
+//   * `kAddToSelectionLitCard` — said by bare `i` and by bare `x`, each of
+//     which refuses to light while ADD TO SELECTION stands. `k` turns a plain
+//     flag click into a membership toggle, which is the one press both of the
+//     others need for themselves: the bound cells are addressed by a plain
+//     press, and the value drag is a plain press that becomes a drag.
+//   * `kValueDragLitCard` — said by bare `k`, which refuses to light while the
+//     VALUE DRAG stands, the same exclusion read from its other side.
+// ONE CLAUSE, SENTENCE CASE, and the mode named in lower case exactly as
+// kIterationLockCard names its own (the two-class rule: a card is a
+// DESCRIPTION). THE REFUSALS ARE FLAT rather than on-edge — the chord refuses
+// while the other lamp stands, whichever way its own toggle would go — and
+// that costs nothing, because the state where you would need the refused
+// chord to turn its own lamp OFF is exactly the state the pair makes
+// unreachable.
+//
+// THEY ARE HOMED HERE, beside the lock's sentence and against the letter of
+// the ruling ("beside kIterationLockCard in notifications.h"), for the reason
+// that header itself records at its own pointer to that constant: A FACE READS
+// THEM — the Grid Iterations, Value Drag and Add to Selection buttons each
+// wear the card its key would raise, under the tooltips-on-disabled ruling —
+// and the faces are compiled in this header, notifications.h including it and
+// not the reverse. NO HINT CONSTANT AND NO ACCELERATOR: the three tooltips
+// take the bare card, as Walk both tabs' lock line does.
+inline constexpr const char* kAddToSelectionLitCard =
+    "Turn off add to selection first";
+inline constexpr const char* kValueDragLitCard =
+    "Turn off value drag first";
+
 // THE ITERATION LOCK'S UNDO PAIR (architect 2026-09-10: "They just don't go in
 // the undo stack at all; they're considered transient by design" — so while
 // grid iterations stands the history is frozen whole). It is the lamp's shape
@@ -13190,10 +13268,11 @@ inline bool playback_launch_playable(const AppState& a,
 //     allowlist) and TOGGLE HISTORY VIEW (the mode is claimed above the gate
 //     and a locked tab reads history as a writable one does). LEFT / RIGHT
 //     compose both halves around one lane term at their own arm. TWO ASK THE
-//     TAB'S BIT ALONE, each saying why at its arm: GRID ITERATIONS (the lamp
-//     that turns the mode off cannot be greyed by it) and BPM ITERATIONS (the
-//     one road that leaves this mode by entering another, landing nothing in
-//     history at the press).
+//     TAB'S BIT ALONE, and it is GRID ITERATIONS: the lamp
+//     that turns the mode off cannot be greyed by it (its OTHER term is the
+//     add-to-selection lamp, a different exclusion entirely). BPM ITERATIONS
+//     stood beside it as the mode's second exit until 2026-09-10, when the
+//     swap it performed was ruled out and the button joined the membership.
 //     Undo and Redo take the mode through history_step_actionable instead, the
 //     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
@@ -13932,15 +14011,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // Redo have always had. It is the roster's DEEPEST mirrored refusal
         // and it costs nothing per tick: the walk is tens of markers and the
         // one classifier it needs comes off the red-flag cache.
-        // AND BPM ITERATIONS KEEPS THE TAB'S LOCK ALONE (architect
-        // 2026-09-10): bare `m` is the one road that leaves grid iterations by
-        // ENTERING another mode — enter_bpm_mode's forced iter-off runs the
-        // same wipe the `i` toggle runs — and the press itself lands nothing
-        // in history, the sweep's commit coming later with the lamp already
-        // dark. So the iteration lock admits it, here and at
-        // iteration_lock_key_blocked, and this arm asks the tab's own bit.
+        // AND BPM ITERATIONS TAKES BOTH HALVES SINCE 2026-09-10 (architect,
+        // that evening: "we should card the exit, because it is still one
+        // button automatically affecting the other" — NO SILENT SWAPS
+        // ANYWHERE). Bare `m` was the one road that LEFT grid iterations by
+        // ENTERING another mode, enter_bpm_mode wiping every bracket on its
+        // way in; that swap is deleted, the chord is off the gate's
+        // admissions and this button is in the lock's membership, so the face
+        // greys with the lamp and wears the lock's card. THE LOCK RANKS FIRST
+        // here as it does at the key, ahead of the sweep's own ten sentences.
         case RedesignButton::IconBpm:
             return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
                    bpm_sweep_open_actionable(a, audio);
         // THE MARKER COLUMN LAMP IS THE ITERATION LOCK'S OTHER DELTA
         // (architect 2026-09-10): the mode is lit for the column you are IN,
@@ -14039,8 +14121,20 @@ inline bool redesign_button_enabled(const AppState& a,
         // that arm refuses on the same predicate and cards the read-only
         // sentence — and the exclusion's other half is the PADLOCK's face
         // above, which greys while the lamp is lit.
+        //
+        // AND ADD TO SELECTION IS A SECOND EXCLUSION OF THE SAME SHAPE
+        // (architect 2026-09-10, that evening: NO SILENT SWAPS — "every mutual
+        // exclusion is a refusal with a card, a greyed button and the reason
+        // in its tooltip"). The sticky ctrl turns a PLAIN flag click into a
+        // membership toggle, which is the press the bound cells are addressed
+        // by, so the two lamps cannot stand together: this face greys while
+        // that one is lit and wears kAddToSelectionLitCard, bare `i`'s own arm
+        // refusing on the very same bit, and Add to Selection greys under a
+        // lit lamp through the membership above. (The pair's third partner,
+        // the VALUE DRAG lamp, excludes Add to selection alone and composes
+        // with this mode freely — it is the road to the bound cells.)
         case RedesignButton::IconIter:
-            return !any_tab_read_only(a);
+            return !any_tab_read_only(a) && !a.add_to_selection;
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
         // render player, which plays a rendered wav and authors nothing, so
         // the key is on the read-only allowlist and the button follows it —
@@ -14435,33 +14529,45 @@ inline bool redesign_button_enabled(const AppState& a,
         // shift half was the lock-legal score-video jump and a chrome face
         // cannot split. The jump left the product whole and the button
         // returned to the read-only arm above with its four neighbours.)
-        // ADD TO SELECTION TAKES THE LOADING/BLANK GUARD AND NOTHING ELSE
-        // (2026-08-18, and still honest under the 2026-08-30 ruling): its
-        // chord authors nothing, so the READ-ONLY arm above deliberately does
-        // not carry it — a selection is navigation, the same ruling that keeps
-        // the trim gestures legal on a locked tab. And there is no refusal to
-        // mirror: bare `k` flips a session bit on any loaded piece, in either
-        // column and either audio view. The `h` VIEW is the one thing that
-        // greys it, through the DERIVED partition at the top of this body
-        // (bare `k` is neither history_mode_owns_key's vocabulary nor on
-        // history_mode_key_blocked's allowlist, so the mode consumes it and
-        // the face follows) — nothing hand-listed. Its LAMP, not its enabled
-        // bit, is what reports the mode (redesign_button_selected below).
+        // ADD TO SELECTION MIRRORS THE TWO LAMPS IT CANNOT STAND BESIDE
+        // (architect 2026-09-10, NO SILENT SWAPS: "every mutual exclusion is a
+        // refusal with a card, a greyed button and the reason in its
+        // tooltip"), and nothing else. Its chord authors nothing, so the
+        // READ-ONLY arm above deliberately does not carry it — a selection is
+        // navigation, the same ruling that keeps the trim gestures legal on a
+        // locked tab (2026-08-18) — and its `h` VIEW grey comes from the
+        // DERIVED partition at the top of this body (bare `k` is neither
+        // history_mode_owns_key's vocabulary nor on history_mode_key_blocked's
+        // allowlist, so the mode consumes it and the face follows), nothing
+        // hand-listed. WHAT IT DOES MIRROR IS THE PAIR OF REFUSALS ITS KEY NOW
+        // RAISES: GRID ITERATIONS, through the membership predicate — the
+        // sticky ctrl would take away the plain click the bound cells are
+        // addressed by, so bare `k` is delta (a)'s fourth member and the gate
+        // cards the lock's own sentence — and THE VALUE DRAG, whose lamp bare
+        // `k`'s own arm refuses under in its own words. THE LOCK RANKS FIRST,
+        // as it does at the key, where the gate eats the chord above the arm.
+        // Its LAMP, not its enabled bit, is what reports the mode
+        // (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
-        // THE VALUE DRAG LAMP TAKES THE SAME GUARD AND NOTHING ELSE
-        // (2026-09-10): its chord flips a session bit and authors nothing, so
-        // the READ-ONLY arm above deliberately does not carry it, and neither
-        // does the ITERATION half (iteration_lock_greys) — this lamp is the
-        // ROAD to the bound cells the lock exists to leave open, which is the
-        // one thing it does not share with its neighbour. There is no refusal
-        // to mirror either: bare `x` flips the bit on any loaded piece, in
-        // both columns and both audio views, and WHICH FLAGS THE DRAG CAN THEN
+            if (iteration_lock_greys(a, b) || a.value_drag_enabled)
+                return false;
+            break;
+        // THE VALUE DRAG LAMP MIRRORS ITS ONE PARTNER (2026-09-10): bare `x`
+        // refuses while ADD TO SELECTION stands — that mode turns a plain flag
+        // press into a membership toggle that arms nothing, so this mode's
+        // drag could never begin — and the face greys on the same bit the key
+        // reads. Nothing else: its chord authors nothing, so the READ-ONLY arm
+        // above deliberately does not carry it, and neither does the ITERATION
+        // half (iteration_lock_greys) — this lamp is the ROAD to the bound
+        // cells the lock exists to leave open, which is the one thing it does
+        // not share with its neighbour. WHICH FLAGS THE DRAG CAN THEN
         // ACT ON is the gesture's own question, asked per press at
         // value_drag_target — a per-marker fact this face has no business
-        // blinking on. The `h` VIEW is the one thing that greys it, through
+        // blinking on. The `h` VIEW greys it through
         // the DERIVED partition at the top of this body. Its LAMP, not its
         // enabled bit, is what reports the mode.
         case RedesignButton::IconValueDrag:
+            if (a.add_to_selection) return false;
             break;
         // THE FIVE HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
         // ICON ROW's own settled rule, which is where they live again since
@@ -14705,17 +14811,19 @@ inline bool redesign_button_enabled(const AppState& a,
             return ab_audition_preflight_ok(a, audio, playback,
                                             target_render);
         default:
-            // REACHED BY EXACTLY NINE IDS, re-derived 2026-08-30 (twelve
-            // earlier that day, before the transport three took arms of their
-            // own above; eleven until Copy value broke out with its
-            // 2026-08-29 landing, the count unrevised that day) — the bottom
+            // REACHED BY EXACTLY TEN IDS, re-derived by walking the first
+            // switch 2026-09-10 (NINE were named on 2026-08-30 and the count
+            // had missed the VALUE DRAG lamp when it landed beside Add to
+            // selection; twelve earlier that day, before the transport three
+            // took arms of their own above) — the bottom
             // row's members that break out of the first switch to take the
             // loading/blank guard and have nothing further to say here: the
-            // marker-walk three, the four arrows, COPY VALUE and ADD TO
-            // SELECTION. Seven of the nine
+            // marker-walk three, the four arrows, COPY VALUE and THE TWO
+            // LAMPS. All ten
             // refuse ahead of that break on their own predicate since the
-            // truthful-buttons ruling (the two cardinal pairs, the two walk
-            // steps and Copy value); the ruling, the 2026-08-15 reversal it
+            // truthful-buttons ruling — the two lamps since 2026-09-10, when
+            // their exclusions became refusals and each learned to read its
+            // partner's bit; the ruling, the 2026-08-15 reversal it
             // supersedes and the
             // per-pair successions are at that block. The row's remaining
             // members are the four SINGLE-MARKER VERBS, the EDIT FLAG BUTTON
@@ -16035,8 +16143,8 @@ inline RedesignTooltipText redesign_button_tooltip(
     // over the ONE membership (architect 2026-09-10; iteration_lock_greys,
     // above, re-greped here 2026-09-10): the marker verbs, the Measure, Edit
     // flag and Up/Down on a payload or measure axis, Left/Right with a marker
-    // selected, the Toggle History View button, the PADLOCK, and a TAB BUTTON
-    // whose own tab is locked. The
+    // selected, the Toggle History View button, the PADLOCK, ADD TO SELECTION
+    // and BPM ITERATIONS. The
     // predicate is the FACE'S OWN — the arms above call it too — so the grey
     // and the words it wears are one decision, never a second list of the same
     // buttons. THE MEMBERSHIP'S NEWEST THREE NEVER ARRIVE HERE: the VIEW BAR'S
@@ -16071,6 +16179,38 @@ inline RedesignTooltipText redesign_button_tooltip(
     // avoid. The two forks that DO name a key each answer ONE button.
     if (iteration_lock_greys(a, b)) {
         return {kIterationLockCard, nullptr};
+    }
+    // THE THREE LAMP EXCLUSIONS' OWN REASONS (architect 2026-09-10, that
+    // evening: NO SILENT SWAPS — "every mutual exclusion is a refusal with a
+    // card, a greyed button and the reason in its tooltip, the lock's own
+    // shape"). Three lamps cannot stand beside a fourth, and each greyed face
+    // wears the card its own key raises, bare as Walk both tabs' does (no
+    // accelerator: a hint constant per member would be a second spelling of
+    // the table's own, which is what a shared fork exists to avoid).
+    //
+    // THEY RANK BELOW THE LOCK'S FORK ABOVE and that ordering is the KEY'S:
+    // the iteration gate eats bare `k` before its own arm can be reached, so
+    // Add to Selection under a lit lamp says the lock's sentence even when
+    // the value drag is lit too. Add to Selection's OTHER reason and the
+    // other two buttons' single ones cannot compose with the lock at all —
+    // Grid Iterations is what the lock exempts, and the value drag composes
+    // with the mode freely.
+    if (b == RedesignButton::IconAddToSelection && a.value_drag_enabled) {
+        return {kValueDragLitCard, nullptr};
+    }
+    if (b == RedesignButton::IconValueDrag && a.add_to_selection) {
+        return {kAddToSelectionLitCard, nullptr};
+    }
+    // GRID ITERATIONS' ADD-TO-SELECTION REASON CARRIES A READ-ONLY TERM, and
+    // it is the one iteration-adjacent fork here that does: this button greys
+    // for TWO reasons that CAN stand together — a locked tab anywhere in the
+    // piece and the sticky ctrl — and bare `i`'s own arm asks the lock FIRST,
+    // so the line must too or it would name a refusal that is not the one
+    // standing. (A locked tab alone falls through to the constant table, as it
+    // always has.)
+    if (b == RedesignButton::IconIter && a.add_to_selection &&
+        !any_tab_read_only(a)) {
+        return {kAddToSelectionLitCard, nullptr};
     }
     // UNDO'S AND REDO'S ITERATION-LOCK REASON (architect 2026-09-10), ranked
     // FIRST of this pair's two forks because the lock is the outermost state —

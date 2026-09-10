@@ -141,9 +141,15 @@ struct GuiWarpMarkersOps {
     // THE VERTICAL ARROWS' SECOND STEP BODY (architect 2026-09-04): steps one
     // bound of the focused marker's iteration bracket — `side` Lower or Upper,
     // the addressed cell the dispatch forks on (AppState::addressed_cell) —
-    // by `delta_cents` through the same ladder, with a 2+ selection taking
-    // the all-or-nothing group arm below. Its predicates are the tempo step's
-    // shape one for one (app_state.h, the bound step's block). IT RECORDS
+    // by `delta_cents` through the same ladder. IT IS A SINGLETON BODY AND HAS
+    // NO GROUP ARM (architect 2026-09-10: the bound cells are "a separate
+    // system" and the mode "is by design targeting each marker
+    // individually"): every road onto a bound axis single-selects — the plain
+    // cell press, the Tab cell step and the bound editor's open alike — and
+    // every Selection mutator that GROWS a selection reseats the axis on the
+    // payload, so a 2+ selection with a bound addressed does not exist and the
+    // group arm that answered it is deleted. Its predicates are the tempo
+    // step's shape one for one (app_state.h, the bound step's block). IT RECORDS
     // NOTHING (architect 2026-09-10): no undo entry, no coalescing kind and no
     // dirty re-derive — the iteration bracket is outside the undo domain, so
     // this body takes no `synthesized_repeat` either, a held run simply
@@ -167,10 +173,4 @@ struct GuiWarpMarkersOps {
     // its own tempo_cents by delta_cents. See the definition for the wall set.
     GuiOpRefusal adjust_tempo_cents_group(int64_t delta_cents,
                                           bool synthesized_repeat);
-    // Group bound step (2+ selection): all-or-nothing over the members the
-    // sweep reads — an ineligible member is skipped, every survivor must take
-    // the FULL `delta_cents` inside its walls or the whole press refuses on
-    // its own sentence; then each survivor's addressed bound steps.
-    GuiOpRefusal adjust_iter_bound_cents_group(MarkerCell side,
-                                               int64_t delta_cents);
 };

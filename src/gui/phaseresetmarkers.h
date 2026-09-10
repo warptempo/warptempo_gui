@@ -148,8 +148,9 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // multiplies the cell count nor names a cell; the flag painter
 // (render_phase_reset_flags, render.cpp) paints the two bound cells on exactly
 // these resets and none on a disabled flag; the bound step
-// (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) skips an ineligible member
-// in a group and refuses an ineligible singleton on a card; the bound
+// (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) refuses an ineligible
+// focus on a card, the warp twin's own reading since its group arm went
+// (2026-09-10); the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
 // paints — no cell, no editor; and the TAB WALK stops on a reset's two purple
 // cells only where they are painted, asking through the painter's own composed

@@ -323,6 +323,13 @@ inline std::string format_signed_hops(int hops) {
 // editor). The type lives here, beside the bracket two of its members
 // address, because the painter (render.h) needs it and render.h cannot see
 // AppState.
+//
+// THE PAYLOAD IS THE MEMBERSHIP SURFACE; EVERY OTHER BOX TAKES THE PLAIN
+// PRESS ONLY (architect 2026-09-10, the bound cells being "a separate
+// system"): a ctrl or shift press landing on Lower, Upper or Measure is a
+// silent no-op at the one act owner (run_marker_click_act, input_pointer.cpp,
+// which argues it), so a selection is built and ranged from the flag box
+// alone while a plain press on any box selects, addresses that box and lands.
 enum class MarkerCell { Payload, Lower, Upper, Measure };
 
 // Iteration mode: the text of ONE bound cell — the bound in the signed
@@ -389,8 +396,9 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // marker's tempo is render-filtered whatever value a cell wrote into it; the
 // flag painter (render_flags, render.cpp) paints the two bound cells on
 // exactly these markers and no cells on a disabled flag; the bound step
-// (GuiWarpMarkersOps::adjust_iter_bound_cents) skips an ineligible member in
-// a group and refuses an ineligible singleton on a card; the bound
+// (GuiWarpMarkersOps::adjust_iter_bound_cents) refuses an ineligible focus on
+// a card — the whole of what it does with this predicate since the group arm
+// went (2026-09-10: a bound axis implies a singleton selection); the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
 // paints — no cell, no editor; and the TAB WALK stops on a marker's two
 // purple cells only where they are painted, asking through the painter's own

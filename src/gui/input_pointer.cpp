@@ -4141,6 +4141,25 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // PRODUCERS since 2026-08-18: a real ctrl press, and a plain press while the
 // ADD TO SELECTION mode stands (the fold, and the shift rule that goes with
 // it, are at the `toggle` term below).
+//
+// THE SELECTION MODIFIERS ACT ON THE FLAG BOX ALONE (architect 2026-09-10:
+// the bound cells "are considered outside of undo, and so in many ways
+// they're a separate system"; "iterations mode is by design targeting each
+// marker individually"). THE PAYLOAD IS THE MEMBERSHIP SURFACE; EVERY OTHER
+// BOX TAKES THE PLAIN PRESS ONLY — a ctrl or shift press on a Lower, Upper or
+// Measure box is a SILENT NO-OP, the guard below returning ahead of the stop:
+// no toggle, no range, no land, no address, no arm and no playback stop, the
+// pointer's own non-event. A range or a membership toggle addressed off a
+// bound cell would build the very 2+ selection with a bound axis the cells'
+// single-marker model has no meaning for, and a range select is a MEMBERSHIP
+// act whose subject is the marker rather than the box. The PLAIN press on
+// those boxes is untouched — single-select, address the cell, land — which is
+// what makes a cell reachable at all. THE `k` FOLD RIDES THE SAME RULE: a
+// lit Add to selection turns a plain press into the toggle, so a `k`-lit
+// press on a MEASURE box is the no-op too (the measure is "every other box");
+// on the two BOUND cells the pair cannot compose, bare `k` being refused
+// while grid iterations stands (iteration_lock_key_blocked) and the lamp
+// clearing the mode as it lights.
 // It runs the stop, the three-way selection fork, the
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
@@ -4163,16 +4182,13 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
                                            const DoubleClickCandidate&
                                                dc_at_press) {
     if (hit < 0) return;
-    // The stop leads on every shape: selecting or editing under a live
-    // audition is the case the top-strip stop exists for, and no arm below
-    // refuses (read-only still selects and lands, and the index came from a
-    // live hit test).
-    playback_lifecycle.stop_playback_if_playing();
     // WHICH CELL THE PRESS LANDED ON, from the painter's published boundaries
     // (hit_test_flag_cell; the MarkerCell block at PendingMarkerPress,
-    // app_state.h), asked ONCE for the press's two readers: the addressed
-    // cell written below the selection fork and the double-click seed the
-    // plain arm stamps at the tail.
+    // app_state.h), asked ONCE for the press's THREE readers: the modified
+    // press's own surface test just below, the addressed cell written under
+    // the selection fork and the double-click seed the plain arm stamps at
+    // the tail. It is a pure geometry read, which is what lets it stand ahead
+    // of the stop.
     const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
     // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
     // 2026-08-18): while the mode stands, a PLAIN press on a flag is a ctrl
@@ -4190,6 +4206,20 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // (the ctrl call site is ctrl-EXACT, and the plain/shift one passes
     // ctrl=false), so this term reads on the mode's arm alone.
     const bool toggle = ctrl || (app.add_to_selection && !shift);
+    // THE PAYLOAD IS THE MEMBERSHIP SURFACE, and this is the whole of that
+    // rule (the head of this body argues it): a MODIFIED press — the toggle
+    // on either of its producers, or the shift range — landing on any box but
+    // the flag is a silent no-op. It returns ABOVE THE STOP deliberately: a
+    // press that does nothing must not stop the audition either, which is
+    // what "the pointer's non-event" means everywhere else in this file. The
+    // plain press falls straight through, so a cell keeps its select, its
+    // address and its land.
+    if ((toggle || shift) && cell != MarkerCell::Payload) return;
+    // The stop leads on every shape THAT ACTS: selecting or editing under a
+    // live audition is the case the top-strip stop exists for, and no arm
+    // below refuses (read-only still selects and lands, and the index came
+    // from a live hit test).
+    playback_lifecycle.stop_playback_if_playing();
     if (toggle) {
         // The individual membership TOGGLE. Whether it ADDED or REMOVED, the
         // playhead lands on the FOCUS the toggle leaves behind (architect

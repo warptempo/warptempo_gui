@@ -118,10 +118,12 @@ struct GuiFlagEditor {
     void enter_bpm_mode();
     void exit_bpm_mode();
     // Wipe BOTH stores' session-only iter brackets — the single clear
-    // every iteration-mode exit route shares, THREE routes re-greped
-    // 2026-09-09: the `i` toggle's turning-off branch, enter_bpm_mode's
-    // forced iter-off, and the iteration sweep's success tail (the S->T
-    // audio-view toggle left the list 2026-08-07; the load in place is NOT a
+    // every iteration-mode exit route shares, TWO routes re-greped
+    // 2026-09-10: the `i` toggle's turning-off branch and the iteration
+    // sweep's success tail (the S->T
+    // audio-view toggle left the list 2026-08-07; enter_bpm_mode's forced
+    // iter-off left it 2026-09-10, when bare `m` stopped being an exit and
+    // became a refusal; the load in place is NOT a
     // route since 2026-09-02 — it leaves the mode bit alone, the record at
     // apply_recipe_in_place). It also puts an addressed BOUND cell back on
     // the payload, the cells going with the mode. HISTORY-LESS since

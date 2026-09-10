@@ -465,10 +465,12 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 //
 // The vertical arrows' second body in the HOP domain — the twin of
 // GuiWarpMarkersOps::adjust_iter_bound_cents, clause for clause: the leading
-// refusal block named whole in a predicate the face reads, the 2+ fork onto an
-// all-or-nothing group arm, the wall asked through the directional face, the
+// refusal block named whole in a predicate the face reads, the wall asked
+// through the directional face, the
 // value-shaped kind refusal on a card, and the mutation through the one
-// landing owner. THERE IS NO STAMP AND NO ENTRY at the end of it (below). The
+// landing owner — AND NO GROUP ARM ON EITHER COLUMN since 2026-09-10, a bound
+// axis implying a singleton selection by construction (the warp twin's head
+// argues it). THERE IS NO STAMP AND NO ENTRY at the end of it (below). The
 // contracts are at the declarations (phaseresetmarkers_ops.h, app_state.h's
 // bound step block); what is argued here is only what differs.
 //
@@ -479,8 +481,8 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 // owner takes the app and the audio because that window is a fact about the
 // store and the live map rather than about one row. The eligibility is this
 // column's (phase_reset_iter_eligible_marker): every reset is a carrier, so
-// the group arm skips only DISABLED members and the singleton refuses one on
-// a card. A blank bracket starts at [0, 0] and the first step authors it, both
+// the one thing the singleton refuses on a card is a DISABLED reset. A blank
+// bracket starts at [0, 0] and the first step authors it, both
 // bounds written through the one write site (phase_iter_bound_step_write) —
 // which is also where the step and the cell editor's commit meet one rule,
 // that a pair of two zeroes is the cleared bracket. AND NOTHING RENDERS AND
@@ -501,8 +503,6 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
     // wants a focused phase reset's range and has none.
     if (!iter_bound_step_actionable(app))
         return "Select a phase reset to change its range";
-    if (app.selected_markers.size() >= 2)
-        return adjust_iter_bound_hops_group(side, delta_hops);
     // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
     // arms read this very predicate), so the key says nothing either — a
     // benign one-dimensional refusal already at its state, the cell's own
@@ -528,7 +528,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
     // Both bounds go through the one write site: a blank bracket becomes
     // [0, 0] with the step applied to its addressed side, a set one keeps its
     // partner as it was, and a pair that lands on two zeroes clears — the
-    // blank rule, which the group arm below and the cell editor's commit take
+    // blank rule, which the cell editor's commit takes
     // from the same owner. The landing owner already holds lo <= hi and the
     // hop window, so nothing is folded after the fact.
     phase_iter_bound_step_write(m, side, landing);
@@ -548,57 +548,3 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
     return std::nullopt;
 }
 
-GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops_group(
-        MarkerCell side, int delta_hops) {
-    // THE WALL SCAN, carded AND greyed — the group pairing the tempo step
-    // argues: a group step would have moved every selected cell, so it is not
-    // the one-dimensional refusal that went silent. (It stood AHEAD OF THE
-    // COALESCE VERDICT until 2026-09-10; there is no verdict on this road any
-    // more.) THE EMPTY STEP HAS THE SINGLETON'S SENTENCE: a selection whose
-    // every member is ineligible has no range to step, which is the
-    // empty-selection answer.
-    switch (iter_bound_step_group_verdict(app, audio, side, delta_hops)) {
-    case IterBoundStepGroupVerdict::Steps:
-        break;
-    case IterBoundStepGroupVerdict::Walled:
-        return "One of the selected markers cannot take this range change";
-    case IterBoundStepGroupVerdict::Empty:
-        return "Select a phase reset to change its range";
-    }
-    const auto& pv = app.phaseresetmarkers.markers();
-    const int n = static_cast<int>(pv.size());
-    // Every SURVIVOR steps its addressed bound by the full delta — none is
-    // walled (checked above through the landing owner) — through the same
-    // write site the singleton uses, so a blank bracket is authored at [0, 0]
-    // plus the step and the blank rule reaches every member alike. A disabled
-    // member is skipped on the same predicate the scan skipped it on; the
-    // store is unchanged between the two walks, so the survivor set is one.
-    //
-    // THE LANDINGS ARE ALL RESOLVED BEFORE ANY WRITE, which the warp twin does
-    // not have to say: a member's hop window reads its NEIGHBOURS' brackets,
-    // so writing as we walk would let an earlier member's new bound narrow a
-    // later one's window mid-act and break the group's all-or-nothing promise
-    // against the very scan that admitted it.
-    std::vector<int> touched;
-    std::vector<int> landings;
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= n) continue;
-        if (!phase_reset_iter_eligible_marker(pv, idx)) continue;
-        touched.push_back(idx);
-        landings.push_back(
-            phase_iter_bound_step_landing(app, audio, idx, side, delta_hops));
-    }
-    // Defensive (a fully-stale selection): the all-ineligible selection never
-    // reaches it — that is the Empty verdict above.
-    if (touched.empty()) return std::nullopt;
-    for (size_t k = 0; k < touched.size(); ++k) {
-        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(touched[k]);
-        if (!m) continue;
-        phase_iter_bound_step_write(*m, side, landings[k]);
-    }
-    // NOTHING IS RECORDED past the writes (2026-09-10). `touched` survives
-    // here where the warp group arm's became a count, because this arm needs
-    // the index list to pair each survivor with its pre-resolved landing.
-    viewport.invalidate_top_strip();
-    return std::nullopt;
-}

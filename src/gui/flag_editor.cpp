@@ -941,14 +941,17 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // (the mode's own cells are what show a bracket, and they are gone by then).
 // No arm reads the stamp here and none should: the wipe runs at the OFF EDGE,
 // where the stamp is already meaningless. The single clear every
-// iteration-mode exit route shares: the `i` toggle's turning-off branch,
-// enter_bpm_mode's forced iter-off, and the iteration sweep's success tail —
+// iteration-mode exit route shares, TWO routes since 2026-09-10: the `i`
+// toggle's turning-off branch and the iteration sweep's success tail —
 // exiting the mode is the clear on every route, so a bracket exists only while
-// the mode paints it on the flags. THE S->T AUDIO-VIEW TOGGLE IS NO LONGER ONE
+// the mode paints it on the flags. ENTER_BPM_MODE'S FORCED ITER-OFF WAS THE
+// THIRD and it is gone with the swap it performed (architect 2026-09-10: NO
+// SILENT SWAPS — bare `m` is REFUSED under a lit lamp now rather than being
+// its second exit), so bare `i` is the only key that reaches this. THE S->T AUDIO-VIEW TOGGLE IS NO LONGER ONE
 // OF THEM (2026-08-07): iteration mode is target-legal, so entering target view
 // neither exits the mode nor clears anything (the record is at
-// switch_active_audio_view_to, input_handler.cpp). Two of the three
-// surviving callers can now run in TARGET view, where the write is the granted
+// switch_active_audio_view_to, input_handler.cpp). BOTH
+// surviving callers can run in TARGET view, where the write is the granted
 // home-view-binding exception argued at the sweep's tail
 // (run_iteration_sweep_render, input_key_dispatch.cpp).
 // THE LOAD IN PLACE IS NOT A ROUTE EITHER (architect 2026-09-02): iteration
@@ -1217,8 +1220,8 @@ bool GuiFlagEditor::commit_bpm_edit() {
     return true;
 }
 
-// Full mode-on transition for BPM mode. Validates the activation gate, toggles
-// iter mode off if active, maintains the single-owner invariant, and marks the
+// Full mode-on transition for BPM mode. Validates the activation gate,
+// maintains the single-owner invariant, and marks the
 // FIRST selected marker as the BPM owner (mode exit wipes the bpm state, so a
 // fresh entry always opens on a blank field), then flips the mode flag. The
 // span endpoint is explicit — supplied by the `m` handler and recorded on the
@@ -1236,15 +1239,15 @@ void GuiFlagEditor::enter_bpm_mode() {
     if (owner < 0 || owner >= static_cast<int>(mv_const.size())) return;
     if (!bpm_popup_eligible_marker(mv_const[owner])) return;
 
-    if (app.iteration_mode_enabled) {
-        // Forced iter-off is a mode exit like any other and takes the same
-        // wipe the `i` toggle's turning-off branch runs — otherwise `m`
-        // would smuggle live brackets out of iteration mode invisibly, and
-        // the BPM commit's tempo rewrite would land on markers still
-        // carrying them.
-        wipe_iter_state();
-        app.iteration_mode_enabled = false;
-    }
+    // NO FORCED ITER-OFF (architect 2026-09-10, that evening: "we should card
+    // the exit, because it is still one button automatically affecting the
+    // other" — NO SILENT SWAPS ANYWHERE). Bare `m` used to be grid iterations'
+    // second exit, wiping every bracket on its way in; it is REFUSED under a
+    // lit lamp now, at the keyboard gate with the lock's own card and on the
+    // BPM Iterations button's greyed face (iteration_lock_key_blocked and
+    // iteration_lock_greys), so this body can only ever run with the lamp
+    // dark and there is no bracket here to smuggle out. Bare `i` is the
+    // mode's one exit.
 
     auto& mv = app.warpmarkers.markers_mut();
     for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
