@@ -531,6 +531,14 @@ struct DragState {
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
 //
+// A PASS IS A TARGET AND THE DRAG CONVERTS IT, exactly as the arrows do
+// (architect 2026-09-10: "the pass inherits whatever it was and then applies
+// on up and down, so we should allow the drag on passes as well"). Its start
+// is the EFFECTIVE base and scale, and the first write freezes the marker to
+// owning at the stepped value — one seed body for the two hands
+// (warp_tempo_step_start, warpmarkers_ops.h). A LABEL REF is still no target,
+// having no tempo of its own to walk from.
+//
 // IT IS THE MARKER DRAG'S SIBLING, NOT ITS STATE: DragState above holds a
 // POSITION proposal in the displayed domain with walls, an overlay and a
 // commit-time column snap, and none of that has a meaning here — a value has
@@ -561,15 +569,29 @@ struct ValueDragState {
     MarkerCell cell    = MarkerCell::Payload;
     int        press_y = 0;    // window px: the travel is measured from here
     // The value the press found, in the cell's own domain: authored CENTS on
-    // the payload and on a warp bound, HOPS on a phase-reset bound.
+    // the payload and on a warp bound, HOPS on a phase-reset bound. ON A PASS
+    // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
+    // "the pass inherits whatever it was and then applies on up and down"):
+    // the seed comes from warp_tempo_step_start (warpmarkers_ops.h), the very
+    // body the arrows' own loop reads, so the drag walks from the tempo the
+    // flag shows and the first write freezes the marker to owning at it.
     int64_t    start_value = 0;
+    // THE OTHER HALF OF THAT SEED — the typed scale the payload arm writes
+    // beside the cents. On an OWNER it is the marker's own scale, so writing
+    // it back is a no-op that keeps the arm's three writes identical to the
+    // step's; on a PASS it is the effective scale the freeze has to carry,
+    // which is what makes the conversion lossless. Neither bound arm reads it
+    // (a bound is one integer and carries no scale).
+    std::optional<double> start_scale;
     // The step count the last applied motion landed on. The motion arm returns
     // early when the count has not moved, so a hand wandering inside one step's
-    // 4 px writes nothing and damages nothing.
+    // kValueDragPxPerStep writes nothing and damages nothing.
     int64_t    last_steps  = 0;
     // The TEMPO arm's undo payload, captured at the begin and pushed by the
-    // commit iff the value actually moved. Empty on a bound drag by
-    // construction — that arm pushes nothing.
+    // commit iff the marker's tempo_inherits/tempo_cents PAIR actually moved
+    // (a pass converted and dragged back to its own base moved the pair, not
+    // the cents). Empty on a bound drag by construction — that arm pushes
+    // nothing.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
 };
 
@@ -577,12 +599,19 @@ struct ValueDragState {
 // number, and a retune is this line (architect 2026-09-10). It is a LENGTH and
 // so it SCALES: the drag reads it through scaled_px, exactly as every other
 // authored press-road distance does (the drag gate, the double-click slack,
-// the touch slop), because a hand's four pixels at 225% is not the same
-// gesture as a hand's four pixels at 100%. Durations never scale; this is not
-// one. The same four pixels buy a cent, a bound cent and a hop alike — the
+// the touch slop), because a hand's eight pixels at 225% is not the same
+// gesture as a hand's eight pixels at 100%. Durations never scale; this is not
+// one. The same eight pixels buy a cent, a bound cent and a hop alike — the
 // step is one step whatever the cell's domain is, which is what makes the
 // gesture read the same on every cell of every flag.
-inline constexpr double kValueDragPxPerStep = 4.0;
+//
+// EIGHT AND NOT FOUR since the afternoon of the day it landed (architect
+// 2026-09-10, on his own first drag: four was "a little fast"). It is the drag
+// GATE's own length now, which is a coincidence worth knowing rather than a
+// derivation: the crossing arrives already one whole step from the press, so
+// the first applied motion always carries a step and the hand never has to
+// travel twice to see the value move.
+inline constexpr double kValueDragPxPerStep = 8.0;
 
 // Drag-time position overlay. Paint sites consult this when a marker
 // index appears in `indices` to read the proposed new time from
@@ -11603,21 +11632,29 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // the map's standing rule, and the reason this is a predicate rather than a
 // test inside the crossing.
 //
-// THE PAYLOAD ARM IS THE BASE TEMPO AND ONLY A REAL OWNER'S (the architect:
-// "never a pass"). A PASS is refused even though the Up/Down step CONVERTS one
-// (it freezes the pass to owning at the stepped value): a keyboard step is a
-// deliberate press with a card behind it, while a drag is a hand that has
-// already committed to sliding — turning a reference into an owner under a
-// slide is a structural edit the gesture never advertises. A LABEL REF is
-// refused for the plain reason it has no tempo of its own, and a DISABLED
-// marker because the write would be render-inert. The two facts are asked of
-// their own owners rather than respelled — iter_bracket_carrier (warpmarkers.h,
-// "this marker owns a base tempo") and effective_disabled (the cascade's one
-// owner) — which is the same composition iter_popup_eligible_marker happens to
-// be today; it is deliberately not CALLED here, because that predicate answers
-// "the sweep reads this marker" and this one answers "this flag has a tempo to
-// drag", and the two are free to diverge exactly as the BPM owner's already
-// has.
+// THE PAYLOAD ARM IS THE BASE TEMPO, AND A PASS IS ONE OF ITS TARGETS
+// (architect 2026-09-10, the afternoon of the day it landed: "the pass
+// inherits whatever it was and then applies on up and down, so we should allow
+// the drag on passes as well"). The morning's rule refused a pass on the
+// argument that a keyboard step is a deliberate press while a drag is a hand
+// already committed to sliding; he overruled it, and the reason the two hands
+// now agree is the one that matters — the drag IS the arrow step, so it
+// converts a pass exactly as the arrow does: seeded from the EFFECTIVE base
+// and scale (warp_tempo_step_start, warpmarkers_ops.h — one body, read by this
+// gesture's begin and by the step's own loop) and frozen to owning at the
+// first write.
+//
+// SO THE ARM IS TWO PER-MARKER TERMS, SPELLED. A LABEL REF is refused for the
+// plain reason it has no tempo of its own to walk from — the step's own loop
+// skips it on the same `label_ref.empty()` test (adjust_tempo_cents,
+// warpmarkers_ops.cpp), which is where that fact is asked in this product; no
+// predicate names it alone. A DISABLED marker is refused through the cascade's
+// one owner, effective_disabled, because the write would be render-inert.
+// iter_bracket_carrier is NOT the composition any more and was never the right
+// one: it answers "this marker can carry a bracket", which the pass ruling
+// severed from "this flag has a tempo to drag" the moment a pass became a
+// target. iter_popup_eligible_marker is not called here for the same reason it
+// never was — it answers "the sweep reads this marker".
 //
 // BOTH LOCKS REFUSE THE PAYLOAD. Read-only refuses because a base tempo is
 // authored musical content; the ITERATION lock refuses because the tempo
@@ -11629,6 +11666,10 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // (tempo_cent_step_target_view_refusal_for): in T view a pass, a ref or a
 // coincident-collapse member is refused, and the drag asks the same owner
 // rather than a second reading of it — ABOUT THE MARKER IT WAS ASKED ABOUT.
+// SO A PASS IS A TARGET IN SOURCE VIEW AND NOT IN TARGET VIEW, and that split
+// is the arrows' and not this gesture's: in T view only a marker that owns its
+// tempo can be stepped at all, so there the cursor shows the Arrow over a pass
+// and the drag does not begin — the cue saying what the arrow key would card.
 // The focus-shaped form would have been the wrong subject here: the cursor
 // map asks this at a RESTING HOVER, before any press has selected the flag
 // under the pointer, so reading last_selected_marker would let one flag's
@@ -11647,7 +11688,7 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 //
 // EVERYTHING ELSE IS FALSE: the measure box (a score position, not a number —
 // the arrows say so on a card and the pointer says it in silence), a phase
-// reset's payload, a pass, a ref, a disabled marker. THE POINTER'S REFUSAL IS
+// reset's payload, a ref, a disabled marker. THE POINTER'S REFUSAL IS
 // SILENT everywhere in this gesture: a pointer gesture's non-event is its own
 // answer, the flag drag's standing rule.
 inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
@@ -11669,7 +11710,10 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         if (authoring_locked(a)) return false;
         const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return false;
-        if (!iter_bracket_carrier(mv[static_cast<size_t>(idx)])) return false;
+        // A TEMPO OF ITS OWN TO WALK FROM — an owner has one and a PASS
+        // resolves one, so only a LABEL REF is refused here (its value is the
+        // definition's, and the step's loop skips it on this same test).
+        if (!mv[static_cast<size_t>(idx)].label_ref.empty()) return false;
         if (effective_disabled(mv, idx)) return false;
         // The arrows' target-view kind refusal, asked of its one owner about
         // THIS marker. It answers null in source view, so this line is the
@@ -16692,7 +16736,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // is an overlay, this drag's cents land in the warp store as the hand moves —
 // so in target view every motion changes the target map's hash, and without
 // the freeze the tick's dirty-detect would dispatch a full waveform render per
-// four pixels of travel and publish a NEW map (and a rebuilt flag row) under
+// step of travel and publish a NEW map (and a rebuilt flag row) under
 // the hand. The freeze protects the SCREEN from the store, which is what makes
 // the gesture's own ruling true: motion damages the top strip alone, the flags
 // keep sitting on the DISPLAYED basis, and the map re-lands ONCE, at the

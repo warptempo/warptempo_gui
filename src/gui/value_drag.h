@@ -31,6 +31,16 @@ struct GuiTargetRender;
 // they clamp silently, exactly as a held Up does at the bracket's end. There
 // is no second arithmetic anywhere in this file.
 //
+// A PASS IS A TEMPO TARGET AND THE DRAG CONVERTS IT (architect 2026-09-10:
+// "the pass inherits whatever it was and then applies on up and down, so we
+// should allow the drag on passes as well"). The seed is the arrow step's own
+// body — warp_tempo_step_start (warpmarkers_ops.h) — so the value the hand
+// walks from is the EFFECTIVE base the flag shows, and the first motion writes
+// the step's own three fields: `tempo_inherits` false, the landed cents, and
+// the effective scale that keeps the freeze lossless. A LABEL REF is still no
+// target, having no tempo of its own; in TARGET view a pass is none either,
+// the arrows' own kind refusal ruling there (value_drag_target, app_state.h).
+//
 // THE TARGET RULE IS NOT HERE EITHER: value_drag_target (app_state.h) answers
 // which flags and which cells this gesture may touch, and the CURSOR MAP reads
 // that same predicate, so the cue promises exactly the gesture. `begin` asks
@@ -38,8 +48,12 @@ struct GuiTargetRender;
 //
 // THE TEMPO ARM'S ONE UNDO ENTRY IS THE COMMIT'S, never a motion's, which is
 // the marker drag's own shape: motion writes the live store and damages the
-// top strip, and the release pushes the pre-drag snapshot iff the value
-// actually moved. It is FENCED from the tap-coalesce window for free —
+// top strip, and the release pushes the pre-drag snapshot iff the marker's
+// `tempo_inherits`/`tempo_cents` PAIR actually moved — the pair and not the
+// cents alone, because a pass dragged back to its own effective base is still
+// an owner now, which is the same answer the arrow step's byte-equal pop
+// gives (warp_row_fields_differ carries `tempo_inherits`). It is FENCED from
+// the tap-coalesce window for free —
 // Undo::push_undo_warp clears the coalescing stamp — so an Up tapped straight
 // after a drag opens its own entry rather than merging into the drag's, which
 // is exactly how commit_drag's entry is fenced (that body records no gesture
@@ -78,8 +92,9 @@ struct ValueDragOps {
     bool begin(int marker, MarkerCell cell, int press_y);
     // One motion event's whole effect. Cheap and idempotent inside a step.
     void apply_motion(int mouse_y);
-    // End the gesture, pushing the tempo arm's one undo entry iff the value
-    // moved. Called by the release, by the lost-button arm and by the
+    // End the gesture, pushing the tempo arm's one undo entry iff the
+    // marker's tempo pair moved (the rule is above). Called by the release,
+    // by the lost-button arm and by the
     // force-end finalizer alike — every end of this gesture commits what
     // stands, the standing no-cancel rule.
     void commit();

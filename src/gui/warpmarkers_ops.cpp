@@ -600,6 +600,21 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
     target_render.trigger();
 }
 
+// WHERE A TEMPO STEP STARTS FROM, one body for the arrow and the drag alike.
+// The whole argument — why a pass resolves through the PROJECTION and not the
+// raw backward walk, and why the no-owner answer is {100, nullopt} — is at the
+// declaration (warpmarkers_ops.h).
+WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
+                                     const std::vector<WarpMarker>& resolved,
+                                     int idx, long total_frames) {
+    if (!m.tempo_inherits) return {m.tempo_cents, m.tempo_scale};
+    const MarkerEffective eff = marker_effective(resolved, idx, total_frames);
+    // base_cents == 0 ("could not resolve") is unreachable from a pass; mirror
+    // the raw walk's {100, nullopt} no-owner fallback.
+    if (eff.base_cents == 0) return {100, std::nullopt};
+    return {eff.base_cents, eff.scale};
+}
+
 // Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
 // ONLY: a label ref is silently skipped (no tempo to nudge — convert via
 // Ctrl+N first); pass markers resolve walk-backward to get their starting
@@ -727,38 +742,18 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     selection.collapse_to_focused();
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
-    // Single-marker resolve via marker_effective (slice once) — the
-    // projection-aware walk, NOT the raw backward walk. The Up/Down step freezes a
-    // pass to owning at the nudged value, so its starting tempo/scale must be
-    // the value hover shows and the render produces: under a coincident-stack
-    // collapse the raw walk would seed the freeze from a collapsed group
-    // member's authored tempo, silently diverging from the projection's 1.00
-    // owner. marker_effective resolves a surviving un-collapsed pass against
-    // that same projection, keeping the freeze lossless.
+    // SLICE ONCE for the seed body below, which resolves a pass through the
+    // projection rather than the raw backward walk; the argument for that walk
+    // lives at warp_tempo_step_start's declaration (warpmarkers_ops.h), the
+    // one body this arm and the VALUE DRAG's begin share.
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         GuiWarpMarker& m = proposed[idx];
         if (!m.label_ref.empty()) continue;
-        int64_t               start_cents;
-        std::optional<double> start_scale;
-        if (m.tempo_inherits) {
-            const MarkerEffective eff =
-                marker_effective(resolved_src, idx, audio.total_frames());
-            // base_cents == 0 ("could not resolve") is unreachable from a
-            // pass; mirror the raw walk's {100, nullopt} no-owner fallback.
-            if (eff.base_cents != 0) {
-                start_cents = eff.base_cents;
-                start_scale = eff.scale;
-            } else {
-                start_cents = 100;
-                start_scale = std::nullopt;
-            }
-        } else {
-            start_cents = m.tempo_cents;
-            start_scale = m.tempo_scale;
-        }
+        const WarpTempoStart start =
+            warp_tempo_step_start(m, resolved_src, idx, audio.total_frames());
         // Constructive clamp into the authored-value bracket, the same
         // convention the settings brackets use: the value walks to the edge
         // and stops there, rather than refusing. This SINGLETON arm already
@@ -774,11 +769,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // naming it is what lets the Up / Down face compare THIS arithmetic
         // against the resting value instead of re-spelling "at the bracket
         // edge" (tempo_cent_step_direction_actionable, below).
-        const int64_t cents = tempo_cent_step_landing(start_cents, delta_cents);
+        const int64_t cents = tempo_cent_step_landing(start.cents, delta_cents);
         if (!m.tempo_inherits && cents == m.tempo_cents) continue;
         m.tempo_inherits = false;
         m.tempo_cents    = cents;
-        m.tempo_scale    = start_scale;
+        m.tempo_scale    = start.scale;
         // (THE BRACKET RODE THE BASE HERE from 2026-08-02 to 2026-09-10,
         // through a retroactive clamp that folded a live bracket onto the
         // stepped base so no sweep cell could leave the tempo bracket. The
