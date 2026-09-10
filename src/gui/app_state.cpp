@@ -397,6 +397,26 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // kMarkerStemGrabPx with them. The marker_stems stash it read survives as the
 // stem PAINTER's input alone.)
 
+// THE WALK'S SEAT — contract at the declaration (app_state.h). Factored out of
+// marker_walk_landing on 2026-09-10, when the cell walk landed and needed the
+// very same question ahead of the landing: "am I standing on a marker?" now
+// has one spelling for the in-group step and for the cell step alike.
+int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
+    const bool phase_reset = (a.active_markers_view == 'P');
+    const int n = phase_reset
+        ? static_cast<int>(a.phaseresetmarkers.markers().size())
+        : static_cast<int>(a.warpmarkers.markers().size());
+    const int last = a.last_selected_marker;
+    if (last < 0 || last >= n) return -1;
+    const int64_t src_f = phase_reset
+        ? a.phaseresetmarkers.markers()[static_cast<size_t>(last)].time_frame
+        : a.warpmarkers.markers()[static_cast<size_t>(last)].time_frame;
+    return source_frame_to_active_domain(a, audio, src_f) ==
+                   a.playhead_cursor_sample
+               ? last
+               : -1;
+}
+
 // Promoted from a lambda in main(). The captured `app`
 // reference is now an explicit argument.
 // THE MARKER WALK'S LANDING — contract at the declaration (app_state.h). This
@@ -434,12 +454,10 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
     const int64_t ph_f = a.playhead_cursor_sample;
     // Current stop: the focused marker when it sits on the playhead frame (a
     // playhead moved elsewhere breaks the equality and disables the in-group
-    // step naturally).
-    int cur_marker = -1;
-    {
-        const int last = a.last_selected_marker;
-        if (last >= 0 && last < n && frame_of(last) == ph_f) cur_marker = last;
-    }
+    // step naturally) — the ONE seat owner above, which marker_walk_step asks
+    // the same question of before it decides whether the step leaves this
+    // marker at all.
+    const int cur_marker = marker_walk_current_stop(a, audio);
     // In-group step first: one place within the shared frame in the walk
     // direction (ascending index forward, descending backward).
     if (cur_marker >= 0) {
@@ -469,6 +487,69 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
         }
     }
     return -1;   // nothing ahead
+}
+
+// ONE TAB / SHIFT+TAB STEP, WHOLE — contract at the declaration (app_state.h).
+// The body is a rank walk over the boxes of the SEAT and a fall to the marker
+// step, in that order, and it is the only place the two are composed.
+//
+// THE CELLS ARE ASKED OF THE PAINTER'S OWN PREDICATE (marker_paints_iter_cells,
+// app_state.h) and of nothing else, on the ACTIVE column, so a marker whose
+// flag shows no cells is walked exactly as it was before grid iterations
+// existed: with the mode dark the predicate is false everywhere, every arm
+// below falls straight through, and this returns the landing owner's answer
+// with a Payload cell — the pre-2026-09-10 walk, unchanged.
+MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
+                                bool forward) {
+    const char column = a.active_markers_view;
+    const int  stop   = marker_walk_current_stop(a, audio);
+    if (stop >= 0) {
+        if (marker_paints_iter_cells(a, column, stop)) {
+            // The seat's own boxes, in painted order: payload, lower, upper.
+            // Forward off the upper (or off the measure, which sits past it)
+            // leaves the marker; backward off the payload does.
+            if (forward) {
+                switch (a.addressed_cell) {
+                case MarkerCell::Payload:
+                    return {stop, MarkerCell::Lower, true};
+                case MarkerCell::Lower:
+                    return {stop, MarkerCell::Upper, true};
+                case MarkerCell::Upper:
+                case MarkerCell::Measure:
+                    break;
+                }
+            } else {
+                switch (a.addressed_cell) {
+                case MarkerCell::Measure:
+                    return {stop, MarkerCell::Upper, true};
+                case MarkerCell::Upper:
+                    return {stop, MarkerCell::Lower, true};
+                case MarkerCell::Lower:
+                    return {stop, MarkerCell::Payload, true};
+                case MarkerCell::Payload:
+                    break;
+                }
+            }
+        } else if (!forward && a.addressed_cell == MarkerCell::Measure) {
+            // A MEASURE SEAT ON A FLAG WITH NO CELLS: backward still steps to
+            // the box on its left, which here is the payload — the same rule
+            // as above with the two purple cells absent from the row. (A press
+            // on the measure box is what seats this axis, and it seats it on
+            // every marker of both columns, mode or no mode.)
+            return {stop, MarkerCell::Payload, true};
+        }
+    }
+    // THE MARKER STEP: the landing owner's answer, untouched.
+    const int m = marker_walk_landing(a, audio, forward);
+    if (m < 0) return {};
+    // SHIFT+TAB ENTERS A MARKER FROM ITS RIGHT, so it comes to rest on the
+    // rightmost purple box the flag actually paints — the upper cell where
+    // there are cells, the payload where there are none. Tab enters from the
+    // left and always rests on the payload, which is also the axis every
+    // focus write seats by itself (Selection::seat_focus).
+    if (!forward && marker_paints_iter_cells(a, column, m))
+        return {m, MarkerCell::Upper, false};
+    return {m, MarkerCell::Payload, false};
 }
 
 PayloadEligibility payload_eligibility(const AppState& app,

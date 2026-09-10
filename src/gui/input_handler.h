@@ -2625,7 +2625,27 @@ private:
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
     // this rule, over its own list (handle_history_mode_key).
-    void cycle_marker_focus(bool forward, MarkerLandingFrame frame);
+    //
+    // THE STEP'S UNIT IS A CELL WHILE GRID ITERATIONS IS LIT (architect
+    // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
+    // seat's purple boxes in painted order, then the next marker — and this
+    // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
+    // and damages the marker lane, and does NOTHING else: no select, no
+    // playhead land, no framing, so `frame` and the Center on next marker lamp
+    // it carries govern marker-to-marker steps alone. A marker step runs the
+    // gate, the select and the jump as it always has and then seats the step's
+    // cell behind them. It RETURNS the step it took ({-1} on the refusal) so
+    // the paired march can put its second tab in the first's shape.
+    MarkerWalkStep cycle_marker_focus(bool forward, MarkerLandingFrame frame);
+
+    // Seat one cell of THIS tab's walk seat — the paired march's second step
+    // and cycle_marker_focus's own write, one body. Contract at the definition
+    // (input_handler.cpp).
+    bool seat_walk_cell(MarkerCell cell);
+
+    // The addressed-cell write and the damage it owes, spelled once for the
+    // walk (input_handler.cpp).
+    void write_addressed_cell(MarkerCell cell);
 
     // Jump the playhead directly onto the currently focused marker
     // (app.last_selected_marker), stopping playback and then treating the

@@ -8207,13 +8207,19 @@ struct AppState {
     // reach over all four cells and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
     //
-    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
+    // WRITTEN TO A CELL BY FOUR ROUTES, each behind the selection write it
     // rides: a marker press inside run_marker_click_act (the pressed cell,
     // all four, on all three click shapes), the measure editor's open
-    // (Measure) and the bound editor's open (Lower or Upper) — an editor open
-    // seats the cell it edits.
+    // (Measure), the bound editor's open (Lower or Upper) — an editor open
+    // seats the cell it edits — and, since 2026-09-10, THE TAB WALK
+    // (GuiInputHandler::cycle_marker_focus and the paired march's
+    // seat_walk_cell over it), which steps through the focused marker's PURPLE
+    // cells while grid iterations paints them and enters a marker from the
+    // right on Shift+Tab. The walk's cell write comes after its own seat for
+    // the same reason the other three do, and a SAME-MARKER step is that write
+    // and nothing else (marker_walk_step, below).
     //
-    // A FOURTH ROUTE WAS THE RESTORE OF A BRACKET-ONLY UNDO ENTRY, and it went
+    // A FIFTH ROUTE WAS THE RESTORE OF A BRACKET-ONLY UNDO ENTRY, and it went
     // with the entry (architect 2026-09-10): the bracket left the undo domain
     // whole, so no entry carries a cell and no restore can put a bound axis
     // back. The axis is session state and nothing else now.
@@ -8226,9 +8232,11 @@ struct AppState {
     // coincidence auto-select at the four entry chokepoints and the flag
     // editor's open all reach the focus through those mutators and inherit
     // the reset (the undo restore's touched-set select goes through
-    // replace_selection for exactly this reason; a BRACKET-ONLY entry's
-    // restore then writes its own cell back at the tail, the one restore that
-    // does not come to rest on the payload). The reorder remap
+    // replace_selection for exactly this reason). NO RESTORE COMES TO REST
+    // ANYWHERE BUT THE PAYLOAD since the bracket left the undo domain, and the
+    // Tab walk is the one focus-CHANGING route that writes a cell back over
+    // the reset: a Shift+Tab entering a cell-bearing marker rests on its upper
+    // cell, which is where a walk from the right belongs. The reorder remap
     // (remap_marker_indices_after_reorder) is not a focus change — the same
     // marker keeps its cell. And the mode going off puts a Lower or Upper
     // axis back on the payload (wipe_iter_state, which every exit runs),
@@ -8237,7 +8245,9 @@ struct AppState {
     // READERS: the Up/Down dispatch's fork (input_handler.cpp; a Measure
     // axis refuses through addressed_cell_step_refusal), the Return arm's
     // editor fork, the flag painter's bright cell (render_flags through the
-    // flag cache's fp_addressed_cell), the Up/Down and Edit Flag buttons'
+    // flag cache's fp_addressed_cell), THE TAB WALK'S OWN STEP
+    // (marker_walk_step, which reads the axis as the box it is standing in),
+    // the Up/Down and Edit Flag buttons'
     // face and tooltip (redesign_button_enabled / redesign_button_tooltip)
     // and THE ITERATION LOCK'S KEYBOARD GATE, which admits Up/Down and Return
     // on a bound axis and drops them on any other
@@ -10051,6 +10061,40 @@ inline bool iteration_column_lit(const AppState& app, char column) {
     return app.iteration_mode_enabled && app.active_markers_view == column;
 }
 
+// DOES THIS MARKER PAINT ITS TWO BOUND CELLS RIGHT NOW — the mode's
+// column-shaped question and the column's own eligibility in ONE name.
+// `column` is 'W' or 'P', `idx` an index into that column's store; an
+// out-of-range index answers false through the eligibility owner.
+//
+// IT EXISTS FOR THE TAB WALK (architect 2026-09-10: "I'd like for the bound
+// cells to be part of the tab walk, but only the purple cells"): the walk
+// stops on a marker's Lower and Upper cells while they are painted and steps
+// straight past the marker when they are not, so its stop rule must be the
+// PAINTER'S rule and not a second reading of it — a walk that could seat a
+// bound axis on a flag showing no cells would light a box that is not there
+// and hand the arrows a bound to step on a marker the sweep never reads.
+// marker_walk_step (below) is its one reader.
+//
+// THE PAINTER SPELLS THE SAME COMPOSITION ACROSS ITS PARAMETER BOUNDARY, and
+// cannot call this: render_flags / render_phase_reset_flags take their store,
+// their selection and their mode verdict as EXPLICIT arguments and no
+// AppState at all, every one of them a field of the flag cache's fingerprint
+// (waveform_cache.cpp), so the mode term reaches warp_iter_cells /
+// phase_iter_cells (render.cpp) as the `iteration_on` bool its caller reads
+// out of iteration_column_lit above, over the very column this asks about
+// (app.active_markers_view, which is the column that pass paints). The two
+// readings cannot drift because BOTH TERMS HAVE ONE OWNER EACH — this
+// function and the painter's two cell bodies call the same
+// iteration_column_lit and the same per-column eligibility predicate, and
+// neither restates either.
+inline bool marker_paints_iter_cells(const AppState& app, char column,
+                                     int idx) {
+    if (!iteration_column_lit(app, column)) return false;
+    return (column == 'P')
+        ? phase_reset_iter_eligible_marker(app.phaseresetmarkers.markers(), idx)
+        : iter_popup_eligible_marker(app.warpmarkers.markers(), idx);
+}
+
 // -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
 //
 // The vertical arrows' SECOND step body steps one bound of the focused
@@ -11280,9 +11324,11 @@ inline int active_marker_count(const AppState& a) {
 // domain), disabled markers are skipped as if absent (the warp side through
 // effective_disabled's cascade), trim bounds are not stops. Defined in
 // app_state.cpp. TWO READERS: Selection::cycle_selection, whose whole
-// landing decision this IS, and marker_walk_actionable below — itself read by
-// the Walk previous / Walk next buttons' face AND, since 2026-08-30, by the
-// ACT's own leading gate (GuiInputHandler::cycle_marker_focus), so the face,
+// landing decision this IS, and marker_walk_step below — the MARKER half of
+// one Tab step, wrapped since 2026-09-10 in the cell walk that may come to
+// rest on the seat instead. Everything downstream reads the step: the Walk
+// previous / Walk next buttons' face and, since 2026-08-30, the ACT's own
+// leading gate (GuiInputHandler::cycle_marker_focus), so the face,
 // the refusal and the landing are one answer and an all-disabled store or
 // "nothing ahead in this direction" greys exactly where the step refuses. IT
 // IS AN O(n) SCAN PER TICK PER BUTTON in the face's hands, the class the
@@ -11291,7 +11337,47 @@ inline int active_marker_count(const AppState& a) {
 int marker_walk_landing(const AppState& a, const GuiAudio& audio,
                         bool forward);
 
-// WOULD A MARKER-WALK STEP THIS WAY ACT? The landing owner's answer in one
+// THE WALK'S SEAT, factored out of the landing owner so the two bodies that
+// need it spell it once: the index of the FOCUSED marker when it sits on the
+// playhead's frame in the ACTIVE domain, or -1 when it does not (a playhead
+// moved elsewhere breaks the equality, which is what disables the in-group
+// step naturally). It asks no disabled bit — the focus is the focus whatever
+// its state, and the disabled skip belongs to the scan past this seat.
+// TWO READERS: marker_walk_landing, whose in-group step it gates, and
+// marker_walk_step, which asks whether the seat has purple cells to step
+// through before it moves to another marker at all. Defined in app_state.cpp.
+int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
+
+// ONE TAB / SHIFT+TAB STEP, WHOLE — which marker the walk comes to rest on and
+// WHICH OF ITS CELLS is addressed there (architect 2026-09-10: "with
+// iterations mode off the tab is unchanged; with it on, Tab and Shift+Tab walk
+// includes the bound cells"). `marker` is -1 when the step would land nothing,
+// which is the whole refusal test; `same_marker` says the step never left the
+// seat it started on — an ADDRESSED-CELL write and nothing else, no select, no
+// playhead land, no framing.
+//
+// THE RANK IS THE PAINTED ORDER, purple only: payload < lower < upper. The
+// MEASURE box sits past upper and is NEVER A STOP — it is blue, it carries no
+// value the arrows can step, and the architect kept the walk to the boxes the
+// colour ties together ("only the purple cells — measure is excluded, which is
+// a good reason we went with purple for the payload and the bounds"). A
+// Measure axis is still a legal SEAT (a press lands on that box), so the
+// backward step reads it as "one box right of upper" and walks into whatever
+// box actually stands left of it.
+struct MarkerWalkStep {
+    int        marker      = -1;
+    MarkerCell cell        = MarkerCell::Payload;
+    bool       same_marker = false;
+};
+
+// Defined in app_state.cpp, over marker_walk_current_stop, the painter's own
+// marker_paints_iter_cells and marker_walk_landing — the marker step is the
+// landing owner's answer untouched, so a walk with no cells anywhere is the
+// walk that was there before the cells existed.
+MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
+                                bool forward);
+
+// WOULD A MARKER-WALK STEP THIS WAY ACT? The step owner's answer in one
 // bit. TWO READERS, and that is the point of it: the Walk previous / Walk next
 // buttons' disabled face, and the ACT's own leading gate since 2026-08-30
 // (GuiInputHandler::cycle_marker_focus, where the refusal's card and its
@@ -11301,9 +11387,14 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
 // cycle seeds from the playhead and can land, while a full store can still
 // land nothing. (Walk both tabs is never a whole no-op: its tab switch acts
 // whatever the two stores hold.)
+//
+// IT READS THE STEP RATHER THAN THE LANDING since 2026-09-10, and the widening
+// is the point: a Shift+Tab standing on the FIRST marker's upper cell acts —
+// it steps to that same marker's lower cell — where the landing owner alone
+// would answer "nothing behind me" and grey the button over a live key.
 inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
                                    bool forward) {
-    return marker_walk_landing(a, audio, forward) >= 0;
+    return marker_walk_step(a, audio, forward).marker >= 0;
 }
 
 // How a marker landing treats the camera, stated by the caller that asks for

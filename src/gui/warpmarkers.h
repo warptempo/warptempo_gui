@@ -381,8 +381,8 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // bracket's writers, which is why it stays. (A 2026-09-09 reading claimed a
 // cascade-disabled marker was the reachable case the term existed for; that
 // was impossible even then, a ref being no carrier — codex round 5's P3.)
-// FIVE READERS,
-// and a disabled marker is invisible at all five: the sweep's
+// SIX READERS,
+// and a disabled marker is invisible at all six: the sweep's
 // dispatch (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's
 // plan (iteration_sweep_plan, app_state.h) skip the marker, so its bracket
 // neither multiplies the cell count nor names a byte-identical cell — the
@@ -390,9 +390,12 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // flag painter (render_flags, render.cpp) paints the two bound cells on
 // exactly these markers and no cells on a disabled flag; the bound step
 // (GuiWarpMarkersOps::adjust_iter_bound_cents) skips an ineligible member in
-// a group and refuses an ineligible singleton on a card; and the bound
+// a group and refuses an ineligible singleton on a card; the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
-// paints — no cell, no editor. (The name is the retired hover popup's — the
+// paints — no cell, no editor; and the TAB WALK stops on a marker's two
+// purple cells only where they are painted, asking through the painter's own
+// composed predicate (marker_paints_iter_cells, app_state.h, this column's
+// arm). (The name is the retired hover popup's — the
 // eligibility rule outlived the surface that first displayed it.)
 inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
                                        int idx) {

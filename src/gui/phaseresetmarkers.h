@@ -140,18 +140,20 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // enabled bit under a standing bracket. This verdict is therefore about the
 // reset's PARTICIPATION and never about hiding a value it still holds — a belt
 // with no producer for a bracketed reset, kept for the warp predicate's own
-// reason (it states the SWEEP's input, not the bracket's writers). FIVE
+// reason (it states the SWEEP's input, not the bracket's writers). SIX
 // READERS, the warp predicate's own inventory in
-// this column's terms (greped 2026-09-09): the sweep's dispatch
+// this column's terms (re-greped 2026-09-10): the sweep's dispatch
 // (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's plan
 // (iteration_sweep_plan, app_state.h) skip the reset, so its bracket neither
 // multiplies the cell count nor names a cell; the flag painter
 // (render_phase_reset_flags, render.cpp) paints the two bound cells on exactly
 // these resets and none on a disabled flag; the bound step
 // (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) skips an ineligible member
-// in a group and refuses an ineligible singleton on a card; and the bound
+// in a group and refuses an ineligible singleton on a card; the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
-// paints — no cell, no editor.
+// paints — no cell, no editor; and the TAB WALK stops on a reset's two purple
+// cells only where they are painted, asking through the painter's own composed
+// predicate (marker_paints_iter_cells, app_state.h, this column's arm).
 inline bool phase_reset_iter_eligible_marker(
     const std::vector<GuiPhaseResetMarker>& pv, int idx) {
     if (idx < 0 || idx >= static_cast<int>(pv.size())) return false;

@@ -934,6 +934,15 @@ struct IterCellText {
 // flag pass and by the measure editor's anchor (committed_flag_box_w), so the
 // resting box and the field that opens past it cannot disagree about where
 // the cells end.
+//
+// `iteration_on && iter_popup_eligible_marker` IS marker_paints_iter_cells
+// (app_state.h) spelled across this painter's parameter boundary: the Tab
+// walk asks that predicate whether a marker has purple cells to stop on, and
+// the two readings compose the same two owners — the caller's one
+// iteration_column_lit read (waveform_cache.cpp, over the column this pass
+// paints) and the eligibility predicate below. This body cannot call it
+// because the flag painter takes no AppState at all, every content input
+// arriving as an explicit argument that the flag cache fingerprints.
 static IterCellText warp_iter_cells(const std::vector<GuiWarpMarker>& markers,
                                     int i, bool iteration_on) {
     IterCellText c;
@@ -953,7 +962,9 @@ static IterCellText warp_iter_cells(const std::vector<GuiWarpMarker>& markers,
 // bracket). Shared by the flag pass, the measure editor's anchor
 // (committed_flag_box_w) and the bound field's own (committed_cell_seam_off)
 // for the same reason its twin is: the resting boxes and the field that opens
-// past them cannot disagree about where the cells end.
+// past them cannot disagree about where the cells end. Its composition is
+// marker_paints_iter_cells' on this column, and the note at its twin above
+// covers why the painter spells it rather than calling it.
 static IterCellText phase_iter_cells(
     const std::vector<GuiPhaseResetMarker>& phase_resets, int i,
     bool iteration_on) {

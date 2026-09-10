@@ -8462,10 +8462,29 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // persists into tab A's saved viewport and is what tab A restores on the
     // way back. Centring once at the end would silently leave tab A framed on
     // its old focus. Do not collapse these two into one.
+    //
+    // IT WALKS THE BOUND CELLS TOO (architect 2026-09-10, on the cells joining
+    // the bare Tab walk: it "walks the cells too, for consistency"), and it
+    // does so WITH NO STATE OF ITS OWN: the second step REPEATS THE FIRST
+    // STEP'S SHAPE. A per-tab addressed cell would be lost at every switch —
+    // switch_active_tab_view_to clears the selection and then runs the
+    // coincidence auto-select at the new tab's playhead, and every Selection
+    // mutator re-seats the payload (Selection::seat_focus) — so the march
+    // STATES its second step exactly as it already states its framing. When
+    // the first step moved between cells of one marker, seat_walk_cell puts
+    // the same cell on the second tab's own seat; when that tab has no seat to
+    // put it on, the march falls back to the ordinary marker step. THE TWO
+    // TABS SHARE BOTH MARKER STORES, so a bracket is common to both by
+    // construction and a march begun with both tabs sitting on cell-bearing
+    // markers keeps them in lockstep: payload, lower, upper, then the next
+    // marker on both. (Planner default 2026-09-10, on the architect's "walks
+    // the cells too, for consistency" — he has not seen this shape.)
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
-        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        const MarkerWalkStep first =
+            cycle_marker_focus(true, MarkerLandingFrame::Center);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        if (!first.same_marker || !seat_walk_cell(first.cell))
+            cycle_marker_focus(true, MarkerLandingFrame::Center);
         target_render.trigger();
         return true;
     }
