@@ -4251,11 +4251,13 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // straddling a seam opens the one the first click named. The gates
     // differ with them: the PAYLOAD editor keeps read-only and the P view,
     // the BOUND editor read-only and the cell's own eligibility (a cell that
-    // paints is eligible, and the open is a belt behind that), while the
+    // paints is eligible, and the open is a belt behind that) on EITHER column
+    // since 2026-09-09, while the
     // MEASURE editor asks read-only ALONE — measures are the fourth ruled
     // exception to the home-view binding, so the phase column's measure
-    // double-click is that column's FIRST pointer authoring gesture,
-    // measure-scoped and nothing wider. Since 2026-08-24 the payload editor
+    // double-click was that column's FIRST pointer authoring gesture,
+    // measure-scoped and nothing wider; a bound cell's is the second, and what
+    // it authors is a session-only render parameter rather than content. Since 2026-08-24 the payload editor
     // no longer differs about the AUDIO view either: it is the fifth
     // exception's member and opens off warp's home as well. Every open route
     // opens fully SELECTED (open-selected), so there is no clicked-glyph
@@ -4276,10 +4278,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
             break;
         case MarkerCell::Lower:
         case MarkerCell::Upper:
-            // A bound cell only paints on the warp column's eligible
-            // markers under a lit mode, so a seed naming one came from
-            // there; the open's own belts re-ask it.
-            flag_editor.enter_iter_bound_edit(hit, dc_at_press.cell);
+            // A bound cell paints on EITHER column's eligible markers under
+            // a lit mode (2026-09-09 — the phase-reset column's own hop
+            // bracket), so the open takes the ACTIVE column exactly as the
+            // measure editor's does and its own belts re-ask the eligibility.
+            flag_editor.enter_iter_bound_edit(app.active_markers_view, hit,
+                                              dc_at_press.cell);
             return;
         case MarkerCell::Measure:
             // The seed is the marker's own measure, which is the whole of

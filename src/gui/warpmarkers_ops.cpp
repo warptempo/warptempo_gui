@@ -1233,14 +1233,50 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // re-land and no target-view kind refusal — the step is target-legal as the
 // bracket is. The entry is the bracket-only kind (affects_persistence false,
 // so the dirty dot never lights for it) and the damage is the marker lane's.
+//
+// IT HAS A TWIN SINCE 2026-09-09, GuiPhaseResetMarkersOps::adjust_iter_bound_
+// hops, which is this body clause for clause in the HOP domain over the
+// phase-reset store. The two share the FOUR PREDICATES below — each forking on
+// the live column inside its own body, so the Up/Down dispatch, the buttons'
+// face and their tooltip keep ONE switch each — and they share
+// GestureKind::IterBoundStep, the stamp's subject terms keeping a warp burst
+// and a phase burst apart (a column switch clears the selection).
 
 // THE GROUP BOUND STEP'S WALL SCAN — the contract is at the declaration
 // (app_state.h). A const walk, extracted for the same reason the tempo scan
 // was: the act reads the verdict and the Up/Down face reads its boolean
 // wrapper, so the wall set has one spelling.
 IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
+                                                        const GuiAudio& audio,
                                                         MarkerCell side,
-                                                        int64_t delta_cents) {
+                                                        int64_t delta) {
+    // THE PHASE ARM (2026-09-09), the same scan in the hop domain: an
+    // INELIGIBLE member (a disabled reset, whose bracket is dormant) is
+    // SKIPPED, the SURVIVORS take the step together or not at all, and the
+    // landing owner's clamp is what "cannot take the whole step" means. Its
+    // window is the hop window's rather than the tempo bracket's, which is
+    // what `audio` is here for.
+    if (a.active_markers_view == 'P') {
+        const auto& pv = a.phaseresetmarkers.markers();
+        const int   pn = static_cast<int>(pv.size());
+        const int   d  = static_cast<int>(delta);
+        int phase_survivors = 0;
+        for (int idx : a.selected_markers) {
+            if (idx < 0 || idx >= pn) continue;   // defensive
+            if (!phase_reset_iter_eligible_marker(pv, idx)) continue;
+            ++phase_survivors;
+            const GuiPhaseResetMarker& p = pv[static_cast<size_t>(idx)];
+            const int start = side == MarkerCell::Upper
+                                  ? p.iter_end_hops.value_or(0)
+                                  : p.iter_start_hops.value_or(0);
+            if (phase_iter_bound_step_landing(a, audio, idx, side, d) !=
+                start + d)
+                return IterBoundStepGroupVerdict::Walled;
+        }
+        return phase_survivors > 0 ? IterBoundStepGroupVerdict::Steps
+                                   : IterBoundStepGroupVerdict::Empty;
+    }
+    const int64_t delta_cents = delta;
     const auto& mv = a.warpmarkers.markers();
     const int   n  = static_cast<int>(mv.size());
     int survivors = 0;
@@ -1266,10 +1302,28 @@ IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
 // The DIRECTIONAL half of the Up/Down face with a bound addressed — the
 // contract is at the declaration (app_state.h). Forks where the act forks.
 bool iter_bound_step_direction_actionable(const AppState& a,
+                                          const GuiAudio& audio,
                                           MarkerCell side,
-                                          int64_t delta_cents) {
+                                          int64_t delta) {
     if (a.selected_markers.size() >= 2)
-        return iter_bound_step_group_actionable(a, side, delta_cents);
+        return iter_bound_step_group_actionable(a, audio, side, delta);
+    // THE PHASE ARM: the same singleton compare in the hop domain. An
+    // INELIGIBLE focus (a disabled reset) answers TRUE, its refusal being a
+    // fact about the reset's state that the act cards through the kind refusal
+    // below — the warp arm's own rule.
+    if (a.active_markers_view == 'P') {
+        const auto& pv = a.phaseresetmarkers.markers();
+        const int   f  = a.last_selected_marker;
+        if (f < 0 || f >= static_cast<int>(pv.size())) return true;  // belt
+        if (!phase_reset_iter_eligible_marker(pv, f)) return true;
+        const GuiPhaseResetMarker& p = pv[static_cast<size_t>(f)];
+        const int start = side == MarkerCell::Upper
+                              ? p.iter_end_hops.value_or(0)
+                              : p.iter_start_hops.value_or(0);
+        return phase_iter_bound_step_landing(a, audio, f, side,
+                                             static_cast<int>(delta)) != start;
+    }
+    const int64_t delta_cents = delta;
     const auto& mv = a.warpmarkers.markers();
     const int   f  = a.last_selected_marker;
     if (f < 0 || f >= static_cast<int>(mv.size())) return true;  // belt
@@ -1290,6 +1344,18 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // to ride it), and a disabled owner's is that its bracket is dormant.
 const char* iter_bound_step_kind_refusal(const AppState& a) {
     if (a.selected_markers.size() >= 2) return nullptr;
+    // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
+    // (there is no pass and no label ref on this column), so the only thing a
+    // focused reset's kind can refuse on is the DORMANT bracket of a disabled
+    // one.
+    if (a.active_markers_view == 'P') {
+        const auto& pv = a.phaseresetmarkers.markers();
+        const int   pf = a.last_selected_marker;
+        if (pf < 0 || pf >= static_cast<int>(pv.size())) return nullptr;
+        if (pv[static_cast<size_t>(pf)].disabled)
+            return "A disabled phase reset's range is dormant";
+        return nullptr;
+    }
     const auto& mv = a.warpmarkers.markers();
     const int   f  = a.last_selected_marker;
     if (f < 0 || f >= static_cast<int>(mv.size())) return nullptr;
@@ -1316,7 +1382,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     // key must leave the stamp exactly as the greyed button does (the rule at
     // Undo::coalesce_gesture). Silent: a benign one-dimensional refusal
     // already at its state, the cell's own value being the place to glance.
-    if (!iter_bound_step_direction_actionable(app, side, delta_cents))
+    if (!iter_bound_step_direction_actionable(app, audio, side, delta_cents))
         return std::nullopt;
     const bool merge =
         undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
@@ -1381,7 +1447,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
     // one-dimensional refusal that went silent. THE EMPTY STEP HAS THE
     // SINGLETON'S SENTENCE: a selection whose every member is ineligible has
     // no range to step, which is the empty-selection answer.
-    switch (iter_bound_step_group_verdict(app, side, delta_cents)) {
+    switch (iter_bound_step_group_verdict(app, audio, side, delta_cents)) {
     case IterBoundStepGroupVerdict::Steps:
         break;
     case IterBoundStepGroupVerdict::Walled:

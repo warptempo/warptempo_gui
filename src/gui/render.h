@@ -2206,6 +2206,11 @@ inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 // composer feeding a different surface — it seeds the DIALOG-HOSTED BpmBracket
 // editor and never reaches a flag box — so no flag width depends on it.
 inline constexpr size_t kIterCellGlyphs = 5;
+// (IT IS THE WARP TOKEN'S WIDTH AND IT BOUNDS BOTH COLUMNS. A phase-reset
+// cell's token is a sign and one digit — `+9` at the widest, the single-digit
+// bracket — so it is comfortably under this, and the cull bound above stays a
+// bound with nothing added for it. Nothing is LAID OUT against this constant;
+// every cell's real width comes from its own shaped run.)
 
 // An UPPER BOUND on a flag box's painted width, used only to decide how far
 // LEFT of the viewport a marker may sit and still reach into it (flags run
@@ -2226,6 +2231,12 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // is FIXED, so this stays a constant-time bound rather than becoming a
 // measurement, and it is charged flat rather than per marker — every carrier
 // paints both cells in the mode, unlike the measure, which most markers lack.
+//
+// ONE BOUND SERVES BOTH COLUMNS (2026-09-09): the phase-reset column's cells
+// carry a signed whole hop (`+9` at the widest — kIterCellGlyphs is the WARP
+// token's five and a hop cell is two), so the same charge over-states there by
+// three ems per cell and stays a bound, which is the only requirement. The
+// phase pass therefore needs no bound of its own and passes only the bit.
 // It remains a bound and not a layout input either way — over-admitting a
 // few offscreen markers per frame costs a shaped run each and drops nothing
 // visible.
@@ -3180,7 +3191,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the
 //              CALM kMarkerFlagFill either way (the architect's explicit rule).
 //
-// `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04): while the
+// `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; both
+// columns since 2026-09-09, the phase-reset painter below carrying the same
+// parameter for its own hop bracket): while the
 // mode is on, every marker the sweep reads (iter_popup_eligible_marker,
 // warpmarkers.h — so a disabled owner's dormant bracket paints no cells)
 // extends its flag rightward with two more boxes, the LOWER bound then the
@@ -3237,10 +3250,10 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // drawn. THE STEM IS THE EXCEPTION on both counts — it paints and publishes for
 // the whole session, the editor unrolling from the flag's own column.
 //
-// BOTH COLUMNS TAKE IT, but only the MEASURE cell is reachable on the
-// phase-reset one: the payload and bound editors are warp-column surfaces by
-// their own open gates, and that painter enforces the asymmetry at its own
-// call rather than trusting its caller (recorded there).
+// BOTH COLUMNS TAKE IT, but the PAYLOAD cell is unreachable on the phase-reset
+// one: that editor is a warp-column surface by its own open gates (the measure
+// and bound editors are both columns'), and that painter enforces the
+// asymmetry at its own call rather than trusting its caller (recorded there).
 //
 // `warp_frame_map`: the displayed-axis translation the painters share (the live
 // map in target view). `waveform_width` is the EFFECTIVE waveform width
@@ -3434,9 +3447,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // The phase-reset column's flags: the identical box, the identical class ladder
 // and the identical publication contract render_flags documents above. Their
 // LABEL is the display-only kPhaseResetLaneToken (a phase reset authors no
-// payload), so there is no iteration_on parameter — nothing to compose. The
-// focus and its addressed cell arrive all the same: this column's measure box
-// is a cell, and it is the bright one when addressed.
+// payload). `iteration_on` PAINTS THIS COLUMN'S TWO BOUND CELLS since
+// 2026-09-09, when grid iterations grew a second column: every reset the sweep
+// reads (phase_reset_iter_eligible_marker, phaseresetmarkers.h — so a disabled
+// reset's dormant bracket paints no cells) extends its flag with the LOWER
+// bound then the UPPER, each painted exactly as the flag box is, carrying the
+// bound as a SIGNED WHOLE HOP of the analysis lattice
+// (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
+// on the warp column, and the ABSENT DECIMALS are what tell a hop cell from a
+// cent cell. The focus and its addressed cell arrive as they always did: this
+// column's measure box is a cell too, and it is the bright one when addressed.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -3447,6 +3467,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
+                            bool iteration_on,
                             int focus_marker,
                             MarkerCell focus_cell,
                             std::vector<FlagHitRect>* out_hit_rects = nullptr,
@@ -3454,12 +3475,13 @@ void render_phase_reset_flags(cairo_t* cr,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                             const DragOverlay* drag_overlay = nullptr,
                             // The standing editor's suppression (contract
-                            // at SuppressedBox and render_flags above). ONLY
-                            // ITS MEASURE CELL REACHES THIS COLUMN and this
-                            // painter is what makes that true — it forwards
-                            // the suppression only where the edited box is a
-                            // MEASURE box, the payload and bound editors being
-                            // warp-column surfaces by their own open gates.
+                            // at SuppressedBox and render_flags above). ITS
+                            // PAYLOAD CELL NEVER REACHES THIS COLUMN and this
+                            // painter is what makes that true — it drops a
+                            // suppression naming the payload box, that editor
+                            // being a warp-column surface by its own open
+                            // gates, while the measure and bound editors are
+                            // both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is

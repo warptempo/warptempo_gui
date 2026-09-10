@@ -51,4 +51,28 @@ struct GuiPhaseResetMarkersOps {
     // arrow_step_magnitude in gui_input.h), the warp twin's own parameter.
     GuiOpRefusal nudge_selected_phase_resets(int step_columns,
                                              bool synthesized_repeat);
+    // THE VERTICAL ARROWS' SECOND STEP BODY ON THIS COLUMN (2026-09-09), the
+    // twin of GuiWarpMarkersOps::adjust_iter_bound_cents clause for clause in
+    // the HOP domain: it steps one bound of the focused reset's iteration
+    // bracket — `side` Lower or Upper, the addressed cell the dispatch forks
+    // on (AppState::addressed_cell) — by `delta_hops` through the same arrow
+    // ladder, with a 2+ selection taking the all-or-nothing group arm. Its
+    // predicates are the shared four (app_state.h, the bound step's block,
+    // each forking on the live column inside its own body) and its undo entry
+    // is the bracket-only kind (affects_persistence false,
+    // Undo::push_undo_phase_iter_bracket), coalescing under
+    // GestureKind::IterBoundStep — ONE kind for both columns, the stamp's
+    // subject terms keeping the two bursts apart (undo.h). Its write goes
+    // through phase_iter_bound_step_write (app_state.h), which is where a pair
+    // landing on two zeroes clears back to the blank bracket. It changes no
+    // map and no position: no render trigger, no re-land, no damage but the
+    // top strip's. Never stops playback, for the tempo step's own reason.
+    GuiOpRefusal adjust_iter_bound_hops(MarkerCell side, int delta_hops,
+                                        bool synthesized_repeat);
+
+   private:
+    // Group bound step (2+ selection): all-or-nothing over the survivors, the
+    // warp twin's shape (adjust_iter_bound_cents_group).
+    GuiOpRefusal adjust_iter_bound_hops_group(MarkerCell side, int delta_hops,
+                                              bool synthesized_repeat);
 };

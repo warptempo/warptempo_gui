@@ -5374,40 +5374,15 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
 
 // -- GuiPaintHandler::phase_reset_overlay_band / its ring pass ------------
 
-// THE ENGINE'S SEED FRAME FOR A RESET, mirrored in the GUI (2026-09-02): the
-// schedule index m the engine seeds at for a reset authored at source frame
-// `reset_source_frame` under `map` — an EMPTY map is the identity, as it is
-// for the map functions themselves. It restates engine.cpp's pass 1 (the
-// last schedule entry ≤ the parser's `S − N/2`) over stft_container.h's
-// schedule (generate_source_frame_positions: positions[m] =
-// llrint(map_target_to_source(m·R_s) − N/2), half-to-even), and it MUST STAY
-// IN LOCKSTEP with both — a change to either is a change here. The compare
-// is in SOURCE terms exactly as the engine's is; ⌊T/R_s⌋ in the target
-// domain is NOT the rule (the schedule rounds in source terms, and a
-// piecewise map can put the two on different sides of a boundary). The
-// condition is monotone in m (the map is monotone), so the search starts at
-// ⌊T/R_s⌋ and steps until it flips — a few iterations at most. m = 0 always
-// qualifies (positions[0] = −N/2 ≤ S − N/2 for every authored S ≥ 0), so the
-// engine's before-the-first-frame drop has no twin here. The schedule's END
-// is not applied: a reset past the map's final anchor, which the parser
-// drops from participation, still paints its band as it paints its flag.
-static int64_t phase_reset_seed_frame_index(
-    int64_t reset_source_frame,
-    const std::vector<WarpFrameMapSegment>& map) {
-    const auto seeds_at_or_before = [&](int64_t m) {
-        const double window_start =
-            map_target_to_source(static_cast<double>(m * kRs), map)
-            - static_cast<double>(kN) / 2.0;
-        return std::llrint(window_start) <= reset_source_frame - kN / 2;
-    };
-    const double t_reset = map_source_to_target(
-        static_cast<double>(reset_source_frame), map);
-    int64_t m = std::max<int64_t>(
-        0, static_cast<int64_t>(std::floor(t_reset / static_cast<double>(kRs))));
-    while (m > 0 && !seeds_at_or_before(m)) --m;
-    while (seeds_at_or_before(m + 1)) ++m;
-    return m;
-}
+// (THE ENGINE'S SEED FRAME FOR A RESET was a file-local static here from
+// 2026-09-02 until 2026-09-09, when the phase-reset column got its own
+// iteration bracket: the walls, the bound editor's refusal, the arrows'
+// landing and the sweep all ask the same lattice this band paints, so the
+// mirror moved out to warp_frame_map_view.h beside the map functions it reads
+// — phase_reset_seed_frame_index, now expressed through
+// phase_reset_window_centre_frame, with the engine.cpp / stft_container.h
+// LOCKSTEP warning that goes with it. This band's own use is unchanged: it
+// reads the DISPLAYED map, as it always did.)
 
 // Resolves the band shown ahead of the focused phase reset marker: from the
 // marker's stem column to where the reset's SEED GRAIN ends, in target time.
@@ -5419,7 +5394,8 @@ static int64_t phase_reset_seed_frame_index(
 // GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead,
 // phaseresetmarkers_ops.cpp — the one prose home). The engine seeds a reset
 // at the LAST synthesis frame whose window CENTRE ≤ the authored frame
-// (phase_reset_seed_frame_index above, the engine's rule mirrored) and that
+// (phase_reset_seed_frame_index, warp_frame_map_view.h — the engine's rule
+// mirrored) and that
 // frame re-synthesizes its window verbatim — the seed grain, centred on the
 // seed centre C, ending at C + N/2 — with propagation resuming past it. So:
 //   LEFT EDGE  = the marker's own column (the stem's placement), the

@@ -2,6 +2,10 @@
 
 #include "gui_input.h"
 #include "marker_measure.h"
+#include "phaseresetmarkers.h"  // kIterHopMax — the hop cap's bound, taken
+                                // from its one owner rather than re-spelled,
+                                // exactly as the measure cap takes
+                                // kMaxMarkerMeasureBytes from marker_measure.h
 #include "value_format.h"
 
 #include <algorithm>
@@ -133,6 +137,22 @@ constexpr int kMaxPendingChars = 28;
 static_assert(kTempoMaxCents - kTempoMinCents < 1000,
               "an iteration bound's integer part no longer fits one digit");
 constexpr int kMaxPendingCharsIterBound = 5;
+// THE SAME KIND ON THE PHASE-RESET COLUMN (2026-09-09), whose bracket is a
+// count of LATTICE HOPS rather than a tempo delta: its grammar is EXACTLY a
+// sign and one digit (format_signed_hops, warpmarkers.h), because a bound is
+// capped at kIterHopMax — the architect's single digit, "past nine it is no
+// longer the phase reset it was". So TWO BYTES is this grammar's widest
+// spelling and its cap, a tight bound like its sibling's, and the assert keeps
+// the derivation honest if the digit ever stops being one. THE CAP AND THE
+// JUDGE AGREE EXACTLY here too: the commit's reader (parse_signed_hops,
+// flag_editor.cpp) takes those two bytes and nothing else — no whitespace, no
+// bare digit, no double sign — so the cap advertises exactly the spellings the
+// commit accepts. WHICH OF THE TWO CAPS A SESSION SPENDS is State::iter_hops
+// below: ONE Kind serves both columns, and this module cannot see the app to
+// ask which column is live.
+static_assert(kIterHopMax < 10,
+              "a hop bound's magnitude no longer fits one digit");
+constexpr int kMaxPendingCharsIterHop = 2;
 // BPM popup, `<beats>@[<lo>,<hi>]` (parse_bpm_bracket, warpmarkers.h — the
 // grammar's one owner):
 //   BEATS  4 bytes, a positive integer with no leading zeros, capped at
@@ -225,10 +245,15 @@ constexpr int kMaxPendingCharsMeasureOffset = 4;
 // judged at the commit by marker_measure.h and not at all on the keyboard);
 // the MEASURE PROPAGATE's paste-offset editor uses MeasureOffset (one signed
 // decimal integer, likewise judged at its commit and not on the keyboard);
-// and the ITERATION BOUND editor uses IterBound (one signed two-decimal
-// bound, the text of one of the two bound cells a flag grows in iteration
-// mode — which of the two is State::iter_upper below — judged at its commit
-// against the bracket's walls). THERE ARE SEVEN KINDS AND FOUR OF THEM ARE
+// and the ITERATION BOUND editor uses IterBound (the text of one of the two
+// bound cells a flag grows in iteration mode — which of the two is
+// State::iter_upper below — judged at its commit against the bracket's walls).
+// ONE KIND, TWO GRAMMARS SINCE 2026-09-09: a warp marker's cell holds a signed
+// TWO-DECIMAL CENT bound and a phase reset's a signed WHOLE HOP, and
+// State::iter_hops says which — one kind because the two are the same surface,
+// the same open, the same modal contract and the same commit route, differing
+// only in what the bytes mean, exactly as the side bit differs in which bound
+// they name. THERE ARE SEVEN KINDS AND FOUR OF THEM ARE
 // DIALOG EDITORS; the three top-strip kinds (FlagPayload, MeasureText,
 // IterBound) share the flag editor's State and paint in the marker lane.
 // The MeasureText kind was architect-blessed 2026-08-19, MeasureOffset
@@ -307,6 +332,16 @@ struct State {
     // it through iter_bound_editor_side, app_state.h, so no reader spells
     // the bool's meaning twice).
     bool iter_upper = false;
+
+    // WHICH GRAMMAR AN IterBound SESSION SPEAKS: false the warp column's
+    // signed two-decimal cent bound, true the phase-reset column's signed
+    // whole hop. Set at `enter()` beside the side bit and meaningless on every
+    // other kind. IT EXISTS FOR THIS MODULE ALONE, which selects the byte cap
+    // and cannot see AppState to ask which column is live — every other reader
+    // (the open, the commit, the painter) reads app.active_markers_view
+    // directly, the same way commit_measure_edit does, because the view CANNOT
+    // MOVE under an open session and so no session needs a stored column.
+    bool iter_hops = false;
 
     // Editable text — the whole of what the editor holds and the whole of what
     // its painter draws. A surface whose value has uneditable neighbours (the
@@ -401,12 +436,14 @@ void deactivate(State& s);
 // Begin editing `target` with the given seed pending.
 // Cursor lands at end of pending. `kind` selects the vocabulary the
 // keystroke handler will accept while this editor is active; `iter_upper`
-// names the bound an IterBound session edits and is ignored by every other
-// kind.
+// names the bound an IterBound session edits and `iter_hops` its grammar (the
+// phase-reset column's whole hops rather than the warp column's cents), and
+// both are ignored by every other kind.
 void enter(State& s, int target,
            std::string initial_pending,
            Kind kind = Kind::FlagPayload,
-           bool iter_upper = false);
+           bool iter_upper = false,
+           bool iter_hops = false);
 
 // Apply a key event to the editor. Returns true if the key was consumed
 // — the caller should NOT route a consumed key to other handlers.

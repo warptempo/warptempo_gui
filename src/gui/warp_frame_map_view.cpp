@@ -4,7 +4,10 @@
 #include "audio.h"
 #include "gui_display_context.h"
 #include "warp_frame_map_build.h"   // resolve_warp_markers_for_render, build_warp_frame_map
+#include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lattice
+#include <algorithm>
 #include <bit>
+#include <limits>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -388,4 +391,110 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
         ? static_cast<size_t>(0)
         : static_cast<size_t>(domain_frame);
     return snap_authored_frame(map_target_to_source(q, *ctx.warp_frame_map));
+}
+
+// -- THE PHASE-RESET LATTICE ------------------------------------------------
+//
+// The contracts (the lockstep warning, the minimum-displacement derivation,
+// the resting-map asymmetry and the wall rules) are at the declarations in
+// warp_frame_map_view.h; what follows is the arithmetic.
+
+int64_t phase_reset_window_centre_frame(
+    int64_t m, const std::vector<WarpFrameMapSegment>& map) {
+    const double window_start =
+        map_target_to_source(static_cast<double>(m * kRs), map) -
+        static_cast<double>(kN) / 2.0;
+    return std::llrint(window_start) + kN / 2;
+}
+
+int64_t phase_reset_seed_frame_index(
+    int64_t reset_source_frame,
+    const std::vector<WarpFrameMapSegment>& map) {
+    // seed(S) = max{ m : centre(m) <= S }, expressed THROUGH the centre owner
+    // so the search and the cell frames below cannot drift apart.
+    const auto seeds_at_or_before = [&](int64_t m) {
+        return phase_reset_window_centre_frame(m, map) <= reset_source_frame;
+    };
+    const double t_reset = map_source_to_target(
+        static_cast<double>(reset_source_frame), map);
+    int64_t m = std::max<int64_t>(
+        0, static_cast<int64_t>(std::floor(t_reset / static_cast<double>(kRs))));
+    while (m > 0 && !seeds_at_or_before(m)) --m;
+    while (seeds_at_or_before(m + 1)) ++m;
+    return m;
+}
+
+int64_t phase_reset_hop_cell_frame(
+    int64_t reset_source_frame, int k,
+    const std::vector<WarpFrameMapSegment>& map) {
+    // The identity cell is the resting store itself, byte for byte — no
+    // arithmetic, so no rounding can move a reset the user did not ask to move.
+    if (k == 0) return reset_source_frame;
+    const int64_t m0 = phase_reset_seed_frame_index(reset_source_frame, map);
+    // The frames seeding at m are [C(m), C(m+1)), so the nearest member of the
+    // interval k hops away is its NEAR end: the floor going right, the ceiling
+    // going left.
+    if (k > 0) return phase_reset_window_centre_frame(m0 + k, map);
+    return phase_reset_window_centre_frame(m0 + k + 1, map) - 1;
+}
+
+const std::vector<WarpFrameMapSegment>& live_warp_frame_map(
+    const AppState& app, const GuiAudio& audio) {
+    return target_view_warp_frame_map_cached(
+               app, audio.sample_rate(),
+               static_cast<long>(audio.total_frames())).warp_frame_map;
+}
+
+PhaseHopWindow phase_reset_hop_window(const AppState& app,
+                                      const GuiAudio& audio, int idx) {
+    PhaseHopWindow out;
+    const std::vector<GuiPhaseResetMarker>& pv =
+        app.phaseresetmarkers.markers();
+    const int n = static_cast<int>(pv.size());
+    // Degenerate subject: the identity-only window, which is what every caller
+    // reads as "nothing but the resting cell is legal here".
+    if (idx < 0 || idx >= n) return out;
+
+    const std::vector<WarpFrameMapSegment>& map = live_warp_frame_map(app, audio);
+    const int64_t rest = pv[static_cast<size_t>(idx)].time_frame;
+    const int64_t last_frame = audio.total_frames() - 1;
+
+    // THE NEIGHBOUR WALLS. An ENABLED neighbour walls at the extreme cell its
+    // own bracket can reach (its dormant-bracket twin cannot move at all, so a
+    // DISABLED one walls at its resting frame); a blank bracket's value_or(0)
+    // lands on the resting frame through the identity cell above. Both are
+    // computed under this same resting map, which is what makes the two
+    // windows mutually consistent.
+    const auto neighbour_wall = [&](int j, bool upper_side) -> int64_t {
+        const GuiPhaseResetMarker& q = pv[static_cast<size_t>(j)];
+        if (q.disabled) return q.time_frame;
+        const int k = upper_side ? q.iter_end_hops.value_or(0)
+                                 : q.iter_start_hops.value_or(0);
+        return phase_reset_hop_cell_frame(q.time_frame, k, map);
+    };
+    const int64_t prev_wall =
+        idx > 0 ? neighbour_wall(idx - 1, /*upper_side=*/true)
+                : std::numeric_limits<int64_t>::min();
+    const int64_t next_wall =
+        idx + 1 < n ? neighbour_wall(idx + 1, /*upper_side=*/false)
+                    : std::numeric_limits<int64_t>::max();
+
+    // The two walks, outward from the identity cell, stopping at the first k
+    // that breaks a wall. At most kIterHopMax landings a side, each one seed
+    // search over a monotone map.
+    for (int k = 1; k <= kIterHopMax; ++k) {
+        const int64_t f = phase_reset_hop_cell_frame(rest, k, map);
+        if (f > last_frame) { out.max_wall = PhaseHopWall::PieceEdge; break; }
+        if (f >= next_wall) { out.max_wall = PhaseHopWall::Neighbour; break; }
+        out.k_max    = k;
+        out.max_wall = PhaseHopWall::Digit;
+    }
+    for (int k = -1; k >= -kIterHopMax; --k) {
+        const int64_t f = phase_reset_hop_cell_frame(rest, k, map);
+        if (f < 0)          { out.min_wall = PhaseHopWall::PieceEdge; break; }
+        if (f <= prev_wall) { out.min_wall = PhaseHopWall::Neighbour; break; }
+        out.k_min    = k;
+        out.min_wall = PhaseHopWall::Digit;
+    }
+    return out;
 }

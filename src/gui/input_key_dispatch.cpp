@@ -4343,21 +4343,33 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
 }
 
 // THE ITERATION SWEEP — the Cartesian product of the per-marker iter ranges
-// authored in iteration mode. Output lands in
-// `<source parent>/tmp/<N>_iterations/`, one cell per product point with
-// basename `<seq>_<delta_csv>`; each cell renders one `.wav`. The CSV holds the
-// swept markers' deltas in timeline order, formatted `%+0.2f`; markers with no
-// iter range authored are excluded from the CSV and contribute one fixed value
-// (their authored tempo_cents) to the product. Per-cell progress and Esc
-// cancellation are handled by the batch runner (start_render_batch and the
-// ActiveBatch lifecycle).
+// authored in iteration mode, ON BOTH COLUMNS since 2026-09-09 (architect's
+// (b): one `I` lamp admitted in both, warp and phase brackets in ONE product).
+// Output lands in `<source parent>/tmp/<N>_iterations/`, one cell per product
+// point; each cell renders one `.wav`.
+//
+// THE BASENAME IS `<seq>_<warp csv>_<phase csv>`, either column's part omitted
+// WITH ITS SEPARATOR when that column sweeps nothing — so a warp-only sweep
+// names byte-identically to what it always did (`03_+1.50,-0.50`), a
+// phase-only sweep reads `03_+2,-3` and a mixed one `03_+1.50,-0.50_+2,-3`.
+// Each CSV holds its column's swept deltas in timeline order through that
+// column's ONE composer — format_signed_delta_cents for the warp bounds and
+// format_signed_hops for the phase ones — so THE ABSENT DECIMALS ARE WHAT TELL
+// THE COLUMNS APART in a file name, which is what the name is for ("the tmp/
+// file names are what I remember"). Nothing anywhere parses a basename.
+// Markers with no range authored are excluded from their CSV and contribute
+// one fixed value to the product (a warp marker its authored tempo_cents, a
+// phase reset its authored frame). Per-cell progress and Esc cancellation are
+// handled by the batch runner (start_render_batch and the ActiveBatch
+// lifecycle).
 //
 // ONE CALLER, Ctrl+Alt+R's iteration arm (architect 2026-08-02: with the mode on
 // that chord IS the sweep, and the former Ctrl+Alt+I is retired). The caller has
 // already established both of this body's outer facts — a non-empty
 // source_audio_path and iteration mode ON — so they are not re-tested here; the
 // refusals below (no brackets authored, the inverted-bracket breach, the cell
-// cap) are the SWEEP'S OWN and are stated where they fire.
+// cap, a phase bracket standing off its walls) are the SWEEP'S OWN and are
+// stated where they fire.
 void GuiInputHandler::run_iteration_sweep_render() {
     // Dispatch validates nothing: the render worker's own resolve->build
     // chain is the tripwire surface (marker arrangements normalize to
@@ -4376,6 +4388,29 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // below is plain integer addition — no conversion anywhere.
     const std::vector<GuiWarpMarker> base_warp_markers =
         app.warpmarkers.markers();
+    // Snapshot phase resets once too: every cell starts from this same
+    // configuration, and a SWEPT reset's time_frame is the only thing a cell
+    // moves in it.
+    const std::vector<GuiPhaseResetMarker> base_phase_resets =
+        app.phaseresetmarkers.markers();
+    // THE INVERTED-BRACKET BREACH, ONE COMPOSER FOR BOTH COLUMNS (architect
+    // 2026-08-30 for its two surfaces; both columns since 2026-09-09). The
+    // editors enforce start <= end and both brackets are session-only, so
+    // start > end is an internal breach — refuse the dispatch loudly and
+    // enqueue nothing, repairing no iter state (the state is evidence; the
+    // bracket lifecycle owns wiping). The stderr line keeps the COLUMN and the
+    // index, which is the evidence; the card says the fact, which is the
+    // answer to the press, and names no index because the sweep's whole
+    // dispatch refused rather than one cell of it. Pre-mutation on both arms:
+    // nothing above has touched app state or the queue.
+    const auto refuse_inverted_bracket = [&](const char* column, int index) {
+        std::fprintf(stderr,
+            "warptempo_gui: render-iterations refused: %s %d "
+            "iter bracket start exceeds end\n", column, index);
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            "A marker's iteration bracket runs backwards");
+    };
     std::vector<int>                  eligible_indices;
     std::vector<std::vector<int64_t>> per_marker_delta_cents;
     std::vector<bool>                 is_swept;
@@ -4403,17 +4438,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // evidence; the bracket lifecycle owns wiping). Pre-mutation:
             // nothing above has touched app state or the queue.
             if (start_cents > end_cents) {
-                // ONE COMPOSER, TWO SURFACES (architect 2026-08-30): the
-                // stderr line keeps the marker's index, which is the
-                // evidence; the card says the fact, which is the answer to
-                // the press. The card names no index because the sweep's
-                // whole dispatch refused, not one cell of it.
-                std::fprintf(stderr,
-                    "warptempo_gui: render-iterations refused: marker %d "
-                    "iter bracket start exceeds end\n", i);
-                notifications.notify(
-                    AppState::NotificationClass::Normal,
-                    "A marker's iteration bracket runs backwards");
+                refuse_inverted_bracket("warp marker", i);
                 return;
             }
             for (int64_t c = start_cents; c <= end_cents; ++c) {
@@ -4423,6 +4448,57 @@ void GuiInputHandler::run_iteration_sweep_render() {
             delta_cents.push_back(0);
         }
         per_marker_delta_cents.push_back(std::move(delta_cents));
+    }
+
+    // THE PHASE DIMENSIONS (2026-09-09), the same walk in the hop domain. A
+    // swept reset's per-cell list is the integers lo..hi inclusive; the
+    // AUTHORED FRAME each of them names is resolved HERE, ONCE per reset per
+    // hop, under the RESTING warp map — the accepted asymmetry recorded at
+    // phase_reset_hop_cell_frame (warp_frame_map_view.h): every warp cell
+    // moves the lattice a little, and a phase cell's displacement is authored
+    // against the lattice the overlay band shows and the walls were checked
+    // under. So this is not computed per warp cell, and the frames below are
+    // read out of these lists.
+    // A COPY, not the cache's reference: the plan below asks the hop window,
+    // which goes back through the same accessor, and a rebuild there would
+    // leave a held reference dangling. The map is tens of segments and this is
+    // a one-shot dispatch.
+    const std::vector<WarpFrameMapSegment> sweep_map =
+        live_warp_frame_map(app, audio);
+    std::vector<int>                  phase_eligible_indices;
+    std::vector<std::vector<int64_t>> per_phase_cell_frames;
+    std::vector<std::vector<int>>     per_phase_hops;
+    std::vector<bool>                 phase_is_swept;
+    for (int i = 0; i < static_cast<int>(base_phase_resets.size()); ++i) {
+        // A DISABLED RESET IS INVISIBLE TO THE ACT, the warp arm's rule on
+        // this column: its bracket is kept, dormant, and neither multiplies
+        // the product nor names a cell.
+        if (!phase_reset_iter_eligible_marker(base_phase_resets, i)) continue;
+        const GuiPhaseResetMarker& p = base_phase_resets[i];
+        phase_eligible_indices.push_back(i);
+        const bool swept =
+            p.iter_start_hops.has_value() && p.iter_end_hops.has_value();
+        phase_is_swept.push_back(swept);
+        std::vector<int>     hops;
+        std::vector<int64_t> frames;
+        if (swept) {
+            const int lo = *p.iter_start_hops;
+            const int hi = *p.iter_end_hops;
+            if (lo > hi) {
+                refuse_inverted_bracket("phase reset", i);
+                return;
+            }
+            for (int k = lo; k <= hi; ++k) {
+                hops.push_back(k);
+                frames.push_back(phase_reset_hop_cell_frame(
+                    p.time_frame, k, sweep_map));
+            }
+        } else {
+            hops.push_back(0);
+            frames.push_back(p.time_frame);
+        }
+        per_phase_hops.push_back(std::move(hops));
+        per_phase_cell_frames.push_back(std::move(frames));
     }
 
     // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02, the four-tier
@@ -4435,7 +4511,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // hand-rolled product survives here. THE BREACH ABOVE IS NOT ITS
     // BUSINESS — the owner counts an inverted bracket as one swept cell so the
     // face stays lit for it, and the loud refusal is the dispatch's alone.
-    const IterationSweepPlan plan = iteration_sweep_plan(app);
+    const IterationSweepPlan plan = iteration_sweep_plan(app, audio);
     if (plan.refusal == IterationSweepRefusal::NoBracketAuthored) {
         // AND IT SAYS SO (architect 2026-08-30): with iteration mode on,
         // Ctrl+Alt+R IS the sweep, so a chord that renders nothing at all
@@ -4481,12 +4557,30 @@ void GuiInputHandler::run_iteration_sweep_render() {
                              kIterSweepOverCapCard);
         return;
     }
+    if (plan.refusal == IterationSweepRefusal::PhaseBracketOffWall) {
+        // THE RETROACTIVE CASE, refused rather than clamped (2026-09-09). A
+        // phase reset's hop bracket is authored inside its walls and can be
+        // pushed off them afterwards by a dozen writers — the reset or a
+        // neighbour nudged or dragged, a neighbour dropped or deleted, a
+        // disable, a warp edit that moves the lattice, a load, an undo — and
+        // that column has no retroactive clamp behind it (the ruling is at
+        // GuiPhaseResetMarker's bracket, phaseresetmarkers.h), so the verdict
+        // owner re-verifies on every read and this arm answers the press. The
+        // cap's own posture exactly: refuse before any allocation, folder or
+        // dispatch, and leave the mode and every bracket standing for
+        // correction — the wipe-and-exit tail below does not run. There is no
+        // cue on the flag: the greyed Render button and this card are the
+        // message.
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kIterSweepPhaseOffWallCard);
+        return;
+    }
 
     // The delta lists built above and the owner's count are the same product
-    // by construction — one store, one eligibility walk, one bracket
-    // arithmetic — and a zero-length list can only come from an inverted
-    // bracket, which returned at the breach. So the count is taken from the
-    // owner rather than re-accumulated, and it is at least one.
+    // by construction — the same two stores, the same two eligibility walks,
+    // the same bracket arithmetic — and a zero-length list can only come from
+    // an inverted bracket, which returned at the breach. So the count is taken
+    // from the owner rather than re-accumulated, and it is at least one.
     const size_t total_cells = plan.cells;
 
     const std::filesystem::path queue_root =
@@ -4530,41 +4624,56 @@ void GuiInputHandler::run_iteration_sweep_render() {
     for (int n = total; n >= 10; n /= 10) ++pad_width;
     if (pad_width > 9) pad_width = 9;
 
-    // Snapshot phase resets once — every cell shares the same
-    // phase reset configuration, only marker tempo_cents values
-    // differ across cells.
-    const std::vector<GuiPhaseResetMarker> base_phase_resets =
-        app.phaseresetmarkers.markers();
-
-    // Cartesian product enumeration. `indices[k]` holds the
-    // current cell coordinate along the k-th eligible marker
-    // (timeline order). Rightmost dimension increments fastest:
-    // consecutive cells differ in the last marker's delta first.
-    const size_t num_dims = per_marker_delta_cents.size();
+    // Cartesian product enumeration. `indices[k]` holds the current cell
+    // coordinate along the k-th swept axis. THE WARP DIMENSIONS COME FIRST AND
+    // THE PHASE DIMENSIONS FOLLOW, each column's in its own store's timeline
+    // order; the rightmost dimension still increments fastest, so consecutive
+    // cells differ in the last PHASE reset's hop first (and in the last warp
+    // marker's delta where nothing on this column sweeps). The loop shape is
+    // unchanged — one flat coordinate vector over one flat list of sizes.
+    const size_t warp_dims  = per_marker_delta_cents.size();
+    const size_t phase_dims = per_phase_hops.size();
+    const size_t num_dims   = warp_dims + phase_dims;
+    const auto dim_size = [&](size_t k) {
+        return k < warp_dims ? per_marker_delta_cents[k].size()
+                             : per_phase_hops[k - warp_dims].size();
+    };
     std::vector<size_t> indices(num_dims, 0);
 
     std::vector<RenderRequest> reqs;
     reqs.reserve(total);
     for (int cell = 0; cell < total; ++cell) {
+        // ONE CSV PER COLUMN, each through its column's one composer. Signed
+        // two-decimal text straight from cents on the warp side
+        // (format_signed_delta_cents, warpmarkers.h) and the signed integer
+        // hop on the phase side (format_signed_hops) — no double round-trip on
+        // either, and the absent decimals are what tell them apart.
         std::string delta_csv;
-        for (size_t k = 0; k < num_dims; ++k) {
+        for (size_t k = 0; k < warp_dims; ++k) {
             if (!is_swept[k]) continue;
-            // Signed two-decimal text straight from cents — no double
-            // round-trip (format_signed_delta_cents, warpmarkers.h).
             if (!delta_csv.empty()) delta_csv += ',';
             delta_csv += format_signed_delta_cents(
                 per_marker_delta_cents[k][indices[k]]);
+        }
+        std::string hop_csv;
+        for (size_t k = 0; k < phase_dims; ++k) {
+            if (!phase_is_swept[k]) continue;
+            if (!hop_csv.empty()) hop_csv += ',';
+            hop_csv += format_signed_hops(
+                per_phase_hops[k][indices[warp_dims + k]]);
         }
 
         char num_buf[16];
         std::snprintf(num_buf, sizeof(num_buf),
                       "%0*d", pad_width, cell + 1);
         std::string basename = num_buf;
-        basename += '_';
-        basename += delta_csv;
+        // AN EMPTY COLUMN'S PART GOES WITH ITS SEPARATOR, which is what makes a
+        // warp-only sweep name byte-identically to what it always did.
+        if (!delta_csv.empty()) { basename += '_'; basename += delta_csv; }
+        if (!hop_csv.empty())   { basename += '_'; basename += hop_csv; }
 
         std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
-        for (size_t k = 0; k < num_dims; ++k) {
+        for (size_t k = 0; k < warp_dims; ++k) {
             const int mi = eligible_indices[k];
             // Per-cell tempo is a computed value, not an authored one, and
             // it needs no bracket gate HERE because it cannot leave the
@@ -4589,8 +4698,30 @@ void GuiInputHandler::run_iteration_sweep_render() {
             cell_warp_markers[mi].iter_end_cents.reset();
         }
 
+        // THE PHASE CELL: each swept reset takes the authored frame its hop
+        // named, precomputed above under the resting map. A displaced frame is
+        // an ORDINARY whole authored frame, so the per-cell
+        // `.phaseresetmarkers` sidecar needs no new grammar and the `'` load
+        // in place recalls the cell exactly — which is what makes the file
+        // names the thing worth remembering. The engine doesn't consume the
+        // hop bracket; clear it so the request is quiet, the warp arm's own
+        // word. THE VECTOR IS STILL SORTED BY time_frame, and that is the
+        // PLAN'S VERDICT rather than an assumption of this loop's: the hop
+        // window walls each reset at its neighbours' own extreme landings and
+        // the plan re-asks that of every bracket a few lines up, so no cell of
+        // the product can cross or coincide. No re-sort and no assert here.
+        std::vector<GuiPhaseResetMarker> cell_phase_resets = base_phase_resets;
+        for (size_t k = 0; k < phase_dims; ++k) {
+            const int pi = phase_eligible_indices[k];
+            cell_phase_resets[pi].time_frame =
+                per_phase_cell_frames[k][indices[warp_dims + k]];
+            cell_phase_resets[pi].iter_start_hops.reset();
+            cell_phase_resets[pi].iter_end_hops.reset();
+        }
+
         RenderRequest req = build_render_request(
-            app.source_audio_path, std::move(cell_warp_markers), base_phase_resets,
+            app.source_audio_path, std::move(cell_warp_markers),
+            std::move(cell_phase_resets),
             app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame,
             batch_folder.string(), std::move(basename));
@@ -4603,7 +4734,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // the loop exits before that's read.
         for (int k = static_cast<int>(num_dims) - 1; k >= 0; --k) {
             ++indices[k];
-            if (indices[k] < per_marker_delta_cents[k].size()) break;
+            if (indices[k] < dim_size(static_cast<size_t>(k))) break;
             indices[k] = 0;
         }
     }
@@ -4633,10 +4764,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
     }
     // The sweep is committed to run either way (dispatched, or parked
     // behind the killed render's drain): iteration mode turns off after
-    // fire, and exiting the mode IS the bracket clear (wipe_iter_state,
-    // the chokepoint every other iter-mode exit runs). Safe here: every
-    // request above carries its own per-cell marker copies, so nothing
-    // dispatched reads the live iter fields.
+    // fire, and exiting the mode IS the bracket clear on BOTH COLUMNS
+    // (wipe_iter_state, the chokepoint every other iter-mode exit runs). Safe
+    // here: every request above carries its own per-cell marker AND
+    // phase-reset copies, so nothing dispatched reads the live iter fields.
     //
     // IN TARGET VIEW THIS TAIL IS A GRANTED HOME-VIEW-BINDING EXCEPTION
     // (architect 2026-08-07, with the ruling that iteration mode is
@@ -4645,11 +4776,12 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // home view the binding would otherwise refuse; it was what gated this
     // whole command to source view (bdf4336, 2026-07-22), and that gate is
     // gone. The exception is admitted on the CENT STEP'S OWN CLASS of
-    // argument, and narrower: iter brackets are SESSION-ONLY fields — never
-    // serialized (no sidecar key), excluded from the render recipe, and
-    // pushed with affects_persistence=false — so the write can reach neither
-    // disk nor a render, and the state it clears is the very state this
-    // command just consumed. Every other route out of the mode already runs
+    // argument, and narrower: iter brackets are SESSION-ONLY fields on both
+    // columns — never serialized (no sidecar key, and the two slices drop them
+    // at the render boundary), excluded from the render recipe, and pushed
+    // with affects_persistence=false — so the write can reach neither disk nor
+    // a render, and the state it clears is the very state this command just
+    // consumed. Every other route out of the mode already runs
     // this same clear, so nothing about the mode's lifecycle changed with the
     // view.
     flag_editor.wipe_iter_state();
@@ -7224,75 +7356,60 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `i` (no modifiers) toggles iteration mode in warp. In phase reset view
-    // it is a no-op that SAYS SO on a card (the arm below, 2026-08-30 —
-    // phase reset flags carry no tempo to iterate). The editor-active branch
+    // `i` (no modifiers) toggles iteration mode, IN EITHER COLUMN since
+    // 2026-09-09 (the arm below carries the ruling; the P-column card it used
+    // to answer with is deleted with the premise that a phase reset had
+    // nothing to iterate). The editor-active branch
     // above already swallows any
     // keystroke while a popup edit is in flight, so this code only
     // runs with no active editor. Toggling repaints the top strip
-    // so iteration popups appear or vanish in one frame.
+    // so the bound cells appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
-        if (app.active_markers_view == 'W') {
-            // THE GATE IS THE WARP COLUMN ALONE — both audio views (architect
-            // 2026-08-07, iteration mode is TARGET-LEGAL; the deleted S->T
-            // wipe's record is in switch_active_audio_view_to,
-            // input_handler.cpp). It read active_column_authoring_allowed
-            // until then, which pinned the toggle to warp's SOURCE home. The
-            // relaxation is about MODE STATE rather than authoring, which is
-            // why it is not a home-view-binding exception: the bit selects
-            // what Ctrl+Alt+R means and what the flags show. IT IS ALSO THE
-            // WHOLE OF WHAT THE GRID ITERATIONS BUTTON'S FACE READS
-            // (redesign_button_enabled, app_state.h) since that button came
-            // back to the icon row on 2026-09-04 — this column test under the
-            // read-only lock, one test rather than a predicate of its own. (Bracket
-            // AUTHORING was source-only at the flag editor's own gate until
-            // 2026-08-24, when the editor became the binding's FIFTH ruled
-            // exception and the grammar rode into target view with it.) The
-            // two views behave IDENTICALLY here in every other respect —
-            // read-only in particular, which refuses `i` from either view for
-            // the same one reason (the key is not on read_only_key_blocked's
-            // allowlist, a view-independent gate that runs above this
-            // dispatch).
-            const bool turning_on = !app.iteration_mode_enabled;
-            if (!turning_on) {
-                // Turning iteration mode OFF wipes every marker's
-                // session-only iter bracket — exiting the mode is the
-                // clear (wipe_iter_state, shared with enter_bpm_mode's
-                // forced iter-off so the two exit routes cannot drift).
-                // Runs before the flag flips.
-                // IN TARGET VIEW THAT WIPE IS A WARP-STORE WRITE OFF WARP'S
-                // HOME, admitted as the same granted home-view-binding
-                // exception the sweep's success tail takes (architect
-                // 2026-08-07, recorded at run_iteration_sweep_render's tail
-                // where the class is argued in full): iter brackets are
-                // session-only fields, never serialized and excluded from the
-                // render recipe, so the write reaches neither disk nor a
-                // render, and the entry it pushes carries
-                // affects_persistence=false.
-                flag_editor.wipe_iter_state();
-            }
-            app.iteration_mode_enabled = !app.iteration_mode_enabled;
-            viewport.invalidate_top_strip();
-            // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR
-            // did, 2026-08-29: the mode bit is one of the eligibility terms
-            // the resolved READOUT read, so the toggle hid or restored that
-            // cell. The readout retired with the bar and nothing outside the
-            // top strip changes here.)
-        } else {
-            // AND THE P VIEW SAYS SO (architect 2026-08-30, the strictness
-            // ruling): iteration brackets are a WARP payload — a phase reset
-            // carries no tempo to iterate — so the card names the COLUMN and
-            // not a view, the bit being legal in both audio views of warp.
-            // THE SUBJECT IS THE COMMAND'S OWN NAME (2026-08-31 rebrand;
-            // the vocabulary's owner is the two icon-row tooltips since that
-            // menu's 2026-09-04 deletion): this card and the BPM ladder's twin
-            // below say "Grid iterations" / "BPM iterations", the words the
-            // user pressed, rather than a "mode" noun that appears nowhere
-            // else — the words alone, in the cards' sentence case, the names
-            // themselves wearing Title Case.
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Grid iterations work on warp markers");
+        // THE MODE IS ONE LAMP IN BOTH COLUMNS (architect 2026-09-09, his
+        // (b)): the phase-reset column has an iteration bracket of its own —
+        // a HOP bracket over the reset's position — and one `I` admits both,
+        // warp and phase brackets sweeping in ONE Cartesian product. So this
+        // arm has NO COLUMN TEST at all and the P-column card
+        // ("Grid iterations work on warp markers") is deleted, its premise
+        // having been that a phase reset carries no value to iterate.
+        //
+        // AND NO AUDIO-VIEW TEST EITHER — both views, on both columns
+        // (architect 2026-08-07, iteration mode is TARGET-LEGAL; the deleted
+        // S->T wipe's record is in switch_active_audio_view_to,
+        // input_handler.cpp). It read active_column_authoring_allowed until
+        // then, which pinned the toggle to warp's SOURCE home. The relaxation
+        // is about MODE STATE rather than authoring, which is why it is not a
+        // home-view-binding exception: the bit selects what Ctrl+Alt+R means
+        // and what the flags show. THE READ-ONLY LOCK IS NOW THE WHOLE OF
+        // WHAT THE GRID ITERATIONS BUTTON'S FACE READS
+        // (redesign_button_enabled, app_state.h) — the column term went with
+        // this one, and the toggle is meaningful in either direction on any
+        // loaded piece — and the lock refuses `i` here for the same one reason
+        // in every view (the key is not on read_only_key_blocked's allowlist,
+        // a view-independent gate that runs above this dispatch).
+        const bool turning_on = !app.iteration_mode_enabled;
+        if (!turning_on) {
+            // Turning iteration mode OFF wipes BOTH stores' session-only iter
+            // brackets — exiting the mode is the clear (wipe_iter_state,
+            // shared with enter_bpm_mode's forced iter-off so the two exit
+            // routes cannot drift). Runs before the flag flips.
+            // OFF EITHER COLUMN'S HOME THAT WIPE IS A GRANTED
+            // home-view-binding exception, the same one the sweep's success
+            // tail takes (architect 2026-08-07, recorded at
+            // run_iteration_sweep_render's tail where the class is argued in
+            // full): iter brackets are session-only fields, never serialized
+            // and excluded from the render recipe, so the write reaches
+            // neither disk nor a render, and the entry it pushes carries
+            // affects_persistence=false.
+            flag_editor.wipe_iter_state();
         }
+        app.iteration_mode_enabled = !app.iteration_mode_enabled;
+        viewport.invalidate_top_strip();
+        // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR
+        // did, 2026-08-29: the mode bit is one of the eligibility terms
+        // the resolved READOUT read, so the toggle hid or restored that
+        // cell. The readout retired with the bar and nothing outside the
+        // top strip changes here.)
         return true;
     }
 

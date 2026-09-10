@@ -1045,8 +1045,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
     // The flags carry TEXT since row 5, and iteration mode changes what an
-    // eligible flag shows (the two bound cells beside it). See
-    // fp_iteration_mode — and fp_addressed_cell for the focus's bright cell,
+    // eligible flag shows on EITHER COLUMN (the two bound cells beside it).
+    // See fp_iteration_mode — and fp_addressed_cell for the focus's bright cell,
     // which the same pass paints in the selected pair.
     const bool      iter_on    = app.iteration_mode_enabled;
     const int       addressed  = static_cast<int>(app.addressed_cell);
@@ -1257,8 +1257,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end, sr,
             app.selected_markers,
             pr_red,
+            // The mode's bit, which paints this column's two BOUND CELLS
+            // since 2026-09-09 (its hop bracket) exactly as it paints the
+            // warp column's.
+            iter_on,
             // The focus and its addressed cell — the bright cell, which on
-            // this column can be the payload or the measure box
+            // this column can be the payload, a bound cell or the measure box
             // (render_flags' declaration).
             app.last_selected_marker,
             app.addressed_cell,

@@ -419,3 +419,155 @@ int painted_column_of_source_frame_on_basis(
 int64_t authored_frame_at_column(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map);
+
+// -- THE PHASE-RESET LATTICE (the engine's seed geometry, GUI-side) ---------
+//
+// These four live here, beside the map functions they read, because the
+// question they answer is a MAP question: where the engine's analysis lattice
+// falls in source frames under the map a render would use. They were the
+// painter's alone until 2026-09-09, when the phase-reset column got its own
+// iteration bracket and the walls, the editor's refusal, the arrows' landing
+// and the sweep all had to ask the same lattice the overlay band paints.
+
+// THE ENGINE'S SEED FRAME FOR A RESET, mirrored in the GUI (2026-09-02): the
+// schedule index m the engine seeds at for a reset authored at source frame
+// `reset_source_frame` under `map` — an EMPTY map is the identity, as it is
+// for the map functions themselves. It restates engine.cpp's pass 1 (the
+// last schedule entry <= the parser's `S - N/2`) over stft_container.h's
+// schedule (generate_source_frame_positions: positions[m] =
+// llrint(map_target_to_source(m*R_s) - N/2), half-to-even), and it MUST STAY
+// IN LOCKSTEP with both — a change to either is a change here. The compare
+// is in SOURCE terms exactly as the engine's is; floor(T/R_s) in the target
+// domain is NOT the rule (the schedule rounds in source terms, and a
+// piecewise map can put the two on different sides of a boundary). The
+// condition is monotone in m (the map is monotone), so the search starts at
+// floor(T/R_s) and steps until it flips — a few iterations at most. m = 0
+// always qualifies (positions[0] = -N/2 <= S - N/2 for every authored S >= 0),
+// so the engine's before-the-first-frame drop has no twin here. The schedule's
+// END is not applied: a reset past the map's final anchor, which the parser
+// drops from participation, still paints its band as it paints its flag.
+int64_t phase_reset_seed_frame_index(
+    int64_t reset_source_frame,
+    const std::vector<WarpFrameMapSegment>& map);
+
+// THE SOURCE-FRAME CENTRE of schedule window `m` under `map`:
+// llrint(map_target_to_source(m*R_s) - N/2) + N/2, the schedule's own rounded
+// window START plus the window's half-width. It is the quantity the seed
+// search above compares against — seed(S) = max{ m : centre(m) <= S } — and
+// the seed function is written THROUGH it so the two cannot drift. Monotone
+// in m, because the map is.
+int64_t phase_reset_window_centre_frame(
+    int64_t m, const std::vector<WarpFrameMapSegment>& map);
+
+// THE HOP CELL'S AUTHORED FRAME: where a phase reset resting at source frame
+// `S` is authored in the iteration cell `k` hops away, under `map`.
+//
+// HIS MINIMUM-DISPLACEMENT RULE (architect 2026-09-09): "for the phase reset
+// overlay, the amount of change added by each hop should be the MINIMUM amount
+// to get to that hop, so that we stay as close to the original starting point
+// of the phase reset as possible". The derivation is the seed rule read
+// backwards: with C(m) the window centre above, seed(S) = max{ m : C(m) <= S },
+// so the frames that seed at m are exactly the half-open interval
+// [C(m), C(m+1)) — and the nearest member of the interval k hops away from
+// m0 = seed(S) is that interval's NEAR END. Hence
+//   k == 0  ->  S itself (the identity cell renders the resting store),
+//   k > 0   ->  C(m0 + k),         the SMALLEST frame whose seed is m0 + k,
+//   k < 0   ->  C(m0 + k + 1) - 1, the LARGEST frame whose seed is m0 + k.
+//
+// TWO CONSEQUENCES, both wanted. A cell either way moves the reset by at least
+// one frame and at most about a hop (plus the map's local rounding), so a
+// bracket of nine is nine hops of displacement and not nine hops plus a
+// residue. And NEITHER DIRECTION CARRIES THE SUB-HOP RESIDUE the resting reset
+// holds between C(m0) and S: a positive cell restarts at its own interval's
+// floor and a negative one at its own interval's ceiling, so the cells are a
+// clean walk of the lattice rather than the resting offset translated k times.
+//
+// THE RESULT IS AN INTEGER SOURCE FRAME BY CONSTRUCTION — llrint plus integer
+// terms, never a fractional authored position — so snap_authored_frame is not
+// called and is not owed one: it is the single double-to-authored conversion
+// route (app_state.h), and no double-to-authored conversion happens here.
+//
+// THE LATTICE IS THE MAP'S, AND THE MAP EVERY CALLER PASSES IS THE RESTING
+// ONE (live_warp_frame_map below). In one product with warp brackets that is
+// an ACCEPTED ASYMMETRY, recorded here: every warp cell rewrites a tempo and
+// so moves the lattice a little, but a phase cell's displacement is authored
+// against the lattice the overlay band SHOWS and the walls were checked under
+// — the resting store's — computed once per reset per k and shared by every
+// warp cell. The cells "re-parse normally" under their own maps, each cell's
+// sidecar carrying an ordinary whole authored frame.
+int64_t phase_reset_hop_cell_frame(
+    int64_t reset_source_frame, int k,
+    const std::vector<WarpFrameMapSegment>& map);
+
+// THE MAP A CELL IS COMPUTED UNDER — the LIVE target-view map, memoized on the
+// warp store's generation (target_view_warp_frame_map_cached above), empty on
+// a failed build, which the map functions read as the identity. ONE ACCESSOR
+// so the wall verdict, the bound editor's refusal, the arrows' landing and the
+// sweep cannot each pick a different map.
+//
+// IT IS NOT THE DISPLAYED MAP (displayed_or_live_target_map): that one exists
+// so painted items stay locked to the blitted plate through a worker publish
+// window, and the overlay band reads it for exactly that reason. A cell is
+// about the RENDER, not the picture, so it takes the map the render would use.
+// Same single-threaded reference lifetime as the cache accessor it wraps.
+const std::vector<WarpFrameMapSegment>& live_warp_frame_map(
+    const AppState& app, const GuiAudio& audio);
+
+// WHICH WALL CLOSED A SIDE of the hop window below. Every side is closed by
+// exactly one of the three, so the kind is always meaningful.
+enum class PhaseHopWall {
+    Digit,      // +/-kIterHopMax — "past nine it is no longer the phase reset"
+    PieceEdge,  // the cell would land before frame 0 or past total_frames - 1
+    Neighbour,  // the cell would reach the adjacent phase reset's own extreme
+};
+
+// THE LEGAL HOP INTERVAL for the phase reset at `idx`, and what closed it on
+// each side. k_min <= 0 <= k_max ALWAYS: the identity cell renders the resting
+// store, so 0 is inside the window whatever the neighbours do, exactly as the
+// warp bracket's clamp window always contains the zero delta.
+struct PhaseHopWindow {
+    int          k_min    = 0;
+    int          k_max    = 0;
+    PhaseHopWall min_wall = PhaseHopWall::Digit;
+    PhaseHopWall max_wall = PhaseHopWall::Digit;
+};
+
+// THE PHASE BRACKET'S WALLS, ONE OWNER (architect 2026-09-09's (d): a cell
+// that would push the reset before frame 0, past the last frame, or onto a
+// neighbour is REFUSED AT AUTHORING, like the tempo window). Walks k outward
+// from 0 on each side under the live map, landing each candidate through
+// phase_reset_hop_cell_frame, and stops at the first k that breaks a wall — at
+// most kIterHopMax steps a side:
+//
+//   THE PIECE: 0 <= F <= total_frames - 1, the drop's own EOF wall
+//   (drop_phase_reset_at_position, phaseresetmarkers_ops.cpp).
+//
+//   THE NEIGHBOURS ARE THE IMMEDIATE STORE ROWS, DISABLED INCLUDED, and the
+//   wall is STRICT (F > prev_wall, F < next_wall). Disabled rows count because
+//   the store is SORTED BY time_frame at rest with disabled rows in it and
+//   every cell's sidecar is written from a per-cell copy of that vector: a
+//   displaced reset crossing or landing on ANY row would write an
+//   out-of-order or coincident-by-displacement sidecar. The sort is the
+//   invariant, not participation. It is strict because his (d) refuses "onto a
+//   neighbour" — coincident drops stay legal AT REST (that rule is untouched;
+//   this is a sweep cell, not authoring at rest).
+//
+//   AND THE NEIGHBOUR'S WALL IS ITS OWN NEAREST LANDING, not its resting
+//   frame: an ENABLED predecessor walls at its furthest-RIGHT cell
+//   (its iter_end_hops landing) and an enabled successor at its furthest-LEFT
+//   (its iter_start_hops landing), so two adjacent brackets each inside the
+//   other's extreme can never cross or meet IN ANY CELL and the whole
+//   Cartesian product is sorted by construction. It is mutual — raising A's
+//   upper narrows B's lower window — which is the tempo window's own shape. A
+//   DISABLED neighbour contributes its RESTING frame instead: its bracket is
+//   kept but dormant, out of the product, so it never actually moves.
+//
+// READERS: the bound editor's commit (refuses outside the window, naming the
+// wall kind — GuiFlagEditor::commit_iter_bound_edit), the step's landing owner
+// (phase_iter_bound_step_landing, app_state.h, which CLAMPS into the window
+// and then at the partner), the group scan and the directional face through
+// it, and the sweep's plan (iteration_sweep_plan), which re-verifies every
+// standing bracket against this window on every read because nothing clamps
+// retroactively on this column.
+PhaseHopWindow phase_reset_hop_window(const AppState& app,
+                                      const GuiAudio& audio, int idx);

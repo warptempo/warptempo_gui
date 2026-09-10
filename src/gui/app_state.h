@@ -261,9 +261,14 @@ struct UndoEntry {
     // assignment: the flip is a DOMAIN TRANSLATION of the playhead and the
     // viewport, not a bit.
     char                      audio_view           = 'S';
-    // False for an iteration-bracket-only snapshot. Iteration brackets are
-    // session state and never serialize, so crossing such an entry must not
-    // make recompute_dirty report a warp-file difference.
+    // False for an iteration-bracket-only snapshot, on EITHER COLUMN, and for
+    // the mode wipe that clears both. Iteration brackets are session state and
+    // never serialize — the warp column's cent bracket and the phase-reset
+    // column's hop bracket alike — so crossing such an entry must not make
+    // recompute_dirty report a file difference for the column it is tagged
+    // with. THREE FALSE PRODUCERS: push_undo_iter_bracket and
+    // push_undo_phase_iter_bracket (the two bracket-only pushes) and
+    // GuiFlagEditor::wipe_iter_state through push_undo_both.
     bool                      affects_persistence  = true;
     // Explicit touched-set IDENTITY HINTS for the post-restore selection, filled
     // ONLY by producers whose touched rows the diff reconstruction cannot
@@ -289,10 +294,12 @@ struct UndoEntry {
     // restored focus back on the cell the entry changed rather than on the
     // payload, so an undone Lower step leaves the lower cell bright and the
     // next Up/Down goes on stepping the bound the undo just moved. ONE
-    // PRODUCER writes it non-Payload, Undo::push_undo_iter_bracket — the
-    // bracket-only push, called by the two arms of the Up/Down bound step and
-    // by the bound editor's commit, which are the only ops whose subject IS a
-    // cell. Every other push leaves it Payload, which is exactly what the
+    // PRODUCER PAIR writes it non-Payload — Undo::push_undo_iter_bracket and
+    // its phase-reset twin push_undo_phase_iter_bracket, the two bracket-only
+    // pushes, each called by the two arms of its column's Up/Down bound step
+    // and by the bound editor's commit on that column, which are the only ops
+    // whose subject IS a cell (TWO pushes since 2026-09-09; it was one while
+    // the bracket was warp-only). Every other push leaves it Payload, which is exactly what the
     // restore's own selection write has already seated (Selection::seat_focus),
     // so the write-back at the tail of restore_history_entry changes nothing
     // for them. The counter-entry carries it verbatim like the three context
@@ -2323,10 +2330,11 @@ enum class RedesignButton {
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
     // drift; the tooltip names the TOGGLE for the reason every lamp's does.
-    // ITS GATE IS THE WARP COLUMN ALONE — both audio views, the toggle being
-    // MODE STATE rather than authoring (the record is at the `i` arm,
-    // input_key_dispatch.cpp) — under the same lock. Its glyph is mathmode,
-    // the italic f beside a multiplication cross.
+    // ITS GATE IS THE READ-ONLY LOCK ALONE since 2026-09-09 — the mode is one
+    // lamp in BOTH COLUMNS and both audio views, the toggle being MODE STATE
+    // rather than authoring (the record is at the `i` arm,
+    // input_key_dispatch.cpp). Its glyph is mathmode, the italic f beside a
+    // multiplication cross.
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
     // hand-listed, which is what their chord rows buy: bare `m` and bare `i`
@@ -8181,7 +8189,7 @@ struct AppState {
     // seats the cell it edits — and the RESTORE OF A BRACKET-ONLY UNDO ENTRY
     // (the tail of Undo::restore_history_entry, writing the cell the entry
     // carries: an undo or redo of an iteration bound step brightens the bound
-    // it moved, and every other entry carries Payload).
+    // it moved, on either column, and every other entry carries Payload).
     //
     // RESET TO PAYLOAD BY EVERY OTHER ROUTE THAT CHANGES THE FOCUS, at ONE
     // chokepoint: every Selection mutator writes the focus through
@@ -8204,9 +8212,9 @@ struct AppState {
     // editor fork, the flag painter's bright cell (render_flags through the
     // flag cache's fp_addressed_cell), the Up/Down and Edit Flag buttons'
     // face and tooltip (redesign_button_enabled / redesign_button_tooltip),
-    // the bound step's coalescing stamp (Undo::coalesce_gesture) and the
-    // bracket-only push, which stamps it onto the entry
-    // (Undo::push_undo_iter_bracket).
+    // the bound step's coalescing stamp (Undo::coalesce_gesture) and the two
+    // bracket-only pushes, which stamp it onto the entry
+    // (Undo::push_undo_iter_bracket and push_undo_phase_iter_bracket).
     MarkerCell addressed_cell = MarkerCell::Payload;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually
@@ -9646,9 +9654,16 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // column opened to both views and needed no exception after),
 // Ctrl+N (toggle_inherits), Delete (delete_selected_marker — again the warp
 // arm alone) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
-// routes, bare Return / KpEnter and the flag double-click (its iter-bracket
-// grammar rides it, bracket authoring having been source-only only because the
-// editor was). The argument is the split named above: none of the four moves a
+// routes, bare Return / KpEnter and the flag double-click (bracket authoring
+// had been source-only only because the editor was; the bracket's own grammar
+// left this surface on 2026-09-05 for the bound cells' editor).
+// THE ITERATION BRACKET IS NO EXCEPTION'S MEMBER AND OWES NONE, ON EITHER
+// COLUMN (2026-09-09, when the phase-reset column got a hop bracket of its
+// own): a bracket is not a POSITION — it becomes one only inside a sweep
+// cell, which is a render and not an authoring act — so its cells, their
+// editor and the arrows' bound step consult this predicate nowhere, in either
+// audio view and on either column, exactly as they did while the bracket was
+// warp-only. The argument is the split named above: none of the four moves a
 // marker, so none of them is imprecise-by-construction in the way a placement
 // edit is. What they DO share with the cent step is the RIPPLE — the target
 // map reshapes under the pointer — and they take the cent step's own answer
@@ -9970,28 +9985,46 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
 
 // -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
 //
-// The vertical arrows' SECOND step body, GuiWarpMarkersOps::adjust_iter_bound_
-// cents (warpmarkers_ops.cpp), steps one bound of the focused marker's
-// iteration bracket while the addressed cell (AppState::addressed_cell) is
-// Lower or Upper; a Payload axis is the tempo step and a Measure axis
-// refuses whole (addressed_cell_step_refusal below). Its predicates mirror
-// the tempo step's above one for one —
+// The vertical arrows' SECOND step body steps one bound of the focused
+// marker's iteration bracket while the addressed cell
+// (AppState::addressed_cell) is Lower or Upper; a Payload axis is the tempo
+// step and a Measure axis refuses whole (addressed_cell_step_refusal below).
+// Its predicates mirror the tempo step's above one for one —
 // the stable-state refusals, the landing owner, the group verdict, the
 // directional face, the kind refusal — and each has the same readers: the act,
 // the Up/Down buttons' face, their tooltip and the card. What differs is the
-// subject (a bound in the bracket's delta domain, not the base tempo) and the
-// eligibility (iter_popup_eligible_marker, the sweep's own — a label ref, a
-// pass or a disabled owner has no live bound to step).
+// subject (a bound in the bracket's own domain, not the base tempo) and the
+// eligibility (the sweep's own — a label ref, a pass or a disabled owner has
+// no live bound to step).
+//
+// THERE ARE TWO BODIES AND THEY FORK AT THESE PREDICATES (2026-09-09):
+// GuiWarpMarkersOps::adjust_iter_bound_cents in the CENT domain
+// (warpmarkers_ops.cpp) and GuiPhaseResetMarkersOps::adjust_iter_bound_hops in
+// the HOP domain (phaseresetmarkers_ops.cpp), the phase-reset column having
+// grown an iteration bracket of its own. Each of the four predicates below
+// forks on app.active_markers_view INSIDE ITS OWN BODY, so the Up/Down
+// dispatch, redesign_button_enabled, redesign_button_tooltip and the Return
+// arm keep ONE switch each and none of them learns a second column.
 
-// THE BOUND STEP'S STABLE-STATE REFUSALS: iteration mode on, then the tempo
-// step's own three terms — the warp column, a standing selection, a valid
-// focus — which are the same terms and are read rather than restated. The
-// mode term is a belt: a bound axis falls back to the payload the moment the
-// mode goes off, so no dispatch reaches the bound body outside it. TWO
-// READERS: the act's leading refusal and the Up/Down face with a bound
-// addressed.
+// THE BOUND STEP'S STABLE-STATE REFUSALS: iteration mode on, then a standing
+// selection and a valid focus, ON WHICHEVER COLUMN IS LIVE. The mode term is a
+// belt: a bound axis falls back to the payload the moment the mode goes off,
+// so no dispatch reaches a bound body outside it. TWO READERS: the act's
+// leading refusal — either act's, the two bodies' — and the Up/Down face with
+// a bound addressed.
+//
+// IT FORKS ON THE COLUMN INSIDE ITS OWN BODY (2026-09-09), which is what lets
+// the dispatch, the faces and the tooltips keep ONE switch each: the WARP arm
+// is tempo_cent_step_actionable, read rather than restated (its own three
+// terms are the warp column, a standing selection and a valid focus), and the
+// PHASE arm is those same two subject atoms over the phase column. The two
+// arms are one sentence in two columns, which is why they are one predicate.
 inline bool iter_bound_step_actionable(const AppState& app) {
-    return app.iteration_mode_enabled && tempo_cent_step_actionable(app);
+    if (!app.iteration_mode_enabled) return false;
+    if (app.active_markers_view == 'P') {
+        return marker_selection_standing(app) && marker_focus_standing(app);
+    }
+    return tempo_cent_step_actionable(app);
 }
 
 // A MEASURE HAS NO VALUE TO STEP (architect 2026-09-05): with the measure
@@ -10078,6 +10111,79 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
     m.iter_end_cents   = new_hi;
 }
 
+// WHERE A PHASE BOUND STEP WOULD LAND — iter_bound_step_landing's twin in the
+// HOP domain (2026-09-09), and the same two-wall shape: the start is the
+// bound's resting value, 0 for a blank bracket (a blank reads `+0` in both
+// cells, so a step from blank starts there), clamped first into the reset's
+// own hop window and then at the PARTNER bound — the lower never rises above
+// the upper, the upper never falls below the lower, the trim endcap's own
+// clamp at its partner.
+//
+// WHAT DIFFERS FROM THE WARP LANDING IS WHICH WINDOW: there the clamp window
+// is a fact about one marker's base tempo, here it is
+// phase_reset_hop_window's — a fact about the piece's length, the reset's two
+// neighbours and the live warp map — so the landing takes the app and the
+// audio rather than a marker by reference. THE WINDOW ALWAYS CONTAINS 0
+// (the identity cell renders the resting store), so a blank bracket's start is
+// inside it and the two clamps compose exactly as the warp pair does.
+//
+// THE PARTNER MAY BE OUTSIDE THE WINDOW HERE, which its warp sibling's
+// invariant rules out: nothing clamps this bracket retroactively, so a
+// standing partner can have been pushed off the wall by a later edit. Clamping
+// to the window FIRST and to the partner SECOND is what keeps the pair ordered
+// in that case — the step lands on the partner and the sweep's own plan is
+// what refuses the off-wall pair (IterationSweepRefusal::PhaseBracketOffWall).
+inline int phase_iter_bound_step_landing(const AppState& app,
+                                         const GuiAudio& audio, int idx,
+                                         MarkerCell side, int delta_hops) {
+    const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(pv.size())) return 0;
+    const GuiPhaseResetMarker& m = pv[static_cast<size_t>(idx)];
+    const int lo = m.iter_start_hops.value_or(0);
+    const int hi = m.iter_end_hops.value_or(0);
+    const int start   = side == MarkerCell::Upper ? hi : lo;
+    const int partner = side == MarkerCell::Upper ? lo : hi;
+    const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
+    const int windowed = std::clamp(start + delta_hops, w.k_min, w.k_max);
+    return side == MarkerCell::Upper ? std::max(windowed, partner)
+                                     : std::min(windowed, partner);
+}
+
+// Commit a phase bound step's landing — iter_bound_step_write's twin, and the
+// PHASE column's one write site for the same reason: the rule it carries is
+// about the PAIR and the landing owner above can only answer for one bound. It
+// writes both: the addressed side takes the landing, the partner keeps what it
+// had (0 when the bracket was blank, which is what makes a step from blank
+// author it).
+//
+// A pair of two zeroes CLEARS instead of resting, the blank rule this column
+// takes from the warp one: `[0, 0]` is the blank bracket on every authoring
+// road, so the arrows' step and the bound editor's commit both write through
+// here and two cells reading `+0` mean the blank bracket whichever authored
+// them. The step from blank still starts at [0, 0] — a blank reads `+0` in
+// both cells — it simply cannot come to rest there, which is what keeps a
+// reset whose cells read `+0` out of the sweep and makes a tap up then a tap
+// down leave the store byte-equal (the merged burst's own byte-equal pop,
+// Undo::record_gesture, whose row comparator reads these two fields).
+//
+// The walls do not move for it: the clearing is what the write does with a
+// landing, never a term of where a step may land, so the directional face and
+// the group scan still read phase_iter_bound_step_landing alone.
+inline void phase_iter_bound_step_write(GuiPhaseResetMarker& m,
+                                        MarkerCell side, int landing) {
+    const int lo = m.iter_start_hops.value_or(0);
+    const int hi = m.iter_end_hops.value_or(0);
+    const int new_lo = side == MarkerCell::Lower ? landing : lo;
+    const int new_hi = side == MarkerCell::Upper ? landing : hi;
+    if (new_lo == 0 && new_hi == 0) {
+        m.iter_start_hops.reset();
+        m.iter_end_hops.reset();
+        return;
+    }
+    m.iter_start_hops = new_lo;
+    m.iter_end_hops   = new_hi;
+}
+
 // THE GROUP BOUND STEP'S WALL SCAN, the tempo scan's shape over the sweep's
 // own eligibility: an INELIGIBLE member (iter_popup_eligible_marker false — a
 // label ref, a pass, a disabled owner) is SKIPPED, not walled, exactly as the
@@ -10087,14 +10193,23 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
 // survivor can, `Empty` when nothing survives. Defined in warpmarkers_ops.cpp
 // beside its tempo sibling; the act forks its sentence on the verdict and the
 // face reads the boolean wrapper.
+//
+// IT FORKS ON THE COLUMN inside its own body and takes `audio` for the phase
+// arm alone, whose walls are the hop window's (a fact about the live map and
+// the piece's length). `delta` is read as CENTS on the warp column and as
+// HOPS on the phase one — the arrows hand the same signed magnitude to both
+// and each domain reads it as its own unit, which is the whole of what the
+// step ladder means on either.
 enum class IterBoundStepGroupVerdict { Steps, Walled, Empty };
 IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
+                                                        const GuiAudio& audio,
                                                         MarkerCell side,
-                                                        int64_t delta_cents);
+                                                        int64_t delta);
 inline bool iter_bound_step_group_actionable(const AppState& a,
+                                             const GuiAudio& audio,
                                              MarkerCell side,
-                                             int64_t delta_cents) {
-    return iter_bound_step_group_verdict(a, side, delta_cents) ==
+                                             int64_t delta) {
+    return iter_bound_step_group_verdict(a, audio, side, delta) ==
            IterBoundStepGroupVerdict::Steps;
 }
 
@@ -10109,16 +10224,24 @@ inline bool iter_bound_step_group_actionable(const AppState& a,
 // The twin rule costs nothing here either: the singleton's clamped landing
 // equals the resting value iff the bound rests on a wall, the same for one
 // cent, three or ten, and the group scan walls a superset as the step grows.
+// It forks on the column in its own body too; `audio` serves the phase arm's
+// landing, whose window is the hop window's.
 bool iter_bound_step_direction_actionable(const AppState& a,
+                                          const GuiAudio& audio,
                                           MarkerCell side,
-                                          int64_t delta_cents);
+                                          int64_t delta);
 
 // WOULD A SINGLETON BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
-// would card with, or nullptr: a marker without a tempo of its own (a pass or
-// a label ref) has no bracket to step, and a disabled owner's bracket is
-// dormant. Magnitude-blind, so the Up/Down tooltip drops its ladder line on it
-// exactly as it drops it on tempo_cent_step_target_view_refusal. TWO READERS:
-// the act's card and the tooltip's line. Defined in warpmarkers_ops.cpp.
+// would card with, or nullptr: on the WARP column a marker without a tempo of
+// its own (a pass or a label ref) has no bracket to step and a disabled
+// owner's bracket is dormant; on the PHASE-RESET column every reset is a
+// carrier, so the one refusal there is the DORMANT one — a disabled reset's
+// range, in that column's own words. Magnitude-blind on both, so the Up/Down
+// tooltip drops its ladder line on it exactly as it drops it on
+// tempo_cent_step_target_view_refusal. TWO READERS: the act's card (either
+// act's) and the tooltip's line. Defined in warpmarkers_ops.cpp, where its
+// warp arm's atoms live; the phase arm is two lines beside it rather than a
+// second owner, because the FACES read one predicate.
 const char* iter_bound_step_kind_refusal(const AppState& a);
 
 // IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
@@ -10375,8 +10498,9 @@ inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
 // addressed cell since 2026-09-05): Return opens the ADDRESSED CELL'S editor
 // on the FOCUSED marker, so it wants a focus first, and then the cell's own
 // column — the flag's payload editor is the warp column's (the P view has no
-// per-flag editor), while the measure editor is both columns' and a bound
-// cell can only be addressed on a warp marker. A bound cell's kind refusal
+// per-flag editor), while the measure editor is both columns' and so, since
+// 2026-09-09, is the BOUND editor: a bound cell is addressed on either
+// column's eligible flags, so neither of those two arms asks the column. A bound cell's kind refusal
 // (an owner disabled after its cell was addressed) stays the act's own
 // card behind a live face, as the Up/Down pair's is. READERS: the Return arm
 // (input_handler.cpp) and the Edit flag button's disabled face. The MEASURE
@@ -11025,7 +11149,14 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
         || a.disabled   != b.disabled
         // The measure, for the warp column's reason: a measure-only undo
         // mutates nothing else, and row identity means the whole struct.
-        || a.measure    != b.measure;
+        || a.measure    != b.measure
+        // And the session-only ITERATION BRACKET (2026-09-09), for the warp
+        // comparator's own reason one line up: a bracket-only undo on this
+        // column mutates nothing but these two fields, so omitting them would
+        // leave the same-count matcher finding no touched row and stranding
+        // the selection. Row identity means the WHOLE struct on both columns.
+        || a.iter_start_hops != b.iter_start_hops
+        || a.iter_end_hops   != b.iter_end_hops;
 }
 
 // WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
@@ -11565,8 +11696,9 @@ inline std::size_t history_walk_step_landing(
 // card, which is the drift the truthful-buttons ruling exists to prevent.
 //
 // ONE WALK ANSWERS BOTH QUESTIONS, and neither is restated: the eligibility is
-// the sweep's own (iter_popup_eligible_marker, warpmarkers.h, CALLED rather
-// than spelled again, so a change to that predicate lands on the face for
+// the sweep's own on each column (iter_popup_eligible_marker, warpmarkers.h,
+// and phase_reset_iter_eligible_marker, phaseresetmarkers.h — CALLED rather
+// than spelled again, so a change to either predicate lands on the face for
 // free — as the disabled verdict did on 2026-09-02, R-12: a disabled owner's
 // dormant bracket is invisible here as at the dispatch, so a store whose only
 // brackets sit on disabled owners greys the button as "no ranges authored"
@@ -11577,22 +11709,32 @@ inline std::size_t history_walk_step_landing(
 // at most the cap when it is multiplied, so the product cannot approach an
 // integer boundary.
 //
+// IT WALKS BOTH COLUMNS SINCE 2026-09-09, and the product is one product: a
+// warp marker's cent bracket and a phase reset's HOP bracket multiply
+// together, which is his (b) — one `I` lamp, one sweep, one Cartesian
+// product. The phase arm carries a refusal of its own, PhaseBracketOffWall,
+// because that column's window has no retroactive clamp behind it (the ruling
+// is at GuiPhaseResetMarker's bracket, phaseresetmarkers.h): a bracket
+// authored inside its walls and pushed off them afterwards is caught HERE, on
+// every read, rather than at a writer.
+//
 // AN INVERTED BRACKET IS A BREACH AND DOES NOT DRIVE THE FACE. The editor
 // commit enforces start <= end and the bracket is session-only, so start > end
 // is an internal breach the dispatch refuses loudly on its own ("A marker's
-// iteration bracket runs backwards"). It is counted here as ONE swept cell —
+// iteration bracket runs backwards"), on either column. It is counted here as ONE swept cell —
 // swept, so the store is not "no ranges authored", and one cell, so it cannot
 // inflate the product — precisely so the face stays LIT and the press can
 // raise that card: a greyed button raises none, and a breach that greys the
 // button in silence is a breach nobody sees.
 //
-// THREE READERS: the sweep's own two refusals (run_iteration_sweep_render,
+// THREE READERS: the sweep's own refusals (run_iteration_sweep_render,
 // input_key_dispatch.cpp, which raises each sentence at its own arm), the
 // Render button's face while the mode is on and no cancel face outranks it
 // (redesign_button_enabled below), and the stateful tooltip, whose first line
 // becomes the card the greyed press would have raised. The face reads this
-// per tick while the mode stands; the walk is the warp store's, tens of
-// markers, and it allocates nothing.
+// per tick while the mode stands; the walk is the two stores', tens of markers
+// each, and it allocates nothing — the phase arm's window walk is at most
+// kIterHopMax landings per bracketed reset over a memoized map.
 inline constexpr std::size_t kMaxIterSweepCells = 1000;
 
 // THE TWO SENTENCES, ONE SPELLING EACH. They live here rather than at the
@@ -11611,6 +11753,19 @@ inline constexpr const char* kIterSweepOverCapCard =
 inline constexpr const char* kIterSweepOverCapHint =
     "Grid iterations refused: the marker brackets make more than 1000 cells "
     "(Ctrl+Alt+R)";
+// THE THIRD SENTENCE (2026-09-09, with the phase-reset column's hop bracket):
+// a phase bracket authored inside its walls can be pushed OFF them afterwards
+// by a dozen writers — a nudge or drag of the reset or of a neighbour, a
+// neighbour dropped or deleted, a disable, a warp edit that moves the lattice,
+// a load, an undo — and there is no retroactive clamp on this column (the
+// ruling is at GuiPhaseResetMarker's bracket). So the PLAN refuses instead,
+// re-verifying every standing bracket on every read; the mode and the brackets
+// stand for correction exactly as they do over the cap.
+inline constexpr const char* kIterSweepPhaseOffWallCard =
+    "Grid iterations refused: a phase reset's range runs off its walls";
+inline constexpr const char* kIterSweepPhaseOffWallHint =
+    "Grid iterations refused: a phase reset's range runs off its walls "
+    "(Ctrl+Alt+R)";
 static_assert(kMaxIterSweepCells == 1000,
               "kIterSweepOverCapCard spells the cap; move both together");
 static_assert(
@@ -11620,6 +11775,10 @@ static_assert(
 static_assert(
     std::string_view(kIterSweepOverCapHint).starts_with(
         std::string_view(kIterSweepOverCapCard)),
+    "the hint is the card's sentence plus the accelerator");
+static_assert(
+    std::string_view(kIterSweepPhaseOffWallHint).starts_with(
+        std::string_view(kIterSweepPhaseOffWallCard)),
     "the hint is the card's sentence plus the accelerator");
 
 // THE RESTRICT-UNDO-TO-VIEWPORT REFUSAL'S FOUR STRINGS (architect 2026-09-04),
@@ -11646,9 +11805,10 @@ static_assert(
     "the hint is the card's sentence plus the accelerator");
 
 enum class IterationSweepRefusal {
-    None,               // the sweep would render `cells` cells
-    NoBracketAuthored,  // no eligible marker carries a bracket at all
-    OverCellCap,        // the Cartesian product passes kMaxIterSweepCells
+    None,                 // the sweep would render `cells` cells
+    NoBracketAuthored,    // no eligible marker carries a bracket at all
+    OverCellCap,          // the Cartesian product passes kMaxIterSweepCells
+    PhaseBracketOffWall,  // a phase bracket no longer fits its hop window
 };
 
 struct IterationSweepPlan {
@@ -11659,7 +11819,16 @@ struct IterationSweepPlan {
     std::size_t           cells   = 0;
 };
 
-inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
+// `audio` arrives for the PHASE ARM alone (the BPM plan's precedent, which
+// takes it for its own cache key): the hop window is a fact about the live
+// warp map and the piece's length, and neither is in AppState.
+//
+// THE WALK ORDER IS THE WARP STORE, THEN THE PHASE STORE, and the FIRST
+// refusal met wins — so a store that is both over the cap and carrying an
+// off-wall phase bracket answers with whichever the walk reached first. The
+// dispatch walks the same two stores in the same order.
+inline IterationSweepPlan iteration_sweep_plan(const AppState& a,
+                                               const GuiAudio& audio) {
     IterationSweepPlan plan;
     bool        any_swept = false;
     std::size_t cells     = 1;
@@ -11688,6 +11857,43 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
             return plan;
         }
     }
+    // THE PHASE STORE, the same walk in the hop domain (2026-09-09). Its
+    // eligibility is this column's own (phase_reset_iter_eligible_marker,
+    // phaseresetmarkers.h — every reset is a carrier, so the verdict is the
+    // disabled bit) and its span is the integer count lo..hi inclusive, folded
+    // into the same checked product so the cap covers both columns together.
+    const std::vector<GuiPhaseResetMarker>& pv = a.phaseresetmarkers.markers();
+    for (int i = 0; i < static_cast<int>(pv.size()); ++i) {
+        if (!phase_reset_iter_eligible_marker(pv, i)) continue;
+        const GuiPhaseResetMarker& p = pv[static_cast<size_t>(i)];
+        if (!p.iter_start_hops.has_value() || !p.iter_end_hops.has_value()) {
+            continue;
+        }
+        any_swept = true;
+        const int lo = *p.iter_start_hops;
+        const int hi = *p.iter_end_hops;
+        // THE OFF-WALL RE-VERIFY, and this is where it lives because nothing
+        // clamps this bracket after the fact: both endpoints must still sit
+        // inside the reset's live hop window, or the whole sweep refuses and
+        // the brackets stand for correction. An INVERTED bracket is the warp
+        // arm's breach shape and is not this refusal's business — it is
+        // counted as one cell below so the face stays lit and the dispatch can
+        // raise its own loud card.
+        const PhaseHopWindow w = phase_reset_hop_window(a, audio, i);
+        if (lo <= hi && (lo < w.k_min || hi > w.k_max)) {
+            plan.refusal = IterationSweepRefusal::PhaseBracketOffWall;
+            return plan;
+        }
+        const std::size_t span =
+            lo > hi ? std::size_t{1}
+                    : static_cast<std::size_t>(hi - lo + 1);
+        cells *= span;
+        if (cells > kMaxIterSweepCells) {
+            plan.refusal = IterationSweepRefusal::OverCellCap;
+            plan.cells   = cells;
+            return plan;
+        }
+    }
     if (!any_swept) {
         plan.refusal = IterationSweepRefusal::NoBracketAuthored;
         return plan;
@@ -11696,8 +11902,10 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
     return plan;
 }
 
-inline bool iteration_sweep_actionable(const AppState& a) {
-    return iteration_sweep_plan(a).refusal == IterationSweepRefusal::None;
+inline bool iteration_sweep_actionable(const AppState& a,
+                                       const GuiAudio& audio) {
+    return iteration_sweep_plan(a, audio).refusal ==
+           IterationSweepRefusal::None;
 }
 
 // THE BPM SWEEP'S OPEN VERDICT (2026-09-04, with the BPM ITERATIONS button's
@@ -12787,15 +12995,16 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconBpm:
             return !active_view_state(a).read_only &&
                    bpm_sweep_open_actionable(a, audio);
-        // GRID ITERATIONS READS THE `i` ARM'S ONE TEST past the lock: the WARP
-        // COLUMN, both audio views (the toggle is mode state rather than
-        // authoring, the 2026-08-07 relaxation at the arm itself). In the P
-        // column the key cards and the button greys, one decision again; there
-        // is nothing else to mirror, the toggle being meaningful in either
-        // direction on any loaded piece.
+        // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
+        // arm has nothing else left to mirror (2026-09-09): the mode is ONE
+        // LAMP IN BOTH COLUMNS now — the phase-reset column carries a hop
+        // bracket of its own and the two sweep in one product — so the COLUMN
+        // TERM went with the arm's, along with the P-column card it greyed
+        // beside. Both audio views as before (the toggle is mode state rather
+        // than authoring, the 2026-08-07 relaxation at the arm itself), and
+        // the toggle is meaningful in either direction on any loaded piece.
         case RedesignButton::IconIter:
-            return !active_view_state(a).read_only &&
-                   a.active_markers_view == 'W';
+            return !active_view_state(a).read_only;
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
         // render player, which plays a rendered wav and authors nothing, so
         // the key is on the read-only allowlist and the button follows it —
@@ -13082,11 +13291,15 @@ inline bool redesign_button_enabled(const AppState& a,
             // owners, with the measure addressed nothing steps
             // (addressed_cell_step_refusal), otherwise the tempo step's — the
             // same fork the dispatch makes, so the face and the act read one
-            // decision either way.
+            // decision either way. IT IS STILL ONE SWITCH with the mode's
+            // second column (2026-09-09): the bound step's predicates fork on
+            // app.active_markers_view inside their own bodies, so this face
+            // asks the same two questions whichever column is live.
             if (addressed_cell_step_refusal(a)) return false;
             if (a.addressed_cell != MarkerCell::Payload) {
                 if (!iter_bound_step_actionable(a)) return false;
-                if (!iter_bound_step_direction_actionable(a, a.addressed_cell,
+                if (!iter_bound_step_direction_actionable(a, audio,
+                                                          a.addressed_cell,
                                                           delta))
                     return false;
                 break;
@@ -13373,8 +13586,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // RENDER'S ITERATION TERM (2026-09-02, the four-tier review's R-10):
         // with grid iterations on, this button's chord IS the sweep, so the
         // face reads the sweep's own pre-dispatch verdict
-        // (iteration_sweep_actionable, above — no brackets authored, or a
-        // cell product past the cap) and greys where the press would only
+        // (iteration_sweep_actionable, above — no brackets authored on
+        // EITHER column, a cell product past the cap, or a phase bracket
+        // standing off its walls) and greys where the press would only
         // card. THE CANCEL FACE OUTRANKS IT, as it outranks the iteration
         // hint: while a render or sweep is in flight this button IS the
         // cancel act (the ruled chord divergence), and cancelling is always
@@ -13383,7 +13597,7 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty() &&
                    (!a.iteration_mode_enabled || a.render_cancel_face ||
-                    iteration_sweep_actionable(a));
+                    iteration_sweep_actionable(a, audio));
         // THE TWO SKIPS (2026-08-30; the succession is at their case in the
         // first switch): lit iff EITHER admitted form — the bare trim-bound
         // jump or the ctrl whole-piece jump — would change anything, through
@@ -14687,15 +14901,17 @@ inline RedesignTooltipText redesign_button_tooltip(
     // THE CARD THE PRESS WOULD HAVE RAISED had the button stayed live — Drop
     // marker's shape one fork over, and what a dead button owes a user under
     // the tooltips-on-disabled ruling. The predicate is the face's own, read
-    // once for the answer rather than asked twice. Both greyed forms keep the
+    // once for the answer rather than asked twice. Every greyed form keeps the
     // chord in the line: the button is dead, but the KEY is not, and it is the
     // key that raises the sentence.
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        switch (iteration_sweep_plan(a).refusal) {
+        switch (iteration_sweep_plan(a, audio).refusal) {
             case IterationSweepRefusal::NoBracketAuthored:
                 return {kIterSweepNoBracketHint, nullptr};
             case IterationSweepRefusal::OverCellCap:
                 return {kIterSweepOverCapHint, nullptr};
+            case IterationSweepRefusal::PhaseBracketOffWall:
+                return {kIterSweepPhaseOffWallHint, nullptr};
             case IterationSweepRefusal::None:
                 break;
         }

@@ -1508,8 +1508,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // (the inventory is at active_column_authoring_allowed, app_state.h;
         // the commit's own tail carries the target-view re-warp and playhead
         // re-land). P view still refuses it — phase resets have no per-flag
-        // editor — while the measure editor is both columns' and a bound
-        // cell is only ever addressed on a warp marker. THE REFUSALS ARE ONE
+        // editor — while the measure editor is both columns' and so, since
+        // 2026-09-09, is the BOUND editor: a bound cell is addressed on either
+        // column's eligible flags now. THE REFUSALS ARE ONE
         // PREDICATE since 2026-08-30 (flag_editor_open_actionable,
         // app_state.h, forking on the axis since 2026-09-05), which the Edit
         // flag button's face reads too — the truthful-buttons ruling. AND
@@ -1531,15 +1532,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         case MarkerCell::Lower:
         case MarkerCell::Upper:
             // A bound cell addressed on a marker that has since lost its
-            // live bracket (an owner disabled after its cell was pressed)
-            // cards the bound step's own kind sentence — a fact about the
-            // marker's kind, behind a live face, the Up/Down pair's shape.
+            // live bracket (an owner or a reset disabled after its cell was
+            // pressed) cards the bound step's own kind sentence — a fact
+            // about the marker's kind, behind a live face, the Up/Down pair's
+            // shape. The predicate forks on the live column, so this arm
+            // opens the addressed cell's editor on either.
             if (const char* refusal = iter_bound_step_kind_refusal(app)) {
                 notifications.notify(AppState::NotificationClass::Normal,
                                      refusal);
                 return;
             }
-            flag_editor.enter_iter_bound_edit(focus, app.addressed_cell);
+            flag_editor.enter_iter_bound_edit(app.active_markers_view, focus,
+                                              app.addressed_cell);
             return;
         case MarkerCell::Measure:
             flag_editor.enter_measure_edit(app.active_markers_view, focus);
@@ -1972,8 +1976,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // bound cells): with a bound cell addressed (AppState::addressed_cell,
     // written by a marker press on that cell, back on the payload the moment
     // the mode goes off) the same chord at the same magnitude runs the SECOND
-    // step body, adjust_iter_bound_cents, whose refusal this arm cards exactly
-    // as it cards the tempo step's; with the MEASURE addressed there is
+    // step body — adjust_iter_bound_cents on the warp column and
+    // adjust_iter_bound_hops on the phase-reset one — whose refusal this arm
+    // cards exactly as it cards the tempo step's; with the MEASURE addressed there is
     // nothing to step and the press cards its one sentence
     // (addressed_cell_step_refusal, the buttons' own grey). Same ladder, same
     // repeat bit, same coalescing shape; the Up/Down buttons' face forks on
@@ -1990,6 +1995,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         case MarkerCell::Lower:
         case MarkerCell::Upper:
+            // AND THE COLUMN PICKS WHICH BOUND BODY (2026-09-09): the
+            // phase-reset column carries an iteration bracket of its own, in
+            // HOPS of the analysis lattice, so the same chord at the same
+            // magnitude runs that column's step there. It is the one fork this
+            // arm makes for the second column — every predicate the faces and
+            // the tooltips read forks inside its own body — and the ladder,
+            // the repeat bit and the coalescing shape are the same on both,
+            // each domain reading the signed magnitude as its own unit.
+            if (app.active_markers_view == 'P') {
+                card_op_refusal(notifications,
+                                phase_resets.adjust_iter_bound_hops(
+                                    app.addressed_cell,
+                                    static_cast<int>(delta_cents),
+                                    mods.synthesized_repeat));
+                return;
+            }
             card_op_refusal(notifications,
                             warpops.adjust_iter_bound_cents(
                                 app.addressed_cell, delta_cents,

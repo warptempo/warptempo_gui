@@ -50,6 +50,32 @@ bool parse_signed_2dp_cents(const std::string& v, int64_t& out) {
     return true;
 }
 
+// THE HOP BOUND'S GRAMMAR, READ BACK — parse_signed_2dp_cents' twin for the
+// phase-reset column (2026-09-09). It is FIXED-WIDTH too and narrower: a sign
+// and ONE DIGIT (format_signed_hops, warpmarkers.h, the one form a phase cell
+// shows), because a bound is capped at kIterHopMax — the architect's single
+// digit, "past nine it is no longer the phase reset it was". So this reader
+// takes exactly those two bytes and nothing else: no surrounding whitespace,
+// no bare digit, no double sign, ONE CANONICAL SPELLING PER VALUE. THE READER
+// IS THE GRAMMAR'S OWNER, which is why it is exact rather than merely wide
+// enough to catch ordinary typing: the field's two-byte cap
+// (kMaxPendingCharsIterHop, text_editor.h) bounds what can be TYPED and this
+// bounds what can be COMMITTED. The conversion is digit-to-int direct, and it
+// needs no overflow arm at all — one digit never leaves [-9, +9]; the hop
+// WINDOW's own walls, refused at the commit below, are what hold a bound
+// inside the piece and off its neighbours. ZERO HAS ONE SIGN AND IT IS '+':
+// the writer spells zero `+0`, so `-0` is a SECOND spelling of a value that
+// already has one and is refused here like any other non-canonical token.
+bool parse_signed_hops(const std::string& v, int& out) {
+    if (v.size() != 2) return false;
+    if (v[0] != '+' && v[0] != '-') return false;
+    if (!std::isdigit(static_cast<unsigned char>(v[1]))) return false;
+    const int mag = v[1] - '0';
+    if (mag == 0 && v[0] == '-') return false;   // -0: zero's second spelling
+    out = (v[0] == '-') ? -mag : mag;
+    return true;
+}
+
 } // namespace
 
 // Flag-editor cluster: the marker lane's three editors (the flag's
@@ -191,19 +217,25 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
 }
 
 // The contract is at the declaration; this is enter_measure_edit's mechanics
-// on the warp store with the cell's own eligibility in front.
-void GuiFlagEditor::enter_iter_bound_edit(int idx, MarkerCell side) {
+// over TWO STORES with the cell's own eligibility in front.
+void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
+                                          MarkerCell side) {
     if (idx < 0) return;
-    const auto& mv = app.warpmarkers.markers();
-    if (idx >= static_cast<int>(mv.size())) return;
+    const bool phase = (column == 'P');
+    const auto& mv  = app.warpmarkers.markers();
+    const auto& pmv = app.phaseresetmarkers.markers();
+    const int n = phase ? static_cast<int>(pmv.size())
+                        : static_cast<int>(mv.size());
+    if (idx >= n) return;
     if (side != MarkerCell::Lower && side != MarkerCell::Upper) return;
     // NO CELL, NO EDITOR: the cell paints on exactly the markers the sweep
-    // reads while the mode is on (warp_iter_cells, render.cpp, off the same
-    // predicate), so an editor opens on exactly those. The callers card the
-    // kind refusal ahead of this belt; a mode-off call cannot arrive, the
-    // axis falling back to the payload with the mode.
+    // reads while the mode is on (warp_iter_cells / phase_iter_cells,
+    // render.cpp, off the same two predicates), so an editor opens on exactly
+    // those. The callers card the kind refusal ahead of this belt; a mode-off
+    // call cannot arrive, the axis falling back to the payload with the mode.
     if (!app.iteration_mode_enabled) return;
-    if (!iter_popup_eligible_marker(mv, idx)) return;
+    if (phase ? !phase_reset_iter_eligible_marker(pmv, idx)
+              : !iter_popup_eligible_marker(mv, idx)) return;
 
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::IterBound &&
@@ -216,9 +248,11 @@ void GuiFlagEditor::enter_iter_bound_edit(int idx, MarkerCell side) {
     }
 
     // The focus repaired, then single-selected and landed — the measure
-    // editor's open verbatim (its comments carry the why). The select resets
-    // the addressed cell to the payload through the Selection chokepoint, so
-    // the cell is written AFTER it: an editor open seats the cell it edits.
+    // editor's open verbatim (its comments carry the why, the select and the
+    // land both resolving against the ACTIVE column's store). The select
+    // resets the addressed cell to the payload through the Selection
+    // chokepoint, so the cell is written AFTER it: an editor open seats the
+    // cell it edits.
     selection.repair_last_selected();
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
@@ -227,14 +261,18 @@ void GuiFlagEditor::enter_iter_bound_edit(int idx, MarkerCell side) {
     if (text_editor::is_active(app.top_flag_editor)) {
         text_editor::deactivate(app.top_flag_editor);
     }
-    // THE SEED IS THE CELL'S OWN TOKEN — the one spelling the cell paints
-    // (format_iter_bound_cell, `+0.00` on a blank bracket), so what the cell
-    // shows and what its editor opens with cannot differ.
-    text_editor::enter(app.top_flag_editor, idx,
-                       format_iter_bound_cell(mv[static_cast<size_t>(idx)],
-                                              side),
+    // THE SEED IS THE CELL'S OWN TOKEN — the one spelling the cell paints on
+    // this column (format_iter_bound_cell's `+0.00` on the warp side,
+    // format_phase_iter_bound_cell's `+0` on the phase side, each blank), so
+    // what the cell shows and what its editor opens with cannot differ.
+    const std::string seed =
+        phase ? format_phase_iter_bound_cell(pmv[static_cast<size_t>(idx)],
+                                             side)
+              : format_iter_bound_cell(mv[static_cast<size_t>(idx)], side);
+    text_editor::enter(app.top_flag_editor, idx, seed,
                        text_editor::Kind::IterBound,
-                       /*iter_upper=*/side == MarkerCell::Upper);
+                       /*iter_upper=*/side == MarkerCell::Upper,
+                       /*iter_hops=*/phase);
 
     // Open-selected, the family's rule: the token is fully selected so the
     // first keystroke replaces it wholesale. The seed is never empty here.
@@ -258,6 +296,20 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     const int idx = app.top_flag_editor.target;
     const MarkerCell side = iter_bound_editor_side(app.top_flag_editor);
     const std::string next = app.top_flag_editor.pending;
+
+    // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN, for
+    // commit_measure_edit's own reason (stated in full there): the view CANNOT
+    // MOVE under an open session — every column-switching key is dropped at
+    // the keyboard-modal gate while any editor stands, and every
+    // column-switching BUTTON acts at the LIFT whose own PRESS already closed
+    // this editor — so the session needs no stored column of its own. The
+    // session's `iter_hops` bit is not that column: it exists for
+    // text_editor.cpp alone, which selects the byte cap and cannot see the
+    // app.
+    if (app.active_markers_view == 'P') {
+        this->commit_phase_iter_bound_edit(idx, side, next);
+        return;
+    }
 
     const auto& mv_const = app.warpmarkers.markers();
     // The target may have gone out from under the editor, or stopped being a
@@ -349,6 +401,122 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // NO RENDER AND NO MAP REBUILD: a bracket is not a map input (excluded
     // from build_warp_frame_map and the render recipe alike), so the cell is
     // the only thing that moved and the strip is the only damage.
+    text_editor::deactivate(app.top_flag_editor);
+    viewport.invalidate_top_strip();
+}
+
+// THE PHASE ARM OF THE BOUND COMMIT (2026-09-09). The contract is at the
+// declaration; this is the warp arm's every clause in the HOP domain, and
+// TYPED INPUT GATES LOUD here for the same reason: a bound typed into its own
+// cell is authored input arriving at its own surface, so the walls the arrows'
+// step clamps at silently (phase_iter_bound_step_landing) are refusals here,
+// each named.
+void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
+                                                 const std::string& next) {
+    const auto& pv_const = app.phaseresetmarkers.markers();
+    // The target may have gone out from under the editor (the store is frozen
+    // under the modal editor, so it cannot happen today; the belt is the
+    // payload commit's own): drop the edit.
+    if (idx < 0 || idx >= static_cast<int>(pv_const.size())) {
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+    const GuiPhaseResetMarker& live = pv_const[static_cast<size_t>(idx)];
+
+    // The warp arm's refuse composer verbatim: `red = true`, a top-strip
+    // repaint, one stderr line keeping the offending token, one normal card
+    // carrying the sentence alone (that text standing in the red field the
+    // refusal leaves), and the session left open for correction.
+    auto refuse = [&](const std::string& why) {
+        app.top_flag_editor.red = true;
+        viewport.invalidate_top_strip();
+        const std::string refusal = "Range bound rejected: " + why;
+        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
+                     refusal.c_str(), next.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+    };
+
+    std::vector<GuiPhaseResetMarker> proposed = pv_const;
+    GuiPhaseResetMarker& m = proposed[static_cast<size_t>(idx)];
+    if (next.empty()) {
+        // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
+        // one bound alone is not representable, so emptying either cell is the
+        // removal — the measure's own empty-removes rule.
+        m.iter_start_hops.reset();
+        m.iter_end_hops.reset();
+    } else {
+        int value = 0;
+        if (!parse_signed_hops(next, value)) {
+            refuse("a hop bound is a sign and one digit, as +0");
+            return;
+        }
+        // THE PARTNER, first and cheapest: the lower never rises above the
+        // upper and the upper never falls below the lower (0 for a blank
+        // bracket, the step's own start).
+        const int partner = side == MarkerCell::Upper
+                                ? live.iter_start_hops.value_or(0)
+                                : live.iter_end_hops.value_or(0);
+        if (side == MarkerCell::Lower && value > partner) {
+            refuse("the lower bound cannot rise above the upper");
+            return;
+        }
+        if (side == MarkerCell::Upper && value < partner) {
+            refuse("the upper bound cannot fall below the lower");
+            return;
+        }
+        // THEN THE HOP WINDOW, refused rather than clamped, and NAMING THE
+        // WALL (architect 2026-09-09's (d): a cell that would push the reset
+        // before frame 0, past the last frame, or onto a neighbour is refused
+        // at authoring, like the tempo window). The window's owner already
+        // decided which wall closed each side, so this reads the verdict
+        // rather than re-deriving it (phase_reset_hop_window,
+        // warp_frame_map_view.h).
+        const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
+        if (value < w.k_min || value > w.k_max) {
+            const bool low = value < w.k_min;
+            const PhaseHopWall wall = low ? w.min_wall : w.max_wall;
+            switch (wall) {
+            case PhaseHopWall::Digit:
+                refuse("a hop past 9 is no longer this phase reset");
+                return;
+            case PhaseHopWall::PieceEdge:
+                refuse("the cell would leave the piece");
+                return;
+            case PhaseHopWall::Neighbour:
+                refuse(low ? "the cell would reach the previous phase reset"
+                           : "the cell would reach the next phase reset");
+                return;
+            }
+            return;
+        }
+        // THE ONE WRITE SITE: the addressed side takes the value, the partner
+        // keeps what it had, and a pair landing on two zeroes clears — the
+        // same rule the arrows' step writes under, so a typed `+0` pair and a
+        // stepped one mean one thing.
+        phase_iter_bound_step_write(m, side, value);
+    }
+
+    // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no store
+    // bump — the shape every no-op commit in the product takes.
+    if (m.iter_start_hops == live.iter_start_hops &&
+        m.iter_end_hops   == live.iter_end_hops) {
+        this->exit_top_flag_edit_no_commit();
+        return;
+    }
+
+    // ONE BRACKET-ONLY ENTRY (affects_persistence false — session-only fields,
+    // never serialized, so the dirty dot stays where it is), carrying the
+    // ADDRESSED CELL this editor seated at its open, so undoing the commit
+    // leaves the focus bright on the cell it was typed into. The snapshot is
+    // taken before the write, the store's own convention.
+    std::vector<GuiPhaseResetMarker> pre_state = pv_const;
+    app.phaseresetmarkers.markers_mut() = std::move(proposed);
+    undo.push_undo_phase_iter_bracket(std::move(pre_state));
+    undo.recompute_dirty();
+
+    // NO RENDER AND NO MAP REBUILD: a bracket is not a position and not a map
+    // input, so the cell is the only thing that moved and the strip is the
+    // only damage.
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
 }
@@ -804,7 +972,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     target_render.trigger();
 }
 
-// Wipe every marker's session-only iter bracket. The single clear every
+// Wipe BOTH STORES' session-only iter brackets (2026-09-09, with the mode's
+// second column: a warp marker's cent bracket and a phase reset's hop bracket
+// go together, the mode being one lamp over both). The single clear every
 // iteration-mode exit route shares: the `i` toggle's turning-off branch,
 // enter_bpm_mode's forced iter-off, and the iteration sweep's success tail —
 // exiting the mode is the clear on every route, so a bracket exists only while
@@ -820,9 +990,17 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // and resets no bracket — the incoming set carries none by construction, and
 // undo restores the outgoing set with its brackets under a mode that never
 // changed (the record is at that body, input_key_dispatch.cpp).
-// Pushes one undo entry when something was cleared and no-ops otherwise, so
-// a bracketless exit leaves the undo stack untouched; plain undo is
-// deliberately ungated and may restore a previously accepted bracket set.
+// Pushes ONE undo entry for the act when something was cleared and no-ops
+// otherwise, so a bracketless exit leaves the undo stack untouched; plain undo
+// is deliberately ungated and may restore a previously accepted bracket set.
+// It is a BOTH-COLUMNS entry (push_undo_both) because the act is one clear
+// over two stores, and it carries affects_persistence FALSE for the reason the
+// warp-only entry always did — neither bracket serializes, so crossing the
+// entry must not move the dirty dot on either column. The entry is TAGGED WITH
+// THE LIVE COLUMN, which is what op_mode names at a restore: the restore
+// writes both snapshots back unconditionally and then reads op_mode for the
+// column to return to and for which post-restore rules to run
+// (Undo::restore_history_entry).
 // Callers own the mode-flag flip and the repaint invalidation.
 // AND IT PUTS AN ADDRESSED BOUND CELL BACK ON THE PAYLOAD (architect
 // 2026-09-04): the cells go with the mode, so a Lower or Upper axis
@@ -830,29 +1008,53 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // bracket test, because this body is the one thing every exit from the mode
 // runs — there is no single mode setter, the three writers of the off edge
 // each flip the bit themselves after calling this — so a step outside the
-// mode can only ever be the tempo step. An addressed MEASURE is left alone:
-// that cell is not the mode's. History-less: the axis is a session address,
-// not content, and the snapshot below carries no such field.
+// mode can only ever be the tempo step, on either column. An addressed
+// MEASURE is left alone: that cell is not the mode's. History-less: the axis
+// is a session address, not content, and the snapshot below carries no such
+// field.
 void GuiFlagEditor::wipe_iter_state() {
     if (app.addressed_cell == MarkerCell::Lower ||
         app.addressed_cell == MarkerCell::Upper) {
         app.addressed_cell = MarkerCell::Payload;
     }
-    auto& mv = app.warpmarkers.markers_mut();
-    bool any = false;
-    for (const auto& m : mv) {
+    // The two scans read the stores CONST, so a bracketless exit bumps neither
+    // generation and rebuilds no cache: markers_mut is what bumps, and it is
+    // reached only past the test below.
+    bool warp_any = false;
+    for (const auto& m : app.warpmarkers.markers()) {
         if (m.iter_start_cents.has_value() || m.iter_end_cents.has_value()) {
-            any = true;
+            warp_any = true;
             break;
         }
     }
-    if (!any) return;
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    for (auto& m : mv) {
-        m.iter_start_cents.reset();
-        m.iter_end_cents.reset();
+    bool phase_any = false;
+    for (const auto& p : app.phaseresetmarkers.markers()) {
+        if (p.iter_start_hops.has_value() || p.iter_end_hops.has_value()) {
+            phase_any = true;
+            break;
+        }
     }
-    undo.push_undo_warp(std::move(pre_state),
+    if (!warp_any && !phase_any) return;
+    std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
+    std::vector<GuiPhaseResetMarker> phase_pre = app.phaseresetmarkers.markers();
+    // Each column is touched only where it has something to clear, for the
+    // same reason: an untouched store keeps its generation. The ENTRY still
+    // carries both snapshots — an undo entry always does — so the restore is
+    // symmetric whichever column had the brackets.
+    if (warp_any) {
+        for (auto& m : app.warpmarkers.markers_mut()) {
+            m.iter_start_cents.reset();
+            m.iter_end_cents.reset();
+        }
+    }
+    if (phase_any) {
+        for (auto& p : app.phaseresetmarkers.markers_mut()) {
+            p.iter_start_hops.reset();
+            p.iter_end_hops.reset();
+        }
+    }
+    undo.push_undo_both(std::move(warp_pre), std::move(phase_pre),
+                        app.active_markers_view,
                         /*affects_persistence=*/false);
 }
 

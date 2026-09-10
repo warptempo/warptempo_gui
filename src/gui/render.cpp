@@ -917,9 +917,11 @@ std::string cap_marker_label(const std::string& text) {
     return out;
 }
 
-// The two bound cells an eligible warp flag paints while iteration mode is on,
-// or nothing. The lambda form each column hands render_flag_boxes_impl
-// answers this; the phase-reset column answers "no cells" always.
+// The two bound cells an eligible flag paints while iteration mode is on, or
+// nothing. The lambda form each column hands render_flag_boxes_impl answers
+// this — the warp column through warp_iter_cells and the phase-reset column
+// through phase_iter_cells (2026-09-09, when the mode grew its second
+// column) — and the two differ in their COMPOSER alone, cents against hops.
 struct IterCellText {
     bool        present = false;
     std::string lower;
@@ -940,6 +942,28 @@ static IterCellText warp_iter_cells(const std::vector<GuiWarpMarker>& markers,
     c.present = true;
     c.lower   = format_iter_bound_cell(m, MarkerCell::Lower);
     c.upper   = format_iter_bound_cell(m, MarkerCell::Upper);
+    return c;
+}
+
+// The cells of phase reset `i` under `iteration_on` — warp_iter_cells' twin
+// (2026-09-09), off this column's own eligibility
+// (phase_reset_iter_eligible_marker, phaseresetmarkers.h: every reset is a
+// carrier, so the verdict is the disabled bit) and its own composer
+// (format_phase_iter_bound_cell — the signed integer hop, `+0` for a blank
+// bracket). Shared by the flag pass, the measure editor's anchor
+// (committed_flag_box_w) and the bound field's own (committed_cell_seam_off)
+// for the same reason its twin is: the resting boxes and the field that opens
+// past them cannot disagree about where the cells end.
+static IterCellText phase_iter_cells(
+    const std::vector<GuiPhaseResetMarker>& phase_resets, int i,
+    bool iteration_on) {
+    IterCellText c;
+    if (!iteration_on || !phase_reset_iter_eligible_marker(phase_resets, i))
+        return c;
+    const GuiPhaseResetMarker& m = phase_resets[static_cast<size_t>(i)];
+    c.present = true;
+    c.lower   = format_phase_iter_bound_cell(m, MarkerCell::Lower);
+    c.upper   = format_phase_iter_bound_cell(m, MarkerCell::Upper);
     return c;
 }
 
@@ -1213,8 +1237,9 @@ void render_flag_boxes_impl(
     DisabledFn&& disabled_of,
     MeasureFn&& measure_of,
     // The two iteration bound cells marker i paints, or none (IterCellText):
-    // the warp column answers through warp_iter_cells, the phase-reset column
-    // never paints any.
+    // the warp column answers through warp_iter_cells and the phase-reset
+    // column through phase_iter_cells, each off its own eligibility and its
+    // own composer.
     CellsFn&& cells_of,
     std::vector<FlagHitRect>* out_hit_rects,
     std::vector<MarkerStem>* out_stems,
@@ -1800,6 +1825,7 @@ void render_phase_reset_flags(cairo_t* cr,
                             int sample_rate,
                             const std::set<int>& selected_set,
                             const std::set<int>& red_set,
+                            bool iteration_on,
                             int focus_marker,
                             MarkerCell focus_cell,
                             std::vector<FlagHitRect>* out_hit_rects,
@@ -1825,30 +1851,28 @@ void render_phase_reset_flags(cairo_t* cr,
         [&](int i) -> const std::string& {
             return phase_resets[static_cast<size_t>(i)].measure;
         },
-        // NO BOUND CELLS ON THIS COLUMN: the iteration bracket is a WARP
-        // payload (a phase reset carries no tempo to iterate), so the cells are
-        // that column's alone — the asymmetry is the bracket's, recorded here
-        // under the symmetry rule (conventions.md).
-        [](int) { return IterCellText{}; },
+        // THE TWO BOUND CELLS, on exactly the resets the sweep reads
+        // (phase_iter_cells above), and none outside the mode. The bracket is
+        // a HOP bracket here — the reset's position walked along the analysis
+        // lattice — so the cells carry the signed integer and no decimals,
+        // which is what tells the two columns' cells apart at a glance.
+        [&](int i) { return phase_iter_cells(phase_resets, i, iteration_on); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        // ONLY A MEASURE BOX IS EVER SUPPRESSED ON THIS COLUMN, and the
+        // THE PAYLOAD BOX IS THE ONE THIS COLUMN NEVER SUPPRESSES, and the
         // asymmetry is real rather than an oversight (the warp/phase-reset
         // symmetry rule, conventions.md): the MEASURE editor is both columns'
-        // (measures are the fourth ruled exception to the home-view binding),
-        // while the PAYLOAD and BOUND editors are WARP-column surfaces by their
-        // own open gates — the payload arm reads app.warpmarkers and a phase
-        // reset carries no tempo to iterate — so no phase-reset flag can ever
-        // be the edited one for either. THE FORK IS HERE rather than at the
-        // caller because this painter owns its column's asymmetry: a
-        // suppression naming any other box is dropped, so a warp target index
-        // can never be applied to this store. If a phase-reset payload editor
-        // is ever added, this is the line it changes.
-        suppressed.cell == MarkerCell::Measure ? suppressed : SuppressedBox{},
-        // No cells on this column, so the cull's bound needs no widening;
-        // the focus and its addressed cell still arrive, because a phase
-        // reset's MEASURE box is a cell of its own and is the bright one
-        // when addressed.
-        /*iteration_on=*/false,
+        // (measures are the fourth ruled exception to the home-view binding)
+        // and so is the BOUND editor since 2026-09-09, while the PAYLOAD
+        // editor is a WARP-column surface by its own open gates — a phase
+        // reset authors no payload line, its flag carrying a display-only
+        // token — so no phase-reset flag can ever be the edited one for that
+        // kind. THE FORK IS HERE rather than at the caller because this
+        // painter owns its column's asymmetry: a suppression naming the
+        // payload is dropped, so a warp target index can never be applied to
+        // this store. If a phase-reset payload editor is ever added, this is
+        // the line it changes.
+        suppressed.cell == MarkerCell::Payload ? SuppressedBox{} : suppressed,
+        iteration_on,
         focus_marker, focus_cell);
 }
 
@@ -2242,8 +2266,9 @@ double gui_scale_factor()  {
 // at the measure box's own seam and so needs the number the flag pass
 // computes: the composed label, capped at the nine-glyph budget, shaped, plus
 // the two pads, then the cells' whole run (measure_iter_cells' span, off the
-// same eligibility and the same tokens the flag pass paints —
-// warp_iter_cells).
+// same eligibility and the same tokens the flag pass paints — warp_iter_cells
+// or phase_iter_cells, the column deciding which, since both columns grow
+// cells).
 // Measured rather than published because the flag pass and this one run on
 // different surfaces at different times; the inputs are the same store, the
 // same composer and the same scaled font, so the two agree.
@@ -2252,7 +2277,12 @@ static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
     std::string text;
     int cells_w = 0;
     if (phase) {
-        text = std::string(kPhaseResetLaneToken);
+        const std::vector<GuiPhaseResetMarker>& pmv =
+            app.phaseresetmarkers.markers();
+        text    = std::string(kPhaseResetLaneToken);
+        cells_w = measure_iter_cells(font,
+                                     phase_iter_cells(pmv, idx, iteration_on))
+                      .span_w;
     } else {
         const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
         text    = flag_text(mv, idx);
@@ -2269,8 +2299,10 @@ static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
 // WHERE ONE BOUND CELL'S SEAM COLUMN STANDS on the committed flag, as an
 // offset from the flag fill's left edge — the bound editor's anchor, and the
 // whole of what that anchor needs. Off the same eligibility, the same tokens
-// and the same font the flag pass lays the cells out with (warp_iter_cells),
-// so the field opens on exactly the column the resting cell's seam stands on.
+// and the same font the flag pass lays the cells out with (warp_iter_cells or
+// phase_iter_cells, `phase` deciding which — the bound editor is both columns'
+// since 2026-09-09), so the field opens on exactly the column the resting
+// cell's seam stands on.
 //
 // IT ANSWERS WHERE, NOT HOW WIDE. It used to publish the cell's fill width too,
 // which the field was PINNED to; that pin is retired (architect 2026-09-05 —
@@ -2282,15 +2314,21 @@ static int committed_flag_box_w(const AppState& app, cairo_scaled_font_t* font,
 // flag's right edge, unreachable because the open asked (enter_iter_bound_edit)
 // and a keyboard-modal editor freezes the mode bit.
 static int committed_cell_seam_off(const AppState& app,
-                                   cairo_scaled_font_t* font, int idx,
-                                   MarkerCell side, bool iteration_on) {
-    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+                                   cairo_scaled_font_t* font, bool phase,
+                                   int idx, MarkerCell side,
+                                   bool iteration_on) {
+    const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
+    const std::vector<GuiPhaseResetMarker>& pmv =
+        app.phaseresetmarkers.markers();
+    const std::string label = phase ? std::string(kPhaseResetLaneToken)
+                                    : flag_text(mv, idx);
     const text_shape::ShapedRun run =
-        text_shape::shape_text_run(font, cap_marker_label(flag_text(mv, idx)));
+        text_shape::shape_text_run(font, cap_marker_label(label));
     const int pads   = marker_flag_pad_left_px() + marker_flag_pad_right_px();
     const int flag_w = pads + static_cast<int>(std::nearbyint(run.width_px));
-    const IterCellLayout cl =
-        measure_iter_cells(font, warp_iter_cells(mv, idx, iteration_on));
+    const IterCellLayout cl = measure_iter_cells(
+        font, phase ? phase_iter_cells(pmv, idx, iteration_on)
+                    : warp_iter_cells(mv, idx, iteration_on));
     if (cl.present && side == MarkerCell::Upper)
         return flag_w + marker_flag_border_px() + cl.lower_w;
     return flag_w;
@@ -2325,12 +2363,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // exception, active_column_authoring_allowed, app_state.h) — which costs
     // this painter nothing, the column below being resolved on the DISPLAYED
     // basis and the live map like every other lane item. The MEASURE editor is
-    // BOTH columns' (measures are the fourth ruled
-    // exception to the home-view binding), so its store is the ACTIVE column's
-    // — the column its open route resolved the index against. A target index
-    // the store has since shrunk past is the only failure shape, and it simply
-    // paints nothing.
-    const bool phase = measure_kind && app.active_markers_view == 'P';
+    // BOTH columns' (measures are the fourth ruled exception to the home-view
+    // binding) and so is the BOUND editor since 2026-09-09 (the phase-reset
+    // column carries an iteration bracket of its own), so their store is the
+    // ACTIVE column's — the column the open route resolved the index against.
+    // A target index the store has since shrunk past is the only failure
+    // shape, and it simply paints nothing.
+    const bool phase = !payload_kind && app.active_markers_view == 'P';
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv = app.phaseresetmarkers.markers();
     const int idx = ed.target;
@@ -2442,8 +2481,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const MarkerCell field_cell = suppressed_flag_box(app).cell;
     const int anchor_off = measure_kind
         ? committed_flag_box_w(app, font, phase, idx, iteration_on) + border_w
-        : bound_kind ? committed_cell_seam_off(app, font, idx, field_cell,
-                                               iteration_on) + border_w
+        : bound_kind ? committed_cell_seam_off(app, font, phase, idx,
+                                               field_cell, iteration_on) +
+                           border_w
                      : 0;
 
     // NO FIELD IS CLAMPED, ON ANY KIND, AT EITHER EDGE (architect 2026-09-06,
@@ -2820,10 +2860,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // on painted cell and measure ink to payload bytes and promise text
     // editing where none is.
     // WHAT RIDES, BY RANK: every box standing right of the field's own. The
-    // MEASURE field's rank is the last, so nothing rides under it — which is
-    // also what keeps the warp store's reads below off the phase-reset column,
-    // the measure editor being the only kind that reaches it (the payload and
-    // bound editors are warp-column surfaces by their own open gates).
+    // MEASURE field's rank is the last, so nothing rides under it. THE STORE
+    // BELOW IS THE FIELD'S OWN COLUMN since 2026-09-09, when the bound editor
+    // became both columns': the payload editor is still warp-only by its open
+    // gates, and `phase` already answered that question for the box above.
     const int  field_rank  = flag_box_rank(field_cell);
     const bool ride_cells  = field_rank < flag_box_rank(MarkerCell::Upper);
     if (field_rank < flag_box_rank(MarkerCell::Measure)) {
@@ -2846,13 +2886,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // will not paint, the pair being one measurement, which is the same
         // one-run cost the flag pass pays on that marker.
         const IterCellLayout cl = measure_iter_cells(
-            font, ride_cells ? warp_iter_cells(mv, idx, iteration_on)
-                             : IterCellText{});
+            font, !ride_cells ? IterCellText{}
+                  : phase     ? phase_iter_cells(pmv, idx, iteration_on)
+                              : warp_iter_cells(mv, idx, iteration_on));
         const bool ride_lower =
             cl.present && field_rank < flag_box_rank(MarkerCell::Lower);
         const bool ride_upper =
             cl.present && field_rank < flag_box_rank(MarkerCell::Upper);
-        const std::string& ctext = mv[static_cast<std::size_t>(idx)].measure;
+        const std::string& ctext =
+            phase ? pmv[static_cast<std::size_t>(idx)].measure
+                  : mv[static_cast<std::size_t>(idx)].measure;
         const bool ride_measure = !ctext.empty();
 
         // THE RUN'S THREE SEAM COLUMNS, accumulated left to right from the

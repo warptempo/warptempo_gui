@@ -169,12 +169,15 @@ void Undo::push_undo_iter_bracket(std::vector<GuiWarpMarker> pre_state,
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                                std::vector<int> touched_snapshot,
-                               std::vector<int> touched_live) {
-    // No affects_persistence parameter, unlike push_undo_warp above: a
-    // recorded asymmetry, not an omission — the field it would set
-    // (UndoEntry::affects_persistence, app_state.h) marks an entry inert for
-    // the ITERATION BRACKET, which is warp-only session state, so a
-    // phase-reset entry has nothing to mark.
+                               std::vector<int> touched_live,
+                               bool affects_persistence,
+                               MarkerCell addressed_cell) {
+    // The two trailing parameters arrived on 2026-09-09 with this column's own
+    // iteration bracket: the recorded asymmetry that stood here — "the
+    // iteration bracket is warp-only session state, so a phase-reset entry has
+    // nothing to mark" — is retired, the bracket now having a hop-domain twin
+    // on this store. Their parameter POSITION is the asymmetry that remains,
+    // and the reason is at the declaration.
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
@@ -182,15 +185,32 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
+    e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
+    e.addressed_cell     = addressed_cell;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
 
+// The contract is at the declaration. Like its warp twin it is a SPELLING of
+// the push above and not a second entry builder: the two fields it fixes are
+// what make an entry bracket-only, and reading the live axis HERE rather than
+// at the three call sites is what keeps "the entry carries the cell it
+// changed" one statement.
+void Undo::push_undo_phase_iter_bracket(
+        std::vector<GuiPhaseResetMarker> pre_state,
+        std::vector<int> touched) {
+    std::vector<int> touched_live = touched;
+    push_undo_phase_reset(std::move(pre_state), std::move(touched),
+                          std::move(touched_live),
+                          /*affects_persistence=*/false, app.addressed_cell);
+}
+
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                          char op_mode) {
+                          char op_mode,
+                          bool affects_persistence) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
@@ -198,6 +218,7 @@ void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
     e.op_mode            = op_mode;
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
+    e.affects_persistence = affects_persistence;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
@@ -1133,8 +1154,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     }
 
     // THE BRACKET-ONLY RESTORE ADDRESSES THE CELL IT CHANGED (architect
-    // 2026-09-05): an undo or redo of an iteration bound step — the arrows'
-    // and the bound editor's alike — leaves the restored focus bright on the
+    // 2026-09-05): an undo or redo of an iteration bound step, on either
+    // column — the arrows' and the bound editor's alike — leaves the restored
+    // focus bright on the
     // bound it moved, so the next Up/Down goes on stepping what the undo just
     // stepped, and a GROUP entry addresses that one cell on its focus, the
     // whole selection having stepped the same bound.
@@ -1143,9 +1165,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // marker click's own ordering: each of those writes seats the focus
     // through Selection::seat_focus, which puts the axis back on the payload,
     // so the cell is said AFTER the selection and never before it. EVERY
-    // OTHER ENTRY CARRIES Payload — the field's one producer is
-    // push_undo_iter_bracket — so for every other restore this writes back
-    // exactly what the mutator just wrote. Where the cell names a box the
+    // OTHER ENTRY CARRIES Payload — the field's producers are the TWO
+    // bracket-only pushes, push_undo_iter_bracket and
+    // push_undo_phase_iter_bracket — so for every other restore this writes
+    // back exactly what the mutator just wrote. Where the cell names a box the
     // restored marker no longer paints, the flag painter falls back to the
     // payload on its own (render_flag_boxes_impl), so nothing is asked here.
     // Ahead of the synchronous plate render below, whose flag cache reads the

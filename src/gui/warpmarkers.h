@@ -268,12 +268,29 @@ inline std::string format_signed_delta_cents(int64_t cents) {
     return s;
 }
 
+// Signed integer HOPS -> the explicit-sign text ("+2", "-3", "+0"). The
+// PHASE-RESET column's iteration bracket lives in whole hops of the analysis
+// lattice (GuiPhaseResetMarker, phaseresetmarkers.h), so its display text
+// formats directly from the integer with no decimals at all — which is what
+// tells the two columns' cells apart on the flag and in a sweep cell's file
+// name, the sign being the whole syntax on both. It sits beside its warp twin
+// above because the two are one product's one pair of delta composers, read
+// by the cell painters, the bound editors' seeds and the iteration sweep's
+// per-cell basename.
+inline std::string format_signed_hops(int hops) {
+    std::string s(1, hops < 0 ? '-' : '+');
+    s += std::to_string(hops < 0 ? -hops : hops);
+    return s;
+}
+
 // The cells of a marker's flag run, in painted order (architect 2026-09-04,
 // the bound cells; one enum for the press, the axis and the editors since
 // 2026-09-05). Payload is the flag box itself — the composed line on a warp
 // marker, the display token on a phase reset — Lower and Upper are the two
-// bound cells iteration mode paints to its right on an eligible warp marker,
-// and Measure is the blue box that follows. It answers three questions with
+// bound cells iteration mode paints to its right on an eligible marker OF
+// EITHER COLUMN (a warp marker's tempo bracket in cents, a phase reset's hop
+// bracket in whole lattice hops since 2026-09-09), and Measure is the blue box
+// that follows. It answers three questions with
 // one value: WHICH BOX a press landed on (hit_test_flag_cell, app_state.cpp,
 // off the painter's published boundaries), WHICH CELL OF THE FOCUS IS
 // ADDRESSED (AppState::addressed_cell — the bright cell, the cell the vertical

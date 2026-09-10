@@ -456,3 +456,166 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
                                 committed_f, target_render);
     return std::nullopt;
 }
+
+// -- THE ITERATION BOUND STEP ON THE PHASE-RESET COLUMN (2026-09-09) ---------
+//
+// The vertical arrows' second body in the HOP domain — the twin of
+// GuiWarpMarkersOps::adjust_iter_bound_cents, clause for clause: the leading
+// refusal block named whole in a predicate the face reads, the 2+ fork onto an
+// all-or-nothing group arm, the wall asked through the directional face AHEAD
+// of the coalesce stamp, the value-shaped kind refusal behind it on a card,
+// the mutation through the one landing owner, the entry and the settle. The
+// contracts are at the declarations (phaseresetmarkers_ops.h, app_state.h's
+// bound step block); what is argued here is only what differs.
+//
+// WHAT DIFFERS. The subject is a bound in HOPS of the analysis lattice, so the
+// walls are the reset's own hop window (phase_reset_hop_window,
+// warp_frame_map_view.h — the piece's ends, the two neighbours' extreme
+// landings and the single digit) rather than a tempo bracket, and the landing
+// owner takes the app and the audio because that window is a fact about the
+// store and the live map rather than about one row. The eligibility is this
+// column's (phase_reset_iter_eligible_marker): every reset is a carrier, so
+// the group arm skips only DISABLED members and the singleton refuses one on
+// a card. A blank bracket starts at [0, 0] and the first step authors it, both
+// bounds written through the one write site (phase_iter_bound_step_write) —
+// which is also where the step and the cell editor's commit meet one rule,
+// that a pair of two zeroes is the cleared bracket. AND NOTHING RENDERS AND
+// NOTHING MOVES: a bracket is not a position and not a map input, so there is
+// no trigger, no re-warp, no re-land and no sort — the reset stays exactly
+// where it is and only a SWEEP CELL ever displaces it. The entry is the
+// bracket-only kind (affects_persistence false, so the dirty dot never lights
+// for it) and the damage is the marker lane's.
+
+GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
+        MarkerCell side, int delta_hops, bool synthesized_repeat) {
+    // THE LEADING REFUSAL BLOCK, named whole (iter_bound_step_actionable, whose
+    // phase arm is the mode plus a standing selection plus a valid focus) and
+    // read by the Up/Down face too, so no lift reaches it. One sentence for
+    // the mode, the column, an empty selection and a missing focus: the step
+    // wants a focused phase reset's range and has none.
+    if (!iter_bound_step_actionable(app))
+        return "Select a phase reset to change its range";
+    if (app.selected_markers.size() >= 2)
+        return adjust_iter_bound_hops_group(side, delta_hops,
+                                            synthesized_repeat);
+    // THE WALL, AHEAD OF THE COALESCE STAMP — the face greys on it, so the key
+    // must leave the stamp exactly as the greyed button does (the rule at
+    // Undo::coalesce_gesture). Silent: a benign one-dimensional refusal already
+    // at its state, the cell's own value being the place to glance.
+    if (!iter_bound_step_direction_actionable(app, audio, side, delta_hops))
+        return std::nullopt;
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
+    // THE KIND REFUSAL, behind the stamp with a live face and a card, as the
+    // tempo step's value-shaped tails are.
+    if (const char* refusal = iter_bound_step_kind_refusal(app))
+        return refusal;
+    const auto& pv_const = app.phaseresetmarkers.markers();
+    const int f = app.last_selected_marker;
+    // A stale focus is a belt against the selection layer's own invariant
+    // (in range by iter_bound_step_actionable above), so it says nothing.
+    if (f < 0 || f >= static_cast<int>(pv_const.size())) return std::nullopt;
+    std::vector<GuiPhaseResetMarker> proposed = pv_const;
+    GuiPhaseResetMarker& m = proposed[static_cast<size_t>(f)];
+    const int landing =
+        phase_iter_bound_step_landing(app, audio, f, side, delta_hops);
+    // Both bounds go through the one write site: a blank bracket becomes
+    // [0, 0] with the step applied to its addressed side, a set one keeps its
+    // partner as it was, and a pair that lands on two zeroes clears — the
+    // blank rule, which the group arm below and the cell editor's commit take
+    // from the same owner. The landing owner already holds lo <= hi and the
+    // hop window, so nothing is folded after the fact.
+    phase_iter_bound_step_write(m, side, landing);
+    // Unreachable past the wall test above, for the warp twin's reason: the
+    // directional face admitted this press only because the landing differs
+    // from the resting bound, and the write moves the store either way. Kept
+    // as the belt it is.
+    if (m.iter_start_hops == pv_const[static_cast<size_t>(f)].iter_start_hops &&
+        m.iter_end_hops   == pv_const[static_cast<size_t>(f)].iter_end_hops)
+        return std::nullopt;
+    std::vector<GuiPhaseResetMarker> pre_state = pv_const;
+    app.phaseresetmarkers.markers_mut() = std::move(proposed);
+    // The bracket-only entry: session-only fields, never serialized, so the
+    // dirty dot stays where it is (recompute_dirty honours the flag), and it
+    // carries the ADDRESSED CELL, so undoing this step brightens the bound it
+    // moved (push_undo_phase_iter_bracket, undo.h). A coalesced repeat skips
+    // the push, the burst's opener owning the pre-burst snapshot — and its
+    // cell, which the coalesce verdict has already found equal to this press's.
+    if (!merge) undo.push_undo_phase_iter_bracket(std::move(pre_state));
+    // Settle the burst, POST-mutation: the stamp, or the byte-equal pop of a
+    // merged press that stepped the bound back to the burst entry's own
+    // snapshot (the rule at Undo::record_gesture; the phase row comparator
+    // reads the hop fields).
+    undo.record_gesture(GestureKind::IterBoundStep, merge);
+    undo.recompute_dirty();
+    // The marker lane repaints its cells — the store's generation moved, so
+    // the flag cache rebuilds under the top strip's damage. No waveform
+    // damage: a stem reads the class, and a bound changes no class; nothing
+    // moved, so no image moved.
+    viewport.invalidate_top_strip();
+    return std::nullopt;
+}
+
+GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops_group(
+        MarkerCell side, int delta_hops, bool synthesized_repeat) {
+    // THE WALL SCAN, ahead of the coalesce verdict, carded AND greyed — the
+    // group pairing the tempo step argues: a group step would have moved every
+    // selected cell, so it is not the one-dimensional refusal that went
+    // silent. THE EMPTY STEP HAS THE SINGLETON'S SENTENCE: a selection whose
+    // every member is ineligible has no range to step, which is the
+    // empty-selection answer.
+    switch (iter_bound_step_group_verdict(app, audio, side, delta_hops)) {
+    case IterBoundStepGroupVerdict::Steps:
+        break;
+    case IterBoundStepGroupVerdict::Walled:
+        return "One of the selected markers cannot take this range change";
+    case IterBoundStepGroupVerdict::Empty:
+        return "Select a phase reset to change its range";
+    }
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
+    const auto& pv = app.phaseresetmarkers.markers();
+    const int n = static_cast<int>(pv.size());
+    std::vector<GuiPhaseResetMarker> pre_state = pv;
+    // Every SURVIVOR steps its addressed bound by the full delta — none is
+    // walled (checked above through the landing owner) — through the same
+    // write site the singleton uses, so a blank bracket is authored at [0, 0]
+    // plus the step and the blank rule reaches every member alike. A disabled
+    // member is skipped on the same predicate the scan skipped it on; the
+    // store is unchanged between the two walks, so the survivor set is one.
+    //
+    // THE LANDINGS ARE ALL RESOLVED BEFORE ANY WRITE, which the warp twin does
+    // not have to say: a member's hop window reads its NEIGHBOURS' brackets,
+    // so writing as we walk would let an earlier member's new bound narrow a
+    // later one's window mid-act and break the group's all-or-nothing promise
+    // against the very scan that admitted it.
+    std::vector<int> touched;
+    std::vector<int> landings;
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= n) continue;
+        if (!phase_reset_iter_eligible_marker(pv, idx)) continue;
+        touched.push_back(idx);
+        landings.push_back(
+            phase_iter_bound_step_landing(app, audio, idx, side, delta_hops));
+    }
+    // Defensive (a fully-stale selection): the all-ineligible selection never
+    // reaches it — that is the Empty verdict above.
+    if (touched.empty()) return std::nullopt;
+    for (size_t k = 0; k < touched.size(); ++k) {
+        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(touched[k]);
+        if (!m) continue;
+        phase_iter_bound_step_write(*m, side, landings[k]);
+    }
+    // ONE bracket-only entry per press with its identity hints (no reorder —
+    // positions untouched — so the push fills both coordinate spaces from the
+    // one list) and with the ADDRESSED CELL, which the restore puts back on
+    // the focus; a coalesced repeat skips the push, the burst's opener owning
+    // the snapshot.
+    if (!merge)
+        undo.push_undo_phase_iter_bracket(std::move(pre_state),
+                                          std::move(touched));
+    undo.record_gesture(GestureKind::IterBoundStep, merge);
+    undo.recompute_dirty();
+    viewport.invalidate_top_strip();
+    return std::nullopt;
+}

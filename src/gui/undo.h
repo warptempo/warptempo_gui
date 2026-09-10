@@ -96,6 +96,14 @@ struct GuiInputHandler;
 // and the one kind whose ENTRY carries the addressed cell too, so a restore
 // lands the focus back on the bound the burst moved —
 // UndoEntry::addressed_cell, pushed by push_undo_iter_bracket).
+// ONE KIND, TWO BODIES SINCE 2026-09-09: the phase-reset column has a bound
+// step of its own (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) in the hop
+// domain, and it stamps THIS kind rather than a fifth. One kind suffices
+// because the stamp's SUBJECT TERMS already separate the two: a column switch
+// (`p`, Ctrl+Tab, the 1/2/3 selectors) CLEARS the selection, and the stamp
+// carries the selection and the A/B tab, so a warp burst and a phase burst can
+// never share a live stamp — there is no reachable sequence in which a tap on
+// one column merges into an entry pushed from the other.
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h).
 enum class GestureKind {
@@ -178,8 +186,9 @@ struct Undo {
     // owes none, which then uses the diff-based touched-set reconstruction in
     // the post-restore rules.
     // `addressed_cell` stamps UndoEntry::addressed_cell and has exactly one
-    // caller, push_undo_iter_bracket below; every other push leaves the
-    // entry on the payload.
+    // caller on this column, push_undo_iter_bracket below (the phase-reset
+    // store's own helper has push_undo_phase_iter_bracket for its twin); every
+    // other push leaves the entry on the payload.
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                         bool affects_persistence = true,
                         std::vector<int> touched_snapshot = {},
@@ -200,16 +209,49 @@ struct Undo {
     // same indices.
     void push_undo_iter_bracket(std::vector<GuiWarpMarker> pre_state,
                                 std::vector<int> touched = {});
+    // `affects_persistence` and `addressed_cell` are push_undo_warp's own two,
+    // APPENDED here rather than seated in that helper's positions: this
+    // signature's existing callers pass their touched hints positionally, and
+    // a bool moved in front of them would be a SILENT conversion at every one
+    // of those call sites rather than a compile error. The asymmetry in the
+    // two parameter orders is that, and is recorded here.
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
-                             std::vector<int> touched_live = {});
+                             std::vector<int> touched_live = {},
+                             bool affects_persistence = true,
+                             MarkerCell addressed_cell = MarkerCell::Payload);
+    // THE BRACKET-ONLY PHASE-RESET ENTRY — push_undo_iter_bracket's twin on
+    // the hop bracket (2026-09-09), fixing the same two fields for the same
+    // two reasons: affects_persistence FALSE, hop bounds being session-only
+    // fields that never serialize, and the LIVE addressed cell stamped onto
+    // the entry so an undo or redo of the step lands the focus back on the
+    // bound it moved. Three callers, this column's: the singleton and group
+    // arms of the Up/Down bound step
+    // (GuiPhaseResetMarkersOps::adjust_iter_bound_hops and its group twin) and
+    // the bound editor's commit on this column
+    // (GuiFlagEditor::commit_iter_bound_edit's phase arm). `touched` is the
+    // group arm's identity hint and fills BOTH coordinate spaces: a bound step
+    // moves no reset, so the entry's snapshot rows and its live rows are the
+    // same indices.
+    void push_undo_phase_iter_bracket(
+        std::vector<GuiPhaseResetMarker> pre_state,
+        std::vector<int> touched = {});
     // Files under the LIVE tab like the three helpers around it. (A
     // `tab_override` parameter stood here for the load-in-place, which used to
     // switch to the tab its file named; it lost its last producer on 2026-08-24
     // when the act stopped writing view state, and went with it.)
+    //
+    // `affects_persistence` is push_undo_warp's own flag over an entry that
+    // spans both stores, and it has ONE false caller: the iteration-mode
+    // wipe (GuiFlagEditor::wipe_iter_state), which clears both columns'
+    // session-only brackets in one act and must not move the dirty dot for
+    // either. `op_mode` names the COLUMN the restore returns to and whose
+    // post-restore rules run; both snapshots are written back whatever it
+    // says (restore_history_entry).
     void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                         std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                        char op_mode);
+                        char op_mode,
+                        bool affects_persistence = true);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules
     // dispatch. Markers are captured wholesale at push time (carry-

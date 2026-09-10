@@ -317,7 +317,12 @@ bool replace_selection(State& s, const std::string& raw) {
     if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
     if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
     if (s.kind == Kind::MeasureOffset)     cap = kMaxPendingCharsMeasureOffset;
-    if (s.kind == Kind::IterBound)         cap = kMaxPendingCharsIterBound;
+    // ONE KIND, TWO GRAMMARS: the phase-reset column's bound is a sign and one
+    // digit, the warp column's a sign, a digit, the point and two decimals.
+    // The session's own bit says which — this module cannot see the app to ask
+    // which column is live (State::iter_hops).
+    if (s.kind == Kind::IterBound)
+        cap = s.iter_hops ? kMaxPendingCharsIterHop : kMaxPendingCharsIterBound;
     // Atomic cap: compute the result size BEFORE mutating anything. Refuse
     // exactly when the operation would push the pending past the cap AND grow
     // it — a non-growing edit (shorter replacement, empty insert from cut) is
@@ -347,6 +352,7 @@ void deactivate(State& s) {
     s.target            = -1;
     s.kind              = Kind::FlagPayload;
     s.iter_upper        = false;
+    s.iter_hops         = false;
     s.pending.clear();
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
@@ -365,7 +371,8 @@ uint64_t next_session_id() {
 void enter(State& s, int target,
            std::string initial_pending,
            Kind kind,
-           bool iter_upper) {
+           bool iter_upper,
+           bool iter_hops) {
     // EVERY ACTIVATION IS A NEW SESSION, including a retarget of a live editor
     // (the flag editor's) and a reopen of the same editor a keystroke after it
     // closed: the published geometry of the old session must never be able to
@@ -374,6 +381,7 @@ void enter(State& s, int target,
     s.target            = target;
     s.kind              = kind;
     s.iter_upper        = iter_upper;
+    s.iter_hops         = iter_hops;
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;
