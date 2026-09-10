@@ -1044,11 +1044,17 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    // The flags carry TEXT since row 5, and iteration mode changes what an
-    // eligible flag shows on EITHER COLUMN (the two bound cells beside it).
+    // The flags carry TEXT since row 5, and grid iterations change what an
+    // eligible flag shows (the two bound cells beside it) ON THE COLUMN THE
+    // MODE IS LIT FOR AND ON THAT ONE ALONE (iteration_column_lit, app_state.h
+    // — architect 2026-09-10). Asked here of `mv`, which is the column this
+    // pass paints, so one read serves both passes below and the fingerprint
+    // field is the verdict rather than the bare bit — a stamp that no longer
+    // names this column reads as "off" here, and fp_active_markers_view above
+    // is what keeps the two readings apart across a switch.
     // See fp_iteration_mode — and fp_addressed_cell for the focus's bright cell,
     // which the same pass paints in the selected pair.
-    const bool      iter_on    = app.iteration_mode_enabled;
+    const bool      iter_on    = iteration_column_lit(app, mv);
     const int       addressed  = static_cast<int>(app.addressed_cell);
     // THE STANDING EDITOR'S SUPPRESSION — which marker, and which of its boxes
     // the pass below does not paint — off THE ONE DERIVATION
@@ -1257,9 +1263,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end, sr,
             app.selected_markers,
             pr_red,
-            // The mode's bit, which paints this column's two BOUND CELLS
-            // since 2026-09-09 (its hop bracket) exactly as it paints the
-            // warp column's.
+            // The mode's verdict FOR THIS COLUMN, which paints its two BOUND
+            // CELLS (its hop bracket) exactly as the warp column's are painted
+            // when the lamp was lit there instead.
             iter_on,
             // The focus and its addressed cell — the bright cell, which on
             // this column can be the payload, a bound cell or the measure box

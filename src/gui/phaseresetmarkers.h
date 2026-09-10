@@ -47,8 +47,12 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // both authoring roads write through the one site that clears it
     // (phase_iter_bound_step_write, app_state.h — the arrows' step and the
     // cell editor's commit alike), so two cells reading `+0` always mean the
-    // same thing. A disabled reset's bracket is DORMANT — kept, off the flag,
-    // out of the sweep and reachable by no editor until re-enabled
+    // same thing. A DISABLED RESET CARRIES NO BRACKET — the disable clears it
+    // in its own undo entry (toggle_phase_reset_disabled,
+    // phaseresetmarkers_ops.cpp, and the state paste that disables one too),
+    // because a disabled
+    // flag shows no cells and an iteration that is not shown has lost its
+    // memory (architect 2026-09-10); re-enabling restores nothing, undo does
     // (phase_reset_iter_eligible_marker below).
     //
     // THERE IS NO RETROACTIVE CLAMP HERE and that is a RULING rather than a
@@ -111,9 +115,11 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // disabled bit alone. Nor is there a cascade to ask: this column carries no
 // labels, so the flag pass reads the plain bool and so does this.
 //
-// A DISABLED RESET'S BRACKET IS DORMANT, exactly as a disabled owner's is —
-// kept, off the flag, out of the product, reachable by no editor, back the
-// moment it is re-enabled. FIVE READERS, the warp predicate's own inventory in
+// A DISABLED RESET CARRIES NO BRACKET, exactly as a disabled owner does not —
+// the disable clears it (2026-09-10) — so this verdict is about the reset's
+// PARTICIPATION and never about hiding a value it still holds; and unlike the
+// warp column there is no cascade here, so a disabled reset is always one a
+// writer disabled. FIVE READERS, the warp predicate's own inventory in
 // this column's terms (greped 2026-09-09): the sweep's dispatch
 // (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's plan
 // (iteration_sweep_plan, app_state.h) skip the reset, so its bracket neither

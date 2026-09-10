@@ -321,6 +321,19 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
         GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
         if (!m) continue;
         m->disabled = !m->disabled;
+        // A DISABLED RESET CARRIES NO RANGE, the warp toggle's rule on this
+        // column (architect 2026-09-10: grid iterations are "one of the most
+        // transitory things in this project", and "if something doesn't have
+        // an iteration shown, it's lost its memory, except insofar as undo
+        // history goes"). A disabled flag paints no bound cells, so a hop
+        // bracket kept on it would be a value the user cannot see, cannot
+        // reach and did not ask to keep. The clear rides THIS entry — the
+        // snapshot above is the pre-state, so one undo puts the reset and its
+        // bracket back together — and re-enabling restores nothing by itself.
+        if (m->disabled) {
+            m->iter_start_hops.reset();
+            m->iter_end_hops.reset();
+        }
         changed = true;
     }
     if (!changed) return;

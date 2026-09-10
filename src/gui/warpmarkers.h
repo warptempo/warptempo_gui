@@ -30,10 +30,12 @@ struct GuiWarpMarker : WarpMarker {
     // grows two cells to its right, the lower bound then the upper, each
     // painted as another flag payload (render_flags, render.cpp). The flag
     // editor never carries the bracket: its line is the plain canonical
-    // payload. A disabled owner's bracket is DORMANT — kept, off the flag,
-    // out of the sweep and reachable by no editor until re-enabled; the
-    // eligibility pair below. Signed tempo deltas in integer cents — the same
-    // integer-cents domain the tempo itself lives in, so the sweep's per-cell
+    // payload. A DISABLED OWNER CARRIES NO BRACKET — the disable clears it in
+    // its own undo entry (GuiWarpMarkersOps::toggle_disabled), because a
+    // disabled flag shows no cells and an iteration that is not shown has lost
+    // its memory (architect 2026-09-10); re-enabling restores nothing, undo
+    // does. The eligibility pair below. Signed tempo deltas in integer cents —
+    // the same integer-cents domain the tempo itself lives in, so the sweep's per-cell
     // base + delta is plain integer addition. nullopt means "blank" (both
     // cells read `+0.00` — the one blank rule at format_iter_bound_cell
     // below); when set, both are set and iter_start_cents <= iter_end_cents.
@@ -324,14 +326,19 @@ inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
 // label_ref marker have none, so neither ever carries a bracket: every route
 // that turns a carrier into a non-carrier clears both bounds (the flag
 // editor's commit, Ctrl+N's owner->pass and ref->pass conversions —
-// toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT IS NOT SUCH A LOSS
-// (architect 2026-09-02, the four-tier review's R-12 — "a disabled marker is
-// invisible to the act", the `m` BPM sweep's own rule asked of the iteration
-// sweep): a disabled owner keeps its bracket DORMANT, never cleared, so the
-// bracket returns to the flag and to the sweep the moment the marker is
-// re-enabled. A dormant bracket is reachable by no editor while the marker
-// is disabled: the cells are its only authoring surface and a disabled owner
-// paints none, so it waits, kept, for the re-enable. THE READERS: the flag
+// toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT IS A LOSS TOO, at its own
+// writer rather than at this predicate (architect 2026-09-10, retiring the
+// DORMANT bracket of 2026-09-02's R-12): the cells are a bracket's only
+// authoring surface and a disabled owner paints none, so a bracket kept on one
+// would be a value the user cannot see or reach, and grid iterations are
+// transitory — "if something doesn't have an iteration shown, it's lost its
+// memory, except insofar as undo history goes". So the DISABLE ITSELF clears
+// both bounds, in the same undo entry (GuiWarpMarkersOps::toggle_disabled),
+// and re-enabling restores nothing; undo is the way back. THE ONE WAY A
+// BRACKET CAN STILL REST ON AN EFFECTIVELY DISABLED MARKER is the CASCADE — a
+// ref through a disabled definition, which no toggle touched — and there it is
+// out of the product exactly as before, this predicate's structural half
+// having already refused it (a ref is no carrier). THE READERS: the flag
 // editor's commit's carrier-loss clear (a marker that stops owning its tempo
 // loses its bracket — the store's rule, not any grammar's), the bound step's
 // kind refusal (iter_bound_step_kind_refusal), and the retroactive clamp
@@ -348,8 +355,11 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // reaches, is no carrier), and it is asked through the vector/index form all
 // the same so that a change to the cascade lands here for free and no caller
 // can hand a bare marker and lose it — which is why this is the ONE spelling
-// and the single-marker form above carries a different name. FIVE READERS,
-// and a disabled owner's bracket is dormant at all five: the sweep's
+// and the single-marker form above carries a different name. IT KEEPS ITS
+// DISABLED TERM under 2026-09-10's clear-on-disable ruling and is not
+// redundant with it: the CASCADE can disable a marker with no toggle in sight,
+// so the eligibility still has to ask. FIVE READERS,
+// and a disabled marker is invisible at all five: the sweep's
 // dispatch (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's
 // plan (iteration_sweep_plan, app_state.h) skip the marker, so its bracket
 // neither multiplies the cell count nor names a byte-identical cell — the
@@ -423,8 +433,8 @@ inline void clamp_iter_bracket_to_tempo_bracket(GuiWarpMarker& m) {
         return;
     }
     // A bracket rests only on a carrier (iter_bracket_carrier above — every
-    // carrier loss clears both bounds; a disabled owner keeps its dormant one
-    // and is an owner still), and an owner's tempo_cents is in-bracket at
+    // carrier loss clears both bounds, and so does a disable), and an owner's
+    // tempo_cents is in-bracket at
     // every input surface, so lo_limit <= 0 <= hi_limit: the clamp window
     // always contains the zero delta and can never be empty. Exact integer
     // cents throughout, the domain the deltas live in.

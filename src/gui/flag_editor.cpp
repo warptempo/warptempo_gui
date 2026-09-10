@@ -229,11 +229,14 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     if (idx >= n) return;
     if (side != MarkerCell::Lower && side != MarkerCell::Upper) return;
     // NO CELL, NO EDITOR: the cell paints on exactly the markers the sweep
-    // reads while the mode is on (warp_iter_cells / phase_iter_cells,
-    // render.cpp, off the same two predicates), so an editor opens on exactly
+    // reads while the mode is lit ON THAT COLUMN (warp_iter_cells /
+    // phase_iter_cells, render.cpp, off the same two predicates under the same
+    // column verdict), so an editor opens on exactly
     // those. The callers card the kind refusal ahead of this belt; a mode-off
-    // call cannot arrive, the axis falling back to the payload with the mode.
-    if (!app.iteration_mode_enabled) return;
+    // call cannot arrive, the axis falling back to the payload with the mode,
+    // and an UNLIT-COLUMN call cannot either, a column switch clearing the
+    // selection and so seating the axis back on the payload.
+    if (!iteration_column_lit(app, column)) return;
     if (phase ? !phase_reset_iter_eligible_marker(pmv, idx)
               : !iter_popup_eligible_marker(mv, idx)) return;
 
@@ -854,10 +857,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // pass conversion of an undo-restored bracketed owner also drops the
     // fields. This mirrors Ctrl+N's owner->pass / ref->pass carrier-loss
     // clears; undo is the sole sanctioned route that resurrects a cleared
-    // bracket. A commit that DISABLES the owner (the `#`) is no loss: the
-    // bracket stays on it dormant — off the flag, out of the sweep and
-    // reachable by no editor until re-enabled — which is why the test below
-    // is the carrier and not the sweep's eligibility (R-12, 2026-09-02).
+    // bracket. THE DISABLED BIT IS NOT THIS COMMIT'S TO MOVE — the candidate
+    // above carried the marker's own `#` — so the test below is the CARRIER
+    // and nothing more, and it needs no disabled term of its own: a disabled
+    // marker reaches this commit carrying no bracket at all, its own toggle
+    // having cleared it (architect 2026-09-10: an iteration that is not shown
+    // has lost its memory), and the one marker a CASCADE can disable without a
+    // toggle is a label ref, which this test clears for being no carrier.
     if (!iter_bracket_carrier(m)) {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
@@ -974,7 +980,14 @@ void GuiFlagEditor::commit_top_flag_edit() {
 
 // Wipe BOTH STORES' session-only iter brackets (2026-09-09, with the mode's
 // second column: a warp marker's cent bracket and a phase reset's hop bracket
-// go together, the mode being one lamp over both). The single clear every
+// go together, the mode being one lamp over both). IT STAYS A TWO-STORE WIPE
+// UNDER THE COLUMN STAMP (2026-09-10): brackets can only be authored on the
+// column the lamp was lit in, so the other store is empty by construction and
+// the second clear is a BELT — kept because a belt against an invariant costs
+// one loop and an exit that left a stale bracket behind would be invisible
+// (the mode's own cells are what show a bracket, and they are gone by then).
+// No arm reads the stamp here and none should: the wipe runs at the OFF EDGE,
+// where the stamp is already meaningless. The single clear every
 // iteration-mode exit route shares: the `i` toggle's turning-off branch,
 // enter_bpm_mode's forced iter-off, and the iteration sweep's success tail —
 // exiting the mode is the clear on every route, so a bracket exists only while

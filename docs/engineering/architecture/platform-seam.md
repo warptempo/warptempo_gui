@@ -434,7 +434,7 @@ drag coordinates floor instead of truncating.
   notional-x FIELD survives and tracks the finger), cursor kinds stored and
   never applied, the title — **and the title stub stopped costing the user
   anything on 2026-09-09**, when the DIRTY MARK moved onto row 8 as the
-  clock's ` *` suffix (messaging.md's state-cell section): the title was the
+  clock's `*` suffix (messaging.md's state-cell section): the title was the
   mark's ONE home from 2026-08-01, and a fullscreen `NativeActivity` has no
   titlebar, so unsaved work showed nowhere at all on the tablet until then.
   The mark is painted by the PORTABLE painter out of `app.dirty`, so it needs

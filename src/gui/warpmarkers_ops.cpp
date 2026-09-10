@@ -497,6 +497,21 @@ void GuiWarpMarkersOps::toggle_disabled() {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         proposed[idx].disabled = !proposed[idx].disabled;
+        // A DISABLED MARKER CARRIES NO RANGE (architect 2026-09-10: grid
+        // iterations are "one of the most transitory things in this project",
+        // and "if something doesn't have an iteration shown, it's lost its
+        // memory, except insofar as undo history goes"). A disabled flag paints
+        // no bound cells, so a bracket kept on it would be a value the user
+        // cannot see, cannot reach and did not ask to keep — the DORMANT
+        // bracket of 2026-09-02's R-12, retired here. The clear rides THIS
+        // entry: the snapshot above is the pre-state, so one undo puts the
+        // marker and its bracket back together, and re-enabling restores
+        // nothing by itself. Nothing serializes either way (the bracket is
+        // session-only), so the entry's persistence class is the disable's.
+        if (proposed[idx].disabled) {
+            proposed[idx].iter_start_cents.reset();
+            proposed[idx].iter_end_cents.reset();
+        }
         changed = true;
     }
     if (!changed) return;
@@ -1218,7 +1233,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // base tempo, so the walls are the clamp window and the partner bound
 // (iter_bound_step_landing). The eligibility is the sweep's own
 // (iter_popup_eligible_marker): a marker without a tempo of its own has no
-// bracket to step, and a disabled owner's bracket is dormant — so the group
+// bracket to step, and a disabled marker has no range at all — so the group
 // arm SKIPS those members as the tempo arm skips a disabled one, and the
 // singleton REFUSES them on a card. A blank bracket starts at [0, 0] and the
 // first step authors it, both bounds written through the one write site
@@ -1252,7 +1267,7 @@ IterBoundStepGroupVerdict iter_bound_step_group_verdict(const AppState& a,
                                                         MarkerCell side,
                                                         int64_t delta) {
     // THE PHASE ARM (2026-09-09), the same scan in the hop domain: an
-    // INELIGIBLE member (a disabled reset, whose bracket is dormant) is
+    // INELIGIBLE member (a disabled reset, which carries no range) is
     // SKIPPED, the SURVIVORS take the step together or not at all, and the
     // landing owner's clamp is what "cannot take the whole step" means. Its
     // window is the hop window's rather than the tempo bracket's, which is
@@ -1342,19 +1357,22 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // THE SINGLETON'S KIND REFUSAL — the contract and the readers are at the
 // declaration (app_state.h). Two sentences for the three ineligible kinds: a
 // pass and a label ref share one fact (no tempo of their own, so no bracket
-// to ride it), and a disabled owner's is that its bracket is dormant.
+// to ride it), and a disabled owner's is that it has no range at all — the
+// disable cleared it (architect 2026-09-10), and the one marker a CASCADE can
+// disable without a toggle, a ref through a disabled definition, is already
+// answered by the first sentence.
 const char* iter_bound_step_kind_refusal(const AppState& a) {
     if (a.selected_markers.size() >= 2) return nullptr;
     // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
     // (there is no pass and no label ref on this column), so the only thing a
-    // focused reset's kind can refuse on is the DORMANT bracket of a disabled
-    // one.
+    // focused reset's kind can refuse on is being DISABLED — and a disabled
+    // reset has no range, its own disable having cleared one.
     if (a.active_markers_view == 'P') {
         const auto& pv = a.phaseresetmarkers.markers();
         const int   pf = a.last_selected_marker;
         if (pf < 0 || pf >= static_cast<int>(pv.size())) return nullptr;
         if (pv[static_cast<size_t>(pf)].disabled)
-            return "A disabled phase reset's range is dormant";
+            return "A disabled phase reset has no range";
         return nullptr;
     }
     const auto& mv = a.warpmarkers.markers();
@@ -1364,7 +1382,7 @@ const char* iter_bound_step_kind_refusal(const AppState& a) {
     if (!iter_bracket_carrier(m))
         return "Only a marker that owns its tempo has a range";
     if (effective_disabled(mv, f))
-        return "A disabled marker's range is dormant";
+        return "A disabled marker has no range";
     return nullptr;
 }
 

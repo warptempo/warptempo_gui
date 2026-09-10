@@ -2329,10 +2329,13 @@ enum class RedesignButton {
     //
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
-    // drift; the tooltip names the TOGGLE for the reason every lamp's does.
-    // ITS GATE IS THE READ-ONLY LOCK ALONE since 2026-09-09 — the mode is one
-    // lamp in BOTH COLUMNS and both audio views, the toggle being MODE STATE
-    // rather than authoring (the record is at the `i` arm,
+    // drift; the tooltip names the TOGGLE for the reason every lamp's does —
+    // AND IT DOES NOT NAME THE COLUMN (architect 2026-09-10, "leave the
+    // tooltip as it is"): the press stamps the column it lands in, and a lamp
+    // seen lit from the other column is the reminder that data rests there.
+    // ITS GATE IS THE READ-ONLY LOCK ALONE since 2026-09-09 — the lamp is
+    // admitted in BOTH COLUMNS and both audio views, the toggle being MODE
+    // STATE rather than authoring (the record is at the `i` arm,
     // input_key_dispatch.cpp). Its glyph is mathmode, the italic f beside a
     // multiplication cross.
     //
@@ -8155,8 +8158,8 @@ struct AppState {
     // string and hand it over directly. The PHASE-RESET clipboard above is a
     // different concept and stays.)
 
-    // Iteration mode. Toggled by plain `i` in the WARP COLUMN, in EITHER AUDIO
-    // VIEW (no-op in phase-reset view). Session-only (off at load, lost on app
+    // Iteration mode. Toggled by plain `i` IN EITHER COLUMN, in EITHER AUDIO
+    // VIEW. Session-only (off at load, lost on app
     // close); it survives the W/P marker-view switch AND the S/T audio-view
     // switch in both directions — ITERATION MODE IS TARGET-LEGAL (architect
     // 2026-08-07, superseding his 2026-07-23 ruling that entering target view
@@ -8166,15 +8169,40 @@ struct AppState {
     // ON 2026-08-24: it was source-only only because the flag editor was, and
     // the editor is now the home-view binding's fifth ruled exception
     // (active_column_authoring_allowed, below), so a bracket is typed in
-    // either view. When true, every eligible owning marker's flag grows two
-    // BOUND CELLS to its right (render_flags — every carrier the sweep reads;
-    // a disabled owner's bracket is dormant and paints no cells), so the mode
+    // either view. When true, every eligible marker's flag ON THE LIT COLUMN
+    // grows two BOUND CELLS to its right (render_flags — every carrier the
+    // sweep reads; a disabled owner carries no bracket to show), so the mode
     // is visible directly on the flags (it is a flag-cache fingerprint field
     // for exactly that reason). THE THREE WRITERS OF THE OFF EDGE all run
     // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm, the sweep's
     // fire and BPM mode's forced exit — which is where an addressed bound
     // cell below falls back to the payload.
     bool iteration_mode_enabled = false;
+
+    // THE COLUMN THE MODE IS LIT FOR (architect 2026-09-10, on reading the
+    // two-column sweep back: "I'm usually in target mode, and then, either in
+    // warp or phase, I press iterations mode in whatever mode I want it to be
+    // located in. So the iterations land wherever I'm looking, and they stay
+    // there for the duration of the lamp being lit. If I happen to be in the
+    // other mode, the lamp is lit, and so it reminds me that there may be some
+    // data on the other mode that I destroy if I unlight the lamp, and undo is
+    // always there to backtrack."). 'W' or 'P'. Session-only, in no settings
+    // vocabulary, and MEANINGFUL ONLY WHILE THE BIT ABOVE IS ON.
+    //
+    // ONE WRITER: the `i` arm's TURNING-ON branch (input_key_dispatch.cpp),
+    // which stamps app.active_markers_view. `i` from either column turns the
+    // mode OFF and wipes both stores, so the off edge has nothing to reset —
+    // and it resets nothing, the field being read nowhere while the bit is
+    // off. The lamp does not name the column and no second lamp exists: a lit
+    // lamp seen from the other column IS the reminder, which is the ruling's
+    // own mechanism.
+    //
+    // THE READERS ARE ONE PREDICATE, iteration_column_lit below — every site
+    // that asks "do this column's cells exist" — and every reader of the BIT
+    // alone is a site that asks "is the mode on, whichever column": the `i`
+    // arm, the Grid Iterations lamp's face, Ctrl+Alt+R's mode fork and the
+    // sweep's own tail.
+    char iteration_column = 'W';
 
     // THE ADDRESSED CELL: which cell of the FOCUSED marker is the bright one,
     // the one the vertical arrows step and the one Enter opens (MarkerCell,
@@ -9983,6 +10011,26 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 const char* tempo_cent_step_target_view_refusal(const AppState& a,
                                                 const GuiAudio& audio);
 
+// DOES THIS COLUMN CARRY GRID ITERATIONS RIGHT NOW — the mode's ONE
+// column-shaped question, and the only reader of AppState::iteration_column
+// (whose contract is at the field: `i` stamps the column it is pressed in and
+// the cells live there alone). `column` is 'W' or 'P'.
+//
+// EVERY SITE THAT ASKS WHETHER A COLUMN'S CELLS EXIST ASKS THIS, with its own
+// column: the two flag passes and the cull that widens with them
+// (waveform_cache.cpp, one call over the active column, which is the one the
+// pass paints), the editor-box painter's two anchors (committed_flag_box_w and
+// committed_cell_seam_off through render_flag_editor_box, render.cpp), the
+// bound editor's "no cell, no editor" belt
+// (GuiFlagEditor::enter_iter_bound_edit), the bound step's leading refusal
+// (iter_bound_step_actionable below) and the sweep's plan and dispatch, which
+// walk the lit column's store alone. A site that asks whether THE MODE is on —
+// the `i` arm, the Grid Iterations lamp, Ctrl+Alt+R's fork, the sweep's tail —
+// reads the bit and not this.
+inline bool iteration_column_lit(const AppState& app, char column) {
+    return app.iteration_mode_enabled && app.iteration_column == column;
+}
+
 // -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
 //
 // The vertical arrows' SECOND step body steps one bound of the focused
@@ -10006,10 +10054,13 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
 // dispatch, redesign_button_enabled, redesign_button_tooltip and the Return
 // arm keep ONE switch each and none of them learns a second column.
 
-// THE BOUND STEP'S STABLE-STATE REFUSALS: iteration mode on, then a standing
-// selection and a valid focus, ON WHICHEVER COLUMN IS LIVE. The mode term is a
+// THE BOUND STEP'S STABLE-STATE REFUSALS: grid iterations lit ON THE LIVE
+// COLUMN, then a standing selection and a valid focus. The mode term is a
 // belt: a bound axis falls back to the payload the moment the mode goes off,
-// so no dispatch reaches a bound body outside it. TWO READERS: the act's
+// so no dispatch reaches a bound body outside it — and it is the COLUMN'S
+// verdict rather than the bare bit since 2026-09-10 (the mode is lit for one
+// column, iteration_column_lit above), so the unlit column, which paints no
+// cells, steps no bound either. TWO READERS: the act's
 // leading refusal — either act's, the two bodies' — and the Up/Down face with
 // a bound addressed.
 //
@@ -10020,7 +10071,7 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
 // PHASE arm is those same two subject atoms over the phase column. The two
 // arms are one sentence in two columns, which is why they are one predicate.
 inline bool iter_bound_step_actionable(const AppState& app) {
-    if (!app.iteration_mode_enabled) return false;
+    if (!iteration_column_lit(app, app.active_markers_view)) return false;
     if (app.active_markers_view == 'P') {
         return marker_selection_standing(app) && marker_focus_standing(app);
     }
@@ -10233,10 +10284,10 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 
 // WOULD A SINGLETON BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
 // would card with, or nullptr: on the WARP column a marker without a tempo of
-// its own (a pass or a label ref) has no bracket to step and a disabled
-// owner's bracket is dormant; on the PHASE-RESET column every reset is a
-// carrier, so the one refusal there is the DORMANT one — a disabled reset's
-// range, in that column's own words. Magnitude-blind on both, so the Up/Down
+// its own (a pass or a label ref) has no bracket to step and a disabled marker
+// has no range at all (the disable cleared it, architect 2026-09-10); on the
+// PHASE-RESET column every reset is a carrier, so the one refusal there is the
+// DISABLED one, in that column's own words. Magnitude-blind on both, so the Up/Down
 // tooltip drops its ladder line on it exactly as it drops it on
 // tempo_cent_step_target_view_refusal. TWO READERS: the act's card (either
 // act's) and the tooltip's line. Defined in warpmarkers_ops.cpp, where its
@@ -11699,22 +11750,24 @@ inline std::size_t history_walk_step_landing(
 // the sweep's own on each column (iter_popup_eligible_marker, warpmarkers.h,
 // and phase_reset_iter_eligible_marker, phaseresetmarkers.h — CALLED rather
 // than spelled again, so a change to either predicate lands on the face for
-// free — as the disabled verdict did on 2026-09-02, R-12: a disabled owner's
-// dormant bracket is invisible here as at the dispatch, so a store whose only
-// brackets sit on disabled owners greys the button as "no ranges authored"
-// and the press cards the same), and the cell count is the same CHECKED product the dispatch
+// free — as the disabled verdict did on 2026-09-02, R-12: a disabled marker is
+// invisible here as at the dispatch, and since 2026-09-10 it carries no
+// bracket for either to see, the disable having cleared it), and the cell count
+// is the same CHECKED product the dispatch
 // accumulates — refusing the instant the running total passes the cap, so no
 // overflow is possible and the cap itself is the early return. A well-formed
 // span is at most kTempoMaxCents - kTempoMinCents + 1 and the running total is
 // at most the cap when it is multiplied, so the product cannot approach an
 // integer boundary.
 //
-// IT WALKS BOTH COLUMNS SINCE 2026-09-09, and the product is one product: a
-// warp marker's cent bracket and a phase reset's HOP bracket multiply
-// together, which is his (b) — one `I` lamp, one sweep, one Cartesian
-// product. The phase arm carries a refusal of its own, PhaseBracketOffWall,
-// because that column's window has no retroactive clamp behind it (the ruling
-// is at GuiPhaseResetMarker's bracket, phaseresetmarkers.h): a bracket
+// IT WALKS THE LIT COLUMN'S STORE ALONE (architect 2026-09-10: `i` stamps the
+// column it is pressed in and "the iterations land wherever I'm looking"), so
+// the other store contributes nothing to the count and nothing to the product
+// — the warp arm below runs under a 'W' stamp and the phase arm under a 'P'
+// one, never both. The phase arm carries a refusal of its own,
+// PhaseBracketOffWall, because that column's window has no retroactive clamp
+// behind it (the ruling is at GuiPhaseResetMarker's bracket,
+// phaseresetmarkers.h): a bracket
 // authored inside its walls and pushed off them afterwards is caught HERE, on
 // every read, rather than at a writer.
 //
@@ -11744,6 +11797,11 @@ inline constexpr std::size_t kMaxIterSweepCells = 1000;
 // round. The `Hint` form is the card's sentence plus this roster's accelerator
 // (the table's own rule); the static_asserts keep the pair in step, and keep
 // the cap's spelling in step with the cap.
+//
+// THE FIRST SENTENCE MEANS "ON THE LIT COLUMN" since 2026-09-10 — the sweep
+// reads one column's store and the lamp says which — and it keeps its wording:
+// a card is one clause, and the column the user is looking at is the column
+// the lamp was lit in.
 inline constexpr const char* kIterSweepNoBracketCard =
     "No iteration ranges are authored";
 inline constexpr const char* kIterSweepNoBracketHint =
@@ -11823,20 +11881,26 @@ struct IterationSweepPlan {
 // takes it for its own cache key): the hop window is a fact about the live
 // warp map and the piece's length, and neither is in AppState.
 //
-// THE WALK ORDER IS THE WARP STORE, THEN THE PHASE STORE, and the FIRST
-// refusal met wins — so a store that is both over the cap and carrying an
-// off-wall phase bracket answers with whichever the walk reached first. The
-// dispatch walks the same two stores in the same order.
+// THE WALK IS THE LIT COLUMN'S, AND ONLY ONE OF THE TWO ARMS BELOW RUNS. The
+// dispatch forks on the same stamp and walks the same store.
 inline IterationSweepPlan iteration_sweep_plan(const AppState& a,
                                                const GuiAudio& audio) {
     IterationSweepPlan plan;
     bool        any_swept = false;
     std::size_t cells     = 1;
+    // THE STAMP SELECTS THE STORE, and it does so by bounding each walk: the
+    // unlit column's loop runs zero times, so neither its eligibility nor its
+    // brackets can reach the count. With the mode OFF both are zero and the
+    // answer is NoBracketAuthored, which no reader asks for (the face and the
+    // dispatch both ask only under a lit lamp) and which is true either way —
+    // the off edge wipes both stores.
     const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
-    for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+    const int warp_n = iteration_column_lit(a, 'W')
+                           ? static_cast<int>(mv.size()) : 0;
+    for (int i = 0; i < warp_n; ++i) {
         // The index form: the verdict carries effective disablement (a
-        // disabled owner's bracket is dormant and counts for nothing here,
-        // exactly as at the dispatch).
+        // disabled marker is invisible to the act, here as at the dispatch,
+        // and carries no bracket of its own to count).
         if (!iter_popup_eligible_marker(mv, i)) continue;
         const GuiWarpMarker& m = mv[static_cast<size_t>(i)];
         // An eligible marker with no bracket contributes the single zero
@@ -11857,13 +11921,16 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a,
             return plan;
         }
     }
-    // THE PHASE STORE, the same walk in the hop domain (2026-09-09). Its
+    // THE PHASE STORE, the same walk in the hop domain, and it runs INSTEAD of
+    // the warp walk above under a 'P' stamp (2026-09-10). Its
     // eligibility is this column's own (phase_reset_iter_eligible_marker,
     // phaseresetmarkers.h — every reset is a carrier, so the verdict is the
     // disabled bit) and its span is the integer count lo..hi inclusive, folded
-    // into the same checked product so the cap covers both columns together.
+    // into the same checked product under the same cap.
     const std::vector<GuiPhaseResetMarker>& pv = a.phaseresetmarkers.markers();
-    for (int i = 0; i < static_cast<int>(pv.size()); ++i) {
+    const int phase_n = iteration_column_lit(a, 'P')
+                            ? static_cast<int>(pv.size()) : 0;
+    for (int i = 0; i < phase_n; ++i) {
         if (!phase_reset_iter_eligible_marker(pv, i)) continue;
         const GuiPhaseResetMarker& p = pv[static_cast<size_t>(i)];
         if (!p.iter_start_hops.has_value() || !p.iter_end_hops.has_value()) {
@@ -12996,11 +13063,14 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    bpm_sweep_open_actionable(a, audio);
         // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
-        // arm has nothing else left to mirror (2026-09-09): the mode is ONE
-        // LAMP IN BOTH COLUMNS now — the phase-reset column carries a hop
-        // bracket of its own and the two sweep in one product — so the COLUMN
+        // arm has nothing else left to mirror (2026-09-09): the lamp is
+        // ADMITTED IN BOTH COLUMNS — the phase-reset column carries a hop
+        // bracket of its own — so the COLUMN
         // TERM went with the arm's, along with the P-column card it greyed
-        // beside. Both audio views as before (the toggle is mode state rather
+        // beside. The press STAMPS the column it lands in (2026-09-10) and the
+        // face still has nothing to say about that: `i` acts in either
+        // column, lighting one or turning the mode off. Both audio views as
+        // before (the toggle is mode state rather
         // than authoring, the 2026-08-07 relaxation at the arm itself), and
         // the toggle is meaningful in either direction on any loaded piece.
         case RedesignButton::IconIter:
@@ -13587,7 +13657,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // with grid iterations on, this button's chord IS the sweep, so the
         // face reads the sweep's own pre-dispatch verdict
         // (iteration_sweep_actionable, above — no brackets authored on
-        // EITHER column, a cell product past the cap, or a phase bracket
+        // THE LIT column, a cell product past the cap, or a phase bracket
         // standing off its walls) and greys where the press would only
         // card. THE CANCEL FACE OUTRANKS IT, as it outranks the iteration
         // hint: while a render or sweep is in flight this button IS the

@@ -3866,8 +3866,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // cell into NO clip at all — the collision it exists to prevent.)
         //
         // AND THE DIRTY MARK IS THE CLOCK'S SUFFIX (architect 2026-09-09):
-        // ` *` after the digits while the tab carries unsaved work, so the
-        // row reads `00:00.100 * | Rendering...`. It is STATE by this
+        // `*` immediately after the digits while the tab carries unsaved work,
+        // so the row reads `00:00.100* | Rendering...`. IT CLOSES UP ON THE
+        // CLOCK (architect 2026-09-10, "remove the space between the timestamp
+        // and the dirty dot"): the mark belongs to the timestamp, and a space
+        // read as a separator between two things rather than as one thing
+        // marked. It is STATE by this
         // product's own split — true right now, replaced as it changes, never
         // timed out and never cleared by a press — which is what puts it on
         // row 8; and it rides THE CLOCK'S RUN rather than the state's because
@@ -3914,7 +3918,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // THE CLOCK, UNCLIPPED, AND THE DIRTY MARK INSIDE ITS RUN; the pair's
         // advance is where the state begins.
         std::string clock = format_timestamp(seconds);
-        if (app.dirty) clock += " *";
+        if (app.dirty) clock += "*";
         const double clock_w =
             show_row_text(cr, font, x0, baseline, clock, kRedesignLabel);
         if (!state.empty()) {

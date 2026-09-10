@@ -487,14 +487,13 @@ int64_t phase_reset_window_centre_frame(
 // called and is not owed one: it is the single double-to-authored conversion
 // route (app_state.h), and no double-to-authored conversion happens here.
 //
-// THE LATTICE IS THE MAP'S, AND THE MAP EVERY CALLER PASSES IS THE RESTING
-// ONE (live_warp_frame_map below). In one product with warp brackets that is
-// an ACCEPTED ASYMMETRY, recorded here: every warp cell rewrites a tempo and
-// so moves the lattice a little, but a phase cell's displacement is authored
-// against the lattice the overlay band SHOWS and the walls were checked under
-// — the resting store's — computed once per reset per k and shared by every
-// warp cell. The cells "re-parse normally" under their own maps, each cell's
-// sidecar carrying an ordinary whole authored frame.
+// THE LATTICE IS THE MAP'S, AND THE MAP EVERY CALLER PASSES IS THE LIVE ONE
+// (live_warp_frame_map below) — the map the sweep's own cells render under. A
+// sweep is ONE COLUMN'S since 2026-09-10, so a phase sweep rewrites no tempo
+// and moves no lattice: the displacement is computed under the same map the
+// overlay band SHOWS, the walls were checked under and every cell renders
+// under, once per reset per k. Each cell's sidecar carries an ordinary whole
+// authored frame and re-parses normally.
 int64_t phase_reset_hop_cell_frame(
     int64_t reset_source_frame, int k,
     const std::vector<WarpFrameMapSegment>& map);
@@ -559,8 +558,9 @@ struct PhaseHopWindow {
 //   other's extreme can never cross or meet IN ANY CELL and the whole
 //   Cartesian product is sorted by construction. It is mutual — raising A's
 //   upper narrows B's lower window — which is the tempo window's own shape. A
-//   DISABLED neighbour contributes its RESTING frame instead: its bracket is
-//   kept but dormant, out of the product, so it never actually moves.
+//   DISABLED neighbour contributes its RESTING frame instead: it is out of the
+//   product and carries no bracket at all (its own disable cleared one —
+//   architect 2026-09-10), so it never moves.
 //
 // READERS: the bound editor's commit (refuses outside the window, naming the
 // wall kind — GuiFlagEditor::commit_iter_bound_edit), the step's landing owner

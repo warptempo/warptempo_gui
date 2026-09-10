@@ -460,10 +460,11 @@ PhaseHopWindow phase_reset_hop_window(const AppState& app,
     const int64_t last_frame = audio.total_frames() - 1;
 
     // THE NEIGHBOUR WALLS. An ENABLED neighbour walls at the extreme cell its
-    // own bracket can reach (its dormant-bracket twin cannot move at all, so a
-    // DISABLED one walls at its resting frame); a blank bracket's value_or(0)
+    // own bracket can reach; a DISABLED one walls at its resting frame, being
+    // out of the product and carrying no bracket at all (its own disable
+    // cleared one — architect 2026-09-10); a blank bracket's value_or(0)
     // lands on the resting frame through the identity cell above. Both are
-    // computed under this same resting map, which is what makes the two
+    // computed under this same live map, which is what makes the two
     // windows mutually consistent.
     const auto neighbour_wall = [&](int j, bool upper_side) -> int64_t {
         const GuiPhaseResetMarker& q = pv[static_cast<size_t>(j)];

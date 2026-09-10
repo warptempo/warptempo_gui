@@ -2456,8 +2456,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const GuiRect area = waveform_area(app);
 
     // ITERATION MODE ADDS THE TWO BOUND CELLS TO THE COMMITTED FLAG, so the
-    // anchors below must ask under the same bit the flag pass paints under.
-    const bool iteration_on = app.iteration_mode_enabled;
+    // anchors below must ask under the same verdict the flag pass paints
+    // under: THE COLUMN'S, not the mode's bare bit (iteration_column_lit,
+    // app_state.h — architect 2026-09-10, `i` stamps the column it is pressed
+    // in and the cells live there alone). `phase` above is this editor's
+    // column, the payload editor being the warp column's by its own open
+    // gates, so the two anchors measure exactly the boxes the cached pass
+    // painted.
+    const bool iteration_on = iteration_column_lit(app, phase ? 'P' : 'W');
     // EVERY FIELD OPENS WHERE ITS CELL SITS. The MEASURE field opens past the
     // committed flag, past its cells, AND past the seam divider standing on
     // their right edge, so the field's fill begins on exactly the column the

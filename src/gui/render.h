@@ -2236,7 +2236,8 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // carry a signed whole hop (`+9` at the widest — kIterCellGlyphs is the WARP
 // token's five and a hop cell is two), so the same charge over-states there by
 // three ems per cell and stays a bound, which is the only requirement. The
-// phase pass therefore needs no bound of its own and passes only the bit.
+// phase pass therefore needs no bound of its own and passes only its column's
+// verdict.
 // It remains a bound and not a layout input either way — over-admitting a
 // few offscreen markers per frame costs a shaped run each and drops nothing
 // visible.
@@ -3191,11 +3192,14 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the
 //              CALM kMarkerFlagFill either way (the architect's explicit rule).
 //
-// `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; both
-// columns since 2026-09-09, the phase-reset painter below carrying the same
-// parameter for its own hop bracket): while the
-// mode is on, every marker the sweep reads (iter_popup_eligible_marker,
-// warpmarkers.h — so a disabled owner's dormant bracket paints no cells)
+// `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
+// phase-reset painter below carries the same parameter for its own hop
+// bracket, and THE CALLER PASSES THE COLUMN'S OWN VERDICT rather than the
+// mode's bare bit since 2026-09-10 — iteration_column_lit, app_state.h — so
+// the cells paint on the column the lamp was lit in and on no other): while
+// the mode is lit here, every marker the sweep reads
+// (iter_popup_eligible_marker, warpmarkers.h — so a disabled owner, which
+// carries no bracket at all, paints no cells)
 // extends its flag rightward with two more boxes, the LOWER bound then the
 // UPPER, each painted exactly as the flag box is — the marker's own class,
 // the seam column on its left, the top edge, the lane's ink — carrying the
@@ -3448,9 +3452,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // and the identical publication contract render_flags documents above. Their
 // LABEL is the display-only kPhaseResetLaneToken (a phase reset authors no
 // payload). `iteration_on` PAINTS THIS COLUMN'S TWO BOUND CELLS since
-// 2026-09-09, when grid iterations grew a second column: every reset the sweep
-// reads (phase_reset_iter_eligible_marker, phaseresetmarkers.h — so a disabled
-// reset's dormant bracket paints no cells) extends its flag with the LOWER
+// 2026-09-09, when grid iterations grew a second column — and it is this
+// column's own verdict, true only while the lamp was lit HERE: every reset the
+// sweep reads (phase_reset_iter_eligible_marker, phaseresetmarkers.h — so a
+// disabled reset, which carries no bracket at all, paints no cells) extends its
+// flag with the LOWER
 // bound then the UPPER, each painted exactly as the flag box is, carrying the
 // bound as a SIGNED WHOLE HOP of the analysis lattice
 // (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
