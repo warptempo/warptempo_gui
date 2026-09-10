@@ -328,14 +328,24 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // from that evening until the File anchor went live under the band, when the
 // header went back to the activation flag and this bar kept the modal half).
 // The crops named "disabled" are the UNFOCUSED WINDOW, not a disabled button:
-// these three have no dimmed face of their own — redesign_button_enabled greys
-// them only under the folder overlay, through its first arm, and it is the
+// these three have no dimmed face of their own. Under the FOLDER OVERLAY
+// redesign_button_enabled greys them through its first arm and it is the
 // ground swap above, not a face, that shows it, the unfocused bar being the
-// focused header's own shade.
+// focused header's own shade. UNDER THE ITERATION LOCK, which greys them too
+// since 2026-09-10 (iteration_lock_greys, app_state.h), NOTHING SHOWS IT: the
+// architect refused this ground as that state's face the morning it was tried
+// — the unfocused bar keeps its labels fully legible and what it says is that
+// the window is inactive, which is untrue under a lit lamp on a focused
+// window — so the lock buys a dead press, the hover outline the one paint
+// that follows (the face composes the enabled term), and A DISABLED
+// VIEW-BAR FACE AWAITS HIS RULING (the account is at that button's enabled
+// arm; this crop set still has no such face to reproduce).
 // (The clause used to name ROW 4 alongside them and no longer can: the icon row
 // greys for two MODES since 2026-08-15 — the `h` view and the read-only lock.
-// The view bar is untouched by either, its 1/2/3 being navigation, which is
-// what keeps this crop set free of a real disabled face.)
+// The view bar is untouched by either, its 1/2/3 being navigation — and by
+// the ITERATION lock it is untouched AT REST since 2026-09-10, the press
+// dying and the hover outline going with it while the crop set goes on
+// having no disabled face to wear.)
 //
 // kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
 // #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is

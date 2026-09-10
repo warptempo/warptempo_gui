@@ -7679,7 +7679,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // whether the button HAS a tooltip — a null line 1 — and that is the
         // menu-row exclusion the state-free table owns; the stateful overload
         // (whose every arm returns a non-null line 1) is the painter's, which
-        // reads the words at paint time.
+        // reads the words at paint time. THE TWO PARTED ON ROW 1 ON 2026-09-10
+        // and this line is why nothing changed on screen: the view bar's three
+        // joined the iteration lock's membership, so the stateful overload's
+        // shared lock fork would hand them a sentence — and they are asked for
+        // one exactly never, the exclusion being the CONSTANT table's.
         if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
             redesign_button_tooltip(id).line1 != nullptr)
             hovered_tip = i;
@@ -7734,7 +7738,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // and that membership is a CONSTANT: only the TEXT is stateful, never
     // whether a button has one. Re-derived from redesign_button_tooltip's
     // stateful overload, whose every arm returns a non-null line 1 and so
-    // takes no hint away from any button: it moved the words on THREE — SAVE
+    // takes no hint away from any button (and since 2026-09-10 its shared
+    // iteration-lock fork would GIVE one to the view bar's three, which the
+    // walk above never asks): it moved the words on THREE — SAVE
     // (a publishing checkpoint first, then the history view's "Save and
     // commit"), RENDER (the mid-render Cancel, then the iteration bit) and,
     // since 2026-08-15, THE BOTTOM ROW'S COLLAPSED PLAY/STOP BUTTON (the live
@@ -7925,12 +7931,17 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // and the inert press are the same fact read twice and the press
         // cannot slip through on a frame the paint disagreed with. Rows 1, 3
         // and 4 have no disabled face of their own, so the predicate is simply
-        // true there — EXCEPT while the `h` history view stands, which greys
-        // every button whose act it consumes across all the rows and is
-        // therefore the one state in which this line consumes a row-1, row-3 or
-        // row-4 press (history_mode_disables_button, above) — row 4's history
-        // group, Zoom out and the magnification pair aside, which carry
-        // resting greys of their own. THE BOTTOM ROW HAS A RESTING CONSUMER
+        // true there — EXCEPT in two states. The `h` history view greys every
+        // button whose act it consumes across all the rows
+        // (history_mode_disables_button, above) — row 4's history group, Zoom
+        // out and the magnification pair aside, which carry resting greys of
+        // their own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
+        // the VIEW BAR'S THREE answer false while grid iterations stands
+        // (iteration_lock_greys, app_state.h) and this line is ALL their grey
+        // amounts to — that row has no disabled paint, so the press dies here
+        // and the face does not move, the KEY's card carrying the sentence
+        // (the account is at their arm in redesign_button_enabled).
+        // THE BOTTOM ROW HAS A RESTING CONSUMER
         // HERE FOR EVERY MEMBER BUT WALK BOTH TABS AND ADD TO SELECTION since
         // 2026-08-30 (the truthful-buttons ruling, reversing the 2026-08-15
         // scoped-truth ruling under which the row's members were lit outside

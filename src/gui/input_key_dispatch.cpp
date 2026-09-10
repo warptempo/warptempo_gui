@@ -745,18 +745,24 @@ bool GuiInputHandler::iteration_lock_column_switch(GuiKey key,
 // app_state.h — the membership the enabled arms and the tooltip's one lock
 // fork both read). Its members are the four marker verbs, the Measure, the
 // Toggle Marker Column lamp, the Toggle History View button, Edit flag and the
-// Up/Down pair on a PAYLOAD or MEASURE axis, and Left/Right in the marker
-// lane; each arm composes its own read-only half beside it, TWO of them having
-// none at all (the column lamp and the history opener, whose chords the base
-// admits or never sees). Undo and Redo take the mode through
+// Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
+// lane, and — since 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
+// quartet's other three chords; each arm composes its own read-only half
+// beside it, THREE of them having none at all (the column lamp, the history
+// opener and the view bar, whose chords the base admits or never sees).
+// Undo and Redo take the mode through
 // history_step_actionable instead, their sentence naming the act. Grid
 // iterations and BPM iterations ask the tab's bit alone, being the two exit
 // roads. A change here needs a hand edit there.
 //
-// TWO ROSTER MEMBERS THE GATE EATS HAVE NO FACE TO GREY: the VIEW BAR'S
-// three selectors, whose row carries no disabled face and no tooltip (the
-// account is at their arm in redesign_button_enabled), and every propagate
-// PASTE, whose surface is a MENU ROW and menu rows never grey.
+// TWO ROSTER MEMBERS THE GATE EATS HAVE NO FACE TO GREY, and they answer it
+// differently. THE VIEW BAR'S three selectors ARE in the membership since
+// 2026-09-10, so their PRESS dies at arm_redesign_press's disabled line as a
+// standing overlay's does — the row simply has no disabled paint and no
+// tooltip to carry it, so this gate's card is the only thing that speaks (the
+// account is at their arm in redesign_button_enabled, and a disabled face for
+// that row awaits the architect's ruling). Every propagate PASTE is not: its
+// surface is a MENU ROW and menu rows never grey.
 bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
                                                  GuiInputState mods) {
     const bool ctrl  = mods.ctrl;

@@ -8661,6 +8661,17 @@ inline bool chrome_focused(const AppState& a) {
 // shade off the row it floats on rather than reading as part of it — which is
 // exactly the separation the crops show on a real focus loss.
 //
+// THE ITERATION LOCK IS NOT A TERM HERE (architect 2026-09-10, at his
+// screenshot): the lock kills these three exactly as a standing overlay does
+// (iteration_lock_greys, below, which their enabled arm reads), and the
+// obvious move was to show it the way the overlay shows it — but THIS FACE IS
+// NOT A DISABLED FACE. The unfocused bar keeps its labels fully legible; what
+// it says is "this window is not the active one", which is true under a modal
+// and false under a lit lamp on a focused window. So the lock's three greys
+// are DEAD PRESSES WITH THEIR RESTING FACE KEPT — the hover outline is the
+// one paint that follows, the face composing the enabled term the hint does
+// not — and a disabled face for this row awaits his ruling.
+//
 // DAMAGE: a panel's open and close each invalidate the whole window, and the
 // activation hook damages the top strip on every focus edge, so both terms
 // repaint this bar with no damage call of its own.
@@ -11153,9 +11164,21 @@ inline bool authoring_locked(const AppState& a) {
 //     the audio-view lamp, the A/B tabs and Copy resolved value, every one of
 //     which the lock ADMITS (the allowlist's two deltas are stated once at
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
-//   * THE VIEW BAR'S THREE SELECTORS, whose chords the lock does refuse and
-//     whose faces stay lit all the same — the reason is at their own arm
-//     below, and it is the row's face scope rather than the lock's answer.
+//   * THE VIEW BAR'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
+//     that morning) and they are the membership's one SILENT entry, in both
+//     of the ways a member usually speaks. NO SENTENCE: the row carries no
+//     tooltip in any state (the row-1 exclusion at the constant table), so the
+//     fork below can never be asked for them and their card is the KEY'S,
+//     raised by the gate. AND NO FACE, YET: this row has no disabled paint at
+//     all (view_bar_face reads hovered / selected / pressed and no enabled
+//     bit), the bar's unfocused ground is NOT one — it keeps every label
+//     legible and says the window is inactive, which under a lit lamp on a
+//     focused window would be a lie — so what membership buys them here is
+//     the DEAD PRESS alone, the road a standing overlay's greys already take.
+//     A disabled face for this row awaits the architect's ruling; until it
+//     lands these three are the roster's one dead button that still looks
+//     live AT REST — the hover outline does stop, the face's own enabled
+//     term — and the lit lamp under them is what says why.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
@@ -11173,6 +11196,20 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // and two modal views are not composed, so the ENTRY refuses
         // (handle_history_mode_key, input_key_dispatch.cpp).
         case RedesignButton::IconHistory:
+        // THE VIEW BAR'S THREE (architect 2026-09-10): bare 1/2/3 run the `t`
+        // and `p` handlers, so the W/P delta blocks all three unconditionally
+        // — iteration_lock_key_blocked's first test is a flat four-chord list
+        // and not a "would this press move the column" question, which is why
+        // S+W under a lit lamp in S+W refuses too. WHAT MEMBERSHIP BUYS THEM
+        // IS THE DEAD PRESS: arm_redesign_press consumes a disabled button
+        // silently, the road a standing overlay's greys already take, and the
+        // KEY carries the sentence. Their RESTING FACE IS UNCHANGED — the row
+        // has no disabled paint and the bar's unfocused ground is not one —
+        // and the hover outline is the one thing that follows the grey; the
+        // account of what a reader sees is at their enabled arm below.
+        case RedesignButton::ViewSW:
+        case RedesignButton::ViewTP:
+        case RedesignButton::ViewTW:
             return true;
         // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
         // as the keyboard gate's own bound-axis test does: with Lower or Upper
@@ -13000,24 +13037,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // TOGGLE HISTORY VIEW left the group the same day and for the same
         // lock, at its own arm below.)
         //
-        // AND THE VIEW BAR'S THREE STAY HERE UNDER THAT LOCK, although the
-        // gate really does eat their chords: bare 1 / 2 / 3 run the `t` and
-        // `p` handlers, so the W/P delta blocks all three unconditionally
-        // (iteration_lock_key_blocked's first test — it is a flat four-chord
-        // list, not a "would this press move the column" question, which is
-        // why S+W under a lit lamp in S+W refuses too). THE ROW'S FACE SCOPE
-        // IS WHY THE FACE DOES NOT FOLLOW: these three have NO DISABLED FACE
-        // (view_bar_face, paint_handler.cpp, reads hovered / selected /
-        // pressed and no enabled bit — their only dimming is the whole bar's
-        // unfocused ground, view_bar_focused's own swap) and NO TOOLTIP (the
-        // row-1 exclusion at the constant table, 2026-08-02: their labels are
-        // the combinations themselves). A `false` here would therefore produce
-        // an INVISIBLE dead button that swallows the card its key raises —
-        // strictly less truthful than the lit button whose chord the gate
-        // drops and answers with "Turn off grid iterations first", which is
-        // the read-only lock's own standing posture for a face it cannot
-        // reach. Greying them wants a disabled view-bar face first, and that
-        // is a paint the crops never showed.
+        // (THE VIEW BAR'S THREE LEFT THIS ARM ON 2026-09-10 with the iteration
+        // lock — they answer at their own arm below, where the `false` buys a
+        // DEAD PRESS and no paint at all, this row still having no disabled
+        // face to wear.)
         // (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
         // 2026-08-18 — the HISTORY COMPANIONS, whose keys are bound only inside
         // the `h` view and which grey at rest for that reason. They held the
@@ -13037,14 +13060,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // scoped to that mode: leave the view and these rows answer true again
         // on the very next frame, no latched state anywhere.)
         //
-        // THE VIEW BAR'S "DISABLED" CROPS ARE THE UNFOCUSED WINDOW (architect
-        // 2026-08-02), not a disabled button: they are the row-1/2 ground swap's
-        // sibling on app.window_activated, a PAINT-ONLY variant of the whole
-        // bar, and never this bit. So the row-1 claim above stays true in its own
-        // terms — no button on this row has a disabled face of its own — and the
-        // three join the same arm. THE VIEW BAR STAYS LIVE IN THE HISTORY VIEW
-        // (its 1/2/3 are on the mode's allowlist), so the two faces never meet
-        // there either. (EDIT joined the row and this arm 2026-08-20, and
+        // (EDIT joined the row and this arm 2026-08-20, and
         // ITERATIONS did too for the eight days it stood, 2026-08-27 to
         // 2026-09-04: an anchor
         // is a popup toggle and has nothing to refuse, so each is never-grey
@@ -13053,9 +13069,6 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
-        case RedesignButton::ViewSW:
-        case RedesignButton::ViewTP:
-        case RedesignButton::ViewTW:
         case RedesignButton::TabA:
         case RedesignButton::TabB:
         case RedesignButton::IconAudioView:
@@ -13385,6 +13398,52 @@ inline bool redesign_button_enabled(const AppState& a,
         // never-grey group above: the mode is target-legal and a bracket
         // reads no audio view, so bare `t` is admitted under both locks.
         case RedesignButton::IconMarkerColumn:
+            return !iteration_lock_greys(a, b);
+        // THE VIEW BAR'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
+        // and they left the never-grey group above for it: bare 1/2/3 COMPOSE
+        // the `p` handler, so they are three of the four chords the column
+        // quartet blocks (iteration_lock_key_blocked's first test), and a
+        // press that cannot act must not act — the roster's own rule, applied
+        // here through arm_redesign_press's disabled line, which consumes the
+        // press silently and lets the KEY's card be the one sentence.
+        //
+        // WHAT THIS ARM DOES NOT BUY IS A RESTING FACE. This row has no
+        // disabled paint (view_bar_face, paint_handler.cpp, reads hovered /
+        // selected / pressed and no enabled bit) and no tooltip (the row-1
+        // exclusion at the constant table), so a `false` here changes what the
+        // PRESS does and, at rest, nothing a reader sees. IT DOES TAKE THE
+        // HOVER OUTLINE WITH IT, the row's one honest consequence: the hover
+        // recompute composes this term into `face.hovered`
+        // (recompute_redesign_button_hover, input_pointer.cpp — the face gets
+        // the enabled term and the hint does not), so under a lit lamp the
+        // accent frame stops following the pointer here, which is the standing
+        // reading of a hover as a promise the pointer can act. The repaint is
+        // that walk's own per-tick comparator, no damage call anywhere here.
+        //
+        // THE BAR'S UNFOCUSED GROUND WAS TRIED AS
+        // THAT FACE AND HE REFUSED IT the same morning, at his screenshot: the
+        // unfocused bar keeps its labels fully legible and what it says is
+        // that the window is inactive, which under a lit lamp on a focused
+        // window is simply untrue — so view_bar_focused takes no lock term and
+        // these three are, for now, the roster's one dead button that still
+        // looks live at rest. A DISABLED VIEW-BAR FACE AWAITS HIS RULING and
+        // is what would finish this arm; until then the lit Grid Iterations
+        // lamp one row down is what says the press is dead, and the digit's
+        // own card says it in words.
+        //
+        // NO READ-ONLY TERM, the column lamp's reading of the gate exactly:
+        // the digits are navigation, on read_only_key_blocked's allowlist, so
+        // a locked tab with the lamp dark leaves all three live — and with it
+        // lit the gate asks the quartet beside the wider list, so the chord
+        // cannot outlive this arm there either. AND THE `h` VIEW NEVER REACHES
+        // THIS ARM: its 1/2/3 are on the mode's allowlist, so the derived
+        // partition above answers LIVE for all three and the two modes' greys
+        // never meet on this row. THE CROPS NAMED "disabled" ARE THE UNFOCUSED
+        // WINDOW and never this bit (architect 2026-08-02; the record and the
+        // arithmetic are at kRedesignViewBarBg, render.h).
+        case RedesignButton::ViewSW:
+        case RedesignButton::ViewTP:
+        case RedesignButton::ViewTW:
             return !iteration_lock_greys(a, b);
         // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
         // arm has nothing else left to mirror (2026-09-09): the lamp is
@@ -15358,7 +15417,11 @@ inline RedesignTooltipText redesign_button_tooltip(
     // payload or measure axis, and Left/Right with a marker selected. The
     // predicate is the FACE'S OWN — the arms above call it too — so the grey
     // and the words it wears are one decision, never a second list of the same
-    // buttons.
+    // buttons. THE MEMBERSHIP'S NEWEST THREE NEVER ARRIVE HERE: the VIEW BAR'S
+    // selectors joined it 2026-09-10 and row 1 carries no tooltip in any
+    // state, so the hover walk never asks this overload for them (membership
+    // is the CONSTANT table's null line 1, input_pointer.cpp) and this fork
+    // takes nothing away from a row that had nothing.
     //
     // IT RANKS ABOVE THE SWITCH BELOW, which is what makes it the OUTERMOST
     // reason the same way the key's own card is: under a lit lamp the gate
