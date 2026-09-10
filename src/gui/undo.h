@@ -88,29 +88,19 @@ struct GuiInputHandler;
 // their place (the stamped selection and A/B tab must still stand); the
 // derivation is at coalesce_gesture's definition.
 // THE ELIGIBLE KINDS, one per coalescing gesture plus None: the two position
-// nudges, the Up/Down cent step (TempoStep, singleton and group — its own kind
-// keeps a nudge burst and a tempo burst separate) and, since 2026-09-04, the
-// same arrows' ITERATION BOUND STEP (IterBoundStep, singleton and group — the
-// arrows' second body, stepping a bound cell of the bracket; its own kind
-// because the two bodies write different fields and a burst has one subject,
-// and the one kind whose ENTRY carries the addressed cell too, so a restore
-// lands the focus back on the bound the burst moved —
-// UndoEntry::addressed_cell, pushed by push_undo_iter_bracket).
-// ONE KIND, TWO BODIES SINCE 2026-09-09: the phase-reset column has a bound
-// step of its own (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) in the hop
-// domain, and it stamps THIS kind rather than a fifth. One kind suffices
-// because the stamp carries the W/P COLUMN as a subject term of this kind
-// (last_gesture_column_, read for IterBoundStep alone beside the addressed
-// cell), so a warp burst and a phase burst can never share a live stamp. The
-// column switch itself is NOT what separates them: it clears the selection,
-// but the cell click that then addresses the other column's marker recreates
-// the same numeric selection and the same cell while pushing nothing, so
-// without the column term a phase tap inside kTapCoalesceMs merged into the
-// warp burst's entry and one Ctrl+Z reverted both columns at once.
+// nudges and the Up/Down cent step (TempoStep, singleton and group — its own
+// kind keeps a nudge burst and a tempo burst separate).
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
-// tempo-image family's deletion (marker_drag.h).
+// tempo-image family's deletion (marker_drag.h). ITERBOUNDSTEP WAS A FOURTH
+// FROM 2026-09-04 TO 2026-09-10 — the same arrows' second body, stepping a
+// bound cell of the iteration bracket — and it went with the bracket's exit
+// from the undo domain (architect 2026-09-10: "They just don't go in the undo
+// stack at all; they're considered transient by design"). The bound step
+// pushes nothing now, so it has nothing to coalesce INTO, and the two subject
+// terms that kind alone read — the addressed cell and the W/P column — went
+// with it.
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep, IterBoundStep
+    None, WarpNudge, PhaseResetNudge, TempoStep
 };
 
 // THE TAP-COALESCE WINDOW (architect 2026-08-01): two consecutive PHYSICAL
@@ -188,73 +178,37 @@ struct Undo {
     // restore_touched_indices, one site): defaulted empty for every caller that
     // owes none, which then uses the diff-based touched-set reconstruction in
     // the post-restore rules.
-    // `addressed_cell` stamps UndoEntry::addressed_cell and has exactly one
-    // caller on this column, push_undo_iter_bracket below (the phase-reset
-    // store's own helper has push_undo_phase_iter_bracket for its twin); every
-    // other push leaves the entry on the payload.
+    // EVERY PUSH STRIPS THE SESSION-ONLY ITERATION BRACKET from both
+    // snapshots it builds (strip_iter_fields, warpmarkers.h and
+    // phaseresetmarkers.h; architect 2026-09-10). So no entry on either stack
+    // can carry a bracket, and no restore can install one — which is the
+    // mechanical half of "they just don't go in the undo stack at all"; the
+    // other half is the LOCK, which refuses everything that would push while
+    // grid iterations stands (authoring_locked, app_state.h). The two
+    // bracket-only pushes that used to seat one — push_undo_iter_bracket and
+    // push_undo_phase_iter_bracket, with the `affects_persistence` and
+    // `addressed_cell` parameters they existed to fix — are retired with them.
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
-                        bool affects_persistence = true,
                         std::vector<int> touched_snapshot = {},
-                        std::vector<int> touched_live = {},
-                        MarkerCell addressed_cell = MarkerCell::Payload);
-    // THE BRACKET-ONLY WARP ENTRY — the iteration bracket's own push, and the
-    // one entry kind that carries an addressed cell. Three callers: the
-    // singleton and group arms of the Up/Down bound step
-    // (GuiWarpMarkersOps::adjust_iter_bound_cents and its group twin) and the
-    // bound editor's commit (GuiFlagEditor::commit_iter_bound_edit). It fixes
-    // affects_persistence FALSE — iteration bounds are session-only fields
-    // that never serialize, so crossing such an entry must not move the dirty
-    // dot — and stamps the LIVE addressed cell onto the entry, so an undo or
-    // redo of the step lands the focus back on the bound it moved (the field's
-    // contract is at UndoEntry::addressed_cell, app_state.h). `touched` is the
-    // group arm's identity hint and fills BOTH coordinate spaces: a bound step
-    // moves no marker, so the entry's snapshot rows and its live rows are the
-    // same indices.
-    void push_undo_iter_bracket(std::vector<GuiWarpMarker> pre_state,
-                                std::vector<int> touched = {});
-    // `affects_persistence` and `addressed_cell` are push_undo_warp's own two,
-    // APPENDED here rather than seated in that helper's positions: this
-    // signature's existing callers pass their touched hints positionally, and
-    // a bool moved in front of them would be a SILENT conversion at every one
-    // of those call sites rather than a compile error. The asymmetry in the
-    // two parameter orders is that, and is recorded here.
+                        std::vector<int> touched_live = {});
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
-                             std::vector<int> touched_live = {},
-                             bool affects_persistence = true,
-                             MarkerCell addressed_cell = MarkerCell::Payload);
-    // THE BRACKET-ONLY PHASE-RESET ENTRY — push_undo_iter_bracket's twin on
-    // the hop bracket (2026-09-09), fixing the same two fields for the same
-    // two reasons: affects_persistence FALSE, hop bounds being session-only
-    // fields that never serialize, and the LIVE addressed cell stamped onto
-    // the entry so an undo or redo of the step lands the focus back on the
-    // bound it moved. Three callers, this column's: the singleton and group
-    // arms of the Up/Down bound step
-    // (GuiPhaseResetMarkersOps::adjust_iter_bound_hops and its group twin) and
-    // the bound editor's commit on this column
-    // (GuiFlagEditor::commit_iter_bound_edit's phase arm). `touched` is the
-    // group arm's identity hint and fills BOTH coordinate spaces: a bound step
-    // moves no reset, so the entry's snapshot rows and its live rows are the
-    // same indices.
-    void push_undo_phase_iter_bracket(
-        std::vector<GuiPhaseResetMarker> pre_state,
-        std::vector<int> touched = {});
+                             std::vector<int> touched_live = {});
     // Files under the LIVE tab like the three helpers around it. (A
     // `tab_override` parameter stood here for the load-in-place, which used to
     // switch to the tab its file named; it lost its last producer on 2026-08-24
     // when the act stopped writing view state, and went with it.)
     //
-    // `affects_persistence` is push_undo_warp's own flag over an entry that
-    // spans both stores, and it has ONE false caller: the iteration-mode
-    // wipe (GuiFlagEditor::wipe_iter_state), which clears both columns'
-    // session-only brackets in one act and must not move the dirty dot for
-    // either. `op_mode` names the COLUMN the restore returns to and whose
+    // `op_mode` names the COLUMN the restore returns to and whose
     // post-restore rules run; both snapshots are written back whatever it
-    // says (restore_history_entry).
+    // says (restore_history_entry). ONE CALLER, the load in place. (The
+    // iteration-mode wipe was a second until 2026-09-10, pushing a
+    // session-only entry over both stores; it pushes nothing now, the bracket
+    // having left the undo domain, and the `affects_persistence` parameter
+    // that existed for it went with it.)
     void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                         std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                        char op_mode,
-                        bool affects_persistence = true);
+                        char op_mode);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules
     // dispatch. Markers are captured wholesale at push time (carry-
@@ -305,8 +259,8 @@ struct Undo {
     //     commit-on-NET-CHANGE principle every PUSH site already gates on
     //     (stated at marker_drag.cpp's commit), extended to the one path that
     //     skips the push; direction-blind merging is untouched. THE MERGE TAIL
-    //     IS THE ONE SEAM all four eligible kinds share, which is why the
-    //     question is asked here and not at the five call sites.
+    //     IS THE ONE SEAM every eligible kind shares, which is why the
+    //     question is asked here and not at the call sites.
     //   * OTHERWISE THE STAMP, written as one unit: the KIND, the
     //     ACCEPTED-EVENT TIMESTAMP the tap window measures from, and the
     //     SUBJECT — the selection, the A/B tab and
@@ -314,9 +268,9 @@ struct Undo {
     //     held-key arm
     //     re-test (the audio view joined when the A/B audition's tick-driven
     //     switch was found able to land between a burst's opener and its
-    //     repeats), plus the ADDRESSED CELL since 2026-09-04, which the
-    //     iteration bound step alone reads (Lower and Upper are two different
-    //     fields of one selection; the argument is at coalesce_gesture).
+    //     repeats). (The ADDRESSED CELL and the W/P COLUMN were stamped here
+    //     too from 2026-09-04 and 2026-09-09, read by the iteration bound step
+    //     alone; both went with that kind on 2026-09-10.)
     // Call after the push / skip and after the mutation — and ONLY on the
     // accepted path, which is what makes a refusing press leave the stamp
     // invalid and is what keeps the pop off every no-op press.
@@ -383,48 +337,30 @@ struct Undo {
     // repeat contract gives arm (1) for free and arm (2) not at all; the
     // repeat arm now tests it too (clause (c) at coalesce_gesture — the run
     // loop's tick is not an input edge, so the A/B audition can switch tabs
-    // between a burst's opener and its repeats). All four eligible gesture
+    // between a burst's opener and its repeats). All three eligible gesture
     // families derive their target from the selection (the nudges from its
-    // focus, the tempo step and the bound step from its members) and AN UNDO
+    // focus, the tempo step from its members) and AN UNDO
     // ENTRY IS FILED UNDER THREE VIEW TAGS — the A/B
     // tab, the W/P column and the S/T audio view, all three of which the restore
     // writes back — so a tap that follows a marker click, a Tab, a range
     // extension, a Ctrl+Tab or a `t` finds a CHANGED subject and opens its own
-    // entry instead of merging into an entry filed elsewhere. THE COLUMN IS
-    // NOT ONE OF THEM FOR THREE OF THE FOUR KINDS: switch_active_markers_view_to
-    // CLEARS the selection (the scope rule) and every eligible family refuses
-    // without one, and those three each have ONE BODY over ONE store, so the
-    // only way back into an eligible press on the other column is a fresh
-    // selection act — which changes the selection term the moment it names a
-    // different marker, and cannot name the same one, there being no second
-    // body to merge into. The bound step needs two more terms than the
-    // selection can carry: the addressed cell and the column, both below.
+    // entry instead of merging into an entry filed elsewhere. THE W/P COLUMN
+    // IS NOT ONE OF THEM: switch_active_markers_view_to CLEARS the selection
+    // (the scope rule) and every eligible family refuses without one, and each
+    // of the three has ONE BODY over ONE store, so the only way back into an
+    // eligible press on the other column is a fresh selection act — which
+    // changes the selection term the moment it names a different marker, and
+    // cannot name the same one, there being no second body to merge into.
+    // (THE ITERATION BOUND STEP WAS THE ONE KIND THAT NEEDED MORE than the
+    // selection could carry — the addressed cell and the column, two
+    // kind-specific terms — and it left the undo domain with the bracket on
+    // 2026-09-10, taking both fields with it.)
     // Captured POST-act (record_gesture), so the position nudges' focus
     // collapse and their reorder remap are already reflected and a steady run
     // of taps compares like against like.
     std::set<int> last_gesture_selection_;
     char          last_gesture_tab_ = 0;
     char          last_gesture_audio_view_ = 0;
-    // The addressed cell, the fourth subject term and one of the two
-    // kind-specific ones: IterBoundStep alone reads it, because that kind's
-    // subject is a field of the selected markers (Lower or Upper) rather than
-    // the markers themselves, so a press on the other cell moves nothing the
-    // three terms above can see. The other three kinds each move one field by
-    // construction and ignore it. Stamped with the rest on every accepted
-    // fire; the compare and its derivation are at coalesce_gesture.
-    MarkerCell    last_gesture_cell_ = MarkerCell::Payload;
-    // The W/P column, the fifth subject term and the second kind-specific one,
-    // read by IterBoundStep alone for the same reason the cell is: that kind
-    // has TWO BODIES over TWO STORES (the warp cents and the phase hops), so
-    // its subject carries a column the other four terms cannot see. The
-    // selection term does not stand in for it — a column switch clears the
-    // selection, but the next press on the other column RECREATES it
-    // numerically (marker index {0} on either store is the same set), and the
-    // cell press that recreates it pushes nothing, so a phase tap could land
-    // in the warp burst's own entry. Stamped on every kind so the field is
-    // never stale for the one kind that reads it; the compare is at
-    // coalesce_gesture.
-    char          last_gesture_column_ = 0;
 
     // Shared authoritative guard for do_undo / do_redo: true when the step
     // would actually act (non-empty source stack, top entry's target tab

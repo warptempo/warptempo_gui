@@ -87,7 +87,7 @@ public:
     //
     // THE TITLE CARRIES NO DIRTY MARK (architect 2026-09-09: "it should only
     // show up in the bottom. Otherwise it becomes a duplicate signal, and we
-    // avoid those in this project"): row 8's clock wears the ` *` suffix read
+    // avoid those in this project"): row 8's clock wears the `*` suffix read
     // straight out of app.dirty, on both backends, and it is the product's ONE
     // dirty indicator. `set_title_dirty` — the seam member the flag was pushed
     // through from 2026-08-01 — is deleted on both backends with the mark it

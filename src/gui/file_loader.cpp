@@ -433,7 +433,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // Undo::recompute_dirty (it assigns the four flags outright); that tail is
     // the other transition site, and those two are the whole inventory, since
     // the four flags above have no other writer in the tree.
-    // ROW 8'S ` *` — the mark's ONE surface since 2026-09-09, the window
+    // ROW 8'S `*` — the mark's ONE surface since 2026-09-09, the window
     // title's own asterisk having been deleted as a duplicate signal — NEEDS
     // NO DAMAGE CALL HERE, unlike at that tail: the mark is painted from
     // app.dirty directly, and this body invalidates the WHOLE WINDOW on both

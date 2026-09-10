@@ -70,7 +70,7 @@
 // shaped and painted through the ONE chokepoint like every other redesigned
 // row (paint_notifications, 2026-08-29). (The dirty mark left this row for
 // the WINDOW TITLE on 2026-08-01 — labwc painted it — and is back on the row
-// since 2026-09-09 as ` *` inside the CLOCK's own run, the title's asterisk
+// since 2026-09-09 as `*` inside the CLOCK's own run, the title's asterisk
 // deleted the same day as a duplicate signal.)
 //
 // The no-wiggle DERIVATION — the widest digit, the "DD:DD.DDD" specimen —
@@ -148,7 +148,7 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // tab row paints tabs over its whole width again.
 //
 // THE DIRTY MARK IS NOT A TENANT EITHER — it is THE CLOCK'S SUFFIX (architect
-// 2026-09-09): ` *` after the timestamp's digits while the tab is dirty,
+// 2026-09-09): `*` after the timestamp's digits while the tab is dirty,
 // inside the clock's own unclipped run, so it stands with or without a state
 // string beside it and reserves no width of its own. It rode the WINDOW TITLE
 // alone from 2026-08-01 until then — the tablet, which has no titlebar and so
@@ -6752,7 +6752,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // rows say in their own vocabulary. The dirty mark's SECTION stays gone —
     // it has no cell of its own and reserves no width — but the mark itself is
     // back on this row since 2026-09-09, as the CLOCK'S SUFFIX inside the
-    // clock's run (` *`, the block in paint_bottom_row_buttons_and_clock), and
+    // clock's run (`*`, the block in paint_bottom_row_buttons_and_clock), and
     // it is the only dirty indicator the product has: the window title's own
     // asterisk was deleted the same day as a duplicate signal.
     //

@@ -120,9 +120,9 @@ constexpr int kMaxPendingChars = 28;
 // cells a flag grows in iteration mode). ITS GRAMMAR IS FIXED-WIDTH: a sign,
 // one integer digit, the point, two decimals (format_signed_delta_cents,
 // warpmarkers.h — the sign is the cells' whole syntax). The integer digit is
-// single because the walls the commit and the arrows' step share — the clamp
-// window clamp_iter_bracket_to_tempo_bracket states — hold every bound inside
-// kTempoMaxCents - kTempoMinCents, i.e. 3.75. So `-3.75` is the widest token
+// single because the walls the commit and the arrows' step share — the tempo
+// window, [kTempoMinCents − base, kTempoMaxCents − base] — hold every bound
+// inside kTempoMaxCents - kTempoMinCents, i.e. 3.75. So `-3.75` is the widest token
 // the field can commit and FIVE BYTES is the cap, a tight bound rather than a
 // policy one; the assert keeps the derivation honest across a bracket retune.
 // THE CAP AND THE JUDGE AGREE EXACTLY: the commit's reader

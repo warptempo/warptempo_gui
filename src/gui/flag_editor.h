@@ -124,9 +124,10 @@ struct GuiFlagEditor {
     // audio-view toggle left the list 2026-08-07; the load in place is NOT a
     // route since 2026-09-02 — it leaves the mode bit alone, the record at
     // apply_recipe_in_place). It also puts an addressed BOUND cell back on
-    // the payload, the cells going with the mode. ONE both-columns undo entry
-    // when something cleared (affects_persistence false, tagged with the live
-    // column); callers own the mode flip and repaint.
+    // the payload, the cells going with the mode. HISTORY-LESS since
+    // 2026-09-10: the clear pushes nothing at all, the bracket having left the
+    // undo domain whole, so a wipe is final; callers own the mode flip and
+    // repaint.
     void wipe_iter_state();
     // Wipe every marker's session-only bpm state (owner flag, beats,
     // bracket bounds, endpoint). History-less; callers own the repaint. TWO

@@ -300,8 +300,8 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // The shared type-free COMMIT TAIL. Each twin calls this AFTER it has: run its
 // regime middle, mutated its store, run reorder_markers_by_time +
 // remap_marker_indices_after_reorder, collected touched_live, and done its own
-// typed undo merge/push block (push_undo_warp with affects_persistence=true /
-// push_undo_phase_reset — those stay in the twins). The tail then, in order:
+// typed undo merge/push block (push_undo_warp / push_undo_phase_reset — those
+// stay in the twins). The tail then, in order:
 // (a) record_gesture — the burst's SETTLEMENT, which is why the twin's own
 //     coalesce verdict rides down here as `merged`: it re-stamps this press's
 //     kind for the next coalesce test, OR, on a merged press whose mutation

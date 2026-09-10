@@ -824,7 +824,7 @@ GuiRect top_marker_row_area(const AppState& a) {
 // — the state text is this row's cell now and the resolved readout retired;
 // the OVERVIEW STRIP was bottom lane 0 under this
 // row for the afternoon of 2026-08-12 and is TOP lane 3 now.) THE DIRTY MARK
-// IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the ` *` suffix
+// IS A TENANT HERE, AND IT IS THE ONLY ONE: the clock wears the `*` suffix
 // while app.dirty stands (paint_bottom_row_buttons_and_clock appends it; the
 // transition is the lane's own damage, Undo::recompute_dirty's tail, and
 // messaging.md carries the ruling). The Wayland title carried a SECOND
@@ -1190,7 +1190,7 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // see the record just above.)
 //
 // THE DIRTY MARK PAINTS PAST THIS CELL AND THAT IS CORRECT (architect
-// 2026-09-09): row 8's ` *` is appended to the timestamp inside the clock's
+// 2026-09-09): row 8's `*` is appended to the timestamp inside the clock's
 // own run, so while the tab is dirty the painted run is wider than the reserved
 // cell this rect covers. The tick does not care — the suffix is not a digit and
 // changes only when app.dirty moves, and THAT transition damages the lane whole

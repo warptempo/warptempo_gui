@@ -559,15 +559,22 @@ struct PhaseHopWindow {
 //   Cartesian product is sorted by construction. It is mutual — raising A's
 //   upper narrows B's lower window — which is the tempo window's own shape. A
 //   DISABLED neighbour contributes its RESTING frame instead: it is out of the
-//   product and carries no bracket at all (its own disable cleared one —
-//   architect 2026-09-10), so it never moves.
+//   product and carries no bracket at all — no reset can be disabled while a
+//   bracket stands, the iteration lock refusing every disabling act (architect
+//   2026-09-10) — so it never moves.
 //
-// READERS: the bound editor's commit (refuses outside the window, naming the
-// wall kind — GuiFlagEditor::commit_iter_bound_edit), the step's landing owner
-// (phase_iter_bound_step_landing, app_state.h, which CLAMPS into the window
-// and then at the partner), the group scan and the directional face through
-// it, and the sweep's plan (iteration_sweep_plan), which re-verifies every
-// standing bracket against this window on every read because nothing clamps
-// retroactively on this column.
+// AND THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (architect 2026-09-10):
+// a bracket exists only while grid iterations is lit, and while it is lit the
+// piece is LOCKED (authoring_locked, app_state.h), so no reset or neighbour
+// can be nudged, dragged, dropped, deleted or disabled and no warp edit can
+// move the lattice. That is what retired the sweep plan's per-read
+// re-verification, which existed because nothing clamps this bracket
+// retroactively: the walls hold by construction now.
+//
+// TWO READERS: the bound editor's commit (refuses outside the window, naming
+// the wall kind — GuiFlagEditor::commit_iter_bound_edit) and the step's
+// landing owner (phase_iter_bound_step_landing, app_state.h, which CLAMPS into
+// the window and then at the partner), the group scan and the directional face
+// reaching it through that landing.
 PhaseHopWindow phase_reset_hop_window(const AppState& app,
                                       const GuiAudio& audio, int idx);

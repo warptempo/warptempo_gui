@@ -93,7 +93,6 @@ void Undo::recompute_dirty() {
         const int n  = -h.saved_distance;
         const int us = static_cast<int>(h.undo_stack.size());
         for (int i = std::max(0, us - n); i < us; ++i) {
-            if (!h.undo_stack[i].affects_persistence) continue;
             const char m = h.undo_stack[i].op_mode;
             if      (m == 'P') app.phase_reset_dirty = true;
             else if (m == 'S') app.settings_dirty    = true;
@@ -108,7 +107,6 @@ void Undo::recompute_dirty() {
         const int n  = h.saved_distance;
         const int rs = static_cast<int>(h.redo_stack.size());
         for (int i = std::max(0, rs - n); i < rs; ++i) {
-            if (!h.redo_stack[i].affects_persistence) continue;
             const char m = h.redo_stack[i].op_mode;
             if      (m == 'P') app.phase_reset_dirty = true;
             else if (m == 'S') app.settings_dirty    = true;
@@ -120,7 +118,14 @@ void Undo::recompute_dirty() {
     // THE DIRTY MARK HAS ONE SURFACE AND ONE DERIVE-OWNER. This is where
     // app.dirty is derived, so every mutation, save and undo/redo transition
     // passes through here.
-    // ROW 8'S ` *` (architect 2026-09-09) is that surface on both backends,
+    // EVERY ENTRY COUNTS (architect 2026-09-10): the walks above used to skip
+    // the three session-only iteration-bracket entries, because a bracket
+    // never reaches a sidecar and crossing one must not light the dot. The
+    // bracket left the undo domain whole — nothing pushes it and every push
+    // strips it from its snapshot — so nothing about a bracket reaches the
+    // history and nothing about it reaches the mark. There is no class left to
+    // skip.
+    // ROW 8'S `*` (architect 2026-09-09) is that surface on both backends,
     // and it is READ, never pushed: the painter takes app.dirty straight out of
     // the state as the clock's own suffix, so what this tail owes it is DAMAGE,
     // and only ON A TRANSITION. This body runs after every command, and an
@@ -135,90 +140,63 @@ void Undo::recompute_dirty() {
     if (app.dirty != was_dirty) viewport.invalidate_status_cell_area();
 }
 
+// THE FOUR PUSH HELPERS ALL STRIP THE SESSION-ONLY ITERATION BRACKET from
+// both snapshots they build (architect 2026-09-10: "They just don't go in the
+// undo stack at all; they're considered transient by design"). It is done HERE
+// rather than at the callers so it is one statement over every producer that
+// exists or will exist, and it is what makes "a restore never installs a
+// bracket" a property of the code: no entry can hold one, so neither can a
+// counter-entry, which is built from live stores that themselves hold none
+// while any push is reachable (the LOCK — while grid iterations stands, every
+// act that would push refuses; authoring_locked, app_state.h).
 void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
-                          bool affects_persistence,
                           std::vector<int> touched_snapshot,
-                          std::vector<int> touched_live,
-                          MarkerCell addressed_cell) {
+                          std::vector<int> touched_live) {
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    strip_iter_fields(e.snapshot);
+    strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
-    e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
-    e.addressed_cell     = addressed_cell;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
-}
-
-// The contract is at the declaration. It is a spelling of the push above and
-// not a second entry builder: the two fields it fixes are what make an entry
-// bracket-only, and reading the live axis HERE rather than at the three call
-// sites is what keeps "the entry carries the cell it changed" one statement.
-void Undo::push_undo_iter_bracket(std::vector<GuiWarpMarker> pre_state,
-                                  std::vector<int> touched) {
-    std::vector<int> touched_live = touched;
-    push_undo_warp(std::move(pre_state), /*affects_persistence=*/false,
-                   std::move(touched), std::move(touched_live),
-                   app.addressed_cell);
 }
 
 void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                                std::vector<int> touched_snapshot,
-                               std::vector<int> touched_live,
-                               bool affects_persistence,
-                               MarkerCell addressed_cell) {
-    // The two trailing parameters arrived on 2026-09-09 with this column's own
-    // iteration bracket: the recorded asymmetry that stood here — "the
-    // iteration bracket is warp-only session state, so a phase-reset entry has
-    // nothing to mark" — is retired, the bracket now having a hop-domain twin
-    // on this store. Their parameter POSITION is the asymmetry that remains,
-    // and the reason is at the declaration.
+                               std::vector<int> touched_live) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
+    strip_iter_fields(e.snapshot);
+    strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
-    e.affects_persistence = affects_persistence;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
-    e.addressed_cell     = addressed_cell;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
 
-// The contract is at the declaration. Like its warp twin it is a SPELLING of
-// the push above and not a second entry builder: the two fields it fixes are
-// what make an entry bracket-only, and reading the live axis HERE rather than
-// at the three call sites is what keeps "the entry carries the cell it
-// changed" one statement.
-void Undo::push_undo_phase_iter_bracket(
-        std::vector<GuiPhaseResetMarker> pre_state,
-        std::vector<int> touched) {
-    std::vector<int> touched_live = touched;
-    push_undo_phase_reset(std::move(pre_state), std::move(touched),
-                          std::move(touched_live),
-                          /*affects_persistence=*/false, app.addressed_cell);
-}
-
 void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
                           std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                          char op_mode,
-                          bool affects_persistence) {
+                          char op_mode) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
+    strip_iter_fields(e.snapshot);
+    strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
-    e.affects_persistence = affects_persistence;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
@@ -227,6 +205,8 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    strip_iter_fields(e.snapshot);
+    strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
@@ -276,44 +256,14 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     const bool stamp_matches =
         last_gesture_kind_ == kind && !app.history.undo_stack.empty();
 
-    // The addressed cell is a fourth subject term, and IterBoundStep alone
-    // reads it (converted 2026-09-04 from a codex finding). That kind's
-    // subject is not the marker set but a field of it: Lower and Upper are two
-    // different bounds, and a press on the other cell of the same selected
-    // marker changes only AppState::addressed_cell, so none of the three terms
-    // below moves — a Lower tap followed by an Upper tap inside
-    // kTapCoalesceMs merged, and one Ctrl+Z reverted both. The other three
-    // kinds ignore it because their subject has no cell: both position nudges
-    // move the focus's frame and the tempo step moves its base, one field
-    // each, and a bound cell is never addressed outside iteration mode
-    // anyway. That is why this is a term of the one kind that needs it rather
-    // than a term every kind pays for. Both arms read it: a held
-    // run cannot change the cell mid-burst (a marker press disarms both hold
-    // producers), but the repeat arm tests its subject terms anyway for the
-    // reason clause (c) gives.
-    //
-    // THE W/P COLUMN RIDES WITH IT, and for the same kind alone (converted
-    // 2026-09-09 from a codex finding, on the phase-reset bound step's own
-    // commit). IterBoundStep has TWO BODIES over TWO STORES since that day —
-    // the warp cents and the phase hops — so its subject carries a column, and
-    // the three terms below cannot see it: the selection is a set of INDICES,
-    // and index 0 on the phase store is the same set as index 0 on the warp
-    // store. The reachable sequence: address Lower on warp marker 0 and tap
-    // Down; press `p`; click phase reset 0's Lower cell, which re-seats the
-    // selection and the cell and PUSHES NOTHING; tap Down inside
-    // kTapCoalesceMs. Every term above stood, so the phase step merged into
-    // the warp burst's 'W'-tagged entry, skipping its own push — one Ctrl+Z
-    // then reverted both columns and landed in W. The column switch is not the
-    // guard: it clears the selection, but the very click that addresses the
-    // other column's cell recreates it. The other three kinds need no such
-    // term — both position nudges and the tempo step are ONE-BODY kinds, so
-    // there is no second body on the other column for a tap to merge into.
-    const bool cell_matches =
-        kind != GestureKind::IterBoundStep ||
-        last_gesture_cell_ == app.addressed_cell;
-    const bool column_matches =
-        kind != GestureKind::IterBoundStep ||
-        last_gesture_column_ == app.active_markers_view;
+    // (TWO KIND-SPECIFIC SUBJECT TERMS STOOD HERE — the ADDRESSED CELL from
+    // 2026-09-04 and the W/P COLUMN from 2026-09-09, each read by
+    // GestureKind::IterBoundStep alone, that kind's subject being a FIELD of
+    // the selection on one of TWO stores rather than the selection itself.
+    // Both went with the kind on 2026-09-10, when the iteration bracket left
+    // the undo domain: the bound step pushes nothing, so it has no entry for a
+    // later tap to merge into and no subject to keep apart. The three kinds
+    // left are one-body kinds whose subject the selection carries whole.)
 
     bool merge = false;
     if (stamp_matches) {
@@ -375,9 +325,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // clock stays out: a hold must coalesce at any repeat rate.
             merge = last_gesture_tab_ == app.active_tab_view
                  && last_gesture_audio_view_ == app.active_audio_view
-                 && last_gesture_selection_ == app.selected_markers
-                 && cell_matches
-                 && column_matches;
+                 && last_gesture_selection_ == app.selected_markers;
         } else {
             // ARM (2), THE TAP WINDOW — a physical press merging into the previous
             // one. Two extra conditions, because a tap has NONE of the repeat
@@ -398,21 +346,18 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     hints — one Ctrl+Z reverting two unrelated edits, which is the
             //     exact composition the arrival-invalidate was introduced to kill
             //     on the repeat side. The selection is the honest subject for all
-            //     four eligible kinds (the nudges act on its focus, the
-            //     tempo step and the bound step on its members, the bound
-            //     step carrying the addressed cell beside it — the compare
-            //     above) and THE TAB AND THE AUDIO VIEW ARE TWO OF THE
+            //     three eligible kinds (the nudges act on its focus, the tempo step
+            //     on its members) and THE TAB AND THE AUDIO VIEW ARE TWO OF THE
             //     THREE TAGS THE ENTRY IS FILED UNDER — the restore writes the
             //     A/B tab, the W/P column and the S/T audio view back, so a `t`
             //     between two taps must open a new entry exactly as a Ctrl+Tab
             //     does, or Ctrl+Z would land the view the burst OPENED in while
-            //     the last press was authored in the other. THE COLUMN IS THE
-            //     BOUND STEP'S OWN TERM (column_matches above): a column switch
-            //     clears the selection, but the cell click that re-addresses
-            //     the other column recreates the same numeric selection, and
-            //     that kind is the one with a body on each column — so the
-            //     tab's third tag is compared explicitly for it and inferred
-            //     from the selection for the other three.
+            //     the last press was authored in the other. THE COLUMN NEEDS NO
+            //     TERM OF ITS OWN: switching it clears the selection, and each of
+            //     the three has ONE BODY over ONE store, so there is no second body
+            //     on the other column for a tap to merge into. (The iteration bound
+            //     step was the one kind that had one, and it left the undo domain
+            //     on 2026-09-10 with the bracket.)
             // The comparison runs on the clock's OWN duration, never on a
             // whole-millisecond count: duration_cast truncates toward zero, so
             // counting first would have admitted every real interval inside
@@ -424,9 +369,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             merge = elapsed <= std::chrono::milliseconds{kTapCoalesceMs}
                  && last_gesture_tab_ == app.active_tab_view
                  && last_gesture_audio_view_ == app.active_audio_view
-                 && last_gesture_selection_ == app.selected_markers
-                 && cell_matches
-                 && column_matches;
+                 && last_gesture_selection_ == app.selected_markers;
         }
     }
 
@@ -487,15 +430,16 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // ONE SITE, DELIBERATELY: the invalidate lives HERE rather than being spelled at
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
-    // preference. The routes are the nudges' shared prologue plus both arms of the
-    // Up/Down cent step and both arms of the Up/Down bound step (grep this
-    // function's callers).
+    // preference. The routes are the nudges' shared prologue plus both arms of
+    // the Up/Down cent step (grep this function's callers; the Up/Down BOUND
+    // step was among them until 2026-09-10, when the iteration bracket left
+    // the undo domain and that step stopped asking any verdict at all).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
     // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
-    // at every eligible route — SIX routes over FIVE call sites (the two position
-    // nudges through their shared commit tail, plus the singleton and group arms of
-    // the Up/Down cent step and of the Up/Down bound step) — and ONLY on the
+    // at every eligible route — FOUR routes over THREE call sites (the two
+    // position nudges through their shared commit tail, plus the singleton and
+    // group arms of the Up/Down cent step) — and ONLY on the
     // accepted path, so a REFUSED press
     // never enables a later merge into an older entry, tap or repeat. Presses
     // beyond the window, or after a subject change, open their own entries.
@@ -536,14 +480,16 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // still merge — they now merge into nothing), and the kind, the window and
     // the subject terms are untouched.
     //
-    // ONE SEAM FOR ALL FOUR KINDS: every eligible route reaches this call
-    // post-mutation on its accepted path — SIX routes over FIVE call sites: the
-    // two position nudges through their shared commit tail, and the singleton
-    // and group arms of the Up/Down cent step and of the Up/Down bound step at
-    // their own tails — so the equality question has ONE owner here rather than
-    // six copies; the per-column readers it uses are the row enumerations at
-    // the head of this file. Those row comparators read the session-only iter
-    // fields too, which is what lets the bound step's wobble pop.
+    // ONE SEAM FOR EVERY KIND: every eligible route reaches this call
+    // post-mutation on its accepted path — FOUR routes over THREE call sites:
+    // the two position nudges through their shared commit tail, and the
+    // singleton and group arms of the Up/Down cent step at their own — so the
+    // equality question has ONE owner here rather than four copies; the
+    // per-column readers it uses are the row enumerations at the head of this
+    // file. (The Up/Down BOUND step was a fifth route over a fourth call site
+    // until 2026-09-10, when the iteration bracket left the undo domain: it
+    // pushes nothing now, so it has no entry to pop and no kind to stamp, and
+    // the row comparators dropped the iter fields with it.)
     // IT CANNOT FIRE ON A NO-OP PRESS: a route reaches this call only past its
     // own refusals and past its own mutation, and a press refused AT A WALL
     // never even asks the coalesce verdict (the wall-before-stamp order,
@@ -586,12 +532,6 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     last_gesture_tab_        = app.active_tab_view;
     last_gesture_audio_view_ = app.active_audio_view;
     last_gesture_selection_  = app.selected_markers;
-    // The addressed cell and the W/P column ride with them, read by
-    // IterBoundStep alone (the argument is at coalesce_gesture's compare).
-    // Both are stamped on every kind so neither field is ever stale for the
-    // one kind that does read them.
-    last_gesture_cell_       = app.addressed_cell;
-    last_gesture_column_     = app.active_markers_view;
 }
 
 void Undo::note_saved() {
@@ -781,11 +721,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // same op in the opposite direction, so redoing it must land the same
     // authoring view undoing it did.
     counter.audio_view          = entry.audio_view;
-    counter.affects_persistence = entry.affects_persistence;
-    // The addressed cell travels verbatim for the three tags' own reason: it
-    // describes the OP, so redoing a bound step must brighten the cell that
-    // undoing it brightened.
-    counter.addressed_cell      = entry.addressed_cell;
+    // THE COUNTER NEEDS NO ITER STRIP OF ITS OWN, though it is built from the
+    // LIVE stores and not from a push helper: a bracket exists only while grid
+    // iterations is lit, and while it is lit history_step_actionable is false,
+    // so neither do_undo nor do_redo can reach this body with one standing
+    // (architect 2026-09-10 — the lock, app_state.h's authoring_locked). Said
+    // here rather than defended with a fifth call, so the reason travels with
+    // the one entry builder that is not a push.
     // The touched-set identity hints SWAP coordinate spaces on the counter: the
     // counter's snapshot is the op's after-state, so the rows touched by a
     // restore of the counter (= redoing this op) are entry.touched_live, and the
@@ -1180,27 +1122,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         // stay put.
     }
 
-    // THE BRACKET-ONLY RESTORE ADDRESSES THE CELL IT CHANGED (architect
-    // 2026-09-05): an undo or redo of an iteration bound step, on either
-    // column — the arrows' and the bound editor's alike — leaves the restored
-    // focus bright on the
-    // bound it moved, so the next Up/Down goes on stepping what the undo just
-    // stepped, and a GROUP entry addresses that one cell on its focus, the
-    // whole selection having stepped the same bound.
-    //
-    // AT THE TAIL, BEHIND EVERY SELECTION WRITE IN THIS BODY, which is the
-    // marker click's own ordering: each of those writes seats the focus
-    // through Selection::seat_focus, which puts the axis back on the payload,
-    // so the cell is said AFTER the selection and never before it. EVERY
-    // OTHER ENTRY CARRIES Payload — the field's producers are the TWO
-    // bracket-only pushes, push_undo_iter_bracket and
-    // push_undo_phase_iter_bracket — so for every other restore this writes
-    // back exactly what the mutator just wrote. Where the cell names a box the
-    // restored marker no longer paints, the flag painter falls back to the
-    // payload on its own (render_flag_boxes_impl), so nothing is asked here.
-    // Ahead of the synchronous plate render below, whose flag cache reads the
-    // axis as a fingerprint field (fp_addressed_cell).
-    app.addressed_cell = entry.addressed_cell;
+    // (AN ADDRESSED-CELL WRITE-BACK STOOD HERE from 2026-09-05 to 2026-09-10:
+    // a bracket-only entry carried the cell it changed, and this tail put the
+    // restored focus back on the bound the undo had moved. The bracket left
+    // the undo domain, so no entry carries a cell, and every restore comes to
+    // rest on the payload — which is exactly what the selection writes above
+    // have already seated, each of them going through Selection::seat_focus.
+    // The axis survives as session state; only its ride on an entry is gone.)
 
     recompute_dirty();
     viewport.invalidate_waveform_area();

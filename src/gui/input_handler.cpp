@@ -833,12 +833,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Per-tab read-only keyboard gate: a permitted-keys allowlist that filters
-    // out every AUTHORING chord — the marker stores and the engine settings are
-    // what the lock protects (architect 2026-08-07) — while admitting
-    // navigation, playback, view-switching, the close-prompt routing, the bare-o
-    // toggle-off escape chord, and THE BAND, THE SAVE AND THE RENDER. Runs when
-    // the active tab's ViewState carries read_only = true.
+    // THE AUTHORING LOCK'S KEYBOARD GATE, and it is ONE GATE FOR TWO LOCKS
+    // since 2026-09-10: a permitted-keys allowlist that filters out every
+    // AUTHORING chord — the marker stores and the engine settings are what the
+    // read-only lock protects (architect 2026-08-07), and the whole UNDO
+    // DOMAIN is what the ITERATION lock protects (architect 2026-09-10) —
+    // while admitting navigation, playback, view-switching, the close-prompt
+    // routing, the bare-o toggle-off escape chord, and THE BAND, THE SAVE AND
+    // THE RENDER. Runs when the active tab's ViewState carries read_only =
+    // true OR grid iterations stands (authoring_locked, app_state.h).
+    //
+    // THE LIST BELOW IS THE READ-ONLY ONE. The iteration lock's is that list
+    // with THREE MORE ADMISSIONS and nothing removed — bare `i` (the off edge
+    // must always be reachable), bare `m` (BPM iterations, the one road that
+    // leaves this mode by entering another, landing nothing in history at the
+    // press), and Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound
+    // cells are the mode's own authoring surface) — plus Ctrl+Z and
+    // Ctrl+Shift+Z, admitted not to act but so their own arm can card the
+    // sentence that names undo. That list has ONE owner,
+    // iteration_lock_key_blocked (input_key_dispatch.cpp), written as this
+    // one's complement plus its deltas rather than as a second copy.
     //   - Bare o                 → toggle read-only off (escape chord)
     //   - Space (no mods)        → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
@@ -929,8 +943,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // them unchanged: Undo and Redo drop here in a locked tab exactly as their
     // keys do, while Save and Render now pass exactly as theirs do). Full
     // rationale at read_only_key_blocked in input_key_dispatch.cpp.
-    if (active_view_state(app).read_only &&
-        read_only_key_blocked(key, mods)) {
+    // THE LOCK IS ONE LOCK WITH TWO REASONS (architect 2026-09-10, the
+    // iteration lock; the predicate is authoring_locked, app_state.h). The
+    // READ-ONLY half is the per-tab bit and its allowlist is
+    // read_only_key_blocked below; the ITERATION half is grid iterations
+    // standing, whose allowlist is that one plus the bound cells
+    // (iteration_lock_key_blocked, input_key_dispatch.cpp, where both deltas
+    // are stated). READ-ONLY OUTRANKS, which is what this ordered fork spells:
+    // a tab can be locked while the lamp is already lit — bare `o` is
+    // read-only-legal and the mode is global rather than per-tab — and there
+    // the tab's own sentence is the one to say, so the WIDER list applies and
+    // the iteration side's three admissions (bare `i`, bare `m`, the bound
+    // axis) stay refused on a locked tab exactly as they always were.
+    const bool read_only_here = active_view_state(app).read_only;
+    if (authoring_locked(app) &&
+        (read_only_here ? read_only_key_blocked(key, mods)
+                        : iteration_lock_key_blocked(key, mods))) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
         // 2026-08-30): "<chord> is not available on a read-only tab", said
         // for a chord this product BINDS and for no other. The sentence is
@@ -998,10 +1026,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the sentence — re-greped 2026-09-04, when the settings editor's lock
         // moved off the opener: the editor's engine-key commit, the render
         // player's Load in place, and the `h` view's bare `v` fork above.
+        //
+        // AND THE CARD FORKS ON THE REASON AT THIS ONE COMPOSER (architect
+        // 2026-09-10). The read-only sentence names the chord for the reason
+        // above — this gate drops unbound chords with bound ones, so it has to
+        // say which it ate. THE ITERATION SENTENCE NAMES THE WAY OUT INSTEAD
+        // (kIterationLockCard, app_state.h — "Turn off grid iterations
+        // first"): the mode is one the user turned on deliberately and can see
+        // (the lamp is lit, the bound cells are painted), so one clause
+        // answers it, and naming the chord would add nothing the press did not
+        // already say. chord_is_bound gates BOTH halves, for its own reason:
+        // an unbound press is identified by its silence in every state.
+        // (Ctrl+Z and Ctrl+Shift+Z are NOT answered here under the iteration
+        // lock — the allowlist admits them so their own arm can say
+        // kIterationLockUndoCard / kIterationLockRedoCard, which name the act
+        // a user pressing undo is asking about.)
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
-                                 spell_chord(key, mods) +
-                                     " is not available on a read-only tab");
+                                 read_only_here
+                                     ? spell_chord(key, mods) +
+                                           " is not available on a read-only tab"
+                                     : std::string(kIterationLockCard));
         return;
     }
 
@@ -1486,10 +1531,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // editor blocks above consume Enter first (commit), so this is reached only
     // with no editor active. Repair the focus first, then fork on
     // AppState::addressed_cell: the payload by default — every focus reached
-    // by a walk, a jump, a clear or a restore is addressed there, the one
-    // exception being the restore of a BRACKET-ONLY entry, which brings back
-    // the bound cell it changed (UndoEntry::addressed_cell), so the standing
-    // behaviour holds for every other non-click focus — opens the
+    // by a walk, a jump, a clear or a restore is addressed there, with no
+    // exception left since 2026-09-10 (a bracket-only entry's restore brought
+    // back the bound cell it changed until then; the bracket left the undo
+    // domain and the entry with it) — opens the
     // canonical-line editor, a bound cell its bound editor, the measure box
     // the measure editor, each with its seeded content fully selected
     // (open-selected, like every open route — the first keystroke replaces
@@ -1617,6 +1662,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // rolled back for that collision (selection-model.md), and an alt-carrying
     // shape is again a plain no-op under strict modifier validation.
     if (ctrl && !alt && key == GuiKeys::Z) {
+        // THE ITERATION LOCK REFUSES FIRST (architect 2026-09-10: "They just
+        // don't go in the undo stack at all; they're considered transient by
+        // design" — so while the lamp is lit the history is frozen whole, both
+        // stacks and both tabs, exactly as the `h` view freezes the local
+        // walk's). It is ranked ahead of the two terms below because the lock
+        // is the OUTERMOST STATE, a mode entered on purpose, and because those
+        // two would otherwise answer a full stack with the other tab's
+        // sentence — a wrong cause. The pair NAMES THE ACT rather than saying
+        // "turn off grid iterations first" like every other site under this
+        // lock: a user who just pressed Ctrl+Z is asking about undo. Both
+        // buttons grey on the same fact (history_step_actionable's third term)
+        // and wear this sentence on their hints, so no lift reaches this line.
+        // The chord IS admitted by iteration_lock_key_blocked precisely so
+        // this arm can speak.
+        if (app.iteration_mode_enabled) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 shift ? kIterationLockRedoCard
+                                       : kIterationLockUndoCard);
+            return;
+        }
         // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30). The
         // authoritative test is history_step_actionable (app_state.h), the
         // one predicate do_undo / do_redo run and the Undo / Redo buttons
@@ -2000,21 +2065,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // HOPS of the analysis lattice, so the same chord at the same
             // magnitude runs that column's step there. It is the one fork this
             // arm makes for the second column — every predicate the faces and
-            // the tooltips read forks inside its own body — and the ladder,
-            // the repeat bit and the coalescing shape are the same on both,
-            // each domain reading the signed magnitude as its own unit.
+            // the tooltips read forks inside its own body — and the ladder is
+            // the same on both, each domain reading the signed magnitude as
+            // its own unit. NEITHER TAKES THE REPEAT BIT (2026-09-10): the
+            // bound step records nothing, so a held run has no burst to open
+            // or merge into and simply steps.
             if (app.active_markers_view == 'P') {
                 card_op_refusal(notifications,
                                 phase_resets.adjust_iter_bound_hops(
                                     app.addressed_cell,
-                                    static_cast<int>(delta_cents),
-                                    mods.synthesized_repeat));
+                                    static_cast<int>(delta_cents)));
                 return;
             }
             card_op_refusal(notifications,
                             warpops.adjust_iter_bound_cents(
-                                app.addressed_cell, delta_cents,
-                                mods.synthesized_repeat));
+                                app.addressed_cell, delta_cents));
             return;
         case MarkerCell::Measure:
             notifications.notify(AppState::NotificationClass::Normal,

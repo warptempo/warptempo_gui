@@ -352,11 +352,14 @@ void GuiFlagEditor::commit_iter_bound_edit() {
             return;
         }
         // THE WALLS, the landing owner's two, refused rather than clamped:
-        // the tempo window clamp_iter_bracket_to_tempo_bracket states —
-        // every sweep cell renders base + delta, so the base plus either
-        // bound must stay inside the tempo bracket — and the partner bound,
-        // the lower never above the upper and the upper never below the
-        // lower (0 for a blank bracket, the step's own start).
+        // THE TEMPO WINDOW — every sweep cell renders base + delta, so the
+        // base plus either bound must stay inside the tempo bracket — and the
+        // partner bound, the lower never above the upper and the upper never
+        // below the lower (0 for a blank bracket, the step's own start). The
+        // window cannot move under the bracket afterwards: while grid
+        // iterations stands the piece is locked and no base tempo can be
+        // authored (authoring_locked, app_state.h), which is what retired the
+        // retroactive clamp this refusal used to name.
         const int64_t lo_wall = kTempoMinCents - live.tempo_cents;
         const int64_t hi_wall = kTempoMaxCents - live.tempo_cents;
         if (value < lo_wall || value > hi_wall) {
@@ -391,15 +394,15 @@ void GuiFlagEditor::commit_iter_bound_edit() {
         return;
     }
 
-    // ONE BRACKET-ONLY ENTRY (affects_persistence false — session-only
-    // fields, never serialized, so the dirty dot stays where it is), carrying
-    // the ADDRESSED CELL this editor seated at its open, so undoing the commit
-    // leaves the focus bright on the cell it was typed into. The snapshot is
-    // taken before the write, the store's own convention.
-    std::vector<GuiWarpMarker> pre_state = mv_const;
+    // NO UNDO ENTRY AND NO DIRTY RE-DERIVE (architect 2026-09-10: "They just
+    // don't go in the undo stack at all; they're considered transient by
+    // design" — "The iterations don't actually do anything to the map itself;
+    // they push that onto the tmp folder as sidecars. So it's more truthful to
+    // exclude them from the dirty dot and from the history"). The commit
+    // writes the store and nothing else: no snapshot, no push, no gesture
+    // stamp, no dirty flag to move. The way back from a typed bound is to type
+    // the old one, or to leave the mode, which clears the bracket whole.
     app.warpmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo_iter_bracket(std::move(pre_state));
-    undo.recompute_dirty();
 
     // NO RENDER AND NO MAP REBUILD: a bracket is not a map input (excluded
     // from build_warp_frame_map and the render recipe alike), so the cell is
@@ -507,15 +510,10 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
         return;
     }
 
-    // ONE BRACKET-ONLY ENTRY (affects_persistence false — session-only fields,
-    // never serialized, so the dirty dot stays where it is), carrying the
-    // ADDRESSED CELL this editor seated at its open, so undoing the commit
-    // leaves the focus bright on the cell it was typed into. The snapshot is
-    // taken before the write, the store's own convention.
-    std::vector<GuiPhaseResetMarker> pre_state = pv_const;
+    // NO UNDO ENTRY AND NO DIRTY RE-DERIVE, the warp arm's own ruling
+    // (2026-09-10): the bracket is outside the undo domain on both columns, so
+    // the commit writes the store and nothing else.
     app.phaseresetmarkers.markers_mut() = std::move(proposed);
-    undo.push_undo_phase_iter_bracket(std::move(pre_state));
-    undo.recompute_dirty();
 
     // NO RENDER AND NO MAP REBUILD: a bracket is not a position and not a map
     // input, so the cell is the only thing that moved and the strip is the
@@ -680,9 +678,9 @@ void GuiFlagEditor::commit_measure_edit() {
         return;
     }
 
-    // ONE UNDO ENTRY, affects_persistence TRUE: a measure is serialized content
-    // and its edit dirties the tab like any other authored change. The snapshot
-    // is taken before the write, the store's own convention.
+    // ONE UNDO ENTRY: a measure is serialized content and its edit dirties the
+    // tab like any other authored change. The snapshot is taken before the
+    // write, the store's own convention.
     if (phase) {
         std::vector<GuiPhaseResetMarker> pre = app.phaseresetmarkers.markers();
         GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
@@ -784,12 +782,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
     const std::string new_def = parsed.label_def;
 
     // Snapshot the canonical (serialized) fields before writing so we can
-    // tell whether the engine/dirty state actually moved. A bracket-only
-    // commit (the carrier-loss clear or the clamp moving a bound under an
-    // unchanged line) does not mark dirty — its undo entry pushes with
-    // affects_persistence=false, which recompute_dirty honors — while the
-    // commit tail below still repaints and triggers unconditionally like any
-    // store mutation.
+    // tell whether the engine/dirty state actually moved.
     const GuiWarpMarker before = m;
 
     // Time stays locked; preserve it (the candidate assembled above carried
@@ -845,36 +838,24 @@ void GuiFlagEditor::commit_top_flag_edit() {
         }
     }
 
-    // THE BRACKET IS THE STORE'S, NOT THIS EDITOR'S: no line above writes a
-    // bound (the bounds are the cells' own, each with its own editor), and
-    // the two writes below are the store's rules about a bracket the marker
-    // already carries.
-    //
-    // Invariant: a committed NON-CARRIER never keeps a bracket. A bracket
-    // exists only on a carrier (iter_bracket_carrier, warpmarkers.h); a
-    // commit that makes the marker a non-carrier (a pass, or a &ref) clears
-    // both bounds unconditionally — in the mode and out of it, so a mode-off
-    // pass conversion of an undo-restored bracketed owner also drops the
-    // fields. This mirrors Ctrl+N's owner->pass / ref->pass carrier-loss
-    // clears; undo is the sole sanctioned route that resurrects a cleared
-    // bracket. THE DISABLED BIT IS NOT THIS COMMIT'S TO MOVE — the candidate
-    // above carried the marker's own `#` — so the test below is the CARRIER
-    // and nothing more, and it needs no disabled term of its own: a disabled
-    // marker reaches this commit carrying no bracket at all, its own toggle
-    // having cleared it (architect 2026-09-10: an iteration that is not shown
-    // has lost its memory), and the one marker a CASCADE can disable without a
-    // toggle is a label ref, which this test clears for being no carrier.
+    // THE BRACKET IS THE STORE'S, NOT THIS EDITOR'S, AND THIS EDITOR CANNOT
+    // MEET ONE (architect 2026-09-10, the iteration lock). No line above
+    // writes a bound — the bounds are the cells' own, each with its own
+    // editor — and a bracket exists only while grid iterations is lit, where
+    // this editor cannot open at all: bare Return and the payload
+    // double-click are both refused on a payload axis while the lamp stands
+    // (authoring_locked, app_state.h). So the invariant "a committed
+    // NON-CARRIER never keeps a bracket" holds vacuously here, and the clear
+    // below is a BELT over two already-empty optionals — kept because it is
+    // the store's own rule stated at the surface that could otherwise break
+    // it (Ctrl+N's owner->pass / ref->pass carrier-loss clears are its
+    // siblings), and because it costs two resets. THE RETROACTIVE CLAMP THAT
+    // FOLLOWED IT IS DELETED with its owner: this commit can move the base
+    // tempo, but never under a bracket.
     if (!iter_bracket_carrier(m)) {
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     }
-    // THE BRACKET RIDES ITS BASE: this commit may have moved the tempo under a
-    // bracket it did not type. Fold the surviving bracket onto the committed
-    // base (the one owner, clamp_iter_bracket_to_tempo_bracket in
-    // warpmarkers.h). Placed before the change compares below, so a clamp
-    // that moves a bound counts as a bracket change and earns its repaint
-    // and its undo entry.
-    clamp_iter_bracket_to_tempo_bracket(m);
 
     // Did any serialized field change? Cascade renames imply a label_def
     // change, already covered by the field compare below.
@@ -887,25 +868,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
         m.disabled       != before.disabled ||
         n_refs_renamed > 0;
 
-    // Did the session-only iteration bracket move? Compare the ACTUAL
-    // final fields: this is correct on every path, including an
-    // ineligibility clear that resets the bounds on a commit whose canonical
-    // fields did not move (the mode-off pass conversion).
-    // optional<int64_t> equality: two bounds are equal when both are
-    // nullopt or when the held cents compare equal. A bracket-only edit
-    // does not mark dirty (iter values are session-only), but it is still a
-    // real undoable change — the snapshot restores the iter values — so its
-    // push must not be skipped.
-    const bool bracket_changed =
-        m.iter_start_cents != before.iter_start_cents ||
-        m.iter_end_cents   != before.iter_end_cents;
-
-    // An undo entry represents a state change, not a gesture. A commit
-    // that moves neither a canonical field nor the bracket is a no-op:
-    // it pushes nothing and touches no dirty/render state. The live-
-    // vector assignment (which bumps the warp generation so the flag
-    // cache repaints) and the editor deactivation below still run.
-    const bool store_changed = canonical_changed || bracket_changed;
+    // (A SECOND TERM ASKED WHETHER THE SESSION-ONLY BRACKET HAD MOVED, and
+    // it went with the bracket's exit from the undo domain on 2026-09-10:
+    // this editor cannot open under a standing bracket, so the belt above
+    // clears nothing and no commit here is bracket-only. `canonical_changed`
+    // is the whole store-change question now.)
 
     // Capture pre-state for undo BEFORE mutating.
     std::vector<GuiWarpMarker> pre_state = mv_const;
@@ -918,22 +885,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
             old_def.c_str(), new_def.c_str(), n_refs_renamed);
     }
 
-    if (store_changed) {
-        undo.push_undo_warp(std::move(pre_state),
-                            /*affects_persistence=*/canonical_changed);
+    if (canonical_changed) {
+        undo.push_undo_warp(std::move(pre_state));
     }
 
     text_editor::deactivate(app.top_flag_editor);
 
-    if (!store_changed) return;
+    if (!canonical_changed) return;
 
     // Unconditional by ruling — rationale at GuiTargetRender::trigger. Any
-    // store change repaints and triggers, a bracket-only commit included (its
-    // undo entry already did): recompute_dirty derives dirty purely from
-    // affects_persistence entries, so a bracket-only push (affects_persistence
-    // false) leaves dirty untouched, and the trigger's re-derive is
-    // identity-unchanged for session-only iteration scratch (excluded from the
-    // render recipe) and lands on dispatch_render_now's reuse rungs.
+    // store change repaints and triggers.
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
@@ -952,21 +913,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // region overlay standing (the rule at clear_region_highlight,
     // input_handler.h). SOURCE VIEW NEEDS NOTHING: identity domain, no image
     // moves.
-    // AND canonical_changed IS THE SECOND TERM, which is where this site
-    // differs from its three siblings: they write nothing BUT map inputs,
-    // while this commit can land a BRACKET-ONLY change (the carrier-loss
-    // clear, the clamp) — session-only fields, excluded from
-    // build_warp_frame_map and from the render recipe alike — which moves
-    // no image and would make the kick a wasted
-    // synchronous plate render and the re-land a write of the value the
-    // playhead already holds. canonical_changed is exactly the map-input set
-    // (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /
-    // disabled / renamed refs; position is not editable here), so it is the
-    // honest gate and it is the same predicate the pre-2026-08-24 branch used
-    // before that branch went unreachable and was deleted. It keeps its other
-    // job as the undo push's affects_persistence gate above. The trigger keeps
-    // its own store_changed gating (it re-derives identity-unchanged for an
-    // iter-bracket-only commit and lands on the reuse rungs).
+    // AND canonical_changed IS THE SECOND TERM, which is exactly the map-input
+    // set (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /
+    // disabled / renamed refs; position is not editable here) and which, since
+    // 2026-09-10, is also the whole store-change question this body asks: the
+    // BRACKET-ONLY commit the second term was carved out for — the carrier-loss
+    // clear and the retired retroactive clamp — cannot happen under the
+    // iteration lock, so the two gates collapsed into one.
     if (app.active_audio_view == 'T' && canonical_changed) {
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
@@ -1000,20 +953,20 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // (run_iteration_sweep_render, input_key_dispatch.cpp).
 // THE LOAD IN PLACE IS NOT A ROUTE EITHER (architect 2026-09-02): iteration
 // mode is where you stand, so apply_recipe_in_place leaves the mode bit alone
-// and resets no bracket — the incoming set carries none by construction, and
-// undo restores the outgoing set with its brackets under a mode that never
-// changed (the record is at that body, input_key_dispatch.cpp).
-// Pushes ONE undo entry for the act when something was cleared and no-ops
-// otherwise, so a bracketless exit leaves the undo stack untouched; plain undo
-// is deliberately ungated and may restore a previously accepted bracket set.
-// It is a BOTH-COLUMNS entry (push_undo_both) because the act is one clear
-// over two stores, and it carries affects_persistence FALSE for the reason the
-// warp-only entry always did — neither bracket serializes, so crossing the
-// entry must not move the dirty dot on either column. The entry is TAGGED WITH
-// THE LIVE COLUMN, which is what op_mode names at a restore: the restore
-// writes both snapshots back unconditionally and then reads op_mode for the
-// column to return to and for which post-restore rules to run
-// (Undo::restore_history_entry).
+// and resets no bracket — and since 2026-09-10 the load CANNOT RUN while the
+// mode is lit at all, the iteration lock refusing it on every road, so the
+// ruling holds vacuously (the record is at that body,
+// input_key_dispatch.cpp).
+// IT PUSHES NOTHING AT ALL (architect 2026-09-10: "Iterations are the least
+// durable thing in this GUI as far as the flags. It's okay to clear them and
+// not remember them very often. They just don't go in the undo stack at all;
+// they're considered transient by design"). It pushed one both-columns entry
+// until then, so that leaving the mode by accident could be undone; the
+// bracket left the undo domain whole with that ruling, and a wipe that pushed
+// would be the one entry able to put a bracket back. So the clear is FINAL —
+// "a bracket exists only on a marker that is on screen or it is gone for
+// good" — and it moves no dirty flag either, neither bracket ever having
+// serialized.
 // Callers own the mode-flag flip and the repaint invalidation.
 // AND IT PUTS AN ADDRESSED BOUND CELL BACK ON THE PAYLOAD (architect
 // 2026-09-04): the cells go with the mode, so a Lower or Upper axis
@@ -1022,9 +975,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // runs — there is no single mode setter, the three writers of the off edge
 // each flip the bit themselves after calling this — so a step outside the
 // mode can only ever be the tempo step, on either column. An addressed
-// MEASURE is left alone: that cell is not the mode's. History-less: the axis
-// is a session address, not content, and the snapshot below carries no such
-// field.
+// MEASURE is left alone: that cell is not the mode's. History-less like
+// everything else here: the axis is a session address, not content.
 void GuiFlagEditor::wipe_iter_state() {
     if (app.addressed_cell == MarkerCell::Lower ||
         app.addressed_cell == MarkerCell::Upper) {
@@ -1048,12 +1000,8 @@ void GuiFlagEditor::wipe_iter_state() {
         }
     }
     if (!warp_any && !phase_any) return;
-    std::vector<GuiWarpMarker>       warp_pre  = app.warpmarkers.markers();
-    std::vector<GuiPhaseResetMarker> phase_pre = app.phaseresetmarkers.markers();
     // Each column is touched only where it has something to clear, for the
-    // same reason: an untouched store keeps its generation. The ENTRY still
-    // carries both snapshots — an undo entry always does — so the restore is
-    // symmetric whichever column had the brackets.
+    // same reason: an untouched store keeps its generation.
     if (warp_any) {
         for (auto& m : app.warpmarkers.markers_mut()) {
             m.iter_start_cents.reset();
@@ -1066,9 +1014,6 @@ void GuiFlagEditor::wipe_iter_state() {
             p.iter_end_hops.reset();
         }
     }
-    undo.push_undo_both(std::move(warp_pre), std::move(phase_pre),
-                        app.active_markers_view,
-                        /*affects_persistence=*/false);
 }
 
 // Wipe every marker's session-only bpm state — owner flag, beats, bracket
@@ -1081,11 +1026,12 @@ void GuiFlagEditor::wipe_iter_state() {
 // defaults — never a mode exit.
 //
 // History-less on purpose: bpm values are session-only with no undo of their
-// own (see commit_bpm_edit), so no undo entry is pushed. Unlike iter state,
-// undo can never resurrect bpm state: the bpm session is modal, so no
-// snapshot-taking op can run while a marker carries live bpm fields, and
-// outside the session every marker is already wiped — every snapshot in
-// history carries default bpm state. Callers own the repaint.
+// own (see commit_bpm_edit), so no undo entry is pushed, and undo can never
+// resurrect bpm state — the bpm session is modal, so no snapshot-taking op can
+// run while a marker carries live bpm fields, and outside the session every
+// marker is already wiped. THE ITER WIPE IS THE SAME SHAPE SINCE 2026-09-10
+// and no longer the contrast it was: it pushes nothing either, and the
+// bracket's own snapshots are stripped at every push. Callers own the repaint.
 void GuiFlagEditor::wipe_bpm_state() {
     auto& mv = app.warpmarkers.markers_mut();
     for (auto& m : mv) {

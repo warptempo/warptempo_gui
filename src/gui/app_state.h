@@ -261,15 +261,18 @@ struct UndoEntry {
     // assignment: the flip is a DOMAIN TRANSLATION of the playhead and the
     // viewport, not a bit.
     char                      audio_view           = 'S';
-    // False for an iteration-bracket-only snapshot, on EITHER COLUMN, and for
-    // the mode wipe that clears both. Iteration brackets are session state and
-    // never serialize — the warp column's cent bracket and the phase-reset
-    // column's hop bracket alike — so crossing such an entry must not make
-    // recompute_dirty report a file difference for the column it is tagged
-    // with. THREE FALSE PRODUCERS: push_undo_iter_bracket and
-    // push_undo_phase_iter_bracket (the two bracket-only pushes) and
-    // GuiFlagEditor::wipe_iter_state through push_undo_both.
-    bool                      affects_persistence  = true;
+    // (THERE IS NO `affects_persistence` FLAG HERE ANY MORE — architect
+    // 2026-09-10, "The iterations don't actually do anything to the map
+    // itself; they push that onto the tmp folder as sidecars. So it's more
+    // truthful to exclude them from the dirty dot and from the history." The
+    // flag existed for the three iteration-bracket entries — the two
+    // bracket-only pushes and the mode wipe — which are the only ops whose
+    // snapshot could differ from the file in session-only fields alone. None
+    // of them pushes any more: the bracket left the undo domain whole, so
+    // EVERY entry on either stack now affects persistence and the flag's
+    // readers — recompute_dirty's walk, the redo-orphan collapse and the
+    // eviction's saved-reference equivalence — each lost the arm that made
+    // them ask.)
     // Explicit touched-set IDENTITY HINTS for the post-restore selection, filled
     // ONLY by producers whose touched rows the diff reconstruction cannot
     // recover — either because a moved row can land field-identical on an
@@ -289,22 +292,13 @@ struct UndoEntry {
     // after-state), which becomes the snapshot coordinate of the counter-entry.
     std::vector<int>          touched_snapshot;
     std::vector<int>          touched_live;
-    // THE CELL THE OP ADDRESSED, Payload for every op that addresses none
-    // (architect 2026-09-05). A restore of a BRACKET-ONLY entry puts the
-    // restored focus back on the cell the entry changed rather than on the
-    // payload, so an undone Lower step leaves the lower cell bright and the
-    // next Up/Down goes on stepping the bound the undo just moved. ONE
-    // PRODUCER PAIR writes it non-Payload — Undo::push_undo_iter_bracket and
-    // its phase-reset twin push_undo_phase_iter_bracket, the two bracket-only
-    // pushes, each called by the two arms of its column's Up/Down bound step
-    // and by the bound editor's commit on that column, which are the only ops
-    // whose subject IS a cell (TWO pushes since 2026-09-09; it was one while
-    // the bracket was warp-only). Every other push leaves it Payload, which is exactly what the
-    // restore's own selection write has already seated (Selection::seat_focus),
-    // so the write-back at the tail of restore_history_entry changes nothing
-    // for them. The counter-entry carries it verbatim like the three context
-    // tags: redoing the op must address the cell undoing it addressed.
-    MarkerCell                addressed_cell       = MarkerCell::Payload;
+    // (AND THERE IS NO `addressed_cell` TAG HERE ANY MORE, for the same
+    // ruling: its only producers were the two bracket-only pushes, and a
+    // restore that could put a bound cell back is a restore of a bracket,
+    // which no stack can hold. The ADDRESSED CELL ITSELF STAYS — it is a
+    // session address on AppState, written by a marker press and by the two
+    // cell editors' opens and reset at Selection::seat_focus — it simply
+    // never rode an undo entry after 2026-09-10.)
 };
 
 // THE REGION IS THE TRIM (architect 2026-08-18, uniting two loose ends into one
@@ -567,51 +561,36 @@ struct UndoHistory {
 
     // Evict the oldest (bottom) entry of the undo stack for the kCap trim while
     // keeping the saved reference honest. Saved distances into the undo stack
-    // are negative. Hopping the saved baseline over an entry is
-    // persistence-equivalent iff that entry's affects_persistence is false —
-    // the same equivalence the redo-orphan collapse in push() applies. So when
-    // the saved reference points at or below the evicted bottom: a session-only
-    // evicted entry pins the reference to the stack-reachable bound (provably
-    // equivalent for dirty purposes, since recompute_dirty's walk skips
-    // session-only entries); a persistence-affecting evicted entry leaves the
-    // baseline genuinely unreachable and inequivalent, so invalidate it —
-    // recompute_dirty's invalid branch then marks everything dirty, the
-    // conservative direction a save re-establishes. The undo stack is the ONLY
-    // stack that ever evicts (the restore-side non-trim invariant is recorded
-    // at its site in restore_history_entry).
+    // are negative. A saved reference pointing at or below the evicted bottom
+    // is genuinely unreachable afterwards, so invalidate it — recompute_dirty's
+    // invalid branch then marks everything dirty, the conservative direction a
+    // save re-establishes. The undo stack is the ONLY stack that ever evicts
+    // (the restore-side non-trim invariant is recorded at its site in
+    // restore_history_entry).
+    //
+    // THE SESSION-ONLY EQUIVALENCE IS GONE WITH ITS PRODUCERS (2026-09-10):
+    // while iteration brackets rode undo entries, hopping the baseline over one
+    // was persistence-equivalent and the reference was PINNED to the reachable
+    // bound instead of invalidated. Every entry affects persistence now, so the
+    // pin arm had no reachable case left.
     void evict_undo_bottom_with_saved_ref() {
-        const bool evicted_affects_persistence =
-            undo_stack.front().affects_persistence;
         undo_stack.erase(undo_stack.begin());
         if (!saved_valid) return;
         const int bound = -static_cast<int>(undo_stack.size());
         if (saved_distance >= bound) return;
-        if (evicted_affects_persistence) saved_valid    = false;
-        else                             saved_distance = bound;
+        saved_valid = false;
     }
 
-    // Push the pre-mutation entry. Clears the redo stack. If the saved
-    // reference was on the redo stack, it is orphaned only when the path back
-    // to it crosses a persistence-affecting entry. A path made solely of
-    // session-only iteration-bracket entries is persistence-equivalent to the
-    // current cursor, so collapse the saved reference here before clearing it.
-    // If pushing evicts the bottom of the undo stack and the saved reference
-    // pointed at or below the evicted entry, evict_undo_bottom_with_saved_ref
-    // resolves it by the same equivalence rule (pin when session-only,
-    // invalidate when persistence-affecting).
+    // Push the pre-mutation entry. Clears the redo stack. A saved reference
+    // that was on the redo stack is orphaned by that clear: the path back to it
+    // crosses at least one entry, and every entry affects persistence
+    // (2026-09-10 — the session-only iteration-bracket entries that used to
+    // make such a path collapsible left the undo domain whole, so the collapse
+    // arm lost its only producer). If pushing evicts the bottom of the undo
+    // stack and the saved reference pointed at or below the evicted entry,
+    // evict_undo_bottom_with_saved_ref invalidates it for the same reason.
     void push(UndoEntry entry) {
-        if (saved_valid && saved_distance > 0) {
-            const int rs = static_cast<int>(redo_stack.size());
-            bool path_affects_persistence = false;
-            for (int i = std::max(0, rs - saved_distance); i < rs; ++i) {
-                if (redo_stack[i].affects_persistence) {
-                    path_affects_persistence = true;
-                    break;
-                }
-            }
-            if (path_affects_persistence) saved_valid = false;
-            else                          saved_distance = 0;
-        }
+        if (saved_valid && saved_distance > 0) saved_valid = false;
         redo_stack.clear();
         if (saved_valid) saved_distance -= 1;
         undo_stack.push_back(std::move(entry));
@@ -8177,32 +8156,46 @@ struct AppState {
     // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm, the sweep's
     // fire and BPM mode's forced exit — which is where an addressed bound
     // cell below falls back to the payload.
+    //
+    // WHILE IT STANDS, THE PIECE IS LOCKED (architect 2026-09-10: "Nothing
+    // that can ever land in the undo history should be allowed, because the
+    // undo history is not allowed. Basically only the brackets are turned on
+    // at that point. Anything I want to do, I do before going to iterations
+    // mode. Iterations mode is just for fine tuning."). The bound cells are
+    // the mode's only authoring surface; every act that would push an undo
+    // entry refuses, undo and redo refuse, and the brackets themselves never
+    // enter the history and never move the dirty mark ("The iterations don't
+    // actually do anything to the map itself; they push that onto the tmp
+    // folder as sidecars. So it's more truthful to exclude them from the dirty
+    // dot and from the history."). ONE PREDICATE carries it —
+    // authoring_locked, below, the read-only lock's shape with the cells
+    // admitted — ONE GATE at the keyboard, ONE COMPOSER for the card. The rule
+    // and its consequences live in marker-ui.md's Iteration Mode section.
+    //
+    // SO THE UNDO OF AN IN-MODE ACT CANNOT EXIST, and that closes the hidden-
+    // bracket class whole: nothing pushes while the lamp is lit, so no stack
+    // ever holds an entry made under it; and every entry made BEFORE it was lit
+    // was pushed with no bracket in its snapshot, the four push helpers
+    // stripping the session-only iter fields at the push (strip_iter_fields,
+    // warpmarkers.h and phaseresetmarkers.h). A restore therefore never meets a
+    // live bracket and never installs one, and "a bracket exists only on a
+    // marker that is on screen or it is gone for good" is a property of the
+    // code rather than a rule anything has to enforce. (The 2026-09-09/10
+    // machinery this replaces — the dormant bracket, the wipe's own undo entry,
+    // the bracket-only entries and their addressed cell, the retroactive clamp
+    // and the sweep's off-wall re-verify — is all retired; git carries it.)
     bool iteration_mode_enabled = false;
 
-    // THE COLUMN THE MODE IS LIT FOR (architect 2026-09-10, on reading the
-    // two-column sweep back: "I'm usually in target mode, and then, either in
-    // warp or phase, I press iterations mode in whatever mode I want it to be
-    // located in. So the iterations land wherever I'm looking, and they stay
-    // there for the duration of the lamp being lit. If I happen to be in the
-    // other mode, the lamp is lit, and so it reminds me that there may be some
-    // data on the other mode that I destroy if I unlight the lamp, and undo is
-    // always there to backtrack."). 'W' or 'P'. Session-only, in no settings
-    // vocabulary, and MEANINGFUL ONLY WHILE THE BIT ABOVE IS ON.
-    //
-    // ONE WRITER: the `i` arm's TURNING-ON branch (input_key_dispatch.cpp),
-    // which stamps app.active_markers_view. `i` from either column turns the
-    // mode OFF and wipes both stores, so the off edge has nothing to reset —
-    // and it resets nothing, the field being read nowhere while the bit is
-    // off. The lamp does not name the column and no second lamp exists: a lit
-    // lamp seen from the other column IS the reminder, which is the ruling's
-    // own mechanism.
-    //
-    // THE READERS ARE ONE PREDICATE, iteration_column_lit below — every site
-    // that asks "do this column's cells exist" — and every reader of the BIT
-    // alone is a site that asks "is the mode on, whichever column": the `i`
-    // arm, the Grid Iterations lamp's face, Ctrl+Alt+R's mode fork and the
-    // sweep's own tail.
-    char iteration_column = 'W';
+    // (A STAMPED COLUMN STOOD HERE for a few hours on 2026-09-10 — `char
+    // iteration_column`, written at the `i` arm's turning-on branch, so that
+    // "the iterations land wherever I'm looking" while the lamp stayed lit
+    // across a column switch. THE LOCK RETIRED IT THE SAME DAY: the W/P
+    // switch is one of the acts the lock refuses, so the column CANNOT MOVE
+    // while the lamp is lit and the stamp is a second spelling of
+    // active_markers_view. iteration_column_lit below is unchanged as the
+    // mode's ONE column-shaped question and reads the live column now. The
+    // "a lit lamp seen from the other column is the reminder" mechanism went
+    // with it — there is no other column to stand on while lit.)
 
     // THE ADDRESSED CELL: which cell of the FOCUSED marker is the bright one,
     // the one the vertical arrows step and the one Enter opens (MarkerCell,
@@ -8210,14 +8203,16 @@ struct AppState {
     // reach over all four cells and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
     //
-    // WRITTEN TO A CELL BY FOUR ROUTES, each behind the selection write it
+    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
     // rides: a marker press inside run_marker_click_act (the pressed cell,
     // all four, on all three click shapes), the measure editor's open
-    // (Measure), the bound editor's open (Lower or Upper) — an editor open
-    // seats the cell it edits — and the RESTORE OF A BRACKET-ONLY UNDO ENTRY
-    // (the tail of Undo::restore_history_entry, writing the cell the entry
-    // carries: an undo or redo of an iteration bound step brightens the bound
-    // it moved, on either column, and every other entry carries Payload).
+    // (Measure) and the bound editor's open (Lower or Upper) — an editor open
+    // seats the cell it edits.
+    //
+    // A FOURTH ROUTE WAS THE RESTORE OF A BRACKET-ONLY UNDO ENTRY, and it went
+    // with the entry (architect 2026-09-10): the bracket left the undo domain
+    // whole, so no entry carries a cell and no restore can put a bound axis
+    // back. The axis is session state and nothing else now.
     //
     // RESET TO PAYLOAD BY EVERY OTHER ROUTE THAT CHANGES THE FOCUS, at ONE
     // chokepoint: every Selection mutator writes the focus through
@@ -8239,10 +8234,10 @@ struct AppState {
     // axis refuses through addressed_cell_step_refusal), the Return arm's
     // editor fork, the flag painter's bright cell (render_flags through the
     // flag cache's fp_addressed_cell), the Up/Down and Edit Flag buttons'
-    // face and tooltip (redesign_button_enabled / redesign_button_tooltip),
-    // the bound step's coalescing stamp (Undo::coalesce_gesture) and the two
-    // bracket-only pushes, which stamp it onto the entry
-    // (Undo::push_undo_iter_bracket and push_undo_phase_iter_bracket).
+    // face and tooltip (redesign_button_enabled / redesign_button_tooltip)
+    // and THE ITERATION LOCK'S KEYBOARD GATE, which admits Up/Down and Return
+    // on a bound axis and drops them on any other
+    // (GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
     MarkerCell addressed_cell = MarkerCell::Payload;
 
     // BPM mode. Toggled by plain `m` in warp view. Mutually
@@ -9649,9 +9644,9 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // both reachable in W+target now that the mode rests there; the class is argued
 // once at run_iteration_sweep_render's tail, input_key_dispatch.cpp). It is the
 // narrowest of the three: iter brackets are SESSION-ONLY warp-store fields,
-// never serialized and excluded from the render recipe, pushed with
-// affects_persistence=false, so the write reaches neither disk nor a render —
-// the cent step's own class of argument. The `i` TOGGLE ITSELF IS NOT ON THIS
+// never serialized, excluded from the render recipe and (since 2026-09-10)
+// outside the undo domain altogether, so the write reaches neither disk nor a
+// render nor a history entry — the cent step's own class of argument. The `i` TOGGLE ITSELF IS NOT ON THIS
 // LIST: it moves MODE STATE, not authored content, and simply gates on the warp
 // column in either view. (4) THE MARKER MEASURE (architect 2026-08-19, the
 // field rebranded from the marker comment 2026-08-20), the widest of the four
@@ -10012,9 +10007,14 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
                                                 const GuiAudio& audio);
 
 // DOES THIS COLUMN CARRY GRID ITERATIONS RIGHT NOW — the mode's ONE
-// column-shaped question, and the only reader of AppState::iteration_column
-// (whose contract is at the field: `i` stamps the column it is pressed in and
-// the cells live there alone). `column` is 'W' or 'P'.
+// column-shaped question. `column` is 'W' or 'P'.
+//
+// IT IS THE BIT AND THE LIVE COLUMN, and that is exact rather than
+// approximate (architect 2026-09-10): the W/P switch is one of the acts the
+// iteration lock refuses, so the column the lamp was lit in IS the column the
+// user is standing in for the whole life of the lamp. A stamped column stood
+// beside the bit for a few hours of that day and was a second spelling of
+// this one; the record is at the retired field.
 //
 // EVERY SITE THAT ASKS WHETHER A COLUMN'S CELLS EXIST ASKS THIS, with its own
 // column: the two flag passes and the cull that widens with them
@@ -10028,7 +10028,7 @@ const char* tempo_cent_step_target_view_refusal(const AppState& a,
 // the `i` arm, the Grid Iterations lamp, Ctrl+Alt+R's fork, the sweep's tail —
 // reads the bit and not this.
 inline bool iteration_column_lit(const AppState& app, char column) {
-    return app.iteration_mode_enabled && app.iteration_column == column;
+    return app.iteration_mode_enabled && app.active_markers_view == column;
 }
 
 // -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
@@ -10094,15 +10094,19 @@ inline const char* addressed_cell_step_refusal(const AppState& app) {
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
 // tempo_cent_step_landing in the bracket's delta domain. The start is the
 // bound's resting value, 0 for a blank bracket (a blank reads +0.00 in both
-// cells, so a step from blank starts there). Two walls, both inclusive: the
-// clamp window clamp_iter_bracket_to_tempo_bracket already states,
-// [kTempoMinCents − base, kTempoMaxCents − base] (inside ±kIterDeltaMaxCents
-// for free — that owner's comment), and the PARTNER bound — the lower never
-// rises above the upper, the upper never falls below the lower, the trim
-// endcap's own clamp at its partner. The partner is inside the window by the
-// retroactive clamp's invariant (and 0 is inside it for a blank bracket, the
-// window always containing the zero delta), so clamping to the window and
-// then to the partner lands inside both. The act commits this number through
+// cells, so a step from blank starts there). Two walls, both inclusive: THE
+// TEMPO WINDOW, [kTempoMinCents − base, kTempoMaxCents − base] — every sweep
+// cell renders base + delta, so base plus either bound must stay inside the
+// tempo bracket — and the PARTNER bound, the lower never rising above the
+// upper, the upper never falling below the lower, the trim endcap's own clamp
+// at its partner. THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (2026-09-10):
+// a bracket exists only while grid iterations is lit, and while it is lit the
+// piece is locked (authoring_locked), so no base tempo can be stepped or typed
+// under one — which is what retired the retroactive clamp that used to fold a
+// standing bracket onto a moved base. The partner is inside the window for the
+// same reason (and 0 is inside it for a blank bracket, the window always
+// containing the zero delta), so clamping to the window and then to the
+// partner lands inside both. The act commits this number through
 // iter_bound_step_write below and the directional face compares it against the
 // resting value.
 inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
@@ -10178,12 +10182,15 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
 // (the identity cell renders the resting store), so a blank bracket's start is
 // inside it and the two clamps compose exactly as the warp pair does.
 //
-// THE PARTNER MAY BE OUTSIDE THE WINDOW HERE, which its warp sibling's
-// invariant rules out: nothing clamps this bracket retroactively, so a
-// standing partner can have been pushed off the wall by a later edit. Clamping
-// to the window FIRST and to the partner SECOND is what keeps the pair ordered
-// in that case — the step lands on the partner and the sweep's own plan is
-// what refuses the off-wall pair (IterationSweepRefusal::PhaseBracketOffWall).
+// THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (2026-09-10): a bracket
+// exists only while grid iterations is lit, and while it is lit the piece is
+// locked (authoring_locked) — no reset or neighbour can be nudged, dragged,
+// dropped, deleted or disabled, and no warp edit can move the lattice — so the
+// walls the editor refused outside and this landing clamps into are the walls
+// that were there when the bound was authored. That is what retired the
+// sweep's per-read re-verification and its off-wall refusal. Clamping to the
+// window FIRST and to the partner SECOND stays the order, the pair being kept
+// ordered by the partner clamp.
 inline int phase_iter_bound_step_landing(const AppState& app,
                                          const GuiAudio& audio, int idx,
                                          MarkerCell side, int delta_hops) {
@@ -11021,7 +11028,7 @@ std::pair<long long, long long> compute_trim_samples(
 // Viewport::invalidate_status_cell_area — which takes the LANE WHOLE, the cell
 // reserving no width of its own to erase inside — after one day on a status
 // bar of their own. THE DIRTY MARK IS ON THIS ROW TOO since 2026-09-09, but
-// not as a tenant: it is ` *` inside the CLOCK's run (the clock's suffix, not
+// not as a tenant: it is `*` inside the CLOCK's run (the clock's suffix, not
 // the state's prefix, so it stands with no state string beside it), damaged
 // through that same lane owner on the flag's transitions alone. And the two
 // families that
@@ -11043,6 +11050,46 @@ inline ViewState& active_view_state(AppState& a) {
 }
 inline const ViewState& active_view_state(const AppState& a) {
     return (a.active_tab_view == 'B') ? a.tab_b : a.tab_a;
+}
+
+// THE PIECE IS LOCKED — ONE LOCK WITH TWO REASONS (architect 2026-09-10, on
+// what grid iterations may admit: "Nothing that can ever land in the undo
+// history should be allowed, because the undo history is not allowed.
+// Basically only the brackets are turned on at that point. Anything I want to
+// do, I do before going to iterations mode. Iterations mode is just for fine
+// tuning."). The READ-ONLY lock protects the authored musical content of one
+// A/B tab; the ITERATION lock protects the whole undo domain while grid
+// iterations stands, because the mode's own authoring surface — the bound
+// cells — deliberately pushes nothing, so an undo entry made under a lit lamp
+// could not be told from one made before it.
+//
+// EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO, and
+// nearly everything it admits the iteration lock admits: navigation,
+// playback, the trim gestures and `[` / `Shift+[`, Ctrl+S, both render
+// chords, the clipboard copies, Synchronize, Open project and the quit. WHAT
+// THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
+// bound axis addressed, bare `i` itself (the off edge must always be
+// reachable) and bare `m` (BPM iterations, the one road that leaves this mode
+// by entering another and which lands nothing in history at the press). WHAT
+// IT TAKES AWAY IS THE W/P COLUMN SWITCH (architect 2026-09-10): the mode is
+// lit for the column you are in, so bare `p` and the absolute view selectors
+// 1/2/3 — which compose that switch — refuse while the lamp stands, and the
+// Toggle Marker Column button greys with the sentence. Bare `t` and the audio
+// view stay live, the mode being target-legal and the brackets reading no
+// audio view. THE A/B TAB SWITCHES STAY LIVE TOO, and by construction rather
+// than by exception: the two tabs SHARE the warp and the phase-reset stores
+// (AppState's tab block), so a bracket is common to both tabs and Ctrl+Tab
+// and the Ctrl+Shift+Tab paired march cannot strand one. The two deltas
+// are stated once, at GuiInputHandler::iteration_lock_key_blocked
+// (input_key_dispatch.cpp), which is the keyboard's ONE gate; the faces read
+// this predicate and the card forks at ONE composer (authoring_lock_card,
+// notifications.h) with READ-ONLY OUTRANKING — a locked tab says its own
+// sentence, since a tab can be locked while the lamp is already lit.
+//
+// The whole rule and its consequences live in marker-ui.md's Iteration Mode
+// section; every owner here points there rather than restating it.
+inline bool authoring_locked(const AppState& a) {
+    return active_view_state(a).read_only || a.iteration_mode_enabled;
 }
 
 // THE ACTIVE MARKER COLUMN'S STORE SIZE, one owner for the phase-reset/warp
@@ -11129,9 +11176,16 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 }
 
 // THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
-// `stack` would actually act. Two ways a step is a silent no-op — an empty
-// source stack, or a top entry whose TARGET tab is currently read-only (a
-// reversible per-tab toggle, so it is decided now rather than at record time).
+// `stack` would actually act. THREE ways a step is a no-op — an empty source
+// stack, a top entry whose TARGET tab is currently read-only (a reversible
+// per-tab toggle, so it is decided now rather than at record time), and GRID
+// ITERATIONS STANDING (architect 2026-09-10: "They just don't go in the undo
+// stack at all; they're considered transient by design" — so while the lamp is
+// lit the whole history is frozen, BOTH stacks and both tabs, exactly as the
+// `h` view freezes the local walk's two stacks while it stands). The mode term
+// is the lock's (authoring_locked above) narrowed to its iteration half here,
+// because the read-only half is already this predicate's second term and
+// answers per TARGET tab rather than per active tab.
 //
 // It lives out here, rather than inside Undo, because it has TWO readers that
 // must never drift: Undo::history_entry_actionable (the authoritative guard
@@ -11143,6 +11197,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 // as for the action.
 inline bool history_step_actionable(const AppState& a,
                                     const std::vector<UndoEntry>& stack) {
+    if (a.iteration_mode_enabled) return false;
     if (stack.empty()) return false;
     const char tt = stack.back().tab;
     return !((tt == 'B') ? a.tab_b.read_only : a.tab_a.read_only);
@@ -11179,14 +11234,17 @@ inline bool warp_row_fields_differ(const GuiWarpMarker& a,
         // mutates nothing else, so omitting it would strand the selection
         // exactly as an omitted bracket would.
         || a.measure        != b.measure
-        // Session-only iter/bpm fields ride undo snapshots too, and row
-        // identity means the WHOLE struct: an iteration-bracket-only or
-        // bpm-only undo mutates only these, so omitting them would leave the
-        // same-count matcher finding no touched row and stranding the
-        // selection. Every GuiWarpMarker field beyond the serialized eight
-        // above.
-        || a.iter_start_cents != b.iter_start_cents
-        || a.iter_end_cents   != b.iter_end_cents
+        // The session-only BPM fields ride undo snapshots, and row identity
+        // means the whole struct for them: a bpm-only undo mutates only these,
+        // so omitting them would leave the same-count matcher finding no
+        // touched row and stranding the selection.
+        //
+        // THE ITERATION BRACKET IS NOT IN ROW IDENTITY (architect 2026-09-10):
+        // it left the undo domain whole — no push carries it, every push
+        // strips it from the snapshot it takes (strip_iter_fields,
+        // warpmarkers.h) — so there is no bracket-only entry for the matcher
+        // to reconstruct and no snapshot in which the field can differ. Asking
+        // it here would be a term with no producer.
         || a.bpm_owner        != b.bpm_owner
         || a.bpm_beats        != b.bpm_beats
         || a.bpm_lo           != b.bpm_lo
@@ -11200,14 +11258,11 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
         || a.disabled   != b.disabled
         // The measure, for the warp column's reason: a measure-only undo
         // mutates nothing else, and row identity means the whole struct.
-        || a.measure    != b.measure
-        // And the session-only ITERATION BRACKET (2026-09-09), for the warp
-        // comparator's own reason one line up: a bracket-only undo on this
-        // column mutates nothing but these two fields, so omitting them would
-        // leave the same-count matcher finding no touched row and stranding
-        // the selection. Row identity means the WHOLE struct on both columns.
-        || a.iter_start_hops != b.iter_start_hops
-        || a.iter_end_hops   != b.iter_end_hops;
+        || a.measure    != b.measure;
+    // The session-only HOP BRACKET is not in row identity, for the warp
+    // comparator's own reason (2026-09-10): the bracket left the undo domain,
+    // every push strips it from the snapshot it takes, and a term with no
+    // producer is a term that lies about what an entry can hold.
 }
 
 // WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
@@ -11267,12 +11322,12 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
 //           (GuiWarpMarkersOps::nudge_selected_markers,
 //           GuiPhaseResetMarkersOps::nudge_selected_phase_resets), all three
 //           filling BOTH coordinate spaces. The two GROUP value steps
-//           (GuiWarpMarkersOps::adjust_tempo_cents_group and
-//           adjust_iter_bound_cents_group, the latter through
-//           push_undo_iter_bracket, undo.h) fill both with their SURVIVORS
-//           alone — a skipped ineligible member changed nothing and must not
-//           be re-selected; their singleton arms move one row's fields in
-//           place and take the same-count arm.
+//           (GuiWarpMarkersOps::adjust_tempo_cents_group; the ITERATION BOUND
+//           step's group arm was a second until 2026-09-10, when the bracket
+//           left the undo domain and it stopped pushing at all) fill both with
+//           their SURVIVORS alone — a skipped ineligible member changed nothing
+//           and must not be re-selected; their singleton arms move one row's
+//           fields in place and take the same-count arm.
 //       (b) A ROW IS ADDED OR REMOVED INSIDE A COINCIDENT GROUP, which the
 //           grown arm below cannot tell apart: it consumes by time_frame alone,
 //           front-to-back, so with k rows at frame F before and k+1 after it
@@ -11764,12 +11819,18 @@ inline std::size_t history_walk_step_landing(
 // column it is pressed in and "the iterations land wherever I'm looking"), so
 // the other store contributes nothing to the count and nothing to the product
 // — the warp arm below runs under a 'W' stamp and the phase arm under a 'P'
-// one, never both. The phase arm carries a refusal of its own,
-// PhaseBracketOffWall, because that column's window has no retroactive clamp
-// behind it (the ruling is at GuiPhaseResetMarker's bracket,
-// phaseresetmarkers.h): a bracket
-// authored inside its walls and pushed off them afterwards is caught HERE, on
-// every read, rather than at a writer.
+// one, never both.
+//
+// NEITHER ARM VERIFIES A WALL ANY MORE (architect 2026-09-10, the iteration
+// lock). The phase arm re-asked phase_reset_hop_window of every standing
+// bracket on every read and answered a third refusal, because a bracket
+// authored inside its walls could be pushed off them afterwards by a nudge, a
+// drag, a drop, a delete, a disable or a warp edit that moved the lattice.
+// NONE OF THOSE IS ADMITTED WHILE A BRACKET STANDS: a bracket exists only
+// while grid iterations is lit, and while it is lit the piece is locked
+// (authoring_locked), so the map is frozen with the walls. The editor's
+// refusal at the commit and the step's clamp at the landing are the walls'
+// whole enforcement now.
 //
 // AN INVERTED BRACKET IS A BREACH AND DOES NOT DRIVE THE FACE. The editor
 // commit enforces start <= end and the bracket is session-only, so start > end
@@ -11811,19 +11872,11 @@ inline constexpr const char* kIterSweepOverCapCard =
 inline constexpr const char* kIterSweepOverCapHint =
     "Grid iterations refused: the marker brackets make more than 1000 cells "
     "(Ctrl+Alt+R)";
-// THE THIRD SENTENCE (2026-09-09, with the phase-reset column's hop bracket):
-// a phase bracket authored inside its walls can be pushed OFF them afterwards
-// by a dozen writers — a nudge or drag of the reset or of a neighbour, a
-// neighbour dropped or deleted, a disable, a warp edit that moves the lattice,
-// a load, an undo — and there is no retroactive clamp on this column (the
-// ruling is at GuiPhaseResetMarker's bracket). So the PLAN refuses instead,
-// re-verifying every standing bracket on every read; the mode and the brackets
-// stand for correction exactly as they do over the cap.
-inline constexpr const char* kIterSweepPhaseOffWallCard =
-    "Grid iterations refused: a phase reset's range runs off its walls";
-inline constexpr const char* kIterSweepPhaseOffWallHint =
-    "Grid iterations refused: a phase reset's range runs off its walls "
-    "(Ctrl+Alt+R)";
+// (THERE IS NO THIRD SENTENCE ANY MORE — architect 2026-09-10. A phase
+// bracket that had run off its walls was the plan's third refusal for one day,
+// on the reasoning that a dozen writers could move a wall under a standing
+// bracket. The iteration lock retired every one of those writers: while a
+// bracket stands the mode is lit, and while it is lit the piece is locked.)
 static_assert(kMaxIterSweepCells == 1000,
               "kIterSweepOverCapCard spells the cap; move both together");
 static_assert(
@@ -11834,11 +11887,6 @@ static_assert(
     std::string_view(kIterSweepOverCapHint).starts_with(
         std::string_view(kIterSweepOverCapCard)),
     "the hint is the card's sentence plus the accelerator");
-static_assert(
-    std::string_view(kIterSweepPhaseOffWallHint).starts_with(
-        std::string_view(kIterSweepPhaseOffWallCard)),
-    "the hint is the card's sentence plus the accelerator");
-
 // THE RESTRICT-UNDO-TO-VIEWPORT REFUSAL'S FOUR STRINGS (architect 2026-09-04),
 // the iteration sweep's shape one refusal over: a CARD sentence per direction
 // — one clause, sentence case, raised by the key that refuses — and a HINT
@@ -11862,11 +11910,77 @@ static_assert(
         std::string_view(kRedoOutsideViewCard)),
     "the hint is the card's sentence plus the accelerator");
 
+// THE ITERATION LOCK'S SENTENCE (architect 2026-09-10, on what grid iterations
+// admits: "Nothing that can ever land in the undo history should be allowed,
+// because the undo history is not allowed. Basically only the brackets are
+// turned on at that point. Anything I want to do, I do before going to
+// iterations mode."). One clause, sentence case, and it names the way OUT
+// rather than the state, because the state is already on screen — the lamp is
+// lit and the bound cells are painted, so "grid iterations is on" would tell
+// the user what they can see.
+//
+// IT IS kTabReadOnlyCard'S SIBLING and shares its readers — the keyboard gate
+// (where the read-only half names the chord instead: that gate drops unbound
+// chords with bound ones and has to say which it ate, while this one answers a
+// mode the user turned on deliberately), the settings editor's ENGINE-KEY
+// commit arm and the render player's Load in place, the last two through the
+// one composer authoring_lock_card (notifications.h). It is homed HERE rather
+// than beside that sibling because A FACE READS IT: the Toggle Marker Column
+// button's hint below is this sentence plus its accelerator, and the faces are
+// compiled in this header (notifications.h's own third-home rule).
+inline constexpr const char* kIterationLockCard =
+    "Turn off grid iterations first";
+
+// THE ITERATION LOCK'S UNDO PAIR (architect 2026-09-10: "They just don't go in
+// the undo stack at all; they're considered transient by design" — so while
+// grid iterations stands the history is frozen whole). It is the lamp's shape
+// one lock over: a CARD sentence per direction, one clause, sentence case,
+// raised by the key that refuses (input_handler.cpp's Ctrl+Z arm, ahead of the
+// empty-stack and other-tab terms because the lock is the outermost state),
+// and a HINT that is that sentence plus the accelerator, worn by the greyed
+// button under the tooltips-on-disabled ruling.
+//
+// THEY DO NOT SAY "TURN OFF GRID ITERATIONS FIRST", the sentence every other
+// site under this lock says (kIterationLockCard above): these two
+// name the act, because a user who has just pressed Ctrl+Z is asking about
+// undo and the answer is what it would take to undo. One card per press, at
+// the outermost site that has the reason.
+inline constexpr const char* kIterationLockUndoCard =
+    "Turn off grid iterations to undo";
+inline constexpr const char* kIterationLockUndoHint =
+    "Turn off grid iterations to undo (Ctrl+Z)";
+inline constexpr const char* kIterationLockRedoCard =
+    "Turn off grid iterations to redo";
+inline constexpr const char* kIterationLockRedoHint =
+    "Turn off grid iterations to redo (Ctrl+Shift+Z)";
+static_assert(
+    std::string_view(kIterationLockUndoHint).starts_with(
+        std::string_view(kIterationLockUndoCard)),
+    "the hint is the card's sentence plus the accelerator");
+static_assert(
+    std::string_view(kIterationLockRedoHint).starts_with(
+        std::string_view(kIterationLockRedoCard)),
+    "the hint is the card's sentence plus the accelerator");
+
+// AND THE COLUMN SWITCH'S HINT (architect 2026-09-10, the same lock's other
+// delta): bare `p` and the three absolute view selectors compose the W/P
+// switch, which the iteration lock refuses — the mode is lit for the column
+// you are in — so the Toggle Marker Column button greys and wears the card
+// its key raises, plus its accelerator, under the tooltips-on-disabled
+// ruling. It is the GENERIC sentence rather than one of its own, because the
+// act it refuses is not about the column: the answer is the way out of the
+// mode, which is what the gate says for every other chord it eats.
+inline constexpr const char* kIterationLockColumnHint =
+    "Turn off grid iterations first (P)";
+static_assert(
+    std::string_view(kIterationLockColumnHint).starts_with(
+        std::string_view(kIterationLockCard)),
+    "the hint is the card's sentence plus the accelerator");
+
 enum class IterationSweepRefusal {
     None,                 // the sweep would render `cells` cells
     NoBracketAuthored,    // no eligible marker carries a bracket at all
     OverCellCap,          // the Cartesian product passes kMaxIterSweepCells
-    PhaseBracketOffWall,  // a phase bracket no longer fits its hop window
 };
 
 struct IterationSweepPlan {
@@ -11877,14 +11991,15 @@ struct IterationSweepPlan {
     std::size_t           cells   = 0;
 };
 
-// `audio` arrives for the PHASE ARM alone (the BPM plan's precedent, which
-// takes it for its own cache key): the hop window is a fact about the live
-// warp map and the piece's length, and neither is in AppState.
-//
 // THE WALK IS THE LIT COLUMN'S, AND ONLY ONE OF THE TWO ARMS BELOW RUNS. The
 // dispatch forks on the same stamp and walks the same store.
-inline IterationSweepPlan iteration_sweep_plan(const AppState& a,
-                                               const GuiAudio& audio) {
+//
+// (IT TOOK A `const GuiAudio&` UNTIL 2026-09-10, for the phase arm's per-read
+// hop-window verification alone. That verification is gone with the iteration
+// lock — nothing can move a wall under a standing bracket — so the plan is a
+// pure function of AppState again, and its two readers dropped the argument
+// with it.)
+inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
     IterationSweepPlan plan;
     bool        any_swept = false;
     std::size_t cells     = 1;
@@ -11939,18 +12054,6 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a,
         any_swept = true;
         const int lo = *p.iter_start_hops;
         const int hi = *p.iter_end_hops;
-        // THE OFF-WALL RE-VERIFY, and this is where it lives because nothing
-        // clamps this bracket after the fact: both endpoints must still sit
-        // inside the reset's live hop window, or the whole sweep refuses and
-        // the brackets stand for correction. An INVERTED bracket is the warp
-        // arm's breach shape and is not this refusal's business — it is
-        // counted as one cell below so the face stays lit and the dispatch can
-        // raise its own loud card.
-        const PhaseHopWindow w = phase_reset_hop_window(a, audio, i);
-        if (lo <= hi && (lo < w.k_min || hi > w.k_max)) {
-            plan.refusal = IterationSweepRefusal::PhaseBracketOffWall;
-            return plan;
-        }
         const std::size_t span =
             lo > hi ? std::size_t{1}
                     : static_cast<std::size_t>(hi - lo + 1);
@@ -11969,10 +12072,8 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a,
     return plan;
 }
 
-inline bool iteration_sweep_actionable(const AppState& a,
-                                       const GuiAudio& audio) {
-    return iteration_sweep_plan(a, audio).refusal ==
-           IterationSweepRefusal::None;
+inline bool iteration_sweep_actionable(const AppState& a) {
+    return iteration_sweep_plan(a).refusal == IterationSweepRefusal::None;
 }
 
 // THE BPM SWEEP'S OPEN VERDICT (2026-09-04, with the BPM ITERATIONS button's
@@ -12374,10 +12475,22 @@ inline bool playback_launch_playable(const AppState& a,
 //     per-tab lock BLOCKS wear the dead face while it stands, so
 //     the toggle makes the buttons it eats look the way the `h` view already
 //     makes its own consumed buttons look. Their term is
-//     `!active_view_state(a).read_only` AND NOTHING ELSE — no selection term,
+//     `!authoring_locked(a)` AND NOTHING ELSE — no selection term,
 //     no view term, no wall term — because this is a MODE statement and not the
 //     truthfulness sweep: any interaction-cadence term added here would
-//     reintroduce the blink the same ruling removed from the arrows. THE
+//     reintroduce the blink the same ruling removed from the arrows.
+//     THE LOCK IS ONE LOCK WITH TWO REASONS SINCE 2026-09-10 (the predicate is
+//     authoring_locked, above): the per-tab read-only bit and grid iterations
+//     standing, which freezes the whole undo domain because the mode's own
+//     surface pushes nothing. FIVE ARMS BELOW COMPOSE BOTH — Drop marker,
+//     Delete, Disable, Toggle inherit, Measure — while FOUR MEMBERS ASK THE
+//     TAB'S BIT ALONE, each saying why at its own arm: GRID ITERATIONS (the
+//     lamp that turns the mode off cannot be greyed by it), BPM ITERATIONS
+//     (the one road that leaves this mode by entering another, landing nothing
+//     in history at the press), EDIT FLAG and the UP/DOWN pair (both live on a
+//     BOUND AXIS, the bound cells being the mode's own authoring surface).
+//     Undo and Redo take the mode through history_step_actionable instead, the
+//     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
 //     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/`, bare `m` and
@@ -12446,7 +12559,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     right here. (1) THE HISTORY FAMILY'S CHORDS ARE BLOCKED VACUOUSLY: bare
 //     `h`, bare `g` (the walk lamp's), bare `u`, bare `,` and
 //     bare `.` sit on no allowlist entry, so the walk reads a grey for five
-//     buttons the lock has no say over. Bare `h` never reaches the gate at all
+//     buttons the read-only lock has no say over. (The ITERATION lock does eat
+//     bare `h`: two modal views are not composed, so the view's opener cards
+//     the lock's sentence while the lamp stands — the OPENER's face is
+//     unchanged all the same, a lit button whose chord the gate drops being
+//     answered by that gate's card, which is the read-only lock's own posture
+//     for it.) Bare `h` never reaches the gate at all
 //     — handle_history_mode_key claims the toggle and returns from on_key
 //     ABOVE it — while the other four DO reach it on every press outside the
 //     view and bind nothing below it (handle_history_mode_key returns false
@@ -12749,7 +12867,10 @@ inline bool redesign_button_enabled(const AppState& a,
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their face scope. (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
+        // 1 and 3 by their face scope. (ROW 2's ICON MARKER COLUMN LEFT THIS
+        // GROUP ON 2026-09-10 with the iteration lock's W/P delta — it greys
+        // while grid iterations stands, at its own arm below. Its AUDIO-VIEW
+        // twin stays here: bare `t` is admitted under both locks.) (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
         // 2026-08-18 — the HISTORY COMPANIONS, whose keys are bound only inside
         // the `h` view and which grey at rest for that reason. They held the
         // same arm from 2026-08-05 (2026-08-08 for the Cumulative toggle) until
@@ -12790,7 +12911,6 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TabA:
         case RedesignButton::TabB:
         case RedesignButton::IconAudioView:
-        case RedesignButton::IconMarkerColumn:
         // THE TRIM REGION TOGGLE MIRRORS NOTHING (2026-08-16, unchanged when
         // it became a toggle on 2026-08-18), and for a stronger reason than
         // the trim scissors it outlived: it HAS no refusal to mirror. Its one
@@ -13008,7 +13128,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // coincident frame being the resolver's and the red flag's business —
         // so the sentence is deleted rather than inherited, 2026-09-02.)
         case RedesignButton::IconMarkerDrop:
-            return !active_view_state(a).read_only &&
+            return !authoring_locked(a) &&
                    (active_column_authoring_allowed(a) ||
                     phase_reset_drop_crossing_actionable(a));
         // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
@@ -13017,12 +13137,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // marker_selection_verb_actionable, which the two dispatch arms read.
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
-            return !active_view_state(a).read_only &&
+            return !authoring_locked(a) &&
                    marker_selection_verb_actionable(a);
         // TOGGLE INHERIT GREYS ON THE OP'S OWN LEADING RETURN (2026-08-30):
         // the P view, an empty selection, no focus — inherit_toggle_actionable.
         case RedesignButton::IconMarkerInherit:
-            return !active_view_state(a).read_only &&
+            return !authoring_locked(a) &&
                    inherit_toggle_actionable(a);
         // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
         // it is the MEASURE'S CLASS EXACTLY: bare Return opens an editor over
@@ -13032,14 +13152,26 @@ inline bool redesign_button_enabled(const AppState& a,
         // GREY IT TOO SINCE 2026-08-30, through the Return arm's own predicate
         // flag_editor_open_actionable; they were consumed no-ops behind a live
         // face until then.
+        //
+        // THE ITERATION LOCK ADMITS IT ON A BOUND AXIS (architect 2026-09-10):
+        // with Lower or Upper addressed, Return opens THAT CELL'S editor, and
+        // the bound cells are the mode's own authoring surface — the one thing
+        // the lock leaves open. On the payload or the measure axis the same
+        // press would open an editor over serialized content, which the lock
+        // refuses like every other authoring verb, so the face greys exactly
+        // where the keyboard gate drops the chord (the two deltas are stated
+        // once at iteration_lock_key_blocked, input_key_dispatch.cpp).
         case RedesignButton::IconMarkerEditFlag:
-            return !active_view_state(a).read_only &&
+            return (!authoring_locked(a) ||
+                    (!active_view_state(a).read_only &&
+                     (a.addressed_cell == MarkerCell::Lower ||
+                      a.addressed_cell == MarkerCell::Upper))) &&
                    flag_editor_open_actionable(a);
         // THE MEASURE GREYS WITH NOTHING FOCUSED (2026-08-30) — the `/` arm's
         // one refusal past the lock, marker_focus_standing; no view term, the
         // measure being both columns' in both views.
         case RedesignButton::IconMarkerMeasure:
-            return !active_view_state(a).read_only &&
+            return !authoring_locked(a) &&
                    marker_focus_standing(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
@@ -13059,9 +13191,30 @@ inline bool redesign_button_enabled(const AppState& a,
         // Redo have always had. It is the roster's DEEPEST mirrored refusal
         // and it costs nothing per tick: the walk is tens of markers and the
         // one classifier it needs comes off the red-flag cache.
+        // AND BPM ITERATIONS KEEPS THE TAB'S LOCK ALONE (architect
+        // 2026-09-10): bare `m` is the one road that leaves grid iterations by
+        // ENTERING another mode — enter_bpm_mode's forced iter-off runs the
+        // same wipe the `i` toggle runs — and the press itself lands nothing
+        // in history, the sweep's commit coming later with the lamp already
+        // dark. So the iteration lock admits it, here and at
+        // iteration_lock_key_blocked, and this arm asks the tab's own bit.
         case RedesignButton::IconBpm:
             return !active_view_state(a).read_only &&
                    bpm_sweep_open_actionable(a, audio);
+        // THE MARKER COLUMN LAMP IS THE ITERATION LOCK'S OTHER DELTA
+        // (architect 2026-09-10): the mode is lit for the column you are IN,
+        // so the W/P switch is one of the acts the lock refuses and this
+        // button — bare `p`, which the three absolute view selectors compose
+        // too — greys while the lamp stands, wearing the card its key raises
+        // on its hint. IT IS THE ONE MEMBER OF THIS ARM WITH NO READ-ONLY
+        // TERM: bare `p` is on read_only_key_blocked's allowlist (a column
+        // switch authors nothing), so a locked tab leaves it lit exactly as it
+        // leaves the chord live, and this face mirrors the ITERATION half of
+        // the gate alone. ITS AUDIO-VIEW TWIN STAYS NEVER-GREY beside the
+        // never-grey group above: the mode is target-legal and a bracket
+        // reads no audio view, so bare `t` is admitted under both locks.
+        case RedesignButton::IconMarkerColumn:
+            return !a.iteration_mode_enabled;
         // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
         // arm has nothing else left to mirror (2026-09-09): the lamp is
         // ADMITTED IN BOTH COLUMNS — the phase-reset column carries a hop
@@ -13073,6 +13226,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // before (the toggle is mode state rather
         // than authoring, the 2026-08-07 relaxation at the arm itself), and
         // the toggle is meaningful in either direction on any loaded piece.
+        //
+        // AND THE READ-ONLY HALF OF THE LOCK IS THE WHOLE LOCK HERE
+        // (2026-09-10): the ITERATION lock cannot grey the lamp that turns it
+        // off, so this arm asks the tab's own bit and not authoring_locked —
+        // the one exception the composition names for itself, matching bare
+        // `i`'s admission through iteration_lock_key_blocked.
         case RedesignButton::IconIter:
             return !active_view_state(a).read_only;
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
@@ -13356,6 +13515,17 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TransportDown: {
             if (active_view_state(a).read_only) return false;
             const int64_t delta = b == RedesignButton::TransportUp ? +1 : -1;
+            // THE ITERATION LOCK ADMITS THE BOUND ARM ALONE (architect
+            // 2026-09-10): the bound cells are the mode's own authoring
+            // surface, so with Lower or Upper addressed the pair stays live
+            // and steps the bound; on the payload axis the same press is the
+            // TEMPO step, which lands in history, so the lock greys it here
+            // and the keyboard gate drops the chord (the deltas are stated
+            // once at iteration_lock_key_blocked, input_key_dispatch.cpp).
+            if (a.iteration_mode_enabled &&
+                a.addressed_cell != MarkerCell::Lower &&
+                a.addressed_cell != MarkerCell::Upper)
+                return false;
             // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
             // a bound cell addressed the pair reads the bound step's own
             // owners, with the measure addressed nothing steps
@@ -13657,9 +13827,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // with grid iterations on, this button's chord IS the sweep, so the
         // face reads the sweep's own pre-dispatch verdict
         // (iteration_sweep_actionable, above — no brackets authored on
-        // THE LIT column, a cell product past the cap, or a phase bracket
-        // standing off its walls) and greys where the press would only
-        // card. THE CANCEL FACE OUTRANKS IT, as it outranks the iteration
+        // THE LIT column, or a cell product past the cap) and greys where the
+        // press would only card. THE CANCEL FACE OUTRANKS IT, as it outranks the iteration
         // hint: while a render or sweep is in flight this button IS the
         // cancel act (the ruled chord divergence), and cancelling is always
         // actionable whatever the store would sweep next. The mode-off
@@ -13667,7 +13836,7 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             return !a.source_audio_path.empty() &&
                    (!a.iteration_mode_enabled || a.render_cancel_face ||
-                    iteration_sweep_actionable(a, audio));
+                    iteration_sweep_actionable(a));
         // THE TWO SKIPS (2026-08-30; the succession is at their case in the
         // first switch): lit iff EITHER admitted form — the bare trim-bound
         // jump or the ctrl whole-piece jump — would change anything, through
@@ -14975,17 +15144,38 @@ inline RedesignTooltipText redesign_button_tooltip(
     // chord in the line: the button is dead, but the KEY is not, and it is the
     // key that raises the sentence.
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        switch (iteration_sweep_plan(a, audio).refusal) {
+        switch (iteration_sweep_plan(a).refusal) {
             case IterationSweepRefusal::NoBracketAuthored:
                 return {kIterSweepNoBracketHint, nullptr};
             case IterationSweepRefusal::OverCellCap:
                 return {kIterSweepOverCapHint, nullptr};
-            case IterationSweepRefusal::PhaseBracketOffWall:
-                return {kIterSweepPhaseOffWallHint, nullptr};
             case IterationSweepRefusal::None:
                 break;
         }
         return {"Render Grid Iterations (Ctrl+Alt+R)", nullptr};
+    }
+    // THE MARKER COLUMN LAMP'S ITERATION-LOCK REASON (architect 2026-09-10),
+    // the same shape one button over: where the lock greys the face, the line
+    // is THE CARD THE PRESS WOULD HAVE RAISED, plus the accelerator, under the
+    // tooltips-on-disabled ruling. It reads the face's own term rather than
+    // restating a condition. (Its AUDIO-VIEW twin needs no arm: bare `t` is
+    // admitted under both locks.)
+    if (b == RedesignButton::IconMarkerColumn && a.iteration_mode_enabled) {
+        return {kIterationLockColumnHint, nullptr};
+    }
+    // UNDO'S AND REDO'S ITERATION-LOCK REASON (architect 2026-09-10), ranked
+    // FIRST of this pair's two forks because the lock is the outermost state —
+    // the same rank the key's own arm gives it. While grid iterations stands
+    // both buttons are dead (history_step_actionable's third term) and each
+    // wears the card its key raises. THE READ-ONLY HALF OF THE LOCK IS NOT
+    // HERE, and for the reason the lamp's fork states below: on a locked tab
+    // the KEY never reaches this refusal at all, the gate dropping Ctrl+Z
+    // first, so the tab keeps the ordinary hint it has always shown.
+    if ((b == RedesignButton::Undo || b == RedesignButton::Redo) &&
+        !active_view_state(a).read_only && a.iteration_mode_enabled) {
+        return {(b == RedesignButton::Undo) ? kIterationLockUndoHint
+                                            : kIterationLockRedoHint,
+                nullptr};
     }
     // UNDO'S AND REDO'S RESTRICT-UNDO-TO-VIEWPORT REASON (architect
     // 2026-09-04), the iteration sweep's shape exactly: where the lamp greys

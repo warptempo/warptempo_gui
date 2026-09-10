@@ -143,7 +143,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // group, while the diff matcher's grown arm consumes by time_frame alone
     // front-to-back and would name the LAST row of that group — the
     // pre-existing twin, silently, both painting at one column.
-    undo.push_undo_warp(std::move(pre_state), /*affects_persistence=*/true,
+    undo.push_undo_warp(std::move(pre_state),
                         /*touched_snapshot=*/{}, /*touched_live=*/{new_idx});
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -322,7 +322,7 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // would name the group's last row — a surviving twin, silently, both
     // painting at one column. The LIVE side names nothing: the rows are gone,
     // and a redone delete rests an empty selection exactly as the act does.
-    undo.push_undo_warp(std::move(pre_state), /*affects_persistence=*/true,
+    undo.push_undo_warp(std::move(pre_state),
                         /*touched_snapshot=*/std::move(live_idx),
                         /*touched_live=*/{});
     undo.recompute_dirty();
@@ -497,21 +497,11 @@ void GuiWarpMarkersOps::toggle_disabled() {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         proposed[idx].disabled = !proposed[idx].disabled;
-        // A DISABLED MARKER CARRIES NO RANGE (architect 2026-09-10: grid
-        // iterations are "one of the most transitory things in this project",
-        // and "if something doesn't have an iteration shown, it's lost its
-        // memory, except insofar as undo history goes"). A disabled flag paints
-        // no bound cells, so a bracket kept on it would be a value the user
-        // cannot see, cannot reach and did not ask to keep — the DORMANT
-        // bracket of 2026-09-02's R-12, retired here. The clear rides THIS
-        // entry: the snapshot above is the pre-state, so one undo puts the
-        // marker and its bracket back together, and re-enabling restores
-        // nothing by itself. Nothing serializes either way (the bracket is
-        // session-only), so the entry's persistence class is the disable's.
-        if (proposed[idx].disabled) {
-            proposed[idx].iter_start_cents.reset();
-            proposed[idx].iter_end_cents.reset();
-        }
+        // (A BRACKET CLEAR RODE THIS LOOP for a few hours on 2026-09-10, so a
+        // marker disabled under a lit lamp could not keep a bracket the flag
+        // no longer paints. The ITERATION LOCK landed the same day and made it
+        // unreachable: Ctrl+D is one of the acts the lock refuses, so no
+        // marker can be disabled while any bracket stands.)
         changed = true;
     }
     if (!changed) return;
@@ -717,14 +707,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         m.tempo_inherits = false;
         m.tempo_cents    = cents;
         m.tempo_scale    = start_scale;
-        // THE BRACKET RIDES THE BASE: the stepped base drags this marker's
-        // live iteration bracket with it, so no sweep cell can leave the tempo
-        // bracket. Silent, deltas only — the rule and the loud/silent division
-        // with the flag editor's typed-bracket gate live at the one owner
-        // (clamp_iter_bracket_to_tempo_bracket, warpmarkers.h), which the flag
-        // editor's manual tempo commit calls too. A no-op on the freeze arm
-        // above: a pass carries no bracket (eligibility loss clears it).
-        clamp_iter_bracket_to_tempo_bracket(m);
+        // (THE BRACKET RODE THE BASE HERE from 2026-08-02 to 2026-09-10,
+        // through a retroactive clamp that folded a live bracket onto the
+        // stepped base so no sweep cell could leave the tempo bracket. The
+        // iteration lock retired it: a bracket exists only while grid
+        // iterations is lit, and while it is lit this step is refused, so no
+        // base can move under a bracket at all.)
         changed = true;
     }
     // NOTHING CHANGED, AND THE ONE LIVE REASON SAYS SO (architect 2026-08-30,
@@ -1114,13 +1102,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // survivor set), every field untouched; none of the survivors is walled
     // (checked above, and the scan asks whether the member can take the WHOLE
     // step), so every add stays in-bracket and actually changes the value;
-    // positions untouched, so no reorder/remap. A member's iteration bracket
-    // is never CLEARED by a tempo change, but it RIDES the new base per member
-    // (the retroactive clamp, owner clamp_iter_bracket_to_tempo_bracket in
-    // warpmarkers.h): the group's rigidity is about the stepped VALUES, and
-    // each member's cells are its own, so clamping member by member deforms
-    // no group relationship. The undo entry's touched hints are the
-    // survivors alone — the skipped members changed nothing.
+    // positions untouched, so no reorder/remap. NO MEMBER CARRIES AN ITERATION
+    // BRACKET HERE (2026-09-10): a bracket exists only while grid iterations
+    // is lit, and while it is lit this step is one of the acts the lock
+    // refuses — which is what retired the per-member retroactive clamp that
+    // used to ride this loop. The undo entry's touched hints are the survivors
+    // alone — the skipped members changed nothing.
     std::vector<int> touched;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= n) continue;
@@ -1128,7 +1115,6 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
         m->tempo_cents = m->tempo_cents + delta_cents;
-        clamp_iter_bracket_to_tempo_bracket(*m);
         touched.push_back(idx);
     }
     // Defensive (a fully-stale selection): a belt against an invariant the
@@ -1147,9 +1133,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // group's cue is its members' brightened flags plus the landed cursor.
     // (The skip is the whole per-press action: note_coalesced_commit died with
     // the hover popup in row 5.)
-    if (!merge) undo.push_undo_warp(std::move(pre_state),
-                                    /*affects_persistence=*/true,
-                                    touched, touched);
+    if (!merge) undo.push_undo_warp(std::move(pre_state), touched, touched);
     // Settle the burst, POST-mutation: the stamp, or — on a merged press that
     // stepped every member back to the burst entry's own snapshot — the
     // BYTE-EQUAL POP of that entry (the rule is at Undo::record_gesture). The
@@ -1223,9 +1207,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // at all). What
 // follows mirrors adjust_tempo_cents' shape one clause at a time: the leading
 // refusal block named whole in a predicate the face reads, the 2+ fork onto an
-// all-or-nothing group arm, the wall asked through the directional face AHEAD
-// of the coalesce stamp, the value-shaped kind refusal behind it on a card,
-// the mutation through the one landing owner, the entry and the settle. The
+// all-or-nothing group arm, the wall asked through the directional face, the
+// value-shaped kind refusal on a card, and the mutation through the one
+// landing owner. THERE IS NO STAMP AND NO ENTRY at the end of it (below). The
 // contracts are at the declarations (warpmarkers_ops.h, app_state.h's bound
 // step block); what is argued here is only what differs from the tempo step.
 //
@@ -1246,17 +1230,26 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // and from the render recipe alike, the flag editor's bracket-only commit
 // being the precedent), so there is no trigger, no target-view re-warp, no
 // re-land and no target-view kind refusal — the step is target-legal as the
-// bracket is. The entry is the bracket-only kind (affects_persistence false,
-// so the dirty dot never lights for it) and the damage is the marker lane's.
+// bracket is.
+//
+// AND NOTHING IS RECORDED (architect 2026-09-10: "They just don't go in the
+// undo stack at all; they're considered transient by design"). The step writes
+// the store and damages the marker lane; there is no snapshot, no undo entry,
+// no coalesce verdict, no gesture stamp and no dirty re-derive — the bracket
+// is outside the undo domain whole, and the mode it lives in freezes the
+// history while it stands (authoring_locked, app_state.h). A HELD RUN SIMPLY
+// STEPS: the hold-repeat producers go on firing this body and each fire is a
+// write, there being no burst entry for a repeat to open or merge into, which
+// is why `synthesized_repeat` reaches nothing here any more. It was
+// GestureKind::IterBoundStep's own coalescing kind until that day, with two
+// subject terms — the addressed cell and the W/P column — that no other kind
+// needed.
 //
 // IT HAS A TWIN SINCE 2026-09-09, GuiPhaseResetMarkersOps::adjust_iter_bound_
 // hops, which is this body clause for clause in the HOP domain over the
-// phase-reset store. The two share the FOUR PREDICATES below — each forking on
+// phase-reset store. The two share the FOUR PREDICATES below, each forking on
 // the live column inside its own body, so the Up/Down dispatch, the buttons'
-// face and their tooltip keep ONE switch each — and they share
-// GestureKind::IterBoundStep, the stamp's subject terms keeping a warp burst
-// and a phase burst apart — the W/P COLUMN among them, a term of this kind
-// alone because it is the one kind with a body on each column (undo.h).
+// face and their tooltip keep ONE switch each.
 
 // THE GROUP BOUND STEP'S WALL SCAN — the contract is at the declaration
 // (app_state.h). A const walk, extracted for the same reason the tempo scan
@@ -1387,7 +1380,7 @@ const char* iter_bound_step_kind_refusal(const AppState& a) {
 }
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
-        MarkerCell side, int64_t delta_cents, bool synthesized_repeat) {
+        MarkerCell side, int64_t delta_cents) {
     // THE LEADING REFUSAL BLOCK, named whole (iter_bound_step_actionable) and
     // read by the Up/Down face too, so no lift reaches it. One sentence for
     // the mode, the column, an empty selection and a missing focus: the step
@@ -1395,18 +1388,16 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     if (!iter_bound_step_actionable(app))
         return "Select a warp marker to change its range";
     if (app.selected_markers.size() >= 2)
-        return adjust_iter_bound_cents_group(side, delta_cents,
-                                             synthesized_repeat);
+        return adjust_iter_bound_cents_group(side, delta_cents);
     // THE WALL, AHEAD OF THE COALESCE STAMP — the face greys on it, so the
     // key must leave the stamp exactly as the greyed button does (the rule at
     // Undo::coalesce_gesture). Silent: a benign one-dimensional refusal
     // already at its state, the cell's own value being the place to glance.
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_cents))
         return std::nullopt;
-    const bool merge =
-        undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
-    // THE KIND REFUSAL, behind the stamp with a live face and a card, as the
-    // tempo step's value-shaped tails are.
+    // THE KIND REFUSAL, with a live face and a card, as the tempo step's
+    // value-shaped tails are. It stood BEHIND the coalesce stamp until
+    // 2026-09-10; there is no stamp to rank against now.
     if (const char* refusal = iter_bound_step_kind_refusal(app))
         return refusal;
     const auto& mv_const = app.warpmarkers.markers();
@@ -1435,21 +1426,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     if (m.iter_start_cents == mv_const[static_cast<size_t>(f)].iter_start_cents &&
         m.iter_end_cents   == mv_const[static_cast<size_t>(f)].iter_end_cents)
         return std::nullopt;
-    std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
-    // The bracket-only entry: session-only fields, never serialized, so the
-    // dirty dot stays where it is (recompute_dirty honours the flag), and it
-    // carries the ADDRESSED CELL, so undoing this step brightens the bound it
-    // moved (push_undo_iter_bracket, undo.h). A coalesced repeat skips the
-    // push, the burst's opener owning the pre-burst snapshot — and its cell,
-    // which the coalesce verdict has already found equal to this press's.
-    if (!merge) undo.push_undo_iter_bracket(std::move(pre_state));
-    // Settle the burst, POST-mutation: the stamp, or the byte-equal pop of a
-    // merged press that stepped the bound back to the burst entry's own
-    // snapshot (the rule at Undo::record_gesture; the row comparator reads
-    // the iter fields).
-    undo.record_gesture(GestureKind::IterBoundStep, merge);
-    undo.recompute_dirty();
     // The marker lane repaints its cells — the store's generation moved, so
     // the flag cache rebuilds under the top strip's damage. No waveform
     // damage: a stem reads the class, and a bound changes no class; no map
@@ -1459,11 +1436,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 }
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
-        MarkerCell side, int64_t delta_cents, bool synthesized_repeat) {
-    // THE WALL SCAN, ahead of the coalesce verdict, carded AND greyed — the
-    // group pairing the tempo step argues (adjust_tempo_cents_group): a group
-    // step would have moved every selected cell, so it is not the
-    // one-dimensional refusal that went silent. THE EMPTY STEP HAS THE
+        MarkerCell side, int64_t delta_cents) {
+    // THE WALL SCAN, carded AND greyed — the group pairing the tempo step
+    // argues (adjust_tempo_cents_group): a group step would have moved every
+    // selected cell, so it is not the one-dimensional refusal that went
+    // silent. (It stood AHEAD OF THE COALESCE VERDICT until 2026-09-10; there
+    // is no verdict on this road any more.) THE EMPTY STEP HAS THE
     // SINGLETON'S SENTENCE: a selection whose every member is ineligible has
     // no range to step, which is the empty-selection answer.
     switch (iter_bound_step_group_verdict(app, audio, side, delta_cents)) {
@@ -1474,11 +1452,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
     case IterBoundStepGroupVerdict::Empty:
         return "Select a warp marker to change its range";
     }
-    const bool merge =
-        undo.coalesce_gesture(GestureKind::IterBoundStep, synthesized_repeat);
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
-    std::vector<GuiWarpMarker> pre_state = mv;
     // Every SURVIVOR steps its addressed bound by the full delta — none is
     // walled (checked above through the landing owner, so the add lands
     // exactly where the landing says) — through the same write site the
@@ -1486,7 +1461,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
     // and the blank rule reaches every member alike. An ineligible member is
     // skipped on the same predicate the scan skipped it on; the store is
     // unchanged between the two walks, so the survivor set is one.
-    std::vector<int> touched;
+    // A COUNT, NOT A TOUCHED LIST: the list existed to fill the entry's
+    // identity hints, and there is no entry (2026-09-10).
+    int stepped = 0;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= n) continue;
         if (!iter_popup_eligible_marker(mv, idx)) continue;   // invisible
@@ -1494,20 +1471,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents_group(
         if (!m) continue;
         const int64_t landing = iter_bound_step_landing(*m, side, delta_cents);
         iter_bound_step_write(*m, side, landing);
-        touched.push_back(idx);
+        ++stepped;
     }
     // Defensive (a fully-stale selection): the all-ineligible selection never
     // reaches it — that is the Empty verdict above.
-    if (touched.empty()) return std::nullopt;
-    // ONE bracket-only entry per press with its identity hints (no reorder —
-    // positions untouched — so the push fills both coordinate spaces from the
-    // one list) and with the ADDRESSED CELL, which the restore puts back on
-    // the focus; a coalesced repeat skips the push, the burst's opener owning
-    // the snapshot.
-    if (!merge)
-        undo.push_undo_iter_bracket(std::move(pre_state), std::move(touched));
-    undo.record_gesture(GestureKind::IterBoundStep, merge);
-    undo.recompute_dirty();
+    if (stepped == 0) return std::nullopt;
     viewport.invalidate_top_strip();
     return std::nullopt;
 }
@@ -1635,7 +1603,6 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
         // restore owes no stem bit: stems key on the MARKER (always on,
         // class-colored), never on the selection.
         undo.push_undo_warp(std::move(pre_state),
-                            /*affects_persistence=*/true,
                             std::move(touched_snapshot),
                             std::move(touched_live));
     }

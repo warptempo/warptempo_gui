@@ -938,7 +938,7 @@ void GuiPlatform::set_title(const std::string& title) {
 // up in the bottom. Otherwise it becomes a duplicate signal, and we avoid those
 // in this project"). The title carried it from 2026-08-01 — an asterisk plus
 // one space before the separator, a U+25CF dot for the first few hours — and
-// the mark's one home now is ROW 8's clock suffix, ` *` inside the clock's own
+// the mark's one home now is ROW 8's clock suffix, `*` inside the clock's own
 // run (paint_bottom_row_buttons_and_clock), which BOTH backends paint. The
 // seam member that pushed the flag here, set_title_dirty, is deleted with it,
 // so this composition has no state left to read but the project name.

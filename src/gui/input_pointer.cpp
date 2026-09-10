@@ -4249,11 +4249,11 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // landed on (MarkerCell): the flag box opens the payload editor, a bound
     // cell its bound editor, the measure box the measure editor, and a pair
     // straddling a seam opens the one the first click named. The gates
-    // differ with them: the PAYLOAD editor keeps read-only and the P view,
+    // differ with them: the PAYLOAD editor keeps the LOCK and the P view,
     // the BOUND editor read-only and the cell's own eligibility (a cell that
     // paints is eligible, and the open is a belt behind that) on EITHER column
     // since 2026-09-09, while the
-    // MEASURE editor asks read-only ALONE — measures are the fourth ruled
+    // MEASURE editor asks the LOCK ALONE — measures are the fourth ruled
     // exception to the home-view binding, so the phase column's measure
     // double-click was that column's FIRST pointer authoring gesture,
     // measure-scoped and nothing wider; a bound cell's is the second, and what
@@ -4268,7 +4268,18 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
-        !active_view_state(app).read_only) {
+        // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
+        // Read-only refuses every one of the three editors, as it always did.
+        // The ITERATION lock refuses the payload and the measure — both open
+        // over serialized content, both push — and ADMITS a bound cell, the
+        // mode's own authoring surface, which is the keyboard's own delta at
+        // iteration_lock_key_blocked (input_key_dispatch.cpp) written for the
+        // pointer. Silent either way: a pointer gesture's non-event is its own
+        // answer, and this surface has never carded (the keys do).
+        !active_view_state(app).read_only &&
+        (!app.iteration_mode_enabled ||
+         dc_at_press.cell == MarkerCell::Lower ||
+         dc_at_press.cell == MarkerCell::Upper)) {
         switch (dc_at_press.cell) {
         case MarkerCell::Payload:
             if (app.active_markers_view != 'P') {
@@ -6964,7 +6975,12 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // landing the playhead per that drop's rule.
     const GuiRect area = waveform_area(app);
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
-    if (active_view_state(app).read_only) return;
+    // THE LOCK, both reasons (authoring_locked, app_state.h): a drop is
+    // authored content on a read-only tab and an undo entry under a lit grid
+    // iterations lamp, and the iteration lock admits no drop at all. Silent,
+    // as the read-only half has always been here — the pointer's non-event is
+    // its answer.
+    if (authoring_locked(app)) return;
     if (!active_column_authoring_allowed(app)) return;
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
@@ -10316,9 +10332,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
         // THE TWO AUTHORING GATES LIVE HERE, not at the arm: they guard the
-        // DRAG (marker motion is authoring), never the click, so a read-only
-        // tab and an off-home column still selected and landed at the press
-        // and simply refuse to move anything.
+        // DRAG (marker motion is authoring), never the click, so a LOCKED tab
+        // and an off-home column still selected and landed at the press
+        // and simply refuse to move anything. THE LOCK IS BOTH LOCKS since
+        // 2026-09-10 (authoring_locked, app_state.h): a drag writes a position
+        // and pushes an entry, so grid iterations refuses it exactly as the
+        // read-only bit does, and silently for the same reason.
         // ONE DRAG, ONE GATE since 2026-07-29: the
         // home-view split that used to arm the TEMPO drag instead in W+target
         // exactly — the pointer half of the home-view binding's tempo
@@ -10327,7 +10346,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // drag left — a WARP flag in target view, the P column dragging in
         // both audio views since 2026-08-30 — is the silent
         // navigation-class refusal.
-        if (active_view_state(app).read_only ||
+        if (authoring_locked(app) ||
             !active_column_authoring_allowed(app))
             return;
         // Begin the drag anchored at the PRESS column so the marker tracks the

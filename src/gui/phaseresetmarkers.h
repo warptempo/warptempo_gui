@@ -47,21 +47,29 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // both authoring roads write through the one site that clears it
     // (phase_iter_bound_step_write, app_state.h — the arrows' step and the
     // cell editor's commit alike), so two cells reading `+0` always mean the
-    // same thing. A DISABLED RESET CARRIES NO BRACKET — the disable clears it
-    // in its own undo entry (toggle_phase_reset_disabled,
-    // phaseresetmarkers_ops.cpp, and the state paste that disables one too),
-    // because a disabled
-    // flag shows no cells and an iteration that is not shown has lost its
-    // memory (architect 2026-09-10); re-enabling restores nothing, undo does
-    // (phase_reset_iter_eligible_marker below).
+    // same thing.
     //
-    // THERE IS NO RETROACTIVE CLAMP HERE and that is a RULING rather than a
-    // gap: the warp bracket rides its base through one owner because its
-    // window has two authoring surfaces, while this window is a fact about the
-    // whole store AND the live warp map (phase_reset_hop_window,
-    // warp_frame_map_view.h) with a dozen writers between them, so nothing
-    // clamps and the SWEEP'S PLAN re-verifies every bracket on every read
-    // instead (IterationSweepRefusal::PhaseBracketOffWall, app_state.h).
+    // A BRACKET EXISTS ONLY WHILE GRID ITERATIONS IS LIT, AND IT IS OUTSIDE
+    // THE UNDO DOMAIN (architect 2026-09-10) — the warp bracket's three
+    // properties verbatim, argued once at GuiWarpMarker's own fields
+    // (warpmarkers.h): no entry carries one (strip_iter_fields below strips
+    // this column's pair from every snapshot the four push helpers take, and
+    // the step, the editor's commit and the mode wipe push nothing at all);
+    // nothing else can move while one stands (the piece is LOCKED —
+    // authoring_locked, app_state.h); and it never moves the dirty mark. A
+    // DISABLED RESET STILL CARRIES NO BRACKET and needs no clear of its own
+    // to: a disable is one of the acts the lock refuses.
+    //
+    // NOTHING CLAMPS THIS BRACKET RETROACTIVELY and nothing needs to. The hop
+    // window is a fact about the whole store AND the live warp map
+    // (phase_reset_hop_window, warp_frame_map_view.h), which had a dozen
+    // writers between them — a nudge or drag of the reset or a neighbour, a
+    // neighbour dropped or deleted, a disable, a warp edit that moves the
+    // lattice — and the sweep's plan re-verified every bracket on every read
+    // for one day because of it. THE LOCK REFUSES EVERY ONE OF THOSE WRITERS
+    // while a bracket stands, so the walls hold by construction and the
+    // re-verify went with them: the editor's refusal at its commit and the
+    // step's clamp at its landing are the walls' whole enforcement.
     std::optional<int> iter_start_hops;
     std::optional<int> iter_end_hops;
 };
@@ -74,6 +82,18 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
 // from it (kMaxPendingCharsIterHop, text_editor.h, with the assert that pins
 // the derivation).
 inline constexpr int kIterHopMax = 9;
+
+// STRIP THE SESSION-ONLY HOP BRACKET FROM A SNAPSHOT — strip_iter_fields'
+// twin on this column (architect 2026-09-10), called by every undo push that
+// captures this store so no entry can carry a bracket and no restore can
+// install one. The contract, and why the two halves are one ruling, are at the
+// warp helper (warpmarkers.h).
+inline void strip_iter_fields(std::vector<GuiPhaseResetMarker>& v) {
+    for (GuiPhaseResetMarker& m : v) {
+        m.iter_start_hops.reset();
+        m.iter_end_hops.reset();
+    }
+}
 
 // Slice a GUI phase-reset vector down to the serialized base, mirroring
 // slice_to_warp_markers. Each element is copy-constructed as a
@@ -115,11 +135,13 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // disabled bit alone. Nor is there a cascade to ask: this column carries no
 // labels, so the flag pass reads the plain bool and so does this.
 //
-// A DISABLED RESET CARRIES NO BRACKET, exactly as a disabled owner does not —
-// the disable clears it (2026-09-10) — so this verdict is about the reset's
-// PARTICIPATION and never about hiding a value it still holds; and unlike the
-// warp column there is no cascade here, so a disabled reset is always one a
-// writer disabled. FIVE READERS, the warp predicate's own inventory in
+// A DISABLED RESET CARRIES NO BRACKET and needs no clear to (2026-09-10):
+// disabling one is an act the iteration lock refuses, so no reset can lose its
+// enabled bit under a standing bracket. This verdict is therefore about the
+// reset's PARTICIPATION and never about hiding a value it still holds — a belt
+// with no producer for a bracketed reset, kept for the warp predicate's own
+// reason (it states the SWEEP's input, not the bracket's writers). FIVE
+// READERS, the warp predicate's own inventory in
 // this column's terms (greped 2026-09-09): the sweep's dispatch
 // (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's plan
 // (iteration_sweep_plan, app_state.h) skip the reset, so its bracket neither

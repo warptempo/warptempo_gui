@@ -30,11 +30,34 @@ struct GuiWarpMarker : WarpMarker {
     // grows two cells to its right, the lower bound then the upper, each
     // painted as another flag payload (render_flags, render.cpp). The flag
     // editor never carries the bracket: its line is the plain canonical
-    // payload. A DISABLED OWNER CARRIES NO BRACKET — the disable clears it in
-    // its own undo entry (GuiWarpMarkersOps::toggle_disabled), because a
-    // disabled flag shows no cells and an iteration that is not shown has lost
-    // its memory (architect 2026-09-10); re-enabling restores nothing, undo
-    // does. The eligibility pair below. Signed tempo deltas in integer cents —
+    // payload.
+    //
+    // A BRACKET EXISTS ONLY WHILE GRID ITERATIONS IS LIT, AND IT IS OUTSIDE
+    // THE UNDO DOMAIN (architect 2026-09-10: "Iterations are the least durable
+    // thing in this GUI as far as the flags. It's okay to clear them and not
+    // remember them very often. They just don't go in the undo stack at all;
+    // they're considered transient by design." — "a bracket exists only on a
+    // marker that is on screen or it is gone for good"). THREE PROPERTIES,
+    // and each of them holds by construction rather than by discipline:
+    //   * NO ENTRY CARRIES ONE. The four push helpers strip these two fields
+    //     from every snapshot they take (strip_iter_fields below, and its
+    //     phase-reset twin), so no snapshot in either stack can hold a bracket
+    //     and no restore can install one. The bound step, the bound editor's
+    //     commit and the mode wipe push nothing at all.
+    //   * NOTHING ELSE CAN MOVE WHILE ONE STANDS. While the lamp is lit the
+    //     piece is locked (authoring_locked, app_state.h): the bound cells are
+    //     the mode's only authoring surface, so no tempo is stepped or typed
+    //     under a bracket, no marker is nudged, dragged, dropped, deleted or
+    //     disabled, and undo and redo refuse. That is what retired the
+    //     RETROACTIVE CLAMP that used to fold a standing bracket onto a moved
+    //     base, and the sweep's per-read wall re-verification with it.
+    //   * IT NEVER MOVES THE DIRTY MARK, for the ruling's own reason: "The
+    //     iterations don't actually do anything to the map itself; they push
+    //     that onto the tmp folder as sidecars."
+    // A DISABLED OWNER STILL CARRIES NO BRACKET, and needs no clear of its own
+    // to: a disable is one of the acts the lock refuses, so no marker can lose
+    // its enabled bit while a bracket rests on it.
+    // The eligibility pair below. Signed tempo deltas in integer cents —
     // the same integer-cents domain the tempo itself lives in, so the sweep's per-cell
     // base + delta is plain integer addition. nullopt means "blank" (both
     // cells read `+0.00` — the one blank rule at format_iter_bound_cell
@@ -43,8 +66,7 @@ struct GuiWarpMarker : WarpMarker {
     // authoring roads write through the one site that clears it
     // (iter_bound_step_write, app_state.h — the arrows' step and the cell
     // editor's commit alike), so two cells reading +0.00 always mean the same
-    // thing. The retroactive clamp below is the one writer that does not ask,
-    // and its own comment says why.
+    // thing, and there is no third writer to make an exception of.
     std::optional<int64_t> iter_start_cents;
     std::optional<int64_t> iter_end_cents;
 
@@ -326,23 +348,17 @@ inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
 // label_ref marker have none, so neither ever carries a bracket: every route
 // that turns a carrier into a non-carrier clears both bounds (the flag
 // editor's commit, Ctrl+N's owner->pass and ref->pass conversions —
-// toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT IS A LOSS TOO, at its own
-// writer rather than at this predicate (architect 2026-09-10, retiring the
-// DORMANT bracket of 2026-09-02's R-12): the cells are a bracket's only
-// authoring surface and a disabled owner paints none, so a bracket kept on one
-// would be a value the user cannot see or reach, and grid iterations are
-// transitory — "if something doesn't have an iteration shown, it's lost its
-// memory, except insofar as undo history goes". So the DISABLE ITSELF clears
-// both bounds, in the same undo entry (GuiWarpMarkersOps::toggle_disabled),
-// and re-enabling restores nothing; undo is the way back. THE ONE WAY A
-// BRACKET CAN STILL REST ON AN EFFECTIVELY DISABLED MARKER is the CASCADE — a
-// ref through a disabled definition, which no toggle touched — and there it is
-// out of the product exactly as before, this predicate's structural half
-// having already refused it (a ref is no carrier). THE READERS: the flag
-// editor's commit's carrier-loss clear (a marker that stops owning its tempo
-// loses its bracket — the store's rule, not any grammar's), the bound step's
-// kind refusal (iter_bound_step_kind_refusal), and the retroactive clamp
-// below.
+// toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT NEEDS NO CLEAR OF ITS OWN
+// (architect 2026-09-10, superseding the same day's clear-on-disable and the
+// DORMANT bracket of 2026-09-02's R-12 alike): a bracket exists only while
+// grid iterations is lit, and while it is lit the piece is LOCKED — Ctrl+D,
+// the phase toggle and the state paste's disabling arm are all refused
+// (authoring_locked, app_state.h) — so no marker can lose its enabled bit
+// under a standing bracket. The three clears that landed for a few hours are
+// deleted with their producers. THE READERS: the flag editor's commit's
+// carrier-loss clear (a marker that stops owning its tempo loses its bracket —
+// the store's rule, not any grammar's) and the bound step's kind refusal
+// (iter_bound_step_kind_refusal).
 inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }
@@ -355,10 +371,17 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // reaches, is no carrier), and it is asked through the vector/index form all
 // the same so that a change to the cascade lands here for free and no caller
 // can hand a bare marker and lose it — which is why this is the ONE spelling
-// and the single-marker form above carries a different name. IT KEEPS ITS
-// DISABLED TERM under 2026-09-10's clear-on-disable ruling and is not
-// redundant with it: the CASCADE can disable a marker with no toggle in sight,
-// so the eligibility still has to ask. FIVE READERS,
+// and the single-marker form above carries a different name. ITS DISABLED TERM
+// IS A BELT WITH NO PRODUCER, and is kept as one: no marker that carries a
+// bracket can BECOME disabled (the lock refuses every disabling act while one
+// stands), and the CASCADE reaches label refs alone, which the structural half
+// has already refused for being no carrier — so the term cannot decide the
+// answer for a bracketed marker today. It costs one call and it is what makes
+// this predicate a statement about the SWEEP's own input rather than about the
+// bracket's writers, which is why it stays. (A 2026-09-09 reading claimed a
+// cascade-disabled marker was the reachable case the term existed for; that
+// was impossible even then, a ref being no carrier — codex round 5's P3.)
+// FIVE READERS,
 // and a disabled marker is invisible at all five: the sweep's
 // dispatch (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's
 // plan (iteration_sweep_plan, app_state.h) skip the marker, so its bracket
@@ -378,70 +401,33 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
            !effective_disabled(mv, idx);
 }
 
-// Iteration mode: THE ITER BRACKET RIDES ITS BASE (architect 2026-08-02).
-// The one owner of the retroactive clamp — every site that moves a marker's
-// BASE tempo while a live bracket rests on it calls this right after the new
-// base is written. Every sweep cell renders base + delta and the deltas run
-// from iter_start_cents to iter_end_cents inclusive, so the two endpoints
-// bound every cell; without this, a base walking toward an edge drags cells
-// out of [kTempoMinCents, kTempoMaxCents] and the cell RENDERS (the frame-map
-// build refuses only a non-positive tempo) into a render-entry sidecar whose
-// strict tempo parse hard-rejects on load — the `'` load-in-place refuses it
-// and the
-// CLI insurance path is dead for that entry. Folding the deltas into
-// [kTempoMinCents - base, kTempoMaxCents - base] makes the sweep's cell
-// vocabulary closed by CONSTRUCTION rather than by discipline.
-//
-// The callers are the two base-tempo authoring surfaces: the bare Up/Down
-// cent step (both arms, warpmarkers_ops.cpp) and the flag editor's commit
-// (flag_editor.cpp, which types no bound and folds whatever bracket rests on
-// the base it just moved). The labour is divided by which value is being
-// authored: a bound TYPED into its cell's editor gates LOUD at that commit
-// (red flash, a card naming the wall) because it is authored input arriving
-// at its own surface; later base motion clamps SILENTLY, because there the
-// base is what is being authored and the bracket is the passenger. Neither
-// bound road is a caller: the bound STEP (the arrows on a bound cell,
-// adjust_iter_bound_cents) lands through iter_bound_step_landing
-// (app_state.h), which clamps into this same window as it steps, and the
-// bound EDITOR's commit refuses outside it, so nothing either writes needs
-// folding after the fact.
-//
-// A blank bracket (either bound nullopt) is untouched — no cells, nothing to
-// bound. A bracket that lands FULLY outside degenerates to a zero-width delta
-// at the window edge: a valid one-cell sweep and the accepted result, never
-// cleared to nullopt (a clear would silently drop the marker from the sweep's
-// delta CSV and change the product's shape). That edge is [0, 0] only when the
-// base rests exactly on a tempo wall (kTempoMinCents or kTempoMaxCents, where
-// one limit is zero) and the whole bracket lies outside it, and this owner
-// still does not clear there: the ruling above is the base's passenger rule,
-// and it outranks the blank rule the two authoring roads keep (the field's own
-// comment). The accepted residue is that one degenerate bracket reading +0.00
-// in both cells — a cell the user authored elsewhere and the base then walked
-// onto, not a bracket this file invented. Clamping both bounds into the
-// SAME interval is monotone, so lo <= hi survives. The result also stays
-// inside the session delta bracket [-kIterDeltaMaxCents, +kIterDeltaMaxCents]
-// for free: an in-bracket base bounds either limit by
-// kTempoMaxCents - kTempoMinCents = 375.
-//
-// Undo needs nothing of its own and none is invented: warp undo entries
-// snapshot the WHOLE GuiWarpMarker vector, session-only iter fields included
-// (the row-identity compare in undo.cpp says so), so an undo of the tempo
-// step restores the pre-clamp bracket together with the pre-step base — the
-// clamp is exactly as undoable as the gesture that caused it.
-inline void clamp_iter_bracket_to_tempo_bracket(GuiWarpMarker& m) {
-    if (!m.iter_start_cents.has_value() || !m.iter_end_cents.has_value()) {
-        return;
+// (THE ITER BRACKET RODE ITS BASE from 2026-08-02 to 2026-09-10, through one
+// retroactive clamp here that every base-tempo authoring surface called right
+// after writing a new base — the bare Up/Down cent step's two arms and the flag
+// editor's commit — because a base walking toward a tempo wall would otherwise
+// drag the sweep's cells out of [kTempoMinCents, kTempoMaxCents] and render a
+// sidecar the strict tempo parse hard-rejects. THE ITERATION LOCK RETIRED IT
+// WITH ITS THREE CALLERS: a bracket exists only while grid iterations is lit,
+// and while it is lit no base tempo can be stepped or typed at all
+// (authoring_locked, app_state.h), so the window a bound was authored inside
+// is the window it still sits in. The bound EDITOR's refusal at its commit and
+// the bound STEP's clamp at its landing are the walls' whole enforcement now.
+// Its one accepted residue — the degenerate [0, 0] bracket a base resting
+// exactly on a tempo wall could produce, which outranked the blank rule — went
+// with it, so the blank rule has no exception left.)
+
+// STRIP THE SESSION-ONLY ITERATION BRACKET FROM A SNAPSHOT (architect
+// 2026-09-10). Called by every undo push that captures this store — the four
+// helpers in undo.cpp — so no entry on either stack can carry a bracket and no
+// restore can install one. It is the mechanical half of "they just don't go in
+// the undo stack at all"; the other half is that nothing which pushes an entry
+// can run while a bracket stands. Its phase-reset twin is in
+// phaseresetmarkers.h, over the hop bracket.
+inline void strip_iter_fields(std::vector<GuiWarpMarker>& v) {
+    for (GuiWarpMarker& m : v) {
+        m.iter_start_cents.reset();
+        m.iter_end_cents.reset();
     }
-    // A bracket rests only on a carrier (iter_bracket_carrier above — every
-    // carrier loss clears both bounds, and so does a disable), and an owner's
-    // tempo_cents is in-bracket at
-    // every input surface, so lo_limit <= 0 <= hi_limit: the clamp window
-    // always contains the zero delta and can never be empty. Exact integer
-    // cents throughout, the domain the deltas live in.
-    const int64_t lo_limit = kTempoMinCents - m.tempo_cents;
-    const int64_t hi_limit = kTempoMaxCents - m.tempo_cents;
-    m.iter_start_cents = std::clamp(*m.iter_start_cents, lo_limit, hi_limit);
-    m.iter_end_cents   = std::clamp(*m.iter_end_cents,   lo_limit, hi_limit);
 }
 
 // BPM mode: an owning, enabled marker (owning = !tempo_inherits AND no

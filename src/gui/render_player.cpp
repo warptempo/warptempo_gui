@@ -443,9 +443,13 @@ bool render_player_button_enabled(const AppState& a,
         // LOAD IN PLACE: the act's three leading refusals in the act's own
         // order — the lock, the running render (load_in_place_render_blocked,
         // a face term since 2026-09-01; the reasoning is at the declaration)
-        // and the recipe-less highlight.
+        // and the recipe-less highlight. THE LOCK IS BOTH LOCKS since
+        // 2026-09-10 (authoring_locked, app_state.h): the load rewrites both
+        // marker stores and the engine block and pushes an entry, so grid
+        // iterations greys this button exactly as a read-only tab does, and
+        // the KEY (bare `'` on the highlight) cards the forked sentence.
         case AppState::PlayerButtonAct::LoadInPlace:
-            return !active_view_state(a).read_only &&
+            return !authoring_locked(a) &&
                    !load_in_place_render_blocked(a) &&
                    render_player_highlighted_entry(a) != nullptr;
         case AppState::PlayerButtonAct::RepeatOne:

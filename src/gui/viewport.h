@@ -369,7 +369,7 @@ struct Viewport {
     //     (process_line_text, paint_handler.cpp), so the pair damages the
     //     lane on the two edges where that bit changes and nothing else;
     //   * undo's ONE, Undo::recompute_dirty's tail — THE DIRTY MARK (architect
-    //     2026-09-09), row 8's ` *` on the clock's own run. It is the one
+    //     2026-09-09), row 8's `*` on the clock's own run. It is the one
     //     member that is not a cell string at all: the painter reads app.dirty
     //     directly, so the derive-owner owes the damage, and it owes it ONLY
     //     WHERE THE FLAG MOVED — that body runs after every command, and an

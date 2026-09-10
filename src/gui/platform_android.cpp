@@ -920,7 +920,7 @@ int GuiPlatform::height() const { return height_; }
 // GUI calls it unconditionally from the load path, and the seam's promise is
 // that a consumer compiles against either backend unchanged.
 // UNSAVED WORK IS SHOWN HERE like anywhere else: since 2026-09-09 the dirty
-// mark is ROW 8'S ` *`, painted by the portable painter out of app.dirty, and
+// mark is ROW 8'S `*`, painted by the portable painter out of app.dirty, and
 // it is the ONE dirty indicator on both backends — the title's own asterisk is
 // deleted, and the seam's set_title_dirty with it, so this backend has no
 // second setter to no-op.

@@ -19,7 +19,7 @@
 // damage now belongs to the derive owner instead: Undo::recompute_dirty (the
 // note_saved tail below) invalidates the row ON THE TRANSITION alone, so a
 // save that actually cleans the flag is repainted by it and one that changes
-// nothing costs no repaint. Row 8's ` *` is the mark's one surface (2026-09-09,
+// nothing costs no repaint. Row 8's `*` is the mark's one surface (2026-09-09,
 // the window title's second asterisk deleted with it).
 //
 // ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright

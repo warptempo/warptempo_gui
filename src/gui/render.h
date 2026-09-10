@@ -651,11 +651,11 @@ inline constexpr GuiColor kOverviewBoxLine  = hex(0xC2C2C2);
 // and every other cell of its run — the flag box, the two iteration bound
 // cells, the measure box, each a cell — in its calm pair; the addressed cell
 // is the payload for every selected marker but the focus, whose addressed
-// cell is AppState::addressed_cell (the cell a press landed on, the cell an
-// editor opened, or the cell a BRACKET-ONLY undo entry's restore brought
-// back — an undone or redone iteration bound step is bright on the bound it
-// moved, UndoEntry::addressed_cell; a focus reached any other way is
-// addressed at its payload). The measure box swaps its own blue pair by the same rule
+// cell is AppState::addressed_cell (the cell a press landed on, or the cell
+// an editor opened; a focus reached any other way — a walk, a jump, a clear,
+// a restore — is addressed at its payload. A bracket-only undo entry's
+// restore brought back the bound it had moved until 2026-09-10, when the
+// bracket left the undo domain with that entry). The measure box swaps its own blue pair by the same rule
 // (kMarkerMeasureFillSel below). The geometry, the stem and the hit rect are
 // identical either way. This RETIRES the "selection is not a class" ruling
 // for the marker flags — that rule existed because a selected OUTLINE would
@@ -2197,7 +2197,7 @@ inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 // ONE ITERATION BOUND CELL'S GLYPH COUNT, a fixed shape by grammar
 // (format_iter_bound_cell, warpmarkers.h: a sign, one integer digit, the
 // point, two decimals — `+4.00` at the widest, the integer digit bounded by the
-// clamp window clamp_iter_bracket_to_tempo_bracket states, which is inside
+// tempo window the commit and the step share, which is inside
 // ±kIterDeltaMaxCents). The width bound below charges two of these while
 // iteration mode is on; nothing is laid out against the number.
 //

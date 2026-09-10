@@ -613,15 +613,24 @@ void GuiSettingsEditor::commit() {
     // unknown, and ahead of the value validator because the lock outranks the
     // grammar: a locked tab refuses the key whatever the value would have
     // been. Red flash plus card, the shape every refusal on this surface
-    // wears, and the sentence is the lock's own (kTabReadOnlyCard,
+    // wears.
+    //
+    // IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h): an
+    // engine key is a map input and its commit pushes a settings undo entry,
+    // so grid iterations refuses it exactly as the read-only bit does, and the
+    // SAME division holds — the device keys and the GUI-kind band still commit
+    // under a lit lamp, because the lock governs the KEYS and not the surface.
+    // The sentence forks at the one composer (authoring_lock_card,
     // notifications.h) because this site knows its act and needs no chord in
-    // it.
-    if (active_view_state(app).read_only) {
+    // it. The editor still OPENS under the lock: `;` is dropped at the
+    // keyboard gate, and the Settings dropdown's rows never grey, so their
+    // commands owe the answer themselves.
+    if (authoring_locked(app)) {
+        const char* card = authoring_lock_card(app);
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
-        std::fprintf(stderr, "warptempo_gui: %s\n", kTabReadOnlyCard);
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kTabReadOnlyCard);
+        std::fprintf(stderr, "warptempo_gui: %s\n", card);
+        notifications.notify(AppState::NotificationClass::Normal, card);
         return;
     }
 

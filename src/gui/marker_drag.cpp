@@ -468,7 +468,6 @@ void MarkerDragOps::commit_drag() {
                                        std::move(touched_live));
         } else {
             undo.push_undo_warp(std::move(snap_w),
-                                /*affects_persistence=*/true,
                                 std::move(touched_snapshot),
                                 std::move(touched_live));
         }

@@ -395,9 +395,9 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
 
 // -- THE PHASE-RESET LATTICE ------------------------------------------------
 //
-// The contracts (the lockstep warning, the minimum-displacement derivation,
-// the resting-map asymmetry and the wall rules) are at the declarations in
-// warp_frame_map_view.h; what follows is the arithmetic.
+// The contracts (the lockstep warning, the minimum-displacement derivation and
+// the wall rules) are at the declarations in warp_frame_map_view.h; what
+// follows is the arithmetic.
 
 int64_t phase_reset_window_centre_frame(
     int64_t m, const std::vector<WarpFrameMapSegment>& map) {

@@ -3221,7 +3221,9 @@ private:
     // the tab the user is standing in, no tab switch happening any more), run
     // the bpm scratch wipe (a statement over a set that already carries
     // defaults — NO bracket is touched and NEITHER sweep-mode bit moves since
-    // 2026-09-02: iteration mode is where you stand, the record at the body),
+    // 2026-09-02: iteration mode is where you stand, and since 2026-09-10 the
+    // act cannot run under a lit lamp at all, the lock refusing it; the record
+    // is at the body),
     // assign the engine block, take the store-change basis reset, clamp
     // the live playhead and viewport into the possibly-changed domain, and run
     // the coincidence auto-select and the sync/invalidate/trigger tail. Each
@@ -4045,6 +4047,17 @@ private:
     // same press authors — the lane decides, and the step ladder's modifier
     // (bare / shift / ctrl, 2026-08-31) does not enter the decision.
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
+
+    // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
+    // (architect 2026-09-10). Returns true if key+mods should be dropped while
+    // GRID ITERATIONS stands on a WRITABLE tab; on a locked tab the wider
+    // read-only list applies instead and this is not called (read-only
+    // outranks, the ordered fork at the gate in on_key). It is written as
+    // read_only_key_blocked's answer plus its own deltas rather than as a
+    // second copy of that list, and both deltas are stated at the definition.
+    // It takes the live AppState through the handler's own member, exactly as
+    // its base does for the arrows' lane term.
+    bool iteration_lock_key_blocked(GuiKey key, GuiInputState mods);
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.

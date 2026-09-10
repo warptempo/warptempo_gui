@@ -1011,11 +1011,13 @@ private:
 // re-propose it.)
 //
 // A MEMBER PAIR THAT SERIALIZES IDENTICALLY SHOWS A BLANK LANE, which is honest
-// rather than a gap: an `affects_persistence == false` event (the iteration
-// bracket's session-only snapshot) changes nothing any sidecar would carry, so
-// there is nothing for a delta to say about the pair that brackets it — the same
+// rather than a gap: an event that changes nothing any sidecar would carry
+// leaves nothing for a delta to say about the pair that brackets it — the same
 // blank the commit walk shows for a checkpoint whose content matches its
-// neighbour.
+// neighbour. (The named instance was the iteration bracket's session-only
+// snapshot, which pushed an entry the dirty walk skipped; the bracket left the
+// undo domain on 2026-09-10, so the shape survives without that producer — a
+// settings entry that rewrites a GUI-kind key is one.)
 class GuiHistoryLocalWalk {
 public:
     // BIND TO THE LIVE SESSION at the mode's entry: BOTH stacks' sizes are

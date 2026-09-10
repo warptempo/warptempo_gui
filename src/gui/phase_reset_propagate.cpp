@@ -638,20 +638,12 @@ void PhaseResetPropagate::paste_state_apply() {
             auto& m = out[dest_indices[j]];
             if (m.disabled != want_disabled) {
                 m.disabled = want_disabled;
-                // A DISABLED RESET CARRIES NO RANGE (architect 2026-09-10),
-                // and this is the THIRD road that disables one — the two
-                // toggles are the other two (warpmarkers_ops.cpp,
-                // phaseresetmarkers_ops.cpp). The rule is about the STATE, not
-                // about which gesture reached it: a disabled flag paints no
-                // bound cells, so a hop bracket left on one here would be the
-                // dormant bracket the ruling retires. It rides this act's own
-                // entry (pre_state above) exactly as the toggles' clear rides
-                // theirs, and it is inside the flag-moved test, so a paste
-                // that changes nothing still writes nothing.
-                if (m.disabled) {
-                    m.iter_start_hops.reset();
-                    m.iter_end_hops.reset();
-                }
+                // (A HOP-BRACKET CLEAR RODE THIS ARM for a few hours on
+                // 2026-09-10 — the third road that disables a reset, beside
+                // the two toggles. The ITERATION LOCK landed the same day and
+                // made it unreachable: the state paste is one of the acts the
+                // lock refuses, so no reset can be disabled while any bracket
+                // stands.)
                 any_change = true;
             }
         }

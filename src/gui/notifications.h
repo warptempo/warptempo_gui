@@ -64,7 +64,7 @@
 // writes — there is something that paints, the dirty dot goes away"). THAT
 // RULING NAMED THE WINDOW TITLE, which the tablet has none of, so the save was
 // silent AND invisible there for the nine days until the mark moved onto ROW 8
-// as the clock's ` *` suffix (architect 2026-09-09); the reasoning is the
+// as the clock's `*` suffix (architect 2026-09-09); the reasoning is the
 // same on both machines now, and stronger. THE
 // SAVE'S FAILURE IS A CARD, that ruling having been about the SUCCESS
 // (architect 2026-09-02): a write that did not happen leaves the dirty mark
@@ -273,14 +273,18 @@
 // but the one COMPOSER several sites share, lowercase_initial, homed here for
 // the same reason.
 //
-// THE LOCK'S SENTENCE — the read-only tab, said by the three sites that KNOW
-// THEIR ACT and so need no chord in it: the settings editor's ENGINE-KEY
-// commit arm (an engine key is the piece; the arm took the sentence from the
-// editor's opener on 2026-09-04, when the lock moved from the surface to the
-// keys — the account is at GuiSettingsEditor::open, and the Settings menu's
-// items still never grey, so their commands owe the answer themselves), the
-// render player's Load in place, and the `h` view's bare `v`, whose admission
-// composes the subject with this same lock. THE KEYBOARD GATE IS
+// THE LOCK'S SENTENCE — the read-only tab, said by the sites that KNOW THEIR
+// ACT and so need no chord in it: the settings editor's ENGINE-KEY commit arm
+// (an engine key is the piece; the arm took the sentence from the editor's
+// opener on 2026-09-04, when the lock moved from the surface to the keys — the
+// account is at GuiSettingsEditor::open, and the Settings menu's items still
+// never grey, so their commands owe the answer themselves), the render
+// player's Load in place, and the `h` view's bare `v`, whose admission
+// composes the subject with this same lock. THE FIRST TWO READ IT THROUGH
+// authoring_lock_card BELOW SINCE 2026-09-10 — the lock gained a second
+// reason, grid iterations, and those two acts refuse under both — while the
+// `h` view's fork keeps the literal, the view being unreachable under the
+// second reason. THE KEYBOARD GATE IS
 // NOT A READER (since 2026-08-30): it says "<chord> is not available on a
 // read-only tab" through the speller instead, naming what was pressed, which
 // is what a user who just pressed it is looking for. Its predicate is the
@@ -289,6 +293,26 @@
 // the unbound half with silence. The full reasoning is at that gate
 // (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
+
+// THE ITERATION LOCK'S SENTENCE IS kIterationLockCard AND IT LIVES IN
+// app_state.h, beside the sweep's two verdict cards and for the same reason
+// this header states above: A FACE READS IT — the Toggle Marker Column
+// button's hint is that sentence plus its accelerator — and app_state.h is
+// where the faces are compiled, this header including it and not the reverse.
+// It is the read-only sentence's sibling all the same, and the composer below
+// is where the two meet.
+
+// THE ONE COMPOSER THE LOCK'S CARD FORKS AT — read-only OUTRANKS, because a
+// locked tab says its own sentence: the two locks compose (authoring_locked,
+// app_state.h) and a tab can be locked while the lamp is already lit (bare `o`
+// is read-only-legal and the mode is global rather than per-tab), so the fork
+// has to be ordered rather than exclusive. Its readers are the three sites
+// that KNOW THEIR ACT and so need no chord in the sentence; the keyboard gate
+// composes its own, the read-only half of it carrying the spelled chord.
+inline const char* authoring_lock_card(const AppState& a) {
+    return active_view_state(a).read_only ? kTabReadOnlyCard
+                                          : kIterationLockCard;
+}
 
 // THE PROJECTS PATH COMMIT'S SENTENCE (2026-09-02, the four-tier review's
 // R-22): a `projects_path=` commit from the settings editor rewrites the

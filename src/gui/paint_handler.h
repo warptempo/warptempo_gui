@@ -361,10 +361,9 @@ struct FlagCache {
     // would repaint the same cached bytes.
     // IT HOLDS THE COLUMN'S VERDICT since 2026-09-10 (iteration_column_lit
     // asked of the painted column, waveform_cache.cpp), not the bare mode bit:
-    // the mode is lit for ONE column and the other paints no cells, so this
-    // field says what this surface shows and the `i` press that stamps the
-    // other column moves it not at all — correctly, nothing on this column
-    // having changed.
+    // the mode is lit for ONE column — the one the user is standing in, the
+    // switch being locked while the lamp is on — and the other paints no
+    // cells, so this field says what this surface shows.
     bool      fp_iteration_mode           = false;
     // THE ADDRESSED CELL (MarkerCell, stored as its integer value): the
     // focused marker's addressed cell is the one that wears the selected
