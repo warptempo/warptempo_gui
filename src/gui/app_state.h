@@ -11370,28 +11370,31 @@ inline const ViewState& active_view_state(const AppState& a) {
 // warp and the phase-reset stores (AppState's tab block), so a bracket is
 // common to both tabs and a plain switch cannot strand one — the MARCH over
 // that switch is refused for its own reason above, which is about the cell
-// walk and not about the stores — while a switch INTO A LOCKED TAB refuses on
-// the iteration sentence, the other half of the mutual exclusion below
-// (iteration_lock_refuses_tab_switch). The two deltas
+// walk and not about the stores. The two deltas
 // are stated once, at GuiInputHandler::iteration_lock_key_blocked
 // (input_key_dispatch.cpp), which is the keyboard's ONE gate; the faces read
 // this predicate and, for the iteration half's per-button membership,
 // iteration_lock_greys below, and the card forks at ONE composer
 // (authoring_lock_card, notifications.h).
 //
-// THE TWO REASONS ARE MUTUALLY EXCLUSIVE (architect 2026-09-10, ruling bare
-// `o` refused under a lit lamp): a lit lamp cannot be locked — the padlock is
-// on the iteration gate's refusal list, the settings editor's typed self-lock
-// refuses beside it, and every tab switch into a locked tab refuses — and a
-// locked tab cannot be lit, bare `i` never having been on the read-only
-// allowlist. So this OR can be true for exactly one of its two reasons at a
-// time, and NOTHING RANKS THEM ANY MORE: the composer above and the keyboard
-// gate each still fork on WHICH reason stood, because the two sentences
-// differ, but the fork chooses rather than outranks. (It was ordered until
-// that morning, read-only first, because `i` then `o` reached the composed
-// state — a state in which the mode's own cells refused with the tab's
-// sentence and the lamp could not be put out. That state is gone; every arm
-// that existed only to describe it went with it.)
+// THE TWO REASONS ARE MUTUALLY EXCLUSIVE, AND THE EXCLUSION IS PIECE-WIDE
+// (architect 2026-09-10: "simpler to just prevent i mode if o mode is on
+// anywhere and vice versa"). NO TAB CAN BE LOCKED WHILE THE LAMP IS LIT — the
+// padlock is on the iteration gate's refusal list and the settings editor's
+// typed self-lock refuses beside it, for BOTH tabs' keys — and THE LAMP
+// CANNOT BE LIT WHILE ANY TAB IS LOCKED, bare `i`'s own arm asking
+// any_tab_read_only below and the Grid Iterations button greying on the same
+// answer. The subject is why it is piece-wide rather than per tab: the two
+// tabs SHARE both marker stores, so a lock on either is a lock on the markers
+// iterations would author. So this OR can be true for exactly one of its two
+// reasons at a time, and NOTHING RANKS THEM: the composer above and the
+// keyboard gate each still fork on WHICH reason stood, because the two
+// sentences differ, but the fork chooses rather than outranks. (It was
+// ordered until that morning, read-only first, because `i` then `o` reached
+// the composed state — a state in which the mode's own cells refused with the
+// tab's sentence and the lamp could not be put out. That state is gone; every
+// arm that existed only to describe it went with it, including the per-tab
+// switch refusal that stood for a few hours of that afternoon.)
 //
 // The whole rule and its consequences live in marker-ui.md's Iteration Mode
 // section; every owner here points there rather than restating it.
@@ -11399,43 +11402,34 @@ inline bool authoring_locked(const AppState& a) {
     return active_view_state(a).read_only || a.iteration_mode_enabled;
 }
 
-// THE LAMP STANDS ONLY OVER A WRITABLE TAB, AND THIS IS THE SWITCH'S HALF OF
-// THAT (architect 2026-09-10, with bare `o`'s refusal): A SWITCH INTO A
-// LOCKED TAB REFUSES WHILE GRID ITERATIONS IS LIT, on kIterationLockCard,
-// exactly as every other act the lock forbids. IT NEVER WIPES — the brackets
-// are what the user is tuning, and the lock refuses rather than mutates — and
-// it never touches the switch OUT of a locked tab, the TARGET's own bit being
-// the whole question.
+// A LOCK ANYWHERE IN THE PIECE IS A LOCK ON WHAT GRID ITERATIONS AUTHOR
+// (architect 2026-09-10, replacing that same day's per-tab switch rule with
+// the simpler one: "simpler to just prevent i mode if o mode is on anywhere
+// and vice versa"): THE TWO A/B TABS SHARE BOTH MARKER STORES (AppState's tab
+// block), so the bracket a bound cell tunes is common to both by construction
+// and the subject a lock protects is the PIECE, not the tab that happens to
+// be active. This is that subject spelled once — true while EITHER tab's
+// `read_only` bit stands — and it is the SUBJECT that is piece-wide, not the
+// lock: every other read-only refusal in the product is still the active
+// tab's own bit (active_view_state, above).
 //
-// WHY THE SWITCH HAD TO BE RULED AT ALL: `read_only` is PER TAB while the
-// lamp is GLOBAL, so bare `o`'s refusal closes only the road that locks the
-// tab you are standing on. Tab A lit, tab B locked, one Ctrl+Tab was the road
-// left over, and the state it reached is the dead one the ruling deletes —
-// read-only refuses the bound cells, refuses bare `i`, and now refuses the
-// unlock too, so nothing on that tab could put the lamp out.
+// TWO READERS, and they are one half of a MUTUAL EXCLUSION: bare `i`'s own
+// arm (input_key_dispatch.cpp), which refuses to light the lamp while any tab
+// is locked and cards the read-only lock's own sentence, and the Grid
+// Iterations button's face (redesign_button_enabled below), which greys on
+// the same answer. THE OTHER HALF is that no tab may be LOCKED while the lamp
+// is lit — bare `o` at the keyboard gate (the iteration allowlist's delta (a))
+// and the settings editor's typed `tab_a_read_only=` / `tab_b_read_only=`
+// commits, which refuse a lock of EITHER tab for this predicate's own reason.
 //
-// FOUR ACT READERS, re-greped 2026-09-10 at every caller of
-// GuiActiveViews::switch_active_tab_view_to: Ctrl+Tab's own arm and the
-// settings editor's `active_tab_view=` commit (the two plain switches),
-// Shift+`j`'s jump to the value's source tab, and the A/B AUDITION, whose
-// preflight asks it about the other tab before the first camera write —
-// an interrupted audition rests on the tab it switched to, so the act
-// installs the state as durably as a switch does. THE FOUR THAT NEED NO
-// READER: the PAIRED MARCH, whose chord the keyboard gate refuses under a lit
-// lamp on any tab, locked or not (the wider answer); the `h` view's own
-// march, the view being unreachable under the lamp; the UNDO RESTORE's
-// switch, undo and redo both refusing under the lock and no entry being
-// pushable under it; and the SOURCE LOAD, which writes both tabs' bits from
-// the sidecar into a FRESH AppState — one per project, main.cpp's run_project
-// — so no reopen can carry a lit lamp across.
-//
-// THE FACE READER IS iteration_lock_greys BELOW, where the two TAB BUTTONS
-// ask it about their own tab: their chord is Ctrl+Tab, so the greyed press
-// dies at arm_redesign_press and the KEY carries the sentence.
-inline bool iteration_lock_refuses_tab_switch(const AppState& a,
-                                              char target_tab) {
-    if (!a.iteration_mode_enabled) return false;
-    return (target_tab == 'B') ? a.tab_b.read_only : a.tab_a.read_only;
+// SO THE COMPOSED STATE IS UNREACHABLE FROM EITHER SIDE, and every arm built
+// to answer a SWITCH INTO a locked tab went with it the day it landed
+// (2026-09-10): Ctrl+Tab, the settings editor's `active_tab_view=`, Shift+`j`
+// and the A/B audition all switch tabs under a lit lamp exactly as they
+// always did, there being no locked tab left to switch into. The two tab
+// buttons are back in the never-grey group with them.
+inline bool any_tab_read_only(const AppState& a) {
+    return a.tab_a.read_only || a.tab_b.read_only;
 }
 
 // THE ITERATION HALF OF THE LOCK, PER BUTTON — the ONE membership statement
@@ -11454,12 +11448,11 @@ inline bool iteration_lock_refuses_tab_switch(const AppState& a,
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the Toggle Marker
 //     Column lamp (bare `p` is on read_only_key_blocked's allowlist), the
 //     Toggle History View button (a locked tab reads history exactly as a
-//     writable one does), Walk both tabs, the view bar's three, the two TAB
-//     buttons and the PADLOCK — so those arms read this predicate and nothing
-//     else. Nothing is lost by the omission: the two locks are MUTUALLY
-//     EXCLUSIVE (authoring_locked, above), so under a lit lamp the active tab
-//     is writable by construction and a read-only term could only ever be
-//     vacuously true;
+//     writable one does), Walk both tabs, the view bar's three and the
+//     PADLOCK — so those arms read this predicate and nothing else. Nothing
+//     is lost by the omission: the two locks are MUTUALLY EXCLUSIVE
+//     (authoring_locked, above), so under a lit lamp NO tab is locked at all
+//     and a read-only term could only ever be vacuously true;
 //   * LEFT / RIGHT's read-only half carries the LANE TERM with it
 //     (horizontal_arrow_step_lock_admits), so that arm spells the two halves
 //     separately rather than composing authoring_locked;
@@ -11479,15 +11472,14 @@ inline bool iteration_lock_refuses_tab_switch(const AppState& a,
 //     of their own, so they take their own fork.
 //   * GRID ITERATIONS and BPM ITERATIONS, the two exit roads, and SAVE,
 //     RENDER, the trim family, playback, the zoom and magnification family,
-//     the audio-view lamp, the two single-tab walk
+//     the audio-view lamp, THE A/B TAB SWITCH, the two single-tab walk
 //     buttons (bare Tab and Shift+Tab step the cells, the mode's own surface)
 //     and Copy resolved value, every one of
 //     which the lock ADMITS (the allowlist's two deltas are stated once at
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
-//     THE A/B TAB SWITCH LEFT THIS LIST ON 2026-09-10 and is a member now,
-//     but CONDITIONALLY and per tab: the lock admits Ctrl+Tab wherever the
-//     target is writable and refuses it into a LOCKED tab
-//     (iteration_lock_refuses_tab_switch, above).
+//     The tab switch left this list for one afternoon on 2026-09-10, as a
+//     per-tab member, and came back to it that evening: under the piece-wide
+//     exclusion there is no locked tab to switch into.
 //   * THE VIEW BAR'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
 //     that morning) and they are the membership's one SILENT entry, in both
 //     of the ways a member usually speaks. NO SENTENCE, still: the row carries
@@ -11559,19 +11551,13 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // Shift+Tab step the cells, which is the mode's own surface.
         case RedesignButton::TransportWalkBoth:
             return true;
-        // THE TWO TAB BUTTONS (architect 2026-09-10), and the membership's one
-        // PER-TAB member: each carries Ctrl+Tab, so each greys exactly where
-        // that chord refuses INTO ITS OWN TAB
-        // (iteration_lock_refuses_tab_switch, above — one owner for the four
-        // act readers and this face). The button of the tab you are STANDING
-        // on can never grey here by construction: under a lit lamp the active
-        // tab is writable, the two locks being mutually exclusive. Its press
-        // was already a consumed nothing (the radio flag), which is why that
-        // is a fact worth stating rather than a term worth adding.
-        case RedesignButton::TabA:
-            return iteration_lock_refuses_tab_switch(a, 'A');
-        case RedesignButton::TabB:
-            return iteration_lock_refuses_tab_switch(a, 'B');
+        // (THE TWO TAB BUTTONS WERE MEMBERS FOR ONE AFTERNOON, 2026-09-10,
+        // when the lock refused Ctrl+Tab INTO A LOCKED TAB and each button
+        // greyed on its own tab's bit. The piece-wide exclusion ruled that
+        // evening deleted the state they described — no tab can be locked
+        // under a lit lamp and the lamp cannot be lit while any tab is locked
+        // — so they are back in the never-grey group at their enabled arm and
+        // this membership has no per-tab member at all.)
         // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
         // as the keyboard gate's own bound-axis test does: with Lower or Upper
         // addressed the press reaches the bound cells — the mode's one
@@ -13581,6 +13567,17 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
+        // THE TWO TAB BUTTONS MIRROR NOTHING, and they left this arm for one
+        // afternoon on 2026-09-10, when the iteration lock refused Ctrl+Tab
+        // into a LOCKED tab and each button greyed on its own tab's bit. The
+        // piece-wide exclusion ruled that evening deleted the state that
+        // described — no tab can be locked under a lit lamp — so they are back
+        // here with their siblings: their presses dispatch in every state and
+        // the CHORD's own refusals answer, the radio flag making a press on
+        // the lit half a consumed nothing, and the `h` view greys neither
+        // (row 3 is the A/B tabs in every state).
+        case RedesignButton::TabA:
+        case RedesignButton::TabB:
         case RedesignButton::IconAudioView:
         // THE TRIM REGION TOGGLE MIRRORS NOTHING (2026-08-16, unchanged when
         // it became a toggle on 2026-08-18), and for a stronger reason than
@@ -13710,20 +13707,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE ITERATION LOCK IS THE ONE REFUSAL IT MIRRORS (architect
         // 2026-09-10): bare `o` refuses while the lamp is lit, so that the
         // two locks can never compose, and this face wears the card the key
-        // would raise. NO READ-ONLY TERM, the history button's shape one arm
-        // down and for the stronger of that arm's two reasons: under a lit
-        // lamp the active tab is writable by construction.
+        // would raise. It is one half of a PIECE-WIDE exclusion — the other
+        // is the Grid Iterations lamp, which greys while EITHER tab is locked
+        // (any_tab_read_only, above) — and this face needs no tab term of its
+        // own for that reason: under a lit lamp no tab is locked at all.
         case RedesignButton::IconReadOnly:
-        // THE TWO TAB BUTTONS MIRROR ONE REFUSAL AND ONLY THEIR OWN HALF OF
-        // IT (architect 2026-09-10): each carries Ctrl+Tab, and the lock
-        // refuses that chord INTO A LOCKED TAB, so the button of a locked tab
-        // greys under a lit lamp and its neighbour does not. Everything else
-        // about them is unchanged — their presses dispatch in every state and
-        // the CHORD's own refusals answer, the radio flag making a press on
-        // the lit half a consumed nothing, and the `h` view greys neither
-        // (row 3 is the A/B tabs in every state).
-        case RedesignButton::TabA:
-        case RedesignButton::TabB:
         // THE HISTORY BUTTON MIRRORS ONE REFUSAL AND NOT THE OTHERS, and both
         // halves are worth naming because the temptation to mirror the rest is
         // real: `h` refuses while audio is loading or absent (on_key's own
@@ -13994,11 +13982,21 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // AND THE READ-ONLY HALF OF THE LOCK IS THE WHOLE LOCK HERE
         // (2026-09-10): the ITERATION lock cannot grey the lamp that turns it
-        // off, so this arm asks the tab's own bit and not authoring_locked —
+        // off, so this arm asks a read-only bit and not authoring_locked —
         // the one exception the composition names for itself, matching bare
         // `i`'s admission through iteration_lock_key_blocked.
+        //
+        // AND THE BIT IT ASKS IS THE PIECE'S, NOT THE ACTIVE TAB'S (architect
+        // 2026-09-10, that evening: "simpler to just prevent i mode if o mode
+        // is on anywhere and vice versa"): the two tabs SHARE both marker
+        // stores, so a lock on EITHER is a lock on the markers a bracket
+        // would tune, and this face greys while either bit stands
+        // (any_tab_read_only, above). It is bare `i`'s own arm read back —
+        // that arm refuses on the same predicate and cards the read-only
+        // sentence — and the exclusion's other half is the PADLOCK's face
+        // above, which greys while the lamp is lit.
         case RedesignButton::IconIter:
-            return !active_view_state(a).read_only;
+            return !any_tab_read_only(a);
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
         // render player, which plays a rendered wav and authors nothing, so
         // the key is on the read-only allowlist and the button follows it —
@@ -16225,17 +16223,15 @@ inline RedesignTooltipText redesign_button_tooltip(
                         "so its value is not what the render applies (J)",
                         nullptr};
             }
-            // AND THE ITERATION LOCK DROPS IT TOO (2026-09-10): the jump ENDS
-            // ON THE OTHER TAB, so under a lit lamp it refuses whenever that
-            // tab is locked — the switch's one owner, asked here about the
-            // tab the jump would land on. Bare `j` still copies, so the twin
-            // rule keeps the face LIT and only the line goes; advertising a
-            // jump the shift press would answer with a card is exactly the
-            // lie codex round B caught in this same arm on 2026-09-01.
+            // (AN ITERATION-LOCK TERM STOOD HERE for one afternoon on
+            // 2026-09-10, dropping the line while the jump's target tab was
+            // locked under a lit lamp. The piece-wide exclusion ruled that
+            // evening deleted that state — the lamp cannot be lit while any
+            // tab is locked — so the jump switches tabs under the lamp
+            // exactly as it always did and the line is owed in every state
+            // the two conditions below admit.)
             if (verdict != PayloadEligibility::Eligible ||
-                value_source_marker(a, total_frames) < 0 ||
-                iteration_lock_refuses_tab_switch(
-                    a, a.active_tab_view == 'A' ? 'B' : 'A'))
+                value_source_marker(a, total_frames) < 0)
                 return {"Copy Resolved Value (J)", nullptr};
             // (A BACKEND FORK stood in both arms above for one day,
             // 2026-09-03, spelling "Copy is not available on this backend"

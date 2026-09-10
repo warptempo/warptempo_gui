@@ -286,13 +286,32 @@
 // `h` view's fork keeps the literal, the view being unreachable under the
 // second reason. THE KEYBOARD GATE IS
 // NOT A READER (since 2026-08-30): it says "<chord> is not available on a
-// read-only tab" through the speller instead, naming what was pressed, which
-// is what a user who just pressed it is looking for. Its predicate is the
+// read-only tab" through the speller and the composer below instead, naming
+// what was pressed, which is what a user who just pressed it is looking for. Its predicate is the
 // complement of an allowlist and so drops an unbound chord with a bound
 // authoring one, which is why that gate asks chord_is_bound first and answers
 // the unbound half with silence. The full reasoning is at that gate
 // (input_handler.cpp).
 inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
+
+// THE SAME LOCK'S SENTENCE WITH THE CHORD IN IT, composed once — "<chord> is
+// not available on a read-only tab", the words the keyboard gate has said
+// since 2026-08-30 (the reasoning for naming the press rather than the tab is
+// at that gate, input_handler.cpp). It takes the ALREADY-SPELLED chord rather
+// than the key and its modifiers, so this header needs nothing of the
+// speller's; every caller reaches spell_chord (gui_input.h) for itself.
+//
+// TWO CALLERS, and the second is why it is a composer at all: the keyboard
+// gate (on_key), whose subject is the ACTIVE tab's bit, and BARE `i`'s OWN
+// ARM (input_key_dispatch.cpp), whose subject is the PIECE — grid iterations
+// refuse to light while EITHER tab is locked, the two A/B tabs sharing both
+// marker stores (any_tab_read_only, app_state.h). The two subjects differ and
+// the SENTENCE MUST NOT: one press of `i` says one thing whichever tab is the
+// locked one, which is exactly what a second spelling of this English would
+// have drifted away from.
+inline std::string read_only_chord_card(const std::string& chord) {
+    return chord + " is not available on a read-only tab";
+}
 
 // THE ITERATION LOCK'S SENTENCE IS kIterationLockCard AND IT LIVES IN
 // app_state.h, beside the sweep's two verdict cards and for the same reason

@@ -856,12 +856,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // carry the column with them; the mode is lit for the column you are in —
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
-    // (architect 2026-09-10; Ctrl+Tab stays admitted, the two tabs sharing
-    // both stores, and a switch INTO A LOCKED TAB is refused by the per-tab
-    // owner iteration_lock_refuses_tab_switch, app_state.h, no keyboard
-    // allowlist being able to ask a per-tab question) — MINUS BARE `o`, the
+    // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
+    // tabs sharing both stores) — MINUS BARE `o`, the
     // read-only toggle (architect 2026-09-10: the padlock refuses under a lit
-    // lamp, which is what makes the two locks mutually exclusive) —
+    // lamp, half of what makes the two locks mutually exclusive; the other
+    // half is bare `i`'s own arm, which refuses to LIGHT the lamp while
+    // either tab is locked and is no allowlist's business, any_tab_read_only
+    // in app_state.h) —
     // AND PLUS FIVE ADMISSIONS: bare `i` (the off edge must always be
     // reachable), bare `m` (BPM iterations, the one road that leaves this
     // mode by entering another, landing nothing in history at the press),
@@ -983,13 +984,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // THE TWO REASONS ARE MUTUALLY EXCLUSIVE (architect 2026-09-10, ruling
     // bare `o` refused under a lit lamp), which is why the fork below is a
-    // plain either/or: a lit lamp cannot be locked — the padlock is on the
-    // iteration list's refusals, the settings editor's typed self-lock refuses
-    // beside it (settings_editor.cpp) and every tab switch into a locked tab
-    // refuses (iteration_lock_refuses_tab_switch, app_state.h) — and a locked
-    // tab cannot be lit, bare `i` never having been on the read-only list. So
+    // plain either/or: NO TAB can be locked while the lamp is lit — the
+    // padlock is on the iteration list's refusals and the settings editor's
+    // typed self-lock refuses beside it for BOTH tabs' keys
+    // (settings_editor.cpp) — and THE LAMP CANNOT BE LIT WHILE ANY TAB IS
+    // LOCKED, bare `i`'s own arm asking any_tab_read_only (app_state.h)
+    // beyond what this gate's per-tab read can say. So
     // at most one of the two terms below is ever true, and the card fork
-    // CHOOSES the sentence rather than ranking it.
+    // CHOOSES the sentence rather than ranking it. THE EXCLUSION IS
+    // PIECE-WIDE for the subject's sake: the two A/B tabs share both marker
+    // stores, so a lock on either is a lock on the markers iterations author.
     //
     // IT WAS ORDERED UNTIL THAT MORNING, read-only first, because `i` then `o`
     // reached the composed state: there the wider list applied, the iteration
@@ -999,7 +1003,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // wider list cannot answer for a refusal it does not carry, and read-only
     // ADMITS the column switch and the paired march — through a predicate of
     // delta (a)'s own. Both the carve-out and that predicate are gone with the
-    // state they described.
+    // state they described — as is the per-tab switch refusal that stood
+    // between the two rulings for one afternoon of the same day.
     const bool read_only_says_no =
         active_view_state(app).read_only && read_only_key_blocked(key, mods);
     const bool iteration_says_no =
@@ -1010,7 +1015,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // for a chord this product BINDS and for no other. The sentence is
         // kept over a bare "This tab is read-only" because it names what was
         // pressed, which is what the user is looking for after a press that
-        // did nothing.
+        // did nothing. THE ENGLISH IS read_only_chord_card's (notifications.h)
+        // and not this site's, because bare `i`'s own arm says it too: that
+        // arm's subject is the PIECE where this gate's is the ACTIVE TAB
+        // (any_tab_read_only, app_state.h), and one press of `i` has to say
+        // one thing whichever tab is the locked one.
         //
         // THE SECOND CLASS IT WAS BUILT FOR HAS GONE SILENT — TWICE OVER, in
         // two rulings a day apart — and with it the cost the wording was chosen
@@ -1073,7 +1082,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // moved off the opener: the editor's engine-key commit, the render
         // player's Load in place, and the `h` view's bare `v` fork above.
         //
-        // AND THE CARD FORKS ON THE REASON AT THIS ONE COMPOSER (architect
+        // AND THE CARD FORKS ON THE REASON AT THIS ONE SITE (architect
         // 2026-09-10), on the REASON THAT ACTUALLY STOOD — which since that
         // morning is the only reason standing, the two locks being mutually
         // exclusive (the fork's own note above). The
@@ -1093,8 +1102,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  read_only_says_no
-                                     ? spell_chord(key, mods) +
-                                           " is not available on a read-only tab"
+                                     ? read_only_chord_card(
+                                           spell_chord(key, mods))
                                      : std::string(kIterationLockCard));
         return;
     }

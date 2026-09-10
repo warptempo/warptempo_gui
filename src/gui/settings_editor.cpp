@@ -335,21 +335,12 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     }
     if (key == "active_tab_view") {
         if (gv.c == app.active_tab_view) { unchanged(); return true; }
-        // THE ITERATION LOCK REFUSES A SWITCH INTO A LOCKED TAB (architect
-        // 2026-09-10), through the switch's one owner: this arm is the typed
-        // spelling of Ctrl+Tab, so it takes Ctrl+Tab's refusal, in this
-        // surface's own shape (red flash plus card). Without it the editor —
-        // which the Settings dropdown opens under a lit lamp, the lock
-        // governing the keys and not the surface — would be a second road onto
-        // the state that ruling exists to delete.
-        if (iteration_lock_refuses_tab_switch(app, gv.c)) {
-            app.settings_editor.red = true;
-            viewport.invalidate_modal_dialog_area();
-            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kIterationLockCard);
-            return true;
-        }
+        // (AN ITERATION-LOCK REFUSAL STOOD HERE for one afternoon on
+        // 2026-09-10, this arm being the typed spelling of Ctrl+Tab and that
+        // chord having been refused INTO A LOCKED TAB. The piece-wide
+        // exclusion ruled that evening deleted the state it answered — the
+        // lamp cannot be lit while any tab is locked — so this commits under
+        // a lit lamp exactly as Ctrl+Tab does.)
         // Exactly the Ctrl+Tab pair.
         active_views.switch_active_tab_view_to(gv.c);
         target_render.trigger();
@@ -464,20 +455,24 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // standing right there. Bare `;` still cannot open the editor on a
         // locked tab at all, being off that allowlist one level up.
         if (gv.b == band.read_only) { unchanged(); return true; }
-        // THE ITERATION LOCK REFUSES A SELF-LOCK (architect 2026-09-10), the
-        // typed spelling of bare `o`'s own refusal and scoped exactly as that
-        // refusal is scoped: LOCKING THE ACTIVE TAB while the lamp is lit is
-        // the road onto the composed state — the tab whose sentence would then
-        // outrank the mode's own cells, with bare `i` off the read-only list
-        // and unable to put the lamp out. A REMOTE lock (`tab_B_read_only=true`
-        // typed from tab A) still commits, and must: it leaves the invariant
-        // intact — the lamp still stands over a writable tab — and Ctrl+Tab
-        // into that tab is what refuses afterwards, through the switch's own
-        // owner. An UNLOCK in either direction commits under a lit lamp too;
-        // it can only widen what is reachable. Red flash plus card, this
-        // surface's shape, with the sentence forked at the one composer.
-        if (gv.b && tab_char == app.active_tab_view &&
-            app.iteration_mode_enabled) {
+        // THE ITERATION LOCK REFUSES A LOCK OF EITHER TAB (architect
+        // 2026-09-10), the typed spelling of bare `o`'s own refusal and
+        // scoped as the exclusion is scoped — PIECE-WIDE, not per tab: the
+        // two A/B tabs SHARE both marker stores, so a lock ANYWHERE is a lock
+        // on the markers the bound cells would tune, and bare `i` refuses to
+        // light the lamp while either bit stands (any_tab_read_only,
+        // app_state.h). A REMOTE lock (`tab_B_read_only=true` typed from tab
+        // A) therefore refuses with a self-lock; it was admitted for one
+        // afternoon that day, under a per-tab rule in which the switch INTO
+        // the locked tab is what refused afterwards, and that rule is gone.
+        // AN UNLOCK IN EITHER DIRECTION COMMITS under a lit lamp: it can only
+        // widen what is reachable, which is why the `gv.b` term is the whole
+        // of the direction test. Red flash plus card, this surface's shape,
+        // with the sentence forked at the one composer. Without this arm the
+        // editor — which the Settings dropdown opens under a lit lamp, the
+        // lock governing the keys and not the surface — would be a second
+        // road onto the state the ruling exists to delete.
+        if (gv.b && app.iteration_mode_enabled) {
             app.settings_editor.red = true;
             viewport.invalidate_modal_dialog_area();
             std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
