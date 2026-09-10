@@ -897,11 +897,13 @@ build_warp_frame_map(const std::vector<MarkerForRender>& markers,
             // GUI/CLI marker never trips it. The clause that used to stand here
             // — that the sweep batches' per-cell tempo mutations are unbracketed
             // and can drive a cell's effective product non-positive, making this
-            // the sweep's ruled async-stderr backstop — IS FALSE as of the same
-            // day: clamp_iter_bracket_to_tempo_bracket (warpmarkers.h) folds a
-            // live iter bracket back into [kTempoMinCents, kTempoMaxCents] every
-            // time its base tempo moves, so every rendered cell is in-bracket by
-            // CONSTRUCTION and no GUI path emits a non-positive tempo at all. A
+            // the sweep's ruled async-stderr backstop — IS FALSE (comment retold
+            // under architect approval 2026-09-10): GRID ITERATIONS LOCK THE
+            // PIECE — while the mode is lit, the bound editor's commit refuses a
+            // bound outside [kTempoMinCents - base, kTempoMaxCents - base], the
+            // arrows' step clamps into that window, and no act that could move
+            // the base tempo is admitted — so every rendered cell is in-bracket
+            // by CONSTRUCTION and no GUI path emits a non-positive tempo at all. A
             // hand-edited sidecar cannot arrive here carrying one either — the
             // parser applies the same cent bracket at load, first.
             //
