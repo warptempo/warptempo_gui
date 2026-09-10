@@ -503,15 +503,17 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
         return "Select a phase reset to change its range";
     if (app.selected_markers.size() >= 2)
         return adjust_iter_bound_hops_group(side, delta_hops);
-    // THE WALL, AHEAD OF THE COALESCE STAMP — the face greys on it, so the key
-    // must leave the stamp exactly as the greyed button does (the rule at
-    // Undo::coalesce_gesture). Silent: a benign one-dimensional refusal already
-    // at its state, the cell's own value being the place to glance.
+    // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
+    // arms read this very predicate), so the key says nothing either — a
+    // benign one-dimensional refusal already at its state, the cell's own
+    // value being the place to glance. (It was ranked AHEAD OF THE COALESCE
+    // STAMP until 2026-09-10, the key having had to leave the stamp exactly
+    // as the greyed button did; the bound step stamps nothing now, so there
+    // is no ordering left to keep.)
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_hops))
         return std::nullopt;
     // THE KIND REFUSAL, with a live face and a card, as the tempo step's
-    // value-shaped tails are. It stood BEHIND the coalesce stamp until
-    // 2026-09-10; there is no stamp to rank against now.
+    // value-shaped tails are.
     if (const char* refusal = iter_bound_step_kind_refusal(app))
         return refusal;
     const auto& pv_const = app.phaseresetmarkers.markers();

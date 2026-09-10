@@ -2310,8 +2310,10 @@ enum class RedesignButton {
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
     // drift; the tooltip names the TOGGLE for the reason every lamp's does —
     // AND IT DOES NOT NAME THE COLUMN (architect 2026-09-10, "leave the
-    // tooltip as it is"): the press stamps the column it lands in, and a lamp
-    // seen lit from the other column is the reminder that data rests there.
+    // tooltip as it is"): the press lights the mode for the column it lands in
+    // and the LIVE COLUMN IS STABLE from there, the W/P switch being one of
+    // the acts the lock refuses, so there is no other column to see it lit
+    // from and no column for a tooltip to name.
     // ITS GATE IS THE READ-ONLY LOCK ALONE since 2026-09-09 — the lamp is
     // admitted in BOTH COLUMNS and both audio views, the toggle being MODE
     // STATE rather than authoring (the record is at the `i` arm,
@@ -11063,33 +11065,146 @@ inline const ViewState& active_view_state(const AppState& a) {
 // cells — deliberately pushes nothing, so an undo entry made under a lit lamp
 // could not be told from one made before it.
 //
-// EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO, and
-// nearly everything it admits the iteration lock admits: navigation,
-// playback, the trim gestures and `[` / `Shift+[`, Ctrl+S, both render
-// chords, the clipboard copies, Synchronize, Open project and the quit. WHAT
+// EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO WITH
+// TWO NAMED EXCEPTIONS, and nearly everything it admits the iteration lock
+// admits: navigation, playback, the trim gestures and `[` / `Shift+[`,
+// Ctrl+S, both render chords, Synchronize, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
-// reachable) and bare `m` (BPM iterations, the one road that leaves this mode
-// by entering another and which lands nothing in history at the press). WHAT
+// reachable), bare `m` (BPM iterations, the one road that leaves this mode
+// by entering another and which lands nothing in history at the press) and
+// THE TWO CLIPBOARD COPIES, Ctrl+P and Ctrl+/, which are the two exceptions:
+// each reads a run into a session clipboard and pushes nothing, so the undo
+// domain this lock protects has no interest in them, while the read-only lock
+// eats the propagate family whole for its own reason — one tab's authored
+// content. The three PASTES stay refused by both. WHAT
 // IT TAKES AWAY IS THE W/P COLUMN SWITCH (architect 2026-09-10): the mode is
 // lit for the column you are in, so bare `p` and the absolute view selectors
 // 1/2/3 — which compose that switch — refuse while the lamp stands, and the
-// Toggle Marker Column button greys with the sentence. Bare `t` and the audio
+// Toggle Marker Column button greys with the sentence. THAT QUARTET IS THE ONE
+// THING THE READ-ONLY LOCK DOES NOT OUTRANK, because it is a refusal the wider
+// list does not carry at all — read-only ADMITS a column switch — so on a
+// locked tab with the lamp lit the gate asks the quartet BESIDE the read-only
+// list and the four chords take the ITERATION sentence there
+// (GuiInputHandler::iteration_lock_column_switch, its one owner). Bare `t` and the audio
 // view stay live, the mode being target-legal and the brackets reading no
-// audio view. THE A/B TAB SWITCHES STAY LIVE TOO, and by construction rather
+// audio view. AND THE `h` HISTORY VIEW'S ENTRY REFUSES (the view's own acts
+// push history and two modal views are not composed), which is the one
+// refusal this lock does NOT keep at the gate: the history vocabulary is
+// claimed a dispatch above it, so the arm that opens the view carries the
+// refusal and the Toggle History View button greys with it. THE A/B TAB SWITCHES STAY LIVE TOO, and by construction rather
 // than by exception: the two tabs SHARE the warp and the phase-reset stores
 // (AppState's tab block), so a bracket is common to both tabs and Ctrl+Tab
 // and the Ctrl+Shift+Tab paired march cannot strand one. The two deltas
 // are stated once, at GuiInputHandler::iteration_lock_key_blocked
 // (input_key_dispatch.cpp), which is the keyboard's ONE gate; the faces read
-// this predicate and the card forks at ONE composer (authoring_lock_card,
+// this predicate and, for the iteration half's per-button membership,
+// iteration_lock_greys below, and the card forks at ONE composer
+// (authoring_lock_card,
 // notifications.h) with READ-ONLY OUTRANKING — a locked tab says its own
-// sentence, since a tab can be locked while the lamp is already lit.
+// sentence, since a tab can be locked while the lamp is already lit. The gate
+// composes its own fork on the REASON THAT STOOD rather than on the tab's bit,
+// which is what gives the column quartet the iteration sentence under both.
 //
 // The whole rule and its consequences live in marker-ui.md's Iteration Mode
 // section; every owner here points there rather than restating it.
 inline bool authoring_locked(const AppState& a) {
     return active_view_state(a).read_only || a.iteration_mode_enabled;
+}
+
+// THE ITERATION HALF OF THE LOCK, PER BUTTON — the ONE membership statement
+// for "grid iterations is what refuses this button's currently addressed
+// form", and it has TWO READERS THAT MUST NEVER DRIFT: the enabled arms below
+// (redesign_button_enabled) and the tooltip overload's one iteration-lock
+// fork, which owes each greyed face the card its press would have raised
+// (the tooltips-on-disabled ruling). Writing it here rather than at each arm
+// is what keeps the hint from becoming a second list of the same buttons —
+// the drift the truthful-buttons ruling exists to prevent, one surface over.
+//
+// IT IS THE ITERATION HALF ALONE, deliberately, and every reader composes its
+// own read-only half:
+//   * most of the members' read-only half is the tab's bare bit (the marker
+//     verbs, the Measure, Edit flag, Up/Down);
+//   * TWO MEMBERS HAVE NO READ-ONLY HALF AT ALL — the Toggle Marker Column
+//     lamp (bare `p` is on read_only_key_blocked's allowlist) and the Toggle
+//     History View button (a locked tab reads history exactly as a writable
+//     one does) — so those two arms read this predicate and nothing else, and
+//     the lamp's KEY agrees on a locked tab: the quartet is asked beside the
+//     wider list there, so the face and the chord refuse together;
+//   * LEFT / RIGHT's read-only half carries the LANE TERM with it
+//     (horizontal_arrow_step_lock_admits), so that arm spells the two halves
+//     separately rather than composing authoring_locked;
+//   * and the TOOLTIP's SHARED fork asks !read_only ahead of it, because for
+//     its members a locked tab's KEY never reaches the iteration refusal at
+//     all — the gate asks the WIDER list there — so the tab keeps the ordinary
+//     hint it has always shown (Undo's and Redo's fork states this same rank).
+//     THE COLUMN LAMP'S OWN FORK, which ranks above that one, asks no
+//     read-only term for the reason its arm gives: its chord is the quartet
+//     the gate asks under BOTH reasons, so the hint is true on a locked tab.
+//
+// WHAT IS NOT A MEMBER, and why:
+//   * UNDO AND REDO, whose mode refusal is history_step_actionable's third
+//     term and whose hint NAMES THE ACT instead of the way out
+//     (kIterationLockUndoHint / kIterationLockRedoHint) — a user who pressed
+//     Ctrl+Z is asking about undo. They are the lock's members with a sentence
+//     of their own, so they take their own fork.
+//   * GRID ITERATIONS and BPM ITERATIONS, the two exit roads, and SAVE,
+//     RENDER, the trim family, playback, the zoom and magnification family,
+//     the audio-view lamp, the A/B tabs and Copy resolved value, every one of
+//     which the lock ADMITS (the allowlist's two deltas are stated once at
+//     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
+//   * THE VIEW BAR'S THREE SELECTORS, whose chords the lock does refuse and
+//     whose faces stay lit all the same — the reason is at their own arm
+//     below, and it is the row's face scope rather than the lock's answer.
+inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
+    if (!a.iteration_mode_enabled) return false;
+    switch (b) {
+        // The four marker verbs and the Measure: every one of them writes a
+        // store and pushes, which is the whole of what the lock holds back.
+        case RedesignButton::IconMarkerDrop:
+        case RedesignButton::IconMarkerDelete:
+        case RedesignButton::IconMarkerDisable:
+        case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconMarkerMeasure:
+        // The Toggle Marker Column lamp — the lock's W/P delta, the mode being
+        // lit for the column you are in.
+        case RedesignButton::IconMarkerColumn:
+        // The Toggle History View button — the view's own acts push history,
+        // and two modal views are not composed, so the ENTRY refuses
+        // (handle_history_mode_key, input_key_dispatch.cpp).
+        case RedesignButton::IconHistory:
+            return true;
+        // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
+        // as the keyboard gate's own bound-axis test does: with Lower or Upper
+        // addressed the press reaches the bound cells — the mode's one
+        // authoring surface — and on the PAYLOAD or the MEASURE axis it would
+        // open an editor over serialized content or run the tempo step, both
+        // of which push. The measure axis is a member for the same reason it
+        // cards the lock's sentence at the key: the gate admits the two bound
+        // cells and nothing else, so the deeper "a measure has no value to
+        // step" is never the refusal that stands under a lit lamp.
+        case RedesignButton::IconMarkerEditFlag:
+        case RedesignButton::TransportUp:
+        case RedesignButton::TransportDown:
+            return a.addressed_cell != MarkerCell::Lower &&
+                   a.addressed_cell != MarkerCell::Upper;
+        // LEFT / RIGHT ARE THE LANE'S, through the gate's own owner: in the
+        // marker lane the press is a position nudge and pushes, in the
+        // waveform lane it is the playhead's step and the lock has nothing to
+        // protect from it.
+        case RedesignButton::TransportLeft:
+        case RedesignButton::TransportRight:
+            return !horizontal_arrow_step_lock_admits(a);
+        // A DEFAULT RATHER THAN AN EXHAUSTIVE SWITCH, unlike the roster
+        // classification below: the members are the lock's, not the roster's,
+        // and a button that joins the lock has to be added at its own enabled
+        // arm anyway — that arm is what would go unwritten, and no -Wswitch
+        // here could catch it. The list above is that arm's mirror and the
+        // faces are hand-listed against the gate either way (the standing note
+        // at read_only_key_blocked, input_key_dispatch.cpp).
+        default:
+            return false;
+    }
 }
 
 // THE ACTIVE MARKER COLUMN'S STORE SIZE, one owner for the phase-reset/warp
@@ -11815,11 +11930,13 @@ inline std::size_t history_walk_step_landing(
 // at most the cap when it is multiplied, so the product cannot approach an
 // integer boundary.
 //
-// IT WALKS THE LIT COLUMN'S STORE ALONE (architect 2026-09-10: `i` stamps the
-// column it is pressed in and "the iterations land wherever I'm looking"), so
-// the other store contributes nothing to the count and nothing to the product
-// — the warp arm below runs under a 'W' stamp and the phase arm under a 'P'
-// one, never both.
+// IT WALKS THE LIT COLUMN'S STORE ALONE (architect 2026-09-10: "the
+// iterations land wherever I'm looking"), so the other store contributes
+// nothing to the count and nothing to the product — the warp arm below runs
+// in the 'W' column and the phase arm in the 'P' one, never both. THE LIVE
+// COLUMN IS THE LIT ONE AND CANNOT MOVE while the lamp stands: the W/P switch
+// is one of the acts the iteration lock refuses (iteration_column_lit, which
+// reads the live column, is this fork's one question).
 //
 // NEITHER ARM VERIFIES A WALL ANY MORE (architect 2026-09-10, the iteration
 // lock). The phase arm re-asked phase_reset_hop_window of every standing
@@ -12474,21 +12591,30 @@ inline bool playback_launch_playable(const AppState& a,
 //   * THE READ-ONLY MODE STATEMENT (architect 2026-08-15): the buttons the
 //     per-tab lock BLOCKS wear the dead face while it stands, so
 //     the toggle makes the buttons it eats look the way the `h` view already
-//     makes its own consumed buttons look. Their term is
-//     `!authoring_locked(a)` AND NOTHING ELSE — no selection term,
+//     makes its own consumed buttons look. Their term is THE LOCK AND NOTHING
+//     ELSE — no selection term,
 //     no view term, no wall term — because this is a MODE statement and not the
 //     truthfulness sweep: any interaction-cadence term added here would
 //     reintroduce the blink the same ruling removed from the arrows.
 //     THE LOCK IS ONE LOCK WITH TWO REASONS SINCE 2026-09-10 (the predicate is
 //     authoring_locked, above): the per-tab read-only bit and grid iterations
 //     standing, which freezes the whole undo domain because the mode's own
-//     surface pushes nothing. FIVE ARMS BELOW COMPOSE BOTH — Drop marker,
-//     Delete, Disable, Toggle inherit, Measure — while FOUR MEMBERS ASK THE
-//     TAB'S BIT ALONE, each saying why at its own arm: GRID ITERATIONS (the
-//     lamp that turns the mode off cannot be greyed by it), BPM ITERATIONS
-//     (the one road that leaves this mode by entering another, landing nothing
-//     in history at the press), EDIT FLAG and the UP/DOWN pair (both live on a
-//     BOUND AXIS, the bound cells being the mode's own authoring surface).
+//     surface pushes nothing. THE TWO HALVES ARE SPELLED SEPARATELY AT EVERY
+//     ARM, because the ITERATION half is PER BUTTON — the mode admits the
+//     bound cells and the marker lane's absence — and its whole membership has
+//     one owner, iteration_lock_greys (above), which the arms and the HINTS
+//     both read. SEVEN ARMS BELOW COMPOSE BOTH HALVES — Drop marker, Delete,
+//     Disable, Toggle inherit, Measure, Edit flag and the Up/Down pair, the
+//     last three admitted on a BOUND AXIS, where the cells are the mode's own
+//     authoring surface. TWO ASK THE ITERATION HALF ALONE, having no
+//     read-only term to compose: TOGGLE MARKER COLUMN (bare `p` is on the base
+//     allowlist) and TOGGLE HISTORY VIEW (the mode is claimed above the gate
+//     and a locked tab reads history as a writable one does). LEFT / RIGHT
+//     compose both halves around one lane term at their own arm. TWO ASK THE
+//     TAB'S BIT ALONE, each saying why at its arm: GRID ITERATIONS (the lamp
+//     that turns the mode off cannot be greyed by it) and BPM ITERATIONS (the
+//     one road that leaves this mode by entering another, landing nothing in
+//     history at the press).
 //     Undo and Redo take the mode through history_step_actionable instead, the
 //     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
@@ -12559,12 +12685,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     right here. (1) THE HISTORY FAMILY'S CHORDS ARE BLOCKED VACUOUSLY: bare
 //     `h`, bare `g` (the walk lamp's), bare `u`, bare `,` and
 //     bare `.` sit on no allowlist entry, so the walk reads a grey for five
-//     buttons the read-only lock has no say over. (The ITERATION lock does eat
-//     bare `h`: two modal views are not composed, so the view's opener cards
-//     the lock's sentence while the lamp stands — the OPENER's face is
-//     unchanged all the same, a lit button whose chord the gate drops being
-//     answered by that gate's card, which is the read-only lock's own posture
-//     for it.) Bare `h` never reaches the gate at all
+//     buttons the read-only lock has no say over. (The ITERATION lock does
+//     refuse bare `h` — two modal views are not composed — but not at this
+//     gate either: the refusal is the mode's own entry arm a dispatch above
+//     it, and the OPENER'S FACE mirrors that arm through the membership
+//     predicate iteration_lock_greys, which is where a walk of this gate
+//     would have found nothing at all.) Bare `h` never reaches the gate at all
 //     — handle_history_mode_key claims the toggle and returns from on_key
 //     ABOVE it — while the other four DO reach it on every press outside the
 //     view and bind nothing below it (handle_history_mode_key returns false
@@ -12870,7 +12996,29 @@ inline bool redesign_button_enabled(const AppState& a,
         // 1 and 3 by their face scope. (ROW 2's ICON MARKER COLUMN LEFT THIS
         // GROUP ON 2026-09-10 with the iteration lock's W/P delta — it greys
         // while grid iterations stands, at its own arm below. Its AUDIO-VIEW
-        // twin stays here: bare `t` is admitted under both locks.) (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
+        // twin stays here: bare `t` is admitted under both locks. ROW 2's
+        // TOGGLE HISTORY VIEW left the group the same day and for the same
+        // lock, at its own arm below.)
+        //
+        // AND THE VIEW BAR'S THREE STAY HERE UNDER THAT LOCK, although the
+        // gate really does eat their chords: bare 1 / 2 / 3 run the `t` and
+        // `p` handlers, so the W/P delta blocks all three unconditionally
+        // (iteration_lock_key_blocked's first test — it is a flat four-chord
+        // list, not a "would this press move the column" question, which is
+        // why S+W under a lit lamp in S+W refuses too). THE ROW'S FACE SCOPE
+        // IS WHY THE FACE DOES NOT FOLLOW: these three have NO DISABLED FACE
+        // (view_bar_face, paint_handler.cpp, reads hovered / selected /
+        // pressed and no enabled bit — their only dimming is the whole bar's
+        // unfocused ground, view_bar_focused's own swap) and NO TOOLTIP (the
+        // row-1 exclusion at the constant table, 2026-08-02: their labels are
+        // the combinations themselves). A `false` here would therefore produce
+        // an INVISIBLE dead button that swallows the card its key raises —
+        // strictly less truthful than the lit button whose chord the gate
+        // drops and answers with "Turn off grid iterations first", which is
+        // the read-only lock's own standing posture for a face it cannot
+        // reach. Greying them wants a disabled view-bar face first, and that
+        // is a paint the crops never showed.
+        // (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
         // 2026-08-18 — the HISTORY COMPANIONS, whose keys are bound only inside
         // the `h` view and which grey at rest for that reason. They held the
         // same arm from 2026-08-05 (2026-08-08 for the Cumulative toggle) until
@@ -13035,16 +13183,32 @@ inline bool redesign_button_enabled(const AppState& a,
         // (redesign_button_selected below). The `h` view greys it through the
         // derived partition above, `o` being consumed in there.
         case RedesignButton::IconReadOnly:
-        // THE HISTORY BUTTON MIRRORS NOTHING EITHER, and its gates are worth
-        // naming because the temptation to mirror them is real: `h` refuses
-        // while audio is loading or absent (on_key's own blank-state return,
-        // above every dispatch) and the mode refuses to open when the git walk
-        // finds no history — and that second answer is NOT KNOWABLE PER FRAME.
-        // It costs subprocesses to ask, the row repaints on every hover, and the
-        // refusal is already a consumed no-op with its own stderr line. So the
-        // button joins the row's arm on the row's own terms.
-        case RedesignButton::IconHistory:
             return true;
+        // THE HISTORY BUTTON MIRRORS ONE REFUSAL AND NOT THE OTHERS, and both
+        // halves are worth naming because the temptation to mirror the rest is
+        // real: `h` refuses while audio is loading or absent (on_key's own
+        // blank-state return, above every dispatch) and the mode refuses to
+        // open while a checkpoint is publishing — and it USED TO refuse when
+        // the git walk found no history, which was NOT KNOWABLE PER FRAME (it
+        // costs subprocesses to ask and the row repaints on every hover; that
+        // refusal is the local walk's fallback since 2026-09-04 and no longer
+        // exists). So the button stayed on the row's own always-true arm.
+        //
+        // THE ITERATION LOCK IS THE ONE IT DOES MIRROR (architect 2026-09-10):
+        // the view's own acts push history — the revert, the two loads, the
+        // checkpoint's save — and two modal views are not composed, so the
+        // ENTRY refuses while the lamp stands (handle_history_mode_key,
+        // input_key_dispatch.cpp) and this face says so, wearing that card on
+        // its hint. It is stable state a glance cannot see and costs nothing
+        // to ask, which is what separates it from the three above.
+        //
+        // IT HAS NO READ-ONLY TERM, the Toggle Marker Column lamp's shape one
+        // button over: bare `h` is not on read_only_key_blocked's allowlist
+        // and never needed to be — the mode is claimed a dispatch ABOVE that
+        // gate, and a locked tab reads history exactly as a writable one does
+        // — so this face mirrors the ITERATION half alone.
+        case RedesignButton::IconHistory:
+            return !iteration_lock_greys(a, b);
         // THE READ-ONLY MODE STATEMENT (architect 2026-08-15) — the roster's
         // one grey that is not the `h` view's: EVERY ARM BELOW IS A CHORD
         // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab,
@@ -13128,7 +13292,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // coincident frame being the resolver's and the red flag's business —
         // so the sentence is deleted rather than inherited, 2026-09-02.)
         case RedesignButton::IconMarkerDrop:
-            return !authoring_locked(a) &&
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
                    (active_column_authoring_allowed(a) ||
                     phase_reset_drop_crossing_actionable(a));
         // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
@@ -13137,12 +13302,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // marker_selection_verb_actionable, which the two dispatch arms read.
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
-            return !authoring_locked(a) &&
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
                    marker_selection_verb_actionable(a);
         // TOGGLE INHERIT GREYS ON THE OP'S OWN LEADING RETURN (2026-08-30):
         // the P view, an empty selection, no focus — inherit_toggle_actionable.
         case RedesignButton::IconMarkerInherit:
-            return !authoring_locked(a) &&
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
                    inherit_toggle_actionable(a);
         // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
         // it is the MEASURE'S CLASS EXACTLY: bare Return opens an editor over
@@ -13160,18 +13327,20 @@ inline bool redesign_button_enabled(const AppState& a,
         // press would open an editor over serialized content, which the lock
         // refuses like every other authoring verb, so the face greys exactly
         // where the keyboard gate drops the chord (the two deltas are stated
-        // once at iteration_lock_key_blocked, input_key_dispatch.cpp).
+        // once at iteration_lock_key_blocked, input_key_dispatch.cpp). THE
+        // AXIS FORK IS THE MEMBERSHIP PREDICATE'S (iteration_lock_greys,
+        // above), which the button's HINT reads too, so the grey and the
+        // sentence it wears are one decision.
         case RedesignButton::IconMarkerEditFlag:
-            return (!authoring_locked(a) ||
-                    (!active_view_state(a).read_only &&
-                     (a.addressed_cell == MarkerCell::Lower ||
-                      a.addressed_cell == MarkerCell::Upper))) &&
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
                    flag_editor_open_actionable(a);
         // THE MEASURE GREYS WITH NOTHING FOCUSED (2026-08-30) — the `/` arm's
         // one refusal past the lock, marker_focus_standing; no view term, the
         // measure being both columns' in both views.
         case RedesignButton::IconMarkerMeasure:
-            return !authoring_locked(a) &&
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
                    marker_focus_standing(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
@@ -13208,21 +13377,23 @@ inline bool redesign_button_enabled(const AppState& a,
         // too — greys while the lamp stands, wearing the card its key raises
         // on its hint. IT IS THE ONE MEMBER OF THIS ARM WITH NO READ-ONLY
         // TERM: bare `p` is on read_only_key_blocked's allowlist (a column
-        // switch authors nothing), so a locked tab leaves it lit exactly as it
-        // leaves the chord live, and this face mirrors the ITERATION half of
-        // the gate alone. ITS AUDIO-VIEW TWIN STAYS NEVER-GREY beside the
+        // switch authors nothing), so a locked tab with the lamp DARK leaves
+        // it lit exactly as it leaves the chord live, and this face mirrors
+        // the ITERATION half of the gate alone — which is the truth on a
+        // LOCKED tab too, the gate asking the column quartet beside the wider
+        // list there precisely so the chord cannot outlive this face. ITS AUDIO-VIEW TWIN STAYS NEVER-GREY beside the
         // never-grey group above: the mode is target-legal and a bracket
         // reads no audio view, so bare `t` is admitted under both locks.
         case RedesignButton::IconMarkerColumn:
-            return !a.iteration_mode_enabled;
+            return !iteration_lock_greys(a, b);
         // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
         // arm has nothing else left to mirror (2026-09-09): the lamp is
         // ADMITTED IN BOTH COLUMNS — the phase-reset column carries a hop
         // bracket of its own — so the COLUMN
         // TERM went with the arm's, along with the P-column card it greyed
-        // beside. The press STAMPS the column it lands in (2026-09-10) and the
-        // face still has nothing to say about that: `i` acts in either
-        // column, lighting one or turning the mode off. Both audio views as
+        // beside. The press lights the mode for the column it lands in
+        // (2026-09-10) and the face still has nothing to say about that: `i`
+        // acts in either column, lighting one or turning the mode off. Both audio views as
         // before (the toggle is mode state rather
         // than authoring, the 2026-08-07 relaxation at the arm itself), and
         // the toggle is meaningful in either direction on any loaded piece.
@@ -13502,11 +13673,21 @@ inline bool redesign_button_enabled(const AppState& a,
         // meets the marker lane, through the gate's own owner
         // horizontal_arrow_step_lock_admits; with no selection the playhead
         // still moves on a locked tab, so the pair stays live there.
+        //
+        // AND THE ITERATION HALF IS THE SAME LANE'S (2026-09-10): with a
+        // marker selected the press is a POSITION NUDGE, which pushes, so the
+        // base allowlist drops it under a lit lamp exactly as it does on a
+        // locked tab — one lane term, two locks. The two halves are spelled
+        // as two lines rather than composed into authoring_locked because the
+        // iteration half is the membership predicate's (iteration_lock_greys,
+        // which the pair's HINT reads too) and only the read-only half is the
+        // tab's bare bit.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
             if (active_view_state(a).read_only &&
                 !horizontal_arrow_step_lock_admits(a))
                 return false;
+            if (iteration_lock_greys(a, b)) return false;
             if (!horizontal_arrow_step_actionable(
                     a, audio, b == RedesignButton::TransportLeft ? -1 : +1))
                 return false;
@@ -13521,11 +13702,14 @@ inline bool redesign_button_enabled(const AppState& a,
             // and steps the bound; on the payload axis the same press is the
             // TEMPO step, which lands in history, so the lock greys it here
             // and the keyboard gate drops the chord (the deltas are stated
-            // once at iteration_lock_key_blocked, input_key_dispatch.cpp).
-            if (a.iteration_mode_enabled &&
-                a.addressed_cell != MarkerCell::Lower &&
-                a.addressed_cell != MarkerCell::Upper)
-                return false;
+            // once at iteration_lock_key_blocked, input_key_dispatch.cpp). The
+            // axis fork is the membership predicate's (iteration_lock_greys),
+            // which the pair's HINT reads too — and it RANKS ABOVE the measure
+            // axis's own refusal below for the reason the key does: under a
+            // lit lamp the gate eats the chord before the step is ever asked,
+            // so the lock is the refusal that stands on the measure axis as
+            // much as on the payload one.
+            if (iteration_lock_greys(a, b)) return false;
             // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
             // a bound cell addressed the pair reads the bound step's own
             // owners, with the measure addressed nothing steps
@@ -15160,8 +15344,44 @@ inline RedesignTooltipText redesign_button_tooltip(
     // tooltips-on-disabled ruling. It reads the face's own term rather than
     // restating a condition. (Its AUDIO-VIEW twin needs no arm: bare `t` is
     // admitted under both locks.)
+    // NO READ-ONLY TERM, and that is the fork's own reading of the gate rather
+    // than an omission: the shared fork below carries one because a locked tab
+    // answers its members with the read-only sentence, while this button's
+    // chord is the COLUMN QUARTET, which the gate asks under both reasons and
+    // answers with this very card either way.
     if (b == RedesignButton::IconMarkerColumn && a.iteration_mode_enabled) {
         return {kIterationLockColumnHint, nullptr};
+    }
+    // AND EVERY OTHER FACE THE LOCK GREYS TAKES THE SAME SENTENCE, at ONE fork
+    // over the ONE membership (architect 2026-09-10; iteration_lock_greys,
+    // above): the marker verbs, the Measure, Edit flag and Up/Down on a
+    // payload or measure axis, and Left/Right with a marker selected. The
+    // predicate is the FACE'S OWN — the arms above call it too — so the grey
+    // and the words it wears are one decision, never a second list of the same
+    // buttons.
+    //
+    // IT RANKS ABOVE THE SWITCH BELOW, which is what makes it the OUTERMOST
+    // reason the same way the key's own card is: under a lit lamp the gate
+    // eats the chord before any of those buttons' deeper refusals is asked, so
+    // "Edit Flag", "Up", "Left" and the measure axis's own arm would each name
+    // an act that is not what refused. The lock's members that carry a
+    // sentence of their own rank ABOVE this one instead — the column lamp
+    // directly above, Undo and Redo below (their pair names the ACT, a user
+    // pressing Ctrl+Z asking about undo).
+    //
+    // READ-ONLY OUTRANKS IT, spelled here as Undo's and Redo's fork spells it:
+    // for THIS fork's members a locked tab's KEY never reaches the iteration
+    // refusal at all — the gate asks the WIDER list there, and none of them is
+    // the column quartet the gate asks beside it — so the tab keeps the
+    // ordinary hint it has always shown.
+    //
+    // THE ACCELERATOR IS ABSENT, and this is the one lock hint without one:
+    // RedesignTooltipText carries LITERALS, so a "…first (S)" per member would
+    // be a constant per member — a second spelling of a dozen accelerators the
+    // table already holds, and exactly the drift a shared fork exists to
+    // avoid. The two forks that DO name a key each answer ONE button.
+    if (!active_view_state(a).read_only && iteration_lock_greys(a, b)) {
+        return {kIterationLockCard, nullptr};
     }
     // UNDO'S AND REDO'S ITERATION-LOCK REASON (architect 2026-09-10), ranked
     // FIRST of this pair's two forks because the lock is the outermost state —

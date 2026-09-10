@@ -4051,13 +4051,24 @@ private:
     // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
     // (architect 2026-09-10). Returns true if key+mods should be dropped while
     // GRID ITERATIONS stands on a WRITABLE tab; on a locked tab the wider
-    // read-only list applies instead and this is not called (read-only
-    // outranks, the ordered fork at the gate in on_key). It is written as
+    // read-only list applies instead and this is not called — its delta (a)
+    // alone is asked there, through the quartet's own owner below (read-only
+    // outranks every refusal it carries, the fork at the gate in on_key). It
+    // is written as
     // read_only_key_blocked's answer plus its own deltas rather than as a
     // second copy of that list, and both deltas are stated at the definition.
     // It takes the live AppState through the handler's own member, exactly as
     // its base does for the arrows' lane term.
     bool iteration_lock_key_blocked(GuiKey key, GuiInputState mods);
+
+    // THE COLUMN SWITCH'S QUARTET — bare `p` and the three absolute view
+    // selectors, the ONE subtraction the allowlist above makes from its base
+    // and therefore the ONE thing that still has to be asked on a LOCKED tab,
+    // where the wider list ADMITS all four. State-free, so it is the class's
+    // own static: its two readers are the delta itself and the gate's
+    // read-only arm, which asks it beside the wider list. The whole account is
+    // at the definition (input_key_dispatch.cpp).
+    static bool iteration_lock_column_switch(GuiKey key, GuiInputState mods);
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.

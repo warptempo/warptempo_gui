@@ -2458,8 +2458,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // ITERATION MODE ADDS THE TWO BOUND CELLS TO THE COMMITTED FLAG, so the
     // anchors below must ask under the same verdict the flag pass paints
     // under: THE COLUMN'S, not the mode's bare bit (iteration_column_lit,
-    // app_state.h — architect 2026-09-10, `i` stamps the column it is pressed
-    // in and the cells live there alone). `phase` above is this editor's
+    // app_state.h — architect 2026-09-10, the lamp is lit for the column it
+    // was pressed in and the cells live there alone; the live column is
+    // stable for the whole life of the lamp, the W/P switch being one of the
+    // acts the iteration lock refuses). `phase` above is this editor's
     // column, the payload editor being the warp column's by its own open
     // gates, so the two anchors measure exactly the boxes the cached pass
     // painted.

@@ -306,9 +306,14 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // locked tab says its own sentence: the two locks compose (authoring_locked,
 // app_state.h) and a tab can be locked while the lamp is already lit (bare `o`
 // is read-only-legal and the mode is global rather than per-tab), so the fork
-// has to be ordered rather than exclusive. Its readers are the three sites
-// that KNOW THEIR ACT and so need no chord in the sentence; the keyboard gate
-// composes its own, the read-only half of it carrying the spelled chord.
+// has to be ordered rather than exclusive. Its readers are TWO of the three
+// sites that KNOW THEIR ACT and so need no chord in the sentence — the
+// settings editor's engine-key commit arm and the render player's Load in
+// place; the third, the `h` view's bare `v`, keeps the bare literal because
+// the view cannot stand under a lit lamp at all (its entry refuses with the
+// iteration sentence), so a fork there would have one live arm. The keyboard
+// gate composes its own, the read-only half of it carrying the spelled
+// chord.
 inline const char* authoring_lock_card(const AppState& a) {
     return active_view_state(a).read_only ? kTabReadOnlyCard
                                           : kIterationLockCard;

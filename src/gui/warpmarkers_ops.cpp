@@ -32,9 +32,11 @@
 // inventory are at active_column_authoring_allowed, app_state.h). So each of
 // the four dispatches in W+TARGET as well as W+source, and each owes the same
 // tail when app.active_audio_view == 'T' — the flag-editor commit adding one
-// term its three siblings do not need, canonical_changed, because it alone can
-// land a change that is NO MAP INPUT (an iter-bracket-only commit; the
-// argument is at that site):
+// term its three siblings do not need, canonical_changed, because a commit
+// that changed nothing serialized owes neither the kick nor the re-land (it
+// could once land a change that was NO MAP INPUT, an iter-bracket-only
+// commit, and that producer went with the bracket's exit from the undo domain
+// on 2026-09-10 — the argument is at that site):
 //   1. viewport.kick_waveform_sync() — the synchronous re-warp, so displayed
 //      == live at the command boundary, leaving no divergence window for the
 //      displayed-basis gestures (phase drags, trim drags) to ride out. These
@@ -1389,15 +1391,17 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
         return "Select a warp marker to change its range";
     if (app.selected_markers.size() >= 2)
         return adjust_iter_bound_cents_group(side, delta_cents);
-    // THE WALL, AHEAD OF THE COALESCE STAMP — the face greys on it, so the
-    // key must leave the stamp exactly as the greyed button does (the rule at
-    // Undo::coalesce_gesture). Silent: a benign one-dimensional refusal
-    // already at its state, the cell's own value being the place to glance.
+    // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
+    // arms read this very predicate), so the key says nothing either — a
+    // benign one-dimensional refusal already at its state, the cell's own
+    // value being the place to glance. (It was ranked AHEAD OF THE COALESCE
+    // STAMP until 2026-09-10, the key having had to leave the stamp exactly
+    // as the greyed button did; the bound step stamps nothing now, so there
+    // is no ordering left to keep.)
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_cents))
         return std::nullopt;
     // THE KIND REFUSAL, with a live face and a card, as the tempo step's
-    // value-shaped tails are. It stood BEHIND the coalesce stamp until
-    // 2026-09-10; there is no stamp to rank against now.
+    // value-shaped tails are.
     if (const char* refusal = iter_bound_step_kind_refusal(app))
         return refusal;
     const auto& mv_const = app.warpmarkers.markers();

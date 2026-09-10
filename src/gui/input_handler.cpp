@@ -752,7 +752,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and needs no entry in it. A locked tab reads history exactly as a writable
     // one does — it is a viewer either way. (The read-only allowlist happens to
     // admit the same navigation shapes anyway, but that is its own answer for
-    // its own reason, not a dependency of this one.)
+    // its own reason, not a dependency of this one.) THE ITERATION HALF OF THE
+    // LOCK IS THE ONE THING THAT DOES REACH THE MODE (2026-09-10), and this
+    // position is why it is spelled at the mode's own ENTRY arm rather than in
+    // either allowlist: the view's acts push history, so opening it under a lit
+    // lamp refuses with the lock's card, while the CLOSE edge stays ungated.
     if (handle_history_mode_key(key, mods)) return;
     if (app.history_mode.active &&
         history_mode_key_blocked(key, mods, app)) {
@@ -844,15 +848,26 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // true OR grid iterations stands (authoring_locked, app_state.h).
     //
     // THE LIST BELOW IS THE READ-ONLY ONE. The iteration lock's is that list
-    // with THREE MORE ADMISSIONS and nothing removed — bare `i` (the off edge
-    // must always be reachable), bare `m` (BPM iterations, the one road that
-    // leaves this mode by entering another, landing nothing in history at the
-    // press), and Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound
-    // cells are the mode's own authoring surface) — plus Ctrl+Z and
-    // Ctrl+Shift+Z, admitted not to act but so their own arm can card the
-    // sentence that names undo. That list has ONE owner,
-    // iteration_lock_key_blocked (input_key_dispatch.cpp), written as this
-    // one's complement plus its deltas rather than as a second copy.
+    // MINUS THE W/P COLUMN SWITCH — bare `p` and the three absolute view
+    // selectors bare 1 / 2 / 3, which run the `t` and `p` handlers and so
+    // carry the column with them; the mode is lit for the column you are in —
+    // AND PLUS FIVE ADMISSIONS: bare `i` (the off edge must always be
+    // reachable), bare `m` (BPM iterations, the one road that leaves this
+    // mode by entering another, landing nothing in history at the press),
+    // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
+    // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
+    // act but so their own arm can card the sentence that names undo), and the
+    // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+/ (they read a run into a session
+    // clipboard and push nothing, so the undo domain this lock protects has no
+    // interest in them; their three ALT-bearing pastes stay refused). That
+    // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
+    // written as this one's complement plus its deltas rather than as a second
+    // copy. THE SUBTRACTION IS ASKED ON A LOCKED TAB TOO, through the quartet's
+    // own owner beside this list — this one ADMITS all four, so it cannot
+    // answer for them (the fork below states it). BARE `h` IS REFUSED UNDER
+    // THAT LOCK TOO and is not on either list:
+    // the history vocabulary is claimed a dispatch above this gate, so the
+    // view's entry arm carries the refusal.
     //   - Bare o                 → toggle read-only off (escape chord)
     //   - Space (no mods)        → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
@@ -944,21 +959,39 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // keys do, while Save and Render now pass exactly as theirs do). Full
     // rationale at read_only_key_blocked in input_key_dispatch.cpp.
     // THE LOCK IS ONE LOCK WITH TWO REASONS (architect 2026-09-10, the
-    // iteration lock; the predicate is authoring_locked, app_state.h). The
-    // READ-ONLY half is the per-tab bit and its allowlist is
-    // read_only_key_blocked below; the ITERATION half is grid iterations
-    // standing, whose allowlist is that one plus the bound cells
+    // iteration lock; the composed predicate is authoring_locked, app_state.h,
+    // which the faces read — here each half spells its own bit, so the pair is
+    // not asked twice). The READ-ONLY half is the per-tab bit and its
+    // allowlist is read_only_key_blocked below; the ITERATION half is grid
+    // iterations standing, whose allowlist is that one plus the bound cells
     // (iteration_lock_key_blocked, input_key_dispatch.cpp, where both deltas
-    // are stated). READ-ONLY OUTRANKS, which is what this ordered fork spells:
-    // a tab can be locked while the lamp is already lit — bare `o` is
-    // read-only-legal and the mode is global rather than per-tab — and there
-    // the tab's own sentence is the one to say, so the WIDER list applies and
-    // the iteration side's three admissions (bare `i`, bare `m`, the bound
-    // axis) stay refused on a locked tab exactly as they always were.
+    // are stated).
+    //
+    // READ-ONLY OUTRANKS FOR EVERY CHORD IT REFUSES, which is what the fork
+    // below spells: a tab can be locked while the lamp is already lit — bare
+    // `o` is read-only-legal and the mode is global rather than per-tab — and
+    // there the tab's own sentence is the one to say, so the WIDER list
+    // applies and the iteration side's admissions (bare `i`, bare `m`, the two
+    // clipboard copies, the bound axis) stay refused on a locked tab exactly
+    // as they always were.
+    //
+    // BUT A WIDER LIST CANNOT ANSWER FOR A REFUSAL IT DOES NOT CARRY, and the
+    // iteration lock has exactly one — THE W/P COLUMN SWITCH, delta (a), which
+    // read-only ADMITS (a column switch authors nothing, so bare `p` and the
+    // three absolute view selectors are on its allowlist). Under BOTH reasons
+    // the two are therefore asked BESIDE each other: the read-only list on its
+    // own terms, plus that quartet through its one owner
+    // (iteration_lock_column_switch, the same predicate delta (a) is) — else
+    // the column would move under a lit lamp on a locked tab while the Toggle
+    // Marker Column button, which greys on the lamp alone, said otherwise.
     const bool read_only_here = active_view_state(app).read_only;
-    if (authoring_locked(app) &&
-        (read_only_here ? read_only_key_blocked(key, mods)
-                        : iteration_lock_key_blocked(key, mods))) {
+    const bool read_only_says_no =
+        read_only_here && read_only_key_blocked(key, mods);
+    const bool iteration_says_no =
+        app.iteration_mode_enabled &&
+        (read_only_here ? iteration_lock_column_switch(key, mods)
+                        : iteration_lock_key_blocked(key, mods));
+    if (read_only_says_no || iteration_says_no) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
         // 2026-08-30): "<chord> is not available on a read-only tab", said
         // for a chord this product BINDS and for no other. The sentence is
@@ -1028,7 +1061,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // player's Load in place, and the `h` view's bare `v` fork above.
         //
         // AND THE CARD FORKS ON THE REASON AT THIS ONE COMPOSER (architect
-        // 2026-09-10). The read-only sentence names the chord for the reason
+        // 2026-09-10), on the REASON THAT ACTUALLY STOOD rather than on the
+        // tab's bit: under both reasons the column-switch quartet is the
+        // iteration lock's refusal alone — the read-only list admits it — so
+        // it carries the iteration sentence on a locked tab too, which is the
+        // sentence the greyed Toggle Marker Column button wears there. The
+        // read-only sentence names the chord for the reason
         // above — this gate drops unbound chords with bound ones, so it has to
         // say which it ate. THE ITERATION SENTENCE NAMES THE WAY OUT INSTEAD
         // (kIterationLockCard, app_state.h — "Turn off grid iterations
@@ -1043,7 +1081,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // a user pressing undo is asking about.)
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
-                                 read_only_here
+                                 read_only_says_no
                                      ? spell_chord(key, mods) +
                                            " is not available on a read-only tab"
                                      : std::string(kIterationLockCard));
@@ -2045,9 +2083,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // adjust_iter_bound_hops on the phase-reset one — whose refusal this arm
     // cards exactly as it cards the tempo step's; with the MEASURE addressed there is
     // nothing to step and the press cards its one sentence
-    // (addressed_cell_step_refusal, the buttons' own grey). Same ladder, same
-    // repeat bit, same coalescing shape; the Up/Down buttons' face forks on
-    // the same axis.
+    // (addressed_cell_step_refusal, the buttons' own grey). SAME LADDER AND
+    // NOTHING ELSE SHARED: the bound step takes no repeat bit and no
+    // coalescing at all (2026-09-10 — it records nothing, so a held run has no
+    // burst to open or merge into and simply steps), while the tempo step
+    // keeps both. The Up/Down buttons' face forks on the same axis.
+    //
+    // AND UNDER A LIT LAMP ONLY THE BOUND ARM IS REACHED: the composed gate
+    // above admits Up/Down exactly on a bound axis (iteration_lock_key_blocked),
+    // so the payload arm's tempo step and the measure arm's sentence both
+    // belong to a dark lamp, and the buttons grey on the same fork.
     if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down)) {
         const int64_t delta_cents = (key == GuiKeys::Up ? +1 : -1) *

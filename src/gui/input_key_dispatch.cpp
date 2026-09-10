@@ -634,7 +634,26 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 }
 
 // -- THE ITERATION LOCK'S ALLOWLIST ------------------------------------------
-//
+
+// THE COLUMN SWITCH'S QUARTET, SPELLED ONCE — delta (a) below and the ONE
+// place the iteration half outranks the read-only lock's ADMISSION (architect
+// 2026-09-10, the lock's own ruling: the column switch is refused while grid
+// iterations is lit). The base list admits bare `p` and the three absolute
+// view selectors, a column switch authoring nothing, so on a LOCKED TAB WITH
+// THE LAMP LIT — reachable, bare `o` being read-only-legal and the mode global
+// rather than per-tab — the gate has to ask this quartet BESIDE the wider list
+// rather than instead of it, or the column would move under a lit lamp while
+// the Toggle Marker Column button greys and says otherwise. TWO READERS and no
+// second list: that gate (on_key, input_handler.cpp, whose read-only arm reads
+// it) and delta (a) below. Bare-exact on all four, as their own dispatch arms
+// spell them.
+bool GuiInputHandler::iteration_lock_column_switch(GuiKey key,
+                                                   GuiInputState mods) {
+    return !mods.ctrl && !mods.shift && !mods.alt &&
+           (key == GuiKeys::P || key == GuiKeys::Digit1 ||
+            key == GuiKeys::Digit2 || key == GuiKeys::Digit3);
+}
+
 // THE PIECE IS LOCKED WHILE GRID ITERATIONS STANDS (architect 2026-09-10:
 // "Nothing that can ever land in the undo history should be allowed, because
 // the undo history is not allowed. Basically only the brackets are turned on
@@ -646,9 +665,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //
 // IT IS THE ALLOWLIST ABOVE PLUS TWO DELTAS, NOT A SECOND COPY, which is what
 // keeps "everything the read-only lock refuses the iteration lock refuses too"
-// one statement rather than two lists that drift. Read-only outranks it: the
-// gate's ordered fork (on_key, input_handler.cpp) asks the WIDER list on a
-// locked tab, so nothing here loosens anything there.
+// one statement rather than two lists that drift. Read-only outranks it FOR
+// EVERY CHORD BUT DELTA (a)'s QUARTET: the gate (on_key, input_handler.cpp)
+// asks the WIDER list on a locked tab and asks the quartet BESIDE it through
+// the owner above, that delta being a REFUSAL the wider list does not carry
+// and so the one thing this side has to be heard on a locked tab about.
+// Nothing else here loosens or tightens anything there.
 //
 // DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS: THE W/P
 // COLUMN SWITCH, and nothing else (architect 2026-09-10: the mode is lit for
@@ -665,14 +687,17 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //
 // EVERY OTHER AUTHORING CHORD this mode has to hold back is already off the
 // list above — the vertical arrows on any modifier, bare Return, bare `/`,
-// Delete, Ctrl+D, Ctrl+N, bare `s` and Shift+S, `;`, the propagate copy/paste
-// family, bare `h` and the whole history vocabulary, and Ctrl+Z /
-// Ctrl+Shift+Z — so the base answers for all of them and this delta subtracts
-// the column switch alone. (The brief that landed this lock expected four
+// Delete, Ctrl+D, Ctrl+N, bare `s` and Shift+S, `;`, the three propagate
+// PASTES, and Ctrl+Z / Ctrl+Shift+Z — so the base answers for all of them and
+// this delta subtracts the column switch alone. BARE `h` IS THE ONE AUTHORING
+// ROAD THIS GATE DOES NOT ANSWER, and it is refused a dispatch earlier
+// instead: the history vocabulary is claimed above this gate
+// (handle_history_mode_key, below), so the view's ENTRY carries the lock's
+// refusal at its own arm and nothing here can see the chord. (The brief that landed this lock expected four
 // other subtractions; each named a chord read-only was thought to admit and
 // does not. Re-greped at the base's body.)
 //
-// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, four
+// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, five
 // entries and each with its own reason:
 //   * BARE `i` — the off edge. A lock that could not be left by the switch
 //     that entered it is a trap; the mode's own lamp stays live for exactly
@@ -698,25 +723,48 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     every other chord and the wrong one for the two the user pressed to ask
 //     about history. The arm refuses first, ahead of its own two terms, and
 //     history_step_actionable greys both buttons on the same fact.
+//   * THE TWO CLIPBOARD COPIES — Ctrl+P (the phase-reset placements) and
+//     Ctrl+/ (the measures) — which are CLIPBOARD-ONLY: each reads a
+//     contiguous labeled run into a session clipboard and writes no store, no
+//     undo entry and no dirty bit, so the whole reason this lock exists says
+//     nothing about them (the lock protects the undo domain; nothing here can
+//     ever land in it). The base list refuses them because READ-ONLY is a
+//     different question — it protects one tab's authored content and eats
+//     the propagate family whole — and this is the one place the two locks
+//     part company in the admitting direction rather than the refusing one.
+//     THE THREE PASTES STAY REFUSED by the base: Ctrl+Alt+P, Ctrl+Alt+Shift+P
+//     and Ctrl+Alt+/ each rewrite a store and push, which is exactly what the
+//     lock holds back. Ctrl-exact on both, no shift and no alt, the dispatch
+//     arms' own spelling — so the alt-bearing pastes cannot reach this
+//     admission by widening it. THE EDIT MENU'S TWO COPY ROWS come back with
+//     them and needed no edit of their own: each synthesizes its chord
+//     through on_key, so the row is the key.
 //
-// THE FACES MIRROR IT BY HAND, exactly as they mirror the base
-// (redesign_button_enabled, app_state.h): five arms compose authoring_locked,
-// four ask the tab's bit alone — Grid iterations, BPM iterations, Edit flag
-// and the Up/Down pair — Undo/Redo take the mode through
-// history_step_actionable, and TOGGLE MARKER COLUMN takes the iteration half
-// alone, having no read-only term to compose (its chord is on the base's
-// allowlist). A change here needs a hand edit there.
+// THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
+// ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
+// app_state.h — the membership the enabled arms and the tooltip's one lock
+// fork both read). Its members are the four marker verbs, the Measure, the
+// Toggle Marker Column lamp, the Toggle History View button, Edit flag and the
+// Up/Down pair on a PAYLOAD or MEASURE axis, and Left/Right in the marker
+// lane; each arm composes its own read-only half beside it, TWO of them having
+// none at all (the column lamp and the history opener, whose chords the base
+// admits or never sees). Undo and Redo take the mode through
+// history_step_actionable instead, their sentence naming the act. Grid
+// iterations and BPM iterations ask the tab's bit alone, being the two exit
+// roads. A change here needs a hand edit there.
+//
+// TWO ROSTER MEMBERS THE GATE EATS HAVE NO FACE TO GREY: the VIEW BAR'S
+// three selectors, whose row carries no disabled face and no tooltip (the
+// account is at their arm in redesign_button_enabled), and every propagate
+// PASTE, whose surface is a MENU ROW and menu rows never grey.
 bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
                                                  GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the W/P column switch, spelled as
-    // its own dispatch arms spell it (bare-exact on all four).
-    if (!ctrl && !shift && !alt &&
-        (key == GuiKeys::P || key == GuiKeys::Digit1 ||
-         key == GuiKeys::Digit2 || key == GuiKeys::Digit3))
-        return true;
+    // DELTA (a), ahead of every admission: the W/P column switch, through the
+    // quartet's one owner above.
+    if (iteration_lock_column_switch(key, mods)) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) return false;
     // Bare `m` — BPM iterations, bare-exact as its dispatch arm is.
@@ -724,6 +772,10 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // The undo pair, admitted for its own card (the whole family, alt binding
     // nothing on it — the dispatch arm's own spelling).
     if (key == GuiKeys::Z && ctrl && !alt) return false;
+    // The two clipboard copies, ctrl-exact as their dispatch arms are — which
+    // is what keeps the three ALT-bearing pastes out of this admission.
+    if ((key == GuiKeys::P || key == GuiKeys::Slash) && ctrl && !shift && !alt)
+        return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
     // one (the arrows' lane term): the same chords mean two different acts and
     // the gate has to ask the same question the dispatch asks.
@@ -1751,6 +1803,36 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::H) {
         if (app.history_mode.active) {
             close_history_mode();
+            return true;
+        }
+        // NOT WHILE GRID ITERATIONS STANDS (architect 2026-09-10, the
+        // iteration lock — the rule is at authoring_locked, app_state.h): the
+        // view's own acts push history (the revert, the two loads, the
+        // checkpoint's save), and TWO MODAL VIEWS ARE NOT COMPOSED, so the
+        // ENTRY refuses rather than the seven chords inside it. IT IS THIS
+        // ARM'S OWN REFUSAL rather than the composed gate's because THIS
+        // DISPATCH RUNS ABOVE THAT GATE (on_key, input_handler.cpp) and must:
+        // the read-only bit is irrelevant to the mode — a locked tab reads
+        // history exactly as a writable one does — which is the whole reason
+        // the mode sits above the lock. So the ITERATION HALF is spelled here
+        // and the read-only half is not; asking authoring_locked would close
+        // the view to a locked tab, which no ruling does.
+        //
+        // IT IS RANKED FIRST, above the publishing guard, because the lock is
+        // the OUTERMOST STATE (a mode the user turned on deliberately, exactly
+        // as the gate's own card ranks it), and the CLOSE above stays ungated:
+        // leaving a view is always allowed, and the composed state this arm
+        // refuses to create cannot arise for it to leave.
+        //
+        // THE FACE FOLLOWS THE KEY: the Toggle History View button greys while
+        // the lamp stands (iteration_lock_greys, app_state.h) and wears this
+        // card on its hint. The view's OWN buttons — Load in place, Revert and
+        // the walk's four — need nothing: they are dead outside the view by
+        // their own resting term, and the view can no longer open under a lit
+        // lamp for them to light in.
+        if (app.iteration_mode_enabled) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIterationLockCard);
             return true;
         }
         // NOT WHILE A CHECKPOINT IS PUBLISHING (2026-08-07). The walk, the now
@@ -4454,9 +4536,11 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
 
 // THE ITERATION SWEEP — the Cartesian product of the per-marker iter ranges
 // authored in grid iterations, ON THE COLUMN THE LAMP WAS LIT IN AND ON THAT
-// ONE ALONE (architect 2026-09-10: `i` stamps the column it is pressed in, so
-// "the iterations land wherever I'm looking"; the two-column product of
-// 2026-09-09 is gone with the two-column mode).
+// ONE ALONE (architect 2026-09-10: "the iterations land wherever I'm
+// looking"; the two-column product of 2026-09-09 is gone with the two-column
+// mode). That column is simply the LIVE one: the W/P switch is one of the
+// acts the iteration lock refuses, so it cannot have moved since the press
+// that lit the lamp.
 // Output lands in `<source parent>/tmp/<N>_iterations/`, one cell per product
 // point; each cell renders one `.wav`.
 //
@@ -7471,7 +7555,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // `i` (no modifiers) toggles grid iterations, IN EITHER COLUMN since
     // 2026-09-09 (the arm below carries the ruling; the P-column card it used
     // to answer with is deleted with the premise that a phase reset had
-    // nothing to iterate), AND IT STAMPS THE COLUMN IT IS PRESSED IN. The
+    // nothing to iterate), AND IT LIGHTS THE MODE FOR THE COLUMN IT IS
+    // PRESSED IN, which the lock then holds still. The
     // editor-active branch above already swallows any
     // keystroke while a popup edit is in flight, so this code only
     // runs with no active editor. Toggling repaints the top strip
