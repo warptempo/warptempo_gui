@@ -504,12 +504,12 @@ void GuiInputHandler::handle_trim_maximize() {
 // the camera. THAT HAZARD IS GONE SINCE 2026-09-04, the show half moving no
 // viewport at all, and the spelling stands on its own mnemonic: `[` looks like
 // the begin-trim endcap, which is why he chose it; its shift form is the
-// maximizer below. THE TWO KEYS IT LEFT ARE
-// UNBOUND — bare `x` (this act's chord from 2026-08-18, and, for the retired
-// set-from-region act, from long before) and Shift+X (the maximizer's) — and
-// answer nothing anywhere under the strict-modifier rule, exactly as
-// Ctrl+Shift+X has since 2026-08-18. ONLY THE SPELLING MOVED: the two acts, the
-// button and its shift admission are untouched.
+// maximizer below. OF THE TWO KEYS IT LEFT, Shift+X (the maximizer's) is
+// UNBOUND and answers nothing anywhere under the strict-modifier rule, exactly
+// as Ctrl+Shift+X has since 2026-08-18, while bare `x` (this act's chord from
+// 2026-08-18, and, for the retired set-from-region act, from long before) IS
+// THE VALUE DRAG LAMP since 2026-09-10. ONLY THE SPELLING MOVED: the two acts,
+// the button and its shift admission are untouched.
 //
 // The button inherited the scissors' SHIFT ADMISSION, so a shift-click or a
 // long press on it is the maximizer — which is what keeps the whole song

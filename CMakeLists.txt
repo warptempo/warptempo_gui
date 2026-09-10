@@ -152,6 +152,11 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/warpmarkers_ops.cpp
     src/gui/position_nudge.cpp
     src/gui/marker_drag.cpp
+    # THE FLAG'S VALUE DRAG (2026-09-10): the marker drag's sibling — the same
+    # plain flag press-and-drag, turned vertical by the Value Drag lamp — in
+    # its own translation unit for marker_drag.cpp's reason, that it is a
+    # cross-kind gesture the per-column authoring clusters do not own.
+    src/gui/value_drag.cpp
     src/gui/file_loader.cpp
     src/gui/flag_editor.cpp
     src/gui/renders_dir.cpp

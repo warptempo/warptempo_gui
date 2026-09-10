@@ -23,6 +23,7 @@
 #include "phase_reset_propagate.h"
 #include "phaseresetmarkers_ops.h"
 #include "marker_drag.h"
+#include "value_drag.h"
 #include "undo.h"
 #include "value_format.h"
 #include "viewport.h"
@@ -838,6 +839,14 @@ struct GuiInputHandler {
     GuiWarpMarkersOps&       warpops;
     GuiPhaseResetMarkersOps& phase_resets;
     MarkerDragOps&           marker_drag;
+    // THE VALUE DRAG (2026-09-10), the marker drag's sibling — and OWNED HERE
+    // rather than passed in, which is the one place it parts from its
+    // neighbour above: it holds exactly five of this handler's own references
+    // and has no consumer outside this file, so main.cpp has nothing to say
+    // about it. Its readers are the three pointer sites the marker drag's own
+    // are — the threshold crossing, the motion arm and the two end roads
+    // (release and finalize_active_drags) — all in input_pointer.cpp.
+    ValueDragOps             value_drag;
     GuiFlagEditor&           flag_editor;
     GuiRendersDir&           renders_dir;
     GuiActiveViews&          active_views;
@@ -1015,6 +1024,10 @@ struct GuiInputHandler {
           warpops(warpops_),
           phase_resets(phase_resets_),
           marker_drag(marker_drag_),
+          // Built from the CONSTRUCTOR'S OWN PARAMETERS, never from the
+          // members beside it: a reference member initialised from another
+          // member depends on declaration order, and this one must not.
+          value_drag(app_, audio_, viewport_, undo_, target_render_),
           flag_editor(flag_editor_),
           renders_dir(renders_dir_),
           active_views(active_views_),

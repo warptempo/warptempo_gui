@@ -556,10 +556,12 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
-// Backspace, and every letter the ladder never tests (A, B, E, W, X — Y left
+// Backspace, and every letter the ladder never tests (A, B, E, W — Y left
 // the class 2026-08-31, the centered pin's toggle, V on 2026-09-01, the
-// `h` view's revert act moving onto it off Ctrl+H, and BARE N on 2026-09-04,
-// the Center on next marker lamp joining Ctrl+N on that letter);
+// `h` view's revert act moving onto it off Ctrl+H, BARE N on 2026-09-04,
+// the Center on next marker lamp joining Ctrl+N on that letter, and X on
+// 2026-09-10, the Value Drag lamp taking the letter the trim family left free
+// on 2026-08-24);
 // every key the boards carry that this switch names nowhere (the keypad, the
 // editing and system block, the vendor strip — the speller named them too
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
@@ -577,10 +579,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the view toggles and the
         // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
-        // selection, `m` bpm mode, `t` the S/T flip, `y` the centered pin).
+        // selection, `m` bpm mode, `t` the S/T flip, `x` the value drag —
+        // 2026-09-10 — and `y` the centered pin).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
         case GuiKeys::K: case GuiKeys::M: case GuiKeys::T:
-        case GuiKeys::Y:
+        case GuiKeys::X: case GuiKeys::Y:
             return bare;
         // The folder overlay's two openers on one letter (2026-09-03): bare
         // `l` toggles the render player and Shift+L toggles the AV sync stats

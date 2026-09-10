@@ -1290,12 +1290,13 @@ int cursor_kind_index(GuiCursorKind kind) {
 // be invisible for the whole gesture. The hidden-during-capture behaviour is
 // unchanged by any of this.
 //
-// `alt_name` is the ONE row-level option in this table: a second spelling to
+// `alt_name` is a row-level option in this table: a second spelling to
 // try before the per-kind degrade, for a shape the freedesktop world names two
-// ways. Only the I-beam carries one (`text`, then the older `xterm` — Breeze
-// ships the second as a symlink to the first, and a theme carrying only the
-// legacy name still gets its cue). Null everywhere else: a kind with one
-// conventional name gets one lookup.
+// ways. TWO ROWS carry one — the I-beam (`text`, then the older `xterm` —
+// Breeze ships the second as a symlink to the first, and a theme carrying only
+// the legacy name still gets its cue) and, since 2026-09-10, the VALUE DRAG's
+// vertical resize (`ns-resize`, then the older `size_ver`). Null everywhere
+// else: a kind with one conventional name gets one lookup.
 struct CursorKindName {
     GuiCursorKind kind;
     const char*   name;
@@ -1315,6 +1316,15 @@ constexpr CursorKindName kCursorKindNames[] = {
     {GuiCursorKind::TrimBoundBegin, "left_side"},
     {GuiCursorKind::TrimBoundEnd,   "right_side"},
     {GuiCursorKind::Text,           "text", "xterm"},
+    // THE VALUE DRAG'S VERTICAL RESIZE (2026-09-10): `ns-resize` is the
+    // freedesktop name for the up/down double arrow a window manager shows on
+    // a window's TOP or BOTTOM edge — the vertical twin of the bridge's
+    // `ew-resize` above, which is exactly the relationship the two gestures
+    // have (slide a value up and down / slide a span left and right). The alt
+    // name is `size_ver`, the older X11 spelling; Breeze ships a third,
+    // `sb_v_double_arrow`, as a symlink of the same image, so these two
+    // lookups reach every theme that has the shape.
+    {GuiCursorKind::ValueDrag,      "ns-resize", "size_ver"},
 };
 static_assert(static_cast<int>(std::size(kCursorKindNames)) ==
                   kGuiCursorKindCount,

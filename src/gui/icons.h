@@ -277,6 +277,13 @@ enum class Icon {
     // THE ADD-TO-SELECTION ACT'S GLYPH (2026-08-18): Breeze's edit-select, the
     // pointer arrow over a marquee corner — picking one more thing up.
     EditSelect,          // Add to selection
+    // THE VALUE DRAG LAMP'S GLYPH (2026-09-10): Breeze's
+    // transform-move-vertical, two solid triangles above and below a dot. It
+    // names the AXIS the lamp turns a flag drag onto, which is the whole of
+    // what the mode does. The runner-up, `adjustlevels` (a slider with a
+    // handle), is recorded at the table entry in icons.cpp with the reason it
+    // lost: a slider reads as a setting, and this is a direction.
+    TransformMoveVertical,   // Value drag (bare `x`)
     // THE WALK'S TWO ARROWS (2026-08-05 as go-previous / go-next, REGLYPHED
     // 2026-08-11): the checkpoint walk's older (`,`) and newer (`.`) steps wear
     // Breeze's keyframe-previous / keyframe-next — a stopwatch dial with a

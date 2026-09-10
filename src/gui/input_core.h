@@ -41,7 +41,7 @@
 // Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
 // also the FALLBACK: a theme missing one of the other six names degrades that
 // KIND to the arrow with one stderr line, which costs the cue and nothing else.
-// The six beside it each mark a zone whose gesture the arrow cannot promise —
+// The seven beside it each mark a zone whose gesture the arrow cannot promise —
 // the mapping from zone to kind is the GUI's (pointer_cursor_kind,
 // input_handler.h), and this enum is only the vocabulary.
 //
@@ -71,6 +71,18 @@
 // with a SECOND name to try (`text`, then the older `xterm`) before the per-kind
 // degrade, the two spellings being one shape with two conventional names; the
 // fallback chain is the loader's, at kCursorKindNames.
+//
+// VALUEDRAG IS THE EIGHTH (architect 2026-09-10, with the Value Drag lamp):
+// `ns-resize`, the vertical twin of the trim bridge's `ew-resize`, worn over a
+// flag box whose cell the VALUE DRAG can step while the lamp stands — the
+// tempo on an owning flag, a bound on a purple cell — and kept for the whole
+// gesture by the live-drag rule the marker, trim and overview drags already
+// take. It is the second kind with an ALT NAME (`size_ver`), the same
+// two-conventional-spellings shape the I-beam has; Breeze ships a third
+// (`sb_v_double_arrow`) as a symlink of the same image, so two lookups reach
+// every theme that has the shape at all. A flag box the lamp cannot act on
+// wears the ARROW, never this — the map's standing rule that a point arming
+// nothing shows the arrow.
 enum class GuiCursorKind {
     Arrow,
     Pan,
@@ -79,10 +91,11 @@ enum class GuiCursorKind {
     TrimBoundBegin,
     TrimBoundEnd,
     Text,
+    ValueDrag,
 };
 // Roster size, for the platform's per-kind cursor array. Keep it equal to the
 // enumerator count above.
-inline constexpr int kGuiCursorKindCount = 7;
+inline constexpr int kGuiCursorKindCount = 8;
 
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop

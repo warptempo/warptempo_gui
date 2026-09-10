@@ -58,9 +58,13 @@
 //      Viewport::reseat_playhead_to's definition (viewport.cpp).
 //   3. target_render.trigger(), unchanged and view-independent.
 // SOURCE VIEW NEEDS NOTHING: it is the identity domain, where no image moves
-// at all — exactly the cent step's own split, and the cent step's target-view
-// tail (adjust_tempo_cents, below) argues the re-land in full as the precedent
-// these four take.
+// at all — exactly the cent step's own split, and the TEMPO WRITE'S TAIL
+// (warp_tempo_write_tail, below) argues the re-land in full as the precedent
+// these four take. That body is not theirs to call: it is the three TEMPO
+// sites' shared tail (the two cent-step arms and the value drag's commit),
+// whose subject is one field, while these four each argue a different subject
+// — an existence, a status, a whole-map rewrite — and the delete re-lands the
+// playhead's own musical instant rather than a focus.
 // THE POSITIONAL FAMILY IS NOT HERE and stays source-only IN THE WARP
 // COLUMN — the one block left since the P column opened to both audio views
 // (architect 2026-08-30) — refusing in T+W at its own DISPATCH site, through
@@ -534,6 +538,68 @@ void GuiWarpMarkersOps::toggle_disabled() {
     target_render.trigger();
 }
 
+// -- THE WARP TEMPO WRITE'S TAIL, ONE BODY (2026-09-10) ----------------------
+//
+// Everything a warp-column TEMPO write owes AFTER its own damage: in TARGET
+// view the synchronous re-warp and the focus's re-land on its post-write
+// image, and then, in every view, the preview trigger. It is steps 1-3 of the
+// family contract at the head of this file, spelled once for the three sites
+// whose SUBJECT is identical — the singleton cent step, the group cent step
+// and the VALUE DRAG's commit (value_drag.cpp), which writes the very same
+// field with a pointer instead of an arrow. The other members of that family
+// (Ctrl+D, Ctrl+N, Delete and the flag editor's commit) keep their own
+// spelled tails: each argues a different subject — an existence, a status, a
+// whole-map rewrite — and the delete re-lands the playhead's own musical
+// instant rather than a focus, so there is nothing there for one body to own.
+//
+// WHY IT IS A BODY AND NOT A FOURTH SPELLING: the value drag lives in its own
+// translation unit and steps the same value through the same landing owner, so
+// a tail written twice is a tail that can drift between the pointer and the
+// keyboard — the one divergence the gesture must never have. The step and the
+// drag are the same act with two hands.
+//
+// THE RE-LAND IS A TRANSLATION, NOT A MOVEMENT, which is why it goes through
+// reseat_playhead_to and never through a movement owner: the focus did not
+// change and the playhead did not leave it — the marker's IMAGE moved under a
+// resting cursor and the cursor follows it — so the trim region overlay must
+// stand (the rule at clear_region_highlight, input_handler.h), and the
+// reseat's keep-visible scroll is what this tail wants. Usually the image
+// cannot move at all (a marker's own tempo shapes only the segment AFTER it),
+// but a LABEL DEFINITION reprices every reference to it, including references
+// EARLIER in the timeline, whose spans then change duration and shift
+// everything downstream — the stepped marker's own image included. Re-landing
+// costs nothing when the image did not move: the playhead is written the value
+// it already holds. SOURCE VIEW NEEDS NOTHING — identity domain, the frame
+// never moved — which is the same split every member of the family takes.
+//
+// NO REGION WORK AT ALL, and none is owed: the overlay is DERIVED from the
+// trim every frame (trim_overlay_span, app_state.h), so a write that re-warps
+// the target re-derives it in the new domain on the next frame with nothing to
+// maintain. (Two retired belts are recorded rather than re-invented: "a region
+// rests only beside an EMPTY selection, and a tempo step needs a selection",
+// retired 2026-08-18 when bare `[` began showing the overlay without writing a
+// selection; and the group arm's own extent re-derive, which died with the
+// SPAN FORM on 2026-07-30. The #16 trim-highlight re-sync went with the
+// highlight itself.)
+//
+// NO SELECTION-DRIVEN STEM WORK EITHER: stems are class-coloured and always
+// on, so no selection change moves one, and the kick below repaints the moved
+// images with their stems.
+void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
+                           Viewport& viewport,
+                           GuiTargetRender& target_render) {
+    if (app.active_audio_view == 'T') {
+        viewport.kick_waveform_sync();
+        const std::vector<GuiWarpMarker>& mv_post = app.warpmarkers.markers();
+        const int f = app.last_selected_marker;
+        if (f >= 0 && f < static_cast<int>(mv_post.size())) {
+            viewport.reseat_playhead_to(source_frame_to_active_domain(
+                app, audio, mv_post[f].time_frame));
+        }
+    }
+    target_render.trigger();
+}
+
 // Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
 // ONLY: a label ref is silently skipped (no tempo to nudge — convert via
 // Ctrl+N first); pass markers resolve walk-backward to get their starting
@@ -627,9 +693,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
     // its source home (target view is exactly where you want to hear/see a tempo
     // change). Since 2026-07-29 it is the WHOLE of the warp column's TEMPO
-    // exception there, and the whole tempo surface anywhere: the other two flavors
+    // exception there: the other two flavors
     // — the pointer tempo drag and its keyboard twin, the bare Left/Right
-    // tempo-image step — were deleted (the list is at the head of marker_drag.h).
+    // tempo-image step — were deleted (the list is at the head of
+    // marker_drag.h). It was the whole tempo surface anywhere until 2026-09-10,
+    // when the VALUE DRAG joined it — a lamp-gated vertical pointer step
+    // through this arm's own landing owner and this arm's own T-view refusal
+    // (value_drag.cpp), so the two hands ask the same questions.
     // W+target authors tempo only, never position. The tempo step there is
     // OWNER-ONLY: the
     // focus-collapse target must already own an adjustable tempo, so a pass
@@ -770,55 +840,17 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // repaint. In target view the synchronous re-warp below repaints anyway; this
     // is the cheaper honest owner for both.
     viewport.invalidate_waveform_area();
-    // Discrete warp_frame_map change that CAN run in target view: the Up/Down
-    // step is a
-    // warp authoring gesture reachable off its source home (the ruled exception
-    // gated above), so it is one of the target-view re-warp sites (the full
-    // inventory lives at Viewport::kick_waveform_sync). When it runs in target
-    // view the plate must re-warp, so render synchronously so displayed == live at
-    // this command boundary, leaving no divergence window for the displayed-basis
-    // gestures (phase drags, trim drags) to ride out. THEN re-land the playhead on
-    // the stepped marker's post-step image — the marker lane owns the playhead
-    // (the rule is stated in full at land_playhead_on_marker, input_pointer.cpp),
-    // and this is the value-gesture form of it: the focus does not change, but its
-    // IMAGE can move out from under the playhead. Usually it cannot — a marker's
-    // own tempo shapes only the segment AFTER it — but a LABEL DEFINITION reprices
-    // every reference to it, including references EARLIER in the timeline, whose
-    // spans then change duration and shift everything downstream, the stepped
-    // marker's own image included. Re-landing costs nothing when the image did not
-    // move (the playhead is written the value it already holds). Source view needs
-    // nothing: identity domain, the frame never moved — the same reason the GROUP
-    // arm gates its re-land on target view.
+    // THE TAIL IS ONE BODY (warp_tempo_write_tail, above — the re-warp, the
+    // re-land and the trigger, with the whole argument at its definition): the
+    // Up/Down step is a warp authoring gesture reachable off its source home
+    // (the ruled exception gated above), so it is one of the target-view
+    // re-warp sites, and the VALUE DRAG's commit writes this same field with a
+    // pointer and calls this same body, which is what keeps the two hands from
+    // drifting.
     // In SOURCE view nothing moves at all, so the marker's always-on stem needs
-    // no repaint there; in target view the synchronous re-warp below repaints
+    // no repaint there; in target view the tail's synchronous re-warp repaints
     // the waveform area and carries the stem to its new column with the image.
-    if (app.active_audio_view == 'T') {
-        // NO REGION WORK AT ALL HERE, and none is needed: the overlay is
-        // DERIVED from the trim every frame (trim_overlay_span, app_state.h),
-        // so a step that re-warps the target re-derives it in the new domain on
-        // the next frame with nothing to maintain. (The belt that stood here —
-        // "a region rests only beside an EMPTY selection, and a tempo step
-        // needs a selection" — is retired, 2026-08-18: bare `[` shows the
-        // overlay and writes no selection.) The #16 trim-highlight re-sync that
-        // stood here was deleted 2026-07-29 and the highlight itself
-        // 2026-07-30.
-        viewport.kick_waveform_sync();
-        const auto& mv_post = app.warpmarkers.markers();
-        const int f = app.last_selected_marker;
-        if (f >= 0 && f < static_cast<int>(mv_post.size())) {
-            // THROUGH THE RESEAT, NOT THE MOVER (2026-08-19): move_playhead_to
-            // HIDES the trim region overlay and this write must not. A
-            // TRANSLATION IS NOT A MOVEMENT — the focus did not change and the
-            // playhead did not leave it; the marker's IMAGE moved under a
-            // resting cursor and the cursor follows it, which is the `t` flip's
-            // act in another spelling. reseat_playhead_to is the identical write
-            // without the hide, and it keeps the keep-visible scroll this tail
-            // wants (the rule at clear_region_highlight, input_handler.h).
-            viewport.reseat_playhead_to(source_frame_to_active_domain(
-                app, audio, mv_post[f].time_frame));
-        }
-    }
-    target_render.trigger();
+    warp_tempo_write_tail(app, audio, viewport, target_render);
     return std::nullopt;
 }
 
@@ -1164,38 +1196,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // singleton runs the same target-view re-land, for the rarer label-definition
     // repricing that can move even its own image. Source view needs nothing
     // (identity domain — the frame never moved).
-    if (app.active_audio_view == 'T') {
-        // NOTHING TO DO FOR THE REGION HERE (architect 2026-07-30, with the SPAN
-        // FORM retired): the region IS THE TRIM, not this selection's extent,
-        // so the group step no longer maintains it — the re-derive that stood
-        // below the kick is deleted with its owner. RE-DERIVED 2026-08-18 and
-        // now true for a stronger reason: the overlay is DERIVED from the trim
-        // every frame (trim_overlay_span, app_state.h), so a step that re-warps
-        // the target simply re-derives it in the new domain on the next frame.
-        // (The old belt — "a region cannot even rest beside this selection
-        // anyway, both formers deselecting at press" — is retired: bare `[`
-        // shows the overlay and writes no selection, so a shown overlay may now
-        // rest beside any selection. And the kick's live-domain reclamp no
-        // longer clears anything of the region's: it had validated the stored
-        // ACTIVE-domain endpoints, which no longer exist, and it is deleted at
-        // its own site, viewport.cpp.)
-        viewport.kick_waveform_sync();
-        const int f = app.last_selected_marker;
-        if (f >= 0 && f < n) {
-            // THROUGH THE RESEAT, the singleton arm's twin and for its reason:
-            // a map-change re-land is a translation, not a movement, so it must
-            // leave the trim region overlay standing (reseat_playhead_to,
-            // viewport.h; the rule at clear_region_highlight, input_handler.h).
-            viewport.reseat_playhead_to(source_frame_to_active_domain(
-                app, audio, app.warpmarkers.markers()[f].time_frame));
-        }
-        // No selection-driven stem work here either: stems are class-colored
-        // and always on, so the re-selection moves none (the members'
-        // brightened flags plus the re-landed cursor are the group's cue). The
-        // kick_waveform_sync above already repainted the moved images, stems
-        // included.
-    }
-    target_render.trigger();
+    // THE TAIL IS THE SINGLETON'S, THROUGH THE ONE BODY (warp_tempo_write_tail
+    // above, which carries the re-land argument, the retired region belts —
+    // this arm's own extent re-derive among them, deleted with the SPAN FORM
+    // on 2026-07-30 — and the stems' silence). Only the REACH differs from the
+    // singleton, never the rule.
+    warp_tempo_write_tail(app, audio, viewport, target_render);
     return std::nullopt;
 }
 

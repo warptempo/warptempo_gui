@@ -518,10 +518,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // bound. THE PAIR MOVED ONTO THE BRACKET ON 2026-08-24 (the architect's
     // reason is at the dispatch arms, input_handler.cpp) and the terms below
     // are named for the ACTS rather than for a key, which is what kept this
-    // move to a spelling change. The keys the pair left — bare `x`, Shift+X —
-    // answer nothing here or anywhere, as Ctrl+Shift+X has not since
-    // 2026-08-18: the strict-modifier rule makes an unbound combination a no-op
-    // everywhere.
+    // move to a spelling change. Of the keys the pair left, Shift+X answers
+    // nothing here or anywhere, as Ctrl+Shift+X has not since 2026-08-18 (the
+    // strict-modifier rule makes an unbound combination a no-op everywhere),
+    // while bare `x` is the VALUE DRAG LAMP since 2026-09-10 and has its own
+    // admission below.
     const bool is_trim_region_toggle =
         (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft);
     const bool is_trim_maximize =
@@ -537,6 +538,24 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // navigation. Bare-exact, exactly the dispatch arm's own spelling.
     const bool is_add_to_selection =
         (!ctrl && !shift && !alt && key == GuiKeys::K);
+    // THE VALUE DRAG LAMP (architect 2026-09-10), admitted on the same
+    // standard as its neighbour above and with one clause more: the chord
+    // flips a session bit that changes what a PLAIN FLAG DRAG means, and the
+    // bit itself writes no store, no undo entry and no dirty flag. WHAT THE
+    // DRAG GOES ON TO DO IS GATED WHERE IT HAPPENS: value_drag_target
+    // (app_state.h) refuses the base tempo on a locked tab — authored musical
+    // content — and refuses a bound cell there too, which is the bound step's
+    // own verdict at this very gate (bare Up/Down are not on this list). So
+    // the lock loses nothing by admitting the switch, and the button stays lit
+    // on a locked tab exactly as bare `k`'s does. Bare-exact, exactly the
+    // dispatch arm's own spelling.
+    //
+    // IT PASSES THE ITERATION LOCK THROUGH THIS SAME ENTRY and needs no delta
+    // of its own there: iteration_lock_key_blocked falls through to this list,
+    // and the lamp is the ROAD to the bound cells the lock exists to leave
+    // open — refusing it would refuse the mode's own authoring surface.
+    const bool is_value_drag =
+        (!ctrl && !shift && !alt && key == GuiKeys::X);
     // BARE `l` — THE RENDER PLAYER (2026-08-28) — is admitted on the header's
     // own standard: it plays a rendered wav through the engine and authors
     // nothing; the player's one authoring act, the Load in place button,
@@ -628,7 +647,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
              is_trim_region_toggle || is_trim_maximize ||
-             is_add_to_selection || is_play_renders || is_av_sync_stats ||
+             is_add_to_selection || is_value_drag ||
+             is_play_renders || is_av_sync_stats ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source);
 }
@@ -7865,6 +7885,35 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // asked for.
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
         app.add_to_selection = !app.add_to_selection;
+        viewport.invalidate_rect(bottom_row_area(app));
+        return true;
+    }
+
+    // `x` (no modifiers): toggle THE VALUE DRAG, the flag's vertical drag
+    // (architect 2026-09-10). It is bare `k`'s shape one line up, exactly —
+    // one bit, flipped both ways by one key, with the bottom row's button
+    // dispatching this same chord — and the ONE route that writes the bit at
+    // all: unlike its neighbour it is cleared by nothing (the whole contract
+    // and the reason for that difference are at AppState::value_drag_enabled).
+    //
+    // NO GATE OF ITS OWN, and each omission is deliberate: it is legal in both
+    // columns and both audio views (WHICH flags the drag can act on is the
+    // gesture's own question, asked per press at value_drag_target), legal on
+    // a LOCKED tab and under the ITERATION LOCK — read_only_key_blocked admits
+    // it and iteration_lock_key_blocked falls through to that admission, the
+    // lamp being the road to the bound cells — and unreachable in the `h`
+    // view, whose allowlist consumes it above this dispatch. It stops no
+    // playback and hides no overlay: turning the mode on IS NOT a pointer act.
+    //
+    // THE REPAINT IS THE BOTTOM LANE'S, its neighbour's fork verbatim: the
+    // lamp lives there, and a mode toggle must light in the frame it was asked
+    // for rather than on the per-tick face comparator's next pass. THE CURSOR
+    // NEEDS NO CALL HERE: the zone map is re-resolved once per run-loop
+    // iteration from the platform's settled-state hook
+    // (refresh_pointer_cursor), so the flag under a resting pointer changes
+    // its cue on this very press with nothing arranged for it.
+    if (key == GuiKeys::X && !ctrl && !shift && !alt) {
+        app.value_drag_enabled = !app.value_drag_enabled;
         viewport.invalidate_rect(bottom_row_area(app));
         return true;
     }

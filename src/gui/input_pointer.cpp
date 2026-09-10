@@ -211,10 +211,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // easy to hit accidentally instead of `c`, and it can mess up the viewport",
     // this act's show half FRAMING the trim span then — the framing left the
     // act on 2026-09-04 and `[` stands on its mnemonic alone, looking like the
-    // begin-trim endcap. THE TWO CHORDS IT HAS LEFT BEHIND
-    // — Ctrl+Shift+X (2026-08-16 to 2026-08-18) and bare `x` (2026-08-18 to
-    // 2026-08-24) — are UNBOUND and answer nothing anywhere under the
-    // strict-modifier rule.
+    // begin-trim endcap. OF THE TWO CHORDS IT HAS LEFT BEHIND, Ctrl+Shift+X
+    // (2026-08-16 to 2026-08-18) is UNBOUND and answers nothing anywhere under
+    // the strict-modifier rule, while bare `x` (2026-08-18 to 2026-08-24) IS
+    // THE VALUE DRAG LAMP since 2026-09-10 — the row below in this table.
     //
     // A TOGGLE, click face, not a radio: it reads and flips the overlay's
     // VISIBILITY, and the lamp the 2026-08-16 momentary ruling refused is safe
@@ -651,6 +651,28 @@ constexpr ToolbarChord kToolbarChords[] = {
     // navigation, not authored content.
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
+    // THE VALUE DRAG LAMP (architect 2026-09-10), the verb group's NINTH and
+    // the row's second lamp: BARE `x`, which was free — it was the Show trim
+    // region button's chord from 2026-08-18 until the trim family moved onto
+    // the bracket on 2026-08-24 and has bound nothing since (the record is at
+    // that button's row above), and the architect picked it back for its
+    // position under the hand: "right above alt, which is my control."
+    // It is a MODE toggle like its neighbour, so the button's lamp reads the
+    // same bit the key flips and button-is-its-chord holds literally: the
+    // press dispatches bare `x` through on_key at the LIFT, while the KEY acts
+    // at the press.
+    //
+    // ITS GATES ARE ADD TO SELECTION'S PLUS ONE: the `h` view consumes bare
+    // `x` and greys the button with the group, the READ-ONLY lock ADMITS it
+    // (flipping the bit authors nothing, and the drag's own target rule
+    // refuses every locked cell for itself) — and so does the ITERATION lock,
+    // which is the addition: the lamp is the road to the bound cells, so it is
+    // deliberately not in iteration_lock_greys.
+    //
+    // NO MODIFIER ADMISSION AND NO REPEAT: the mode has one shifted twin
+    // nowhere, and a toggle repeats onto itself.
+    {RedesignButton::IconValueDrag,
+     GuiKeys::X,      false, false, false, false, true},                             // bare x
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
     // behind a separator and ahead of the arrows. THREE BUTTONS, THREE CHORDS
     // — no hold, no double-click, no modifier gesture on the surface — and the
@@ -2037,6 +2059,26 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // become), so an armed marker pending always names the drag it may become
     // and the shift/ctrl fields it briefly carried are gone with their
     // producers.
+    // AND THE VALUE DRAG KEEPS ITS OWN, on the same rule (2026-09-10): the
+    // thing being dragged is a VALUE, so the vertical resize the flag box
+    // wears under a lit lamp stays TRUE for the whole gesture. The record is
+    // that it is live — one shape, a number sliding up and down — and there is
+    // no position to re-derive from (this drag leaves the flag box by
+    // definition, exactly as a bound drag leaves the band). Capture-free, so
+    // there is a visible cursor to keep.
+    if (app.value_drag.active) return GuiCursorKind::ValueDrag;
+    // THE PENDING ARM IS THE SAME ARM FOR BOTH DRAGS, and under a lit lamp it
+    // has to ask the lamp's question: sub-threshold the pointer still rests on
+    // the flag box it pressed, where the hover arm below answers ValueDrag on
+    // an actionable cell and the ARROW on every other one, so the pending
+    // reads the same predicate and the cue cannot flip at the crossing. A
+    // marker drag cannot be live here at all while the lamp stands — the
+    // crossing begins one gesture or none — so `drag.active` needs no term.
+    if (app.value_drag_enabled && app.pending_marker_press.active) {
+        return value_drag_target(app, audio, app.pending_marker_press.marker,
+                                 app.pending_marker_press.cell)
+                   ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
+    }
     if (app.drag.active || app.pending_marker_press.active)
         return GuiCursorKind::TrimResize;
     // (THE REGION EDITOR'S OWN LIVE ARM STOOD HERE FROM 2026-08-15 TO
@@ -2288,7 +2330,12 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // the drag in a live view at home; where the drag refuses (off the
         // column's home view, a read-only tab) or does not exist (the `h`
         // view's diff flags, which take clicks alone) the box still wears it,
-        // one shape for the one surface. It reads
+        // one shape for the one surface. THE EXCEPTION IS THE VALUE DRAG LAMP
+        // (2026-09-10), and it is one because the lamp changes WHICH GESTURE
+        // the surface offers rather than merely whether it will succeed: with
+        // the lamp lit the horizontal move is off on every flag, so a box that
+        // still promised it would promise a gesture that no longer exists.
+        // That fork is at the arm below. It reads
         // hit_test_flag — the painter's published boxes, the same predicate the
         // press claims and the nav surface carves itself out with — so it
         // answers the LIVE marker lane and the `h` view's DIFF flags through
@@ -2296,8 +2343,26 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // modifier arms by their own rank (a ctrl or shift press on a flag is a
         // selection act, which carries no cue) and AHEAD of the strip's Arrow,
         // which is what used to answer here.
-        if (hit_test_flag(app, audio, x, y) >= 0)
+        // THE VALUE DRAG LAMP TAKES THIS ARM WHILE IT STANDS (architect
+        // 2026-09-10), and it is the map's standing rule applied rather than
+        // an exception to it: under a lit lamp the flag's plain drag is the
+        // VERTICAL one, so a box whose cell the drag can act on wears the
+        // vertical resize — and a box it cannot act on arms NOTHING at all
+        // (the horizontal move is off on every flag while the lamp stands), so
+        // it wears the Arrow, which is what a point arming nothing shows
+        // everywhere in this map. The question is the gesture's own owner,
+        // value_drag_target, asked with the cell the same published boundaries
+        // resolve for a press (hit_test_flag_cell) — one answer for the cue
+        // and for the crossing.
+        const int flag_hit = hit_test_flag(app, audio, x, y);
+        if (flag_hit >= 0) {
+            if (app.value_drag_enabled) {
+                return value_drag_target(app, audio, flag_hit,
+                                         hit_test_flag_cell(app, audio, x, y))
+                           ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
+            }
             return GuiCursorKind::TrimResize;
+        }
         // The rest of the strip: the button rows (claimed far above the
         // waveform in the press path, no cue of their own) and GAP 1's blank
         // band — all Arrow.
@@ -4314,8 +4379,10 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     app.pending_marker_press.press_x = x;
     app.pending_marker_press.press_y = y;
     // WHICH CELL THIS PRESS LANDED ON, resolved at the head and carried to
-    // the seed at the motionless release. Only the double-click reads it
-    // here; the drag this may become is the same gesture from any cell.
+    // the seed at the motionless release AND, since 2026-09-10, to the VALUE
+    // DRAG at the threshold crossing, whose subject IS the cell. The
+    // horizontal marker drag still reads it nowhere: that gesture is the same
+    // act from any cell.
     app.pending_marker_press.cell = cell;
 }
 
@@ -7385,6 +7452,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             .cell    = press.cell};
         return;
     }
+    if (app.value_drag.active) {
+        // THE VALUE DRAG'S OWN END, beside the marker drag's below and on the
+        // same rule: the release commits what the motion wrote — the tempo
+        // arm's one undo entry, or nothing at all on a bound.
+        value_drag.commit();
+        return;
+    }
     if (!app.drag.active) return;
     // The marker reposition drag's own end.
     marker_drag.commit_drag();
@@ -7401,10 +7475,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // The gestures are mutually exclusive in practice, so this reads as a chain of
 // no-ops around the one that is live.
 // ITS MEMBERSHIP IS any_pointer_gesture_active's, EXACTLY (re-grepped
-// 2026-08-28): the two lists must agree, because a caller's whole promise is
+// 2026-09-10): the two lists must agree, because a caller's whole promise is
 // that what follows lands on a gesture-free state, and that predicate is what
-// "gesture-free" means to the keyboard, the wheel and the cursor. THE ELEVEN,
-// in this body's order: the editor text drag, the marker reposition drag, the
+// "gesture-free" means to the keyboard, the wheel and the cursor. THE TWELVE,
+// in this body's order: the editor text drag, the marker reposition drag, THE
+// VALUE DRAG (2026-09-10, the flag's vertical one), the
 // trim drag, the sweep (region_drag), the nav drag (scroll_drag), the overview
 // drag, the three pendings (marker press, trim, deferred click) and THE RENDER
 // PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
@@ -7438,6 +7513,10 @@ void GuiInputHandler::finalize_active_drags() {
     // becomes the store) and pushes the one undo entry iff the drag netted a
     // change — the release path exactly, so Ctrl+Z reverts it.
     if (app.drag.active) marker_drag.commit_drag();
+    // THE VALUE DRAG COMMITS TOO (2026-09-10) — the release path exactly, so
+    // a resize, a WM close or the Ctrl+Q hatch leaves the value the hand had
+    // reached and, on the tempo arm, the one undo entry that takes it back.
+    if (app.value_drag.active) value_drag.commit();
     // (The tempo drag's finalize arm went with the gesture, 2026-07-29 — see
     // marker_drag.h.)
     // The trim drag keeps its live bounds and runs the full commit tail (the
@@ -10359,6 +10438,30 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // drag left — a WARP flag in target view, the P column dragging in
         // both audio views since 2026-08-30 — is the silent
         // navigation-class refusal.
+        // THE VALUE DRAG FORKS AHEAD OF BOTH (architect 2026-09-10): while
+        // the lamp stands the flag's plain drag is the VERTICAL one, so the
+        // crossing begins that gesture or NONE — "we never allow multi-axis
+        // dragging; flags move up and down or not at all". The return is
+        // unconditional for that reason: a flag the value drag cannot act on
+        // does not fall back to the horizontal move under a lit lamp, it
+        // simply does not drag. The two AUTHORING GATES are not skipped, they
+        // are ASKED INSIDE the target rule instead — value_drag_target reads
+        // authoring_locked for the payload and the tab's read-only bit for a
+        // bound cell, each cell answering for what it authors — and the
+        // home-view gate has nothing to say here, this gesture moving no
+        // marker at all. Silent either way, as this whole surface is.
+        if (app.value_drag_enabled) {
+            // The begin is followed by THIS EVENT'S OWN MOTION, which is the
+            // marker drag's fall-through said as a call: the crossing is
+            // already 8 px from the press, so the first apply folds the whole
+            // press->crossing travel and the value lands where the hand
+            // already is instead of waiting for the next event. A crossing
+            // that travelled sideways alone folds nothing — the step count is
+            // still zero, and the motion arm returns on its own guard.
+            if (value_drag.begin(press.marker, press.cell, press.press_y))
+                value_drag.apply_motion(mouse_y);
+            return;
+        }
         if (authoring_locked(app) ||
             !active_column_authoring_allowed(app))
             return;
@@ -10383,6 +10486,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // No follow override needed: the arming press ran the click act's
         // stop, and nothing can have restarted playback since (the drag-modal
         // gate), so there is no live playhead to chase.
+    }
+    // THE VALUE DRAG'S LIVE ARM (2026-09-10), ahead of the marker drag's own
+    // and in its shape exactly: a lost button ends the gesture through its
+    // commit (every end of a pointer gesture commits what stands), and a held
+    // one applies the motion. The two are mutually exclusive by construction —
+    // the crossing above begins one or the other — so this arm's rank costs
+    // the marker drag nothing.
+    if (app.value_drag.active) {
+        if (!mods.primary_button_held) {
+            value_drag.commit();
+            return;
+        }
+        value_drag.apply_motion(mouse_y);
+        return;
     }
     if (!app.drag.active) {
         // The redesigned rows' own hover, resolved in the same no-gesture tail

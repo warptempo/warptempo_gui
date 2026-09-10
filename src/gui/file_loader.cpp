@@ -390,6 +390,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     selection.clear_selection();
     app.active_markers_view    = 'W';
     app.drag = DragState{};
+    // The flag's OTHER drag, cleared with its sibling (2026-09-10). The LAMP
+    // is deliberately not cleared beside it: the bit is a session tool
+    // posture that nothing clears, unlike the sticky ctrl below, which rides
+    // the Selection chokepoint.
+    app.value_drag = ValueDragState{};
     app.region_drag = RegionDragState{};
     app.pending_marker_press = PendingMarkerPress{};
     app.pending_trim_drag = PendingTrimDrag{};

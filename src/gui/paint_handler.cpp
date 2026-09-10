@@ -3360,7 +3360,14 @@ constexpr TransportRowDef kTransportGroup[] = {
 // retired the one-evening touch halo that had tried to rescue the double tap
 // instead.
 //
-// THE GROUP IS EIGHT since 2026-08-29, the COPY RESOLVED VALUE button seated
+// THE GROUP IS NINE since 2026-09-10, the VALUE DRAG LAMP seated at its tail
+// beside Add to selection — the architect's own seat, and his reason is that
+// the two are one idea an axis apart ("Add to Selection is there to replace
+// ctrl-click, so we can add the other one, which is ctrl-drag"). It is the
+// row's SECOND LAMP, and the second member of the group the READ-ONLY LOCK
+// does not grey.
+//
+// THE GROUP WAS EIGHT from 2026-08-29, the COPY RESOLVED VALUE button seated
 // IMMEDIATELY AFTER THE MEASURE (bare `j`, edit-copy's two stacked sheets) —
 // THE ARCHITECT'S OWN SEAT, taken on his live pass that evening. It landed
 // that afternoon in the slot after Toggle inherit, on a coder's reading of his
@@ -3379,6 +3386,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerMeasure,    icons::Icon::MinuetScales},
     {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
+    {RedesignButton::IconValueDrag,        icons::Icon::TransformMoveVertical},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle three
 // between the verbs and the arrows: previous marker (Shift+Tab), next marker
@@ -3686,15 +3694,17 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // bottom row timestamp to left alignment, place a separator between
     // transport buttons and timestamp". The RIGHT BLOCK anchors at the RIGHT
     // margin as FIVE + SEPARATOR + THREE + SEPARATOR + FOUR — the MARKER
-    // VERBS with the MARKER MEASURE and ADD TO SELECTION behind them, the
+    // VERBS with the MARKER MEASURE, ADD TO SELECTION and the VALUE DRAG LAMP
+    // behind them, the
     // MARKER-WALK GROUP, and the CARDINAL ARROWS (↓ ↑ ← →, the
     // architect's order since 2026-08-14). The span between the cell and the
     // right block is THE STATUS CELL since 2026-08-29 (the status bar's fold
     // into this row) — the clock's neighbour, laid out with it below and
     // clipped one lane pad short of the right block's own left edge. THE VERB
-    // GROUP IS EIGHT since 2026-08-29, the COPY VALUE button joining it after
-    // Toggle inherit (it was seven from 2026-08-27, the EDIT FLAG BUTTON's
-    // arrival, and six from 2026-08-19, the MARKER MEASURE's).
+    // GROUP IS NINE since 2026-09-10, the VALUE DRAG LAMP joining it at the
+    // tail (it was eight from 2026-08-29, the COPY VALUE button's arrival,
+    // seven from 2026-08-27, the EDIT FLAG BUTTON's, and six from 2026-08-19,
+    // the MARKER MEASURE's).
     //
     // THE TWO ENDS CANNOT CRAWL INTO EACH OTHER FROM THE CLOCK'S SIDE ANY MORE
     // (2026-08-18). The cell was CENTRED IN THE LANE until then, so it TRAVELLED
@@ -3703,34 +3713,43 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // fixed pen on every window, and only the RIGHT block moves. At 100% the
     // left block ends at the clock's pen — 8px pad + three 32px boxes + two 2px
     // gaps = 108, then 5 + 1 + 5 = 119, and the cell's own authored 4px offset
-    // seats it at 123 — and the right block is 526 wide
-    // (270 verbs + 11 separator span + 100 walk + 11 + 134 arrows), so it
-    // starts at 106 on the 640px defensive floor, 490 on the retired rig's
-    // 1024 and 1386 at 1920. The 9-glyph cell measures about 80px at 100% (it
-    // narrowed when the clock went to 11pt on 2026-08-14, so that is an upper
-    // bound), which leaves the rig's own 1024 some 287px of ground between
+    // seats it at 123 — and the right block is 560 wide since 2026-09-10
+    // (304 verbs + 11 separator span + 100 walk + 11 + 134 arrows; it was 526
+    // with an eight-box verb group), so it
+    // starts at 72 on the 640px defensive floor, 456 on the retired rig's
+    // 1024 and 1352 at 1920. The 9-glyph cell measures 79.2px at 100% (it
+    // narrowed when the clock went to 11pt on 2026-08-14), which leaves the
+    // rig's own 1024 some 254px of ground between
     // the cell and the verbs — the room THE STATUS CELL now takes, clipped
     // one pad short of the block. THE 640px DEFENSIVE FLOOR NOW CROPS INTO
     // THE CLOCK — the
-    // block's origin lands left of the cell's ~203px right edge — and that is
+    // block's origin lands left of the cell's ~202px right edge — and that is
     // ACCEPTED under the crop-at-the-floor allowance recorded at
     // kMinWindowWidthPx rather than answered: 640 is a floor no real host of
     // this product uses (the rig was 1024, the laptop 1920). The Marker Measure
     // button took 34 of the 40 that Add to selection left on 2026-08-18, the
-    // EDIT FLAG BUTTON took 34 more on 2026-08-27 and the COPY VALUE button
-    // another 34 on 2026-08-29 — the block's ONE
+    // EDIT FLAG BUTTON took 34 more on 2026-08-27, the COPY VALUE button
+    // another 34 on 2026-08-29 and the VALUE DRAG LAMP another 34 on
+    // 2026-09-10 — the block's ONE
     // dimension that moves when this group gains a box, which is why the
     // numbers in this paragraph are re-derived at every such landing rather
-    // than inherited. THE
+    // than inherited. THE ARCHITECT RULED THAT COST ACCEPTED AT THE LAMP'S
+    // LANDING and named what pays it: "there's plenty of room there, no need
+    // to calculate anything; what pays the price is the message: messages will
+    // be even shorter on the tablet, and that's fine, that's accepted." The
+    // STATE CELL is 1142 authored px wide at 100% on 1920 (1176 before the
+    // lamp) and 364 logical px on the tablet's 2560 device px at 225% (398
+    // before), each measured from the clock's own right edge to the clip
+    // bound. THE
     // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx is what covers a scale driven
-    // toward the 350 ceiling (2026-08-29). THE RIGHT BLOCK IS 526 AUTHORED PX
+    // toward the 350 ceiling (2026-08-29). THE RIGHT BLOCK IS 560 AUTHORED PX
     // WIDE and anchored one pad in from the right edge, so it reaches the
-    // clock's own ~203px right edge once the LOGICAL width (device width over
-    // the factor) falls below about 737 — at 350% on a 2304px panel that is
+    // clock's own ~202px right edge once the LOGICAL width (device width over
+    // the factor) falls below about 770 — at 350% on a 2304px panel that is
     // 658, where the verb group lands on the cell outright; the tablet's own
-    // 225% leaves 1024 logical px and 287 of clear ground. Still no collision
+    // 225% leaves 1138 logical px and 364 of clear ground. Still no collision
     // rule, for the reason above: the row crops at its floor. THE STATUS CELL
     // TAKES THAT GROUND AND CANNOT PUSH ANYTHING: it CLIPS at the block's own
     // left edge less one pad, so a long line is cut rather than colliding.
@@ -3741,10 +3760,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     }
     const int clock_cell_x = paint_separator(x);
 
-    // THE RIGHT BLOCK, from its right-anchored origin: the VERB GROUP's seven
+    // THE RIGHT BLOCK, from its right-anchored origin: the VERB GROUP's nine
     // boxes (the four single-marker verbs with the EDIT FLAG BUTTON since
-    // 2026-08-27, the MARKER MEASURE since 2026-08-19 and ADD TO SELECTION
-    // since 2026-08-18 behind them), a separator, the WALK GROUP's three, a separator, and the four
+    // 2026-08-27, the MARKER MEASURE since 2026-08-19, ADD TO SELECTION
+    // since 2026-08-18 and the VALUE DRAG LAMP since 2026-09-10 behind them),
+    // a separator, the WALK GROUP's three, a separator, and the four
     // ARROWS whose LAST button's right edge is one pad in from the lane's
     // right edge. The whole block is measured first and laid left to right
     // from there, so one expression owns the anchor and no group re-derives it.
@@ -3759,7 +3779,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // on every frame now, except under a modal, where the row yields whole.
     int right_block_x = lane.x + lane.w - pad;
     {
-        const int verbs_w  = 8 * btn + 7 * btn_gap;
+        const int verbs_w  = 9 * btn + 8 * btn_gap;
         const int walk_w   = 3 * btn + 2 * btn_gap;
         const int arrows_w = 4 * btn + 3 * btn_gap;
         const int sep_span = sep_gap + sep_w + sep_gap;

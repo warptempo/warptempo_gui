@@ -20,11 +20,26 @@ struct GuiTargetRender;
 int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame);
 
+// EVERYTHING A WARP-COLUMN TEMPO WRITE OWES AFTER ITS OWN DAMAGE (2026-09-10):
+// in TARGET view the synchronous re-warp and the focused marker's re-land on
+// its post-write image, then — in every view — the preview trigger. THREE
+// CALLERS, and they are three because the SUBJECT is one: the singleton cent
+// step, the group cent step (both in warpmarkers_ops.cpp) and the VALUE DRAG's
+// commit (value_drag.cpp), which writes the same field with a pointer instead
+// of an arrow. The full argument, the re-land's translation-not-movement rule
+// and the retired region belts live at the definition.
+void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
+                           Viewport& viewport,
+                           GuiTargetRender& target_render);
+
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
 // delete / toggle / adjust) and the pixel-column-anchored nudge — and, in
-// adjust_tempo_cents + adjust_tempo_cents_group, THE WHOLE TEMPO SURFACE since
-// 2026-07-29 (the pointer tempo drag and the bare Left/Right tempo-image step were
-// deleted; the list is at the head of marker_drag.h).
+// adjust_tempo_cents + adjust_tempo_cents_group, THE TEMPO SURFACE'S KEYBOARD
+// HALF (the deleted pointer tempo drag and the bare Left/Right tempo-image step
+// are listed at the head of marker_drag.h; these two were the WHOLE surface
+// from 2026-07-29 until 2026-09-10, when the architect added the VALUE DRAG —
+// a lamp-gated vertical pointer step of this same field, through this same
+// landing owner, in value_drag.{h,cpp}).
 // stop_playback_if_playing is reached through playback_lifecycle. The
 // reposition drag is no longer here: it is the one cross-kind gesture and
 // lives in MarkerDragOps in marker_drag.{h,cpp}.

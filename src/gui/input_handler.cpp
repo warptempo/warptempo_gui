@@ -660,6 +660,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
+    // VALUE (2026-09-10 — the flag's vertical drag under the Value Drag lamp,
+    // which writes the live store per motion and so must swallow every chord
+    // exactly as its horizontal sibling does) /
     // trim / region drags, the one nav drag and its pending
     // click (scroll_drag — one state for the pending, the pan and the ctrl
     // zoom phase since 2026-08-14; the dual-axis STRIP drag was a member here
@@ -696,7 +699,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // playback between a lower-half press and the release that auditions. The
     // tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-    if (app.drag.active || app.trim_drag.active ||
+    if (app.drag.active || app.value_drag.active || app.trim_drag.active ||
         app.region_drag.active ||
         app.scroll_drag.active || app.overview_drag.active ||
         app.pending_marker_press.active || app.pending_click.active() ||
@@ -2204,10 +2207,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the neighbouring working-zoom command moved the camera; that hazard died
     // with the framing on 2026-09-04 and the spelling stands on its mnemonic
     // alone. `[` looks like the begin-trim endcap, and the shift form
-    // rides the same key so the pair stays one surface. BOTH KEYS IT LEFT ARE
-    // UNBOUND — bare `x` and Shift+X answer nothing anywhere now, exactly as
-    // Ctrl+Shift+X has since 2026-08-18 — and under strict modifier validation
-    // an unbound combination is a consumed no-op everywhere. Only the spelling
+    // rides the same key so the pair stays one surface. Shift+X is UNBOUND and
+    // answers nothing anywhere, exactly as Ctrl+Shift+X has since 2026-08-18,
+    // and under strict modifier validation an unbound combination is a
+    // consumed no-op everywhere; BARE `x` IS THE VALUE DRAG LAMP since
+    // 2026-09-10, which took the free letter. Only the spelling
     // moved: the two acts and the button are untouched.
     //
     // THE SHIFT FORM ARRIVES AS BracketLeft PLUS THE SHIFT BIT, not as a `{`

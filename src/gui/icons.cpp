@@ -613,6 +613,27 @@ constexpr IconPath kEditSelectPaths[] = {
      "19 10.900391 14.300781 17 14 7 6"},
 };
 
+// THE VALUE DRAG LAMP'S GLYPH (architect 2026-09-10): transform-move-vertical,
+// two solid triangles pointing up and down around a dot — the axis the lamp
+// turns a flag drag onto, said as plainly as an icon can say it. A LAMP rather
+// than an act, so it wears this one glyph in both states like Add to selection
+// beside it.
+//
+// THE RUNNER-UP WAS `adjustlevels`, the row's other candidate: a slider with a
+// handle, which reads as a SETTING rather than as a direction, and the axis is
+// what this mode is about. Recorded here for the same reason every succession
+// on this row is — so it is not re-proposed without a new ruling.
+//
+// Command coverage: absolute `M` / `L` / `C` with explicit `z` on all three
+// subpaths (the two triangles and the round dot), which is the same set the
+// chronometer and the vcs pair already use — nothing new for the parser.
+constexpr IconPath kTransformMoveVerticalPaths[] = {
+    {kIconText,
+     "M 11 3 L 9 7 L 13 7 L 11 3 z M 11 10 C 10.446 10 10 10.446 10 11 C 10 "
+     "11.554 10.446 12 11 12 C 11.554 12 12 11.554 12 11 C 12 10.446 11.554 10 "
+     "11 10 z M 9 15 L 11 19 L 13 15 L 9 15 z "},
+};
+
 // THE MARKER MEASURE ACT'S GLYPH: minuet-scales, KDE Minuet's own icon —
 // three note heads climbing a five-line staff. THE ARCHITECT PICKED IT
 // 2026-08-20, replacing edit-comment's speech balloon, which had been right for
@@ -1252,6 +1273,7 @@ constexpr IconDef kKeyframeNext       {22.0, kKeyframeNextPaths,        1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
+constexpr IconDef kTransformMoveVertical {22.0, kTransformMoveVerticalPaths, 1};
 constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
 constexpr IconDef kTextField          {22.0, kTextFieldPaths,           1};
 constexpr IconDef kFolder             {22.0, kFolderPaths,              1};
@@ -1312,6 +1334,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DocumentRevert:      return kDocumentRevert;
         case Icon::ShallowHistory:      return kShallowHistory;
         case Icon::EditSelect:          return kEditSelect;
+        case Icon::TransformMoveVertical: return kTransformMoveVertical;
         case Icon::MinuetScales:        return kMinuetScales;
         case Icon::TextField:           return kTextField;
         case Icon::Folder:              return kFolder;
