@@ -655,43 +655,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 
 // -- THE ITERATION LOCK'S ALLOWLIST ------------------------------------------
 
-// WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS — delta (a) below,
-// SPELLED ONCE, and the ONE place the iteration half outranks the read-only
-// lock's ADMISSION (architect 2026-09-10). Everything here is on the base
-// allowlist, so the wider list CANNOT answer for it: on a LOCKED TAB WITH THE
-// LAMP LIT — reachable, bare `o` being read-only-legal and the mode global
-// rather than per-tab — the gate asks this BESIDE the wider list rather than
-// instead of it, and these chords take the ITERATION sentence there, which is
-// the sentence their greyed buttons wear. TWO READERS and no second list: that
-// gate (on_key, input_handler.cpp, whose read-only arm reads it) and delta (a)
-// below. TWO MEMBERS:
-//
-//   * THE COLUMN SWITCH'S QUARTET — bare `p` and the three absolute view
-//     selectors bare 1 / 2 / 3, which run the `t` and `p` handlers and so
-//     carry the column with them. The mode is lit for the column you are IN,
-//     so the switch cannot run under a lit lamp; without this the column would
-//     move while the Toggle Marker Column button greys and says otherwise.
-//     Bare-exact on all four, as their own dispatch arms spell them.
-//   * THE Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10, on reading the
-//     march's cell walk back): the march switches tabs between its two steps,
-//     and the switch CLEARS THE SELECTION and re-seats the payload
-//     (Selection::seat_focus), so the second tab can never walk its cells
-//     honestly — a per-tab addressed cell cannot survive the switch that is
-//     the act's own middle. He refused the act rather than the workaround that
-//     had the second step repeat the first's shape. Ctrl+TAB is NOT here and
-//     stays admitted, by construction rather than by exception: the two tabs
-//     SHARE both marker stores, so a bracket is common to both and a plain
-//     switch strands nothing and walks nothing. Ctrl-and-shift exact, the
-//     march's own dispatch spelling.
-bool GuiInputHandler::iteration_lock_beyond_read_only(GuiKey key,
-                                                      GuiInputState mods) {
-    if (!mods.alt && !mods.ctrl && !mods.shift &&
-        (key == GuiKeys::P || key == GuiKeys::Digit1 ||
-         key == GuiKeys::Digit2 || key == GuiKeys::Digit3))
-        return true;
-    return !mods.alt && mods.ctrl && mods.shift && key == GuiKeys::Tab;
-}
-
 // THE PIECE IS LOCKED WHILE GRID ITERATIONS STANDS (architect 2026-09-10:
 // "Nothing that can ever land in the undo history should be allowed, because
 // the undo history is not allowed. Basically only the brackets are turned on
@@ -703,33 +666,47 @@ bool GuiInputHandler::iteration_lock_beyond_read_only(GuiKey key,
 //
 // IT IS THE ALLOWLIST ABOVE PLUS TWO DELTAS, NOT A SECOND COPY, which is what
 // keeps "everything the read-only lock refuses the iteration lock refuses too"
-// one statement rather than two lists that drift. Read-only outranks it FOR
-// EVERY CHORD BUT DELTA (a)'s: the gate (on_key, input_handler.cpp) asks the
-// WIDER list on a locked tab and asks delta (a) BESIDE it through the owner
-// above, that delta being a set of REFUSALS the wider list does not carry and
-// so the only thing this side has to be heard on a locked tab about.
-// Nothing else here loosens or tightens anything there.
+// one statement rather than two lists that drift. THE GATE ASKS EXACTLY ONE OF
+// THE TWO LISTS (on_key, input_handler.cpp), because the two locks are
+// MUTUALLY EXCLUSIVE since 2026-09-10 (authoring_locked, app_state.h): a lit
+// lamp cannot be locked — bare `o` is delta (a)'s newest member, below — and a
+// locked tab cannot be lit, bare `i` never having been on the wider list. The
+// gate ASKED BOTH LISTS BESIDE EACH OTHER until that morning, over an owner
+// that spelled delta (a) on its own, because a locked tab with the lamp lit
+// was reachable and delta (a) is the one thing the wider list cannot answer
+// for; with that state gone the owner went with it and its members are plain
+// first tests below.
 //
-// DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, stated
-// whole at its owner above (iteration_lock_beyond_read_only) and TWO MEMBERS
-// wide: THE W/P COLUMN SWITCH's four chords — bare `p` and the three ABSOLUTE
-// VIEW SELECTORS bare 1 / 2 / 3, which run the `t` and `p` handlers and so
-// carry the column with them (architect 2026-09-10: the mode is lit for the
-// column you are IN, which is also what retired the stamped column that stood
-// beside the mode bit for a few hours of that day) — and THE Ctrl+Shift+Tab
-// PAIRED MARCH, whose tab switch clears the selection and re-seats the
-// payload, so its second tab could never walk the cells honestly (architect
-// 2026-09-10). BARE `t` IS NOT ONE of them and stays admitted: the mode is
-// target-legal and a bracket reads no audio view. NEITHER IS Ctrl+Tab, and
-// that is by construction rather than by exception, the two tabs SHARING the
-// warp and phase-reset stores, so a bracket is common to both tabs and a plain
-// switch can strand nothing.
+// DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, and
+// THREE MEMBERS wide: THE W/P COLUMN SWITCH's four chords — bare `p` and the
+// three ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3, which run the `t` and `p`
+// handlers and so carry the column with them (architect 2026-09-10: the mode
+// is lit for the column you are IN, which is also what retired the stamped
+// column that stood beside the mode bit for a few hours of that day) — THE
+// Ctrl+Shift+Tab PAIRED MARCH, whose tab switch clears the selection and
+// re-seats the payload, so its second tab could never walk the cells honestly
+// (architect 2026-09-10) — and BARE `o`, THE READ-ONLY TOGGLE (architect
+// 2026-09-10, that morning). The padlock is the odd one out in what it
+// protects: a lock writes no store and pushes nothing, so the undo domain has
+// no interest in it. WHAT IT PROTECTS IS THE MODE'S OWN REACHABILITY. Locking
+// the tab under a lit lamp used to reach a state in which the bound cells
+// refused with the TAB's sentence and bare `i` — off the wider list — could
+// not put the lamp out; he ruled the road shut rather than widen the wider
+// list, so the padlock greys and cards `Turn off grid iterations first`. The
+// SWITCH half of that same rule lives at iteration_lock_refuses_tab_switch
+// (app_state.h), a per-tab question no keyboard allowlist can ask: a switch
+// INTO a locked tab refuses, which is why Ctrl+Tab is admitted here.
+// BARE `t` IS NOT ONE of them and stays admitted: the mode is
+// target-legal and a bracket reads no audio view. NEITHER IS Ctrl+Tab, whose
+// admission here is the whole of what that per-tab owner narrows — the two
+// tabs SHARE the warp and phase-reset stores, so a bracket is common to both
+// tabs and a switch onto a WRITABLE tab strands nothing.
 //
 // EVERY OTHER AUTHORING CHORD this mode has to hold back is already off the
 // list above — the vertical arrows on any modifier, bare Return, bare `/`,
 // Delete, Ctrl+D, Ctrl+N, bare `s` and Shift+S, `;`, the three propagate
 // PASTES, and Ctrl+Z / Ctrl+Shift+Z — so the base answers for all of them and
-// this delta subtracts the column switch alone. BARE `h` IS THE ONE AUTHORING
+// this delta subtracts the three above alone. BARE `h` IS THE ONE AUTHORING
 // ROAD THIS GATE DOES NOT ANSWER, and it is refused a dispatch earlier
 // instead: the history vocabulary is claimed above this gate
 // (handle_history_mode_key, below), so the view's ENTRY carries the lock's
@@ -787,10 +764,13 @@ bool GuiInputHandler::iteration_lock_beyond_read_only(GuiKey key,
 // Toggle Marker Column lamp, the Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
 // lane, and — since 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
-// quartet's other three chords, and WALK BOTH TABS, delta (a)'s other member;
-// each arm composes its own read-only half beside it, FOUR of them having none
-// at all (the column lamp, the history opener, the view bar and Walk both
-// tabs, whose chords the base admits or never sees).
+// quartet's other three chords, WALK BOTH TABS, delta (a)'s second member,
+// THE PADLOCK, its third, and A TAB BUTTON WHOSE OWN TAB IS LOCKED (the
+// switch's per-tab owner, iteration_lock_refuses_tab_switch). NO ARM THERE
+// COMPOSES A READ-ONLY HALF ANY MORE for the members whose chords the base
+// admits or never sees, and the members that do compose one do it for their
+// act rather than for a rank: the two locks are mutually exclusive, so a lit
+// lamp implies a writable active tab.
 // Undo and Redo take the mode through
 // history_step_actionable instead, their sentence naming the act. Grid
 // iterations and BPM iterations ask the tab's bit alone, being the two exit
@@ -811,9 +791,19 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the W/P column switch and the
-    // paired march, through their one owner above.
-    if (iteration_lock_beyond_read_only(key, mods)) return true;
+    // DELTA (a), ahead of every admission: the W/P column switch, BARE `o`
+    // (the read-only toggle — the lock's own reachability, the header) and the
+    // paired march. Bare-exact on all five and ctrl-and-shift exact on the
+    // march, exactly as their dispatch arms spell them. (They lived in an
+    // owner of their own until 2026-09-10, so that the gate could ask them
+    // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
+    // state unreachable, and the owner went with it.)
+    if (!alt && !ctrl && !shift &&
+        (key == GuiKeys::O || key == GuiKeys::P ||
+         key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+         key == GuiKeys::Digit3))
+        return true;
+    if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) return false;
     // Bare `m` — BPM iterations, bare-exact as its dispatch arm is.
@@ -8284,6 +8274,22 @@ void GuiInputHandler::copy_focused_marker_value() {
 // NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
 // anywhere in the product, so there is nothing here to push.
 void GuiInputHandler::jump_to_value_source() {
+    // THE ITERATION LOCK REFUSES THE JUMP INTO A LOCKED TAB (architect
+    // 2026-09-10), through the switch's one owner and AHEAD of every other
+    // gate here: the act ENDS on the other tab, so it installs the composed
+    // state as durably as Ctrl+Tab would, and it must refuse before the first
+    // `c` — a refused act moves no camera and lands no playhead, this body's
+    // own promise about the tab it leaves. The chord itself stays ADMITTED at
+    // the keyboard gate (it is on the read-only allowlist and the iteration
+    // list falls through to it), which is right: the jump is refused only
+    // where the tab it would land on is locked, a per-tab question no
+    // allowlist can ask.
+    if (iteration_lock_refuses_tab_switch(
+            app, app.active_tab_view == 'A' ? 'B' : 'A')) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kIterationLockCard);
+        return;
+    }
     switch (payload_eligibility(app, audio, app.last_selected_marker)) {
         case PayloadEligibility::NoResolvedValue:
             // THE COPY'S OWN GATE, in the JUMP's words: there is no resolved
@@ -8506,8 +8512,28 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // current viewport/zoom/playhead to the leaving tab, restores the
     // target tab. Does not mark the document dirty. Alt-strict: an Alt
     // held alongside makes the chord an unbound no-op, never this binding.
+    //
+    // THE ITERATION LOCK REFUSES IT INTO A LOCKED TAB (architect 2026-09-10),
+    // and this is the switch half of the rule that keeps the two locks apart:
+    // the lamp is GLOBAL while `read_only` is PER TAB, so bare `o`'s refusal
+    // alone would still leave "tab A lit, tab B locked, one Ctrl+Tab" as a
+    // road onto a tab where the bound cells refuse with the tab's sentence and
+    // bare `i` cannot put the lamp out. The verdict has ONE owner
+    // (iteration_lock_refuses_tab_switch, app_state.h — its four act readers
+    // are inventoried there) and the TARGET's bit is the whole question, so
+    // the switch OUT of a locked tab is untouched. IT NEVER WIPES: the
+    // brackets are what the user is tuning, and this lock refuses rather than
+    // mutates. The two tab buttons carry this chord and grey on the same
+    // owner, so the greyed press dies at arm_redesign_press and this card is
+    // the keyboard's alone.
     if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+        const char target = (app.active_tab_view == 'A') ? 'B' : 'A';
+        if (iteration_lock_refuses_tab_switch(app, target)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIterationLockCard);
+            return true;
+        }
+        active_views.switch_active_tab_view_to(target);
         target_render.trigger();
         return true;
     }
@@ -8534,10 +8560,13 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // its old focus. Do not collapse these two into one.
     //
     // IT NEVER MEETS A BOUND CELL, because it never runs while grid iterations
-    // is lit (architect 2026-09-10): the march is one of delta (a)'s two
-    // members at the authoring lock's keyboard gate, refused on
+    // is lit (architect 2026-09-10): the march is one of delta (a)'s members
+    // at the authoring lock's keyboard gate, refused on
     // kIterationLockCard with the Walk both tabs button greyed beside it
-    // (iteration_lock_beyond_read_only, above). The reason is this arm's own
+    // (iteration_lock_key_blocked, above). It needs no term of the SWITCH's
+    // own per-tab owner, which the Ctrl+Tab arm above carries: the gate's
+    // refusal is the wider one, standing on any tab, locked or not. The
+    // reason is this arm's own
     // middle — switch_active_tab_view_to CLEARS THE SELECTION and re-seats the
     // payload (Selection::seat_focus), so a second step through the purple
     // cells could not honestly repeat what the first one did, and he refused

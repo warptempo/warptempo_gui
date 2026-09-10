@@ -302,11 +302,13 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // It is the read-only sentence's sibling all the same, and the composer below
 // is where the two meet.
 
-// THE ONE COMPOSER THE LOCK'S CARD FORKS AT — read-only OUTRANKS, because a
-// locked tab says its own sentence: the two locks compose (authoring_locked,
-// app_state.h) and a tab can be locked while the lamp is already lit (bare `o`
-// is read-only-legal and the mode is global rather than per-tab), so the fork
-// has to be ordered rather than exclusive. Its readers are TWO of the three
+// THE ONE COMPOSER THE LOCK'S CARD FORKS AT, and the fork CHOOSES rather than
+// ranks: the two locks are MUTUALLY EXCLUSIVE since 2026-09-10
+// (authoring_locked, app_state.h — a lit lamp cannot be locked and a locked
+// tab cannot be lit), so exactly one arm can ever be reached. It was ORDERED
+// until then, read-only first, a tab being lockable while the lamp was already
+// lit; the body did not change with the ruling, only what it means.
+// Its readers are TWO of the three
 // sites that KNOW THEIR ACT and so need no chord in the sentence — the
 // settings editor's engine-key commit arm and the render player's Load in
 // place; the third, the `h` view's bare `v`, keeps the bare literal because

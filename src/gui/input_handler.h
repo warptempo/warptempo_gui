@@ -2648,7 +2648,7 @@ private:
     // it carries govern marker-to-marker steps alone. A marker step runs the
     // gate, the select and the jump as it always has and then seats the step's
     // cell behind them. THE MARCH MEETS NO CELL AT ALL: it is refused while
-    // grid iterations is lit (the lock's delta (a)), so its two calls are
+    // grid iterations is lit (the lock's keyboard gate), so its two calls are
     // marker steps whatever the mode, and nothing reads the step back.
     void cycle_marker_focus(bool forward, MarkerLandingFrame frame);
 
@@ -4079,26 +4079,19 @@ private:
 
     // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
     // (architect 2026-09-10). Returns true if key+mods should be dropped while
-    // GRID ITERATIONS stands on a WRITABLE tab; on a locked tab the wider
-    // read-only list applies instead and this is not called — its delta (a)
-    // alone is asked there, through that delta's own owner below (read-only
-    // outranks every refusal it carries, the fork at the gate in on_key). It
-    // is written as
+    // GRID ITERATIONS stands; the gate asks exactly one of the two lists,
+    // because the two locks are MUTUALLY EXCLUSIVE (authoring_locked,
+    // app_state.h — a lit lamp cannot be locked and a locked tab cannot be
+    // lit). It is written as
     // read_only_key_blocked's answer plus its own deltas rather than as a
     // second copy of that list, and both deltas are stated at the definition.
     // It takes the live AppState through the handler's own member, exactly as
     // its base does for the arrows' lane term.
+    // (A SECOND PREDICATE STOOD BESIDE IT until 2026-09-10, spelling delta (a)
+    // on its own so the gate could ask it BESIDE the wider list on a locked
+    // tab. Bare `o`'s refusal under a lit lamp made that state unreachable and
+    // the predicate went with it, its members becoming plain first tests.)
     bool iteration_lock_key_blocked(GuiKey key, GuiInputState mods);
-
-    // WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS — the column
-    // switch's quartet (bare `p` and the three absolute view selectors) and
-    // the Ctrl+Shift+Tab paired march: the subtractions the allowlist above
-    // makes from its base, and therefore the only chords that still have to be
-    // asked on a LOCKED tab, where the wider list ADMITS all five. State-free,
-    // so it is the class's own static: its two readers are the delta itself
-    // and the gate's read-only arm, which asks it beside the wider list. The
-    // whole account is at the definition (input_key_dispatch.cpp).
-    static bool iteration_lock_beyond_read_only(GuiKey key, GuiInputState mods);
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.

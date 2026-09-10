@@ -335,6 +335,21 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     }
     if (key == "active_tab_view") {
         if (gv.c == app.active_tab_view) { unchanged(); return true; }
+        // THE ITERATION LOCK REFUSES A SWITCH INTO A LOCKED TAB (architect
+        // 2026-09-10), through the switch's one owner: this arm is the typed
+        // spelling of Ctrl+Tab, so it takes Ctrl+Tab's refusal, in this
+        // surface's own shape (red flash plus card). Without it the editor —
+        // which the Settings dropdown opens under a lit lamp, the lock
+        // governing the keys and not the surface — would be a second road onto
+        // the state that ruling exists to delete.
+        if (iteration_lock_refuses_tab_switch(app, gv.c)) {
+            app.settings_editor.red = true;
+            viewport.invalidate_modal_dialog_area();
+            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIterationLockCard);
+            return true;
+        }
         // Exactly the Ctrl+Tab pair.
         active_views.switch_active_tab_view_to(gv.c);
         target_render.trigger();
@@ -449,6 +464,27 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // standing right there. Bare `;` still cannot open the editor on a
         // locked tab at all, being off that allowlist one level up.
         if (gv.b == band.read_only) { unchanged(); return true; }
+        // THE ITERATION LOCK REFUSES A SELF-LOCK (architect 2026-09-10), the
+        // typed spelling of bare `o`'s own refusal and scoped exactly as that
+        // refusal is scoped: LOCKING THE ACTIVE TAB while the lamp is lit is
+        // the road onto the composed state — the tab whose sentence would then
+        // outrank the mode's own cells, with bare `i` off the read-only list
+        // and unable to put the lamp out. A REMOTE lock (`tab_B_read_only=true`
+        // typed from tab A) still commits, and must: it leaves the invariant
+        // intact — the lamp still stands over a writable tab — and Ctrl+Tab
+        // into that tab is what refuses afterwards, through the switch's own
+        // owner. An UNLOCK in either direction commits under a lit lamp too;
+        // it can only widen what is reachable. Red flash plus card, this
+        // surface's shape, with the sentence forked at the one composer.
+        if (gv.b && tab_char == app.active_tab_view &&
+            app.iteration_mode_enabled) {
+            app.settings_editor.red = true;
+            viewport.invalidate_modal_dialog_area();
+            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIterationLockCard);
+            return true;
+        }
         // The bit's one setter, shared with bare `o` (the contract is at
         // GuiInputHandler::set_tab_read_only, input_handler.h): it writes the
         // named band and, when that band is the active one, damages the top

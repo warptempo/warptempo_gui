@@ -57,7 +57,9 @@ bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
 // all but the act's STOP: a standing sequence is transport_session_live, which
 // the face reads ahead of this and answers with its lit STOP glyph, so a press
 // on that face always does something. It sits beside start() so the two read as
-// one; a gate added there must be added here. THE DEVICE TERM IS A READ,
+// one; a gate added there must be added here — THE ITERATION LOCK'S TAB GATE
+// arrived that way on 2026-09-10, ahead of the device exactly as it is in
+// start(). THE DEVICE TERM IS A READ,
 // NEVER A REOPEN, AND THE READ IS THE NEVER-CAME-UP HALF (2026-09-02, the
 // truthful-buttons rule): start() asks ensure_device_available_for_play,
 // which reopens a dead AAudio stream and cards only when that fails, so this
@@ -66,6 +68,9 @@ bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
 bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
                               const GuiPlayback& playback,
                               const GuiTargetRender& target_render) {
+    if (iteration_lock_refuses_tab_switch(
+            app, app.active_tab_view == 'A' ? 'B' : 'A'))
+        return false;
     if (playback.device_absent()) return false;
     return tab_launch_ready_impl(app, audio, playback, target_render,
                                  app.playhead_cursor_sample) &&
@@ -96,6 +101,24 @@ void GuiAbAudition::start() {
     // the answer — and no audition is launched by this press.
     if (app.audition_sequence.phase != Phase::Idle) {
         playback_lifecycle.stop_playback_if_playing();
+        return;
+    }
+    // THE ITERATION LOCK IS THE PREFLIGHT'S OUTERMOST QUESTION (architect
+    // 2026-09-10), ahead of the device because a refused act must not reopen a
+    // stream either: the act SWITCHES TO THE OTHER TAB and an INTERRUPTED
+    // audition rests there — bare Space, or any of the four clearing owners,
+    // ends it wherever it stands — so it installs the composed state as
+    // durably as Ctrl+Tab would, and the switch's one owner refuses it into a
+    // LOCKED tab while the lamp is lit (iteration_lock_refuses_tab_switch,
+    // app_state.h). The chord stays admitted at the keyboard gate: the refusal
+    // is the target tab's bit, a per-tab question no allowlist can ask. THE
+    // FACE FOLLOWS THROUGH THE ASK-AHEAD ABOVE, which carries the same term in
+    // the same rank — and the Play button stays LIT wherever bare Space would
+    // play, the twin rule, this card answering the shift press alone.
+    if (iteration_lock_refuses_tab_switch(
+            app, app.active_tab_view == 'A' ? 'B' : 'A')) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kIterationLockCard);
         return;
     }
     // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), AND THE

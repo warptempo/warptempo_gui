@@ -857,7 +857,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
     // (architect 2026-09-10; Ctrl+Tab stays admitted, the two tabs sharing
-    // both stores) —
+    // both stores, and a switch INTO A LOCKED TAB is refused by the per-tab
+    // owner iteration_lock_refuses_tab_switch, app_state.h, no keyboard
+    // allowlist being able to ask a per-tab question) — MINUS BARE `o`, the
+    // read-only toggle (architect 2026-09-10: the padlock refuses under a lit
+    // lamp, which is what makes the two locks mutually exclusive) —
     // AND PLUS FIVE ADMISSIONS: bare `i` (the off edge must always be
     // reachable), bare `m` (BPM iterations, the one road that leaves this
     // mode by entering another, landing nothing in history at the press),
@@ -869,13 +873,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // interest in them; their three ALT-bearing pastes stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
-    // copy. THE SUBTRACTIONS ARE ASKED ON A LOCKED TAB TOO, through delta (a)'s
-    // own owner beside this list — this one ADMITS all five chords, so it
-    // cannot answer for them (the fork below states it). BARE `h` IS REFUSED UNDER
+    // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
+    // being mutually exclusive (the fork below states it). BARE `h` IS REFUSED UNDER
     // THAT LOCK TOO and is not on either list:
     // the history vocabulary is claimed a dispatch above this gate, so the
     // view's entry arm carries the refusal.
-    //   - Bare o                 → toggle read-only off (escape chord)
+    //   - Bare o                 → toggle read-only off (escape chord).
+    //                              THE ITERATION LIST SUBTRACTS IT (2026-09-10):
+    //                              the padlock cannot lock a tab under a lit
+    //                              lamp, which is what keeps the two locks
+    //                              from ever standing together
     //   - Space (no mods)        → playback toggle
     //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
     //                              EMPTY selection (the waveform lane): with one
@@ -974,32 +981,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (iteration_lock_key_blocked, input_key_dispatch.cpp, where both deltas
     // are stated).
     //
-    // READ-ONLY OUTRANKS FOR EVERY CHORD IT REFUSES, which is what the fork
-    // below spells: a tab can be locked while the lamp is already lit — bare
-    // `o` is read-only-legal and the mode is global rather than per-tab — and
-    // there the tab's own sentence is the one to say, so the WIDER list
-    // applies and the iteration side's admissions (bare `i`, bare `m`, the two
-    // clipboard copies, the bound axis) stay refused on a locked tab exactly
-    // as they always were.
+    // THE TWO REASONS ARE MUTUALLY EXCLUSIVE (architect 2026-09-10, ruling
+    // bare `o` refused under a lit lamp), which is why the fork below is a
+    // plain either/or: a lit lamp cannot be locked — the padlock is on the
+    // iteration list's refusals, the settings editor's typed self-lock refuses
+    // beside it (settings_editor.cpp) and every tab switch into a locked tab
+    // refuses (iteration_lock_refuses_tab_switch, app_state.h) — and a locked
+    // tab cannot be lit, bare `i` never having been on the read-only list. So
+    // at most one of the two terms below is ever true, and the card fork
+    // CHOOSES the sentence rather than ranking it.
     //
-    // BUT A WIDER LIST CANNOT ANSWER FOR A REFUSAL IT DOES NOT CARRY, and the
-    // iteration lock has two — THE W/P COLUMN SWITCH and THE Ctrl+Shift+Tab
-    // PAIRED MARCH, delta (a), both of which read-only ADMITS (a column switch
-    // and a marker walk each author nothing, so bare `p`, the three absolute
-    // view selectors and the march are all on its allowlist). Under BOTH
-    // reasons the two lists are therefore asked BESIDE each other: the
-    // read-only list on its own terms, plus delta (a) through its one owner
-    // (iteration_lock_beyond_read_only) — else the column would move, and the
-    // march would walk, under a lit lamp on a locked tab while the Toggle
-    // Marker Column and Walk both tabs buttons, which grey on the lamp alone,
-    // said otherwise.
-    const bool read_only_here = active_view_state(app).read_only;
+    // IT WAS ORDERED UNTIL THAT MORNING, read-only first, because `i` then `o`
+    // reached the composed state: there the wider list applied, the iteration
+    // side's admissions (bare `i`, bare `m`, the two clipboard copies, the
+    // bound axis) stayed refused, and the lamp could not be put out until the
+    // tab was unlocked. That fork asked delta (a) BESIDE the wider list — a
+    // wider list cannot answer for a refusal it does not carry, and read-only
+    // ADMITS the column switch and the paired march — through a predicate of
+    // delta (a)'s own. Both the carve-out and that predicate are gone with the
+    // state they described.
     const bool read_only_says_no =
-        read_only_here && read_only_key_blocked(key, mods);
+        active_view_state(app).read_only && read_only_key_blocked(key, mods);
     const bool iteration_says_no =
-        app.iteration_mode_enabled &&
-        (read_only_here ? iteration_lock_beyond_read_only(key, mods)
-                        : iteration_lock_key_blocked(key, mods));
+        app.iteration_mode_enabled && iteration_lock_key_blocked(key, mods);
     if (read_only_says_no || iteration_says_no) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
         // 2026-08-30): "<chord> is not available on a read-only tab", said
@@ -1070,12 +1074,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // player's Load in place, and the `h` view's bare `v` fork above.
         //
         // AND THE CARD FORKS ON THE REASON AT THIS ONE COMPOSER (architect
-        // 2026-09-10), on the REASON THAT ACTUALLY STOOD rather than on the
-        // tab's bit: under both reasons delta (a) — the column-switch quartet
-        // and the paired march — is the iteration lock's refusal alone, the
-        // read-only list admitting both, so those chords carry the iteration
-        // sentence on a locked tab too, which is the sentence the greyed
-        // Toggle Marker Column and Walk both tabs buttons wear there. The
+        // 2026-09-10), on the REASON THAT ACTUALLY STOOD — which since that
+        // morning is the only reason standing, the two locks being mutually
+        // exclusive (the fork's own note above). The
         // read-only sentence names the chord for the reason
         // above — this gate drops unbound chords with bound ones, so it has to
         // say which it ate. THE ITERATION SENTENCE NAMES THE WAY OUT INSTEAD
@@ -1188,7 +1189,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Bare `o` toggles the active tab's read-only flag. Always admitted
     // by the read-only allowlist above (the locked-out user must be
-    // able to unlock). Pure view-state mutation: not undoable, not dirty;
+    // able to unlock) and REFUSED BY THE ITERATION ONE since 2026-09-10
+    // (architect): the padlock cannot lock a tab under a lit lamp, because
+    // that state left the mode's own cells refusing with the TAB's sentence
+    // and bare `i` — off the read-only list — unable to put the lamp out. The
+    // refusal is the gate's, on kIterationLockCard, with the icon row's Lock
+    // button greyed beside it (iteration_lock_greys, app_state.h); nothing
+    // here forks, the chord never arriving under a lit lamp.
+    // Pure view-state mutation: not undoable, not dirty;
     // silently persisted on the next Ctrl+S — WHICH THE LOCKED TAB CAN NOW RUN
     // ITSELF (2026-08-07: the save authors nothing, so it is on the allowlist),
     // so a tab locked here reaches disk without an unlock and without a trip to
