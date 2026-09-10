@@ -1255,8 +1255,10 @@ int cursor_kind_index(GuiCursorKind kind) {
 }
 
 // THE KIND -> XCURSOR NAME TABLE, and the whole of what the product knows about
-// cursor art: SEVEN KINDS over eight standard freedesktop names, all present
-// in Breeze and in Adwaita. (`crosshair` LEFT THE TABLE with the Scrub kind,
+// cursor art: EIGHT KINDS over ten standard freedesktop names, all present
+// in Breeze and in Adwaita (eight names over seven kinds until 2026-09-10,
+// when the VALUE DRAG's `ns-resize` / `size_ver` row landed — the count is
+// re-derived from the table below at every retell, never carried). (`crosshair` LEFT THE TABLE with the Scrub kind,
 // 2026-08-13 — the waveform's two halves became one surface and the lower
 // half's audition became a click act, which carries no cue; the enum's own
 // comment holds the ruling.
@@ -1270,9 +1272,12 @@ int cursor_kind_index(GuiCursorKind kind) {
 //
 //     left_ptr 4,4   grab 16,16   zoom-in 15,15
 //     ew-resize 16,15   left_side 4,15   right_side 27,15   text 16,15
+//     ns-resize 16,15
 //
 // The POINTER-ISH shapes are centred (grab exactly, zoom-in within a pixel of
-// it, the I-beam's 16,15 on its own waist) while left_side and right_side sit
+// it, the I-beam's 16,15 on its own waist, and ns-resize on ew-resize's own
+// 16,15 — Breeze serves both from one pair of transposed images that declare
+// the same hotspot) while left_side and right_side sit
 // hard against their OWN edge
 // — 4,15 and 27,15, which is the whole point of an edge cue — and left_ptr sits
 // at its tip. No single rule we could compute produces all three, which is

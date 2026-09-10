@@ -39,8 +39,10 @@
 // and its own declared hotspot are what the compositor gets.
 //
 // Arrow is left_ptr, the cursor everywhere the GUI names nothing else, and it is
-// also the FALLBACK: a theme missing one of the other six names degrades that
-// KIND to the arrow with one stderr line, which costs the cue and nothing else.
+// also the FALLBACK: a theme missing one of the other SEVEN kinds' names —
+// ten names over eight kinds since the value drag landed, two of the rows
+// carrying a second spelling — degrades that KIND to the arrow with one
+// stderr line, which costs the cue and nothing else.
 // The seven beside it each mark a zone whose gesture the arrow cannot promise —
 // the mapping from zone to kind is the GUI's (pointer_cursor_kind,
 // input_handler.h), and this enum is only the vocabulary.

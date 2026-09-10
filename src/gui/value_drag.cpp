@@ -165,6 +165,16 @@ void ValueDragOps::apply_motion(int mouse_y) {
     // flags keep sitting on the DISPLAYED basis until the commit's own tail
     // re-warps the plate — the marker drag's precedent exactly, where the
     // proposal paints on the frozen basis and the map re-lands at the release.
+    // WHAT MAKES THAT TRUE IS NOT THIS FUNCTION'S RESTRAINT (2026-09-10,
+    // codex's finding): the write above lands in the LIVE store, so the target
+    // map's hash moves with it and the per-tick dirty-detect would dispatch a
+    // full waveform render — and publish its map and rebuild the flags — every
+    // four pixels of travel. The gesture is a member of displayed_basis_frozen
+    // (app_state.h), which shuts the worker's dispatch AND its publication for
+    // the drag's life, and the tick's live-total backstop (main.cpp) is gated
+    // on the same bit, so no clamp can page the viewport sideways under a hand
+    // moving vertically. Both gates lift at the commit, which clears the state
+    // before it runs the tail.
     // The waveform is not damaged here either: a stem reads the marker's
     // CLASS, a tempo can move a marker in and out of the RED set, and the
     // commit is where that one repaint is owed.

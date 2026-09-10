@@ -2340,12 +2340,32 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // backstop finds their geometry already clamped (no movement, no second
         // render). live_total_frames is live-warp-map-derived, and every path
         // that can change that map is now synchronous (edits) or self-clamping
-        // (load / load-in-place), so no NAMED asynchronous case remains —
+        // (load / load-in-place) — WITH ONE NAMED EXCEPTION, THE VALUE DRAG,
+        // which defers its map re-land to its commit and is answered by the
+        // gate below — so no NAMED asynchronous case remains —
         // preview
         // completion repaints the plate but never touches the live map. This
         // stays cheap belt-and-braces insurance (a silent-wrong-geometry guard)
         // for any future path that moves the total without clamping.
-        {
+        //
+        // THERE IS EXACTLY ONE NAMED LIVE-MAP MUTATION THAT REACHES THIS TICK
+        // BEFORE ITS COMMIT, AND THE GATE IS HOW IT IS ANSWERED (2026-09-10):
+        // the VALUE DRAG writes tempo cents into the live warp store on every
+        // motion event, so in target view the total moves under a held button.
+        // The backstop DEFERS for the gesture rather than clamping into it — a
+        // synchronous clamp+rebuild mid-drag would page the viewport sideways
+        // under a hand that is moving vertically, which is precisely what the
+        // gesture's "motion damages the top strip alone" ruling forbids
+        // (value_drag.cpp). Nothing is lost by waiting: the commit clears
+        // app.value_drag and then runs warp_tempo_write_tail, whose
+        // kick_waveform_sync reclamps through this same chokepoint and renders
+        // the final geometry in one shot, so the first tick AFTER the release
+        // finds last_tick_live_total stale by exactly one gesture, re-reads the
+        // FINAL total once, and finds the geometry already clamped — no
+        // movement, no second render. The displayed-basis freeze covers the
+        // same window on the worker side (displayed_basis_frozen, app_state.h),
+        // and this gate is its live-total twin.
+        if (!app.value_drag.active) {
             const int64_t lt = live_total_frames(app, audio);
             if (app.last_tick_live_total != lt) {
                 app.last_tick_live_total = lt;

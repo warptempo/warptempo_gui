@@ -213,7 +213,10 @@ struct Viewport {
         // active_views, the settings editor, the tick backstop) it is a pure no-op.
         // The tick backstop (main.cpp) remains cheap belt-and-braces insurance
         // for any future total-changing path that skips this reclamp — with
-        // every edit tail synchronous now, no NAMED asynchronous case drives it.
+        // every edit tail synchronous now, no NAMED asynchronous case drives
+        // it, and the one edit that defers its re-land to a gesture's commit
+        // (the value drag) is gated out of that backstop for the gesture's
+        // life, so it reaches the tick exactly once, here, through this call.
         clamp_viewport_start(app, audio);
         // Repair the resting playhead and any live region against the (possibly
         // shrunk) live domain, AFTER the zoom/viewport reclamp so it reads the

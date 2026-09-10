@@ -9805,8 +9805,9 @@ inline int64_t snap_authored_frame(double frame) {
 // spells its twelve in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
-// own derivation — the absolute painted-subject drags plus the two pendings
-// that aim them — and answers a different question ("the displayed paint basis
+// own derivation — the absolute painted-subject drags, the two pendings that
+// aim them, and the value drag, which is there for the opposite reason (it
+// writes the live store per motion) — and answers a different question ("the displayed paint basis
 // may not move", not "some pointer gesture is live"). Each states its own
 // membership; neither reads the other.
 inline bool any_pointer_gesture_active(const AppState& app) {
@@ -10204,17 +10205,37 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // the belt says nothing by GuiOpRefusal's contract. Defined in
 // warpmarkers_ops.cpp beside the act.
 //
-// TWO READERS, and they are two because the CARD and the LINE must say the
-// same thing: GuiWarpMarkersOps::adjust_tempo_cents' target-view block, whose
-// refusal this IS, and the Up / Down buttons' MODIFIER LINE in the stateful
-// tooltip overload below, which drops where this answers non-null. That is
-// the truthful-tooltips rule applied to the one case the recorded
-// VALUE-SHAPED TAILS exception leaves lit: the face stays live and the key
-// cards, but the plain, the shifted and the ctrl press all card THIS same
-// sentence, so "Press Shift for a 3-step, Ctrl for 10." names three rungs
-// that do nothing different. It is deliberately NOT a term of
-// tempo_cent_step_direction_actionable: that predicate answers TRUE here on
-// purpose (the tails' record at its declaration), and this owner adds no face.
+// TWO FORMS SINCE 2026-09-10, ONE BODY — the verdict is a fact about ONE
+// MARKER, so the INDEX form carries it and the FOCUS form is the group
+// short-circuit over it. Split at the owner because the value drag asked the
+// focus form about the marker UNDER THE POINTER: at the resting hover the
+// press has not selected that flag yet, so an eligible hovered owner could
+// show the Arrow because the FOCUS was a collapsed member, and a collapsed
+// hovered owner could show ns-resize because the focus was eligible — the
+// cursor promising a gesture the crossing would then refuse. Fixing it at the
+// caller would have been a second reading of these three tests.
+//
+// THREE READERS ACROSS THE TWO FORMS, and they are three because the CARD,
+// the LINE and the CUE must say the same thing:
+//   * the FOCUS form — GuiWarpMarkersOps::adjust_tempo_cents' target-view
+//     block, whose refusal this IS, and the Up / Down buttons' MODIFIER LINE
+//     in the stateful tooltip overload below, which drops where it answers
+//     non-null (the truthful-tooltips rule applied to the one case the
+//     recorded VALUE-SHAPED TAILS exception leaves lit: the face stays live
+//     and the key cards, but the plain, the shifted and the ctrl press all
+//     card THIS same sentence, so "Press Shift for a 3-step, Ctrl for 10."
+//     names three rungs that do nothing different);
+//   * the INDEX form — value_drag_target below, the gesture's ONE predicate,
+//     which the crossing and the cursor map share.
+// The GROUP short-circuit lives on the focus form alone: a group press is not
+// this refusal's business (the group arm's refusals are the wall scan's),
+// while the drag presses one flag whatever the selection holds. Neither form
+// is a term of tempo_cent_step_direction_actionable: that predicate answers
+// TRUE here on purpose (the tails' record at its declaration), and this owner
+// adds no face.
+const char* tempo_cent_step_target_view_refusal_for(const AppState& a,
+                                                    const GuiAudio& audio,
+                                                    int idx);
 const char* tempo_cent_step_target_view_refusal(const AppState& a,
                                                 const GuiAudio& audio);
 
@@ -11513,12 +11534,16 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // surface, and a base that moved would carry every cell with it). One term,
 // authoring_locked, says both.
 //
-// THE TARGET-VIEW GATE IS THE ARROWS' OWN (tempo_cent_step_target_view_refusal):
-// in T view a pass, a ref or a coincident-collapse member is refused, and the
-// drag asks the same owner rather than a second reading of it. Source view and
-// a stale focus answer null there, so the term costs the ordinary case nothing.
-// The COLUMN is asked outright: a phase reset's payload is a POSITION and has
-// no value to step, so this arm is warp-only.
+// THE TARGET-VIEW GATE IS THE ARROWS' OWN, IN ITS INDEX FORM
+// (tempo_cent_step_target_view_refusal_for): in T view a pass, a ref or a
+// coincident-collapse member is refused, and the drag asks the same owner
+// rather than a second reading of it — ABOUT THE MARKER IT WAS ASKED ABOUT.
+// The focus-shaped form would have been the wrong subject here: the cursor
+// map asks this at a RESTING HOVER, before any press has selected the flag
+// under the pointer, so reading last_selected_marker would let one flag's
+// kind decide another flag's cue. Source view answers null, so the term costs
+// the ordinary case nothing. The COLUMN is asked outright: a phase reset's
+// payload is a POSITION and has no value to step, so this arm is warp-only.
 //
 // THE BOUND ARM IS THE PAINTED CELLS' — marker_paints_iter_cells, the same
 // predicate the Tab walk stops on, so the drag can never step a bound on a
@@ -11555,11 +11580,11 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         if (idx >= static_cast<int>(mv.size())) return false;
         if (!iter_bracket_carrier(mv[static_cast<size_t>(idx)])) return false;
         if (effective_disabled(mv, idx)) return false;
-        // The arrows' target-view kind refusal, asked of its one owner. It
-        // answers null in source view and for a stale focus, so this line is
-        // the T-view case alone.
+        // The arrows' target-view kind refusal, asked of its one owner about
+        // THIS marker. It answers null in source view, so this line is the
+        // T-view case alone.
         if (a.active_audio_view == 'T' &&
-            tempo_cent_step_target_view_refusal(a, audio))
+            tempo_cent_step_target_view_refusal_for(a, audio, idx))
             return false;
         return true;
     }
@@ -11639,7 +11664,12 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
 // a good reason we went with purple for the payload and the bounds"). A
 // Measure axis is still a legal SEAT (a press lands on that box), so the
 // backward step reads it as "one box right of upper" and walks into whatever
-// box actually stands left of it.
+// box actually stands left of it — ON A FLAG THAT PAINTS CELLS, and only
+// there. A flag showing no cells (the mode dark, or an ineligible marker
+// under a lit lamp) has no rank walk of any kind: every cell arm is skipped
+// and the seat falls WHOLE to the marker step, so a Measure axis is
+// walk-inert exactly as Payload is and the lamp-off walk is byte-identical to
+// the walk that stood before the cells existed.
 struct MarkerWalkStep {
     int        marker      = -1;
     MarkerCell cell        = MarkerCell::Payload;
@@ -16485,7 +16515,10 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // belongs iff it is
 // an ABSOLUTE drag on a PAINTED
 // subject — the marker drag and the trim drags — or the PENDING PRESS that
-// AIMS one (pending_marker_press, pending_trim_drag). THE FREEZE STARTS AT
+// AIMS one (pending_marker_press, pending_trim_drag), OR — the value drag,
+// argued in full at the bottom of this block — a drag that writes the LIVE
+// STORE per motion event, where the freeze runs the other way and protects
+// the screen from the store. THE FREEZE STARTS AT
 // THE AIMED PRESS, not at the 8px crossing: the crossing CONVERTS the press's
 // STORED press_x through the then-current displayed basis (the marker path's
 // begin_drag, the trim path's begin_trim_drag conversion), so the epoch the
@@ -16503,9 +16536,29 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // SUBSET of any_pointer_gesture_active under its own derivation, not a
 // consumer of it: that predicate answers "some pointer gesture is live", this
 // one "the displayed paint basis may not move".
+//
+// THE VALUE DRAG IS THE FIFTH MEMBER (2026-09-10) AND IT IS HERE FOR THE
+// OPPOSITE REASON TO THE OTHER FOUR. They are absolute drags on a painted
+// subject and the freeze protects the GESTURE from a basis that moves under
+// it. This one writes THE LIVE STORE per motion — the marker drag's proposal
+// is an overlay, this drag's cents land in the warp store as the hand moves —
+// so in target view every motion changes the target map's hash, and without
+// the freeze the tick's dirty-detect would dispatch a full waveform render per
+// four pixels of travel and publish a NEW map (and a rebuilt flag row) under
+// the hand. The freeze protects the SCREEN from the store, which is what makes
+// the gesture's own ruling true: motion damages the top strip alone, the flags
+// keep sitting on the DISPLAYED basis, and the map re-lands ONCE, at the
+// commit, through the tempo write's shared tail (value_drag.cpp). The commit
+// clears app.value_drag BEFORE it runs that tail, so the tail's synchronous
+// rebuild lands in the ordinary unfrozen way, and the staged pair the deferral
+// held promotes at the first frame that carries the repair damage — the marker
+// drag's own road out, unchanged. (Its own PENDING press is already a member
+// above: the same pending arms both drags, so the freeze covers this gesture
+// from the press through the crossing and on to the release with no gap.)
 inline bool displayed_basis_frozen(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
+           app.value_drag.active ||
            app.pending_marker_press.active ||
            app.pending_trim_drag.active;
 }

@@ -530,14 +530,15 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                     break;
                 }
             }
-        } else if (!forward && a.addressed_cell == MarkerCell::Measure) {
-            // A MEASURE SEAT ON A FLAG WITH NO CELLS: backward still steps to
-            // the box on its left, which here is the payload — the same rule
-            // as above with the two purple cells absent from the row. (A press
-            // on the measure box is what seats this axis, and it seats it on
-            // every marker of both columns, mode or no mode.)
-            return {stop, MarkerCell::Payload, true};
         }
+        // A FLAG THAT PAINTS NO CELLS HAS NO ARM HERE AT ALL — not even the
+        // backward step off a Measure seat, which a press seats on every
+        // marker of both columns whether the mode is lit or not. With no
+        // purple row to walk there is nothing to step THROUGH, so the seat
+        // falls whole to the marker step below and the walk is byte-identical
+        // to the pre-2026-09-10 walk: a Measure axis is walk-inert there
+        // exactly as Payload is (architect: "with iterations mode off the tab
+        // is unchanged").
     }
     // THE MARKER STEP: the landing owner's answer, untouched.
     const int m = marker_walk_landing(a, audio, forward);

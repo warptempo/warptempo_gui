@@ -191,10 +191,16 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // contract's "the one job in flight at the grab" means the AIMED PRESS,
     // not the 8px crossing (the crossing converts the press's stored press_x,
     // so the epoch it was aimed in must survive until then — the derivation
-    // is the predicate's). A gesture belongs iff it is an ABSOLUTE drag on a
-    // PAINTED subject, reading the displayed basis per motion event, so that
-    // publishing a new one mid-gesture would move that subject out from under
-    // a stationary hand; the trim membership spans the endcaps, the bar AND —
+    // is the predicate's) — PLUS, since 2026-09-10, THE VALUE DRAG, whose
+    // membership runs the other way: it writes the LIVE STORE per motion, so
+    // in target view the desired fingerprint's map hash changes every four
+    // pixels and this gate is what keeps a full render off the worker until
+    // the commit (the argument is the predicate's, in full). A gesture belongs
+    // iff it is an ABSOLUTE drag on a PAINTED subject, reading the displayed
+    // basis per motion event, so that publishing a new one mid-gesture would
+    // move that subject out from under a stationary hand — or, the value
+    // drag's clause, a drag whose own motion would otherwise DRIVE the
+    // publication; the trim membership spans the endcaps, the bar AND —
     // since the region became the trim — the waveform overlay's own move and
     // bound drags, which hit the span on the plate basis through the
     // painter's region_columns and convert every motion column back on that

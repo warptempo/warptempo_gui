@@ -964,22 +964,41 @@ TempoCentStepGroupVerdict tempo_cent_step_group_verdict(const AppState& a,
 // coincident-collapse condition (the same argument the GROUP step's wall scan
 // makes — the two cent-step arms are the red set's two consumers here since
 // the tempo-drag predecessor walk was deleted).
-const char* tempo_cent_step_target_view_refusal(const AppState& a,
-                                                const GuiAudio& audio) {
+//
+// THE BODY IS INDEX-SHAPED AND THE FOCUS FORM WRAPS IT (2026-09-10, codex's
+// finding): the verdict is a fact about ONE marker, so the subject is a
+// parameter. The focus form below is the group short-circuit plus this one
+// asked of `last_selected_marker` — the keyboard's own subject — while the
+// value drag asks it of the marker UNDER THE POINTER, which is not the focus
+// yet at the resting hover (the press is what selects). A focus-shaped call
+// there let the cursor promise or deny a drag on the strength of a different
+// flag entirely.
+const char* tempo_cent_step_target_view_refusal_for(const AppState& a,
+                                                    const GuiAudio& audio,
+                                                    int idx) {
     if (a.active_audio_view != 'T') return nullptr;
-    if (a.selected_markers.size() >= 2) return nullptr;
     const auto& mv = a.warpmarkers.markers();
-    const int   f  = a.last_selected_marker;
-    if (f < 0 || f >= static_cast<int>(mv.size())) return nullptr;
-    const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return nullptr;
+    const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
     if (m.tempo_inherits || !m.label_ref.empty())
         return "In target view only a marker that owns its tempo can be "
                "stepped";
     const std::set<int>& red = warp_red_flag_set_cached(
         a, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).red;
-    return red.count(f) ? "That marker shares its frame with another"
-                        : nullptr;
+    return red.count(idx) ? "That marker shares its frame with another"
+                          : nullptr;
+}
+
+const char* tempo_cent_step_target_view_refusal(const AppState& a,
+                                                const GuiAudio& audio) {
+    // A GROUP PRESS IS NOT THIS REFUSAL'S BUSINESS — the group arm's own
+    // refusals are the wall scan's — so the short-circuit stays here, on the
+    // focus form, and does not travel into the index body: the value drag
+    // presses ONE flag whatever the selection holds.
+    if (a.selected_markers.size() >= 2) return nullptr;
+    return tempo_cent_step_target_view_refusal_for(a, audio,
+                                                   a.last_selected_marker);
 }
 
 // THE BPM SWEEP'S OPEN VERDICT — the contract, the reader list and the arm
