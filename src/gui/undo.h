@@ -99,11 +99,14 @@ struct GuiInputHandler;
 // ONE KIND, TWO BODIES SINCE 2026-09-09: the phase-reset column has a bound
 // step of its own (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) in the hop
 // domain, and it stamps THIS kind rather than a fifth. One kind suffices
-// because the stamp's SUBJECT TERMS already separate the two: a column switch
-// (`p`, Ctrl+Tab, the 1/2/3 selectors) CLEARS the selection, and the stamp
-// carries the selection and the A/B tab, so a warp burst and a phase burst can
-// never share a live stamp — there is no reachable sequence in which a tap on
-// one column merges into an entry pushed from the other.
+// because the stamp carries the W/P COLUMN as a subject term of this kind
+// (last_gesture_column_, read for IterBoundStep alone beside the addressed
+// cell), so a warp burst and a phase burst can never share a live stamp. The
+// column switch itself is NOT what separates them: it clears the selection,
+// but the cell click that then addresses the other column's marker recreates
+// the same numeric selection and the same cell while pushing nothing, so
+// without the column term a phase tap inside kTapCoalesceMs merged into the
+// warp burst's entry and one Ctrl+Z reverted both columns at once.
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h).
 enum class GestureKind {
@@ -387,25 +390,41 @@ struct Undo {
     // tab, the W/P column and the S/T audio view, all three of which the restore
     // writes back — so a tap that follows a marker click, a Tab, a range
     // extension, a Ctrl+Tab or a `t` finds a CHANGED subject and opens its own
-    // entry instead of merging into an entry filed elsewhere. THE COLUMN NEEDS
-    // NO TERM OF ITS OWN: switch_active_markers_view_to CLEARS the selection
-    // (the scope rule), and every eligible family refuses without one, so a
-    // column switch between two taps is already a subject change the selection
-    // term sees. The bound step needs one more term than the selection can
-    // carry, the addressed cell below. Captured POST-act (record_gesture), so
-    // the position nudges' focus collapse and their reorder remap are already
-    // reflected and a steady run of taps compares like against like.
+    // entry instead of merging into an entry filed elsewhere. THE COLUMN IS
+    // NOT ONE OF THEM FOR THREE OF THE FOUR KINDS: switch_active_markers_view_to
+    // CLEARS the selection (the scope rule) and every eligible family refuses
+    // without one, and those three each have ONE BODY over ONE store, so the
+    // only way back into an eligible press on the other column is a fresh
+    // selection act — which changes the selection term the moment it names a
+    // different marker, and cannot name the same one, there being no second
+    // body to merge into. The bound step needs two more terms than the
+    // selection can carry: the addressed cell and the column, both below.
+    // Captured POST-act (record_gesture), so the position nudges' focus
+    // collapse and their reorder remap are already reflected and a steady run
+    // of taps compares like against like.
     std::set<int> last_gesture_selection_;
     char          last_gesture_tab_ = 0;
     char          last_gesture_audio_view_ = 0;
-    // The addressed cell, the fourth subject term and the only kind-specific
-    // one: IterBoundStep alone reads it, because that kind's subject is a
-    // field of the selected markers (Lower or Upper) rather than the markers
-    // themselves, so a press on the other cell moves nothing the three terms
-    // above can see. The other three kinds each move one field by
+    // The addressed cell, the fourth subject term and one of the two
+    // kind-specific ones: IterBoundStep alone reads it, because that kind's
+    // subject is a field of the selected markers (Lower or Upper) rather than
+    // the markers themselves, so a press on the other cell moves nothing the
+    // three terms above can see. The other three kinds each move one field by
     // construction and ignore it. Stamped with the rest on every accepted
     // fire; the compare and its derivation are at coalesce_gesture.
     MarkerCell    last_gesture_cell_ = MarkerCell::Payload;
+    // The W/P column, the fifth subject term and the second kind-specific one,
+    // read by IterBoundStep alone for the same reason the cell is: that kind
+    // has TWO BODIES over TWO STORES (the warp cents and the phase hops), so
+    // its subject carries a column the other four terms cannot see. The
+    // selection term does not stand in for it — a column switch clears the
+    // selection, but the next press on the other column RECREATES it
+    // numerically (marker index {0} on either store is the same set), and the
+    // cell press that recreates it pushes nothing, so a phase tap could land
+    // in the warp burst's own entry. Stamped on every kind so the field is
+    // never stale for the one kind that reads it; the compare is at
+    // coalesce_gesture.
+    char          last_gesture_column_ = 0;
 
     // Shared authoritative guard for do_undo / do_redo: true when the step
     // would actually act (non-empty source stack, top entry's target tab

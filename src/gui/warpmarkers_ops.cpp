@@ -1240,7 +1240,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // the live column inside its own body, so the Up/Down dispatch, the buttons'
 // face and their tooltip keep ONE switch each — and they share
 // GestureKind::IterBoundStep, the stamp's subject terms keeping a warp burst
-// and a phase burst apart (a column switch clears the selection).
+// and a phase burst apart — the W/P COLUMN among them, a term of this kind
+// alone because it is the one kind with a body on each column (undo.h).
 
 // THE GROUP BOUND STEP'S WALL SCAN — the contract is at the declaration
 // (app_state.h). A const walk, extracted for the same reason the tempo scan

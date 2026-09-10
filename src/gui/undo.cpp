@@ -287,13 +287,33 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // move the focus's frame and the tempo step moves its base, one field
     // each, and a bound cell is never addressed outside iteration mode
     // anyway. That is why this is a term of the one kind that needs it rather
-    // than a fifth stamp field every kind pays for. Both arms read it: a held
+    // than a term every kind pays for. Both arms read it: a held
     // run cannot change the cell mid-burst (a marker press disarms both hold
     // producers), but the repeat arm tests its subject terms anyway for the
     // reason clause (c) gives.
+    //
+    // THE W/P COLUMN RIDES WITH IT, and for the same kind alone (converted
+    // 2026-09-09 from a codex finding, on the phase-reset bound step's own
+    // commit). IterBoundStep has TWO BODIES over TWO STORES since that day —
+    // the warp cents and the phase hops — so its subject carries a column, and
+    // the three terms below cannot see it: the selection is a set of INDICES,
+    // and index 0 on the phase store is the same set as index 0 on the warp
+    // store. The reachable sequence: address Lower on warp marker 0 and tap
+    // Down; press `p`; click phase reset 0's Lower cell, which re-seats the
+    // selection and the cell and PUSHES NOTHING; tap Down inside
+    // kTapCoalesceMs. Every term above stood, so the phase step merged into
+    // the warp burst's 'W'-tagged entry, skipping its own push — one Ctrl+Z
+    // then reverted both columns and landed in W. The column switch is not the
+    // guard: it clears the selection, but the very click that addresses the
+    // other column's cell recreates it. The other three kinds need no such
+    // term — both position nudges and the tempo step are ONE-BODY kinds, so
+    // there is no second body on the other column for a tap to merge into.
     const bool cell_matches =
         kind != GestureKind::IterBoundStep ||
         last_gesture_cell_ == app.addressed_cell;
+    const bool column_matches =
+        kind != GestureKind::IterBoundStep ||
+        last_gesture_column_ == app.active_markers_view;
 
     bool merge = false;
     if (stamp_matches) {
@@ -356,7 +376,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             merge = last_gesture_tab_ == app.active_tab_view
                  && last_gesture_audio_view_ == app.active_audio_view
                  && last_gesture_selection_ == app.selected_markers
-                 && cell_matches;
+                 && cell_matches
+                 && column_matches;
         } else {
             // ARM (2), THE TAP WINDOW — a physical press merging into the previous
             // one. Two extra conditions, because a tap has NONE of the repeat
@@ -385,10 +406,13 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     A/B tab, the W/P column and the S/T audio view back, so a `t`
             //     between two taps must open a new entry exactly as a Ctrl+Tab
             //     does, or Ctrl+Z would land the view the burst OPENED in while
-            //     the last press was authored in the other. THE COLUMN NEEDS NO
-            //     TERM: switch_active_markers_view_to clears the selection and
-            //     both eligible families refuse without one, so a column switch
-            //     is already a subject change the selection term sees.
+            //     the last press was authored in the other. THE COLUMN IS THE
+            //     BOUND STEP'S OWN TERM (column_matches above): a column switch
+            //     clears the selection, but the cell click that re-addresses
+            //     the other column recreates the same numeric selection, and
+            //     that kind is the one with a body on each column — so the
+            //     tab's third tag is compared explicitly for it and inferred
+            //     from the selection for the other three.
             // The comparison runs on the clock's OWN duration, never on a
             // whole-millisecond count: duration_cast truncates toward zero, so
             // counting first would have admitted every real interval inside
@@ -401,7 +425,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
                  && last_gesture_tab_ == app.active_tab_view
                  && last_gesture_audio_view_ == app.active_audio_view
                  && last_gesture_selection_ == app.selected_markers
-                 && cell_matches;
+                 && cell_matches
+                 && column_matches;
         }
     }
 
@@ -561,10 +586,12 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     last_gesture_tab_        = app.active_tab_view;
     last_gesture_audio_view_ = app.active_audio_view;
     last_gesture_selection_  = app.selected_markers;
-    // The addressed cell rides with them, read by IterBoundStep alone (the
-    // argument is at coalesce_gesture's compare). It is stamped on every kind
-    // so the field is never stale for the one kind that does read it.
+    // The addressed cell and the W/P column ride with them, read by
+    // IterBoundStep alone (the argument is at coalesce_gesture's compare).
+    // Both are stamped on every kind so neither field is ever stale for the
+    // one kind that does read them.
     last_gesture_cell_       = app.addressed_cell;
+    last_gesture_column_     = app.active_markers_view;
 }
 
 void Undo::note_saved() {

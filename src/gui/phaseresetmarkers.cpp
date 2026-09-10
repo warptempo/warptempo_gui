@@ -10,8 +10,11 @@ std::expected<void, std::string> GuiPhaseResetMarkers::load(
         std::optional<std::string>* path_free_reason) {
     // The parse fills each serialized PhaseResetMarker base; the shared
     // load_impl (clear-bump-parse-upcast) copies it into a
-    // GuiPhaseResetMarker (no extra fields today). The path-free reason rides
-    // through to the parser untouched.
+    // GuiPhaseResetMarker, whose one extra field is the SESSION-ONLY
+    // iteration bracket — no sidecar grammar carries it, so a loaded row
+    // opens blank by construction (the field's own prose is at the type,
+    // phaseresetmarkers.h). The path-free reason rides through to the parser
+    // untouched.
     return load_impl(path, parse_phaseresetmarkers_file, path_free_reason);
 }
 
