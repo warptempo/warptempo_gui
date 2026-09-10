@@ -1963,11 +1963,61 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                                   f.framed ? &f.frame : nullptr);
             }
 
-            // The label is kRedesignLabel in EVERY state, focused and unfocused
-            // — the nine crops agree — and sits at the box's own padding origin,
-            // which is the same place the width was measured from.
-            cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                                 kRedesignLabel.b);
+            // The label is kRedesignLabel in every LIVE state, focused and
+            // unfocused — the nine crops agree — and sits at the box's own
+            // padding origin, which is the same place the width was measured
+            // from.
+            //
+            // THE ROW HAS A DISABLED FACE SINCE 2026-09-10 (architect, at his
+            // mockup: "accepted") AND IT IS THE LABEL'S INK ALONE: a dead
+            // UNSELECTED selector retains kRedesignDisabledMix of the label
+            // over the bar's own ground, exactly row 2's disabled ink through
+            // the same mix_color owner (the icon row's `keep`, this file's
+            // row-2 painter)
+            // — no second formula and no new constant, so a retune of that knob
+            // retunes this row with it. Nothing else on the row moves: the bar's
+            // ground, the box faces and every metric are what they were, and the
+            // crop set — which never had a disabled member to sample — is
+            // untouched, this face being BUILT from the row's own vocabulary
+            // rather than measured. It answers the question the lock's arm and
+            // kRedesignViewBarBg both left open, and it is why the bar's
+            // unfocused ground is NOT that face (it would keep the labels fully
+            // legible and say the window is inactive, which under a lit lamp on
+            // a focused window is untrue).
+            //
+            // THE SELECTED VIEW KEEPS ITS FULL INK even while it is dead: the
+            // three go dead TOGETHER under the lock (iteration_lock_greys,
+            // app_state.h — the whole quartet's chords), and dimming the one
+            // that reports WHERE YOU STAND would dim a true statement. So the
+            // face reads the selected bit beside the enabled one, and what
+            // greys is the two selectors the press can no longer reach.
+            // face.selected is redesign_button_selected, the live S/T x W/P
+            // combination (at most one of the three, none in S+P), so an S+P
+            // combination greys all three — the honest reading, none of them
+            // being where you stand.
+            //
+            // IT READS THE ENABLED BIT AND NOT THE LOCK, which is the roster's
+            // own rule (a face arm never restates an act's condition) and
+            // costs a second membership list nowhere. THE FOLDER OVERLAY IS
+            // ITS OTHER PRODUCER, redesign_button_enabled's first arm having
+            // killed these three under the player, the picker and the stats
+            // panel since long before the lock: there the dimmed labels join
+            // the BAR'S UNFOCUSED GROUND (view_bar_focused's modal term), the
+            // two halves of one disabled face rather than a doubled cue — it
+            // was that ground alone that showed the state until 2026-09-10.
+            // THE `h` VIEW REACHES NEITHER: its 1/2/3 are on the mode's
+            // allowlist, so all three answer enabled there.
+            const double keep = (face.enabled || face.selected)
+                                    ? 1.0 : kRedesignDisabledMix;
+            // Toward the BAR'S ground, which is what a dead selector sits on:
+            // its rest face paints no fill of its own, and the two faces that do
+            // — hover and pressed — cannot arise here (the hover recompute
+            // composes the enabled term and the press dies at
+            // arm_redesign_press's disabled line).
+            const GuiColor view_label_c =
+                mix_color(kRedesignLabel, bar_bg, keep);
+            cairo_set_source_rgb(cr, view_label_c.r, view_label_c.g,
+                                 view_label_c.b);
             text_shape::show_shaped_run(
                 cr, runs[i], static_cast<double>(box.x + bord + bpad),
                 redesign_baseline(font, static_cast<double>(box.y),

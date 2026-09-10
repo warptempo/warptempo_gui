@@ -3028,11 +3028,13 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
 // not a dropdown anchor CLOSES it, because only one button in that row is lit at
 // a time. WHAT THAT LEAVES, re-derived from the two predicates rather than
-// inherited: row 1 is SEVEN buttons and FOUR of them are anchors, so the close
-// rule covers THE VIEW BAR'S THREE alone — the same three it covered while
-// Navigation was a third anchor, since EDIT became one (2026-08-20), while
-// ITERATIONS was a fourth (2026-08-27 to 2026-09-04) and since HELP joined
-// (2026-09-03). It was "Quit or the view bar's three"
+// inherited (re-greped 2026-09-10 against the switch below and
+// redesign_button_is_menu_anchor): row 1 is SIX buttons and THREE of them are
+// anchors, so the close rule covers THE VIEW BAR'S THREE alone — the same three
+// it covered while Navigation was a third anchor, since EDIT became one
+// (2026-08-20), while ITERATIONS was a fourth (2026-08-27 to 2026-09-04) and
+// while HELP was one (2026-09-03 to its deletion 2026-09-09, which is what put
+// the count back to six and three). It was "Quit or the view bar's three"
 // while the Quit button
 // existed; the Navigation anchor's 2026-08-15 deletion moved this membership
 // not at all and neither Edit's arrival nor the Iterations anchor's arrival and
@@ -8646,10 +8648,14 @@ inline bool chrome_focused(const AppState& a) {
 // buttons — those look right when window loses focus but when media player/
 // picker is open they don't have the disabled background for the nonselected
 // buttons — if that was deliberate, they should have the disabled bg as that
-// is what kdenlive does with a modal"), and it is THE ONLY WAY THOSE THREE
-// GREY: they have no dimmed face of their own (render.h's view-bar block —
-// the crops named "disabled" are the unfocused window), so the ground swap is
-// what shows that redesign_button_enabled's first arm has killed them.
+// is what kdenlive does with a modal"), and it was THE ONLY WAY THOSE THREE
+// GREY until 2026-09-10: the crops named "disabled" are the unfocused window
+// (render.h's view-bar block), so the ground swap was all that showed
+// redesign_button_enabled's first arm had killed them. THE ROW HAS A DISABLED
+// FACE OF ITS OWN SINCE THAT DAY — the two DEAD UNSELECTED labels at
+// kRedesignDisabledMix, the view bar's painter — and it reads the ENABLED bit,
+// so under the band the dimmed ink and this ground are the two halves of one
+// face rather than two cues; this term is unchanged by it.
 //
 // IT IS THE BAR'S AND NOT THE HEADER'S SINCE 2026-09-03 EVENING, when the
 // File anchor went live under the band and the header went back to reading
@@ -8667,10 +8673,11 @@ inline bool chrome_focused(const AppState& a) {
 // obvious move was to show it the way the overlay shows it — but THIS FACE IS
 // NOT A DISABLED FACE. The unfocused bar keeps its labels fully legible; what
 // it says is "this window is not the active one", which is true under a modal
-// and false under a lit lamp on a focused window. So the lock's three greys
-// are DEAD PRESSES WITH THEIR RESTING FACE KEPT — the hover outline is the
-// one paint that follows, the face composing the enabled term the hint does
-// not — and a disabled face for this row awaits his ruling.
+// and false under a lit lamp on a focused window. So the ground stays out of
+// it and THE LOCK'S FACE IS THE LABEL'S INK (architect 2026-09-10 the same
+// day, at his mockup: "accepted") — a dead UNSELECTED selector's label at
+// kRedesignDisabledMix over this ground, the selected one full, painted at the
+// view bar's own painter (paint_handler.cpp) and read nowhere else.
 //
 // DAMAGE: a panel's open and close each invalidate the whole window, and the
 // activation hook damages the top strip on every focus edge, so both terms
@@ -11166,19 +11173,21 @@ inline bool authoring_locked(const AppState& a) {
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
 //   * THE VIEW BAR'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
 //     that morning) and they are the membership's one SILENT entry, in both
-//     of the ways a member usually speaks. NO SENTENCE: the row carries no
-//     tooltip in any state (the row-1 exclusion at the constant table), so the
-//     fork below can never be asked for them and their card is the KEY'S,
-//     raised by the gate. AND NO FACE, YET: this row has no disabled paint at
-//     all (view_bar_face reads hovered / selected / pressed and no enabled
-//     bit), the bar's unfocused ground is NOT one — it keeps every label
-//     legible and says the window is inactive, which under a lit lamp on a
-//     focused window would be a lie — so what membership buys them here is
-//     the DEAD PRESS alone, the road a standing overlay's greys already take.
-//     A disabled face for this row awaits the architect's ruling; until it
-//     lands these three are the roster's one dead button that still looks
-//     live AT REST — the hover outline does stop, the face's own enabled
-//     term — and the lit lamp under them is what says why.
+//     of the ways a member usually speaks. NO SENTENCE, still: the row carries
+//     no tooltip in any state (the row-1 exclusion at the constant table), so
+//     the fork below can never be asked for them and their card is the KEY'S,
+//     raised by the gate. A FACE THEY DO HAVE since 2026-09-10 (architect, at
+//     his mockup: "accepted"), and it is the LABEL'S INK: view_bar_face still
+//     reads hovered / selected / pressed and no enabled bit — the ground, the
+//     box and the metrics are untouched — while the painter dims a DEAD
+//     UNSELECTED selector's label by kRedesignDisabledMix over the bar's
+//     ground, the icon row's own disabled ink through the one mix_color owner.
+//     THE SELECTED VIEW KEEPS ITS FULL INK: all three go dead together, and
+//     the one that reports where you stand is telling the truth. So membership
+//     buys them the dead press, the stopped hover outline (the face composes
+//     the enabled term) and now two dimmed labels; the bar's unfocused ground
+//     is still NOT that face, since it keeps every label legible and says the
+//     window is inactive, which under a lit lamp on a focused window is a lie.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
@@ -13407,11 +13416,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // here through arm_redesign_press's disabled line, which consumes the
         // press silently and lets the KEY's card be the one sentence.
         //
-        // WHAT THIS ARM DOES NOT BUY IS A RESTING FACE. This row has no
-        // disabled paint (view_bar_face, paint_handler.cpp, reads hovered /
-        // selected / pressed and no enabled bit) and no tooltip (the row-1
-        // exclusion at the constant table), so a `false` here changes what the
-        // PRESS does and, at rest, nothing a reader sees. IT DOES TAKE THE
+        // WHAT THIS ARM BUYS AT REST IS THE LABEL'S INK. view_bar_face still
+        // reads hovered / selected / pressed and no enabled bit — the box's
+        // own faces are untouched — and the row still has no tooltip (the
+        // row-1 exclusion at the constant table), so a `false` here changes
+        // what the PRESS does and, in paint, the LABEL alone: the view bar's
+        // painter dims a dead UNSELECTED selector's by kRedesignDisabledMix
+        // over the bar's ground and leaves the SELECTED view's full. IT ALSO TAKES THE
         // HOVER OUTLINE WITH IT, the row's one honest consequence: the hover
         // recompute composes this term into `face.hovered`
         // (recompute_redesign_button_hover, input_pointer.cpp — the face gets
@@ -13424,12 +13435,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // THAT FACE AND HE REFUSED IT the same morning, at his screenshot: the
         // unfocused bar keeps its labels fully legible and what it says is
         // that the window is inactive, which under a lit lamp on a focused
-        // window is simply untrue — so view_bar_focused takes no lock term and
-        // these three are, for now, the roster's one dead button that still
-        // looks live at rest. A DISABLED VIEW-BAR FACE AWAITS HIS RULING and
-        // is what would finish this arm; until then the lit Grid Iterations
-        // lamp one row down is what says the press is dead, and the digit's
-        // own card says it in words.
+        // window is simply untrue — so view_bar_focused takes no lock term.
+        // THE FACE THAT FINISHED THIS ARM LANDED THAT EVENING (architect
+        // 2026-09-10, at his mockup: "accepted") AND IT IS THE LABEL'S INK
+        // ALONE: the view bar's painter (paint_handler.cpp) dims a DEAD
+        // UNSELECTED selector's label by kRedesignDisabledMix over the bar's
+        // ground — row 2's disabled ink through the one mix_color owner, no
+        // second formula — while the SELECTED view keeps its full ink, all
+        // three going dead together and the one that reports where you stand
+        // being true whatever the lamp does. The ground, the box faces and
+        // every metric are unchanged, and the row still has no tooltip, so the
+        // digit's own card is what says it in words and the lit Grid
+        // Iterations lamp one row down is what says why.
         //
         // NO READ-ONLY TERM, the column lamp's reading of the gate exactly:
         // the digits are navigation, on read_only_key_blocked's allowlist, so

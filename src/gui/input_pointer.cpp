@@ -7937,9 +7937,12 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // out and the magnification pair aside, which carry resting greys of
         // their own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
         // the VIEW BAR'S THREE answer false while grid iterations stands
-        // (iteration_lock_greys, app_state.h) and this line is ALL their grey
-        // amounts to — that row has no disabled paint, so the press dies here
-        // and the face does not move, the KEY's card carrying the sentence
+        // (iteration_lock_greys, app_state.h), so the press dies here — and
+        // that row DOES have a disabled paint since the architect's mockup the
+        // same day, the two DEAD UNSELECTED selectors' labels at
+        // kRedesignDisabledMix over the bar's ground (the view bar's painter,
+        // paint_handler.cpp; the selected one keeps its full ink). The row
+        // still carries no tooltip, so the KEY's card carries the sentence
         // (the account is at their arm in redesign_button_enabled).
         // THE BOTTOM ROW HAS A RESTING CONSUMER
         // HERE FOR EVERY MEMBER BUT WALK BOTH TABS AND ADD TO SELECTION since

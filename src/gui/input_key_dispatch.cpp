@@ -755,14 +755,16 @@ bool GuiInputHandler::iteration_lock_column_switch(GuiKey key,
 // iterations and BPM iterations ask the tab's bit alone, being the two exit
 // roads. A change here needs a hand edit there.
 //
-// TWO ROSTER MEMBERS THE GATE EATS HAVE NO FACE TO GREY, and they answer it
-// differently. THE VIEW BAR'S three selectors ARE in the membership since
+// TWO ROSTER MEMBERS THE GATE EATS HAVE NO SENTENCE TO CARRY, and they answer
+// it differently. THE VIEW BAR'S three selectors ARE in the membership since
 // 2026-09-10, so their PRESS dies at arm_redesign_press's disabled line as a
-// standing overlay's does — the row simply has no disabled paint and no
-// tooltip to carry it, so this gate's card is the only thing that speaks (the
-// account is at their arm in redesign_button_enabled, and a disabled face for
-// that row awaits the architect's ruling). Every propagate PASTE is not: its
-// surface is a MENU ROW and menu rows never grey.
+// standing overlay's does, and their FACE followed the same day (architect, at
+// his mockup: the two dead UNSELECTED labels at kRedesignDisabledMix over the
+// bar's ground, the selected one full — the view bar's painter,
+// paint_handler.cpp). The row still carries no tooltip, so this gate's card is
+// the only thing that SPEAKS (the account is at their arm in
+// redesign_button_enabled). Every propagate PASTE is not: its surface is a MENU
+// ROW and menu rows never grey.
 bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
                                                  GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
