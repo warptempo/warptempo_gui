@@ -150,13 +150,10 @@ void Selection::set_single_selection(int idx) {
     // dies here, at the next membership replace). This is also cycle_selection's
     // clear route (it delegates here).
     app.shift_range_anchor = -1;
-    // AND THE STICKY CTRL DIES WITH IT (2026-08-18): a membership REPLACE is
-    // exactly the boundary that ends a plain ctrl+click's accumulated effect,
-    // so it ends the mode that produces those clicks. The two bits share this
-    // chokepoint and differ only in their one keeper —
-    // select_range_from_anchor keeps the anchor, toggle_selection_membership
-    // keeps the mode. The whole contract is at AppState::add_to_selection.
-    app.add_to_selection = false;
+    // THE STICKY CTRL DOES NOT DIE HERE (architect 2026-09-10): the Add to
+    // selection lamp is a TOOL POSTURE cleared by nothing but its own toggle,
+    // so no Selection mutator touches it any more. The anchor above is this
+    // body's only bit. The whole contract is at AppState::add_to_selection.
     app.selected_markers.clear();
     if (idx >= 0) app.selected_markers.insert(idx);
     seat_focus((idx >= 0) ? idx : -1);
@@ -173,13 +170,12 @@ void Selection::set_single_selection(int idx) {
 }
 
 // The whole-set replace (contract at the declaration): set_single_selection's
-// body one arity up, with the same two clears and the same damage — one
-// chokepoint, so the sticky ctrl and the shift anchor cannot survive a replace
-// made programmatically any more than one made by a click.
+// body one arity up, with the same clear and the same damage — one chokepoint,
+// so the shift anchor cannot survive a replace made programmatically any more
+// than one made by a click.
 void Selection::replace_selection(std::set<int> members, int focus) {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.shift_range_anchor = -1;
-    app.add_to_selection   = false;
     app.selected_markers   = std::move(members);
     seat_focus(app.selected_markers.count(focus) ? focus : -1);
     viewport.invalidate_top_strip();
@@ -188,13 +184,9 @@ void Selection::replace_selection(std::set<int> members, int focus) {
 
 void Selection::clear_selection() {
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
-    app.add_to_selection   = false;   // and the sticky ctrl that fed it
-    // (Both clears sit ABOVE the already-empty early return below, so a
-    // redundant clear still ends the mode — `p`, Ctrl+Tab and the load path
-    // all reach this body with nothing selected. NO SELECTION MUTATOR DAMAGES
-    // THE BOTTOM ROW, so the Add to selection button's lamp is repainted by
-    // the roster's per-tick face comparator (main.cpp), which is that face's
-    // standing owner for every bit that moves without a damage call.)
+    // (The clear sits ABOVE the already-empty early return below, so a
+    // redundant clear still dissolves the anchor — `p`, Ctrl+Tab and the load
+    // path all reach this body with nothing selected.)
     if (app.selected_markers.empty() && app.last_selected_marker == -1)
         return;   // nothing selected (already empty)
     const std::optional<int64_t> old_subject = phase_overlay_subject();
@@ -230,7 +222,6 @@ void Selection::collapse_to_focused() {
     // make the top-strip / status-chain damage here redundant (a benign damage-union,
     // accepted).
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
-    app.add_to_selection   = false;   // and the sticky ctrl (a narrow IS a replace)
     // No focus -> nothing to collapse TO. Both surviving classes depend on the
     // focus being a live member of the very selection they are collapsing, and it
     // is: a 2+ membership carrying focus -1 has exactly one producer in the
@@ -257,13 +248,12 @@ void Selection::collapse_to_focused() {
 bool Selection::toggle_selection_membership(int idx) {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     app.shift_range_anchor = -1;   // dissolve the shift-range anchor
-    // THIS IS THE ONE MUTATOR THAT KEEPS app.add_to_selection (2026-08-18) —
-    // the exact mirror of select_range_from_anchor's relationship to the
-    // anchor. The mode exists to make plain flag clicks land HERE, so its own
-    // act cannot be what ends it; every other Selection mutator clears it.
-    // repair_last_selected, called from the remove arm below, deliberately
-    // clears neither bit: it is a FOCUS repair inside this act, not an act of
-    // its own.
+    // app.add_to_selection is untouched here, as it is in every Selection
+    // body since 2026-09-10: the mode exists to make plain flag clicks land
+    // HERE, and it is a tool posture that only its own toggle puts out.
+    // repair_last_selected, called from the remove arm below, likewise clears
+    // neither bit: it is a FOCUS repair inside this act, not an act of its
+    // own.
     if (idx < 0) return false;
     bool added;
     auto it = app.selected_markers.find(idx);
@@ -292,13 +282,13 @@ void Selection::select_range_from_anchor(int idx) {
     // idx < 0 (never reached from the
     // shift-click path, which resolves a real hit) is a plain no-op guard.
     if (idx < 0) return;
-    // SHIFT ENDS THE STICKY CTRL (2026-08-18). Shift+click has its own gesture
-    // and beats the mode at the click (the `toggle` term at
-    // run_marker_click_act), and the range it selects is a membership REPLACE
-    // — the boundary the mode auto-clears on. So this is the one Selection
-    // body that KEEPS the shift-range anchor and CLEARS the mode, the exact
-    // mirror of toggle_selection_membership above.
-    app.add_to_selection = false;
+    // SHIFT DOES NOT END THE STICKY CTRL (architect 2026-09-10). It beats the
+    // mode for the PRESS — the `toggle` term at run_marker_click_act carries
+    // `&& !shift` — and that is the whole of their relationship: the lamp is a
+    // tool posture that survives the range select and every other selection
+    // act, and only bare `k` or its button puts it out. So this is the one
+    // Selection body that KEEPS the shift-range anchor, and no Selection body
+    // writes the mode at all.
     const std::optional<int64_t> old_subject = phase_overlay_subject();
 
     // The active column's store size, from its one owner (active_marker_count,
@@ -361,9 +351,10 @@ void Selection::sanitize_selection_after_restore(int n) {
     // Ctrl+Shift+Z, which arrives with shift still held: the restore's clear is
     // what dissolves the anchor under it.
     app.shift_range_anchor = -1;
-    // The sticky ctrl goes with it: a restore REPLACES the membership from a
-    // snapshot, which is the boundary the mode ends on.
-    app.add_to_selection = false;
+    // The sticky ctrl does NOT go with it (architect 2026-09-10): a restore
+    // replaces the membership, but the lamp describes the POINTER's posture
+    // rather than the selection under it, so it survives the restore as it
+    // survives every other selection act.
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     std::set<int> cleaned;
     for (int idx : app.selected_markers) {

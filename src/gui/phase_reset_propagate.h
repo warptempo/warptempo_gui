@@ -62,9 +62,10 @@ struct PhaseResetPropagate {
     GuiNotifications&     notifications;
     // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the target-view
     // landing REPLACES the membership with the set the paste created, and a
-    // replace must run through a Selection mutator or the sticky ctrl and the
-    // shift anchor outlive it (Selection::replace_selection carries the whole
-    // reasoning; the contract is at AppState::add_to_selection). Every other
+    // replace must run through a Selection mutator or the shift anchor
+    // outlives it (Selection::replace_selection carries the whole reasoning;
+    // the sticky ctrl rode beside the anchor here until 2026-09-10, when it
+    // became a tool posture no Selection body writes). Every other
     // selection effect on this path is already the column switch's own clear.
     Selection&            selection;
 

@@ -26,10 +26,11 @@ struct Selection {
     void repair_last_selected();
     void set_single_selection(int idx);
     // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
-    // set_single_selection's own body one arity up, with the same two clears
-    // — the shift-range anchor and the STICKY CTRL — because it is the same
-    // boundary: a membership REPLACE is what ends both (the contract is at
-    // AppState::add_to_selection). ONE CALLER, the phase-reset propagate
+    // set_single_selection's own body one arity up, with the same clear — the
+    // shift-range anchor — because it is the same boundary: a membership
+    // REPLACE is what ends it. (It rode beside the STICKY CTRL's clear until
+    // 2026-09-10, when that lamp became a tool posture no Selection body
+    // writes; the contract is at AppState::add_to_selection.) ONE CALLER, the phase-reset propagate
     // PASTE's target-view landing (land_paste_in_target_view), which is the
     // product's one act that installs a set it just created and the LAST
     // wholesale replace outside a Selection mutator; it wrote the two fields

@@ -7960,9 +7960,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // `k` (no modifiers): toggle ADD TO SELECTION, the sticky ctrl (architect
     // 2026-08-18). It is `i`'s and `p`'s shape exactly — one bit, flipped both
     // ways by one key, with the bottom row's button dispatching this same
-    // chord — and the ONE route that SETS the bit; every clear is the
-    // Selection layer's (the whole contract, the clear list and the shift rule
-    // are at AppState::add_to_selection).
+    // chord — and, since 2026-09-10, THE ONLY ROUTE THAT WRITES THE BIT AT
+    // ALL, in both directions: the lamp is a session tool posture that nothing
+    // else clears, its six Selection-layer auto-clears and the load's belt
+    // having been deleted that day (the whole contract, the posture and the
+    // shift rule are at AppState::add_to_selection).
     //
     // ITS GATES ARE THE TWO LAMPS IT CANNOT STAND BESIDE, and nothing else
     // (architect 2026-09-10, NO SILENT SWAPS: every mutual exclusion is a
@@ -8008,8 +8010,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (architect 2026-09-10). It is bare `k`'s shape one line up, exactly —
     // one bit, flipped both ways by one key, with the bottom row's button
     // dispatching this same chord — and the ONE route that writes the bit at
-    // all: unlike its neighbour it is cleared by nothing (the whole contract
-    // and the reason for that difference are at AppState::value_drag_enabled).
+    // all: it is cleared by nothing, which its neighbour has been too since
+    // 2026-09-10 (the whole contract is at AppState::value_drag_enabled).
     //
     // ITS ONE GATE IS ADD TO SELECTION (architect 2026-09-10, NO SILENT
     // SWAPS: every mutual exclusion is a refusal with a card, a greyed button

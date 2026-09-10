@@ -2903,10 +2903,11 @@ enum class RedesignButton {
     // edit-select glyph, and a MODE rather than an act: while it is lit a
     // plain flag click takes the CTRL BRANCH — toggle membership, land the
     // playhead on the focus the toggle leaves, keep the rest of the selection
-    // — and the mode auto-clears at the first selection act that is not that
-    // toggle. Nothing about the click is new; the mode only routes a plain
-    // press into the branch ctrl+click already ran. The whole contract, the
-    // shift rule and the clear list are at AppState::add_to_selection.
+    // — and the mode stands until bare `k` or this button puts it out
+    // (architect 2026-09-10; its six silent auto-clears are deleted). Nothing
+    // about the click is new; the mode only routes a plain press into the
+    // branch ctrl+click already ran. The whole contract, the shift rule and
+    // the posture are at AppState::add_to_selection.
     //
     // WHY GLASS NEEDS IT, in the architect's own words (2026-08-18): "none of
     // the modifier-click vocabulary exists on touch, so buttons are how glass
@@ -5369,35 +5370,38 @@ struct AppState {
     // lit mode swallow a held shift; the fold carries `&& !shift` for exactly
     // that reason and a real shift+click still ranges while the mode stands.
     //
-    // IT AUTO-CLEARS ON THE BOUNDARY THAT ENDS A PLAIN CTRL+CLICK'S EFFECT —
-    // that effect being the accumulated membership, which any selection
-    // REPLACE or CLEAR ends. Implemented as the SHIFT-RANGE ANCHOR'S OWN RULE
-    // with the keeper swapped, which is what makes the two mirror images:
-    // Selection::toggle_selection_membership — the mode's own act — KEEPS the
-    // mode and clears the anchor, while Selection::select_range_from_anchor
-    // keeps the anchor and clears the mode; every OTHER Selection mutator
-    // clears BOTH. THE AUTHORITATIVE CLEAR LIST, re-derived by grepping every
-    // Selection body 2026-08-29 rather than copied from the anchor's:
-    // set_single_selection, replace_selection, clear_selection,
-    // collapse_to_focused, select_range_from_anchor and
-    // sanitize_selection_after_restore (cycle_selection and the two marker
-    // walks clear through set_single_selection; load_source_file's explicit
-    // clear is belt over the clear_selection it already runs).
-    // replace_selection joined on 2026-08-29 WITH ITS ONE CALLER: the
-    // phase-reset propagate paste's target-view landing wrote the two fields
-    // directly until then — the last act that installed a membership without
-    // passing this chokepoint, leaning on the column switch beside it to clear
-    // both bits (behaviour-neutral today, and now a property of the replace
-    // itself; see the anchor's wholesale-replace record above).
-    // repair_last_selected is NOT one of them and must not become one: it is a
-    // FOCUS repair reached only from inside the toggle, so clearing there
-    // would make the mode die on the very act that defines it.
-    // A marker REORDER does not clear it either — a bool has no index to go
-    // stale, and remap_marker_indices_after_reorder carries the anchor through
-    // rather than dissolving it for the same reason.
-    // Riding the Selection chokepoint costs no inventory of its own and cannot
-    // drift: a Selection mutator added later inherits the CLEAR by default,
-    // which is the safe direction.
+    // IT STAYS LIT UNTIL `k` PUTS IT OUT (architect 2026-09-10) — THE WHOLE
+    // CLEAR LIST IS ITS OWN TOGGLE. It is a TOOL POSTURE, not a per-selection
+    // posture: it says what the POINTER does to a flag, so nothing about the
+    // selection under it can end it. A shift-click still wins for its own
+    // press (the `&& !shift` term above) and the lamp is still lit after it; a
+    // Tab walk, `p`, Ctrl+Tab, a waveform click, a marker drop, an undo
+    // restore and a SOURCE LOAD all leave it lit, and the plain flag press
+    // keeps taking the ctrl branch until bare `k` or the button says
+    // otherwise. That is bare `x`'s posture exactly (value_drag_enabled below,
+    // whose declaration used to name this bit as its one point of departure)
+    // and bare `z`'s (restrict_undo_to_viewport): the three session lamps are
+    // one family, off at every launch, in no settings vocabulary, never
+    // serialized, and cleared by nothing but their own toggles.
+    //
+    // WHAT THIS REPLACED, because the deletion is the ruling: from 2026-08-18
+    // the bit rode the Selection chokepoint as the SHIFT-RANGE ANCHOR'S MIRROR
+    // — every mutator but toggle_selection_membership cleared it, on the
+    // reasoning that a membership REPLACE or CLEAR is the boundary that ends a
+    // plain ctrl+click's accumulated effect. Six silent clears carried that
+    // (set_single_selection, replace_selection, clear_selection,
+    // collapse_to_focused, select_range_from_anchor,
+    // sanitize_selection_after_restore) plus the load's belt, and they are all
+    // DELETED: an off edge nothing announced is exactly the silent swap the
+    // mutual-exclusion ruling of the same day forbids everywhere else.
+    // THE ANCHOR KEEPS ITS OWN RULE UNCHANGED — the two bits are no longer
+    // mirrors and no longer share a chokepoint.
+    //
+    // ITS MUTUAL EXCLUSIONS ARE THE ONLY OTHER THING THAT GOVERNS IT, and they
+    // are REFUSALS rather than clears (architect 2026-09-10): bare `k` is
+    // refused while grid iterations or the value drag stands, and bare `i` and
+    // bare `x` are refused while this lamp stands, each on a card with the
+    // partner's button greyed. No toggle ever puts another lamp out.
     bool          add_to_selection = false;
 
     // THE VALUE DRAG LAMP (architect 2026-09-10) — bare `x`, the bottom row's
@@ -5427,14 +5431,14 @@ struct AppState {
     // arms nothing), and a mode a finger can turn on is what glass needs — the
     // very argument Add to selection was seated on.
     //
-    // A SESSION TOOL POSTURE, NOT A PER-SELECTION ONE, which is the one place
-    // it parts from its neighbour: `add_to_selection` is cleared by every
-    // Selection mutator but the toggle it enables, because it describes the
-    // selection being built; this bit describes what the POINTER does and is
+    // A SESSION TOOL POSTURE: it describes what the POINTER does, so it is
     // cleared by NOTHING — bare `x` and its own button are the only writers,
-    // in both directions. It is bare `z`'s shape (the restrict-undo lamp): off
-    // at every launch, in no settings vocabulary, never serialized, never in
-    // the undo domain.
+    // in both directions. It is bare `z`'s shape (the restrict-undo lamp) and,
+    // since 2026-09-10, its NEIGHBOUR'S TOO: `add_to_selection` above used to
+    // be a per-selection posture that every Selection mutator cleared, and the
+    // architect gave it this one instead, so the three lamps now share it
+    // whole — off at every launch, in no settings vocabulary, never
+    // serialized, never in the undo domain, surviving a source load.
     //
     // ITS GATES: legal in both columns and both audio views (the target rule
     // asks the column itself), legal on a LOCKED TAB and under the ITERATION
