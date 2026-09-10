@@ -854,6 +854,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // MINUS THE W/P COLUMN SWITCH — bare `p` and the three absolute view
     // selectors bare 1 / 2 / 3, which run the `t` and `p` handlers and so
     // carry the column with them; the mode is lit for the column you are in —
+    // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
+    // selection, so its second step could never walk the bound cells honestly
+    // (architect 2026-09-10; Ctrl+Tab stays admitted, the two tabs sharing
+    // both stores) —
     // AND PLUS FIVE ADMISSIONS: bare `i` (the off edge must always be
     // reachable), bare `m` (BPM iterations, the one road that leaves this
     // mode by entering another, landing nothing in history at the press),
@@ -865,9 +869,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // interest in them; their three ALT-bearing pastes stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
-    // copy. THE SUBTRACTION IS ASKED ON A LOCKED TAB TOO, through the quartet's
-    // own owner beside this list — this one ADMITS all four, so it cannot
-    // answer for them (the fork below states it). BARE `h` IS REFUSED UNDER
+    // copy. THE SUBTRACTIONS ARE ASKED ON A LOCKED TAB TOO, through delta (a)'s
+    // own owner beside this list — this one ADMITS all five chords, so it
+    // cannot answer for them (the fork below states it). BARE `h` IS REFUSED UNDER
     // THAT LOCK TOO and is not on either list:
     // the history vocabulary is claimed a dispatch above this gate, so the
     // view's entry arm carries the refusal.
@@ -979,20 +983,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // as they always were.
     //
     // BUT A WIDER LIST CANNOT ANSWER FOR A REFUSAL IT DOES NOT CARRY, and the
-    // iteration lock has exactly one — THE W/P COLUMN SWITCH, delta (a), which
-    // read-only ADMITS (a column switch authors nothing, so bare `p` and the
-    // three absolute view selectors are on its allowlist). Under BOTH reasons
-    // the two are therefore asked BESIDE each other: the read-only list on its
-    // own terms, plus that quartet through its one owner
-    // (iteration_lock_column_switch, the same predicate delta (a) is) — else
-    // the column would move under a lit lamp on a locked tab while the Toggle
-    // Marker Column button, which greys on the lamp alone, said otherwise.
+    // iteration lock has two — THE W/P COLUMN SWITCH and THE Ctrl+Shift+Tab
+    // PAIRED MARCH, delta (a), both of which read-only ADMITS (a column switch
+    // and a marker walk each author nothing, so bare `p`, the three absolute
+    // view selectors and the march are all on its allowlist). Under BOTH
+    // reasons the two lists are therefore asked BESIDE each other: the
+    // read-only list on its own terms, plus delta (a) through its one owner
+    // (iteration_lock_beyond_read_only) — else the column would move, and the
+    // march would walk, under a lit lamp on a locked tab while the Toggle
+    // Marker Column and Walk both tabs buttons, which grey on the lamp alone,
+    // said otherwise.
     const bool read_only_here = active_view_state(app).read_only;
     const bool read_only_says_no =
         read_only_here && read_only_key_blocked(key, mods);
     const bool iteration_says_no =
         app.iteration_mode_enabled &&
-        (read_only_here ? iteration_lock_column_switch(key, mods)
+        (read_only_here ? iteration_lock_beyond_read_only(key, mods)
                         : iteration_lock_key_blocked(key, mods));
     if (read_only_says_no || iteration_says_no) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
@@ -1065,10 +1071,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         //
         // AND THE CARD FORKS ON THE REASON AT THIS ONE COMPOSER (architect
         // 2026-09-10), on the REASON THAT ACTUALLY STOOD rather than on the
-        // tab's bit: under both reasons the column-switch quartet is the
-        // iteration lock's refusal alone — the read-only list admits it — so
-        // it carries the iteration sentence on a locked tab too, which is the
-        // sentence the greyed Toggle Marker Column button wears there. The
+        // tab's bit: under both reasons delta (a) — the column-switch quartet
+        // and the paired march — is the iteration lock's refusal alone, the
+        // read-only list admitting both, so those chords carry the iteration
+        // sentence on a locked tab too, which is the sentence the greyed
+        // Toggle Marker Column and Walk both tabs buttons wear there. The
         // read-only sentence names the chord for the reason
         // above — this gate drops unbound chords with bound ones, so it has to
         // say which it ate. THE ITERATION SENTENCE NAMES THE WAY OUT INSTEAD
@@ -2473,21 +2480,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // together that evening.
 }
 
-// THE WALK'S CELL SEAT, one write and its damage — the body the paired march
-// below reaches for when it repeats a cell step on the second tab, and the
-// same write cycle_marker_focus makes on both of its own arms. True when the
-// cell was seated, false when this tab has no seat to put it on (no marker
-// under the playhead, or one whose flag paints no cells): the caller's answer
-// to false is to take an ordinary marker step instead.
-bool GuiInputHandler::seat_walk_cell(MarkerCell cell) {
-    const int stop = marker_walk_current_stop(app, audio);
-    if (stop < 0) return false;
-    if (!marker_paints_iter_cells(app, app.active_markers_view, stop))
-        return false;
-    write_addressed_cell(cell);
-    return true;
-}
-
 // THE ADDRESSED-CELL WRITE AND ITS DAMAGE, spelled once for the walk: the
 // bright cell moves, and the flag cache keys the axis (fp_addressed_cell,
 // waveform_cache.cpp), so the marker lane must be damaged even where the
@@ -2500,8 +2492,8 @@ void GuiInputHandler::write_addressed_cell(MarkerCell cell) {
     viewport.invalidate_top_strip();
 }
 
-MarkerWalkStep GuiInputHandler::cycle_marker_focus(bool forward,
-                                                   MarkerLandingFrame frame) {
+void GuiInputHandler::cycle_marker_focus(bool forward,
+                                         MarkerLandingFrame frame) {
     // THE WALK REFUSES WHOLE AT A WALL (architect 2026-08-30, the strictness
     // ruling), and the test is THE STEP OWNER'S — marker_walk_step
     // (app_state.h), whose `marker` field marker_walk_actionable is the one-bit
@@ -2512,17 +2504,15 @@ MarkerWalkStep GuiInputHandler::cycle_marker_focus(bool forward,
     // GREYED button sat over a key that moved the cursor; the face and the act
     // ask one question now, so they cannot disagree. THE Ctrl+Shift+Tab MARCH
     // takes this answer at each of its two cycles (the tab switch between them
-    // is its own act and still runs), and reads the step this returns to keep
-    // its second tab in the first's shape.
+    // is its own act and still runs); it reads nothing back, the step being
+    // this body's own business since the march stopped walking cells.
     //
     // THE REFUSAL IS SILENT (architect 2026-08-31, superseding the 2026-08-30
     // card): a benign one-dimensional refusal already at its state says
     // nothing — one glance at the marker lane shows the focus is at its end —
     // and the greyed Walk button is the standing cue.
     const MarkerWalkStep step = marker_walk_step(app, audio, forward);
-    if (step.marker < 0) {
-        return {};
-    }
+    if (step.marker < 0) return;
 
     // A STEP BETWEEN THE CELLS OF ONE MARKER IS AN AXIS WRITE AND NOTHING ELSE
     // (architect 2026-09-10, the purple cells joining the walk): the focus has
@@ -2535,7 +2525,7 @@ MarkerWalkStep GuiInputHandler::cycle_marker_focus(bool forward,
     // stepped onto.
     if (step.same_marker) {
         write_addressed_cell(step.cell);
-        return step;
+        return;
     }
 
     // The marker step. Selection::cycle_selection asks marker_walk_landing
@@ -2585,7 +2575,6 @@ MarkerWalkStep GuiInputHandler::cycle_marker_focus(bool forward,
     // editors' opens do the same for the same reason. Payload needs no write:
     // the seat has already put it there.
     if (step.cell != MarkerCell::Payload) write_addressed_cell(step.cell);
-    return step;
 }
 
 void clear_region_highlight(AppState& app, Viewport& viewport) {

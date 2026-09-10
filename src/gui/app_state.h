@@ -8391,13 +8391,16 @@ struct AppState {
     // rides: a marker press inside run_marker_click_act (the pressed cell,
     // all four, on all three click shapes), the measure editor's open
     // (Measure), the bound editor's open (Lower or Upper) — an editor open
-    // seats the cell it edits — and, since 2026-09-10, THE TAB WALK
-    // (GuiInputHandler::cycle_marker_focus and the paired march's
-    // seat_walk_cell over it), which steps through the focused marker's PURPLE
-    // cells while grid iterations paints them and enters a marker from the
-    // right on Shift+Tab. The walk's cell write comes after its own seat for
-    // the same reason the other three do, and a SAME-MARKER step is that write
-    // and nothing else (marker_walk_step, below).
+    // seats the cell it edits — and, since 2026-09-10, THE BARE TAB WALK
+    // (GuiInputHandler::cycle_marker_focus), which steps through the focused
+    // marker's PURPLE cells while grid iterations paints them and enters a
+    // marker from the right on Shift+Tab. The walk's cell write comes after
+    // its own seat for the same reason the other three do, and a SAME-MARKER
+    // step is that write and nothing else (marker_walk_step, below). THE
+    // Ctrl+Shift+Tab PAIRED MARCH IS NOT A ROUTE: it is refused while the lamp
+    // stands (the lock's delta (a), iteration_lock_beyond_read_only), so it
+    // never meets a cell — its tab switch clears the selection and re-seats
+    // the payload, which is the very reason the architect refused it.
     //
     // A FIFTH ROUTE WAS THE RESTORE OF A BRACKET-ONLY UNDO ENTRY, and it went
     // with the entry (architect 2026-09-10): the bracket left the undo domain
@@ -8407,7 +8410,8 @@ struct AppState {
     // RESET TO PAYLOAD BY EVERY OTHER ROUTE THAT CHANGES THE FOCUS, at ONE
     // chokepoint: every Selection mutator writes the focus through
     // Selection::seat_focus (selection.cpp), which resets the axis — the Tab
-    // walk, the paired march, Shift+J's jump, the load's and the undo/redo
+    // walk, the paired march (whose two marker steps go through it), Shift+J's
+    // jump, the load's and the undo/redo
     // restores' auto-select and sanitize, `p` / Ctrl+Tab's clear, the
     // coincidence auto-select at the four entry chokepoints and the flag
     // editor's open all reach the focus through those mutators and inherit
@@ -10276,7 +10280,9 @@ inline bool iteration_column_lit(const AppState& app, char column) {
 // PAINTER'S rule and not a second reading of it — a walk that could seat a
 // bound axis on a flag showing no cells would light a box that is not there
 // and hand the arrows a bound to step on a marker the sweep never reads.
-// marker_walk_step (below) is its one reader.
+// marker_walk_step (below) is one of its two readers; the other is
+// value_drag_target's bound arm (2026-09-10), which asks the same question
+// for the same reason — a drag must not step a bound on a flag showing none.
 //
 // THE PAINTER SPELLS THE SAME COMPOSITION ACROSS ITS PARAMETER BOUNDARY, and
 // cannot call this: render_flags / render_phase_reset_flags take their store,
@@ -11343,24 +11349,29 @@ inline const ViewState& active_view_state(const AppState& a) {
 // domain this lock protects has no interest in them, while the read-only lock
 // eats the propagate family whole for its own reason — one tab's authored
 // content. The three PASTES stay refused by both. WHAT
-// IT TAKES AWAY IS THE W/P COLUMN SWITCH (architect 2026-09-10): the mode is
-// lit for the column you are in, so bare `p` and the absolute view selectors
-// 1/2/3 — which compose that switch — refuse while the lamp stands, and the
-// Toggle Marker Column button greys with the sentence. THAT QUARTET IS THE ONE
-// THING THE READ-ONLY LOCK DOES NOT OUTRANK, because it is a refusal the wider
-// list does not carry at all — read-only ADMITS a column switch — so on a
-// locked tab with the lamp lit the gate asks the quartet BESIDE the read-only
-// list and the four chords take the ITERATION sentence there
-// (GuiInputHandler::iteration_lock_column_switch, its one owner). Bare `t` and the audio
+// IT TAKES AWAY IS THE W/P COLUMN SWITCH AND THE PAIRED MARCH (architect
+// 2026-09-10): the mode is lit for the column you are in, so bare `p` and the
+// absolute view selectors 1/2/3 — which compose that switch — refuse while the
+// lamp stands, and the Toggle Marker Column button greys with the sentence;
+// and Ctrl+Shift+Tab refuses with them, its own tab switch clearing the
+// selection so that its second step could never walk the bound cells honestly
+// (Walk both tabs greys with the same sentence). THOSE FIVE CHORDS ARE THE ONE
+// THING THE READ-ONLY LOCK DOES NOT OUTRANK, because they are refusals the
+// wider list does not carry at all — read-only ADMITS a column switch and a
+// marker walk — so on a locked tab with the lamp lit the gate asks that delta
+// BESIDE the read-only list and they take the ITERATION sentence there
+// (GuiInputHandler::iteration_lock_beyond_read_only, its one owner). Bare `t` and the audio
 // view stay live, the mode being target-legal and the brackets reading no
 // audio view. AND THE `h` HISTORY VIEW'S ENTRY REFUSES (the view's own acts
 // push history and two modal views are not composed), which is the one
 // refusal this lock does NOT keep at the gate: the history vocabulary is
 // claimed a dispatch above it, so the arm that opens the view carries the
-// refusal and the Toggle History View button greys with it. THE A/B TAB SWITCHES STAY LIVE TOO, and by construction rather
-// than by exception: the two tabs SHARE the warp and the phase-reset stores
-// (AppState's tab block), so a bracket is common to both tabs and Ctrl+Tab
-// and the Ctrl+Shift+Tab paired march cannot strand one. The two deltas
+// refusal and the Toggle History View button greys with it. CTRL+TAB STAYS
+// LIVE, and by construction rather than by exception: the two tabs SHARE the
+// warp and the phase-reset stores (AppState's tab block), so a bracket is
+// common to both tabs and a plain switch cannot strand one — the MARCH over
+// that switch is refused for its own reason above, which is about the cell
+// walk and not about the stores. The two deltas
 // are stated once, at GuiInputHandler::iteration_lock_key_blocked
 // (input_key_dispatch.cpp), which is the keyboard's ONE gate; the faces read
 // this predicate and, for the iteration half's per-button membership,
@@ -11415,7 +11426,9 @@ inline bool authoring_locked(const AppState& a) {
 //     of their own, so they take their own fork.
 //   * GRID ITERATIONS and BPM ITERATIONS, the two exit roads, and SAVE,
 //     RENDER, the trim family, playback, the zoom and magnification family,
-//     the audio-view lamp, the A/B tabs and Copy resolved value, every one of
+//     the audio-view lamp, the A/B tab switch, the two single-tab walk
+//     buttons (bare Tab and Shift+Tab step the cells, the mode's own surface)
+//     and Copy resolved value, every one of
 //     which the lock ADMITS (the allowlist's two deltas are stated once at
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
 //   * THE VIEW BAR'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
@@ -11466,6 +11479,15 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
+        // WALK BOTH TABS (architect 2026-09-10) — delta (a)'s other member,
+        // and the one member here that refuses for a reason of SHAPE rather
+        // than of authoring: the march's own tab switch clears the selection
+        // and re-seats the payload, so its second step could never walk the
+        // bound cells honestly. Its chord is asked under BOTH reasons at the
+        // gate, so the face and the key refuse together on a locked tab too.
+        // The two SINGLE-tab walk buttons are NOT members: bare Tab and
+        // Shift+Tab step the cells, which is the mode's own surface.
+        case RedesignButton::TransportWalkBoth:
             return true;
         // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
         // as the keyboard gate's own bound-axis test does: with Lower or Upper
@@ -11691,8 +11713,9 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
 // greyed button and the dead key agree. Its count-only form (an empty store
 // alone, 2026-08-30 morning) was the audit's false premise: with no focus the
 // cycle seeds from the playhead and can land, while a full store can still
-// land nothing. (Walk both tabs is never a whole no-op: its tab switch acts
-// whatever the two stores hold.)
+// land nothing. (Walk both tabs is never a whole no-op on the stores: its tab
+// switch acts whatever the two hold. Its own face has one refusal and it is
+// not this owner's — the iteration lock refuses the march outright.)
 //
 // IT READS THE STEP RATHER THAN THE LANDING since 2026-09-10, and the widening
 // is the point: a Shift+Tab standing on the FIRST marker's upper cell acts —
@@ -14219,8 +14242,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // (marker_walk_actionable over marker_walk_landing, planner decision
         // 59 — an empty store, an all-disabled store, no enabled marker past
         // the playhead this way; the morning's count-only face was the
-        // audit's false premise); WALK BOTH TABS never greys, its tab switch
-        // acting whatever the stores hold.
+        // audit's false premise); WALK BOTH TABS never greys on the STORES,
+        // its tab switch acting whatever they hold — its one grey is the
+        // ITERATION LOCK's, which refuses the march outright (2026-09-10;
+        // iteration_lock_greys, and the key's own delta (a) refusal at the
+        // gate), and it is read WITHOUT a read-only term because the chord is
+        // asked under both reasons there, exactly as the column lamp's is.
         case RedesignButton::TransportWalkPrev:
             if (!marker_walk_actionable(a, audio, /*forward=*/false))
                 return false;
@@ -14230,6 +14257,7 @@ inline bool redesign_button_enabled(const AppState& a,
                 return false;
             break;
         case RedesignButton::TransportWalkBoth:
+            if (iteration_lock_greys(a, b)) return false;
             break;
         // COPY VALUE (2026-08-29) is the VERB GROUP'S ONE MEMBER OUTSIDE THE
         // READ-ONLY ARM: both of its chords — bare `j`, the clipboard write,
@@ -15854,6 +15882,18 @@ inline RedesignTooltipText redesign_button_tooltip(
     if (b == RedesignButton::IconMarkerColumn && a.iteration_mode_enabled) {
         return {kIterationLockColumnHint, nullptr};
     }
+    // WALK BOTH TABS' ITERATION-LOCK REASON (architect 2026-09-10), the
+    // column lamp's shape for the column lamp's reason: this button's chord is
+    // the lock's OTHER delta (a) member, which the gate asks under BOTH
+    // reasons (iteration_lock_beyond_read_only), so the line is true on a
+    // locked tab too and carries NO read-only term — the shared fork below,
+    // which does carry one, is for the members whose key never reaches the
+    // iteration refusal there. It takes the bare card rather than a hint of
+    // its own: no member of the shared fork spells an accelerator, and one
+    // constant for one button would be the drift that fork exists to avoid.
+    if (b == RedesignButton::TransportWalkBoth && a.iteration_mode_enabled) {
+        return {kIterationLockCard, nullptr};
+    }
     // AND EVERY OTHER FACE THE LOCK GREYS TAKES THE SAME SENTENCE, at ONE fork
     // over the ONE membership (architect 2026-09-10; iteration_lock_greys,
     // above): the marker verbs, the Measure, Edit flag and Up/Down on a
@@ -15876,9 +15916,11 @@ inline RedesignTooltipText redesign_button_tooltip(
     // pressing Ctrl+Z asking about undo).
     //
     // READ-ONLY OUTRANKS IT, spelled here as Undo's and Redo's fork spells it:
-    // for THIS fork's members a locked tab's KEY never reaches the iteration
-    // refusal at all — the gate asks the WIDER list there, and none of them is
-    // the column quartet the gate asks beside it — so the tab keeps the
+    // for THIS fork's remaining members a locked tab's KEY never reaches the
+    // iteration refusal at all — the gate asks the WIDER list there, and none
+    // of them is delta (a), which the gate asks beside it (the two that ARE —
+    // the column lamp and Walk both tabs — take their own forks above, each
+    // without a read-only term for exactly that reason) — so the tab keeps the
     // ordinary hint it has always shown.
     //
     // THE ACCELERATOR IS ABSENT, and this is the one lock hint without one:

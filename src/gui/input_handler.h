@@ -2647,14 +2647,10 @@ private:
     // playhead land, no framing, so `frame` and the Center on next marker lamp
     // it carries govern marker-to-marker steps alone. A marker step runs the
     // gate, the select and the jump as it always has and then seats the step's
-    // cell behind them. It RETURNS the step it took ({-1} on the refusal) so
-    // the paired march can put its second tab in the first's shape.
-    MarkerWalkStep cycle_marker_focus(bool forward, MarkerLandingFrame frame);
-
-    // Seat one cell of THIS tab's walk seat — the paired march's second step
-    // and cycle_marker_focus's own write, one body. Contract at the definition
-    // (input_handler.cpp).
-    bool seat_walk_cell(MarkerCell cell);
+    // cell behind them. THE MARCH MEETS NO CELL AT ALL: it is refused while
+    // grid iterations is lit (the lock's delta (a)), so its two calls are
+    // marker steps whatever the mode, and nothing reads the step back.
+    void cycle_marker_focus(bool forward, MarkerLandingFrame frame);
 
     // The addressed-cell write and the damage it owes, spelled once for the
     // walk (input_handler.cpp).
@@ -4085,7 +4081,7 @@ private:
     // (architect 2026-09-10). Returns true if key+mods should be dropped while
     // GRID ITERATIONS stands on a WRITABLE tab; on a locked tab the wider
     // read-only list applies instead and this is not called — its delta (a)
-    // alone is asked there, through the quartet's own owner below (read-only
+    // alone is asked there, through that delta's own owner below (read-only
     // outranks every refusal it carries, the fork at the gate in on_key). It
     // is written as
     // read_only_key_blocked's answer plus its own deltas rather than as a
@@ -4094,14 +4090,15 @@ private:
     // its base does for the arrows' lane term.
     bool iteration_lock_key_blocked(GuiKey key, GuiInputState mods);
 
-    // THE COLUMN SWITCH'S QUARTET — bare `p` and the three absolute view
-    // selectors, the ONE subtraction the allowlist above makes from its base
-    // and therefore the ONE thing that still has to be asked on a LOCKED tab,
-    // where the wider list ADMITS all four. State-free, so it is the class's
-    // own static: its two readers are the delta itself and the gate's
-    // read-only arm, which asks it beside the wider list. The whole account is
-    // at the definition (input_key_dispatch.cpp).
-    static bool iteration_lock_column_switch(GuiKey key, GuiInputState mods);
+    // WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS — the column
+    // switch's quartet (bare `p` and the three absolute view selectors) and
+    // the Ctrl+Shift+Tab paired march: the subtractions the allowlist above
+    // makes from its base, and therefore the only chords that still have to be
+    // asked on a LOCKED tab, where the wider list ADMITS all five. State-free,
+    // so it is the class's own static: its two readers are the delta itself
+    // and the gate's read-only arm, which asks it beside the wider list. The
+    // whole account is at the definition (input_key_dispatch.cpp).
+    static bool iteration_lock_beyond_read_only(GuiKey key, GuiInputState mods);
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
