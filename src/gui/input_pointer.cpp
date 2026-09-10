@@ -4157,9 +4157,12 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // what makes a cell reachable at all. THE `k` FOLD RIDES THE SAME RULE: a
 // lit Add to selection turns a plain press into the toggle, so a `k`-lit
 // press on a MEASURE box is the no-op too (the measure is "every other box");
-// on the two BOUND cells the pair cannot compose, bare `k` being refused
-// while grid iterations stands (iteration_lock_key_blocked) and the lamp
-// clearing the mode as it lights.
+// on the two BOUND cells the pair cannot compose AT ALL, the two lamps being
+// MUTUALLY EXCLUSIVE since 2026-09-10 (architect, that evening: NO SILENT
+// SWAPS) — bare `k` is refused while grid iterations stands
+// (iteration_lock_key_blocked) and bare `i` refuses while Add to selection
+// stands (its own arm, on kAddToSelectionLitCard), each with a card, a greyed
+// button and the reason in its tooltip. Neither ever clears the other.
 // It runs the stop, the three-way selection fork, the
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
@@ -8053,7 +8056,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // still carries no tooltip, so the KEY's card carries the sentence
         // (the account is at their arm in redesign_button_enabled).
         // THE BOTTOM ROW HAS A RESTING CONSUMER
-        // HERE FOR EVERY MEMBER BUT WALK BOTH TABS AND ADD TO SELECTION since
+        // HERE FOR EVERY MEMBER — the last two, WALK BOTH TABS and ADD TO
+        // SELECTION, having joined on 2026-09-10 (below) — since
         // 2026-08-30 (the truthful-buttons ruling, reversing the 2026-08-15
         // scoped-truth ruling under which the row's members were lit outside
         // the `h` view whatever their chord would do): each arm at
@@ -8069,9 +8073,16 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // and the marker-walk THREE — its diff-flag cycle plus the march over
         // it — take no partition grey. The arrows joined the in-view list on
         // 2026-08-18 by being PAINTED in the view at all — the cluster swap
-        // that hid them went with the history companions. ADD TO SELECTION
-        // has no refusal to mirror at all: the lock does not carry it, a
-        // selection being navigation.
+        // that hid them went with the history companions. WALK BOTH TABS AND
+        // ADD TO SELECTION EACH GAINED A RESTING REFUSAL ON 2026-09-10, both
+        // out of the iteration lock: the march is delta (a)'s own member and
+        // greys through iteration_lock_greys, while ADD TO SELECTION mirrors
+        // THE TWO LAMPS IT CANNOT STAND BESIDE — grid iterations (the lock
+        // again, bare `k` being delta (a)'s fourth member) and the VALUE DRAG,
+        // the exclusion read from its other side. The READ-ONLY lock still
+        // does not carry either of them, a selection and a walk being
+        // navigation; it is the second lock that reaches them (the arms are at
+        // redesign_button_enabled).
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
                                     playback, target_render, tc.id))
             return true;

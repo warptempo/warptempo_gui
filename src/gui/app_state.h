@@ -12755,6 +12755,37 @@ static_assert(
         std::string_view(kIterationLockCard)),
     "the hint is the card's sentence plus the accelerator");
 
+// AND THE EXCLUSION'S OTHER DIRECTION, the sentence bare `i` says when a
+// READ-ONLY TAB refuses the lamp (2026-09-10). Grid Iterations greys while
+// EITHER tab is locked (any_tab_read_only, below — the two A/B tabs share
+// both marker stores) and bare `i`'s own arm cards the read-only sentence
+// there, so the greyed face owes that same sentence under the
+// tooltips-on-disabled ruling; without it a locked tab fell through to the
+// constant table and the tooltip named the act instead of the refusal.
+//
+// IT IS THE KEYBOARD GATE'S ENGLISH WITH THE CHORD ALREADY IN IT, and the
+// English has ONE OWNER either way: the tail below is what
+// read_only_chord_card (notifications.h) appends to a spelled chord, so this
+// literal and every card that composer builds cannot drift — the
+// static_assert is the tie. The chord is `I` in the speller's own spelling
+// (BARE LETTERS UPPERCASE, gui_input.h), which is also why this hint carries
+// no parenthesised accelerator: naming the press IS the sentence here, unlike
+// the generic lock hints above, where the accelerator is appended to a
+// sentence about the mode.
+//
+// It is homed HERE rather than beside kTabReadOnlyCard for the reason that
+// header states at its own pointer to kIterationLockCard: A FACE READS IT,
+// and the faces are compiled in this header, notifications.h including it and
+// not the reverse.
+inline constexpr const char* kReadOnlyChordCardSuffix =
+    " is not available on a read-only tab";
+inline constexpr const char* kIterationReadOnlyHint =
+    "I is not available on a read-only tab";
+static_assert(
+    std::string_view(kIterationReadOnlyHint).ends_with(
+        std::string_view(kReadOnlyChordCardSuffix)),
+    "the hint is the keyboard gate's own sentence for the `i` chord");
+
 enum class IterationSweepRefusal {
     None,                 // the sweep would render `cells` cells
     NoBracketAuthored,    // no eligible marker carries a bracket at all
@@ -16205,15 +16236,30 @@ inline RedesignTooltipText redesign_button_tooltip(
     if (b == RedesignButton::IconValueDrag && a.add_to_selection) {
         return {kAddToSelectionLitCard, nullptr};
     }
-    // GRID ITERATIONS' ADD-TO-SELECTION REASON CARRIES A READ-ONLY TERM, and
-    // it is the one iteration-adjacent fork here that does: this button greys
-    // for TWO reasons that CAN stand together — a locked tab anywhere in the
-    // piece and the sticky ctrl — and bare `i`'s own arm asks the lock FIRST,
-    // so the line must too or it would name a refusal that is not the one
-    // standing. (A locked tab alone falls through to the constant table, as it
-    // always has.)
-    if (b == RedesignButton::IconIter && a.add_to_selection &&
-        !any_tab_read_only(a)) {
+    // GRID ITERATIONS' TWO REASONS, IN BARE `i`'S OWN ORDER. This button greys
+    // for two reasons that CAN stand together — a locked tab ANYWHERE in the
+    // piece and the sticky ctrl — and the key's arm asks the lock FIRST
+    // (input_key_dispatch.cpp's `i` arm: the read-only card, then
+    // kAddToSelectionLitCard), so the lines are ranked the same way here or
+    // the tooltip would name a refusal that is not the one standing.
+    //
+    // THE READ-ONLY LINE ARRIVED 2026-09-10 (codex round 2's P2): until then a
+    // locked tab fell through to the constant table and the dead button said
+    // "Toggle Grid Iterations (I)" — the act, not the reason — which the
+    // tooltips-on-disabled ruling owes better, and a disabled icon's PRESS is
+    // deliberately silent, so the tooltip is this road's only explanation. The
+    // sentence is the KEY'S OWN, the tail shared with the composer that builds
+    // it (kIterationReadOnlyHint, above). The predicate is the face's own term
+    // — the IconIter arm in redesign_button_enabled reads the same
+    // any_tab_read_only — so the grey and its words are one decision.
+    //
+    // THE ADD-TO-SELECTION LINE NEEDS NO READ-ONLY TERM OF ITS OWN any more:
+    // the arm above returns on that state, so the ranking is the arms' ORDER
+    // rather than a condition restated inside the lower one.
+    if (b == RedesignButton::IconIter && any_tab_read_only(a)) {
+        return {kIterationReadOnlyHint, nullptr};
+    }
+    if (b == RedesignButton::IconIter && a.add_to_selection) {
         return {kAddToSelectionLitCard, nullptr};
     }
     // UNDO'S AND REDO'S ITERATION-LOCK REASON (architect 2026-09-10), ranked

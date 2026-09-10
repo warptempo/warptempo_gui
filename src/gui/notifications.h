@@ -309,8 +309,16 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // the SENTENCE MUST NOT: one press of `i` says one thing whichever tab is the
 // locked one, which is exactly what a second spelling of this English would
 // have drifted away from.
+//
+// THE TAIL IS A CONSTANT IN app_state.h SINCE 2026-09-10
+// (kReadOnlyChordCardSuffix), and for that header's own third-home reason: a
+// FACE reads this English now — the Grid Iterations button's read-only line
+// is `I` plus this very tail, spelled as a literal because
+// RedesignTooltipText carries literals — so the words live where the faces
+// are compiled and this composer is one of their two readers rather than a
+// second spelling.
 inline std::string read_only_chord_card(const std::string& chord) {
-    return chord + " is not available on a read-only tab";
+    return chord + kReadOnlyChordCardSuffix;
 }
 
 // THE ITERATION LOCK'S SENTENCE IS kIterationLockCard AND IT LIVES IN

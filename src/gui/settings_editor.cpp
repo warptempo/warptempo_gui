@@ -161,11 +161,37 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // `tab_X_trim_*=` relaxation of 2026-08-07 among them, and
 // `tab_X_read_only=false` with them as a self-unlock beside bare `o` and the
 // icon row's toggle. That is the ruling working rather than a hole, and it is
-// why the commit arm below stays engine-only: the GUI-kind keys are band
-// rather than authored content — view state, follow, centered,
+// why the READ-ONLY arm in commit() stays engine-only: the GUI-kind keys are
+// band rather than authored content — view state, follow, centered,
 // center_on_next_marker, the magnification level, the per-tab viewport, zoom, playhead, trim and the
 // read_only bit itself — and have been read-only-legal since 2026-08-07, so
-// none of them owes a gate here.
+// none of them owes a read-only gate here.
+//
+// THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
+// (architect 2026-09-10). It governs the keys by the identical rule — the
+// engine-key arm in commit() asks authoring_locked for both locks at once —
+// but its keyboard gate refuses SEVEN chords the read-only allowlist admits
+// (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
+// bare `p`, bare `k`, the three absolute view selectors and the paired
+// march), so a GUI-kind key whose chokepoint is one of those chords owes a
+// gate of its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
+// validate_gui_setting's whole key set (2026-09-10), TWO KEYS OWE ONE AND
+// BOTH CARRY IT, each ahead of its own no-op gate so it refuses in both
+// directions as its chord does:
+//   * `active_markers_view=` — bare `p` (and the column half of 1/2/3); the
+//     mode is lit for the column it was pressed in.
+//   * `tab_X_read_only=true` — bare `o`, PIECE-WIDE, an unlock in either
+//     direction still committing.
+// AND THE REST DO NOT, each because its own chord is live under a lit lamp:
+// `active_audio_view=` is bare `t` (the S/T flip the lock never touches, and
+// the audio half of 1/2/3 with it), `active_tab_view=` is Ctrl+Tab,
+// `follow=`/`centered=`/`center_on_next_marker=` are bare `f`/`y`/`n`,
+// `waveform_magnification_level=` is the `=`/`-` pair, and the per-tab
+// `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
+// viewport and trim band, which neither lock protects. The delta's other two
+// chords — bare `k` and the paired march — have no key in this schema at all,
+// so nothing here can spell them. A change to that delta needs a hand edit
+// here.
 void GuiSettingsEditor::open() {
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
     // answer — a second `;` asks for what is already there.
@@ -328,6 +354,36 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (key == "active_markers_view") {
+        // THE ITERATION LOCK REFUSES THE COLUMN SWITCH (architect 2026-09-10),
+        // the typed spelling of bare `p`'s own refusal at the keyboard gate
+        // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp,
+        // which eats bare `p` and the three absolute view selectors alike):
+        // the mode is LIT FOR THE COLUMN IT WAS PRESSED IN and the column is
+        // frozen with it, so a typed `active_markers_view=P` under a lit lamp
+        // would leave the cells painted and the sweep aimed at a column the
+        // brackets were never authored on. The Settings dropdown opens this
+        // editor under the lock — the lock governs the KEYS and not the
+        // surface — and its field is free text, so without this arm the
+        // editor is a second road onto the state the ruling exists to delete;
+        // it is the sibling of the tab_X_read_only refusal below, which
+        // answers bare `o` the same way.
+        //
+        // IT REFUSES IN BOTH DIRECTIONS, ahead of the unchanged() no-op gate
+        // rather than behind it: bare `p` refuses whichever column it is
+        // pressed in, and a typed same-column commit is the same press asking
+        // the same question. One press, one answer, whatever the column.
+        // Red flash plus card, this surface's shape, on the GENERIC sentence
+        // (kIterationLockCard) the gate itself says for every chord it eats —
+        // the accelerator-bearing kIterationLockColumnHint is the greyed
+        // button's tooltip and not a card.
+        if (app.iteration_mode_enabled) {
+            app.settings_editor.red = true;
+            viewport.invalidate_modal_dialog_area();
+            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIterationLockCard);
+            return true;
+        }
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
         // The bare-`p` route; it flips W<->P and repaints.
         active_views.toggle_active_markers_view();
