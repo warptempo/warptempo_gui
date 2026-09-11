@@ -280,7 +280,7 @@ struct UndoEntry {
     // GROUP is indistinguishable to a by-frame match. THE PRODUCER ENUMERATION
     // LIVES AT ONE SITE, restore_touched_indices below, which is where the arms
     // that consume the hints are ranked; nothing restates it here. A hint may
-    // name ONE row or MANY (the group tempo and bound steps, the deletes and
+    // name ONE row or MANY (the group tempo step, the deletes and
     // the propagate paste all name several), and either side may be empty on
     // its own: an added row is absent from the snapshot, a removed one from
     // live. Empty means "no hint on this side — use the diff reconstruction".
@@ -10468,11 +10468,13 @@ inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
                                        : std::min(windowed, partner);
 }
 
-// Commit a bound step's landing — the step's one write site, singleton arm and
-// group arm alike, because the rule it carries is about the PAIR and the
-// landing owner above can only answer for one bound. It writes both: the
-// addressed side takes the landing, the partner keeps what it had (0 when the
-// bracket was blank, which is what makes a step from blank author it).
+// Commit a bound step's landing — the step's ONE write site, and a step is
+// always a SINGLETON: every road onto a bound axis single-selects, so there is
+// no group arm to write for. The site exists because the rule it carries is
+// about the PAIR and the landing owner above can only answer for one bound. It
+// writes both: the addressed side takes the landing, the partner keeps what it
+// had (0 when the bracket was blank, which is what makes a step from blank
+// author it).
 //
 // A pair of two zeroes clears instead of resting, because [0, 0] is the blank
 // bracket on every authoring road (planner-ruled 2026-09-04, converting a
@@ -10485,14 +10487,15 @@ inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
 // cells — it simply cannot come to rest there.
 //
 // Two consequences, both wanted. A tap up then a tap down on a blank bracket
-// leaves the store byte-equal to what it was, so the merge tail's byte-equal
-// pop retires the coalesced entry and the wobble leaves no invisible restore
-// (Undo::record_gesture). And a marker whose two cells read +0.00 is never in
-// the sweep: one look, one meaning.
+// leaves the store byte-equal to what it was, and there is nothing to pop
+// because nothing was pushed: a bound step is a session act outside the
+// history, writing no undo entry, raising no dirty flag and coalescing
+// nothing. And a marker whose two cells read +0.00 is never in the sweep: one
+// look, one meaning.
 //
 // The walls do not move for it. The clearing is what the write does with a
-// landing, never a term of where a step may land, so the directional face and
-// the group scan still read iter_bound_step_landing alone. Nor can this clear
+// landing, never a term of where a step may land, so the directional face
+// reads iter_bound_step_landing alone. Nor can this clear
 // a bracket the caller did not mean to move: a landing on [0, 0] is admitted
 // only when it differs from the resting bound, which for an already-blank
 // bracket it cannot (start is 0 and the partner walls the landing there).
@@ -10553,11 +10556,12 @@ inline int phase_iter_bound_step_landing(const AppState& app,
 }
 
 // Commit a phase bound step's landing — iter_bound_step_write's twin, and the
-// PHASE column's one write site for the same reason: the rule it carries is
-// about the PAIR and the landing owner above can only answer for one bound. It
-// writes both: the addressed side takes the landing, the partner keeps what it
-// had (0 when the bracket was blank, which is what makes a step from blank
-// author it).
+// PHASE column's ONE write site for the same reason: the rule it carries is
+// about the PAIR and the landing owner above can only answer for one bound. A
+// step here is a SINGLETON as it is there — every road onto a bound axis
+// single-selects — so there is no group arm to write for. It writes both: the
+// addressed side takes the landing, the partner keeps what it had (0 when the
+// bracket was blank, which is what makes a step from blank author it).
 //
 // A pair of two zeroes CLEARS instead of resting, the blank rule this column
 // takes from the warp one: `[0, 0]` is the blank bracket on every authoring
@@ -10566,12 +10570,14 @@ inline int phase_iter_bound_step_landing(const AppState& app,
 // them. The step from blank still starts at [0, 0] — a blank reads `+0` in
 // both cells — it simply cannot come to rest there, which is what keeps a
 // reset whose cells read `+0` out of the sweep and makes a tap up then a tap
-// down leave the store byte-equal (the merged burst's own byte-equal pop,
-// Undo::record_gesture, whose row comparator reads these two fields).
+// down leave the store byte-equal, with nothing to pop because nothing was
+// pushed: a bound step is a session act outside the history, writing no undo
+// entry, raising no dirty flag and coalescing nothing, and the row comparator
+// does not read these two fields at all.
 //
 // The walls do not move for it: the clearing is what the write does with a
-// landing, never a term of where a step may land, so the directional face and
-// the group scan still read phase_iter_bound_step_landing alone.
+// landing, never a term of where a step may land, so the directional face
+// reads phase_iter_bound_step_landing alone.
 inline void phase_iter_bound_step_write(GuiPhaseResetMarker& m,
                                         MarkerCell side, int landing) {
     const int lo = m.iter_start_hops.value_or(0);
