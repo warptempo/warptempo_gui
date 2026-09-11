@@ -7,7 +7,6 @@
 #include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lattice
 #include <algorithm>
 #include <bit>
-#include <limits>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -459,41 +458,26 @@ PhaseHopWindow phase_reset_hop_window(const AppState& app,
     const int64_t rest = pv[static_cast<size_t>(idx)].time_frame;
     const int64_t last_frame = audio.total_frames() - 1;
 
-    // THE NEIGHBOUR WALLS. An ENABLED neighbour walls at the extreme cell its
-    // own bracket can reach; a DISABLED one walls at its resting frame, being
-    // out of the product and carrying no bracket at all (its own disable
-    // cleared one — architect 2026-09-10); a blank bracket's value_or(0)
-    // lands on the resting frame through the identity cell above. Both are
-    // computed under this same live map, which is what makes the two
-    // windows mutually consistent.
-    const auto neighbour_wall = [&](int j, bool upper_side) -> int64_t {
-        const GuiPhaseResetMarker& q = pv[static_cast<size_t>(j)];
-        if (q.disabled) return q.time_frame;
-        const int k = upper_side ? q.iter_end_hops.value_or(0)
-                                 : q.iter_start_hops.value_or(0);
-        return phase_reset_hop_cell_frame(q.time_frame, k, map);
-    };
-    const int64_t prev_wall =
-        idx > 0 ? neighbour_wall(idx - 1, /*upper_side=*/true)
-                : std::numeric_limits<int64_t>::min();
-    const int64_t next_wall =
-        idx + 1 < n ? neighbour_wall(idx + 1, /*upper_side=*/false)
-                    : std::numeric_limits<int64_t>::max();
-
+    // THE TWO WALLS THAT STAND ARE THE PIECE'S EDGES AND THE DIGIT (architect
+    // 2026-09-11). A neighbouring reset is NOT a wall: two adjacent ranges may
+    // cross or meet, the sweep sorts each cell's vector before the request, and
+    // the ear is what catches a contortion — the same latitude coincident
+    // markers have at rest. Iteration is wanted in quiet sections with few
+    // resets, and a user who puts two ranges within a few hops of each other is
+    // doing it deliberately.
+    //
     // The two walks, outward from the identity cell, stopping at the first k
     // that breaks a wall. At most kIterHopMax landings a side, each one seed
     // search over a monotone map.
     for (int k = 1; k <= kIterHopMax; ++k) {
         const int64_t f = phase_reset_hop_cell_frame(rest, k, map);
         if (f > last_frame) { out.max_wall = PhaseHopWall::PieceEdge; break; }
-        if (f >= next_wall) { out.max_wall = PhaseHopWall::Neighbour; break; }
         out.k_max    = k;
         out.max_wall = PhaseHopWall::Digit;
     }
     for (int k = -1; k >= -kIterHopMax; --k) {
         const int64_t f = phase_reset_hop_cell_frame(rest, k, map);
         if (f < 0)          { out.min_wall = PhaseHopWall::PieceEdge; break; }
-        if (f <= prev_wall) { out.min_wall = PhaseHopWall::Neighbour; break; }
         out.k_min    = k;
         out.min_wall = PhaseHopWall::Digit;
     }

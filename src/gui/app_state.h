@@ -10537,21 +10537,22 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
 //
 // WHAT DIFFERS FROM THE WARP LANDING IS WHICH WINDOW: there the clamp window
 // is a fact about one marker's base tempo, here it is
-// phase_reset_hop_window's — a fact about the piece's length, the reset's two
-// neighbours and the live warp map — so the landing takes the app and the
-// audio rather than a marker by reference. THE WINDOW ALWAYS CONTAINS 0
-// (the identity cell renders the resting store), so a blank bracket's start is
-// inside it and the two clamps compose exactly as the warp pair does.
+// phase_reset_hop_window's — a fact about the piece's length and the live warp
+// map (a NEIGHBOURING RESET IS NOT A WALL since 2026-09-11: two ranges may
+// cross or meet and the sweep sorts each cell before the request) — so the
+// landing takes the app and the audio rather than a marker by reference. THE
+// WINDOW ALWAYS CONTAINS 0 (the identity cell renders the resting store), so a
+// blank bracket's start is inside it and the two clamps compose exactly as the
+// warp pair does.
 //
 // THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (2026-09-10): a bracket
 // exists only while grid iterations is lit, and while it is lit the piece is
-// locked (authoring_locked) — no reset or neighbour can be nudged, dragged,
-// dropped, deleted or disabled, and no warp edit can move the lattice — so the
-// walls the editor refused outside and this landing clamps into are the walls
-// that were there when the bound was authored. That is what retired the
-// sweep's per-read re-verification and its off-wall refusal. Clamping to the
-// window FIRST and to the partner SECOND stays the order, the pair being kept
-// ordered by the partner clamp.
+// locked (authoring_locked) — the piece's length cannot change and no warp
+// edit can move the lattice — so the walls the editor refused outside and this
+// landing clamps into are the walls that were there when the bound was
+// authored. That is what retired the sweep's per-read re-verification and its
+// off-wall refusal. Clamping to the window FIRST and to the partner SECOND
+// stays the order, the pair being kept ordered by the partner clamp.
 inline int phase_iter_bound_step_landing(const AppState& app,
                                          const GuiAudio& audio, int idx,
                                          MarkerCell side, int delta_hops) {

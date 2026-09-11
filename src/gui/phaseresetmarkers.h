@@ -61,15 +61,18 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // to: a disable is one of the acts the lock refuses.
     //
     // NOTHING CLAMPS THIS BRACKET RETROACTIVELY and nothing needs to. The hop
-    // window is a fact about the whole store AND the live warp map
-    // (phase_reset_hop_window, warp_frame_map_view.h), which had a dozen
-    // writers between them — a nudge or drag of the reset or a neighbour, a
-    // neighbour dropped or deleted, a disable, a warp edit that moves the
-    // lattice — and the sweep's plan re-verified every bracket on every read
-    // for one day because of it. THE LOCK REFUSES EVERY ONE OF THOSE WRITERS
-    // while a bracket stands, so the walls hold by construction and the
-    // re-verify went with them: the editor's refusal at its commit and the
-    // step's clamp at its landing are the walls' whole enforcement.
+    // window is a fact about the piece's length AND the live warp map
+    // (phase_reset_hop_window, warp_frame_map_view.h), and it once read the
+    // neighbouring resets too, which gave it a dozen writers — a nudge or drag
+    // of the reset or a neighbour, a neighbour dropped or deleted, a disable, a
+    // warp edit that moves the lattice — and the sweep's plan re-verified every
+    // bracket on every read for one day because of it. THE LOCK REFUSES EVERY
+    // ONE OF THOSE WRITERS while a bracket stands, and the neighbour walls
+    // themselves are retired (architect 2026-09-11: two ranges may cross or
+    // meet, the sweep sorting each cell before the request), so the walls that
+    // remain — the piece's edges and the single digit — hold by construction:
+    // the editor's refusal at its commit and the step's clamp at its landing
+    // are their whole enforcement.
     std::optional<int> iter_start_hops;
     std::optional<int> iter_end_hops;
 };

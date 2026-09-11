@@ -476,11 +476,12 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 //
 // WHAT DIFFERS. The subject is a bound in HOPS of the analysis lattice, so the
 // walls are the reset's own hop window (phase_reset_hop_window,
-// warp_frame_map_view.h — the piece's ends, the two neighbours' extreme
-// landings and the single digit) rather than a tempo bracket, and the landing
-// owner takes the app and the audio because that window is a fact about the
-// store and the live map rather than about one row. The eligibility is this
-// column's (phase_reset_iter_eligible_marker): every reset is a carrier, so
+// warp_frame_map_view.h — the piece's ends and the single digit, a
+// neighbouring reset not being a wall since 2026-09-11) rather than a tempo
+// bracket, and the landing owner takes the app and the audio because that
+// window is a fact about the piece and the live map rather than about one
+// row. The eligibility is this column's
+// (phase_reset_iter_eligible_marker): every reset is a carrier, so
 // the one thing the singleton refuses on a card is a DISABLED reset. A blank
 // bracket starts at [0, 0] and the first step authors it, both
 // bounds written through the one write site (phase_iter_bound_step_write) —

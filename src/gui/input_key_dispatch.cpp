@@ -4971,11 +4971,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // in place recalls the cell exactly — which is what makes the file
         // names the thing worth remembering. The engine doesn't consume the
         // hop bracket; clear it so the request is quiet, the warp arm's own
-        // word. THE VECTOR IS STILL SORTED BY time_frame, and that is the
-        // PLAN'S VERDICT rather than an assumption of this loop's: the hop
-        // window walls each reset at its neighbours' own extreme landings and
-        // the plan re-asks that of every bracket a few lines up, so no cell of
-        // the product can cross or coincide. No re-sort and no assert here.
+        // word.
         std::vector<GuiPhaseResetMarker> cell_phase_resets = base_phase_resets;
         for (size_t k = 0; k < per_phase_hops.size(); ++k) {
             const int pi = phase_eligible_indices[k];
@@ -4984,6 +4980,27 @@ void GuiInputHandler::run_iteration_sweep_render() {
             cell_phase_resets[pi].iter_start_hops.reset();
             cell_phase_resets[pi].iter_end_hops.reset();
         }
+        // THE VECTOR IS SORTED HERE because the cells MAY CROSS (architect
+        // 2026-09-11): a neighbouring reset is not a wall any more, so two
+        // adjacent ranges may cross or meet and a cell can displace a reset
+        // past the one beside it. A crossed cell is the user's own deliberate
+        // contortion and renders exactly where its cells put the resets, in
+        // swapped order; a cell where two enabled resets land on ONE frame
+        // renders them as one reset, the parser's exact-coincidence collapse
+        // with its stderr line — the same answer a coincident drop at rest
+        // gets. What the sort protects is the SORT INVARIANT every consumer
+        // reads: the load parser rejects decreasing times as a corruption
+        // tripwire, so an unsorted per-cell sidecar would be unloadable, and
+        // the engine's phase reset validator (strictly ascending) is the
+        // backstop behind that, never a wall of its own. Disabled rows sort
+        // with the rest — the sidecar's grammar is non-decreasing over EVERY
+        // row, participation not being a term of it. Stable so equal frames
+        // keep the store's own order.
+        std::stable_sort(cell_phase_resets.begin(), cell_phase_resets.end(),
+                         [](const GuiPhaseResetMarker& a,
+                            const GuiPhaseResetMarker& b) {
+                             return a.time_frame < b.time_frame;
+                         });
 
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(cell_warp_markers),

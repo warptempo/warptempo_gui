@@ -63,9 +63,9 @@ bool parse_signed_2dp_cents(const std::string& v, int64_t& out) {
 // bounds what can be COMMITTED. The conversion is digit-to-int direct, and it
 // needs no overflow arm at all — one digit never leaves [-9, +9]; the hop
 // WINDOW's own walls, refused at the commit below, are what hold a bound
-// inside the piece and off its neighbours. ZERO HAS ONE SIGN AND IT IS '+':
-// the writer spells zero `+0`, so `-0` is a SECOND spelling of a value that
-// already has one and is refused here like any other non-canonical token.
+// inside the piece. ZERO HAS ONE SIGN AND IT IS '+': the writer spells zero
+// `+0`, so `-0` is a SECOND spelling of a value that already has one and is
+// refused here like any other non-canonical token.
 bool parse_signed_hops(const std::string& v, int& out) {
     if (v.size() != 2) return false;
     if (v[0] != '+' && v[0] != '-') return false;
@@ -471,12 +471,13 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
             return;
         }
         // THEN THE HOP WINDOW, refused rather than clamped, and NAMING THE
-        // WALL (architect 2026-09-09's (d): a cell that would push the reset
-        // before frame 0, past the last frame, or onto a neighbour is refused
-        // at authoring, like the tempo window). The window's owner already
-        // decided which wall closed each side, so this reads the verdict
-        // rather than re-deriving it (phase_reset_hop_window,
-        // warp_frame_map_view.h).
+        // WALL: a cell that would push the reset before frame 0 or past the
+        // last frame is refused at authoring, like the tempo window. A
+        // NEIGHBOURING RESET IS NOT A WALL (architect 2026-09-11) — two
+        // ranges may cross or meet and the sweep sorts each cell before the
+        // request. The window's owner already decided which wall closed each
+        // side, so this reads the verdict rather than re-deriving it
+        // (phase_reset_hop_window, warp_frame_map_view.h).
         const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
         if (value < w.k_min || value > w.k_max) {
             const bool low = value < w.k_min;
@@ -487,10 +488,6 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
                 return;
             case PhaseHopWall::PieceEdge:
                 refuse("the cell would leave the piece");
-                return;
-            case PhaseHopWall::Neighbour:
-                refuse(low ? "the cell would reach the previous phase reset"
-                           : "the cell would reach the next phase reset");
                 return;
             }
             return;

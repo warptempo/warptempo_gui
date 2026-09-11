@@ -513,16 +513,15 @@ const std::vector<WarpFrameMapSegment>& live_warp_frame_map(
     const AppState& app, const GuiAudio& audio);
 
 // WHICH WALL CLOSED A SIDE of the hop window below. Every side is closed by
-// exactly one of the three, so the kind is always meaningful.
+// exactly one of the two, so the kind is always meaningful.
 enum class PhaseHopWall {
     Digit,      // +/-kIterHopMax — "past nine it is no longer the phase reset"
     PieceEdge,  // the cell would land before frame 0 or past total_frames - 1
-    Neighbour,  // the cell would reach the adjacent phase reset's own extreme
 };
 
 // THE LEGAL HOP INTERVAL for the phase reset at `idx`, and what closed it on
 // each side. k_min <= 0 <= k_max ALWAYS: the identity cell renders the resting
-// store, so 0 is inside the window whatever the neighbours do, exactly as the
+// store, so 0 is inside the window whatever else is around, exactly as the
 // warp bracket's clamp window always contains the zero delta.
 struct PhaseHopWindow {
     int          k_min    = 0;
@@ -531,50 +530,48 @@ struct PhaseHopWindow {
     PhaseHopWall max_wall = PhaseHopWall::Digit;
 };
 
-// THE PHASE BRACKET'S WALLS, ONE OWNER (architect 2026-09-09's (d): a cell
-// that would push the reset before frame 0, past the last frame, or onto a
-// neighbour is REFUSED AT AUTHORING, like the tempo window). Walks k outward
-// from 0 on each side under the live map, landing each candidate through
+// THE PHASE BRACKET'S WALLS, ONE OWNER. Walks k outward from 0 on each side
+// under the live map, landing each candidate through
 // phase_reset_hop_cell_frame, and stops at the first k that breaks a wall — at
-// most kIterHopMax steps a side:
+// most kIterHopMax steps a side. THE WALLS ARE TWO:
 //
 //   THE PIECE: 0 <= F <= total_frames - 1, the drop's own EOF wall
 //   (drop_phase_reset_at_position, phaseresetmarkers_ops.cpp).
 //
-//   THE NEIGHBOURS ARE THE IMMEDIATE STORE ROWS, DISABLED INCLUDED, and the
-//   wall is STRICT (F > prev_wall, F < next_wall). Disabled rows count because
-//   the store is SORTED BY time_frame at rest with disabled rows in it and
-//   every cell's sidecar is written from a per-cell copy of that vector: a
-//   displaced reset crossing or landing on ANY row would write an
-//   out-of-order or coincident-by-displacement sidecar. The sort is the
-//   invariant, not participation. It is strict because his (d) refuses "onto a
-//   neighbour" — coincident drops stay legal AT REST (that rule is untouched;
-//   this is a sweep cell, not authoring at rest).
+//   THE DIGIT: +/-kIterHopMax, "past nine it is no longer the phase reset it
+//   was" (phaseresetmarkers.h).
 //
-//   AND THE NEIGHBOUR'S WALL IS ITS OWN NEAREST LANDING, not its resting
-//   frame: an ENABLED predecessor walls at its furthest-RIGHT cell
-//   (its iter_end_hops landing) and an enabled successor at its furthest-LEFT
-//   (its iter_start_hops landing), so two adjacent brackets each inside the
-//   other's extreme can never cross or meet IN ANY CELL and the whole
-//   Cartesian product is sorted by construction. It is mutual — raising A's
-//   upper narrows B's lower window — which is the tempo window's own shape. A
-//   DISABLED neighbour contributes its RESTING frame instead: it is out of the
-//   product and carries no bracket at all — no reset can be disabled while a
-//   bracket stands, the iteration lock refusing every disabling act (architect
-//   2026-09-10) — so it never moves.
+// A NEIGHBOURING RESET IS NOT A WALL (architect 2026-09-11): two adjacent
+// ranges may CROSS OR MEET. The neighbour walls that stood from 2026-09-09 are
+// retired — they were order-dependent (each neighbour walled at its bracket's
+// own extreme landing while the walks checked one side each, so a neighbour
+// that moved its bound away vacated space a range could enter and its later
+// retreat or clear left the crossing behind), and the answer is no wall rather
+// than a tighter one: iteration is wanted in quiet, exposed sections with few
+// resets, and a user who sets two ranges within a few hops of each other is
+// doing it deliberately — the ear catches the contortion, the same latitude
+// coincident markers have at rest, with git and the session history the way
+// back. A cell where two enabled resets land on ONE frame renders them as one
+// reset (the parser's exact-coincidence collapse and its stderr line, what a
+// coincident drop at rest gets); a cell where they CROSS renders both where
+// the cells put them, in swapped order — which is why the SWEEP SORTS each
+// cell's vector by time_frame before the request (input_key_dispatch.cpp): the
+// store's sort is the invariant every consumer reads, the load parser
+// rejecting decreasing times and the engine's phase reset validator refusing a
+// list that is not strictly ascending.
 //
 // AND THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (architect 2026-09-10):
 // a bracket exists only while grid iterations is lit, and while it is lit the
-// piece is LOCKED (authoring_locked, app_state.h), so no reset or neighbour
-// can be nudged, dragged, dropped, deleted or disabled and no warp edit can
-// move the lattice. That is what retired the sweep plan's per-read
+// piece is LOCKED (authoring_locked, app_state.h), so the piece's length
+// cannot change and no warp edit can move the lattice — the two facts these
+// walls are made of. That is what retired the sweep plan's per-read
 // re-verification, which existed because nothing clamps this bracket
 // retroactively: the walls hold by construction now.
 //
 // TWO READERS: the bound editor's commit (refuses outside the window, naming
 // the wall kind — GuiFlagEditor::commit_iter_bound_edit) and the step's
 // landing owner (phase_iter_bound_step_landing, app_state.h, which CLAMPS into
-// the window and then at the partner), the group scan and the directional face
-// reaching it through that landing.
+// the window and then at the partner), the directional face reaching it
+// through that landing.
 PhaseHopWindow phase_reset_hop_window(const AppState& app,
                                       const GuiAudio& audio, int idx);
