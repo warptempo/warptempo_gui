@@ -5376,13 +5376,24 @@ struct AppState {
     // selection under it can end it. A shift-click still wins for its own
     // press (the `&& !shift` term above) and the lamp is still lit after it; a
     // Tab walk, `p`, Ctrl+Tab, a waveform click, a marker drop, an undo
-    // restore and a SOURCE LOAD all leave it lit, and the plain flag press
+    // restore and a LOAD IN PLACE all leave it lit, and the plain flag press
     // keeps taking the ctrl branch until bare `k` or the button says
     // otherwise. That is bare `x`'s posture exactly (value_drag_enabled below,
     // whose declaration used to name this bit as its one point of departure)
     // and bare `z`'s (restrict_undo_to_viewport): the three session lamps are
-    // one family, off at every launch, in no settings vocabulary, never
-    // serialized, and cleared by nothing but their own toggles.
+    // one family, in no settings vocabulary, never serialized, and cleared by
+    // nothing but their own toggles for as long as the project stays open.
+    //
+    // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN. The bit
+    // lives on this AppState, which run_project constructs fresh for each
+    // project and which gui_main's loop constructs again at a REOPEN (File →
+    // Open project, Ctrl+O, the picker), so opening another piece starts every
+    // lamp dark exactly as launching does. Inside one open project there is no
+    // source load for the lamp to survive: GuiFileLoader::load_file has a
+    // single caller, that fresh state's own first load, and the only loads
+    // INTO a standing state — the render player's load in place and the
+    // history view's `'` — write the markers and the engine block and touch no
+    // lamp.
     //
     // WHAT THIS REPLACED, because the deletion is the ruling: from 2026-08-18
     // the bit rode the Selection chokepoint as the SHIFT-RANGE ANCHOR'S MIRROR
@@ -5437,8 +5448,10 @@ struct AppState {
     // since 2026-09-10, its NEIGHBOUR'S TOO: `add_to_selection` above used to
     // be a per-selection posture that every Selection mutator cleared, and the
     // architect gave it this one instead, so the three lamps now share it
-    // whole — off at every launch, in no settings vocabulary, never
-    // serialized, never in the undo domain, surviving a source load.
+    // whole — in no settings vocabulary, never serialized, never in the undo
+    // domain, and per-project state that is dark at every project open, a
+    // reopen as much as a launch (the family's record is at add_to_selection
+    // above, with the reason no load can leave it lit).
     //
     // ITS GATES: legal in both columns and both audio views (the target rule
     // asks the column itself), legal on a LOCKED TAB and under the ITERATION

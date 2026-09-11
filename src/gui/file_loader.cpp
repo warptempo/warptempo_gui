@@ -411,11 +411,14 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     app.shift_range_anchor = -1;
     // The STICKY CTRL does NOT ride that belt (architect 2026-09-10). It is a
     // session TOOL POSTURE now, in the family the two lamps beside it are
-    // already in — this body clears neither `value_drag_enabled` (the record
-    // is at the ValueDragState reset above) nor `restrict_undo_to_viewport`,
-    // so a load leaves Add to selection lit too. The whole family is put out
-    // by its own toggle and by relaunching; the contract is at
-    // AppState::add_to_selection.
+    // already in — this body clears none of the three (`add_to_selection`,
+    // `value_drag_enabled` — the record for that one is at the ValueDragState
+    // reset above — and `restrict_undo_to_viewport`), and it has nothing to
+    // clear either: this is the FRESH AppState's own first load, load_file
+    // having exactly one caller (main.cpp's project entry), so all three are
+    // already dark when it runs. Their only writers are their own toggles, and
+    // a project reopen builds a new AppState rather than loading into this
+    // one; the contract is at AppState::add_to_selection.
     // (The displayed hit map AND the trim region overlay's visibility are reset in
     // apply_settings_engine_and_prefs, this load's own view-establishment
     // routine, not here.)
