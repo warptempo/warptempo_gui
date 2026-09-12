@@ -1330,15 +1330,17 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // THE SINGLETON'S KIND REFUSAL — the contract and the readers are at the
 // declaration (app_state.h). Two sentences for the three ineligible kinds: a
 // pass and a label ref share one fact (no tempo of their own, so no bracket
-// to ride it), and a disabled owner's is that it has no range at all — the
-// disable cleared it (architect 2026-09-10), and the one marker a CASCADE can
-// disable without a toggle, a ref through a disabled definition, is already
-// answered by the first sentence.
+// to ride it), and a disabled owner's is that it has no range at all — no
+// disable road is admitted while a bracket can stand, and the mode's own wipe
+// clears every bracket before one is, so the two states never meet. The one
+// marker a CASCADE can disable without a toggle, a ref through a disabled
+// definition, is already answered by the first sentence.
 const char* iter_bound_step_kind_refusal(const AppState& a) {
     // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
     // (there is no pass and no label ref on this column), so the only thing a
     // focused reset's kind can refuse on is being DISABLED — and a disabled
-    // reset has no range, its own disable having cleared one.
+    // reset has no range, disablement and a standing bracket being mutually
+    // unreachable on this column too.
     if (a.active_markers_view == 'P') {
         const auto& pv = a.phaseresetmarkers.markers();
         const int   pf = a.last_selected_marker;

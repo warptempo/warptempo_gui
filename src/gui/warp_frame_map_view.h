@@ -568,10 +568,13 @@ struct PhaseHopWindow {
 // re-verification, which existed because nothing clamps this bracket
 // retroactively: the walls hold by construction now.
 //
-// TWO READERS: the bound editor's commit (refuses outside the window, naming
-// the wall kind — GuiFlagEditor::commit_iter_bound_edit) and the step's
-// landing owner (phase_iter_bound_step_landing, app_state.h, which CLAMPS into
-// the window and then at the partner), the directional face reaching it
-// through that landing.
+// TWO READERS: the bound editor's commit (refuses a value outside the window
+// — GuiFlagEditor::commit_phase_iter_bound_edit, which names THE PIECE EDGE
+// outright, that being the only wall a COMMITTED value can break: the phase
+// grammar is a sign and one digit under a two-byte field cap, so what arrives
+// is already inside the digit wall) and the step's landing owner
+// (phase_iter_bound_step_landing, app_state.h, which CLAMPS into the window
+// and then at the partner, and is the one road the DIGIT wall closes), the
+// directional face reaching it through that landing.
 PhaseHopWindow phase_reset_hop_window(const AppState& app,
                                       const GuiAudio& audio, int idx);

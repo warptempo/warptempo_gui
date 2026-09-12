@@ -4632,8 +4632,12 @@ bool GuiInputHandler::handle_escape_cancels(GuiKey key, GuiInputState mods) {
 // already established both of this body's outer facts — a non-empty
 // source_audio_path and iteration mode ON — so they are not re-tested here; the
 // refusals below (no brackets authored, the inverted-bracket breach, the cell
-// cap, a phase bracket standing off its walls) are the SWEEP'S OWN and are
-// stated where they fire.
+// cap) are the SWEEP'S OWN and are stated where they fire. THE WALLS ARE NOT
+// AMONG THEM: a bracket is authored inside its column's window and the lock
+// freezes everything that window is made of while the lamp stands, so there is
+// no wall to re-verify here (the neighbour walls that once needed one are
+// retired, and a cell where two resets cross or meet is legal — the per-cell
+// sort below is what carries it).
 void GuiInputHandler::run_iteration_sweep_render() {
     // Dispatch validates nothing: the render worker's own resolve->build
     // chain is the tripwire surface (marker arrangements normalize to
@@ -4702,8 +4706,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // disabled verdict, so a disabled owner neither multiplies the product
         // nor names a cell, and it
         // keeps its authored tempo in every cell (render-filtered
-        // either way). It carries no bracket to lose, its own disable having
-        // cleared one (architect 2026-09-10).
+        // either way). IT CARRIES NO BRACKET EITHER, and by construction: no
+        // disable road is admitted while a bracket can stand — Ctrl+D is one
+        // of the acts the iteration lock refuses — and the mode's own wipe
+        // clears every bracket before ordinary disablement is reachable
+        // again.
         if (!iter_popup_eligible_marker(base_warp_markers, i)) continue;
         eligible_indices.push_back(i);
         const bool swept =
@@ -4750,7 +4757,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
     for (int i = 0; i < phase_axis_n; ++i) {
         // A DISABLED RESET IS INVISIBLE TO THE ACT, the warp arm's rule on
         // this column: it neither multiplies the product nor names a cell, and
-        // it carries no bracket, its own disable having cleared one.
+        // it carries no bracket, disablement and a standing bracket being
+        // mutually unreachable (the warp arm above carries the whole reason).
         if (!phase_reset_iter_eligible_marker(base_phase_resets, i)) continue;
         const GuiPhaseResetMarker& p = base_phase_resets[i];
         phase_eligible_indices.push_back(i);

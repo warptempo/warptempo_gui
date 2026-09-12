@@ -176,12 +176,17 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // march), so a GUI-kind key whose chokepoint is one of those chords owes a
 // gate of its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
 // validate_gui_setting's whole key set (2026-09-10), TWO KEYS OWE ONE AND
-// BOTH CARRY IT, each ahead of its own no-op gate so it refuses in both
-// directions as its chord does:
-//   * `active_markers_view=` — bare `p` (and the column half of 1/2/3); the
-//     mode is lit for the column it was pressed in.
-//   * `tab_X_read_only=true` — bare `o`, PIECE-WIDE, an unlock in either
-//     direction still committing.
+// BOTH CARRY IT, EACH IN THE SHAPE ITS OWN CHORD REFUSES IN:
+//   * `active_markers_view=` — bare `p` (and the column half of 1/2/3) —
+//     BOTH DIRECTIONS, the gate standing AHEAD of the no-op gate: the chord
+//     refuses whichever column it is pressed in, so a typed same-column
+//     commit is that same press asking the same question, and the mode is lit
+//     for the column it was pressed in.
+//   * `tab_X_read_only=` — bare `o`, PIECE-WIDE — ONE DIRECTION, the gate
+//     standing BEHIND the no-op gate and asking the REQUESTED value: a lock
+//     of either tab refuses while an UNLOCK commits, an unlock only widening
+//     what is reachable, and an unchanged value is the ordinary no-op with
+//     nothing for the lock to exclude.
 // AND THE REST DO NOT, each because its own chord is live under a lit lamp:
 // `active_audio_view=` is bare `t` (the S/T flip the lock never touches, and
 // the audio half of 1/2/3 with it), `active_tab_view=` is Ctrl+Tab,

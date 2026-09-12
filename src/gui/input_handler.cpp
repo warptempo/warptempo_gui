@@ -1641,12 +1641,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         case MarkerCell::Lower:
         case MarkerCell::Upper:
-            // A bound cell addressed on a marker that has since lost its
-            // live bracket (an owner or a reset disabled after its cell was
-            // pressed) cards the bound step's own kind sentence — a fact
-            // about the marker's kind, behind a live face, the Up/Down pair's
-            // shape. The predicate forks on the live column, so this arm
-            // opens the addressed cell's editor on either.
+            // A bound cell addressed on a marker whose kind carries no
+            // bracket cards the bound step's own kind sentence — a fact about
+            // the marker's kind, behind a live face, the Up/Down pair's
+            // shape. It is the pair's BELT: a bound cell is addressed only
+            // where its cell paints, and while the lamp stands the lock
+            // refuses every act that could take the carrier away, Ctrl+D
+            // included — so the predicate has no answer to give today. The
+            // predicate forks on the live column, so this arm opens the
+            // addressed cell's editor on either.
             if (const char* refusal = iter_bound_step_kind_refusal(app)) {
                 notifications.notify(AppState::NotificationClass::Normal,
                                      refusal);

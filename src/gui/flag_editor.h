@@ -84,8 +84,10 @@ struct GuiFlagEditor {
     // on phase, else the editor stands, red, and a card says which. On success
     // the pair is written through that column's one write site
     // (iter_bound_step_write / phase_iter_bound_step_write, so two zeroes
-    // clear there too), one bracket-only undo entry, no render, the editor
-    // closing on every path except the refusal.
+    // clear there too) and NOTHING ELSE MOVES: no undo entry, no dirty
+    // re-derive, no render — a bracket is outside the undo domain on both
+    // columns, so the strip's damage is the whole tail — the editor closing on
+    // every path except the refusal.
     void commit_iter_bound_edit();
 
     // THE MEASURE EDITOR'S ONE ENTRY (the sixth text_editor Kind). `column` is

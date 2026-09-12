@@ -10636,7 +10636,8 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // would card with, or nullptr (it said SINGLETON while there was a group arm
 // to say it against; there is one subject now): on the WARP column a marker without a tempo of
 // its own (a pass or a label ref) has no bracket to step and a disabled marker
-// has no range at all (the disable cleared it, architect 2026-09-10); on the
+// has no range at all (no disable road is admitted while a bracket can stand,
+// and the mode's wipe clears every bracket before one is); on the
 // PHASE-RESET column every reset is a carrier, so the one refusal there is the
 // DISABLED one, in that column's own words. Magnitude-blind on both, so the Up/Down
 // tooltip drops its ladder line on it exactly as it drops it on
@@ -12568,8 +12569,9 @@ inline std::size_t history_walk_step_landing(
 // and phase_reset_iter_eligible_marker, phaseresetmarkers.h — CALLED rather
 // than spelled again, so a change to either predicate lands on the face for
 // free — as the disabled verdict did on 2026-09-02, R-12: a disabled marker is
-// invisible here as at the dispatch, and since 2026-09-10 it carries no
-// bracket for either to see, the disable having cleared it), and the cell count
+// invisible here as at the dispatch, and it carries no bracket for either to
+// see, disablement and a standing bracket being mutually unreachable under the
+// lock), and the cell count
 // is the same CHECKED product the dispatch
 // accumulates — refusing the instant the running total passes the cap, so no
 // overflow is possible and the cap itself is the early return. A well-formed

@@ -470,26 +470,26 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
             refuse("the upper bound cannot fall below the lower");
             return;
         }
-        // THEN THE HOP WINDOW, refused rather than clamped, and NAMING THE
-        // WALL: a cell that would push the reset before frame 0 or past the
-        // last frame is refused at authoring, like the tempo window. A
-        // NEIGHBOURING RESET IS NOT A WALL (architect 2026-09-11) — two
-        // ranges may cross or meet and the sweep sorts each cell before the
-        // request. The window's owner already decided which wall closed each
-        // side, so this reads the verdict rather than re-deriving it
-        // (phase_reset_hop_window, warp_frame_map_view.h).
+        // THEN THE HOP WINDOW, refused rather than clamped: a cell that would
+        // push the reset before frame 0 or past the last frame is refused at
+        // authoring, like the tempo window. A NEIGHBOURING RESET IS NOT A
+        // WALL — two ranges may cross or meet and the sweep sorts each cell
+        // before the request (phase_reset_hop_window, warp_frame_map_view.h).
+        //
+        // ONLY ONE WALL CAN ARRIVE HERE, AND IT IS THE PIECE'S EDGE, so the
+        // refusal names it outright rather than reading the window's wall
+        // kind: THE GRAMMAR BOUNDS THE DIGIT BEFORE THE WINDOW IS ASKED —
+        // parse_signed_hops takes a sign and ONE digit and the field cannot
+        // hold a third byte (kMaxPendingCharsIterHop, text_editor.h), so a
+        // committed value already lies inside [-kIterHopMax, kIterHopMax],
+        // which is the very interval PhaseHopWall::Digit closes. A typed `+10`
+        // never reaches this test; it is refused as a full field or by the
+        // grammar sentence above. The Digit wall itself is not dead — the
+        // STEP clamps into this same window and stops at +/-9 there
+        // (phase_iter_bound_step_landing) — it simply has no typed road.
         const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
         if (value < w.k_min || value > w.k_max) {
-            const bool low = value < w.k_min;
-            const PhaseHopWall wall = low ? w.min_wall : w.max_wall;
-            switch (wall) {
-            case PhaseHopWall::Digit:
-                refuse("a hop past 9 is no longer this phase reset");
-                return;
-            case PhaseHopWall::PieceEdge:
-                refuse("the cell would leave the piece");
-                return;
-            }
+            refuse("the cell would leave the piece");
             return;
         }
         // THE ONE WRITE SITE: the addressed side takes the value, the partner
