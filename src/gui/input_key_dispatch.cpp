@@ -4359,7 +4359,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // walk the folder a file per repeat, while the SHIFTED pair lands the
     // folder's first and last wav, where a hold could only re-reach the wall
     // it just hit; and the ring's Tab repeats through this arm's own first
-    // line exactly as every ring's does. The item's two NEIGHBOURS were
+    // line exactly as every ring's does. THEY STAY ONE-SHOT UNDER THE PLAYLIST
+    // PAIR (2026-09-12), and that is the ruling's own reason: a car never
+    // repeats a key, and a held Previous walking up and OUT of a folder is
+    // exactly the accidental exit the asymmetry rule exists to prevent. THE
+    // ARROWS STAY ELIGIBLE, which is the same ruling read literally: bare Up
+    // takes Previous's row-0 rule at rest, so a held Up walks the band to the
+    // top and then pops out one folder per repeat — a held ARROW is a walk the
+    // user is watching, which is not the shape the one-shot protects against.
+    // The item's two NEIGHBOURS were
     // repeat-eligible on bare `,` / `.` with their shifted ends from
     // 2026-08-30 to 2026-08-31 and left the mode with them. A prompt over the
     // player is the prompt's own answer, which the arm above and the blanket
@@ -8367,9 +8375,26 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.play_button_act();
             return true;
         case GuiKeys::Up:
+            // THE ARROW TAKES THE PLAYLIST PAIR'S ROW-0 RULE AT REST
+            // (architect 2026-09-12, from the car: "the tablet's Up key takes
+            // the same rule at row 0"), so at rest bare Up and bare Home are
+            // ONE act and bare Down and bare End are ONE act — the arrows part
+            // from the pair only while a transport is LIVE, where Up is the
+            // band walk it has always been and Home is the file skip. The fork
+            // is the ITEM's: up() would unload a playing item, and an arrow
+            // must never stop the sound, so a live transport keeps the wall at
+            // row 0 rather than leaving the folder.
+            if (app.render_player.transport !=
+                    AppState::RenderPlayer::Transport::Live &&
+                folder_overlay::walk_origin_row(app) == 0) {
+                render_player.up();
+                return true;
+            }
             render_player.move_highlight(-1);
             return true;
         case GuiKeys::Down:
+            // Bare Down is the walk and nothing else — the listing's last row
+            // is its silent wall, exactly as the playlist pair's Next has it.
             render_player.move_highlight(+1);
             return true;
         case GuiKeys::Left:
@@ -8379,21 +8404,32 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.seek_by(+render_player.seek_step_frames());
             return true;
         case GuiKeys::Home:
-            // THE LEFT SKIP'S KEY (architect 2026-08-31) — this track's start,
-            // or THE PREVIOUS ENTRY inside the item's first three seconds (the
-            // previous-track window at kPlayerPreviousThresholdMs, the act's
-            // own fork). One-shot: both arms are absolute landings.
-            render_player.home();
+            // THE PLAYLIST'S PREVIOUS (architect 2026-09-12, from the car) —
+            // the left skip's key, its button's plain press and the head unit's
+            // Previous, one body forked on the transport: WHILE LIVE this
+            // track's start, or THE PREVIOUS ENTRY inside the item's first
+            // three seconds (the previous-track window at
+            // kPlayerPreviousThresholdMs); AT REST the band one row up, and at
+            // the band's FIRST row one folder up. One-shot: every arm is an
+            // absolute landing, and a held Previous walking up and out of a
+            // folder is exactly the accidental exit the asymmetry rule exists
+            // to prevent (repeat_eligible's player arm).
+            render_player.previous();
             return true;
         case GuiKeys::End:
-            // THE NEXT SONG (architect 2026-09-04, from the car: "Next should
-            // always skip to the next song. The home/end analogy doesn't quite
-            // work — this isn't a playhead, this is audio playback"). It plays
-            // the next wav of the TRANSPORT ITEM's folder from its start,
-            // whatever the transport was doing and whatever the Repeat one
+            // THE PLAYLIST'S NEXT (architect 2026-09-12), Home's mirror: AT
+            // REST the band one row down, a silent wall at the listing's last
+            // row — it never leaves a folder, the asymmetry being the ruling's
+            // (the contract at the declaration).
+            // WHILE LIVE it is THE NEXT SONG (architect 2026-09-04, from the
+            // car: "Next should always skip to the next song. The home/end
+            // analogy doesn't quite work — this isn't a playhead, this is audio
+            // playback"): the next wav of the TRANSPORT ITEM's folder from its
+            // start, whatever the Repeat one
             // lamp says; at the folder's last wav it is a silent walled no-op,
             // nothing looping, and the button greys on that same wall.
-            // IT WAS THE TRACK'S OWN END from 2026-08-30 to that day — a seek
+            // ITS LIVE ARM WAS THE TRACK'S OWN END from 2026-08-30 to
+            // 2026-09-04 — a seek
             // to the position the scrub's right edge writes, on the reasoning
             // that a LIVE transport would play its last frames out and the
             // natural end would advance from there. That held for a live
@@ -8402,7 +8438,7 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // seek_to's own refusal; and under a lit Repeat one even the live
             // road came back to the same file, which is the shape the
             // architect met in the car.
-            render_player.next_track();
+            render_player.next();
             return true;
         case GuiKeys::BackSpace:
             render_player.up();

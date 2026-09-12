@@ -7344,20 +7344,37 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // which this painter already reads for the clock). Every bit
         // reaches a repaint through the row's one damage owner: the three
         // highlight movers and the transport writers damage the row already,
-        // for the Load in place face and the pause glyph.
+        // for the Load in place face and the pause glyph — which is also what
+        // carries the two skips' own bits, the rest fork reading the transport
+        // and the up-a-folder bit reading the band.
         RenderPlayerHintState hint;
         hint.play_face     = render_player_play_face(app);
+        // THE SKIPS' OWN FORK FIRST (architect 2026-09-12, from the car): at
+        // rest the pair walks the BAND, so each hint names a row rather than a
+        // file, and the left one names the FOLDER wherever its rest arm would
+        // leave this one — the act's own second fork, the band's first row
+        // ANDed with the up wall, so the root's greyed first row keeps saying
+        // "Previous Row". Both bits are read from the predicates the acts read
+        // (render_player_up_actionable, folder_overlay::walk_origin_row), never
+        // restated.
+        hint.transport_at_rest =
+            app.render_player.transport !=
+            AppState::RenderPlayer::Transport::Live;
+        hint.previous_goes_up = hint.transport_at_rest &&
+                                folder_overlay::walk_origin_row(app) == 0 &&
+                                render_player_up_actionable(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
                                                                 audio);
         // (END'S IDLE BIT STOOD HERE and retired 2026-09-04 with the act it
         // described: it was seek_to's second refusal asked past its first, so
         // that the hint said "At the end" only with an item bound. The right
-        // skip's press is the NEXT TRACK now, whose one refusal greys the
-        // button, and its word names that act in every state.)
+        // skip's press became the NEXT TRACK, whose one refusal greys the
+        // button, and its word named that act in every state until the
+        // transport fork above gave the rest arm "Next Row".)
         // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
         // (codex round A, 2026-09-01): the line names the FILE the shifted
         // press plays, so it must drop wherever the plain press already
-        // plays that file. Home's two destinations are home()'s own — the
+        // plays that file. Home's two destinations are previous()'s own — the
         // PREVIOUS entry inside the previous-track window
         // (render_player_home_takes_previous, the fork's one owner, resolved
         // just above) and otherwise a seek that leaves the item where it is —
@@ -7368,12 +7385,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // STILL A TERM and is still asked from the twin's own owner, which
         // the face reads too — it is what answers on item_index == 0, where
         // the twin is dead outright.
+        // THE COMPARE IS A LIVE-ONLY QUESTION since 2026-09-12: at rest the
+        // plain press walks the band and reaches NO file, so it can never land
+        // where the twin lands and the line stands wherever the twin's own wall
+        // admits it — which is why both compares hang off `!at_rest` rather
+        // than being re-derived for a rest that has no destination to compare.
         const int home_plain_index =
             hint.home_previous ? app.render_player.item_index - 1
                                : app.render_player.item_index;
         hint.home_shift_differs =
             render_player_first_in_item_folder_actionable(app) &&
-            home_plain_index != 0;
+            (hint.transport_at_rest || home_plain_index != 0);
         // THE RIGHT SKIP COMPARES DESTINATIONS TOO SINCE 2026-09-04, and for
         // the first time: its plain act is the NEXT TRACK now, so on the
         // folder's SECOND-TO-LAST item both presses play the folder's last
@@ -7389,7 +7411,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             static_cast<int>(app.render_player.item_folder.size()) - 1;
         hint.end_shift_differs =
             render_player_last_in_item_folder_actionable(app) &&
-            end_plain_index != end_twin_index;
+            (hint.transport_at_rest || end_plain_index != end_twin_index);
         const bool pause_face = hint.play_face == PlayerPlayFace::Pause;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {

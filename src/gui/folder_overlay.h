@@ -432,15 +432,29 @@ inline bool set_highlight(AppState& a, int index) {
     return changed;
 }
 
+// THE ROW A WALK STEPS FROM: the highlight, or row 0 where the band has no
+// seat (an empty listing, or one whose rows have not been seated yet). ONE
+// OWNER, THREE READER CLASSES — move_highlight below, the step itself; the
+// player's own two walk walls (render_player_previous_actionable /
+// render_player_next_actionable, app_state.h), which answer whether that step
+// would reach anything; and the PLAYLIST PAIR'S ROW-0 FORKS, which ask whether
+// the walk is at the band's first row before leaving the folder instead
+// (GuiRenderPlayer::previous, the player router's bare Up arm and the plan
+// builder's `previous_goes_up` hint bit). They must not drift: a fork or a
+// wall that measured from the raw field and a step that measures from this
+// would disagree about where a seatless band begins.
+inline int walk_origin_row(const AppState& a) {
+    return a.folder_overlay.highlight_row < 0 ? 0
+                                              : a.folder_overlay.highlight_row;
+}
+
 // Move the highlight by `delta` rows, clamped; an empty listing has nothing
-// to move and a -1 highlight walks from row 0. Returns whether the band
-// changed.
+// to move and a -1 highlight walks from row 0 (the origin owner above).
+// Returns whether the band changed.
 inline bool move_highlight(AppState& a, int delta) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (n <= 0) return false;
-    const int from = a.folder_overlay.highlight_row < 0
-                         ? 0 : a.folder_overlay.highlight_row;
-    return set_highlight(a, std::clamp(from + delta, 0, n - 1));
+    return set_highlight(a, std::clamp(walk_origin_row(a) + delta, 0, n - 1));
 }
 
 // Scroll the band by `rows` rows (the wheel's detent step) at the standing

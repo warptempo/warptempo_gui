@@ -68,6 +68,11 @@ inline constexpr uint32_t kCarStableCodeBase = 1000;
 // included), and a position window makes a SECOND Home "previous" at any
 // press speed at all, since the first one landed the cursor at 0.
 //
+// IT IS THE LIVE ARM'S ALONE since 2026-09-12: at rest that act walks the BAND
+// (the playlist pair at previous() / next()), so nothing off a live transport
+// asks this window any more. It answered in every transport state until then,
+// an idle rest being at frame 0 by construction.
+//
 // IT IS AN AUTHORED DURATION AND NEVER SCALES — gui_scale is a LENGTH axis
 // (the scaled_px family) and no duration in the product reads it. It is
 // converted to frames at the DEVICE's rate where it is used, the item being
@@ -88,7 +93,10 @@ struct GuiInputHandler;
 // the bottom row's modal carries the transport (THE MAIN WINDOW'S OWN
 // TRANSPORT TRIPLE since 2026-09-01 — Home / Play-Pause / End, the same three
 // keys as the roster's, and the same three acts until 2026-09-04, when the
-// right one became the NEXT TRACK — then the play-scrub, the
+// right one became the NEXT TRACK, and until 2026-09-12, when the OUTER TWO
+// BECAME THE PLAYLIST'S PREVIOUS AND NEXT — files while the transport is live,
+// THE BAND at rest (the pair's contract at previous() / next()) — then the
+// play-scrub, the
 // clock, the Repeat one lamp, the UP button, and Load in place / Close flush
 // right — the row's order and faces are the painter's, R25/R36).
 //
@@ -350,8 +358,12 @@ struct GuiRenderPlayer {
     // producers are the row click's motionless lift and Enter on the
     // highlight, both through the overlay's one row-act fork.
     void open_row(int index);
-    // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE, one act, since
-    // the `..` row retired (2026-09-01); a SILENT consumed no-op at the root,
+    // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE since the `..`
+    // row retired (2026-09-01), and since 2026-09-12 THE PLAYLIST PAIR'S REST
+    // ARM TOO: previous() composes this body at the band's first row, and bare
+    // Up at rest takes that same row-0 rule, so the act has FIVE roads on ONE
+    // body (the button, Backspace, bare Up, bare Home and the head unit's
+    // Previous). A SILENT consumed no-op at the root,
     // which is `tmp/` (the wall's one owner is render_player_up_actionable,
     // app_state.h, which the button's face reads too). Past that wall it
     // UNLOADS THE ITEM (unload_item) and re-enters the root, so the player
@@ -477,44 +489,73 @@ struct GuiRenderPlayer {
     // slider).
     void seek_by(int64_t delta_frames);
     void seek_to(int64_t frame);
-    // HOME — the left skip's plain act, bare Home's, and the head unit's
-    // Previous (architect 2026-08-31). TWO ARMS OVER ONE POSITION TEST: with
-    // the item inside its first kPlayerPreviousThresholdMs AND a previous
-    // entry in `item_folder`, this plays THAT ENTRY from its start (the
-    // previous-track window at the constant); anywhere else — past the
-    // window, at the folder's first entry, with no folder — it seeks the
-    // item's own start and takes every refusal seek_to owns, the no-item arm
-    // and the idle arm alike — both silent since 2026-08-31 (R5). It never
-    // reports a folder wall either: at the first
-    // entry the restart IS the act. THE FORK IS ONE OWNER since 2026-09-01,
-    // render_player_home_takes_previous (app_state.h), which the button's
-    // hint reads too ("Previous file" / "Go to start").
-    void home();
-    // THE NEXT TRACK (architect 2026-09-04, in his words: "Next should always
-    // skip to the next song. The home/end analogy doesn't quite work — this
-    // isn't a playhead, this is audio playback") — Home's twin, the RIGHT
-    // SKIP's plain act, bare End's and the head unit's Next. It plays the NEXT
-    // WAV OF THE TRANSPORT ITEM'S OWN FOLDER as that folder was listed when
-    // the item was played, from its start, whatever the transport was doing:
-    // live, paused or idle alike, the one act (advance_to_next_in_item_folder,
-    // the body the natural end's auto-advance shares).
-    // IT OUTRANKS REPEAT ONE, and the lamp is not read here at all: the lamp
-    // governs what a file does when it REACHES ITS END, and a press is not a
-    // natural end.
-    // AT THE FOLDER'S LAST WAV IT IS A SILENT WALLED NO-OP — nothing loops —
-    // and the wall is one owner, render_player_next_track_actionable
-    // (app_state.h), which the button's face and the head unit's own arm read
-    // too. THE SHIFTED TWIN IS UNCHANGED (Shift+End, the folder's last wav).
+    // -- THE PLAYLIST PAIR (architect 2026-09-12, from the car) --------------
     //
-    // IT WAS THE ITEM'S END until that day (architect 2026-08-30): a seek to
-    // `frames`, the position the scrub's right edge writes, on the reasoning
-    // that at the end of a track "next" is what the NATURAL END already does
-    // — true of a LIVE transport, which played its last frames out, and of
-    // nothing else: a paused one only moved its rest, whose resume replayed
-    // the same file from the start, and under a lit Repeat One even the live
-    // arm came back to the same file. In the car that made Next a button that
-    // did nothing, which is what this act replaces.
-    void next_track();
+    // PREVIOUS and NEXT, one body each and THREE ROADS EACH: the KEY (bare
+    // Home, bare End), the SKIP BUTTON'S PLAIN PRESS (the modal row's Home and
+    // NextTrack arms) and THE HEAD UNIT'S own Previous / Next, which press
+    // those keys. PARITY IS THE RULING: whatever the car does the tablet does,
+    // one pair on both devices.
+    //
+    // WHY: in Bluetooth mode the head unit shows ONE TRACK at a time with
+    // play/pause and previous/next and nothing else — no folder-up, no repeat,
+    // no scrub — so `tmp/` must be presentable to it as a PLAYLIST, the mental
+    // model being a `tree` listing whose first line is the folder the tree
+    // starts in. EACH ACT FORKS ON THE TRANSPORT, and REST IS THE TRANSPORT
+    // NOT LIVE — paused and idle alike, a paused item not being something that
+    // is playing, and the pair's job at a rest being to pick what the next Play
+    // starts.
+    //
+    // PREVIOUS:
+    //   LIVE — the left skip's own act, unchanged: with the item inside its
+    //     first kPlayerPreviousThresholdMs AND a previous entry in
+    //     `item_folder`, it plays THAT ENTRY from its start (the previous-track
+    //     window at the constant); past the window it seeks the item's own
+    //     start and takes every refusal seek_to owns. It never reports a folder
+    //     wall: at the folder's first entry the restart IS the act. THE FORK IS
+    //     ONE OWNER, render_player_home_takes_previous (app_state.h), which the
+    //     button's hint reads too ("Previous File" / "Go to Start").
+    //   AT REST — it WALKS THE BAND UP ONE ROW, and AT THE BAND'S FIRST ROW IT
+    //     GOES UP A FOLDER (up() whole: the item unloaded, the band seated on
+    //     the folder just left). At the ROOT's first row it is a silent walled
+    //     no-op.
+    // NEXT:
+    //   LIVE — the NEXT TRACK (architect 2026-09-04, "Next should always skip
+    //     to the next song. The home/end analogy doesn't quite work — this
+    //     isn't a playhead, this is audio playback"): the next wav of the
+    //     TRANSPORT ITEM'S OWN FOLDER as that folder was listed when the item
+    //     was played, from its start, through advance_to_next_in_item_folder —
+    //     the body the natural end's auto-advance shares. IT OUTRANKS REPEAT
+    //     ONE and reads the lamp nowhere: the lamp governs what a file does
+    //     when it REACHES ITS END, and a press is not a natural end.
+    //   AT REST — it WALKS THE BAND DOWN ONE ROW; at the band's LAST ROW it is
+    //     a silent walled no-op. IT NEVER LEAVES A FOLDER and never wraps.
+    //
+    // THE ASYMMETRY IS DELIBERATE — only PREVIOUS ever leaves a folder: the
+    // listener always knows which file is a folder's FIRST and never how many
+    // it holds, so walking off the TOP is a known, intended act while walking
+    // off the END must never be an accidental exit. TIMING GESTURES ARE
+    // REJECTED ("Home twice quickly"): the pair is position- and band-based,
+    // never press-timed, which is the previous-track window's own precedent.
+    //
+    // EACH WALL IS ONE OWNER — render_player_previous_actionable /
+    // render_player_next_actionable (app_state.h) — read by the buttons' face
+    // arms and by the head unit's two arms, which re-publish at the wall
+    // rather than pressing the key. THESE BODIES CALL NEITHER: each wall's
+    // arms ARE the refusals of the bodies composed here (move_highlight's own
+    // clamp, up()'s root return, advance_to_next_in_item_folder's folder end,
+    // and seek_to's for the live seek), so the wall predicts the act rather
+    // than gating it and the two cannot disagree. THE SHIFTED TWINS ARE UNTOUCHED
+    // (Shift+Home / Shift+End and the buttons' shift-click or long press): they
+    // are the ITEM folder's first and last wav in every transport state, and
+    // they are silent with no item, as they have been since 2026-08-31.
+    //
+    // (The left one was `home()` and the right `next_track()` while both were
+    // acts inside the playing folder alone; before 2026-09-04 the right one was
+    // a seek to the item's END, which under a lit Repeat One or a rest came
+    // back to the same file and made Next a button that did nothing in the car.)
+    void previous();
+    void next();
     // Left / Right's step: 5 s at the project source's rate (R6).
     int64_t seek_step_frames() const;
 
