@@ -666,11 +666,15 @@ struct GuiRenderPlayer {
     // track act, its first three seconds stepping back a file and everything
     // past them restarting this one — the behaviour of the architect's own
     // car. They were Period / Comma from 2026-08-30 and PageDown / PageUp
-    // before that. END IS THE NEXT SONG since 2026-09-04, so the wheel's Next
-    // is a track change on every road and in every transport state, and this
-    // arm asks the act's own wall before it presses: at the folder's last wav
-    // the press changes nothing, so it publishes instead — a re-publish on a
-    // refusal, the pressed directions' own rule);
+    // before that. END IS THE NEXT SONG since 2026-09-04 AND THE PAIR FORKS
+    // ON THE TRANSPORT since 2026-09-12: a LIVE press is the whole-file act
+    // the wheel wants — the next track, or the item's start with a file back
+    // inside the previous-track window — while a press AT REST walks the band
+    // by one row (Previous on the first row going up a folder instead), which
+    // is the same listener's act said in the playlist's terms. Both arms ask
+    // the act's own wall before they press: at the wall the press changes
+    // nothing, so this one publishes instead — a re-publish on a refusal, the
+    // pressed directions' own rule);
     // FastForward / Rewind
     // -> Right / Left (5 s per press, nothing depending on repeat);
     // FocusGained -> nothing (NOTHING RECOVERS BY ITSELF — the AAudio
@@ -692,7 +696,9 @@ struct GuiRenderPlayer {
     // EACH KEY IS A PRESS AND A RELEASE, synthesized back to back: the release
     // is what cancels the core's repeat arm for the repeat-eligible keys
     // (Left / Right — the seeks alone since 2026-08-31, Home and End being
-    // absolute and one-shot), exactly as the on-screen keyboard
+    // ONE-SHOT: while live each press is a whole file, and at rest Previous's
+    // first-row arm leaves the folder, an exit a held key must never reach by
+    // accident), exactly as the on-screen keyboard
     // owes its key-up. The stable code is kCarStableCodeBase + the GuiKey;
     // the codepoint is 0 for every transport key.
     void on_media_command(GuiMediaCommand cmd);
@@ -728,8 +734,10 @@ struct GuiRenderPlayer {
     // FILE: a silent wav on disk would be listed by the player, mirrored by
     // Synchronize and played by the auto-advance.
     //
-    // THE EDGE INVENTORY, re-derived by grep at each retell (THIRTEEN call
-    // sites across NINE functions — twelve across eight before the band's
+    // THE EDGE INVENTORY, re-derived by grep at each retell (FOURTEEN call
+    // sites across NINE functions — thirteen across nine before the resting
+    // Previous grew a wall of its own and its refusal took a re-publish,
+    // twelve across eight before the band's
     // three writers took the placeholder's own edges and open() and up() gave
     // up their tail pushes for it, eleven across eight before the Play arm's
     // act-side refusal took its own push, eight across seven before
@@ -752,10 +760,10 @@ struct GuiRenderPlayer {
     // the head unit's clock stays honest (which is also what publishes the
     // car Stop's seek to the top, that command being a pause and then this
     // seek);
-    // on_media_command's FOUR REFUSAL ARMS, re-grepped 2026-09-07 and still
-    // four — a Play said to a live transport,
-    // a Pause said to a resting one and a Next at the item folder's last wav
-    // (2026-09-04), plus a Play whose GATE PASSED and whose ACT started no
+    // on_media_command's FIVE REFUSAL-OR-RESULT ARMS, re-grepped 2026-09-12
+    // and now five — a Play said to a live transport,
+    // a Pause said to a resting one, a Next at its own wall and a Previous at
+    // its own, plus a Play whose GATE PASSED and whose ACT started no
     // transport, having OPENED the highlighted folder or refused outright with
     // nothing bound, where Up and a
     // fresh open() leave the player: the state has not moved, so each pushes the

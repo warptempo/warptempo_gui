@@ -4353,14 +4353,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // DOES, on any modifier. Enter and Space are the modal's one-shot press or
     // the open/play acts; the closers and the load chord are
     // one-shot commands; THE TWO SKIPS ARE ONE-SHOT ON BOTH SHAPES (architect
-    // 2026-08-31, and more plainly so since 2026-09-04): each plain press is a
-    // whole FILE — the next track on End, and on Home the item's start or,
-    // inside the previous-track window, a whole file back — so a hold would
-    // walk the folder a file per repeat, while the SHIFTED pair lands the
-    // folder's first and last wav, where a hold could only re-reach the wall
-    // it just hit; and the ring's Tab repeats through this arm's own first
-    // line exactly as every ring's does. THEY STAY ONE-SHOT UNDER THE PLAYLIST
-    // PAIR (2026-09-12), and that is the ruling's own reason: a car never
+    // 2026-08-31, and more plainly so since 2026-09-04): a plain press WHILE
+    // LIVE is a whole FILE — the next track on End, and on Home the item's
+    // start or, inside the previous-track window, a whole file back — so a
+    // hold would walk the folder a file per repeat, while the SHIFTED pair
+    // lands the folder's first and last wav, where a hold could only re-reach
+    // the wall it just hit; and the ring's Tab repeats through this arm's own
+    // first line exactly as every ring's does. THEY STAY ONE-SHOT UNDER THE
+    // PLAYLIST PAIR (2026-09-12), where a plain press AT REST walks the band
+    // by one row, and that is the ruling's own reason: a car never
     // repeats a key, and a held Previous walking up and OUT of a folder is
     // exactly the accidental exit the asymmetry rule exists to prevent. THE
     // ARROWS STAY ELIGIBLE, which is the same ruling read literally: bare Up
@@ -8309,8 +8310,10 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // first and the last wav of the transport item's own folder, never a wrap
     // and a carded refusal with no item. Ahead of the blanket below because
     // that blanket is what consumes every OTHER shifted spelling; they are
-    // ONE-SHOT with the plain pair (repeat_eligible's player arm — an absolute
-    // landing a hold could only re-reach).
+    // ONE-SHOT with the plain pair (repeat_eligible's player arm), these two
+    // because an absolute landing is all a hold could re-reach and the plain
+    // pair for its own reason — a whole file while live, and at rest a walk
+    // whose first-row arm steps up out of the folder.
     //
     // THE PAIR FOLLOWS ITS PLAIN ACTS off `,` / `.` — the skips are Home and
     // End now, "just like the regular GUI", and a shifted twin lives on its
@@ -8410,8 +8413,8 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // track's start, or THE PREVIOUS ENTRY inside the item's first
             // three seconds (the previous-track window at
             // kPlayerPreviousThresholdMs); AT REST the band one row up, and at
-            // the band's FIRST row one folder up. One-shot: every arm is an
-            // absolute landing, and a held Previous walking up and out of a
+            // the band's FIRST row one folder up. One-shot: the live arm is a
+            // whole file, and a held Previous walking up and out of a
             // folder is exactly the accidental exit the asymmetry rule exists
             // to prevent (repeat_eligible's player arm).
             render_player.previous();

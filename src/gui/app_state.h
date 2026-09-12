@@ -9341,7 +9341,8 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // 2026-09-01: inside the item's first kPlayerPreviousThresholdMs the
         // press PLAYS THE PREVIOUS ENTRY, and the hint says so — it lived
         // under "Go to start" for one day, the recorded lie the ruling
-        // retired (the fork is home()'s own, render_player_home_takes_previous).
+        // retired (the fork is previous()'s live arm, through
+        // render_player_home_takes_previous).
         // THE RIGHT SKIP NAMED ONE ACT IN EVERY STATE from 2026-09-04: its
         // press was the NEXT TRACK, whose one refusal is the folder's end, and
         // a wall greys the button rather than renaming it — the same shape a
