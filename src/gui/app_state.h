@@ -454,7 +454,11 @@ struct DragState {
     // ENGAGED when this drag began, so this gesture is the REVERSE PAN — the
     // flag holds the window's centre column and the waveform slides under it,
     // the nudge made continuous. Set ONCE, at the threshold crossing, from
-    // centered_pin_engaged; the drag derives the camera itself, per motion
+    // centered_pin_engaged — WHICH THE ARMING PRESS LEAVES STANDING, the
+    // plain flag press landing through the carry and deferring both camera
+    // lamps to its motionless release (PendingMarkerPress above), so a pin
+    // lit before the press is lit here and this bit is reachable at all; the
+    // drag derives the camera itself, per motion
     // event, through the pin's one derivation body; and the DISPLAYED BASIS IS
     // NOT FROZEN for it (displayed_basis_frozen names this field, the freeze's
     // one deliberate non-member among the absolute drags). NO SITE RE-ASKS THE
@@ -954,8 +958,29 @@ struct EditorTextDragState {
 // CTRL arm nothing — they have no drag to become and their click has already
 // committed — and a CONSUMED double-click open arms nothing either (the editor
 // owns input, and the consume must preempt the drag arm). A MOTIONLESS RELEASE
-// seeds the next Marker double-click candidate and nothing else (the seed is a
-// release act by family rule — only the release knows the press stayed still).
+// seeds the next Marker double-click candidate AND WRITES THE TWO CAMERA LAMPS
+// (2026-09-12), and nothing else (the seed is a release act by family rule —
+// only the release knows the press stayed still).
+//
+// THE POSTURE WRITE IS THE THIRD THING THIS RECORD DEFERS, and the third
+// clause is what puts it here (architect 2026-09-12): a plain flag press is
+// the ONE press on this surface whose identity is not certain at the press, so
+// the one act whose answer depends on which edge it reaches waits for that
+// edge. The press LANDS THE PLAYHEAD THROUGH THE CARRY
+// (carry_playhead_on_marker — the land minus that write alone, so the stop,
+// the select, the hide and the audition's end all still run at the press); the
+// MOTIONLESS RELEASE then runs postures_after_movement, a click being a
+// movement like any other; and the CROSSING leaves the lamps alone, because a
+// drag begun under a lit centred pin IS that posture's own motion — the
+// reverse pan (marker_drag.h), whose whole fork is a sample of the pin the
+// press must therefore not have collapsed. The MODIFIED arms are certain at
+// the press and take the ordinary land. THE ABNORMAL ENDS — a lost button,
+// the force-end finalizer, the touch layer's hard end — write no posture for
+// the same reason they seed nothing: none of them is a clean click sequence.
+// NOTHING ON SCREEN MOVES A FRAME LATER FOR IT: this record is a member of
+// any_pointer_gesture_active, which pauses the pin's own derivation for the
+// whole pending window, so the collapse arrives in the same event as the
+// release and no frame is ever painted between the two.
 // A CROSSING of drag_moved_threshold_px() (Chebyshev from the press; the one
 // generic 8px gate shared by every press-becomes-drag surface) begins the
 // reposition drag — the click's acts already stand from the press, so the
@@ -5059,7 +5084,12 @@ struct AppState {
     // stamped at the crossing from centered_pin_engaged and the whole of the
     // gesture's fork). Its ride and its commit land through
     // Viewport::carry_playhead_to / carry_playhead_on_marker, the movement
-    // owners minus this write, exactly as the nudge's do.
+    // owners minus this write, exactly as the nudge's do — AND SO DOES ITS
+    // ARMING PRESS, which is what makes the keeper reachable at all: a plain
+    // flag press that collapsed the pin on the way down would leave the
+    // crossing nothing to stamp, so that press defers its posture write to
+    // the motionless release, where a click and only a click collapses
+    // (PendingMarkerPress).
     //
     // THE COLLAPSE HAS ONE BODY (collapse_centered_posture, below), reached by
     // most owners through the composed postures_after_movement /
@@ -5071,7 +5101,14 @@ struct AppState {
     //     (input_pointer.cpp). Every click, walk, skip, drop and land reaches
     //     one of the three. (The walk's own landing takes the collapse-only
     //     sibling land_playhead_on_marker_for_walk, for the walk lamp's reason
-    //     and not for this one: it collapses exactly as the owner does.)
+    //     and not for this one: it collapses exactly as the owner does.) THE
+    //     PLAIN MARKER CLICK IS THE ONE ROAD THAT COLLAPSES AT ITS RELEASE
+    //     (2026-09-12): its press lands through the CARRY and its motionless
+    //     release runs the composed body, because that press's identity is
+    //     not certain until then — a click here, a drag at the crossing, and
+    //     the drag is the keeper above. The two MODIFIED arms collapse at the
+    //     press through the owner like everything else. The whole argument is
+    //     at PendingMarkerPress.
     //   * THE CAMERA OWNERS — the three zoom appliers
     //     (Viewport::apply_zoom_change, ::apply_strip_drag_zoom,
     //     ::apply_zoom_to_start), the pan funnel Viewport::scroll_viewport,
@@ -12261,10 +12298,14 @@ enum class MarkerLandingFrame { Center, FollowPage };
 //     synthesizing that press (input_key_dispatch.cpp);
 //   THE MOVEMENT CLASS, through postures_after_movement below — TRUE: the three
 //     playhead movement owners, the three zoom appliers, the pan funnel, the
-//     typed viewport move, the trim family's park, and the map-changing acts
+//     typed viewport move, the trim family's park, the map-changing acts
 //     that are not value changes (the warp delete, Ctrl+D, the typed `scale=`,
-//     apply_recipe_in_place, the `h` revert's warp arm). None of them spells
-//     the write;
+//     apply_recipe_in_place, the `h` revert's warp arm) and THE PLAIN FLAG
+//     PRESS'S MOTIONLESS RELEASE (input_pointer.cpp, 2026-09-12), which calls
+//     the composed body itself because its press landed through the carry —
+//     the one act in this class that answers at a later edge than its own
+//     press, the argument at PendingMarkerPress. None of them spells the
+//     write;
 //   THE VALUE CLASS, through postures_after_value_change below — FALSE: the
 //     tempo family's one tail (warp_tempo_write_tail, so the singleton cent
 //     step, the group cent step and the value drag's tempo commit all go out

@@ -28,7 +28,11 @@ struct GuiTargetRender;
 // song's ends, where the flag walks off-centre exactly as the pin does. THE
 // WHOLE FORK IS ONE BIT, DragState::camera_follows, stamped at the crossing
 // from centered_pin_engaged and read at four sites (its contract carries them);
-// off the pin the gesture is unchanged in every particular. It is therefore the
+// off the pin the gesture is unchanged in every particular. THE ARMING PRESS
+// IS WHAT LEAVES A LIT PIN TO STAMP: it lands through the carry and defers
+// both camera lamps to the edge that knows whether the press was a click
+// (PendingMarkerPress, app_state.h), so the pin the user lit survives the
+// press that starts this gesture. It is therefore the
 // pin's strongest KEEPER rather than a collapser — the drag IS the posture's
 // own motion — and it is the displayed-basis freeze's one deliberate
 // non-member, the camera moving per motion event.

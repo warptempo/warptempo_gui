@@ -71,6 +71,12 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // and the waveform slides under it, the nudge made continuous — so the
     // whole fork is this one bit, stamped here and never re-asked (the
     // contract, and the four readers, are at DragState::camera_follows).
+    // WHAT KEEPS THE BIT REACHABLE is the arming press: a plain flag press
+    // lands the playhead through the CARRY and defers both camera lamps to
+    // its motionless release (PendingMarkerPress, app_state.h), so a pin lit
+    // before the press is still lit at this crossing. A press that collapsed
+    // it on the way down — the ordinary land every other click takes — would
+    // make this read false always and the gesture unreachable.
     // NO SIGN FLIPS ANYWHERE: the store proposal stays today's (the marker's
     // frame follows the pointer's travel) and the CAMERA follows the marker,
     // so the waveform slides the other way by itself.

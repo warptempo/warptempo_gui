@@ -658,18 +658,65 @@ void apply_post_restore_rules_impl(Selection& selection,
 //     unchanged (a settings-only entry that moved no map, a typed `notes=`).
 //     The restore moved nothing the user can see move: NEITHER LAMP IS
 //     WRITTEN.
-//   * POSITION-ONLY — the touched rows differ in `time_frame` ALONE. This is
-//     the undo of a TIME ACT, so it answers as the nudge and the flag drag do:
-//     the centred pin KEEPS (no collapse) and the walk's framing lamp LIGHTS.
-//   * VALUE-ONLY — every touched row keeps its `time_frame` and differs in one
-//     or more value fields (a tempo, a payload, a measure, a disabled bit).
-//     The pin collapses and the walk's lamp goes OUT: position is not a value.
+//   * POSITION-ONLY — the column's two stores hold THE SAME ROWS UP TO
+//     `time_frame` and are not identical. This is the undo of a TIME ACT, so
+//     it answers as the nudge and the flag drag do: the centred pin KEEPS (no
+//     collapse) and the walk's framing lamp LIGHTS.
+//   * VALUE-ONLY — every row keeps its `time_frame` INDEX-WISE and some row
+//     differs in one or more value fields (a tempo, a payload, a measure, a
+//     disabled bit). The pin collapses and the walk's lamp goes OUT: position
+//     is not a value.
 //   * ANYTHING ELSE — a marker COUNT change on the differing column, both
 //     kinds in one entry, both columns touched, or the engine `scale`
 //     differing: the sweeping default, the movement class (collapse, lamp ON).
 //   * THE NON-DEFAULT ARMS APPLY ONLY WHERE THE COUNTS MATCH, which is what
-//     makes the pairwise walk meaningful at all: rows can only be compared
-//     row-for-row while both sides hold the same number of them.
+//     makes any row-to-row reading meaningful at all: rows can only be paired
+//     while both sides hold the same number of them.
+//
+// THE POSITION-ONLY ARM IS ORDER-INSENSITIVE AND THE VALUE-ONLY ARM IS
+// INDEX-WISE, and the asymmetry is the acts' own (architect 2026-09-12). A
+// TIME ACT MAY REORDER THE STORE: the nudge and the flag drag both let a
+// marker cross its neighbours and then re-sort by time
+// (reorder_markers_by_time), so after such an entry the same index names two
+// different markers and a row-for-row walk reads a pure move as a move AND a
+// value change — the sweeping arm, collapsing the very pin the position-only
+// arm exists to keep. So the position question is asked of the MULTISET: the
+// column is position-only when every row of the snapshot matches exactly one
+// unmatched row of the live store with its position equalized, which is
+// `differs_beyond_time` — the same comparator, asked pairwise instead of
+// index-wise, so no second field list is minted. A VALUE CHANGE REORDERS
+// NOTHING (positions are what the sort reads), so index pairing is exact
+// there and stays.
+//
+// THE VALUE QUESTION IS ASKED FIRST, and the order is load-bearing: two rows
+// that SWAP their values keep every position and satisfy the multiset test as
+// well, so a multiset-first reading would call a value swap a move. Asking
+// "did any position change at its own index" first sends that case to the
+// value arm, where it belongs, and leaves the multiset to the entries that
+// actually moved a row.
+//
+// THE MATCH IS A GREEDY O(n^2) WALK AND THAT IS EXACT, not an approximation:
+// "equal in every field but `time_frame`" is an EQUIVALENCE relation (it is
+// field equality over a fixed field set), so the rows fall into classes and
+// the two multisets agree iff a greedy first-fit pairs them all — there is no
+// augmenting path to miss. It runs once per restore over a few hundred rows
+// at most, beside a vector swap and a synchronous plate render.
+//
+// IT CONSUMES NO PRODUCER'S HINTS, deliberately: the drag and the nudge carry
+// `touched_snapshot` / `touched_live` for the post-restore SELECTION, but only
+// some producers write them, so reading them here would make the verdict
+// depend on which act recorded the entry. The classification is DATA-DERIVED
+// AND UNIFORM — it asks the two stores and nothing else — which is the same
+// property the whole five-arm reading rests on.
+//
+// TWO RESIDUES, recorded rather than fixed, both on the harmless side of the
+// same reading: a position-only entry whose crossing rows happen to be equal
+// in everything but time is still trivially position-only (the multiset
+// matches, which is the right answer for a move); and an entry that SWAPS TWO
+// MARKERS' WHOLE IDENTITIES — every value field of one written onto the other
+// and vice versa, at positions that also swap — reads as position-only though
+// it is mixed. No act in the product produces that; it is a measure-zero
+// misread of a keeping arm, and the cost is one lamp left standing.
 //
 // BOTH COLUMNS ARE ASKED, the co-equal axes rule: a phase reset's row is
 // `time_frame`, `disabled` and `measure`, so a phase position-only restore
@@ -687,20 +734,50 @@ void apply_post_restore_rules_impl(Selection& selection,
 // second definition of what a row is.
 enum class RestorePostureClass { Translation, PositionOnly, ValueOnly, Sweeping };
 
+// ONE COLUMN'S OWN READING, the four the arms above are composed from. Mixed
+// carries the count change too: an add or a remove is sweeping by the arms'
+// rule, and a pairing has nothing to stand on there.
+enum class ColumnDiffClass { Untouched, PositionOnly, ValueOnly, Mixed };
+
 template <class M, class FieldsDiffer, class BeyondTime>
-void accumulate_restore_diff(const std::vector<M>& after,
-                             const std::vector<M>& before,
-                             FieldsDiffer fields_differ,
-                             BeyondTime   differs_beyond_time,
-                             bool& count_changed,
-                             bool& position_touched,
-                             bool& value_touched) {
-    if (after.size() != before.size()) { count_changed = true; return; }
+ColumnDiffClass classify_column_diff(const std::vector<M>& after,
+                                     const std::vector<M>& before,
+                                     FieldsDiffer fields_differ,
+                                     BeyondTime   differs_beyond_time) {
+    if (after.size() != before.size()) return ColumnDiffClass::Mixed;
+
+    // ONE INDEX-WISE PASS ANSWERS TWO OF THE FOUR: whether the column moved at
+    // all, and whether any position moved at its own index.
+    bool any_row_differs       = false;
+    bool times_equal_index_wise = true;
     for (std::size_t i = 0; i < after.size(); ++i) {
-        if (!fields_differ(after[i], before[i])) continue;
-        if (after[i].time_frame != before[i].time_frame) position_touched = true;
-        if (differs_beyond_time(after[i], before[i]))     value_touched    = true;
+        if (fields_differ(after[i], before[i])) any_row_differs = true;
+        if (after[i].time_frame != before[i].time_frame)
+            times_equal_index_wise = false;
     }
+    if (!any_row_differs) return ColumnDiffClass::Untouched;
+    // VALUE-ONLY, AND IT IS ASKED FIRST (the head of this block argues the
+    // order): no position moved at its index, so the store cannot have been
+    // re-sorted and the rows that differ differ in a value.
+    if (times_equal_index_wise) return ColumnDiffClass::ValueOnly;
+
+    // POSITION-ONLY, ORDER-INSENSITIVELY: every snapshot row must match one
+    // unmatched live row in everything but its position. Greedy first-fit,
+    // exact because the relation is an equivalence (the head of this block
+    // carries that argument too).
+    std::vector<bool> matched(before.size(), false);
+    for (const M& row : after) {
+        bool paired = false;
+        for (std::size_t j = 0; j < before.size(); ++j) {
+            if (matched[j]) continue;
+            if (differs_beyond_time(row, before[j])) continue;
+            matched[j] = true;
+            paired     = true;
+            break;
+        }
+        if (!paired) return ColumnDiffClass::Mixed;
+    }
+    return ColumnDiffClass::PositionOnly;
 }
 
 RestorePostureClass classify_restore_postures(
@@ -711,27 +788,27 @@ RestorePostureClass classify_restore_postures(
         bool scale_differs) {
     if (scale_differs) return RestorePostureClass::Sweeping;
 
-    bool count_changed = false;
-    bool w_position = false, w_value = false;
-    bool t_position = false, t_value = false;
-    accumulate_restore_diff(after_w, before_w, warp_row_fields_differ,
-                            warp_row_differs_beyond_time,
-                            count_changed, w_position, w_value);
-    accumulate_restore_diff(after_t, before_t, phase_reset_row_fields_differ,
-                            phase_reset_row_differs_beyond_time,
-                            count_changed, t_position, t_value);
-    if (count_changed) return RestorePostureClass::Sweeping;
+    // BOTH COLUMNS ASK THE SAME QUESTION, the co-equal axes rule; only the row
+    // comparators differ.
+    const ColumnDiffClass w =
+        classify_column_diff(after_w, before_w, warp_row_fields_differ,
+                             warp_row_differs_beyond_time);
+    const ColumnDiffClass t =
+        classify_column_diff(after_t, before_t, phase_reset_row_fields_differ,
+                             phase_reset_row_differs_beyond_time);
+    if (w == ColumnDiffClass::Mixed || t == ColumnDiffClass::Mixed)
+        return RestorePostureClass::Sweeping;
 
-    const bool w_touched = w_position || w_value;
-    const bool t_touched = t_position || t_value;
+    const bool w_touched = (w != ColumnDiffClass::Untouched);
+    const bool t_touched = (t != ColumnDiffClass::Untouched);
     if (!w_touched && !t_touched) return RestorePostureClass::Translation;
+    // BOTH COLUMNS TOUCHED IS SWEEPING whatever each of them says on its own:
+    // an entry that moved two kinds at once is larger than either reading.
     if (w_touched && t_touched)   return RestorePostureClass::Sweeping;
 
-    const bool position = w_position || t_position;
-    const bool value    = w_value    || t_value;
-    if (position && value) return RestorePostureClass::Sweeping;
-    return position ? RestorePostureClass::PositionOnly
-                    : RestorePostureClass::ValueOnly;
+    return ((w_touched ? w : t) == ColumnDiffClass::PositionOnly)
+               ? RestorePostureClass::PositionOnly
+               : RestorePostureClass::ValueOnly;
 }
 
 }  // namespace

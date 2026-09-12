@@ -1610,8 +1610,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // the LAND that composes it with the two camera lamps' movement answer, and the
 // WALK's land, which takes the centered collapse alone — and the list above is
 // the LAND family's: every member of it is an act the centred pin goes out on.
-// The carry's one caller is named at its declaration (input_handler.h) and the
-// walk land's at its own body below.
+// The carry's two callers are named at its declaration (input_handler.h) and
+// the walk land's at its own body below.
 // The shared write, defined below the two entry points that share it.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport, int64_t src_frame);
@@ -1634,8 +1634,10 @@ void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
     // statement: the complete clearing-owner inventory is at
     // GuiAuditionSequence (app_state.h).
     // IT IS IN THE CARRY RATHER THAN THE LAND BELOW, exactly as
-    // Viewport::carry_playhead_to holds it: a TIME ACT declines the centered
-    // posture's collapse, never the act's end.
+    // Viewport::carry_playhead_to holds it: what a carry's callers decline is
+    // the POSTURE WRITE and never the act's end — a time act declines it for
+    // good, the plain flag press defers it to the edge that knows whether the
+    // press was a click, and both of them end a standing audition here.
     clear_audition_sequence(app);
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }
@@ -4229,6 +4231,16 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // begins it; the two authoring gates live there) and the double-click SEED
 // only a motionless release may write.
 //
+// AND THE PLAIN ARM'S LAND IS THE CARRY, its THIRD deferred thing since
+// 2026-09-12 (architect): the two CAMERA LAMPS' movement answer waits for
+// the same edge the other two do, because a plain flag press is the one
+// press on this surface whose identity is not certain at the press — a
+// click at the motionless release, a drag at the crossing — and the click
+// collapses the centred pin while the drag under that pin IS the pin's own
+// motion. The argument is written out at the plain arm's own land; the
+// write itself is one line in the pending's release body, and nothing else
+// on this surface defers anything.
+//
 // THE HIT INDEX IS THE PRESS'S OWN live hit test — the act runs in the same
 // event that resolved it, so nothing can be stale. The DOUBLE-CLICK verdict
 // reads the press-time candidate SNAPSHOT (dc_at_press), because
@@ -4334,7 +4346,25 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         // any arm: stems are class-colored and always on, so a membership
         // change never creates, moves or recolors one.
         selection.set_single_selection(hit);
-        land_playhead_on_marker(app, audio, viewport, hit);
+        // AND THE LAND IS THE CARRY HERE (architect 2026-09-12) — the ONE
+        // place on this surface where the two camera lamps' answer waits for
+        // a later edge, and the third clause is what puts it there. The
+        // playhead lands at the press exactly as it always did (so do the
+        // stop, the select, the region hide and the audition's end, all
+        // above); what the carry declines is the posture write, because THIS
+        // press's identity is not certain yet: it arms the pending below and
+        // becomes a CLICK at the motionless release or a DRAG at the
+        // threshold crossing, and the two want opposite answers. A click is a
+        // movement and collapses the centred pin; a DRAG under that pin is
+        // the REVERSE PAN and is the posture's own motion (marker_drag.h), so
+        // a collapse here would put the lamp out before
+        // MarkerDragOps::begin_drag ever samples it and the gesture could
+        // never be reached. So the release writes both lamps
+        // (postures_after_movement, at the pending's own release body below)
+        // and the crossing leaves them standing for the drag's commit to
+        // answer for. The MODIFIED arms above take the LAND: they arm
+        // nothing, have no drag to become and are certain at the press.
+        carry_playhead_on_marker(app, audio, viewport, hit);
     }
     // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
     // bound cells; every cell since 2026-09-05 — "light the colour of only
@@ -7515,11 +7545,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (app.pending_marker_press.active) {
-        // THE FLAG'S MOTIONLESS LIFT OWES ONLY THE SEED — the click itself
-        // acted at the press (2026-08-17; the contract is at
-        // PendingMarkerPress, app_state.h), and only the release can tell a
-        // click from a drag, so the next Marker double-click candidate is
-        // written here and nowhere else.
+        // THE FLAG'S MOTIONLESS LIFT OWES THE SEED AND THE TWO CAMERA LAMPS
+        // — the click itself acted at the press (2026-08-17; the contract is
+        // at PendingMarkerPress, app_state.h), and only the release can tell
+        // a click from a drag, so the next Marker double-click candidate is
+        // written here and nowhere else, and since 2026-09-12 so is the
+        // posture answer the press's own land declined (the argument is at
+        // run_marker_click_act's plain arm, this file).
         // THE POSITION IS THE PRESS'S, not this release's: it keeps the
         // SPATIAL pairing press-to-press, and it is the honest one for the
         // touch layer, whose synthesized release carries the finger's LAST
@@ -7533,6 +7565,20 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // moved-drag rule.)
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
+        // THE CLICK THAT STAYED A CLICK IS A MOVEMENT, and this is where it
+        // says so (architect 2026-09-12): the centred pin collapses and the
+        // walk's framing lamp lights, exactly as they do for every other
+        // marker land — one press later than they used to, and invisibly so,
+        // because the pin's derivation is paused for the whole pending window
+        // (any_pointer_gesture_active holds this record, main.cpp's pre-paint
+        // hook reads it) and the collapse lands in the same event as the
+        // release. THE ABNORMAL ENDS DECLINE IT exactly as they decline the
+        // seed, and for the same reason: a lost button, the force-end
+        // finalizer and the touch layer's hard end are not clean click
+        // sequences, so the click they leave standing from the press keeps
+        // the posture standing too — a press that never became a drag and
+        // never became a click has no movement to answer for.
+        postures_after_movement(app);
         // THE CELL IS THE PRESS'S TOO, for the position's own reason: the seed
         // describes the press, and the box may be repainted at a different
         // width before the second click arrives.
@@ -10583,6 +10629,18 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // BRIGHTENED, and the stop is why no follow override is needed below
         // (nothing can restart playback under the held button: the drag-modal
         // gate swallows every chord while this pending stands).
+        // AND NO POSTURE IS WRITTEN ON ANY EXIT OF THIS BODY (2026-09-12):
+        // the press deferred both camera lamps and only the MOTIONLESS
+        // RELEASE writes them, so a crossing leaves them exactly as they
+        // stood — for the horizontal drag because it is the centred pin's
+        // KEEPER and its own commit answers for the move, for the VALUE drag
+        // because its commit takes the value class, and for a crossing that
+        // begins NOTHING (a refused value-drag target, a locked tab, an
+        // off-home column) because a gesture that never started is no act to
+        // answer for. That last case is the one delta the deferral leaves on
+        // this surface — such a press used to collapse the pin on its way
+        // down — and it reads as the lamps' own standing rule: a lamp
+        // answers a write, not a press.
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
         // THE TWO AUTHORING GATES LIVE HERE, not at the arm: they guard the
@@ -10637,7 +10695,16 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // IT ALSO STAMPS THE CENTRED PIN (architect 2026-09-12): begin_drag
         // reads centered_pin_engaged once, into DragState::camera_follows, and
         // the gesture is the REVERSE PAN for its whole length off that one bit
-        // — no refusal here, and no site below re-asks the lamp.
+        // — no refusal here, and no site below re-asks the lamp. THE PIN IS
+        // STILL STANDING WHEN IT READS IT, and that is what the plain arm's
+        // CARRY buys: the arming press landed the playhead without writing
+        // either camera lamp, so a pin lit before the press is lit here.
+        // (Were the press to collapse it, as every other land does, this
+        // sample could only ever read false and the reverse pan would be
+        // unreachable.) The posture write it deferred belongs to the other
+        // end of the fork — the motionless release's, in on_button_release —
+        // and a crossing spends the pending without it, leaving the drag's
+        // own commit to answer for what it moved.
         // NO DOUBLE-CLICK CLEAR IS OWED HERE: the seed is the motionless
         // release's alone, so a press that becomes a drag never seeded one,
         // and on_button_press's own
