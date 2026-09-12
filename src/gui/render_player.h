@@ -695,30 +695,6 @@ struct GuiRenderPlayer {
     void publish_media_state();
 
 private:
-    // The transport's rest act takes the device out of its running state once
-    // the player has come to rest with nothing about to sound again. The
-    // mechanism is GuiPlayback::suspend_stream (nothing on JACK, and its
-    // declaration owns why the player needs it at all); what this body owns is
-    // which rests reach the device, a question the stop body cannot answer,
-    // since every player stop takes that fence, transitions included.
-    //
-    // Five call sites, each of them immediately past the fence that the
-    // suspension requires and does not take: toggle_pause's pause arm, the
-    // tick's dead-device arm, on_natural_end's two rests — its terminal rest
-    // (the arm that neither replays nor advances) and its Repeat One arm where
-    // the replay refused to decode, a rest being a rest whichever way the
-    // player arrived at it — and unload_item on both of its tails. The
-    // live-to-live transitions are deliberately absent (2026-09-04, moving the
-    // suspension off the stop body's player fork, where it lived for one
-    // evening): play_wav's fence ahead of another item — the deliberate Next,
-    // another row pressed while live — and the natural end's Repeat One replay
-    // and auto-advance all sound again within microseconds, and stopping the
-    // device across them would pay the AAudio start's settle wait and, over
-    // Bluetooth, the link's own reactivation on the very acts that must stay
-    // responsive, with a failed restart free to publish Live for a tick before
-    // the dead-device arm parks the transport. Only the link's reactivation
-    // after a pause is an accepted cost.
-    void rest_stream();
     // Which tail the unload is running. It is required, with no default,
     // because the two roads want the mode bit in different places and a third
     // caller must choose rather than inherit one of them:
@@ -737,7 +713,7 @@ private:
     // down the project's arm and leave the engine unfenced.
     enum class UnloadTail { Up, Close };
     // THE ONE OWNER OF THE UNLOAD ORDERING, shared by close() and up(): the
-    // stop body's fence, then the transport's rest act, then the mode bit
+    // stop body's fence, then the mode bit
     // where the tail wants it, then THE VIEW'S buffer rebound, then the item's
     // fields cleared to their open() values and its buffer freed. The order
     // is load-bearing — the engine may hold the item's pointer until the

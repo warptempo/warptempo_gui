@@ -66,21 +66,9 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
             app.render_player.transport != RenderPlayerTransport::Live)
             return;
         playback.stop();
-        // The device is not rested here, and the reason is the sentence just
-        // above: every player stop passes this fork, and half of them are
-        // transitions — the rebind ahead of the next item (the deliberate
-        // Next, another row pressed while live) and the natural end's Repeat
-        // One replay and auto-advance, all of which sound again within
-        // microseconds. Stopping the Android stream across one of those would
-        // pay the start's settle wait and, over Bluetooth, the link's own
-        // reactivation, on exactly the acts that have to stay responsive; a
-        // failed restart could even publish Live for a tick before the tick's
-        // own dead-device arm parked the transport. So the suspension is the
-        // player's own rest act (GuiRenderPlayer::rest_stream), called past
-        // this fence by the five roads that really leave the transport at rest
-        // and by nothing else — its declaration carries them, and the ruling
-        // it serves is at the head of playback_aaudio.cpp. It lived here for
-        // one evening (2026-09-04) and moved out the same night.
+        // The device is not touched here or anywhere between plays (the
+        // lifecycle block at the head of playback_aaudio.cpp): a player stop is
+        // the fence and the transport write alone.
         app.render_player.transport = RenderPlayerTransport::Paused;
         viewport.invalidate_modal_dialog_area();
         // THE HEAD UNIT'S "PAUSED" IS PUBLISHED HERE AND NOWHERE ELSE

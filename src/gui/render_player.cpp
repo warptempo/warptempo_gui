@@ -744,18 +744,6 @@ void GuiRenderPlayer::toggle_repeat_one() {
     damage_row();
 }
 
-// The device leaves its running state where the player has come to rest, and
-// nowhere else (the five callers and the reasoning are at the declaration).
-// Deliberately thin: the mechanism is GuiPlayback::suspend_stream's and the
-// JACK backend answers it with nothing, so what this body exists for is to be
-// a name the five rest roads call and the live-to-live transitions do not — a
-// distinction the stop body's fence, taken by both classes alike, could never
-// draw. The caller has just returned from that fence, which is the quiescence
-// proof the suspension needs and does not take for itself.
-void GuiRenderPlayer::rest_stream() {
-    playback.suspend_stream();
-}
-
 void GuiRenderPlayer::toggle_pause() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.item.empty() || rp.frames <= 0) return;
@@ -794,12 +782,6 @@ void GuiRenderPlayer::toggle_pause() {
         rp.resume_frame =
             std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
-        // The pause is the rest this whole mechanism exists for: the device
-        // comes out of its running state behind the fence, so a head unit
-        // reading the Bluetooth link stops seeing an active player under a
-        // session that says paused (rest_stream's declaration owns the
-        // membership; the ruling is at the head of playback_aaudio.cpp).
-        rest_stream();
         return;
     }
     // RESUME: from the resume point; a point at or past the item's end (the
@@ -1052,13 +1034,8 @@ void GuiRenderPlayer::on_natural_end() {
         const bool replayed =
             play_wav(folder[static_cast<size_t>(i)].path, folder, i);
         if (!replayed) {
-            // A refused replay is a rest like any other, so the device rests
-            // under it: the lamp's arm is terminal, nothing follows this
-            // return, and the transport is left idle on an item that will not
-            // decode. The fence is this body's own, taken above — play_wav's
-            // decode refusals all return ahead of the fence it would take, so
-            // the last stop is still the one at the head of this function.
-            rest_stream();
+            // The lamp's arm is terminal: nothing follows this return, and the
+            // transport is left idle on an item that will not decode.
             damage_row();
         }
         return;
@@ -1087,15 +1064,8 @@ void GuiRenderPlayer::on_natural_end() {
     // rest from any other idle rest at an item's start now, which is the
     // simplification itself.
     //
-    // This is the natural end's terminal rest (rest_stream's declaration owns
-    // the membership): a replay and an advance that sound both sound again
-    // within microseconds and must not stop the stream between the two items,
-    // while here the player has finished and the head unit is looking at a
-    // session that says so. It is one of this body's two rests, the other
-    // being the refused Repeat One replay above — a rest is a rest, so that
-    // arm takes the act too, and no road out of this function leaves an idle
-    // transport over a running stream.
-    rest_stream();
+    // This is the ordinary idle rest at the item's start: the player has
+    // finished and the head unit is looking at a session that says so.
     damage_row();
 }
 
@@ -1132,15 +1102,9 @@ void GuiRenderPlayer::tick() {
         rp.resume_frame =
             std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
         playback_lifecycle.stop_playback_if_playing();
-        // The rest act, as the pause arm this one copies takes it: nothing
-        // follows this stop, so the device rests behind the fence. The two
-        // shapes this arm covers meet it differently and both are right: a
-        // device that never came up has no stream and the suspension returns
-        // at once, while one that went away under a started stream is asked to
-        // stop like any other rest — a refusal there is the suspension's own
-        // stderr line and changes nothing, the reopen the next press takes
-        // being what really closes that stream.
-        rest_stream();
+        // Nothing follows this stop: the device is not touched here, and what
+        // really closes a stream that went away is the reopen the next play
+        // press takes.
         // ONE CLAUSE (2026-09-01, the capitalization sweep's sentence
         // shape): it read "No audio device; the wav cannot be played".
         status("No audio device to play the wav");
@@ -1239,15 +1203,10 @@ bool GuiRenderPlayer::open() {
 // need it in different places (the reasons are at UnloadTail).
 void GuiRenderPlayer::unload_item(UnloadTail tail) {
     AppState::RenderPlayer& rp = app.render_player;
-    // THE ORDER IS LOAD-BEARING: stop (the fence) → the rest act → the mode
-    // bit where the tail wants it → the VIEW's buffer rebound → only then the
-    // item's buffer freed, the engine holding the pointer until the rebind.
+    // THE ORDER IS LOAD-BEARING: stop (the fence) → the mode bit where the
+    // tail wants it → the VIEW's buffer rebound → only then the item's buffer
+    // freed, the engine holding the pointer until the rebind.
     playback_lifecycle.stop_playback_if_playing();
-    // The transport has come to rest and nothing follows it, on either tail,
-    // so the device rests with it (the caller inventory and the reasons are at
-    // rest_stream's declaration). Past the fence, which is what the suspension
-    // requires and does not take.
-    rest_stream();
     // IDLE OVER THE FORK'S PAUSED: the stop body's player fork parks every
     // LIVE transport at PAUSED, and an unloaded transport has nothing to
     // resume — so this write lands after that fork, exactly as open()'s reset

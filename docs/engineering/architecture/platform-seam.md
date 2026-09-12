@@ -147,44 +147,23 @@ drag coordinates floor instead of truncating.
   glass — starting a stream unmutes the device's output path and that
   transient was audible as a click at the head of every audition): it is
   started at open, stopped only where it is about to be closed (shutdown,
-  the dead-stream reopen — `close_stream` holds one of the file's two
-  `requestStop` calls), and between plays it runs while the callback's gate on the
+  the dead-stream reopen — `close_stream` holds the file's ONE
+  `requestStop` call), and between plays it runs while the callback's gate on the
   session word's playing bit writes silence and reads no sample.
-  THE RENDER PLAYER'S PAUSE IS THE ONE NARROWING OF THAT RULING (architect
-  2026-09-04, after a road test): a stream left started through the player's
-  pause keeps the Bluetooth link fed with silence, so the head unit sees an
-  active player under a session that says paused and resolves the
-  contradiction by flipping its display back to playing — after which its one
-  toggle button sends the already-true direction forever (AVRCP has no
-  play/pause opcode). So the pause reaches the device: `GuiPlayback::
-  suspend_stream`, a member of the playback header both backends implement
-  (JACK: nothing — the laptop has no head unit and no link to suspend), asks
-  the stream stopped after `stop()`'s own fence and clears `started`, and the
-  next `play()` starts it again through the SAME `start_stream` a reopen
-  takes; a start that finds the stream still STOPPING waits briefly for the
-  transition it asked for, which is the only place this can add a delay and
-  is reached only by a resume pressed straight after a pause. THE ONE CALL
-  SITE IS THE PLAYER'S OWN REST ACT (`GuiRenderPlayer::rest_stream`), whose
-  five roads are the pause, the tick's dead-device arm, the natural end's TWO
-  rests (its terminal rest and its Repeat One arm where the replay refused to
-  decode) and the unload on both of its tails — so the main window's
-  Space, the waveform scrub and the A/B audition's four plays keep the
-  2026-08-27 lifecycle whole, AND SO DO THE PLAYER'S OWN LIVE-TO-LIVE
-  TRANSITIONS (codex round 3, the same evening, moving the suspension off the
-  stop body's player fork, which every player stop takes and which therefore
-  could not tell a rest from a track change): a Next, another row pressed
-  while live, and the natural end's Repeat One replay and auto-advance all
-  sound again within microseconds and never touch the device. WHAT IT COSTS,
-  both accepted at the ruling:
-  the start transient is back at the player's resume on the tablet's own
-  speaker (*"I don't use the speakers ever — leave it"*), and over Bluetooth a
-  resume waits for the link to come back — accepted as that and as nothing
-  else, the player's and the GUI's responsiveness over the link being good and
-  staying so. `device_unavailable()` and `device_absent()` are untouched
-  across a suspension: a suspended stream is neither dead nor absent, and the
-  quiescence fence's `!started` early return stays sound because the session
-  word's playing bit is already down when the suspend runs — a callback still
-  retiring reads no sample at all. So the fence is now the SAME
+  THE RULING HAS NO NARROWING, AND ONE STOOD FOR EIGHT DAYS (2026-09-04 to
+  2026-09-12): the render player's rest stopped the stream, so that a paused
+  player would not go on feeding the Bluetooth link with silence the head unit
+  read as an active player under a session that says paused. IT IS REVERTED ON
+  THE ARCHITECT'S CAR EVIDENCE: a fresh continuous stream is clean for hours,
+  while every play on a stopped-and-restarted stream crackles throughout — the
+  beginning, the middle and the end of a 30-40 s stretch, never twice at the
+  same spot, so it is the restart itself and not the settling of its first
+  seconds. What the head unit makes of a stream running under a session that
+  says paused is therefore the PUBLISH side's business
+  (`GuiRenderPlayer::publish_media_state`), and no road touches the device
+  between plays: the main window's Space, the waveform scrub, the A/B
+  audition's four plays and every one of the player's own rests and
+  transitions leave the stream running. So the fence is the SAME
   PROOF ON BOTH BACKENDS — counting callback invocations, two after the
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback

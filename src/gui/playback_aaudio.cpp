@@ -41,38 +41,24 @@
 // audition began with one of those transients — the click. It now starts the
 // stream ONCE, at open (init, and the reopen after a disconnect), and stops it
 // only where the stream is about to be CLOSED: shutdown, and the dead-stream
-// reopen. Both live in close_stream, which holds one of the file's two
-// requestStop calls — the other is suspend_stream's, the render player's own
-// narrowing recorded below. `start_stream` is idempotent on `started`, so the
+// reopen. Both live in close_stream, which holds the file's ONE requestStop
+// call. `start_stream` is idempotent on `started`, so the
 // three sites that call it — init's own, the launch gate's
 // (ensure_device_available_for_play, where a reopened stream's start is what
 // the gate's answer rests on) and play()'s retry for the roads that reach it
 // ungated — are one road and an ordinary play makes no device call at all.
 //
-// THE RENDER PLAYER'S PAUSE IS THE ONE NARROWING OF THAT RULING (architect
-// 2026-09-04, after a road test in the car). A stream that stays started while
-// the player is paused keeps writing silence into the Bluetooth link, so the
-// head unit sees an active player under a session that says paused and
-// resolves the contradiction by flipping its display back to playing — after
-// which its one toggle button sends the wrong direction forever. So the
-// player's rest reaches the device: suspend_stream (below) requests the stream
-// stopped and clears `started`, and the next play() starts it again through
-// start_stream, which is the same road a reopen takes. It is called from the
-// player's own rest act alone (GuiRenderPlayer::rest_stream, whose declaration
-// carries the five roads that reach it), so the main window's auditions, its
-// Space and the A/B act keep the no-click lifecycle exactly as the 2026-08-27
-// ruling left it. The narrowing is to a rest and not to a stop: the player's
-// live-to-live transitions — a Next, another row pressed while live, the
-// natural end's Repeat One replay and its auto-advance — take the same stop
-// fence and are deliberately outside it, because a track change that stopped
-// the stream would pay the settle wait below and the link's reactivation on an
-// act that has to be immediate. (The rest act lived inside the stop body's
-// player fork for one evening, 2026-09-04, which is exactly the set it could
-// not tell apart.) The architect's words for the trade: "all I need is for the
-// car and the player to work as expected", the resume transient on the
-// tablet's own speaker accepted outright ("I don't use the speakers ever —
-// leave it") and the Bluetooth resume delay accepted only as the moment the
-// link takes to come back after a pause.
+// THE RULING HAS NO NARROWING, and one stood for eight days. From 2026-09-04
+// to 2026-09-12 the render player's rest stopped the stream, so that a paused
+// player would not go on feeding the Bluetooth link with silence the head unit
+// read as an active player. It is REVERTED on the architect's car evidence: a
+// fresh continuous stream is clean for hours, while every play on a
+// stopped-and-restarted stream crackles throughout — the beginning, the middle
+// and the end of a 30-40 s stretch, never twice at the same spot, so it is the
+// restart itself and not the settling of its first seconds. What the head unit
+// makes of a stream that runs while the session says paused is therefore the
+// PUBLISH side's business (GuiRenderPlayer::publish_media_state), and the
+// device is never touched between plays by any road.
 //
 // So the transient happens once per session, at launch, with no audition under
 // it, and no play() or stop() touches the device's run state at all. BETWEEN
@@ -365,30 +351,6 @@ void fence_quiesced(GuiPlayback::Impl& impl) {
     }
 }
 
-// Wait out a transition this file asked for, briefly and at most once per
-// start. AAudio's stop is a request: the stream passes through STOPPING before
-// it is STOPPED, and a start asked during that window can be refused for the
-// state alone — which on the player's road would close the device over a pause
-// and a resume pressed back to back. The only producer of that window in this
-// file is suspend_stream, so the ordinary start (a settled stream, an open one,
-// a dead one) reads the state once and waits for nothing. A live-to-live track
-// change never reaches it: the suspension is the player's rest act's alone and
-// no transition calls that act, so the one start that can meet a STOPPING
-// stream is a resume pressed straight after a pause — which is also the one
-// place the ruling accepts a delay. A timeout leaves the state where it is and
-// the start takes its own failure arm; the deadline is generous because it is
-// never reached in the sequence it exists for.
-constexpr int64_t kStateSettleTimeoutNs = 200 * 1000 * 1000;
-
-void settle_stopping_state(GuiPlayback::Impl& impl) {
-    if (!impl.stream) return;
-    const aaudio_stream_state_t state = AAudioStream_getState(impl.stream);
-    if (state != AAUDIO_STREAM_STATE_STOPPING) return;
-    aaudio_stream_state_t next = AAUDIO_STREAM_STATE_UNINITIALIZED;
-    AAudioStream_waitForStateChange(impl.stream, state, &next,
-                                    kStateSettleTimeoutNs);
-}
-
 // START THE STREAM, once per open (the lifecycle block at the head). Idempotent
 // on `started`, so the init path's start and play()'s own are one road: a start
 // refused at init is logged there and RETRIED at the next play, which owns the
@@ -397,7 +359,9 @@ void settle_stopping_state(GuiPlayback::Impl& impl) {
 bool start_stream(GuiPlayback::Impl& impl) {
     if (impl.started) return true;
     if (!impl.stream) return false;
-    settle_stopping_state(impl);
+    // No stream this function can meet is STOPPING: the file's one requestStop
+    // is close_stream's, on a stream it is about to close, and the reopen that
+    // follows opens a new one — so the state is never waited out here.
     const aaudio_result_t r = AAudioStream_requestStart(impl.stream);
     if (r != AAUDIO_OK) {
         std::fprintf(stderr,
@@ -429,11 +393,9 @@ void close_stream(GuiPlayback::Impl& impl) {
     // dead-stream reopen closes ahead of its open — so this is the whole seed
     // a fresh stream needs.
     impl.xrun_at_launch = -1;
-    // ONE OF THE FILE'S TWO requestStop calls, and it is here because the
-    // stream is being CLOSED (shutdown, or the dead-stream reopen) — never
-    // between the main window's plays; the other is suspend_stream's, which
-    // rests the device under the render player's own rest act and keeps the
-    // stream open for the resume. The
+    // THE FILE'S ONE requestStop call, and it is here because the stream is
+    // being CLOSED (shutdown, or the dead-stream reopen) — never between
+    // plays. The
     // close is the stronger fence anyway: it blocks until the callback thread
     // is gone, which is what makes it safe on a stream this function may be
     // stopping while a callback is mid-flight.
@@ -697,12 +659,11 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
 
     // ORDINARILY A NO-OP, and that is the point of the new lifecycle: the
     // stream was started at open and has been running ever since, so an
-    // ordinary play makes no device call at all. Three paths still arrive here
+    // ordinary play makes no device call at all. Two paths still arrive here
     // with a stopped stream and are started by this call — the reopen just
-    // above (the head's, or the launch press's a moment earlier), an init whose
-    // own start was refused, and the render player's resume after its rest act
-    // suspended the stream (2026-09-04) — and a refusal here disables the
-    // device until the next press reopens it.
+    // above (the head's, or the launch press's a moment earlier) and an init
+    // whose own start was refused — and a refusal here disables the device
+    // until the next press reopens it.
     if (!start_stream(*impl_)) {
         impl_->state.session.fetch_and(~kSessionPlayingBit,
                                        std::memory_order_release);
@@ -743,40 +704,6 @@ void GuiPlayback::stop() {
                                    std::memory_order_seq_cst);
     fence_quiesced(*impl_);
     report_xrun_count(*impl_);
-}
-
-// Rest the device under the render player's rest (the contract at the
-// declaration, and the narrowing at the head of this file). The caller is
-// GuiRenderPlayer::rest_stream and every road into it has just returned from
-// the stop body, so the session word's playing bit is down and the fence has
-// proved the callback out of the sample buffer — this adds no fence and needs
-// none.
-//
-// What it changes is the stream's run state and `started` with it, so the next
-// play() reaches start_stream and starts the stream it left stopped, exactly
-// as it does for a stream the reopen left standing. Between the two,
-// fence_quiesced's `!started` early return is sound for the reason the fence's
-// own escape clause gives: a stopped stream has no callback left to count, and
-// any callback still retiring reads no sample at all with the playing bit
-// down.
-//
-// A REFUSED STOP LEAVES THE DEVICE AS IT WAS: `started` stays true, the stream
-// keeps running and writing silence, and the player behaves as it did before
-// this member existed. Nothing here can make the device unavailable — the
-// stream, `device_ready` and the disconnect latch are all untouched, which is
-// what keeps device_unavailable() and device_absent() meaning what their
-// contracts say across a suspension.
-void GuiPlayback::suspend_stream() {
-    if (!impl_ || !impl_->device_ready || !impl_->stream) return;
-    if (!impl_->started) return;
-    const aaudio_result_t r = AAudioStream_requestStop(impl_->stream);
-    if (r != AAUDIO_OK) {
-        std::fprintf(stderr,
-            "warptempo_gui: AAudio requestStop failed (%s); the stream keeps "
-            "running through the pause.\n", AAudio_convertResultToText(r));
-        return;
-    }
-    impl_->started = false;
 }
 
 bool GuiPlayback::is_playing() const {
