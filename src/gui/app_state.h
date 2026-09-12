@@ -8921,9 +8921,16 @@ struct AppState {
     //              ONE item — with no repeat-all ("the user can just press
     //              play once the playlist finishes... repeat one is much more
     //              useful"). While it stands, the natural end replays the item
-    //              from its start instead of advancing. SESSION-ONLY: false at
-    //              every open(), never serialized, carried by no sidecar and
-    //              no device-config key;
+    //              from its start instead of advancing. SESSION-ONLY AND LIT
+    //              BY DEFAULT: TRUE at every open() (architect 2026-09-11 —
+    //              the default is repeat the one item, and the button keeps
+    //              its name and its glyph rather than inverting into a "play
+    //              through" lamp; it was false at every open from 2026-08-28),
+    //              never serialized, carried by no sidecar and no
+    //              device-config key. THE OPEN IS ITS ONE RESET: the lamp
+    //              forgets at the close and survives everything in between,
+    //              the Up act's unload included — going up a folder is not an
+    //              open;
     //              (`ended_at_folder_end` was a fourteenth field from
     //              2026-08-28 to 2026-08-31: the natural end set it at the
     //              item folder's last wav and play_button_act read it as
@@ -8956,7 +8963,10 @@ struct AppState {
         std::vector<float>         buffer;
         int64_t                    frames         = 0;
         Transport                  transport      = Transport::Idle;
-        bool                       repeat_one     = false;
+        // The declared rest state is the open's own reset said once more:
+        // nothing reads the lamp while the player is down, and the two
+        // must not read as two different defaults.
+        bool                       repeat_one     = true;
         int64_t                    resume_frame   = 0;
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {

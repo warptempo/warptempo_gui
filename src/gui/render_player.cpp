@@ -86,7 +86,7 @@ std::vector<Row> GuiRenderPlayer::listing_wavs() const {
     return wavs;
 }
 
-void GuiRenderPlayer::rebuild_rows() {
+void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     AppState::RenderPlayer&  rp = app.render_player;
     ov.rows.clear();
@@ -132,8 +132,21 @@ void GuiRenderPlayer::rebuild_rows() {
         }
     }
 
-    // THE INITIAL HIGHLIGHT of every rebuild: the transport's item's row when
-    // it is in this listing, else row 0; -1 only for an empty listing.
+    // THE INITIAL HIGHLIGHT of every rebuild, THREE ARMS IN ORDER: the
+    // transport's item's row when it is in this listing; else the row of
+    // `seat_folder` when the caller named one and it is listed; else row 0 —
+    // and -1 only for an empty listing.
+    // THE SECOND ARM IS THE UP ACT'S ALONE (architect 2026-09-11): pressing
+    // Up inside a batch folder is not a memory of where the band once was but
+    // something happening right now — "I'm pressing Up on a specific folder,
+    // and I expect that folder to be highlighted" — so up() names the folder
+    // it is leaving and the root listing seats the band on that folder's row.
+    // EVERY OTHER CALLER NAMES NONE, and ENTERING A FOLDER STAYS
+    // MEMORY-LESS: the band takes the folder's top, or the item's row when
+    // the item lives there, and a file played earlier that is no longer the
+    // item is never sought out. A named folder that is not in the listing —
+    // deleted while the player stood, the listing being rebuilt from disk at
+    // every entry — falls through to row 0 like any other miss.
     // ROW 0 IS THE FIRST REAL ROW since 2026-09-01, and that DISSOLVES R6'S
     // ONE SURFACED EDGE structurally: while every non-root listing opened with
     // a `..` row, entering a folder that does not hold the playing item seated
@@ -151,10 +164,21 @@ void GuiRenderPlayer::rebuild_rows() {
     // DoubleClickSurface::FolderRow on 2026-08-29, when a click became the
     // open act and the second press lost its meaning.)
     ov.highlight_row = ov.rows.empty() ? -1 : 0;
+    bool seated = false;
     if (!rp.item.empty()) {
         for (size_t i = 0; i < ov.rows.size(); ++i) {
             if (ov.rows[i].kind == Row::Kind::Wav &&
                 ov.rows[i].path == rp.item) {
+                ov.highlight_row = static_cast<int>(i);
+                seated = true;
+                break;
+            }
+        }
+    }
+    if (!seated && !seat_folder.empty()) {
+        for (size_t i = 0; i < ov.rows.size(); ++i) {
+            if (ov.rows[i].kind == Row::Kind::Folder &&
+                ov.rows[i].path == seat_folder) {
                 ov.highlight_row = static_cast<int>(i);
                 break;
             }
@@ -172,10 +196,11 @@ void GuiRenderPlayer::rebuild_rows() {
     damage_row();
 }
 
-void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir) {
+void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir,
+                            const std::filesystem::path& seat_folder) {
     app.render_player.folder    = folder;
     app.render_player.batch_dir = dir;
-    rebuild_rows();
+    rebuild_rows(seat_folder);
 }
 
 // THE UP WALL'S ONE OWNER (the contract is at the declaration, app_state.h):
@@ -192,6 +217,12 @@ void GuiRenderPlayer::up() {
     // said it before. The wall is asked through the predicate above, which the
     // button's face reads too, so the key and the button cannot disagree.
     if (!render_player_up_actionable(app)) return;
+    // THE FOLDER BEING LEFT, read before the act runs: the root entry below
+    // rewrites `batch_dir`, and the band's seat wants the folder this press
+    // was made in (the rule is at rebuild_rows' seat block). The unload
+    // between them leaves the field alone — it clears the ITEM's fields, not
+    // the listing's place — so this copy is what survives both.
+    const std::filesystem::path came_from = app.render_player.batch_dir;
     // UP UNLOADS THE ITEM (architect 2026-09-04, in his words: "The Up button
     // should simply stop audio and drop the selection, not pause it. It should
     // make it like when you first open the player: nothing is loaded"). WHY AN
@@ -211,14 +242,17 @@ void GuiRenderPlayer::up() {
     // The ordering the engine's pointer demands is the shared body's (the
     // contract at unload_item's declaration), and the Up tail is what keeps
     // the mode bit standing through it — the player is not going anywhere.
-    // What is UP'S OWN is the root entry — the listing rebuilt with no item,
-    // so the band seats on row 0 as at an open — and the head unit's push,
-    // which must be THE LAST WORD: the stop body's fork inside the unload has
+    // What is UP'S OWN is the root entry — the listing rebuilt with no item
+    // and SEATED ON THE FOLDER JUST LEFT (architect 2026-09-11: the press was
+    // made in that folder and the band lands on it, rather than on row 0 as
+    // it did from 2026-09-04 to that day) — and the head unit's push, which
+    // must be THE LAST WORD: the stop body's fork inside the unload has
     // already published a paused state carrying the very item this act is
-    // dropping. REPEAT ONE IS UNTOUCHED: the lamp is session state, off at
-    // every open() and at no other time, and going up a folder is not an open.
+    // dropping. REPEAT ONE IS UNTOUCHED: the lamp is session state that an
+    // open() resets and nothing else writes, and going up a folder is not an
+    // open.
     unload_item(UnloadTail::Up);
-    enter(Folder::Root, {});
+    enter(Folder::Root, {}, came_from);
     publish_media_state();
 }
 
@@ -231,7 +265,10 @@ void GuiRenderPlayer::open_row(int index) {
         case Row::Kind::Folder:
             switch (app.render_player.folder) {
                 case Folder::Root:
-                    enter(Folder::Batch, row.path);
+                    // Entering names no folder to seat on: the band takes
+                    // this listing's top, or the item's row if the item lives
+                    // in here (the seat rule at rebuild_rows).
+                    enter(Folder::Batch, row.path, {});
                     return;
                 case Folder::Batch:
                     return;   // a batch listing carries no folder rows
@@ -1166,9 +1203,12 @@ bool GuiRenderPlayer::open() {
     rp.buffer.clear();
     rp.frames         = 0;
     rp.transport      = Transport::Idle;
-    // REPEAT ONE IS SESSION-ONLY AND OFF AT EVERY OPEN (R26), like the mode's
-    // every other bit.
-    rp.repeat_one     = false;
+    // REPEAT ONE IS SESSION-ONLY AND LIT AT EVERY OPEN (architect 2026-09-11
+    // — the default is repeat the one item; it was off at every open from
+    // 2026-08-28, R26). The lamp is reset here and nowhere else, like the
+    // mode's every other bit: it forgets at the close, survives the Up act's
+    // unload, and bare `r` and the row's lamp flip it from lit.
+    rp.repeat_one     = true;
     rp.resume_frame   = 0;
     rp.painted_cursor = -1;
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
@@ -1178,7 +1218,8 @@ bool GuiRenderPlayer::open() {
     // overlay, and every other field of the panel is reset with it.
     app.folder_overlay       = AppState::FolderOverlay{};
     app.folder_overlay.owner = AppState::FolderOverlay::Owner::Player;
-    rebuild_rows();
+    // The open names no folder to seat on: the root listing takes its top.
+    rebuild_rows({});
     // A modal OPEN damages the whole window: the row's chrome greys, the band
     // appears over the waveform, and the modal row has no rect before its
     // first paint.

@@ -169,6 +169,13 @@ struct GuiInputHandler;
 // natural end, and an ungated seat would drag the band off the row a user
 // walked to under a lit lamp — repeatedly, and under his next Load in place.
 //
+// AND THE UP ACT SEATS THE BAND ON THE FOLDER IT JUST LEFT (architect
+// 2026-09-11): the root listing a press of Up builds holds no item, so the
+// seat rule's second arm takes it — "I'm pressing Up on a specific folder,
+// and I expect that folder to be highlighted", which is the standing gesture
+// and not a remembered place. ENTERING a folder names nothing to seat on and
+// stays memory-less either way (the arms are at rebuild_rows).
+//
 // NOTHING LOOPS, WITH ONE SANCTIONED EXCEPTION — REPEAT ONE (architect
 // 2026-08-28, R26): the player's lamp is a two-state toggle, off or repeat
 // the ONE item ("the user can just press play once the playlist finishes...
@@ -180,11 +187,15 @@ struct GuiInputHandler;
 // words on a notification card and the transport resting on that item at its
 // start, never the folder's next wav. It is the
 // whole of the exception: nothing else in the product plays anything twice by
-// itself, and the state is session-only (false at every open, serialized
-// nowhere). THE LAMP GOVERNS THE NATURAL END ALONE: a deliberate Next
-// (next_track) walks to the folder's next wav under a lit lamp exactly as
-// under a dark one, because a press is not a file reaching its end (architect
-// 2026-09-04 — under the old act Next did nothing at all with the lamp lit).
+// itself, and the state is session-only (LIT at every open since 2026-09-11
+// — the architect's default is repeat the one item, and he kept the button's
+// name and glyph rather than inverting the lamp into a "play through" — and
+// serialized nowhere; the open is its one reset, so it forgets at the close
+// and survives everything in between). THE LAMP GOVERNS THE NATURAL END
+// ALONE: a deliberate Next (next_track) walks to the folder's next wav under
+// a lit lamp exactly as under a dark one, because a press is not a file
+// reaching its end (architect 2026-09-04 — under the old act Next did
+// nothing at all with the lamp lit).
 //
 // AT THE FOLDER'S LAST WAV, with the lamp off, the transport stops with the
 // item resting at its start AND THAT IS ALL IT MEANS — the next Play replays
@@ -455,9 +466,9 @@ struct GuiRenderPlayer {
     // REPEAT ONE (architect 2026-08-28, R26) — the row's one lamp, flipped by
     // its button and by bare `r`: while it stands the natural end replays the
     // item from its start instead of advancing. Session-only state
-    // (AppState::RenderPlayer::repeat_one, false at every open), and this is
-    // its ONE writer past that reset; it damages the row for the lamp and
-    // touches no transport.
+    // (AppState::RenderPlayer::repeat_one, LIT at every open since
+    // 2026-09-11), and this is its ONE writer past that reset; it damages the
+    // row for the lamp and touches no transport.
     void toggle_repeat_one();
     // Seek by `delta_frames` from the current position, clamped into the
     // item; a no-op with no item. A live transport reseeks in place, a paused
@@ -735,13 +746,20 @@ private:
     // nothing itself: the fork inside the stop body pushes a paused state that
     // both callers supersede with their own.
     void unload_item(UnloadTail tail);
-    // Rebuild the listing for the live folder: rows, scroll 0, the highlight
-    // on the transport's item's row if it is here else row 0, hover and press
-    // cleared. Damages the band.
-    void rebuild_rows();
-    // Enter a folder: the Root, which IS `tmp/`, or the batch at `dir`.
+    // Rebuild the listing for the live folder: rows, scroll 0, hover and
+    // press cleared, and the highlight through THE SEAT RULE'S THREE ARMS —
+    // the transport's item's row if it is here, else `seat_folder`'s row if
+    // the caller named one and it is here, else row 0. Damages the band.
+    // `seat_folder` IS REQUIRED AND IS EMPTY EVERYWHERE BUT UP: entering a
+    // folder is memory-less by ruling, so a caller must state that it names
+    // none rather than inherit a default (the rule and the architect's words
+    // are at the seat block, render_player.cpp).
+    void rebuild_rows(const std::filesystem::path& seat_folder);
+    // Enter a folder: the Root, which IS `tmp/`, or the batch at `dir`;
+    // `seat_folder` is passed straight to the seat rule above.
     void enter(AppState::RenderPlayer::Folder folder,
-               const std::filesystem::path& dir);
+               const std::filesystem::path& dir,
+               const std::filesystem::path& seat_folder);
     // Decode `path` under the vocabulary above; on success bind it as the
     // item and play it from its start. `folder_wavs` / `index` name the
     // item's folder list and its place in it. Returns whether it played; a
