@@ -115,7 +115,10 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // (app_state.h).
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
-    app.follow_overridden_for_session = false;
+    // THE STOP ENDS THE CHASE: no chase outlives the session it began in, so
+    // the next play chases only if the user armed the lamp for it (the writer
+    // inventory is at app.follow_engaged, app_state.h).
+    app.follow_engaged = false;
 }
 
 // The one owner of the modal-open stop. See the declaration for the decision
@@ -191,12 +194,13 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
         stop_playback_if_playing();
         return;
     }
-    // Defensive: clear any stale override from an unhandled stop path so
-    // it can't survive into the new playback session. Runs before any
-    // launch validation (the device and pre-sum gates below included), so a
-    // refused launch still leaves it cleared; the shared launch body assumes
-    // its caller ran it (scrub_launch_at, the other caller, does too).
-    app.follow_overridden_for_session = false;
+    // Defensive: clear any stale chase from an unhandled stop path so it
+    // can't survive into the new playback session. Runs before any launch
+    // validation (the device and pre-sum gates below included), so a REFUSED
+    // launch leaves the chase off — and leaves the armed lamp alone, the
+    // spend being the success tail's; the shared launch body assumes its
+    // caller ran this (scrub_launch_at, the other caller, does too).
+    app.follow_engaged = false;
     // THE DEVICE IS REOPENED HERE, AHEAD OF THE POSITION (asked 2026-08-30;
     // a REOPEN since 2026-09-02, architect — the four-tier review's R-3: the
     // AAudio backend reopened a dead stream inside play(), and a read ahead of
@@ -315,10 +319,10 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
     // keeps a future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
     // The same defensive clear toggle_playback's play edge runs (the launch
-    // body assumes its caller ran it): a stale override must not survive into
-    // the new session, and a refused launch leaves it cleared exactly as a
-    // refused Space does.
-    app.follow_overridden_for_session = false;
+    // body assumes its caller ran it): a stale chase must not survive into the
+    // new session, and a refused launch leaves it off exactly as a refused
+    // Space does.
+    app.follow_engaged = false;
     launch_playback_from(frame);
 }
 
@@ -365,7 +369,19 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // its launch so the body's seed fork can read it. The edge inventory is at
     // GuiAuditionSequence (app_state.h), owner (2).
     clear_audition_sequence(app);
-    return launch_playback_window(launch_pos, active_view_play_end());
+    if (!launch_playback_window(launch_pos, active_view_play_end()))
+        return false;
+    // THE ONE-SHOT IS SPENT HERE, in the success tail (architect 2026-09-11):
+    // the lamp says "the next play follows", this IS that next play, so the
+    // arm becomes the chase and the lamp goes out. The two roads through this
+    // entry are the project's own launches — Space's play arm and the scrub's
+    // — and the A/B audition's plays enter the body directly, which is what
+    // keeps the act from spending a lamp it does not use. A REFUSED launch
+    // returned above and consumed nothing: the lamp stays lit for the press
+    // that does play.
+    app.follow_engaged = app.follow_armed;
+    app.follow_armed   = false;
+    return true;
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -383,8 +399,13 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     if (playback.is_playing()) return false;
     if (span <= 0) return false;
     // The same defensive clear the other two launch entries run before their
-    // own validation (the launch body assumes its caller ran it).
-    app.follow_overridden_for_session = false;
+    // own validation (the launch body assumes its caller ran it) — and here it
+    // is also the act's whole relationship with follow: THE AUDITION NEITHER
+    // SPENDS THE LAMP NOR CHASES (architect 2026-09-11). Its four bounded
+    // plays are each framed by their own `c`, so a chase would only fight that
+    // framing, and the lamp the user armed is about his NEXT play — it stands
+    // untouched across the whole sequence, this road passing no launch tail.
+    app.follow_engaged = false;
     const int64_t view_end = active_view_play_end();
     if (start >= view_end - 1) return false;
     const int64_t end = std::min(start + span, view_end);
@@ -533,17 +554,17 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // If the launch position is offscreen at play press, left-edge-align the
     // viewport on it before the scanner issues forth (Space launches from the
     // possibly-offscreen cursor; a scrub click is a visible column by
-    // construction, so this no-ops there). Follow mode's same-shape check is
-    // sufficient regardless of whether the user has follow mode toggled on,
-    // so always run it on press.
+    // construction, so this no-ops there). Follow's own check has exactly the
+    // right shape for it whether or not this play will chase, so always run it
+    // on press.
     // UNDER THE CENTERED LAMP THE SEED IS THE DERIVATION instead (2026-08-31,
     // R11): the scanner issues forth CENTERED where follow's check would
     // left-edge-align it, so the first frame already holds the invariant
     // rather than taking a visible two-step (align, then the pre-paint's
     // recenter one frame later). Unconditional on the lamp for the same
-    // reason the follow-shape check is unconditional here — the launch edges
-    // clear the pan suppression before this line, so a new session always
-    // starts pinned.
+    // reason the follow-shape check is unconditional here: the seed is about
+    // the scanner issuing forth VISIBLE, which is owed whatever the follow
+    // lamp says and whether or not this play will chase.
     // THE A/B AUDITION'S OWN PLAYS TAKE FOLLOW'S ARM (architect 2026-09-01,
     // the act disregarding the pin whole): each of its four launches must seed
     // exactly as it would with centered=false, or a play launched after the
@@ -624,10 +645,10 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
 // immediate scanner teardown (stop_playback_if_playing). No follow-scroll at
 // the reseek site: the reseek repositions without recentering the viewport.
 //
-// stop_playback_if_playing clears follow_overridden_for_session. The
-// placement caller sets it back to true immediately AFTER this returns
-// (having already run move_playhead_to before), so the reset is a harmless
-// transient there — that caller owns the override across the reseek.
+// stop_playback_if_playing clears app.follow_engaged, and the placement
+// caller clears it too immediately AFTER this returns (having already run
+// move_playhead_to before), so the two agree by construction whichever arm
+// runs — an aiming click ends the chase either way.
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     // (NO A/B AUDITION CLEAR HERE: the act's clear is the MOVEMENT OWNER's, one
     // call up. This body's one caller — place_playhead_at_click_column,
@@ -666,27 +687,43 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     playback.play(sample, song_end);
 }
 
-// Set follow mode (contract at the header declaration). Shared by the bare-`f`
-// toggle and the icon-row button that synthesizes that chord.
-void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
-    const bool was_off = !app.follow_mode;
-    app.follow_mode = desired;
-    if (was_off && app.follow_mode && playback.is_playing()) {
-        // Explicit enable clears a prior pan suppression so follow resumes
-        // paging, not just the one initial jump — which since 2026-07-30 is this
-        // arm's whole purpose, the "manual-pan suppression" it names finally
-        // having pan producers (every viewport pan during playback sets the
-        // flag; the producer inventory is at its declaration in app_state.h).
-        // Land the scanner at the page-turn position if it had drifted
-        // offscreen; no-op when it is already in view.
-        app.follow_overridden_for_session = false;
-        playback.resync_predictor();
-        viewport.follow_scroll_if_needed();
+// The follow key's one chokepoint (contract at the header declaration).
+// Shared by the bare-`f` toggle and the icon-row button that synthesizes that
+// chord, and it takes no value because the two arms below write two different
+// bits.
+void GuiPlaybackLifecycle::toggle_follow() {
+    // A PROJECT PLAY IN FLIGHT is playback live with the A/B audition NOT
+    // standing: the act's four bounded plays are each framed by their own `c`
+    // and never chase, so a press during one is about the user's next play and
+    // takes the lamp arm below, exactly as a press at rest does.
+    if (playback.is_playing() &&
+        app.audition_sequence.phase == GuiAuditionSequence::Phase::Idle) {
+        // THE PLAY IN FLIGHT IS THE SUBJECT AND THE LAMP IS NOT TOUCHED: this
+        // play's launch already spent whatever was armed, so there is nothing
+        // here to light — the press says "chase / stop chasing THIS play".
+        const bool engage = !app.follow_engaged;
+        app.follow_engaged = engage;
+        if (engage) {
+            // Resume PAGING, not just the one initial jump: re-anchor the
+            // predictor as every discrete camera move does, and land the
+            // scanner at the page-turn position if a pan had left it offscreen
+            // (a no-op when it is already in view).
+            playback.resync_predictor();
+            viewport.follow_scroll_if_needed();
+        }
+        // The off edge writes nothing else — the camera stays where the chase
+        // left it, which is what a pan's own clear leaves behind too.
+        return;
     }
+    // ARM OR DISARM THE LAMP, and nothing else: the promise is about a launch
+    // that has not happened yet, and the next one spends it (the mechanism is
+    // at app.follow_armed, app_state.h). The face repaints through the
+    // per-tick comparator, so this mutator owes no damage.
+    app.follow_armed = !app.follow_armed;
 }
 
 // Set the centered pin (contract at the header declaration) — the `y` lamp's
-// one gesture chokepoint, set_follow_mode's sibling above.
+// one gesture chokepoint, toggle_follow's sibling above.
 void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
     const bool was_off = !app.centered_mode;
     app.centered_mode = desired;
@@ -699,13 +736,11 @@ void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
     if (was_off && centered_pin_engaged(app)) {
         // THE TOGGLE ITSELF RECENTERS — the invariant starts holding at the
         // press, not at the next playhead change. During live playback the
-        // explicit enable clears a prior pan suppression exactly as follow's
-        // off→on arm does (the user re-engaged the autonomous mover), and the
-        // one-shot jump re-anchors the predictor like every discrete pan.
-        if (playback.is_playing()) {
-            app.follow_overridden_for_session = false;
-            playback.resync_predictor();
-        }
+        // one-shot jump re-anchors the predictor like every discrete pan. It
+        // clears no chase bit: the pin and the follow chase stopped sharing a
+        // suppression when follow became a one-shot (2026-09-11), and while
+        // this lamp stands the camera is the playhead's whatever a pan did.
+        if (playback.is_playing()) playback.resync_predictor();
         // (The derivation memory is stamped by the body itself — its one
         // writer since codex round C, so the next pre-paint does not re-derive
         // a camera this press just derived. No hand-kept stamp here.)

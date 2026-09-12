@@ -1231,8 +1231,8 @@ struct TrimDragState {
 //     still leaves the cursor somewhere ordinary), the crossing event folds
 //     the whole press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
-//     what suppresses follow for the session (the pan producer class at
-//     follow_overridden_for_session). A PAN IS A PURE VIEWPORT MOVE: it moves
+//     what ends the follow chase for the play in flight (the pan producer
+//     class at follow_engaged). A PAN IS A PURE VIEWPORT MOVE: it moves
 //     NO playhead, hides NO overlay and clears NO selection, seeds nothing.
 // THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -1644,9 +1644,9 @@ struct ScrollDragState {
 // job the box's own three motions already do.
 // Navigation-class: touches no playhead, no region, no selection, allowed in
 // read-only and live in the `h` view (the lane's claim sits above the mode's
-// gate). Follow suppression: the pan and the teleport ride scroll_viewport's
-// funnel, the edge drags apply_strip_drag_zoom's either-axis term — the
-// producer inventory at follow_overridden_for_session. Cursors: the box EDGES
+// gate). The follow chase: the pan and the teleport ride scroll_viewport's
+// funnel and the edge drags apply_strip_drag_zoom's either-axis term, each
+// ending a chasing play — the producer inventory at follow_engaged. Cursors: the box EDGES
 // wear the trim endcaps' own pair and THE WHOLE REST OF THE LANE WEARS
 // TrimResize (the bridge's own shape — the pan is an x-only slide of the whole
 // span), inside the box and outside it alike, because the plain drag is that
@@ -2921,7 +2921,7 @@ enum class RedesignButton {
     //
     // IT WEARS THE SELECTED FACE, being a mode — the roster's standing rule
     // and the lamp IconFollow already wears, reading the live bit
-    // its own chord flips. THE ROW HAS A LAMP AGAIN because of it, having had
+    // its own chord writes. THE ROW HAS A LAMP AGAIN because of it, having had
     // none between the Cumulative toggle's departure earlier the same day and
     // this arrival.
     //
@@ -4859,7 +4859,7 @@ struct AppState {
     bool    loading               = false;
 
     // Live working copy of the active view's state — exactly the three view
-    // fields immediately below, playhead / zoom / viewport (follow_mode after
+    // fields immediately below, playhead / zoom / viewport (follow_armed after
     // them is a session posture, not a per-tab mirror). The SELECTION is NOT one of
     // them: it lives here alone and is parked nowhere, see selected_markers.
     // This is an INTENTIONAL cache of the active view's per-view slot, not
@@ -4872,21 +4872,57 @@ struct AppState {
     int64_t playhead_cursor_sample = 0;
     double  zoom_level             = kWorkingZoomLevel;
     int64_t viewport_start_sample  = 0;
-    // FOLLOW THE PLAYHEAD — the `f` lamp. A SESSION POSTURE in the
+    // FOLLOW THE PLAYHEAD — the `f` lamp, WHICH IS ARMED AND THEN SPENT
+    // (architect 2026-09-11). The lamp says one thing: THE NEXT PLAY FOLLOWS.
+    // The user arms it by hand (bare `f`, its icon-row button), and the next
+    // play of the project's audio CONSUMES it at its launch — the launch tail
+    // copies it into follow_engaged below and puts the lamp out. Nothing is
+    // remembered: a play that chased leaves the lamp dark behind it, and
+    // chasing the play after that one means arming it again.
+    // A SESSION POSTURE in the
     // add_to_selection family (the family's record is at that declaration
     // below): it answers what the user is doing right now rather than what the
     // piece determines, so it is in no settings vocabulary, is never
     // serialized, is never in the undo domain, is not carried by `'`, and
     // starts DARK at every project open — a reopen as much as a launch —
-    // because run_project constructs this AppState fresh each time. Its
-    // writers are bare `f`, its icon-row button, and the setter they share.
-    bool    follow_mode            = false;
+    // because run_project constructs this AppState fresh each time.
+    // TWO WRITERS: GuiPlaybackLifecycle::toggle_follow — the one chokepoint
+    // bare `f` and its button share — which writes this field only when NO
+    // project play is in flight (with one in flight the same press toggles
+    // that play's chase instead and leaves the lamp alone), and the launch
+    // tail that spends it. So a lit lamp and a project play in flight cannot
+    // stand together, and the face reads this field alone.
+    bool    follow_armed           = false;
 
-    // True when the user has taken the viewport away from the chase for the
-    // current playback session, which stops follow_scroll_if_needed from
-    // snatching it back on the next tick. THE PRODUCER INVENTORY (grep-derived;
-    // this is the ONE authoritative copy — the sites carry a class statement plus
-    // a pointer here) is TWO CLASSES, both gated on playback being live:
+    // THE PLAY IN FLIGHT IS CHASING — true exactly while the viewport is to
+    // keep the scanner in view, and false everywhere else (at rest, and in a
+    // play the user never armed follow for). ONE READER CLASS, the chase
+    // itself: the pre-paint hook's autopager gate (main.cpp), which asks it
+    // with its two aiming terms beside it. THE CENTRED PIN READS NOTHING HERE
+    // — what a pan does to the pin is the pin's own rule, stated at
+    // centered_mode below.
+    //
+    // THE WRITER INVENTORY (re-greped 2026-09-11; this is the ONE
+    // authoritative copy — the sites carry a class statement plus a pointer
+    // here).
+    // SET BY THE LAUNCH, which is the one-shot's whole mechanism:
+    // GuiPlaybackLifecycle::launch_playback_from's SUCCESS TAIL copies the
+    // armed lamp above into this field and puts the lamp out. Its two callers
+    // are the two project-audio launch roads — Space's play arm
+    // (toggle_playback) and the scrub's launch (scrub_launch_at) — and a
+    // REFUSED launch reaches no tail, so it consumes nothing and leaves the
+    // lamp lit for the next attempt. THE A/B AUDITION'S FOUR PLAYS NEVER PASS
+    // THAT ENTRY (launch_bounded_audition goes straight to the launch body),
+    // so the act neither spends the lamp nor chases: each of its bounded plays
+    // is framed by its own `c`.
+    // SET AND CLEARED BY THE IN-FLIGHT ARM of GuiPlaybackLifecycle::
+    // toggle_follow, bare `f`'s (and its button's) other half: with a project
+    // play in flight the press turns THIS bit on or off for that play and
+    // never touches the lamp — the on edge resyncing the predictor and paging
+    // the scanner back into view, the off edge writing nothing else.
+    // CLEARED BY EVERY PAN DURING PLAYBACK — the user has taken the viewport
+    // away from the chase, so the chase stops snatching it back on the next
+    // tick. TWO PRODUCER CLASSES, both gated on playback being live:
     //   * ANY VIEWPORT PAN (joined 2026-07-30, architect — "every pan
     //     suppresses"): Viewport::scroll_viewport's changed branch, which is the
     //     funnel for PageUp/PageDown, the ALT+WHEEL stepped pan, touchpad
@@ -4899,51 +4935,41 @@ struct AppState {
     //     pure viewport move of the pan class) and its BOX-FOLLOWS-POINTER PAN
     //     (apply_overview_drag_at's Pan arm, per event); plus
     //     Viewport::apply_strip_drag_zoom, which bypasses that
-    //     funnel and suppresses on EITHER axis its callers write — its own
+    //     funnel and ends the chase on EITHER axis its callers write — its own
     //     viewport write AND its level write, the drag's zoom being SONG-ANCHORED
     //     and so carrying the view off the scanner the same way a pan does (a
     //     level change can leave the viewport start bit-identical, which is why
     //     the site tests both); the overview lane's EDGE drags ride that same
-    //     site, their per-event zoom applying through it. Before this the flag's
-    //     "manual-pan suppression" named a producer class that did not exist and
-    //     panning away during playback was impossible with follow on (the
-    //     default). A pure keyboard ZOOM is deliberately NOT a producer: it
-    //     centers on the scanner during playback, so it never leaves the chase.
+    //     site, their per-event zoom applying through it. A pure keyboard ZOOM
+    //     is deliberately NOT a producer: it centers on the scanner during
+    //     playback, so it never leaves the chase.
     //   * the PLACEMENT (place_playhead_at_click_column, input_pointer.cpp),
-    //     which moves the cursor and reseeks. IT SUPPRESSES THE CENTRED PIN
-    //     TOO, AND THAT IS RULED (architect 2026-09-02, the four-tier review's
-    //     R-9): the pin reads this same bit, so a reseek click during playback
-    //     under a lit `y` stops the centring for the session and leaves the
-    //     lamp lit. The click IS AN AIMING GESTURE and takes the camera on
-    //     follow's own precedent — "centering is not a camera for extended
-    //     listening or for moving the playhead, it is for A/B nudging with the
-    //     Shift+Space compare" — so this is one producer class with one
-    //     meaning, not follow's rule leaking onto the pin. A click that
-    //     changes no playhead still sets the bit, accepted under the same
-    //     reading. The bit's THREE true writers are this site,
-    //     scroll_viewport and apply_strip_drag_zoom (viewport.cpp). THREE ROUTES REACH IT (re-derived 2026-08-12, the membership
-    //     matching reseek_keeping_alive's own at playback_lifecycle.cpp): the
+    //     which moves the cursor and reseeks. The click IS AN AIMING GESTURE
+    //     and takes the camera on follow's own precedent — the user placed the
+    //     cursor deliberately, so the chase must not page the viewport away
+    //     from it. A click that changes no playhead still clears the bit,
+    //     accepted under the same reading. The bit's THREE pan-class writers
+    //     are this site, scroll_viewport and apply_strip_drag_zoom
+    //     (viewport.cpp). THREE ROUTES REACH IT (re-derived 2026-08-12, the
+    //     membership matching reseek_keeping_alive's own at
+    //     playback_lifecycle.cpp): the
     //     DEFERRED CLICK ACT at a plain navigation-surface press's motionless
     //     release (run_nav_click_act — the upper half, the ruler and the empty
     //     marker lane, live and `h`-view arms alike, though the view's cannot
     //     actually produce, playback being unreachable inside it since
     //     2026-08-05; the act's LOWER-HALF scrub arm is deliberately NOT a
-    //     producer — it returns above the placement and overrides no follow,
+    //     producer — it returns above the placement and ends no chase,
     //     2026-08-13), the LIVE shift former's press, and the view's own shift
     //     former.
-    // CLEARED at SIX sites (re-greped 2026-09-02, all in
-    // playback_lifecycle.cpp): the ONE stop body, stop_playback_if_playing (both
-    // stop edges — Space's and the tick's natural end — collapsed onto it, retiring
-    // the second clearer that used to sit in restore_playhead_to_lsp); the THREE
-    // LAUNCH entries' defensive clears — toggle_playback's play arm,
-    // scrub_launch_at and launch_bounded_audition — each running
-    // before its own validation so even a refused launch leaves it clear; and
-    // the TWO LAMP RE-ENGAGEMENTS while playing, follow's off→on arm and the
-    // CENTRED lamp's (set_follow_mode and set_centered_mode). So the chase
-    // resumes at the next launch, or at either lamp's OFF→ON edge (the off
-    // edge writes nothing), so a suppressed session is recovered by
-    // re-engaging the centred pin exactly as by re-engaging follow.
-    bool    follow_overridden_for_session = false;
+    // CLEARED AT THE STOP AND DEFENSIVELY AT EVERY LAUNCH ENTRY (four sites,
+    // re-greped 2026-09-11, all in playback_lifecycle.cpp): the ONE stop body,
+    // stop_playback_if_playing (both stop edges — Space's and the tick's
+    // natural end — collapsed onto it), so no chase outlives the session it
+    // began in; and the THREE LAUNCH entries' defensive clears —
+    // toggle_playback's play arm, scrub_launch_at and launch_bounded_audition
+    // — each running before its own validation, so a refused launch leaves the
+    // chase off and the audition's own plays run with it off by that write.
+    bool    follow_engaged         = false;
 
     // KEEP VIEWPORT CENTERED ON PLAYHEAD — the `y` lamp (architect
     // 2026-08-31, R11). A SESSION POSTURE in the add_to_selection family (the
@@ -4957,9 +4983,12 @@ struct AppState {
     // clamp_viewport_start clamping at the song's two ends, where the
     // playhead walks off-center because no waveform remains. The ONE
     // derivation body is Viewport::derive_centered_viewport (ownership
-    // statement there); the pin SHARES follow's suppression bit above — an
-    // aiming pan during playback takes the camera from BOTH autonomous
-    // movers for the session, the same truth the bit has always told.
+    // statement there); THE PIN READS NO CHASE BIT (2026-09-11, when follow
+    // became a one-shot and follow_engaged narrowed to the chase alone): while
+    // the lamp stands the camera is a FUNCTION of the playhead and nothing
+    // else, so a pan during playback is re-derived away on the next frame —
+    // the pin and the chase no longer share a suppression, and what a pan does
+    // to this lamp is this lamp's own rule.
     //
     // THIS FIELD IS THE PREFERENCE, NOT THE ENGAGEMENT (architect 2026-09-01):
     // the A/B audition disregards the pin for its whole duration, so every
@@ -5043,10 +5072,7 @@ struct AppState {
     // AUDITION'S LAST PLAY WAS A FOURTH ROAD HERE UNTIL 2026-09-01: the act
     // disregards the pin whole now, so its plays never derive and never stamp
     // a SCANNER subject for this term to catch — its own end is carried by the
-    // void below instead. A session whose pin was suppressed by a manual pan
-    // during playback re-pins at that stop too: the suppression is the
-    // SESSION's (the stop body clears the bit), and the resting half has
-    // never consulted it.
+    // void below instead.
     //
     // The pre-paint hook re-derives when the subject has flipped back to the
     // cursor or the (tab, audio view, cursor) triple has MOVED since — which
@@ -13844,9 +13870,10 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconWaveformReduce:
             return is_waveform_magnification_level(
                 waveform_magnification_step_target(a, -1));
-        // FOLLOW MIRRORS NOTHING: bare `f` toggles the chase in either
-        // direction on any loaded piece, and the lock admits it (follow is
-        // navigation, not authored content). Its lamp reports the state.
+        // FOLLOW MIRRORS NOTHING: bare `f` always does something on a loaded
+        // piece — it arms or disarms the lamp at rest, and turns the chase on
+        // or off for a play in flight — and the lock admits it (follow is
+        // navigation, not authored content). Its lamp reports the arm.
         case RedesignButton::IconFollow:
         // THE CENTERED LAMP MIRRORS NOTHING EITHER (2026-08-31, R11), on
         // follow's exact answer: bare `y` toggles the pin in either direction
@@ -14975,7 +15002,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
             return a.active_audio_view   == 'T';
         case RedesignButton::IconMarkerColumn:
             return a.active_markers_view == 'P';
-        case RedesignButton::IconFollow: return a.follow_mode;
+        // FOLLOW'S LAMP IS THE ARM, NOT THE CHASE (2026-09-11): the field it
+        // reads is the one-shot the next play will spend, so the face says
+        // exactly what the lamp promises. A play in flight cannot be found
+        // with it lit — the launch spends it — and bare `f` during such a play
+        // toggles that play's chase without lighting anything, which is why
+        // this arm has one term and not a fork.
+        case RedesignButton::IconFollow: return a.follow_armed;
         // The centered lamp (2026-08-31): the same toggle pattern, reading
         // the live bit bare `y` flips, so the lit face and the pin cannot
         // drift.

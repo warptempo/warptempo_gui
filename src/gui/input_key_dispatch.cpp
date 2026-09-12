@@ -8885,10 +8885,13 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         run_waveform_lane_playhead_step(+1);
         break;
     case GuiKeys::F:
-        // Toggle follow mode. The full body (off→on edge resync) lives in
-        // GuiPlaybackLifecycle::set_follow_mode, shared with the icon-row
-        // button's synthesized chord and with nothing else.
-        playback_lifecycle.set_follow_mode(!app.follow_mode);
+        // Toggle follow. The whole body — the fork between ARMING THE LAMP for
+        // the next play and toggling the CHASE of a play already in flight —
+        // lives in GuiPlaybackLifecycle::toggle_follow, shared with the
+        // icon-row button's synthesized chord and with nothing else. The press
+        // computes no desired value: which bit it is about is the transport's
+        // answer, not the dispatch's.
+        playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::Y:
         // Toggle the centered pin (2026-08-31, R11). The full body — the

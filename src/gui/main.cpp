@@ -2843,12 +2843,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
         // hand-spelled pair this branch and Space's stop edge both carried
         // collapsed onto stop_playback_if_playing, the product's one stop body. The
-        // follow-scroll tail that used to run here — `if (follow_mode &&
-        // !follow_overridden_for_session) follow_scroll_if_needed();` — is DELETED,
-        // and the two asymmetries flagged against it (its override guard was dead,
-        // the stop having just cleared that flag; and it could scroll the viewport
-        // BACK to the restored playhead, which the Space stop never does) die WITH
-        // the arm rather than being fixed inside it.
+        // follow-scroll tail that used to run here — a last chase page at the
+        // natural end — is DELETED, and the two asymmetries flagged against it
+        // (its chase guard was dead, the stop having just cleared the chase;
+        // and it could scroll the viewport BACK to the restored playhead,
+        // which the Space stop never does) die WITH the arm rather than being
+        // fixed inside it.
         //
         // THE FENCE-BEFORE-FLAG-CLEAR ORDERING SURVIVES THE COLLAPSE, and it is the
         // whole reason this branch calls anything at all: the session word's
@@ -3084,11 +3084,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // subsumes the narrow-on-plate pair below — the pan-class damage
         // erases the old line wholesale and the lane with it — so the narrow
         // pair and the overview pair run only when the pin did not move the
-        // camera: lamp unlit, the pin SUPPRESSED for the session (the follow
-        // funnel's own bit — a manual pan during playback takes both
-        // autonomous movers), the chase's aiming pause (a live gesture or
-        // finger), or the derivation CLAMPED at the song's ends, where the
-        // playhead walks off-center across a wall-parked viewport.
+        // camera: lamp unlit, the aiming pause (a live gesture or finger), or
+        // the derivation CLAMPED at the song's ends, where the playhead walks
+        // off-center across a wall-parked viewport.
         // THE FIFTH QUIET CASE IS THE A/B AUDITION (architect 2026-09-01):
         // centered_pin_engaged (app_state.h) leads the terms here as it does
         // at the resting half, so the act's four bounded plays scroll no
@@ -3096,7 +3094,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // lamp unlit — which is what "the audition disregards the toggle"
         // means for the plays themselves.
         bool centered_recentered = false;
-        if (centered_pin_engaged(app) && !app.follow_overridden_for_session &&
+        if (centered_pin_engaged(app) &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active()) {
             centered_recentered = viewport.derive_centered_viewport();
         }
@@ -3155,14 +3153,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // PAUSING THE MOVER is the whole fix: with the chase held, the
         // press-time viewport stays valid by construction and every existing
         // conversion is already correct — nothing captures frames at the press
-        // and nothing about the click act, the fold or the session override
-        // moves. This is a PAUSE, not a suppression: it writes nothing, so the
-        // follow producer inventory (follow_overridden_for_session, app_state.h)
-        // is unchanged and the chase simply resumes and catches up on the next
-        // tick after the gesture ends — including after a lost button or a
-        // force-end that ran no act at all. A long motionless HOLD therefore
-        // visibly freezes the chase for as long as it is held, which is the
-        // intended reading: the user is aiming.
+        // and nothing about the click act or the fold moves. This is a PAUSE,
+        // not an end: it writes nothing, so the producer inventory
+        // (follow_engaged, app_state.h) is unchanged and the chase simply
+        // resumes and catches up on the next tick after the gesture ends —
+        // including after a lost button or a force-end that ran no act at
+        // all. A long motionless HOLD therefore visibly freezes the chase for
+        // as long as it is held, which is the intended reading: the user is
+        // aiming.
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during the disambiguation
         // window; the contract is at the touch state block, input_core.h.
@@ -3170,11 +3168,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // gated (2026-08-31, R11 — no exclusivity machinery, two independent
         // lamps): the pin's per-frame recenter above runs first and holds the
         // scanner at the center column, so the chase's own leaves-the-window
-        // test simply never fires — and wherever the pin is suppressed or
-        // paused, both movers read the SAME bit and the same aiming terms, so
-        // they go quiet together. Follow at rest and with the lamp unlit is
-        // untouched.
-        if (app.follow_mode && !app.follow_overridden_for_session &&
+        // test simply never fires. The two movers share the AIMING terms and
+        // nothing else since 2026-09-11 — the pin reads no chase bit, and a
+        // pan that ends the chase leaves the pin deriving.
+        // THE BIT IS THE PLAY'S, NOT THE LAMP'S: follow is a one-shot, so
+        // this asks whether the play IN FLIGHT is chasing (the launch that
+        // spent the armed lamp is what turned it on; every pan turns it off,
+        // and bare `f` mid-play turns it either way) — the `f` lamp itself is
+        // the promise for the NEXT launch and is not read here.
+        if (app.follow_engaged &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     });

@@ -520,10 +520,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     if (!final && !level_changed && !vp_changed) return;
 
     // THE STRIP DRAG BYPASSES scroll_viewport (it writes the viewport itself,
-    // above), so it carries the same follow suppression here: every user pan
-    // suppresses follow for the session (architect 2026-07-30; the funnel copy
-    // is in scroll_viewport, the producer inventory at the flag's declaration in
-    // app_state.h). Gated on playback being live exactly as the funnel is, and
+    // above), so it ends the follow chase here as the funnel does: every user
+    // pan during playback takes the camera from the chase (architect
+    // 2026-07-30; the funnel copy is in scroll_viewport, the producer
+    // inventory at the bit's declaration in app_state.h). Gated on playback being live exactly as the funnel is, and
     // on EITHER STRIP AXIS having moved — not on the viewport alone. The ZOOM
     // axis is a first-class producer here: this zoom is SONG-ANCHORED (the
     // grabbed sample stays pinned at its column), so it carries the view off the
@@ -549,7 +549,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // the true-no-op early return above takes it, and the terminating event falls
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
-        app.follow_overridden_for_session = true;
+        app.follow_engaged = false;
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -684,20 +684,21 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     app.viewport_start_sample += delta_samples;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
-        // EVERY PAN SUPPRESSES FOLLOW FOR THE SESSION (architect 2026-07-30).
-        // This is the pan funnel — PageUp/PageDown, the alt+wheel stepped pan,
-        // touchpad scroll
+        // EVERY PAN ENDS THE CHASE (architect 2026-07-30, "every pan
+        // suppresses"). This is the pan funnel — PageUp/PageDown, the
+        // alt+wheel stepped pan, touchpad scroll
         // and the plain-drag grab-pan all land here (the DRAG plain since
         // 2026-08-12, pan-primary; the WHEEL back on alt since 2026-08-27, the
         // plain form being the waveform magnification) — so one line covers the whole
         // class by construction. Inside the CHANGED guard, because a pan that
-        // moved nothing (wall-saturated) suppresses nothing, and gated on
+        // moved nothing (wall-saturated) ends nothing, and gated on
         // playback being live, matching the placement body's own `was_playing`
-        // gate: a pan while stopped must not pre-suppress the next session. The
-        // producer inventory lives at the flag's declaration (app_state.h); the
-        // flag is cleared at every stop edge and by an explicit `f` re-enable,
-        // which is what scopes the suppression to the session it was made in.
-        if (playback.is_playing()) app.follow_overridden_for_session = true;
+        // gate: a pan while stopped must not pre-empt the next play's chase.
+        // The producer inventory lives at the bit's declaration (app_state.h);
+        // the chase is turned back on for THIS play by a bare `f` press and by
+        // nothing else, and the next play chases only if the lamp was armed
+        // for it.
+        if (playback.is_playing()) app.follow_engaged = false;
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too — the flags carry their own text now, so this one
@@ -777,11 +778,11 @@ void Viewport::center_viewport_on_playhead() {
 // exactly the budget a grab-pan frame already proved. NO PREDICTOR RESYNC —
 // the per-frame case is the continuous pan's (a per-frame re-anchor would
 // step the scanner), and at rest there is no predictor to resync. AND NO
-// FOLLOW SUPPRESSION: this is the autonomous mover itself, not a user pan,
-// so it must never write follow_overridden_for_session — which is also the
-// bit that SUPPRESSES this body for the session when a manual pan during
-// playback takes the camera away (the gate is the callers', at the pre-paint
-// hook; the producer inventory is at the flag's declaration, app_state.h).
+// FOLLOW SUPPRESSION: this is the autonomous mover itself, not a user pan, so
+// it must never write follow_engaged — the follow chase's own bit, which this
+// body neither reads nor produces (since 2026-09-11 the pin reads no chase
+// bit at all: while its lamp stands the camera is a function of the playhead,
+// so a pan during playback is re-derived away on the next frame).
 bool Viewport::derive_centered_viewport() {
     if (audio.total_frames() <= 0) return false;
     // Split-playhead, center_viewport_on_playhead's own ternary: during

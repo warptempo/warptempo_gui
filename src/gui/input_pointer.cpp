@@ -2716,9 +2716,9 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 
 // THE CLICK-TELEPORT: center the viewport on the pressed column's whole-song
 // position, zoom level UNCHANGED — a pure viewport move of the pan class (no
-// playhead, no region, no selection touch; follow suppressed for the session
-// by scroll_viewport's funnel exactly as any pan — the producer inventory at
-// follow_overridden_for_session, app_state.h). IT RUNS AT THE PRESS since
+// playhead, no region, no selection touch; a chasing play stops chasing
+// through scroll_viewport's funnel exactly as at any pan — the producer
+// inventory at follow_engaged, app_state.h). IT RUNS AT THE PRESS since
 // 2026-08-17 (CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN: an outside
 // press can only mean the teleport, so there is nothing for a lift to
 // disambiguate; the two-day lift deferral of 2026-08-15 — and the Pending kind
@@ -6688,7 +6688,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the ONLY difference between the halves now, and it is TWO differences
         // read honestly, both pre-existing and neither touched by this ruling:
         // the placement also DESELECTS, HIDES the trim region overlay and
-        // overrides follow for the session, while the scrub act touches no
+        // ENDS A CHASING PLAY'S CHASE, while the scrub act touches no
         // selection, no region, no cursor and no follow state at all (that is
         // what makes it the overlay's PREVIEW gesture — click inside the span
         // to audition it and the overlay stays up).
@@ -7012,11 +7012,11 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     viewport.move_playhead_to(sample);
     if (was_playing && sample != playhead_at_entry)
         playback_lifecycle.reseek_keeping_alive(sample);
-    // SUPPRESS THE CHASE for this session: the user placed the cursor
+    // END THE CHASE for the play in flight: the user placed the cursor
     // deliberately, so follow must not page the viewport away from it. One of
-    // two producer classes (the other being any viewport pan); the inventory and
-    // the clearing rule live at the flag's declaration, app_state.h.
-    if (was_playing) app.follow_overridden_for_session = true;
+    // two producer classes (the other being any viewport pan); the inventory
+    // and the rest of the bit's writers live at its declaration, app_state.h.
+    if (was_playing) app.follow_engaged = false;
     return sample;
 }
 

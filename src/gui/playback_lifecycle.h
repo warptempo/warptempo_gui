@@ -306,26 +306,33 @@ struct GuiPlaybackLifecycle {
     // well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);
 
-    // Set follow mode to `desired`. Shared by the bare-`f` toggle (which
-    // passes !app.follow_mode) and the icon-row button that synthesizes that
-    // chord, which since the `follow` key left the schema 2026-09-11 are the
-    // whole membership. An off→on edge
-    // during live playback clears the manual-pan suppression and resyncs so
-    // follow resumes paging, not just the one initial jump; with playback
-    // stopped (the settings editor is modal, so its open stopped playback) the
-    // edge branch is inert and this is a plain field set.
-    void set_follow_mode(bool desired);
+    // THE FOLLOW KEY'S ONE CHOKEPOINT, and it TAKES NO VALUE because the
+    // subject is not always the same bit (architect 2026-09-11, follow's
+    // one-shot): shared by the bare-`f` toggle and the icon-row button that
+    // synthesizes that chord, which since the `follow` key left the schema
+    // 2026-09-11 are the whole membership.
+    // IT FORKS ON THE TRANSPORT. With NO project play in flight it toggles
+    // app.follow_armed, the lamp that says "the next play follows" — and
+    // nothing else happens, the arming being a promise about a launch that has
+    // not happened yet. WITH A PROJECT PLAY IN FLIGHT (playback live and the
+    // A/B audition not standing) it toggles app.follow_engaged for that play
+    // alone and leaves the lamp untouched: the on edge resyncs the predictor
+    // and pages the scanner back into view if it had drifted offscreen — the
+    // chase resuming its paging, not just taking one jump — and the off edge
+    // writes nothing else. During the A/B AUDITION the lamp is the subject:
+    // the act's plays never chase, so the press is about the user's next play.
+    void toggle_follow();
 
     // Set the centered pin to `desired` — the `y` lamp's one gesture
-    // chokepoint (2026-08-31, R11), set_follow_mode's sibling: shared by the
+    // chokepoint (2026-08-31, R11), toggle_follow's sibling: shared by the
     // bare-`y` toggle (which passes !app.centered_mode) and its icon-row
     // button (which synthesizes that chord), the whole membership since the
     // `centered` key left the schema 2026-09-11. History-less and serialized
     // nowhere — the pin is a session posture like follow. The
     // off→on edge recenters IMMEDIATELY through the one derivation body — the
     // invariant starts holding at the toggle — and during live playback also
-    // clears the manual-pan suppression and resyncs, follow's own re-engage
-    // shape. THE EDGE IS THE PIN'S ENGAGEMENT, NOT THE FIELD'S (2026-09-01):
+    // resyncs the predictor, the one-shot jump re-anchoring it like any
+    // discrete pan. THE EDGE IS THE PIN'S ENGAGEMENT, NOT THE FIELD'S (2026-09-01):
     // with an A/B audition standing the field is set and the lamp lights, but
     // nothing derives until the act ends.
     void set_centered_mode(bool desired);
@@ -340,13 +347,17 @@ private:
     // The view-end launch (contract at the definition): validate an absolute
     // paint-domain launch position and play from it to active_view_play_end.
     // Returns whether it launched. Callers (toggle_playback's play edge,
-    // scrub_launch_at) run the defensive follow-override clear before
+    // scrub_launch_at) run the defensive follow_engaged clear before
     // delegating. Since 2026-08-26 this is a thin caller of
     // launch_playback_window below, adding the end and — since 2026-09-01 —
     // THE USER-LAUNCH CLEAR of the A/B audition sequence ahead of the
     // delegation (owner (2) of the edge inventory at GuiAuditionSequence): a
     // launch of the user's own transport is a fresh session, refused or not,
     // and this entry is the only road into the body that is not the act's.
+    // IT IS ALSO WHERE THE FOLLOW LAMP IS SPENT (2026-09-11): its SUCCESS TAIL
+    // copies app.follow_armed into app.follow_engaged and puts the lamp out,
+    // which is exactly the two project-audio launch roads and not the
+    // audition's — that road enters the body directly.
     bool launch_playback_from(int64_t launch_pos);
     // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the
     // definition): validate `start`, seed the scanner, and play [start, end).

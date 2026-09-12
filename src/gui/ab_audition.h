@@ -78,7 +78,7 @@ struct GuiInputHandler;
 // phase BEFORE it launches and the act's road into the launch body runs no
 // clear (the flag that named the act by its entry for the first hours of
 // 2026-09-01 retired that evening). The lamp is untouched (this act writes no
-// field and it reports the persisted preference), and the pin re-engages at
+// field and it reports the standing preference), and the pin re-engages at
 // the act's end, on the resting cursor `c` has already centered.
 //
 // ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
