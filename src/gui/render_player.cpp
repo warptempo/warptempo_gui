@@ -448,9 +448,10 @@ bool render_player_next_track_actionable(const AppState& a) {
 // move_highlight steps by, so a wall and the step it predicts cannot disagree
 // about where a seatless band begins.
 bool render_player_previous_actionable(const AppState& a) {
-    // LIVE: the act is the left skip's own and always does something — inside
-    // the previous-track window it changes file, and past it the reseek
-    // re-lands the item's start, which is a landing wherever the cursor was.
+    // LIVE: every arm of the act lands somewhere — inside the previous-track
+    // window it changes file, or LEAVES THE FOLDER where the item has no file
+    // before it, and past the window the reseek re-lands the item's own start,
+    // which is a landing wherever the cursor was.
     if (a.render_player.transport == Transport::Live) return true;
     // AT REST: a row above, or a folder above. Only the root's first row
     // refuses, which is the one place the walk has nowhere left to go.
@@ -957,9 +958,9 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     }
 }
 
-// THE LIVE ARM'S FORK — the contract is at the declaration. THE PREVIOUS-TRACK
-// WINDOW (architect 2026-08-31, kPlayerPreviousThresholdMs) and, past it, the
-// seek to the item's own start with every refusal seek_to owns.
+// THE PREVIOUS-TRACK WINDOW'S ONE OWNER (architect 2026-08-31,
+// kPlayerPreviousThresholdMs; the contract is at the declaration): is the item
+// inside its own first three seconds?
 //
 // THE WINDOW IS THE POSITION THE CLOCK AND THE SCRUB SHOW — position(), the
 // one reader, which is the engine's cursor while live and the resume point at
@@ -970,25 +971,20 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
 // window).
 //
 // ONLY A LIVE TRANSPORT ASKS IT since 2026-09-12: at rest the press walks the
-// band, so this fork lives entirely under previous()'s live arm and the hint's
+// band, so the window lives entirely under previous()'s live arm and the hint's
 // own live arm. It answered in every transport state until then — `resume_frame`
 // being 0 at every idle rest by construction, an idle press took the window and
 // stepped back a file — and what replaced that is the walk, which is the same
 // listener's act said in the playlist's terms.
 //
-// THE FORK IS ONE OWNER since 2026-09-01 (render_player_home_takes_previous
-// below), which the Home button's hint reads too, so "Previous File" and
-// "Go to Start" are said exactly where each is what the press does — and,
-// since codex round A the same day, so does the hint's SHIFT line, which
-// compares this arm's destination with the shifted twin's and drops where the
-// folder's second item makes them one file.
-bool render_player_home_takes_previous(const AppState& a,
-                                       const GuiPlayback& playback,
-                                       const GuiAudio& audio) {
-    const AppState::RenderPlayer& rp = a.render_player;
-    const bool has_previous = render_player_first_in_item_folder_actionable(a) &&
-                              !rp.item.empty() && rp.frames > 0;
-    if (!has_previous) return false;
+// THE LIVE ARM ASKS IT TWICE, which is why it is a predicate of its own: once
+// WITH a previous entry beside it (render_player_home_takes_previous below,
+// the file step) and once WITHOUT one, where the same window's press LEAVES THE
+// FOLDER instead. One owner, so the two questions cannot drift, and the Home
+// hint's live arm reads them in the act's own order.
+bool render_player_inside_previous_window(const AppState& a,
+                                          const GuiPlayback& playback,
+                                          const GuiAudio& audio) {
     // The window in frames at the DEVICE's rate — the item's own rate by
     // the decode's equality. A rate the engine cannot name closes the
     // window rather than opening it wide.
@@ -998,12 +994,36 @@ bool render_player_home_takes_previous(const AppState& a,
     return render_player_position(a, playback) < window;
 }
 
+// THE LIVE ARM'S FIRST FORK — the contract is at the declaration: a previous
+// entry to play AND the window above. THE FORK IS ONE OWNER since 2026-09-01,
+// which the Home button's hint reads too, so "Previous File" and "Go to Start"
+// are said exactly where each is what the press does — and, since codex round
+// A the same day, so does the hint's SHIFT line, which compares this arm's
+// destination with the shifted twin's and drops where the folder's second item
+// makes them one file.
+bool render_player_home_takes_previous(const AppState& a,
+                                       const GuiPlayback& playback,
+                                       const GuiAudio& audio) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    const bool has_previous = render_player_first_in_item_folder_actionable(a) &&
+                              !rp.item.empty() && rp.frames > 0;
+    if (!has_previous) return false;
+    return render_player_inside_previous_window(a, playback, audio);
+}
+
 // THE PLAYLIST'S PREVIOUS (architect 2026-09-12, from the car) — the contract,
 // the three roads and the asymmetry's reason are at the declaration. THE FORK
-// IS THE TRANSPORT, and the wall is NOT CALLED HERE — it predicts this act
-// rather than gating it (render_player_previous_actionable, whose two arms ARE
-// the silent returns of what this body composes: move_highlight refuses at row
-// 0 and up() refuses at the root).
+// IS THE TRANSPORT, and the act's own wall is NOT CALLED HERE — it predicts
+// this act rather than gating it (render_player_previous_actionable, whose arms
+// ARE the silent returns of what this body composes: move_highlight refuses at
+// row 0 and up() refuses at the root).
+//
+// THE UP-A-FOLDER EXIT IS THIS ACT'S IN EVERY TRANSPORT STATE (architect
+// 2026-09-12, from the car, on the first drive with the playlist build: "Home
+// should do what Home does, whether it's playing or idle"). The rest arm walks
+// off the band's top and the LIVE arm walks off the folder's first FILE, one
+// rule said in each state's own units, and the previous-track window is the
+// only position term either arm reads.
 void GuiRenderPlayer::previous() {
     if (app.render_player.transport != Transport::Live) {
         // AT REST THE BAND IS THE PLAYLIST. A row above steps to it; the FIRST
@@ -1014,6 +1034,8 @@ void GuiRenderPlayer::previous() {
         else                                          up();
         return;
     }
+    // LIVE, IN THE ACT'S OWN ORDER. Inside the window with a file before this
+    // one: that file, from its start.
     if (render_player_home_takes_previous(app, playback, audio)) {
         const AppState::RenderPlayer& rp = app.render_player;
         const std::vector<Row> folder = rp.item_folder;
@@ -1021,6 +1043,20 @@ void GuiRenderPlayer::previous() {
         play_wav(folder[static_cast<size_t>(i)].path, folder, i);
         return;
     }
+    // INSIDE THE WINDOW AT THE FOLDER'S FIRST FILE: one more press back is out
+    // of the folder, exactly as it is at the band's first row — the item
+    // unloaded and the sound stopped by up()'s own body, which is what leaving
+    // a folder means here. THE WALL IS ASKED because the alternative is the
+    // restart: at the ROOT there is nothing above, so up() would return in
+    // silence and the press would do nothing at all, and a press inside the
+    // window there is the restart it has always been.
+    if (render_player_inside_previous_window(app, playback, audio) &&
+        render_player_up_actionable(app)) {
+        up();
+        return;
+    }
+    // PAST THE WINDOW (or at the root inside it): this file from its start,
+    // with every refusal seek_to owns.
     seek_to(0);
 }
 
@@ -1573,9 +1609,11 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
         case Kind::Previous:
             // The mirror of the arm above, wall and re-publish alike. WHICH
             // PUSH ANSWERS A PRESS THAT ACTS: a band walk publishes from
-            // move_highlight's own edge, and a Previous that goes UP publishes
-            // from the root entry's rebuild_rows — the last word over the stop
-            // body's fork inside the unload (the ordering is at up()).
+            // move_highlight's own edge, and a Previous that goes UP — from a
+            // rest at the band's first row or from a LIVE first file inside the
+            // previous-track window alike — publishes from the root entry's
+            // rebuild_rows, the last word over the stop body's fork inside the
+            // unload (the ordering is at up()).
             if (!render_player_previous_actionable(app)) {
                 publish_media_state();
                 return;

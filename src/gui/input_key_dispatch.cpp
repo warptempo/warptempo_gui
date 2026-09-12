@@ -4363,11 +4363,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // PLAYLIST PAIR (2026-09-12), where a plain press AT REST walks the band
     // by one row, and that is the ruling's own reason: a car never
     // repeats a key, and a held Previous walking up and OUT of a folder is
-    // exactly the accidental exit the asymmetry rule exists to prevent. THE
-    // ARROWS STAY ELIGIBLE, which is the same ruling read literally: bare Up
-    // takes Previous's row-0 rule at rest, so a held Up walks the band to the
-    // top and then pops out one folder per repeat — a held ARROW is a walk the
-    // user is watching, which is not the shape the one-shot protects against.
+    // exactly the accidental exit the asymmetry rule exists to prevent —
+    // and MORE SO since the exit became the live arm's too the same day. THE
+    // ARROWS STAY ELIGIBLE and are pure walks: bare Up stops at the band's top
+    // rather than leaving the folder, so a hold can only walk a listing, which
+    // is the continuous step this eligibility is for.
     // The item's two NEIGHBOURS were
     // repeat-eligible on bare `,` / `.` with their shifted ends from
     // 2026-08-30 to 2026-08-31 and left the mode with them. A prompt over the
@@ -8380,21 +8380,15 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             render_player.play_button_act();
             return true;
         case GuiKeys::Up:
-            // THE ARROW TAKES THE PLAYLIST PAIR'S ROW-0 RULE AT REST
-            // (architect 2026-09-12, from the car: "the tablet's Up key takes
-            // the same rule at row 0"), so at rest bare Up and bare Home are
-            // ONE act and bare Down and bare End are ONE act — the arrows part
-            // from the pair only while a transport is LIVE, where Up is the
-            // band walk it has always been and Home is the file skip. The fork
-            // is the ITEM's: up() would unload a playing item, and an arrow
-            // must never stop the sound, so a live transport keeps the wall at
-            // row 0 rather than leaving the folder.
-            if (app.render_player.transport !=
-                    AppState::RenderPlayer::Transport::Live &&
-                folder_overlay::walk_origin_row(app) == 0) {
-                render_player.up();
-                return true;
-            }
+            // THE ARROWS ARE THE BAND WALK AND NOTHING ELSE, in every transport
+            // state (architect 2026-09-12, from the car: "Up is different than
+            // Home — leave Up without popping out to the folder; Up is more of
+            // a laptop thing, and on the laptop I don't want it to pop out").
+            // Row 0 is Up's silent wall exactly as the listing's last row is
+            // Down's: THE UP-A-FOLDER EXIT IS THE LEFT SKIP'S ALONE, because
+            // the arrow is the fast walk through a listing and must never leave
+            // one by itself. (It took the skip's row-0 rule for the hours
+            // between the two rulings of that day.)
             render_player.move_highlight(-1);
             return true;
         case GuiKeys::Down:
@@ -8414,11 +8408,13 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
             // Previous, one body forked on the transport: WHILE LIVE this
             // track's start, or THE PREVIOUS ENTRY inside the item's first
             // three seconds (the previous-track window at
-            // kPlayerPreviousThresholdMs); AT REST the band one row up, and at
-            // the band's FIRST row one folder up. One-shot: the live arm is a
-            // whole file, and a held Previous walking up and out of a
-            // folder is exactly the accidental exit the asymmetry rule exists
-            // to prevent (repeat_eligible's player arm).
+            // kPlayerPreviousThresholdMs), or ONE FOLDER UP inside that window
+            // at the folder's first file; AT REST the band one row up, and at
+            // the band's FIRST row one folder up. THE EXIT IS THIS KEY'S IN
+            // EITHER STATE and is this key's ALONE — bare Up is the plain band
+            // walk. One-shot: the live arm is a whole file, and a held Previous
+            // walking up and out of a folder is exactly the accidental exit the
+            // asymmetry rule exists to prevent (repeat_eligible's player arm).
             render_player.previous();
             return true;
         case GuiKeys::End:

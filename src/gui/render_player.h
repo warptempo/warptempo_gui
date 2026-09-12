@@ -79,6 +79,12 @@ inline constexpr uint32_t kCarStableCodeBase = 1000;
 // asks this window any more. It answered in every transport state until then,
 // an idle rest being at frame 0 by construction.
 //
+// IT IS ALSO THAT ARM'S ONLY POSITION TERM, and the arm asks it TWICE — with a
+// file before this one it steps back a file, and WITHOUT one it leaves the
+// folder — through the one owner render_player_inside_previous_window
+// (app_state.h), which render_player_home_takes_previous composes for the first
+// of those and the Home hint reads for both.
+//
 // IT IS AN AUTHORED DURATION AND NEVER SCALES — gui_scale is a LENGTH axis
 // (the scaled_px family) and no duration in the product reads it. It is
 // converted to frames at the DEVICE's rate where it is used, the item being
@@ -365,11 +371,14 @@ struct GuiRenderPlayer {
     // highlight, both through the overlay's one row-act fork.
     void open_row(int index);
     // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE since the `..`
-    // row retired (2026-09-01), and since 2026-09-12 THE PLAYLIST PAIR'S REST
-    // ARM TOO: previous() composes this body at the band's first row, and bare
-    // Up at rest takes that same row-0 rule, so the act has FIVE roads on ONE
-    // body (the button, Backspace, bare Up, bare Home and the head unit's
-    // Previous). A SILENT consumed no-op at the root,
+    // row retired (2026-09-01), and since 2026-09-12 THE LEFT SKIP'S TWO ARMS
+    // TOO: previous() composes this body at the band's first row AT REST and at
+    // the folder's first FILE inside the previous-track window WHILE LIVE, so
+    // the act has FOUR roads on ONE body as re-greped that day (the button,
+    // Backspace, and previous()'s two arms — which is where bare Home and the
+    // head unit's Previous reach it). BARE Up IS NOT ONE OF THEM: the arrow is
+    // the plain band walk and never leaves a folder (the architect's reason is
+    // at the router's arm). A SILENT consumed no-op at the root,
     // which is `tmp/` (the wall's one owner is render_player_up_actionable,
     // app_state.h, which the button's face reads too). Past that wall it
     // UNLOADS THE ITEM (unload_item) and re-enters the root, so the player
@@ -512,15 +521,24 @@ struct GuiRenderPlayer {
     // is playing, and the pair's job at a rest being to pick what the next Play
     // starts.
     //
-    // PREVIOUS:
-    //   LIVE — the left skip's own act, unchanged: with the item inside its
-    //     first kPlayerPreviousThresholdMs AND a previous entry in
-    //     `item_folder`, it plays THAT ENTRY from its start (the previous-track
-    //     window at the constant); past the window it seeks the item's own
-    //     start and takes every refusal seek_to owns. It never reports a folder
-    //     wall: at the folder's first entry the restart IS the act. THE FORK IS
-    //     ONE OWNER, render_player_home_takes_previous (app_state.h), which the
-    //     button's hint reads too ("Previous File" / "Go to Start").
+    // PREVIOUS — ONE RULE IN EVERY TRANSPORT STATE, said in each state's own
+    //   units (architect 2026-09-12, from the car, on the first drive with the
+    //   playlist build: "Home should do what Home does, whether it's playing or
+    //   idle"): step back by one, and where there is nothing to step back to,
+    //   LEAVE THE FOLDER. The previous-track window is the only position term
+    //   either arm reads.
+    //   LIVE — three arms in this order: with the item inside its first
+    //     kPlayerPreviousThresholdMs AND a previous entry in `item_folder`, it
+    //     plays THAT ENTRY from its start (the previous-track window at the
+    //     constant, the fork's one owner render_player_home_takes_previous,
+    //     app_state.h, which the button's hint reads too); INSIDE THAT WINDOW
+    //     WITH NO previous entry it GOES UP A FOLDER, the same up() the rest arm
+    //     runs, so the folder's first file is where a live walk-back leaves the
+    //     folder; and otherwise — past the window, or inside it at the ROOT,
+    //     where there is no folder to go up to — it seeks the item's own start
+    //     and takes every refusal seek_to owns. (The live arm was the window and
+    //     the restart alone until that day, the restart standing at the folder's
+    //     first entry.)
     //   AT REST — it WALKS THE BAND UP ONE ROW, and AT THE BAND'S FIRST ROW IT
     //     GOES UP A FOLDER (up() whole: the item unloaded, the band seated on
     //     the folder just left). At the ROOT's first row it is a silent walled
@@ -543,6 +561,13 @@ struct GuiRenderPlayer {
     // off the END must never be an accidental exit. TIMING GESTURES ARE
     // REJECTED ("Home twice quickly"): the pair is position- and band-based,
     // never press-timed, which is the previous-track window's own precedent.
+    //
+    // AND THE EXIT IS THIS PAIR'S ALONE: bare Up is the plain band walk in
+    // every state, a silent wall at row 0 exactly as bare Down is at the last
+    // row (architect the same day: "Up is different than Home — leave Up
+    // without popping out to the folder; Up is more of a laptop thing, and on
+    // the laptop I don't want it to pop out"). The arrow carried this act's
+    // row-0 rule for the hours between his two rulings.
     //
     // EACH WALL IS ONE OWNER — render_player_previous_actionable /
     // render_player_next_actionable (app_state.h) — read by the buttons' face

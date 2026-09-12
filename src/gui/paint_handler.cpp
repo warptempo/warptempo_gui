@@ -7355,20 +7355,30 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.play_face     = render_player_play_face(app);
         // THE SKIPS' OWN FORK FIRST (architect 2026-09-12, from the car): at
         // rest the pair walks the BAND, so each hint names a row rather than a
-        // file, and the left one names the FOLDER wherever its rest arm would
-        // leave this one — the act's own second fork, the band's first row
-        // ANDed with the up wall, so the root's greyed first row keeps saying
-        // "Previous Row". Both bits are read from the predicates the acts read
-        // (render_player_up_actionable, folder_overlay::walk_origin_row), never
-        // restated.
+        // file. THE LEFT ONE NAMES THE FOLDER WHEREVER ITS PRESS WOULD LEAVE
+        // ONE, in either transport state — the exit is that act's in both since
+        // the same day's second ruling ("Home should do what Home does, whether
+        // it's playing or idle"), so this bit reads the act's OWN two exit
+        // tests: at rest the band's first row, while live the previous-track
+        // window with no file before this one, each ANDed with the up wall the
+        // act asks there. At the root neither arm goes up, so the greyed first
+        // row keeps "Previous Row" and a live press there keeps its restart
+        // word. Every term is a predicate the act reads, never restated:
+        // render_player_up_actionable, folder_overlay::walk_origin_row,
+        // render_player_home_takes_previous and the window's own owner
+        // render_player_inside_previous_window.
         hint.transport_at_rest =
             app.render_player.transport !=
             AppState::RenderPlayer::Transport::Live;
-        hint.previous_goes_up = hint.transport_at_rest &&
-                                folder_overlay::walk_origin_row(app) == 0 &&
-                                render_player_up_actionable(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
                                                                 audio);
+        hint.previous_goes_up =
+            render_player_up_actionable(app) &&
+            (hint.transport_at_rest
+                 ? folder_overlay::walk_origin_row(app) == 0
+                 : (!hint.home_previous &&
+                    render_player_inside_previous_window(app, playback,
+                                                         audio)));
         // (END'S IDLE BIT STOOD HERE and retired 2026-09-04 with the act it
         // described: it was seek_to's second refusal asked past its first, so
         // that the hint said "At the end" only with an item bound. The right
@@ -7378,12 +7388,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
         // (codex round A, 2026-09-01): the line names the FILE the shifted
         // press plays, so it must drop wherever the plain press already
-        // plays that file. Home's two destinations are previous()'s own — the
+        // plays that file. Home's LIVE destinations are previous()'s own — the
         // PREVIOUS entry inside the previous-track window
-        // (render_player_home_takes_previous, the fork's one owner, resolved
-        // just above) and otherwise a seek that leaves the item where it is —
-        // against the twin's `folder.front()`, index 0; both land at frame 0
-        // of the file they name, so the index decides. On the folder's second
+        // (render_player_home_takes_previous, the first fork's one owner,
+        // resolved just above), the FOLDER ABOVE where that same window finds
+        // no file before this one, and otherwise a seek that leaves the item
+        // where it is — against the twin's `folder.front()`, index 0; the two
+        // that stay in the folder land at frame 0 of the file they name, so the
+        // index decides, and the up-a-folder arm reaches NO file at all, which
+        // the compare already answers: it runs at item_index 0 alone, where the
+        // twin's own wall is what refuses. On the folder's second
         // item inside that window the two are one file and the line goes,
         // which the wall alone (item_index > 0) could not see. THE WALL IS
         // STILL A TERM and is still asked from the twin's own owner, which
