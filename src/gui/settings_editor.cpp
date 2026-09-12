@@ -411,18 +411,19 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             const int64_t before = app.viewport_start_sample;
             app.viewport_start_sample = v;
             clamp_viewport_start(app, audio);
-            // THE TYPED CAMERA MOVE PUTS THE CENTERED POSTURE OUT (the rule is
-            // at AppState::centered_mode): this is the ACTIVE tab's viewport
+            // THE TYPED CAMERA MOVE TAKES THE MOVEMENT ANSWER (the classes are
+            // at postures_after_movement, app_state.h; the centred rule at
+            // AppState::centered_mode): this is the ACTIVE tab's viewport
             // written direct — the one camera write in the product that reaches
-            // no pan funnel and no zoom applier — so it owes the collapse
-            // itself, and it owes it on the CLAMPED answer: a value the clamp
+            // no pan funnel and no zoom applier — so it owes the two lamps
+            // itself, and it owes them on the CLAMPED answer: a value the clamp
             // pulls back onto the one already standing moved no camera and
-            // collapses nothing, exactly as it repaints nothing. THE INACTIVE
+            // writes nothing, exactly as it repaints nothing. THE INACTIVE
             // TAB'S ARM BELOW IS PARKING, NOT A CAMERA MOVE, and takes none —
             // the band it writes is restored (and clamped) at the next tab-in,
             // where Ctrl+Tab's own keeper rule governs.
             if (app.viewport_start_sample != before)
-                collapse_centered_posture(app);
+                postures_after_movement(app);
             viewport.invalidate_waveform_area();
             viewport.kick_waveform_sync();
         } else {
@@ -810,17 +811,19 @@ void GuiSettingsEditor::commit() {
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
 
-    // A SCALE COMMIT MOVES THE MAP, SO THE CENTERED POSTURE COLLAPSES (the rule
-    // is at AppState::centered_mode, whose MAP clause this is — the warp tempo
-    // write's tail takes it for the same reason). `scale` is the engine block's
-    // one warp-map input (build_warp_frame_map's slope product); every other key
-    // in this block is provenance and moves no image, so the collapse asks the
-    // field rather than the commit. IN BOTH AUDIO VIEWS, as the tempo tail is:
-    // the map is the map whichever domain is on screen. Past the no-op gate
-    // above by construction, so this is the changed path already, and the
-    // re-land below is a TRANSLATION that collapses nothing of its own.
+    // A SCALE COMMIT MOVES THE MAP, so the two camera lamps take the MOVEMENT
+    // answer (postures_after_movement, app_state.h; the centred rule at
+    // AppState::centered_mode, whose MAP clause this is): the scale is the
+    // PIECE's, not a flag's own number, so it is not one of the value changes
+    // that put the walk's framing lamp out. `scale` is the engine block's one
+    // warp-map input (build_warp_frame_map's slope product); every other key in
+    // this block is provenance and moves no image, so the question asks the
+    // field rather than the commit. IN BOTH AUDIO VIEWS: the map is the map
+    // whichever domain is on screen. Past the no-op gate above by construction,
+    // so this is the changed path already, and the re-land below is a
+    // TRANSLATION that writes nothing of its own.
     if (app.engine_settings.scale != scale_before)
-        collapse_centered_posture(app);
+        postures_after_movement(app);
 
     std::fprintf(stderr,
         "warptempo_gui: Setting applied: %s=%s\n",

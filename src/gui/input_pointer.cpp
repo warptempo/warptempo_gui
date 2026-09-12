@@ -1606,10 +1606,12 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // no store at all — lands through the identical expression instead of a second
 // copy of it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
-// THE MARKER FORM IS TWO ENTRY POINTS SINCE 2026-09-11 — carry_playhead_on_marker
-// and the land that composes it with the CENTERED POSTURE'S COLLAPSE — and the
-// list above is the LAND's: every member of it is an act the posture goes out
-// on. The carry's one caller is named at its declaration (input_handler.h).
+// THE MARKER FORM IS THREE ENTRY POINTS SINCE 2026-09-12 — carry_playhead_on_marker,
+// the LAND that composes it with the two camera lamps' movement answer, and the
+// WALK's land, which takes the centered collapse alone — and the list above is
+// the LAND family's: every member of it is an act the centred pin goes out on.
+// The carry's one caller is named at its declaration (input_handler.h) and the
+// walk land's at its own body below.
 // The shared write, defined below the two entry points that share it.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport, int64_t src_frame);
@@ -1638,14 +1640,39 @@ void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }
 
-// THE MARKER MOVEMENT OWNER — the carry above plus the centered posture's
-// collapse, Viewport::move_playhead_to's marker form (2026-09-11). The rule is
-// stated once at AppState::centered_mode; the ORDER is load-bearing the same
-// way it is there — the carry's clear of the audition runs first, so a land
-// that interrupts the act ends it AND puts the lamp out, while the act's own
-// `c` lands (made while its phase stands) find the collapse a no-op.
+// THE MARKER MOVEMENT OWNER — the carry above plus the two camera lamps'
+// movement answer, Viewport::move_playhead_to's marker form (2026-09-11, the
+// pair since 2026-09-12). The centered rule is stated once at
+// AppState::centered_mode and the classes at postures_after_movement; the ORDER
+// is load-bearing the same way it is there — the carry's clear of the audition
+// runs first, so a land that interrupts the act ends it AND writes both lamps,
+// while the act's own `c` lands (made while its phase stands) find the composed
+// body's leading return.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
+    carry_playhead_on_marker(app, audio, viewport, hit);
+    postures_after_movement(app);
+}
+
+// THE WALK'S OWN LANDING — the same movement, with the CENTERED COLLAPSE ALONE
+// and no walk-lamp write (architect 2026-09-12). THE WALK MUST NOT WRITE THE
+// LAMP THAT GOVERNS IT: bare Tab / Shift+Tab / IsoLeftTab land through here and
+// the Center on next marker lamp decides whether they frame, so the ON write
+// the owner above carries would relight a dark lamp on the first step and the
+// dark state would last exactly one press. The step is still a movement — the
+// playhead's position in the music changes — so the centred pin goes out
+// exactly as it does for every other land, and this entry differs from the
+// owner in that one omission.
+//
+// NAMED RATHER THAN SPELLED AS A FLAG, the reseat's own argument: a parameter
+// meaning "skip the rule this time" is the hand-listed inventory in disguise.
+// ITS CALLER IS THE WALK'S OWN JUMP BODY and nothing else
+// (GuiInputHandler::jump_playhead_to_focused_marker_for_walk,
+// input_handler.cpp), which the three bare Tab arms and the Ctrl+Shift+Tab
+// paired march reach through cycle_marker_focus — the march being the walk
+// composed, so it takes the walk's road whatever framing it states.
+void land_playhead_on_marker_for_walk(AppState& app, const GuiAudio& audio,
+                                      Viewport& viewport, int hit) {
     carry_playhead_on_marker(app, audio, viewport, hit);
     collapse_centered_posture(app);
 }
@@ -1692,12 +1719,12 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
     // The A/B audition's end, this entry point's half of it — the argument is
     // at the marker form above, the inventory at GuiAuditionSequence.
     clear_audition_sequence(app);
-    // AND THE CENTERED POSTURE'S COLLAPSE, after that clear and for the same
-    // reason the marker form takes it (the rule at AppState::centered_mode).
-    // This form has NO CARRY TWIN: its callers are all `h`-view commands and no
-    // time act holds a bare source frame — one is owed an argument of its own
-    // before it is written.
-    collapse_centered_posture(app);
+    // AND THE TWO CAMERA LAMPS' MOVEMENT ANSWER, after that clear and for the
+    // same reason the marker form takes it (the rule at AppState::centered_mode,
+    // the classes at postures_after_movement). This form has NO CARRY TWIN: its
+    // callers are all `h`-view commands and no time act holds a bare source
+    // frame — one is owed an argument of its own before it is written.
+    postures_after_movement(app);
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 
@@ -2358,12 +2385,13 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // the drag in a live view at home; where the drag refuses (off the
         // column's home view, a read-only tab) or does not exist (the `h`
         // view's diff flags, which take clicks alone) the box still wears it,
-        // one shape for the one surface. THE EXCEPTION IS THE VALUE DRAG LAMP
-        // (2026-09-10), and it is one because the lamp changes WHICH GESTURE
-        // the surface offers rather than merely whether it will succeed: with
-        // the lamp lit the horizontal move is off on every flag, so a box that
-        // still promised it would promise a gesture that no longer exists.
-        // That fork is at the arm below. It reads
+        // one shape for the one surface. THE TWO EXCEPTIONS ARE THE VALUE DRAG
+        // LAMP (2026-09-10) AND THE CENTRED PIN (2026-09-12), and they are
+        // exceptions because each changes WHICH GESTURE the surface offers
+        // rather than merely whether it will succeed: under either one the
+        // horizontal move is off on every flag, so a box that still promised it
+        // would promise a gesture that cannot start. Both forks are at the arm
+        // below. It reads
         // hit_test_flag — the painter's published boxes, the same predicate the
         // press claims and the nav surface carves itself out with — so it
         // answers the LIVE marker lane and the `h` view's DIFF flags through
@@ -2389,6 +2417,15 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
+            // THE CENTRED PIN TAKES THE SAME SHAPE AS THE LAMP ABOVE (architect
+            // 2026-09-12): while it is engaged the horizontal move is REFUSED
+            // at the crossing on every flag, so a box that still promised it
+            // would promise a gesture that cannot start. The Arrow is what a
+            // point arming nothing wears everywhere in this map. It ranks below
+            // the value-drag arm because that lamp answers for the VERTICAL
+            // drag, which the pin leaves live — a value change moves no marker
+            // in time and takes nothing out from under the playhead.
+            if (centered_pin_engaged(app)) return GuiCursorKind::Arrow;
             return GuiCursorKind::TrimResize;
         }
         // The rest of the strip: the button rows (claimed far above the
@@ -10596,6 +10633,20 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (authoring_locked(app) ||
             !active_column_authoring_allowed(app))
             return;
+        // AND THE CENTRED PIN REFUSES THE DRAG (architect 2026-09-12): the pin
+        // promises that the playhead is always centred, and a horizontal flag
+        // drag carries the marker out from under a playhead that cannot move to
+        // meet it — the one gesture whose whole point the posture contradicts.
+        // So the drag is UNREACHABLE while the pin is engaged rather than being
+        // a keeper or a collapser of it; the arrows are the way to move a marker
+        // in time under a lit lamp, or the lamp goes out first. It reads
+        // centered_pin_engaged like every other engagement site, which by this
+        // point in the press is the lamp itself: the arming press's own click
+        // act landed the playhead through a movement owner, so any standing A/B
+        // audition is already ended. SILENT, a pointer non-event exactly like
+        // the two gates above — the press's acts (the stop, the select, the
+        // land, the region hide) all ran at the press and stand.
+        if (centered_pin_engaged(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta
         // (the strip/region catch-up pattern). begin_drag captures the pre-drag

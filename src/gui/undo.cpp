@@ -645,6 +645,95 @@ void apply_post_restore_rules_impl(Selection& selection,
     selection.replace_selection(std::move(target_set), focus);
 }
 
+// WHAT THE TWO CAMERA LAMPS OWE A RESTORE — the ONE data-derived
+// classification in the product, and the architect's own justification for it
+// (2026-09-12): every other site classifies itself by the ACT it is, but at a
+// restore the act is gone and only its EFFECT remains, so the effect is the
+// only honest thing to ask. The question is asked of the entry's own diff, per
+// column, before the swap installs it.
+//
+// THE FIVE ARMS, and the two lamps' answers are the mirror images they are
+// everywhere else:
+//   * TRANSLATION — no row touched on either column and the engine `scale`
+//     unchanged (a settings-only entry that moved no map, a typed `notes=`).
+//     The restore moved nothing the user can see move: NEITHER LAMP IS
+//     WRITTEN.
+//   * POSITION-ONLY — the touched rows differ in `time_frame` ALONE. This is
+//     the undo of a TIME ACT, so it answers as the nudge and the flag drag do:
+//     the centred pin KEEPS (no collapse) and the walk's framing lamp LIGHTS.
+//   * VALUE-ONLY — every touched row keeps its `time_frame` and differs in one
+//     or more value fields (a tempo, a payload, a measure, a disabled bit).
+//     The pin collapses and the walk's lamp goes OUT: position is not a value.
+//   * ANYTHING ELSE — a marker COUNT change on the differing column, both
+//     kinds in one entry, both columns touched, or the engine `scale`
+//     differing: the sweeping default, the movement class (collapse, lamp ON).
+//   * THE NON-DEFAULT ARMS APPLY ONLY WHERE THE COUNTS MATCH, which is what
+//     makes the pairwise walk meaningful at all: rows can only be compared
+//     row-for-row while both sides hold the same number of them.
+//
+// BOTH COLUMNS ARE ASKED, the co-equal axes rule: a phase reset's row is
+// `time_frame`, `disabled` and `measure`, so a phase position-only restore
+// keeps the pin and a phase measure-only restore is a value change.
+//
+// THE FIELD QUESTION IS NOT RE-SPELLED HERE: warp_row_fields_differ answers
+// "this row moved at all" and warp_row_differs_beyond_time (app_state.h,
+// beside it) answers "it moved in something other than its position", the
+// second being the first asked of a copy with the position equalized — so a
+// field added to the row is answered by both at once.
+//
+// THE ACCEPTED COST, recorded rather than fixed: a BPM-bracket-only entry
+// reads as VALUE-ONLY, the session bpm fields being members of row identity.
+// That is the conservative side of one owner and the price of not minting a
+// second definition of what a row is.
+enum class RestorePostureClass { Translation, PositionOnly, ValueOnly, Sweeping };
+
+template <class M, class FieldsDiffer, class BeyondTime>
+void accumulate_restore_diff(const std::vector<M>& after,
+                             const std::vector<M>& before,
+                             FieldsDiffer fields_differ,
+                             BeyondTime   differs_beyond_time,
+                             bool& count_changed,
+                             bool& position_touched,
+                             bool& value_touched) {
+    if (after.size() != before.size()) { count_changed = true; return; }
+    for (std::size_t i = 0; i < after.size(); ++i) {
+        if (!fields_differ(after[i], before[i])) continue;
+        if (after[i].time_frame != before[i].time_frame) position_touched = true;
+        if (differs_beyond_time(after[i], before[i]))     value_touched    = true;
+    }
+}
+
+RestorePostureClass classify_restore_postures(
+        const std::vector<GuiWarpMarker>& after_w,
+        const std::vector<GuiWarpMarker>& before_w,
+        const std::vector<GuiPhaseResetMarker>& after_t,
+        const std::vector<GuiPhaseResetMarker>& before_t,
+        bool scale_differs) {
+    if (scale_differs) return RestorePostureClass::Sweeping;
+
+    bool count_changed = false;
+    bool w_position = false, w_value = false;
+    bool t_position = false, t_value = false;
+    accumulate_restore_diff(after_w, before_w, warp_row_fields_differ,
+                            warp_row_differs_beyond_time,
+                            count_changed, w_position, w_value);
+    accumulate_restore_diff(after_t, before_t, phase_reset_row_fields_differ,
+                            phase_reset_row_differs_beyond_time,
+                            count_changed, t_position, t_value);
+    if (count_changed) return RestorePostureClass::Sweeping;
+
+    const bool w_touched = w_position || w_value;
+    const bool t_touched = t_position || t_value;
+    if (!w_touched && !t_touched) return RestorePostureClass::Translation;
+    if (w_touched && t_touched)   return RestorePostureClass::Sweeping;
+
+    const bool position = w_position || t_position;
+    const bool value    = w_value    || t_value;
+    if (position && value) return RestorePostureClass::Sweeping;
+    return position ? RestorePostureClass::PositionOnly
+                    : RestorePostureClass::ValueOnly;
+}
+
 }  // namespace
 
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
@@ -816,22 +905,28 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     const int64_t playhead_source_frame = active_domain_to_source_frame(
         app, viewport.audio, app.playhead_cursor_sample);
 
-    // DOES THIS RESTORE MOVE THE MAP? Read while both sides are still in hand
-    // — the entry's own snapshot against the live store `before_w` copied
-    // above, and the entry's engine scale against the live one — because the
-    // two lines below consume both. The warp list and the engine `scale` are
-    // the warp map's whole input set (build_warp_frame_map's slope product),
-    // so a phase-only entry and a settings-only entry that moved no scale
-    // answer false. The list question is asked through the product's own
-    // same-map owner, warp_rows_equal (app_state.h), the same comparator
-    // proposed_display_context asks to decide whether a restore installs the
-    // map that is already built; its row identity is the WHOLE struct, so a
-    // measure-only or bpm-only entry answers true here and collapses — the
-    // conservative side of the one owner, and the price of not minting a
-    // second definition of "the same map".
-    const bool restore_moves_map =
-        !warp_rows_equal(entry.snapshot, before_w) ||
-        entry.settings.engine_settings.scale != app.engine_settings.scale;
+    // WHAT THE TWO CAMERA LAMPS OWE THIS RESTORE, read while both sides are
+    // still in hand — the entry's own snapshots against the live stores
+    // `before_w` / `before_t` copied above, and the entry's engine scale
+    // against the live one — because the lines below consume all of them. The
+    // classification and its five arms are at classify_restore_postures, above
+    // in this file, and the verdict is applied past the swap.
+    const RestorePostureClass restore_postures = classify_restore_postures(
+        entry.snapshot, before_w, entry.phase_reset_snapshot, before_t,
+        entry.settings.engine_settings.scale != app.engine_settings.scale);
+    // AND THE TWO LAMPS AS THEY STAND RIGHT NOW, captured with the verdict
+    // because the ARMS THAT KEEP need something to put back. NOTHING BETWEEN
+    // THIS LINE AND THE VISUAL TAIL WRITES EITHER BIT, re-greped: the engine
+    // and store swaps write data, the map-change re-land is a reseat, and the
+    // W/P and S/T restores write their bands and cursors direct (their
+    // re-express is `reseat_playhead_on_marker`, their auto-select the same) —
+    // so these two ARE the preference the user held when the step was pressed,
+    // and the tail's land is the first writer below them. (The stop at this
+    // body's head has already ended any standing A/B audition, so a pin
+    // captured true here is the pin that act armed, and a keeping arm hands it
+    // back lit — which is what the act promises when what ends it keeps.)
+    const bool centered_before = app.centered_mode;
+    const bool walk_lamp_before = app.center_on_next_marker;
 
     // Restore engine settings before the marker swap. Marker entries get their
     // settings field populated from app at push time (carry-everywhere), so the
@@ -849,17 +944,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // selections' liveness rule, and both died 2026-07-29.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
-
-    // THE CENTERED POSTURE COLLAPSES ON A RESTORE THAT MOVED THE MAP (the rule
-    // is at AppState::centered_mode, whose MAP clause this is), on the verdict
-    // taken above — so undoing a delete, a tempo, a disable, a flag commit, a
-    // marker's position or a scale puts the lamp out exactly as the act itself
-    // does, while a phase-only entry and a settings-only entry that moved no
-    // scale leave it lit. THE RE-LAND BELOW STAYS A TRANSLATION and takes no
-    // collapse of its own (the reseat collapses nothing anywhere), and neither
-    // do the three view-axis restores: the tab switch is the A/B keeper by
-    // ruling, and the column and audio-view switches are translations.
-    if (restore_moves_map) collapse_centered_posture(app);
 
     // THE MAP-CHANGE RE-LAND, the shape the product already owns for a map
     // rebuilt under a STANDING view (the family contract is at the head of
@@ -1157,6 +1241,51 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // rest on the payload — which is exactly what the selection writes above
     // have already seated, each of them going through Selection::seat_focus.
     // The axis survives as session state; only its ride on an entry is gone.)
+
+    // AND THE TWO CAMERA LAMPS TAKE THE VERDICT CLASSIFIED BEFORE THE SWAP — so
+    // undoing a NUDGE keeps the centred pin and lights the walk's framing lamp
+    // exactly as the act itself does, undoing a tempo step or a retyped flag
+    // puts both out, and anything larger — a delete, a scale, a mixed entry —
+    // takes the sweeping movement answer. A restore that moved no row and no
+    // scale writes neither. The POSITION arm writes the walk lamp DIRECT
+    // because that is what the two TIME ACTS do (set_center_on_next_marker,
+    // app_state.h): the whole point of the arm is that it declines the
+    // collapse, so it cannot take a composed body that carries one.
+    //
+    // IT IS LAST IN THIS BODY, AND THAT PLACEMENT IS THE VERDICT'S WHOLE FORCE:
+    // the visual tail above LANDS the playhead on the restored focus through
+    // the movement owner and may recentre or frame through a zoom applier, and
+    // every one of those writes the movement class on its own — they are the
+    // restore's own RE-EXPRESSION of the state it just installed, not acts the
+    // user took, so the entry's classification has the last word over them. The
+    // map-change re-land is a TRANSLATION and writes nothing anywhere, and the
+    // three view-axis restores write nothing either: the tab switch is the A/B
+    // keeper by ruling, and the column and audio-view switches are
+    // translations. Running last also puts it past the land's clear of any
+    // standing A/B audition, so the composed bodies' own guard cannot swallow
+    // it.
+    //
+    // WHICH IS WHY THE KEEPING ARMS PUT THE LAMPS BACK RATHER THAN MERELY
+    // DECLINING TO WRITE THEM, and the put-back is what "the last word" MEANS
+    // here: the tail has already collapsed the centred pin through its land and
+    // lit the walk lamp with it, so an arm that only skipped its own write
+    // would hand the user the tail's answer instead of the entry's — undoing a
+    // NUDGE would lose the pin, which is the one case that arm exists for. The
+    // two bits are the ones captured with the verdict, above the tail; this is
+    // the FOURTH road onto write_centered_posture (app_state.h names the three
+    // others).
+    switch (restore_postures) {
+        case RestorePostureClass::Translation:
+            write_centered_posture(app, centered_before);
+            set_center_on_next_marker(app, walk_lamp_before);
+            break;
+        case RestorePostureClass::PositionOnly:
+            write_centered_posture(app, centered_before);
+            set_center_on_next_marker(app, true);
+            break;
+        case RestorePostureClass::ValueOnly: postures_after_value_change(app); break;
+        case RestorePostureClass::Sweeping:  postures_after_movement(app);     break;
+    }
 
     recompute_dirty();
     viewport.invalidate_waveform_area();

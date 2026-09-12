@@ -280,7 +280,18 @@ void GuiAbAudition::apply_working_zoom() {
     // at the two sites where the sequence is momentarily Idle — start()'s
     // pre-launch pair and the switch-back above — the act's own write of the
     // posture follows (the rule at AppState::centered_mode).
+    // THE WALK'S FRAMING LAMP IS THIS CLUSTER'S, AND IT KEEPS IT (architect
+    // 2026-09-12): the act's own camera acts are not the user's, so they write
+    // neither camera lamp — but `c` reaches the playhead movement owner and the
+    // zoom applier, both of which LIGHT this lamp for the movement class, and
+    // at the two Idle windows the composed body's own audition guard cannot
+    // answer for them. The centred posture has the act's explicit write to
+    // repair it there; this lamp has no owner in the act, so the honest repair
+    // is to put back exactly what stood. Inside the standing phase the read and
+    // the write are both no-ops, the composed body having returned above them.
+    const bool walk_lamp = app.center_on_next_marker;
     if (input != nullptr) input->run_center_command();
+    set_center_on_next_marker(app, walk_lamp);
 }
 
 void GuiAbAudition::fire_if_due() {

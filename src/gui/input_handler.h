@@ -373,7 +373,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     the marker click, the editor opens, the undo/redo restore, the propagate
 //     paste, the Ctrl+N collapse, the `h` mode's Tab cycle and diff-flag
 //     clicks — the marker and frame forms each carrying the call, since they
-//     share only the write below them). ALL HIDE UNCONDITIONALLY, never gated on whether the write moved
+//     share only the write below them; the walk's own
+//     land_playhead_on_marker_for_walk composes the marker form's carry and so
+//     hides through it, differing from the owner in the camera lamps alone). ALL HIDE UNCONDITIONALLY, never gated on whether the write moved
 //     anything: a Home pressed on the frame the cursor already holds still
 //     hides, which is what the bottom row's ungreyed skip buttons promise
 //     (architect 2026-08-15).
@@ -599,12 +601,27 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // are what the `y` posture is for, so they must not put its lamp out. The hide
 // and the A/B audition's end are the land's and stay here; only the collapse
 // is declined.
-// ONE CALLER, the complete list (re-greped 2026-09-11): the Left/Right POSITION
-// NUDGE's group-collapse prologue, which lands the playhead on the focus it
-// collapsed to (position_nudge.cpp). The posture's whole rule and the carry's
-// other three call sites are at AppState::centered_mode and viewport.h.
+// ONE ACT CALLS IT DIRECT, the complete list (re-greped 2026-09-12): the
+// Left/Right POSITION NUDGE's group-collapse prologue, which lands the playhead
+// on the focus it collapsed to (position_nudge.cpp). The two LAND entries below
+// compose it — the movement owner and the walk's — and they are the only other
+// callers. The posture's whole rule and the frame-shaped carry's own call sites
+// are at AppState::centered_mode and viewport.h.
 void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
                               Viewport& viewport, int hit);
+
+// THE WALK'S LAND — the land above with the CENTERED COLLAPSE ALONE and no
+// write to the Center on next marker lamp (architect 2026-09-12). THE WALK MUST
+// NOT WRITE THE LAMP THAT GOVERNS IT: the lamp decides whether a bare Tab step
+// frames its landing, so the ON write every other movement carries would
+// relight a dark lamp on the first step. Everything else the land does — the
+// hide, the audition's end, the centred pin's collapse — is unchanged, a walk
+// step being a movement like any other. ONE CALLER, the walk's own jump body
+// (GuiInputHandler::jump_playhead_to_focused_marker_for_walk), which the three
+// bare Tab arms and the Ctrl+Shift+Tab paired march reach through
+// cycle_marker_focus. The argument is at the definition (input_pointer.cpp).
+void land_playhead_on_marker_for_walk(AppState& app, const GuiAudio& audio,
+                                      Viewport& viewport, int hit);
 
 // THE SAME LAND WITHOUT THE HIDE — the non-hiding entry point for the two
 // callers whose write is a RESEAT rather than a movement: the S/T flip's
@@ -2713,7 +2730,36 @@ private:
     // 2026-09-04): it asks no lamp, no follow bit and no mode, so every route
     // that lands a focus states its own camera. `c` states Center; the walk
     // states what ITS caller handed it.
+    // THIS IS THE LIGHTING ROAD (2026-09-12): its land is the movement owner,
+    // which puts the centred pin out and LIGHTS the Center on next marker lamp.
+    // Its callers are `c` and, through `c`, Shift+`j`, the `0` command's second
+    // arm and the A/B audition — every road onto a focused landing except the
+    // walk, which takes the sibling below.
     bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
+
+    // THE WALK'S OWN JUMP — the body above with the walk's land in place of the
+    // movement owner, so the step collapses the centred pin and writes NO walk
+    // lamp (architect 2026-09-12: the walk must not write the lamp that governs
+    // it, or a dark lamp would relight on the first step). ONE CALLER,
+    // cycle_marker_focus, which the three bare Tab arms and the Ctrl+Shift+Tab
+    // paired march reach — the march being the walk composed, so it takes this
+    // road too whatever framing it states. Named rather than spelled as a flag:
+    // a parameter meaning "skip the lamp this time" is the hand-listed
+    // inventory in disguise, the reseat entries' own argument.
+    bool jump_playhead_to_focused_marker_for_walk(MarkerLandingFrame frame);
+
+    // The one landing entry the two bodies above differ in, as a type: both
+    // entries are free functions with this signature (input_pointer.cpp), so
+    // the shared implementation below takes the entry BY NAME and neither road
+    // needs a flag to say which posture rules it takes.
+    using MarkerLandEntry = void (*)(AppState&, const GuiAudio&, Viewport&, int);
+
+    // The two jump bodies' whole shared implementation — the focus resolution
+    // and its false return, the stop, the land through `land`, and the camera
+    // `frame` states. It is private because the choice of entry is the pair's
+    // own business: a caller states which ACT it is by calling one of the two
+    // named bodies, never by handing this one a landing.
+    bool run_focused_marker_jump(MarkerLandingFrame frame, MarkerLandEntry land);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
     // (architect 2026-08-05, replacing the working-zoom toggle; the second arm
@@ -3511,6 +3557,12 @@ private:
     // structural, this function writing the cursor DIRECT and so reaching
     // neither of the rule's two movement owners (the rule at
     // clear_region_highlight; the argument at this function's definition).
+    // THE TWO CAMERA LAMPS ARE NOT EXEMPT, AND SINCE 2026-09-12 THIS FUNCTION
+    // ANSWERS FOR THEM: the playhead's position in the music really does change
+    // here, whichever road wrote the cursor, so the family is an ordinary
+    // member of the movement class and this one line covers every trim route
+    // (postures_after_movement, app_state.h). The overlay's exemption is about
+    // the OVERLAY and buys the lamps nothing.
     // Callers own the refusals above it: a route that
     // writes no bound must not call this. The full per-route inventory is at
     // the head of input_trim.cpp.

@@ -238,19 +238,22 @@ struct Viewport {
     // (input_handler.h). The hide is UNCONDITIONAL — a Home that lands on the
     // frame the cursor already holds still hides, which is the 2026-08-15 ruling
     // the bottom row's ungreyed skip buttons rest on.
-    // SINCE 2026-09-11 IT IS THE CARRY BELOW PLUS THE CENTERED POSTURE'S
-    // COLLAPSE, in that order: the playhead's position in the music changing is
-    // the collapse's rule as much as the hide's (the rule is at
-    // AppState::centered_mode).
+    // SINCE 2026-09-11 IT IS THE CARRY BELOW PLUS THE TWO CAMERA LAMPS' MOVEMENT
+    // ANSWER, in that order: the playhead's position in the music changing is
+    // the centred pin's collapse rule as much as the hide's, and it lights the
+    // walk's framing lamp in the same line (postures_after_movement and
+    // AppState::centered_mode, app_state.h).
     void move_playhead_to(int64_t new_sample);
-    // THE CARRY — the movement, WITHOUT the centered posture's collapse, for
-    // the TIME ACTS (architect 2026-09-11): the acts that move a marker in time
+    // THE CARRY — the movement, WITHOUT either camera lamp's write, for the
+    // TIME ACTS (architect 2026-09-11): the acts that move a marker in time
     // under a playhead that follows it are exactly what the `y` posture is for,
-    // so they must not put its lamp out. Everything else about it is
+    // so they must not put its lamp out — and they light the WALK's lamp from
+    // their own commits instead, that write being on a changed path this
+    // per-motion entry knows nothing about. Everything else about it is
     // move_playhead_to's, the overlay hide and the audition's end included —
     // this is not a reseat.
     // A CLASS STATEMENT WITH ITS COMPLETE LIST HERE, and it is TWO acts at
-    // three call sites (re-greped 2026-09-11): the Left/Right POSITION NUDGE's
+    // three call sites (re-greped 2026-09-12): the Left/Right POSITION NUDGE's
     // follow of the nudged marker (position_nudge.cpp) and the FLAG DRAG's
     // per-motion carry and its commit re-land (marker_drag.cpp). Named rather
     // than spelled as a flag on the mover, for the reason the reseat carries:

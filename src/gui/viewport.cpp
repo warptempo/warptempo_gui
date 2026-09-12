@@ -232,18 +232,20 @@ void Viewport::carry_playhead_to(int64_t new_sample) {
     reseat_playhead_to(new_sample);
 }
 
-// move_playhead_to: THE MOVEMENT OWNER — the carry above plus the centered
-// posture's collapse, and nothing else. The playhead's position in the music
-// changing is the collapse's rule exactly as it is the hide's (the rule is
-// stated once at AppState::centered_mode): a click, a walk, a skip or a land
-// puts the `y` lamp out, while the two time acts take the carry.
+// move_playhead_to: THE MOVEMENT OWNER — the carry above plus the two camera
+// lamps' movement answer, and nothing else. The playhead's position in the
+// music changing is the centered collapse's rule exactly as it is the hide's
+// (the rule is stated once at AppState::centered_mode): a click, a skip or a
+// land puts the `y` lamp out and lights the walk's framing lamp, while the two
+// time acts take the carry.
 // THE ORDER IS LOAD-BEARING: the carry's clear of the A/B audition runs FIRST,
 // so a movement that interrupts the act finds the sequence already Idle and the
-// collapse writes — where the act's own movements, made while its phase stands,
-// find the collapse a no-op (collapse_centered_posture, app_state.h).
+// postures write — where the act's own movements, made while its phase stands,
+// find the composed body's leading return (postures_after_movement,
+// app_state.h).
 void Viewport::move_playhead_to(int64_t new_sample) {
     carry_playhead_to(new_sample);
-    collapse_centered_posture(app);
+    postures_after_movement(app);
 }
 
 // reseat_playhead_to: update playhead, keep viewport so playhead stays
@@ -455,14 +457,15 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
-    // A ZOOM PUTS THE CENTERED POSTURE OUT (the rule is at
-    // AppState::centered_mode): past the return above the level really moves,
-    // which is the whole test — `c`, `0`, ctrl+wheel and the icon row's four
-    // zoom buttons all land here, and the WAVEFORM MAGNIFICATION does not (it
-    // is a picture gain, not a zoom, and writes no level). A zoom that lands on
-    // the level already standing collapses nothing, exactly as it repaints
-    // nothing.
-    collapse_centered_posture(app);
+    // A ZOOM IS A CAMERA MOVE: the centered posture goes out and the walk's
+    // framing lamp lights (the classes are at postures_after_movement,
+    // app_state.h; the centered rule at AppState::centered_mode). Past the
+    // return above the level really moves, which is the whole test — `c`, `0`,
+    // ctrl+wheel and the icon row's four zoom buttons all land here, and the
+    // WAVEFORM MAGNIFICATION does not (it is a picture gain, not a zoom, and
+    // writes no level). A zoom that lands on the level already standing writes
+    // neither lamp, exactly as it repaints nothing.
+    postures_after_movement(app);
 
     // A ZOOM WRITE THAT MOVES THE LEVEL LEAVES THE CEILING, so bare `0`'s
     // whole-song state goes with it (ViewState::whole_song_visible, whose
@@ -578,15 +581,17 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_engaged = false;
-    // AND THE CENTERED POSTURE COLLAPSES ON EITHER AXIS TOO (the rule is at
+    // AND THE TWO CAMERA LAMPS TAKE EITHER AXIS TOO (the classes are at
+    // postures_after_movement, app_state.h; the centered rule at
     // AppState::centered_mode), on the same test and for the same reading of
     // it: a frame that moved the level is a ZOOM and a frame that moved only
-    // the viewport is a PAN, and the posture goes out on both — so the nav
-    // drag's ctrl zoom phase, the two-finger pinch and the overview lane's edge
-    // drags each put the lamp out as the pan funnel does. Gated on NOTHING ELSE
-    // — unlike the chase's clear above there is no playback term, the posture
-    // being a resting camera rule as much as a playing one.
-    if (level_changed || vp_changed) collapse_centered_posture(app);
+    // the viewport is a PAN, and both are camera moves — so the nav drag's ctrl
+    // zoom phase, the two-finger pinch and the overview lane's edge drags each
+    // put the pin out and light the walk's framing lamp as the pan funnel does.
+    // Gated on NOTHING ELSE — unlike the chase's clear above there is no
+    // playback term, the postures being a resting camera rule as much as a
+    // playing one.
+    if (level_changed || vp_changed) postures_after_movement(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -642,12 +647,13 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
         return;
     }
 
-    // THE FRAMING PUTS THE CENTERED POSTURE OUT (the rule is at
-    // AppState::centered_mode): past the return above either the level or the
-    // start really moved, so this is a zoom, a pan, or both at once — the trim
-    // bar's span-framing double-click and the group undo/redo restore's
+    // THE FRAMING IS A CAMERA MOVE, so the centered posture goes out and the
+    // walk's framing lamp lights (the classes are at postures_after_movement,
+    // app_state.h): past the return above either the level or the start really
+    // moved, so this is a zoom, a pan, or both at once — the trim bar's
+    // span-framing double-click and the group undo/redo restore's
     // zoom-out-to-fit arm being what reach here.
-    collapse_centered_posture(app);
+    postures_after_movement(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -743,16 +749,18 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // nothing else, and the next play chases only if the lamp was armed
         // for it.
         if (playback.is_playing()) app.follow_engaged = false;
-        // AND EVERY PAN PUTS THE CENTERED POSTURE OUT (architect 2026-09-11;
-        // the rule is at AppState::centered_mode). Until that day a pan under a
-        // lit lamp was simply re-derived away on the next frame — a lamp that
-        // reported a camera the user had just taken somewhere else — and the
-        // ruling made the pan the posture's end instead. This funnel covers the
-        // whole class by construction, exactly as the chase's clear above does;
-        // the strip drag writes the viewport itself and collapses at its own
-        // site. NO PLAYBACK TERM: the posture holds at rest too, so a pan at
-        // rest ends it as one during playback does.
-        collapse_centered_posture(app);
+        // AND EVERY PAN PUTS THE CENTERED POSTURE OUT AND LIGHTS THE WALK'S
+        // FRAMING LAMP (architect 2026-09-11 for the collapse, 2026-09-12 for
+        // the pair; the classes are at postures_after_movement, app_state.h).
+        // Until the first of those days a pan under a lit pin was simply
+        // re-derived away on the next frame — a lamp that reported a camera the
+        // user had just taken somewhere else — and the ruling made the pan the
+        // posture's end instead. This funnel covers the whole class by
+        // construction, exactly as the chase's clear above does; the strip drag
+        // writes the viewport itself and answers at its own site. NO PLAYBACK
+        // TERM: the postures hold at rest too, so a pan at rest ends the pin as
+        // one during playback does.
+        postures_after_movement(app);
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too — the flags carry their own text now, so this one
@@ -834,10 +842,11 @@ void Viewport::center_viewport_on_playhead() {
 // step the scanner), and at rest there is no predictor to resync. AND IT
 // PRODUCES NOTHING THE USER'S OWN PAN PRODUCES: this is the AUTONOMOUS MOVER,
 // not a user pan, so it writes neither the follow chase's bit (follow_engaged,
-// which it neither reads nor produces) nor the centered posture's own collapse
-// — a body that collapsed the lamp it derives for would put itself out on its
-// first frame. What a USER pan does to the lamp is the pan funnel's line
-// (scroll_viewport, above; the rule at AppState::centered_mode).
+// which it neither reads nor produces) nor either camera lamp — a body that
+// collapsed the pin it derives for would put itself out on its first frame,
+// and the walk's framing lamp answers acts the USER takes. What a user pan
+// does to the two is the pan funnel's line (scroll_viewport, above; the rule
+// at AppState::centered_mode).
 bool Viewport::derive_centered_viewport() {
     if (audio.total_frames() <= 0) return false;
     // Split-playhead, center_viewport_on_playhead's own ternary: during

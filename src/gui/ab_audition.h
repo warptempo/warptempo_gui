@@ -86,7 +86,10 @@ struct GuiInputHandler;
 // hands: bare `y` cards on kCenteredAuditionCard, the icon-row button greys,
 // and the posture's collapse is a no-op (collapse_centered_posture), so the
 // act's own two `c` commands, its tab switches and its four plays put out
-// nothing. An act INTERRUPTED by a movement ends dark, the movement owner
+// nothing — and neither do they write the WALK's framing lamp, the two
+// composed posture bodies taking the same leading return for the same reason
+// (postures_after_movement, app_state.h): while the sequence stands the camera
+// acts belong to the act and not to the user. An act INTERRUPTED by a movement ends dark, the movement owner
 // clearing the sequence ahead of its own collapse; one ended by bare Space or
 // Ctrl+Tab ends lit.
 //

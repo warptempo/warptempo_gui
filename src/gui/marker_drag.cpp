@@ -312,11 +312,13 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
-    // THROUGH THE CARRY (architect 2026-09-11): the flag drag is a TIME ACT —
-    // it moves a marker in time under a playhead that follows it, which is what
-    // the centered posture exists for — so the ride must not put the `y` lamp
-    // out, per motion event or at the commit below. The rule is at
-    // AppState::centered_mode.
+    // THROUGH THE CARRY: the flag drag is a TIME ACT — it moves a marker in
+    // time under a playhead that follows it — so the ride writes no centred
+    // pin, per motion event or at the commit below. SINCE 2026-09-12 THE CARRY
+    // IS SIMPLY THE HONEST ENTRY FOR A MOVEMENT WITH NOTHING TO COLLAPSE: the
+    // pin REFUSES this gesture outright at the crossing (input_pointer.cpp), so
+    // a lit lamp never reaches here and the drag is neither a keeper of the
+    // posture nor a collapser of it. The rule is at AppState::centered_mode.
     viewport.carry_playhead_to(sample);
     // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
     // marker and HID the trim region overlay, so a marker drag runs with the
@@ -342,10 +344,13 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
-// THE DRAG IS A TIME ACT AND THE TWO CAMERA LAMPS READ IT AS ONE (architect
-// 2026-09-11): the playhead ride and this land go through the CARRY, which
-// declines the centered posture's collapse, and the commit LIGHTS the walk's
-// framing lamp — that one on the NET-CHANGED path alone, a wander-back drag
+// THE DRAG IS A TIME ACT AND THE TWO CAMERA LAMPS READ IT DIFFERENTLY
+// (architect 2026-09-11, the pin's half superseded 2026-09-12): the playhead
+// ride and this land go through the CARRY, which writes no centred pin — and it
+// owes none, the gesture being UNREACHABLE while the pin is engaged (the
+// crossing refuses it: a horizontal drag would carry the marker out from under
+// a playhead the pin holds centred) — while the commit LIGHTS the walk's
+// framing lamp, that one on the NET-CHANGED path alone, a wander-back drag
 // having moved no marker in time. Both rules are stated at their fields
 // (AppState::centered_mode, set_center_on_next_marker) and neither is restated
 // here.
@@ -503,8 +508,9 @@ void MarkerDragOps::commit_drag() {
     // the playhead lands on the committed frame directly; a phase reset drag in
     // its target home maps through the post-commit map.
     if (land_playhead) {
-        // The carry, the motion arm's own reason: a time act keeps the centered
-        // posture (AppState::centered_mode).
+        // The carry, the motion arm's own reason: a time act writes no centred
+        // pin, and this one cannot run under a lit pin at all — the crossing
+        // refuses the gesture there (AppState::centered_mode).
         viewport.carry_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
@@ -512,8 +518,9 @@ void MarkerDragOps::commit_drag() {
     // 2026-09-11, in his words: if he is adjusting time he does want the walk
     // centred). The flag drag is the other TIME act, the nudge's pointer twin,
     // so it writes the same bit through the same one writer
-    // (set_center_on_next_marker, app_state.h, which carries the four-caller
-    // inventory) — but the gate here is net_changed and NOT land_playhead: a
+    // (set_center_on_next_marker, app_state.h, which carries the caller
+    // inventory by class — a time act writes DIRECT, the composed posture
+    // bodies all carrying the centred pin's collapse this act declines) — but the gate here is net_changed and NOT land_playhead: a
     // wander-back drag still lands the playhead, to erase the motion arm's
     // rounding drift, and it moved no marker in time, so it is not the act the
     // lamp answers for. Silent, history-less, and no camera moves at the write.

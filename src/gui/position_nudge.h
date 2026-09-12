@@ -333,8 +333,10 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     that on a 2+ press; either way this tail always runs stopped).
 // (f) THE WALK'S FRAMING LAMP: a time act LIGHTS Center on next marker
 //     (architect 2026-09-11), through the one writer
-//     set_center_on_next_marker (app_state.h), which carries the four-caller
-//     inventory. The tail is the honest site for it because the twins' own
+//     set_center_on_next_marker (app_state.h), which carries the caller
+//     inventory by class. It writes DIRECT rather than through a composed
+//     posture body because a time act declines the centred pin's collapse,
+//     which every composed body carries. The tail is the honest site for it because the twins' own
 //     post-clamp identity no-op returns ahead of every write, so reaching here
 //     IS the committed move; the write is silent, history-less and moves no
 //     camera.

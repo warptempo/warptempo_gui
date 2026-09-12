@@ -962,13 +962,17 @@ struct EditorTextDragState {
 // and crossing; the selection capture that used to be on that list was deleted
 // with the cancels (2026-07-29).
 //
-// THE TWO AUTHORING GATES GUARD THE DRAG, NOT THE CLICK, and they live at the
-// CROSSING: a read-only tab and an off-home column still select, still land
-// the playhead and still open no editor (read-only protects the AUTHORED
-// MUSICAL CONTENT — the marker stores and the engine settings — and a
-// selection is navigation), so the plain arm itself is unconditional: even a
-// press whose drag will refuse must arm, because the motionless release still
-// owes the SEED.
+// THE GATES GUARD THE DRAG, NOT THE CLICK, and they live at the CROSSING: a
+// read-only tab and an off-home column still select, still land the playhead
+// and still open no editor (read-only protects the AUTHORED MUSICAL CONTENT —
+// the marker stores and the engine settings — and a selection is navigation),
+// so the plain arm itself is unconditional: even a press whose drag will refuse
+// must arm, because the motionless release still owes the SEED. SINCE
+// 2026-09-12 THERE IS A THIRD, THE CENTRED PIN, refusing the horizontal drag in
+// the same silent shape for a reason of its own: the pin promises a playhead
+// held at the window's centre and a drag would carry the marker out from under
+// it. The crossing is where all three stand, and the VALUE DRAG lamp forks
+// ahead of them into the vertical gesture, which the pin leaves live.
 //
 // Session-only, never serialized. Cleared on the crossing (either the drag
 // takes over or the arm is spent), on release / lost button, by the force-end
@@ -4899,16 +4903,20 @@ struct AppState {
     // project play is in flight (with one in flight the same press toggles
     // that play's chase instead and leaves the lamp alone), and the launch
     // tail that spends it. So a lit lamp and a project play in flight cannot
-    // stand together, and the face reads this field alone.
+    // stand together, and THE FACE READS THIS FIELD AT REST AND THE CHASE
+    // DURING A PROJECT PLAY (2026-09-12, the same fork the toggle takes — the
+    // argument is at the face, redesign_button_selected's IconFollow arm).
     bool    follow_armed           = false;
 
     // THE PLAY IN FLIGHT IS CHASING — true exactly while the viewport is to
     // keep the scanner in view, and false everywhere else (at rest, and in a
-    // play the user never armed follow for). ONE READER CLASS, the chase
-    // itself: the pre-paint hook's autopager gate (main.cpp), which asks it
-    // with its two aiming terms beside it. THE CENTRED PIN READS NOTHING HERE
-    // — what a pan does to the pin is the pin's own rule, stated at
-    // centered_mode below.
+    // play the user never armed follow for). TWO READERS: the chase itself —
+    // the pre-paint hook's autopager gate (main.cpp), which asks it with its
+    // two aiming terms beside it — and, since 2026-09-12, THE LAMP'S FACE while
+    // a project play runs, the lamp showing that play's chase for as long as
+    // one stands (redesign_button_selected's IconFollow arm, which carries the
+    // fork). THE CENTRED PIN READS NOTHING HERE — what a pan does to the pin is
+    // the pin's own rule, stated at centered_mode below.
     //
     // THE WRITER INVENTORY (re-greped 2026-09-11; this is the ONE
     // authoritative copy — the sites carry a class statement plus a pointer
@@ -4997,26 +5005,42 @@ struct AppState {
     // else, and what a pan does to this lamp is this lamp's own rule, stated
     // in the next paragraph.
     //
-    // THE RULE, AND IT STANDS HERE ALONE (architect 2026-09-11): CENTERED
-    // COLLAPSES ON EVERY ACT THAT MOVES THE CAMERA OR THE PLAYHEAD'S POSITION
-    // IN THE MUSIC OR THE MAP, EXCEPT THE TIME ACTS, THE AUDITION, THE A/B
-    // SWITCH AND BARE SPACE. What the posture is FOR is the pair of tabs: one
-    // tab held as the reference while the other's picture shifts under a
-    // playhead that does not move, so the two placements can be lined up by
-    // eye. So it survives exactly the acts that move a marker in TIME — the
-    // Left/Right nudge and the flag drag, which take the named non-collapsing
-    // entries Viewport::carry_playhead_to / carry_playhead_on_marker — plus
-    // Shift+Space, Ctrl+Tab and bare Space, and it goes out on every zoom, the
-    // Tab block, any pointer playhead placement or marker click, any pan, and
-    // every act that rewrites the warp map under it.
+    // THE RULE, AND IT STANDS HERE ALONE (architect 2026-09-12, restating his
+    // 2026-09-11 sentence as the KEEPER LIST it always was): CENTERED KEEPS
+    // THROUGH EXACTLY Ctrl+Tab (the A/B switch), Shift+Space (the audition),
+    // BARE SPACE AND THE SCRUB'S PLAY (project audio from the playhead), THE
+    // Left/Right NUDGE, ITS OWN BARE `y`, AND THE S/T TRANSLATION — the W/P
+    // switch and bare 1/2/3 compose that same pair of handlers and move
+    // nothing, and the waveform magnification is a picture gain with no zoom
+    // level and no camera — AND EVERYTHING ELSE THAT MOVES THE CAMERA OR THE
+    // PLAYHEAD'S POSITION IN THE MUSIC OR THE MAP COLLAPSES IT. What the
+    // posture is FOR is the pair of tabs: one tab held as the reference while
+    // the other's picture shifts under a playhead that does not move, so the
+    // two placements can be lined up by eye. So it goes out on every zoom, the
+    // Tab block, any pointer playhead placement or marker click, any pan, every
+    // trim write, and every act that rewrites the warp map or a flag's value
+    // under it.
     //
-    // THE COLLAPSE HAS ONE BODY (collapse_centered_posture, below) and each
-    // owner calls it in one line and restates none of this. THE OWNER
-    // INVENTORY, re-derived by grep, in three classes:
+    // THE FLAG DRAG IS NEITHER A KEEPER NOR A COLLAPSER: it is UNREACHABLE
+    // while the pin is engaged (architect 2026-09-12 — the pin promises a
+    // centred playhead and a horizontal drag would pull the marker out from
+    // under it, so the crossing refuses, silently, at input_pointer.cpp). Its
+    // ride and its commit land through Viewport::carry_playhead_to /
+    // carry_playhead_on_marker still, which is simply the honest entry for a
+    // movement with no posture to answer for: under a dark lamp there is
+    // nothing to collapse, and a lit lamp never reaches the gesture.
+    //
+    // THE COLLAPSE HAS ONE BODY (collapse_centered_posture, below), reached by
+    // most owners through the composed postures_after_movement /
+    // postures_after_value_change, which write the walk's framing lamp in the
+    // same line. Each owner calls one of them and restates none of this. THE
+    // OWNER INVENTORY, re-derived by grep 2026-09-12, in four classes:
     //   * THE PLAYHEAD MOVEMENT OWNERS — Viewport::move_playhead_to,
     //     land_playhead_on_marker and land_playhead_on_source_frame
     //     (input_pointer.cpp). Every click, walk, skip, drop and land reaches
-    //     one of the three.
+    //     one of the three. (The walk's own landing takes the collapse-only
+    //     sibling land_playhead_on_marker_for_walk, for the walk lamp's reason
+    //     and not for this one: it collapses exactly as the owner does.)
     //   * THE CAMERA OWNERS — the three zoom appliers
     //     (Viewport::apply_zoom_change, ::apply_strip_drag_zoom,
     //     ::apply_zoom_to_start), the pan funnel Viewport::scroll_viewport,
@@ -5025,35 +5049,42 @@ struct AppState {
     //     the one camera write that reaches no funnel and no applier, which is
     //     why it owes a line of its own. It collapses on the CLAMPED answer;
     //     the INACTIVE tab's arm is parking, not a camera move, and takes none.
-    //   * THE MAP-CHANGING FAMILY, every one of them on its own CHANGED path:
-    //     the warp tempo write's tail (warp_tempo_write_tail — the two cent
-    //     step arms and the value drag's commit), the warp DELETE and the
-    //     Ctrl+D disable toggle (warpmarkers_ops.cpp), the flag editor's
-    //     PAYLOAD commit on canonical_changed (flag_editor.cpp), the typed
-    //     engine `scale` commit (settings_editor.cpp), the recipe apply both
-    //     load-in-place roads share (apply_recipe_in_place,
-    //     input_key_dispatch.cpp), the `h` view's REVERT on its warp arm
-    //     (run_history_revert, same file), and the undo/redo RESTORE where the
-    //     restored warp list or engine scale differs from the live one
-    //     (undo.cpp). Ctrl+N needs no line: it lands the playhead on the
-    //     collapsed focus and collapses through the movement owner.
-    // THE PHASE-RESET COLUMN IS NOT IN THAT FAMILY AND THIS IS THE ONE PLACE
+    //   * THE MAP-CHANGING FAMILY THAT IS NOT A VALUE CHANGE, every one of them
+    //     on its own CHANGED path: the warp DELETE and the Ctrl+D disable
+    //     toggle (warpmarkers_ops.cpp), the typed engine `scale` commit
+    //     (settings_editor.cpp), the recipe apply both load-in-place roads
+    //     share (apply_recipe_in_place, input_key_dispatch.cpp), the `h` view's
+    //     REVERT on its warp arm (run_history_revert, same file), and THE TRIM
+    //     FAMILY'S park (park_playhead_at_trim_start, input_trim.cpp — the
+    //     family's one playhead writer, which writes the cursor direct and so
+    //     owes the posture a line of its own; it is idempotent under the
+    //     sweep's and the endcap drag's per-motion path). Ctrl+N needs no line:
+    //     it lands the playhead on the collapsed focus and collapses through
+    //     the movement owner.
+    //   * THE VALUE CHANGES, the other composed body's callers and on their own
+    //     changed paths too: the warp tempo write's tail (warp_tempo_write_tail
+    //     — the two cent step arms and the value drag's tempo commit), the flag
+    //     editor's PAYLOAD commit on canonical_changed and its MEASURE commit
+    //     (flag_editor.cpp, both columns), and the ITERATION BRACKET's four
+    //     authoring roads — the two bound steps (warpmarkers_ops.cpp,
+    //     phaseresetmarkers_ops.cpp), the two bound editor commits
+    //     (flag_editor.cpp) and the value drag's bound motion (value_drag.cpp).
+    //   * THE UNDO/REDO RESTORE CLASSIFIES ITSELF BY ITS OWN DIFF (undo.cpp,
+    //     where the five arms and the architect's argument for the one
+    //     data-derived classification in the product stand): a position-only
+    //     restore KEEPS the posture, a value-only restore collapses, anything
+    //     larger collapses, and a restore that moved no row and no scale is a
+    //     translation that writes neither lamp. ITS KEEPING ARMS PUT BOTH BITS
+    //     BACK rather than merely declining to write them: the restore's own
+    //     visual tail lands the playhead through a movement owner and may frame
+    //     through a zoom applier, so the verdict runs LAST and restores what
+    //     stood — the fourth road onto write_centered_posture below.
+    // THE PHASE-RESET COLUMN IS NOT IN THE MAP FAMILY AND THIS IS THE ONE PLACE
     // IT IS SAID: a phase reset is no warp-map input, so no phase write moves
     // an image — the phase delete, the phase disable toggle and the phase
     // revert arm collapse nothing, and a phase DROP collapses only through the
-    // movement owner its own seat takes.
-    // THE TRIM FAMILY IS THE ONE ASYMMETRY, and it is by construction rather
-    // than by exemption: every trim write parks the playhead by writing the
-    // cursor DIRECT (park_playhead_at_trim_start), so it passes no movement
-    // owner and reaches no collapse, and a trim gesture leaves the lamp as it
-    // found it.
-    // THE KEEPERS, stated as a set so no site has to argue its own silence:
-    // the TIME ACTS (the Left/Right nudge and the flag drag, through the two
-    // carry entries), the A/B AUDITION (the collapse is a no-op while its
-    // sequence stands — the body below says why), the A/B SWITCH (Ctrl+Tab),
-    // BARE SPACE, the TRIM family above, the WAVEFORM MAGNIFICATION (a picture
-    // gain, no zoom level and no camera), and every TRANSLATION — the reseat
-    // entries, the S/T and W/P switches, and the restore's own re-land.
+    // movement owner its own seat takes. Its bracket cells are value changes
+    // like the warp column's and take that body, the co-equal axes rule.
     //
     // THE A/B AUDITION ARMS IT: Shift+Space leaves the lamp LIT when its
     // sequence reaches its first play (GuiAbAudition::start), the act being
@@ -5094,10 +5125,21 @@ struct AppState {
     // down and does not grey, which is Follow's own precedent for a preference
     // the pin supersedes.
     //
-    // ITS WRITERS ARE THE ACT FAMILY SINCE 2026-09-11 (architect): bare `n` is
-    // the MANUAL toggle, a TEMPO act puts the lamp out and a TIME act lights
-    // it — the whole inventory, and why each site sits on its caller's changed
-    // path, is at the one writer set_center_on_next_marker (below).
+    // ITS WRITERS ARE THE ACT FAMILY SINCE 2026-09-11 (architect), AND SINCE
+    // 2026-09-12 THE FAMILY IS THE CENTERED POSTURE'S MIRROR IMAGE: that lamp
+    // KEEPS through a named list and collapses on everything else; this one
+    // goes OUT on a named list — THE FLAG-VALUE CHANGES, on both columns — and
+    // is written ON by everything else that reaches a posture owner. POSITION
+    // IS NOT A VALUE (his sentence): a hand spent on tempos, bounds, payloads
+    // and measures wants the walk to hold the picture still, while a hand that
+    // has moved the picture, the playhead or the map wants the walk to bring it
+    // along. Bare `n` is the MANUAL toggle and the only writer outside the two
+    // composed bodies besides the two TIME ACTS' carries, which light it
+    // direct. The whole inventory, and why each site sits on its caller's
+    // changed path, is at the one writer set_center_on_next_marker (below).
+    // HIS ACCEPTED COST, stated where the lamp lives: the ON side leans
+    // aggressive — a `c`, a pan or an undo of a tempo step mid-fine-tune
+    // relights the walk, and one `n` puts it back out.
     //
     // ITS ONE READER IS marker_walk_frame (below), which the three bare Tab
     // arms call and nothing else does. The walk itself does not read this bit:
@@ -10885,12 +10927,19 @@ inline bool centered_pin_engaged(const AppState& a) {
 
 // THE CENTERED POSTURE'S ONE FIELD WRITE (architect 2026-09-11). Every road
 // that lights or puts out the `y` lamp assigns through here and nowhere else,
-// so the three of them cannot drift: the TOGGLE
+// so the FOUR of them cannot drift (re-greped 2026-09-12): the TOGGLE
 // (GuiPlaybackLifecycle::set_centered_mode, which composes this with its
 // off->on recenter — the gesture chokepoint bare `y` and the icon-row button
 // share), the A/B audition's ARM (GuiAbAudition::start, after its first play
-// has launched) and the COLLAPSE below, which the movement owners, the zoom
-// appliers, the pan funnel and the tempo tail call. It is a bare assignment:
+// has launched, and its switch-back step's re-assert), the COLLAPSE below —
+// which the two composed posture bodies call for the movement owners, the zoom
+// appliers, the pan funnel, the trim park and the value and map families — and,
+// since 2026-09-12, THE UNDO/REDO RESTORE'S KEEPING ARMS (undo.cpp), which PUT
+// THE PIN BACK as it stood before the restore's own visual tail collapsed it.
+// That fourth road is a put-back rather than a preference change: the tail's
+// land and framing are the restore's re-expression of the state it just
+// installed, so the ENTRY'S classification has the last word over them, and a
+// keeping arm that merely declined to write would hand back the tail's answer. It is a bare assignment:
 // the lamp's face repaints through the per-tick comparator, so no writer of
 // this field owes damage, and nothing here derives — a write that must also
 // recenter says so at its own site.
@@ -10900,10 +10949,18 @@ inline void write_centered_posture(AppState& a, bool lit) {
 
 // PUT THE CENTERED POSTURE OUT — the collapse, whose whole rule is stated once
 // at the field's declaration (AppState::centered_mode) and restated nowhere:
-// the lamp goes out on every act that moves the camera or the playhead's
-// position in the music or the map, except the time acts, the audition, the
-// A/B switch and bare Space. Each owner calls this in one line after its own
-// decision and states only its own class.
+// the lamp KEEPS through a named list of acts and goes out on everything else
+// that moves the camera or the playhead's position in the music or the map.
+// Each owner calls this in one line after its own decision and states only its
+// own class.
+//
+// MOST OWNERS DO NOT CALL IT DIRECTLY: the same events write the walk's framing
+// lamp too, so they go through the two composed bodies further down this header
+// (postures_after_movement, postures_after_value_change), which compose this
+// with set_center_on_next_marker. What calls THIS one alone is the road where
+// only one lamp has an answer: the bare Tab walk's own landing, which must not
+// write the lamp that governs it (land_playhead_on_marker_for_walk,
+// input_pointer.cpp).
 //
 // IT IS A NO-OP WHILE THE A/B AUDITION STANDS, and that is the arm the act is
 // built on: the act opens each half with the `c` command, switches tabs and
@@ -12142,31 +12199,52 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 enum class MarkerLandingFrame { Center, FollowPage };
 
 // THE CENTER-ON-NEXT-MARKER LAMP'S ONE FIELD WRITE (architect 2026-09-04 for
-// the lamp, 2026-09-11 for the act family that writes it). It lives beside the
+// the lamp, 2026-09-11 for the act family that writes it, 2026-09-12 for the
+// classification it shares with the centered posture). It lives beside the
 // bit's one reader (marker_walk_frame, below) and out here rather than on the
-// input handler because THREE OF ITS FOUR CALLERS HOLD NO HANDLER: the tempo
-// write's shared tail and the two time acts are free bodies in their own
-// translation units, and a second spelling is how the four would drift.
+// input handler because MOST OF ITS CALLERS HOLD NO HANDLER: the two composed
+// posture bodies below and the two time acts are free bodies in their own
+// translation units, and a second spelling is how they would drift.
 //
-// THE FOUR CALLERS ARE THREE CLASSES (architect 2026-09-11 — a pass spent on
-// TEMPO wants the walk to hold the picture still, a pass spent on TIME wants
-// the walk to bring it along):
+// THE CALLERS ARE FOUR CLASSES, re-derived by grep 2026-09-12:
 //   THE MANUAL TOGGLE — bare `n`, which the icon row's own button reaches by
-//     synthesizing that press;
-//   THE TEMPO FAMILY'S ONE TAIL — warp_tempo_write_tail (warpmarkers_ops.cpp)
-//     writes FALSE at its head, so the singleton cent step, the group cent
-//     step and the value drag's tempo commit all put the lamp out through that
-//     one line and none of them spells it, exactly as they collapse the
-//     centered posture there;
-//   THE TWO TIME ACTS — both write TRUE: the Left/Right position nudge's
-//     committed landing (finish_position_nudge, position_nudge.cpp, both
-//     columns) and the flag drag's changed commit (MarkerDragOps::commit_drag,
-//     marker_drag.cpp). They are the same two acts that take the non-collapsing
-//     carry, for the same reason.
+//     synthesizing that press (input_key_dispatch.cpp);
+//   THE MOVEMENT CLASS, through postures_after_movement below — TRUE: the three
+//     playhead movement owners, the three zoom appliers, the pan funnel, the
+//     typed viewport move, the trim family's park, and the map-changing acts
+//     that are not value changes (the warp delete, Ctrl+D, the typed `scale=`,
+//     apply_recipe_in_place, the `h` revert's warp arm). None of them spells
+//     the write;
+//   THE VALUE CLASS, through postures_after_value_change below — FALSE: the
+//     tempo family's one tail (warp_tempo_write_tail, so the singleton cent
+//     step, the group cent step and the value drag's tempo commit all go out
+//     through one line), the flag editor's payload and measure commits, and the
+//     iteration bracket's four authoring roads (the two bound steps, the two
+//     bound editor commits, the value drag's bound motion);
+//   THE TWO TIME ACTS, which write TRUE DIRECT because they are the acts that
+//     DECLINE the centered collapse and so cannot take the composed body: the
+//     Left/Right position nudge's committed landing (finish_position_nudge,
+//     position_nudge.cpp, both columns) and the flag drag's changed commit
+//     (MarkerDragOps::commit_drag, marker_drag.cpp). They are the same two acts
+//     that take the non-collapsing carry, for the same reason;
+//   THE UNDO/REDO RESTORE'S TWO KEEPING ARMS (undo.cpp), which also write
+//     DIRECT and for the same shape of reason: the entry's own classification
+//     runs LAST, past a visual tail that has already lit this lamp through a
+//     movement owner, so a POSITION-ONLY restore writes TRUE (the nudge's own
+//     answer) and a TRANSLATION restore PUTS BACK what stood. Its other two
+//     arms take the composed bodies like every other site.
+// THE BARE TAB WALK IS THE ONE CARVE-OUT AND IT IS STRUCTURAL: THE WALK MUST
+// NOT WRITE THE LAMP THAT GOVERNS IT. Its landing is a movement owner, so an ON
+// write there would relight a dark lamp on the first step and the dark state
+// would last exactly one press. The walk therefore lands through the
+// collapse-only entry (land_playhead_on_marker_for_walk, input_pointer.cpp) and
+// writes no lamp at all, the Ctrl+Shift+Tab paired march with it, the march
+// being the walk composed. `c`, Shift+`j`, the marker clicks, the skips and
+// every other road onto those owners write ON as the class says.
 // EVERY ACT SITE RUNS ON ITS OWN CHANGED PATH ALONE, so a nudge already at its
-// wall, a drag that wanders back to its column and a step that lands the value
-// already standing all leave the lamp exactly where it was: the lamp answers a
-// write, not a press.
+// wall, a drag that wanders back to its column, a pan at a wall and a step that
+// lands the value already standing all leave the lamp exactly where it was: the
+// lamp answers a write, not a press.
 //
 // It is a bare assignment, and the lamp's whole nature is in what it does not
 // do: SESSION-ONLY and serialized nowhere, HISTORY-LESS (no undo entry, no
@@ -12190,6 +12268,48 @@ inline void set_center_on_next_marker(AppState& a, bool lit) {
 inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
     return a.center_on_next_marker ? MarkerLandingFrame::Center
                                    : MarkerLandingFrame::FollowPage;
+}
+
+// THE TWO CAMERA LAMPS AFTER AN ACT — ONE BODY PER CLASS (architect
+// 2026-09-12). The two postures are mirror images and they read the SAME
+// events, so a site that owes them anything owes them both, and spelling two
+// lines at twenty sites is how the pair would drift. Each body states its class
+// once; a caller names the class in one line and restates nothing.
+//
+// They live here rather than beside collapse_centered_posture above because
+// they compose BOTH field writers and set_center_on_next_marker is declared
+// here; that declaration carries the write's own nature (silent, history-less,
+// owed no damage) and the collapse's carries the posture's rule.
+//
+// A MOVEMENT: the camera moved, or the playhead's position in the music, or the
+// map. The centered pin collapses (its rule is at AppState::centered_mode) and
+// the walk's framing lamp LIGHTS — the user has taken the picture somewhere, so
+// the next Tab walk brings it along. Its callers are the three playhead
+// movement owners, the three zoom appliers, the pan funnel, the typed viewport
+// move, the trim park and the map-changing acts that are not value changes.
+//
+// A VALUE CHANGE: a flag's own number moved and nothing else — a tempo, a
+// bracket bound, a payload, a measure. The pin collapses for the same rule
+// (a tempo or a payload moves the map under it) and the walk's lamp GOES OUT:
+// position is not a value, so a hand spent on values wants the walk to hold
+// the picture still.
+//
+// BOTH TAKE THE A/B AUDITION'S LEADING RETURN, and it is the collapse's own
+// argument applied to the second write: while the sequence stands the camera
+// acts belong to the ACT and not to the user — its two `c` commands, its tab
+// switches and its four bounded plays — so neither lamp may be written for
+// them. The collapse below carries the same guard for its own callers; this one
+// is what keeps the ON/OFF write inside it.
+inline void postures_after_movement(AppState& a) {
+    if (audition_sequence_standing(a)) return;
+    collapse_centered_posture(a);
+    set_center_on_next_marker(a, true);
+}
+
+inline void postures_after_value_change(AppState& a) {
+    if (audition_sequence_standing(a)) return;
+    collapse_centered_posture(a);
+    set_center_on_next_marker(a, false);
 }
 
 // THE ONE HISTORY-STEP ACTIONABILITY PREDICATE: true when a restore FROM
@@ -12280,6 +12400,33 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
     // comparator's own reason (2026-09-10): the bracket left the undo domain,
     // every push strips it from the snapshot it takes, and a term with no
     // producer is a term that lies about what an entry can hold.
+}
+
+// DOES THIS ROW PAIR DIFFER IN ANYTHING BUT ITS POSITION — the question the
+// undo/redo restore's self-classification asks of each touched row (undo.cpp,
+// where the five arms and their argument stand): a row that differs in
+// `time_frame` ALONE is a POSITION change and one that differs elsewhere is a
+// VALUE change, and the two lamps answer them oppositely.
+//
+// It lives here, beside the comparators, because it is those comparators asked
+// a second way and must never become a second field list: the body equalizes
+// the position on a copy and hands the pair to the one row comparator, so a
+// field added there is answered here by construction. The copy is a whole
+// marker row, which is cheap beside the restore it serves (one vector swap and
+// one synchronous plate render) and is the price of having exactly one
+// enumeration of what a row is.
+inline bool warp_row_differs_beyond_time(const GuiWarpMarker& a,
+                                         const GuiWarpMarker& b) {
+    GuiWarpMarker probe = b;
+    probe.time_frame = a.time_frame;
+    return warp_row_fields_differ(a, probe);
+}
+
+inline bool phase_reset_row_differs_beyond_time(const GuiPhaseResetMarker& a,
+                                                const GuiPhaseResetMarker& b) {
+    GuiPhaseResetMarker probe = b;
+    probe.time_frame = a.time_frame;
+    return phase_reset_row_fields_differ(a, probe);
 }
 
 // WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
@@ -15245,13 +15392,24 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
             return a.active_audio_view   == 'T';
         case RedesignButton::IconMarkerColumn:
             return a.active_markers_view == 'P';
-        // FOLLOW'S LAMP IS THE ARM, NOT THE CHASE (2026-09-11): the field it
-        // reads is the one-shot the next play will spend, so the face says
-        // exactly what the lamp promises. A play in flight cannot be found
-        // with it lit — the launch spends it — and bare `f` during such a play
-        // toggles that play's chase without lighting anything, which is why
-        // this arm has one term and not a fork.
-        case RedesignButton::IconFollow: return a.follow_armed;
+        // FOLLOW'S LAMP IS THE ARM AT REST AND THE CHASE DURING A PROJECT PLAY
+        // (architect 2026-09-12): at rest the field is the one-shot the next
+        // play will spend, so the face says exactly what the lamp promises;
+        // while a project play runs the promise has already been spent and the
+        // only thing the lamp can honestly report is whether THAT play is
+        // chasing — so bare `f` mid-play lights it, a pan or a placement click
+        // mid-play puts it out, and it goes dark when the play ends, which is
+        // "a meaningless act, truthfully depicted".
+        // THE FORK IS toggle_follow's OWN, said in the painter's terms: a
+        // PROJECT play is the scanner active with the A/B audition NOT standing
+        // — the act's four bounded plays run the scanner too and never chase,
+        // each being framed by its own `c`, so a press during one is about the
+        // user's NEXT play and takes the lamp arm, which is exactly what the
+        // second term keeps the face reading.
+        case RedesignButton::IconFollow:
+            return (a.playhead_scanner_active && !audition_sequence_standing(a))
+                       ? a.follow_engaged
+                       : a.follow_armed;
         // The centered lamp (2026-08-31): the same toggle pattern, reading
         // the live bit bare `y` flips, so the lit face and the pin cannot
         // drift.

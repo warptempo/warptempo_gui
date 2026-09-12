@@ -2603,7 +2603,14 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // happen behind the gate above: the select just focused the landing that
     // gate proved. Nothing here reads it; the return exists for the other
     // caller (run_center_command).
-    jump_playhead_to_focused_marker(frame);
+    // THE WALK'S OWN JUMP BODY (architect 2026-09-12), which lands through the
+    // collapse-only entry: a step is a movement like any other and puts the
+    // centred pin out, but it writes NO Center on next marker lamp, because
+    // that lamp is what decides whether this very step frames — a dark lamp
+    // relit by its own first step would last exactly one press. The march takes
+    // this road with the bare arms: it is this walk composed, and its Center is
+    // a statement about framing, not about the lamp.
+    jump_playhead_to_focused_marker_for_walk(frame);
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because
     // every Selection mutator resets the axis to the payload as it seats the
@@ -2637,7 +2644,25 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport) {
     viewport.invalidate_waveform_area();
 }
 
+// THE TWO NAMED JUMP ROADS, each naming the LAND ENTRY its act takes and
+// nothing else (architect 2026-09-12). `c` and every road through it lands on
+// the movement owner, which puts the centred pin out and lights the Center on
+// next marker lamp; the WALK lands on the collapse-only entry, because the walk
+// must not write the lamp that governs it — an ON write there would relight a
+// dark lamp on the first step and the dark state would last one press. The
+// difference is the entry and nothing else, which is why the implementation
+// below is shared whole.
 bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) {
+    return run_focused_marker_jump(frame, &land_playhead_on_marker);
+}
+
+bool GuiInputHandler::jump_playhead_to_focused_marker_for_walk(
+        MarkerLandingFrame frame) {
+    return run_focused_marker_jump(frame, &land_playhead_on_marker_for_walk);
+}
+
+bool GuiInputHandler::run_focused_marker_jump(MarkerLandingFrame frame,
+                                              MarkerLandEntry land) {
     // The walk is markers-only (trim is not a cycle stop). The playhead lands on
     // the focused marker unconditionally, and the camera below does whatever
     // `frame` says — this body resolves nothing, asking no lamp, no follow bit
@@ -2669,7 +2694,9 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // site's own hide is deleted with the inventory it belonged to. What stays
     // HERE is exactly what the owner does not provide: the stop above and the
     // recenter below.
-    land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
+    // THE ENTRY IS THE CALLER'S, named at the two bodies above: the walk's
+    // declines the walk lamp's write, everything else takes the owner.
+    land(app, audio, viewport, app.last_selected_marker);
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
@@ -2698,11 +2725,14 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // reads the resting cursor. A landing already on screen leaves it a no-op,
     // which is the whole of what "does not frame" means here.
     //
-    // WHO PASSES WHAT, re-grepped 2026-09-04: `c` (run_center_command) and the
+    // WHO PASSES WHAT, re-grepped 2026-09-12: `c` (run_center_command) and the
     // Ctrl+Shift+Tab paired march both state Center; the three bare Tab arms
     // state marker_walk_frame(app), the lamp's one reader. Shift+`j` and the
     // A/B audition reach the camera through run_center_command by name and so
-    // take its Center with it.
+    // take its Center with it. The FRAMING and the LAND ENTRY are separate
+    // questions and the march is where they part: it states Center, framing
+    // both tabs by its own statement, and still takes the WALK's entry, being
+    // the walk composed.
     switch (frame) {
         case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
         case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;

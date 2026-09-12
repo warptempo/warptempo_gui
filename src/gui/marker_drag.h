@@ -17,6 +17,13 @@ struct GuiTargetRender;
 // flag's plain drag is the VERTICAL one (ValueDragOps, value_drag.{h,cpp}) and
 // this one does not begin at all, on any flag — "we never allow multi-axis
 // dragging; flags move up and down or not at all" (architect 2026-09-10).
+// AND THE CENTRED PIN REFUSES IT OUTRIGHT (architect 2026-09-12): while the `y`
+// lamp is engaged the view promises a playhead held at the window's centre, and
+// this gesture would carry the marker out from under a playhead that cannot
+// move to meet it — so the crossing returns silently, the cursor answers Arrow
+// on a flag, and the arrows are the road to moving a marker in time under a lit
+// lamp. The gesture is therefore neither a keeper of that posture nor a
+// collapser of it: it never meets a lit one.
 // Shared by the warp and phase reset views and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —

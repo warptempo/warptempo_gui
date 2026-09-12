@@ -321,6 +321,10 @@ struct GuiPlaybackLifecycle {
     // chase resuming its paging, not just taking one jump — and the off edge
     // writes nothing else. During the A/B AUDITION the lamp is the subject:
     // the act's plays never chase, so the press is about the user's next play.
+    // WHAT IT WRITES IS UNCHANGED BY THE LAMP'S 2026-09-12 FACE, which took
+    // this very fork: with a project play in flight the face shows that play's
+    // chase, so the in-flight arm below now LIGHTS the lamp it does not touch,
+    // and the face is what says so (redesign_button_selected, app_state.h).
     void toggle_follow();
 
     // Set the centered pin to `desired` — the `y` lamp's one gesture

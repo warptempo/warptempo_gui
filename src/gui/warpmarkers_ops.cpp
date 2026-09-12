@@ -332,12 +332,13 @@ void GuiWarpMarkersOps::delete_selected_marker() {
                         /*touched_snapshot=*/std::move(live_idx),
                         /*touched_live=*/{});
     undo.recompute_dirty();
-    // THE CENTERED POSTURE COLLAPSES (the rule is at AppState::centered_mode):
-    // a delete reshapes the map from the deleted marker onward, which is the
-    // rule's MAP clause, the same one the tempo tail answers for. Past the
-    // empty-batch return above, so this is the changed path; the re-land below
-    // is a TRANSLATION and collapses nothing of its own.
-    collapse_centered_posture(app);
+    // THE TWO CAMERA LAMPS TAKE THE MOVEMENT ANSWER (the classes are at
+    // postures_after_movement, app_state.h): a delete reshapes the map from the
+    // deleted marker onward, which is the centred pin's MAP clause, and a map
+    // change is not a flag's VALUE — so the pin goes out and the walk's framing
+    // lamp lights. Past the empty-batch return above, so this is the changed
+    // path; the re-land below is a TRANSLATION and writes nothing of its own.
+    postures_after_movement(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
     // delete reshapes the map from the deleted marker onward, so in W+target
@@ -521,13 +522,15 @@ void GuiWarpMarkersOps::toggle_disabled() {
     app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
-    // THE CENTERED POSTURE COLLAPSES (the rule is at AppState::centered_mode):
-    // a disabled marker stops shaping its segment, which moves the map — the
-    // rule's MAP clause. Past the `changed` return above, so this is the
-    // changed path. (Ctrl+N needs no line of its own: it lands the playhead on
-    // the collapsed focus through land_playhead_on_marker, a MOVEMENT owner,
-    // and collapses there.)
-    collapse_centered_posture(app);
+    // THE TWO CAMERA LAMPS TAKE THE MOVEMENT ANSWER (the classes are at
+    // postures_after_movement, app_state.h): a disabled marker stops shaping
+    // its segment, which moves the map — the centred pin's MAP clause — and the
+    // act is a map change rather than a flag's value, so the walk's framing
+    // lamp lights with the pin going out. Past the `changed` return above, so
+    // this is the changed path. (Ctrl+N needs no line of its own: it lands the
+    // playhead on the collapsed focus through land_playhead_on_marker, a
+    // MOVEMENT owner, and answers there.)
+    postures_after_movement(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
     // disabled marker stops shaping its segment (and a disabled label_def
@@ -572,12 +575,13 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // drag are the same act with two hands.
 //
 // IT IS ALSO WHERE THE TWO CAMERA LAMPS ANSWER FOR A TEMPO WRITE (architect
-// 2026-09-11): the centered posture COLLAPSES (the rule is at
-// AppState::centered_mode, and a tempo write is its MAP clause) and the walk's
-// framing lamp GOES OUT (the caller inventory is at
-// set_center_on_next_marker, app_state.h) — the two keyboard cent-step arms
-// and the value drag's commit reach both through these two lines, none of them
-// spelling either.
+// 2026-09-11, through the VALUE class since 2026-09-12): the centered posture
+// COLLAPSES (the rule is at AppState::centered_mode, and a tempo write is its
+// MAP clause) and the walk's framing lamp GOES OUT — one composed body says
+// both (postures_after_value_change, app_state.h, where the class and the
+// caller inventory live), and the two keyboard cent-step arms and the value
+// drag's commit reach it through this one line, none of them spelling either
+// lamp.
 //
 // THE RE-LAND IS A TRANSLATION, NOT A MOVEMENT, which is why it goes through
 // reseat_playhead_to and never through a movement owner: the focus did not
@@ -615,19 +619,17 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
     // the one thing the posture's pair-of-tabs reading cannot survive. All
     // three of this body's callers reach it on their CHANGED path alone (each
     // returns above on a write that landed the value already standing), so the
-    // collapse is the write's, not the press's. The re-land below is a
-    // TRANSLATION and takes the reseat, which collapses nothing of its own —
-    // this line is why the tail owes the posture anything at all.
-    collapse_centered_posture(app);
-    // AND THE WALK'S FRAMING LAMP GOES OUT HERE (architect 2026-09-11, in his
-    // words: if he is modifying tempos he does not want the walk centring on
-    // every Tab). The two lamps read the SAME EVENT — a tempo write — so the
-    // second line sits beside the first and neither of this body's three
-    // callers spells either; the caller inventory and the changed-path
-    // argument are at the writer (set_center_on_next_marker, app_state.h). It
-    // is silent and moves no camera: the bit is read at the next bare Tab
-    // walk, and the lamp going dark is the whole message.
-    set_center_on_next_marker(app, false);
+    // write is the write's, not the press's. The re-land below is a TRANSLATION
+    // and takes the reseat, which writes nothing of its own — this line is why
+    // the tail owes the postures anything at all.
+    // AND THE SAME LINE PUTS THE WALK'S FRAMING LAMP OUT (architect 2026-09-11,
+    // in his words: if he is modifying tempos he does not want the walk centring
+    // on every Tab). A tempo is a flag's VALUE, and position is not a value —
+    // the two lamps read this one event and answer it oppositely, which is
+    // exactly what the composed body says once (postures_after_value_change,
+    // app_state.h, where the class and the caller inventory live). Silent and
+    // moving no camera: the walk bit is read at the next bare Tab.
+    postures_after_value_change(app);
     if (app.active_audio_view == 'T') {
         viewport.kick_waveform_sync();
         const std::vector<GuiWarpMarker>& mv_post = app.warpmarkers.markers();
@@ -1450,6 +1452,14 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
         m.iter_end_cents   == mv_const[static_cast<size_t>(f)].iter_end_cents)
         return std::nullopt;
     app.warpmarkers.markers_mut() = std::move(proposed);
+    // A BOUND IS A FLAG'S VALUE, so the two camera lamps take the VALUE answer
+    // (postures_after_value_change, app_state.h, where the class and the caller
+    // inventory live): the walk's framing lamp goes out — position is not a
+    // value, and a hand spent on ranges wants the walk to hold the picture
+    // still — and the centred pin goes out with it, the class being one answer
+    // for both. Past the unchanged belt above, so this is the changed path; a
+    // [0, 0] clear is a value change like any other.
+    postures_after_value_change(app);
     // The marker lane repaints its cells — the store's generation moved, so
     // the flag cache rebuilds under the top strip's damage. No waveform
     // damage: a stem reads the class, and a bound changes no class; no map

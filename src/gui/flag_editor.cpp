@@ -404,6 +404,14 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // the old one, or to leave the mode, which clears the bracket whole.
     app.warpmarkers.markers_mut() = std::move(proposed);
 
+    // AND THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER (postures_after_value_change,
+    // app_state.h, where the class and the caller inventory live): a bound is a
+    // flag's own number, so the walk's framing lamp goes out and the centred
+    // pin with it — the same line the arrows' step and the value drag's bound
+    // motion take, the bracket's three authoring roads answering as one. Past
+    // the unchanged return above, so this is the changed path.
+    postures_after_value_change(app);
+
     // NO RENDER AND NO MAP REBUILD: a bracket is not a map input (excluded
     // from build_warp_frame_map and the render recipe alike), so the cell is
     // the only thing that moved and the strip is the only damage.
@@ -512,6 +520,12 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     // (2026-09-10): the bracket is outside the undo domain on both columns, so
     // the commit writes the store and nothing else.
     app.phaseresetmarkers.markers_mut() = std::move(proposed);
+
+    // AND THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER, the warp arm's own line
+    // in this column (postures_after_value_change, app_state.h): a hop bound is
+    // a flag's own number, so the walk's framing lamp goes out and the centred
+    // pin with it. Past the unchanged return above, so this is the changed path.
+    postures_after_value_change(app);
 
     // NO RENDER AND NO MAP REBUILD: a bracket is not a position and not a map
     // input, so the cell is the only thing that moved and the strip is the
@@ -691,6 +705,15 @@ void GuiFlagEditor::commit_measure_edit() {
         undo.push_undo_warp(std::move(pre));
     }
     undo.recompute_dirty();
+
+    // AND THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER, on both columns
+    // (postures_after_value_change, app_state.h, where the class and the caller
+    // inventory live): a measure is a flag's own number and position is not a
+    // value, so the walk's framing lamp goes out and the centred pin with it —
+    // one answer for the class, and the restore of a measure-only entry reads
+    // itself the same way (undo.cpp). Past the unchanged return above, so this
+    // is the changed path.
+    postures_after_value_change(app);
 
     // NO RE-RENDER AND NO MAP REBUILD: a measure reaches neither the engine nor
     // the render fingerprint (the field's own contract at WarpMarker::measure),
@@ -894,13 +917,15 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // Unconditional by ruling — rationale at GuiTargetRender::trigger. Any
     // store change repaints and triggers.
     undo.recompute_dirty();
-    // THE CENTERED POSTURE COLLAPSES (the rule is at AppState::centered_mode):
-    // canonical_changed IS the map-input set on this surface — a tempo, a
-    // scale, a label definition or reference, the disabled bit — so a commit
-    // that reaches this line moved the map, the rule's MAP clause. Past the
-    // canonical_changed return above, so this is the changed path, and the
-    // re-land below is a TRANSLATION that collapses nothing of its own.
-    collapse_centered_posture(app);
+    // THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER (postures_after_value_change,
+    // app_state.h, where the class and the caller inventory live): this editor
+    // is a VALUE surface and never a placement one — canonical_changed IS the
+    // map-input set on it, a tempo, a scale, a label definition or reference,
+    // the disabled bit — so the centred pin goes out on the rule's MAP clause
+    // and the walk's framing lamp goes out because position is not a value.
+    // Past the canonical_changed return above, so this is the changed path, and
+    // the re-land below is a TRANSLATION that writes nothing of its own.
+    postures_after_value_change(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
     // VALUE surface — tempo, label_def / label_ref, per-marker scale, the

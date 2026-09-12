@@ -698,9 +698,13 @@ void GuiPlaybackLifecycle::toggle_follow() {
     // takes the lamp arm below, exactly as a press at rest does.
     if (playback.is_playing() &&
         app.audition_sequence.phase == GuiAuditionSequence::Phase::Idle) {
-        // THE PLAY IN FLIGHT IS THE SUBJECT AND THE LAMP IS NOT TOUCHED: this
-        // play's launch already spent whatever was armed, so there is nothing
-        // here to light — the press says "chase / stop chasing THIS play".
+        // THE PLAY IN FLIGHT IS THE SUBJECT AND THE ARMED FIELD IS NOT TOUCHED:
+        // this play's launch already spent whatever was armed, so there is
+        // nothing here to arm — the press says "chase / stop chasing THIS
+        // play". THE LAMP STILL LIGHTS, because its face reads the chase for as
+        // long as a project play runs (2026-09-12, redesign_button_selected's
+        // IconFollow arm, which takes this same fork); this body's business is
+        // which BIT the press means, and that is unchanged.
         const bool engage = !app.follow_engaged;
         app.follow_engaged = engage;
         if (engage) {
