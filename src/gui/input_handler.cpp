@@ -1740,8 +1740,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // sentence — a wrong cause. The pair NAMES THE ACT rather than saying
         // "turn off grid iterations first" like every other site under this
         // lock: a user who just pressed Ctrl+Z is asking about undo. Both
-        // buttons grey on the same fact (history_step_actionable's third term)
-        // and wear this sentence on their hints, so no lift reaches this line.
+        // buttons grey on the same fact (history_step_actionable's third term),
+        // so no lift reaches this line; the sentence is THIS KEY'S alone since
+        // 2026-09-12, when the refusal-reason tooltip lines went — the greyed
+        // pair names its own act and nothing more.
         // The chord IS admitted by iteration_lock_key_blocked precisely so
         // this arm can speak.
         if (app.iteration_mode_enabled) {

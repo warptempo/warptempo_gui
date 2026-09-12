@@ -5683,10 +5683,13 @@ struct AppState {
     // press exists for a crossing to turn into a drag — this gesture simply
     // never begins, and neither does the horizontal marker drag, which this
     // lamp switches off on every flag. THE CURSOR SAYS SO rather than promising
-    // what it cannot deliver: the cue map's flag arm answers Arrow, never
-    // ValueDrag, while add to selection is lit (pointer_cursor_kind,
-    // input_pointer.cpp) — the map's standing rule that a point arming nothing
-    // wears the Arrow.
+    // what it cannot deliver: while add to selection is lit the cue map's flag
+    // arm answers Arrow on EVERY flag of the live lane — neither ValueDrag nor
+    // the resting TrimResize, since neither drag can begin — that term being
+    // ranked ahead of this lamp's own and asked outside it, and forked on the
+    // `h` view, whose diff flags the sticky ctrl does not reach
+    // (pointer_cursor_kind, input_pointer.cpp). It is the map's standing rule
+    // that a point arming nothing wears the Arrow.
     //
     // It is bare `z`'s shape (the restrict-undo lamp) and its NEIGHBOUR'S too:
     // the three lamps are one family — in no settings vocabulary, never
@@ -12409,10 +12412,14 @@ inline void postures_after_value_change(AppState& a) {
 // lamp lit; an accepted one that happens to land the value already standing did
 // consume the selection, because "in fact I have already acted" reads the
 // PRESS. The callers, by act (re-greped 2026-09-12):
-//   * THE TEMPO CENT STEP, both arms through the one dispatcher's entry
-//     (GuiWarpMarkersOps::adjust_tempo_cents, past tempo_cent_step_actionable
-//     and ahead of the group fork, so the singleton and the group take one
-//     line);
+//   * THE TEMPO CENT STEP, BRANCH-LOCALLY — its refusals are per-branch (the
+//     group's walled / empty verdict, target view's kind refusals, source
+//     view's label ref, the last of them inside the changed-path tail), so the
+//     write sits on each ACCEPTED exit and on none of them: the singleton's
+//     bracket wall (an accepted step landing the value already standing), the
+//     singleton's changed path past that tail, and the group arm past its
+//     verdict (GuiWarpMarkersOps::adjust_tempo_cents and
+//     ::adjust_tempo_cents_group, warpmarkers_ops.cpp);
 //   * THE WARP DELETE and the PHASE-RESET DELETE, Ctrl+D on both columns and
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete is
@@ -14578,8 +14585,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // (architect 2026-09-10): the mode is lit for the column you are IN,
         // so the W/P switch is one of the acts the lock refuses and this
         // button — bare `p`, which the three absolute view selectors compose
-        // too — greys while the lamp stands, wearing the card its key raises
-        // on its hint. IT IS THE ONE MEMBER OF THIS ARM WITH NO READ-ONLY
+        // too — greys while the lamp stands, WEARING ITS OWN ACT'S NAME AND NO
+        // REASON: the sentence its key cards rode this face as a tooltip line
+        // until 2026-09-12, when the refusal-reason tooltip class was ruled out
+        // whole (the record is at redesign_button_tooltip's stateful overload).
+        // IT IS THE ONE MEMBER OF THIS ARM WITH NO READ-ONLY
         // TERM: bare `p` is on read_only_key_blocked's allowlist (a column
         // switch authors nothing), so a locked tab with the lamp DARK leaves
         // it lit exactly as it leaves the chord live, and this face mirrors

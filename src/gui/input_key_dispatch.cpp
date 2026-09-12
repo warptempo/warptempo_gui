@@ -785,8 +785,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //
 // THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
 // ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
-// app_state.h — the membership the enabled arms and the tooltip's one lock
-// fork both read). Its members are the four marker verbs, the Measure, the
+// app_state.h — the membership the ENABLED ARMS read, and they alone since
+// 2026-09-12, when the refusal-reason tooltip lines went: a greyed button
+// names its own act, the grey is the message, and the reason lives at the
+// key's card). Its members are the four marker verbs, the Measure, the
 // Toggle Marker Column lamp, the Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
 // lane, and — since 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column

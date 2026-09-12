@@ -710,9 +710,11 @@ void GuiFlagEditor::commit_measure_edit() {
     // (postures_after_value_change, app_state.h, where the class and the caller
     // inventory live): a measure is a flag's own number and position is not a
     // value, so the walk's framing lamp goes out and the centred pin with it —
-    // one answer for the class, and the restore of a measure-only entry reads
-    // itself the same way (undo.cpp). Past the unchanged return above, so this
-    // is the changed path.
+    // one answer for the class. A RESTORE IS NOT IN THAT CLASS AT ALL: every
+    // undo and redo takes the MOVEMENT posture unconditionally, whatever the
+    // entry's diff holds (Undo::restore_history_entry, undo.cpp — the
+    // self-classifying restore of 2026-09-12 is deleted). Past the unchanged
+    // return above, so this is the changed path.
     postures_after_value_change(app);
 
     // NO RE-RENDER AND NO MAP REBUILD: a measure reaches neither the engine nor

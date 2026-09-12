@@ -701,16 +701,19 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // buttons grey on the same predicate, so no lift reaches it.
     if (!tempo_cent_step_actionable(app))
         return "Select a warp marker to change its tempo";
-    // AND THE SELECTION IS SPENT HERE, FOR BOTH ARMS (architect 2026-09-12,
-    // the lamps resolved by use case): a press that reaches this line has a
-    // warp marker selected and is stepping its tempo, which is the moment Add
-    // to selection's building pass ends — "in fact I have already acted." It
-    // stands past the subject refusal above and AHEAD of the group fork, the
-    // wall and every value-shaped tail, so the singleton and the group say it
-    // once between them and a step that lands the value already standing still
-    // spends the selection it acted on. The writer carries the class's whole
-    // inventory (selection_consumed, app_state.h).
-    selection_consumed(app);
+    // AND THE SELECTION IS SPENT ON EACH ACCEPTED BRANCH, NOT HERE (architect
+    // 2026-09-12, the lamps resolved by use case): a step that ACTS is the
+    // moment Add to selection's building pass ends — "in fact I have already
+    // acted" — but a step that refuses consumed nothing, and every refusal
+    // past this line is PER-BRANCH (the group's walled / empty verdict, target
+    // view's kind refusals, source view's label ref), so THE WRITE IS
+    // BRANCH-LOCAL: each accepted exit calls selection_consumed exactly once
+    // and no refusing exit calls it at all, which is the placement rule the
+    // writer states for the whole class (selection_consumed, app_state.h,
+    // where the inventory lives). This arm has two accepted exits — the
+    // BRACKET WALL below, an accepted step whose landing is the value already
+    // standing, and the changed path past the tail's last refusal — and the
+    // group arm carries its own line past its verdict.
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below is UNCHANGED
     // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,
@@ -736,8 +739,18 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // their place past the stamp. The supersession of the old "an early call
     // must poison for a press that goes on to refuse" clause is recorded at
     // Undo::coalesce_gesture.
-    if (!tempo_cent_step_direction_actionable(app, audio, delta_cents))
+    if (!tempo_cent_step_direction_actionable(app, audio, delta_cents)) {
+        // AND THE WALL SPENDS THE SELECTION: the press had a warp marker
+        // selected and stepped its tempo, and the clamped landing is the value
+        // the marker already holds — an act that lands where it stands, not a
+        // refusal on the marker's kind, so it reads as the press it was (the
+        // accepted-path rule is at selection_consumed, app_state.h). The wall
+        // set and the kind-refused set are disjoint by this predicate's own
+        // record (it answers TRUE for every value-shaped tail), so this exit
+        // can never swallow a refusal's press.
+        selection_consumed(app);
         return std::nullopt;
+    }
     // THE COALESCE VERDICT, past the wall and ahead of every remaining refusal
     // (the tails named above): the call has a side effect — a PHYSICAL press
     // INVALIDATES the coalescing stamp inside it (the derivation is at
@@ -866,6 +879,14 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // about the marker's kind, not a wall the value is resting on.
         return std::nullopt;
     }
+    // THE ACCEPTED SINGLETON PATH SPENDS THE SELECTION, and it says so HERE
+    // rather than ahead of the `changed` test above because this arm's LAST
+    // refusal lives inside that tail: the source-view label ref is skipped by
+    // the loop and carded by the tail, so a write ahead of the test would put
+    // the lamp out on a press that refused. Nothing reaches this line but a
+    // step that moved the value (selection_consumed, app_state.h, where the
+    // accepted-path rule and the whole inventory live).
+    selection_consumed(app);
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a held tempo step: the repeats skip the redundant push so one
@@ -1178,6 +1199,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     case TempoCentStepGroupVerdict::Empty:
         return "Select a warp marker to change its tempo";
     }
+    // AND THE GROUP'S ACCEPTED PATH SPENDS THE SELECTION, past the one refusal
+    // this arm has (the verdict above) and ahead of its changed-path belt: a
+    // group step that acts is exactly the press Add to selection was built
+    // for, and it ends that pass. The branch-local placement is argued at the
+    // group fork in adjust_tempo_cents above; the class's rule and its
+    // inventory are at selection_consumed (app_state.h).
+    selection_consumed(app);
     // THE COALESCE VERDICT, now past the one refusal this act has. It is
     // computed BEFORE the invalidate inside the call (the hybrid's order rule
     // at coalesce_gesture), and `merge` is consumed below; order-independent of

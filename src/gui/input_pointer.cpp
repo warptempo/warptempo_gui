@@ -2385,11 +2385,12 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // the drag in a live view at home; where the drag refuses (off the
         // column's home view, a read-only tab) or does not exist (the `h`
         // view's diff flags, which take clicks alone) the box still wears it,
-        // one shape for the one surface. THE EXCEPTION IS THE VALUE DRAG LAMP
-        // (2026-09-10), and it is one because the lamp changes WHICH GESTURE
-        // the surface offers rather than merely whether it will succeed: with
-        // the lamp lit the horizontal move is off on every flag, so a box that
-        // still promised it would promise a gesture that no longer exists.
+        // one shape for the one surface. THE EXCEPTIONS ARE THE TWO LAMPS —
+        // the VALUE DRAG (2026-09-10) and ADD TO SELECTION (2026-09-12) — and
+        // they are exceptions because each changes WHICH GESTURE the surface
+        // offers rather than merely whether it will succeed: with either lit
+        // the horizontal move is off on every flag, so a box that still
+        // promised it would promise a gesture that no longer exists.
         // THE CENTRED PIN IS NOT A SECOND ONE: under a lit pin the horizontal
         // drag exists exactly as it does at rest — it simply collapses the
         // posture at its crossing — so the box keeps TrimResize and the cursor
@@ -2414,18 +2415,30 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // and for the crossing.
         const int flag_hit = hit_test_flag(app, audio, x, y);
         if (flag_hit >= 0) {
+            // ADD TO SELECTION GOVERNS THE WHOLE ARM (architect 2026-09-12,
+            // the ruling that let the two lamps stand lit together): while the
+            // sticky ctrl stands, EVERY plain flag press on the live lane takes
+            // the membership-toggle branch, which acts at the press and arms
+            // NOTHING (run_marker_click_act's `toggle` term, this file), so no
+            // crossing can begin a drag of either axis on any flag. That is
+            // true whatever the value drag lamp says, so the term is ranked
+            // first and outside it: the Arrow is what a point arming nothing
+            // wears everywhere in this map, and a box still promising the
+            // horizontal move would promise a gesture the press cannot begin.
+            //
+            // AND IT IS THE LIVE LANE'S TERM ALONE. In the `h` view the flags
+            // are the mode's DIFF flags, whose plain press is the mode's own
+            // focus click (handle_history_mode_press -> focus_history_diff_flag
+            // — the mode's multi-selection is its explicit ctrl and shift
+            // clicks, and this lamp is no producer of it), so the sticky ctrl
+            // changes nothing a diff flag does and must change nothing it
+            // wears: in there the box keeps the ruled one-shape-for-the-one-
+            // surface answer below. The value drag's own term needs no such
+            // fork — its predicate answers false whole in the view, at its own
+            // declaration.
+            if (app.add_to_selection && !app.history_mode.active)
+                return GuiCursorKind::Arrow;
             if (app.value_drag_enabled) {
-                // AND ADD TO SELECTION ANSWERS AHEAD OF THE TARGET (architect
-                // 2026-09-12, the ruling that let the two lamps stand lit
-                // together): while the sticky ctrl stands, EVERY plain flag
-                // press takes the membership-toggle branch, which acts at the
-                // press and arms nothing, so no crossing can begin this drag on
-                // any flag. The pair is harmless exactly because of that — and
-                // this is where the map says so, the Arrow being what a point
-                // arming nothing wears everywhere in it. One term, ranked
-                // first: the target rule below has nothing to add once the
-                // gesture cannot begin.
-                if (app.add_to_selection) return GuiCursorKind::Arrow;
                 return value_drag_target(app, audio, flag_hit,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
