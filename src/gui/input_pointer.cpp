@@ -2385,13 +2385,16 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // the drag in a live view at home; where the drag refuses (off the
         // column's home view, a read-only tab) or does not exist (the `h`
         // view's diff flags, which take clicks alone) the box still wears it,
-        // one shape for the one surface. THE TWO EXCEPTIONS ARE THE VALUE DRAG
-        // LAMP (2026-09-10) AND THE CENTRED PIN (2026-09-12), and they are
-        // exceptions because each changes WHICH GESTURE the surface offers
-        // rather than merely whether it will succeed: under either one the
-        // horizontal move is off on every flag, so a box that still promised it
-        // would promise a gesture that cannot start. Both forks are at the arm
-        // below. It reads
+        // one shape for the one surface. THE EXCEPTION IS THE VALUE DRAG LAMP
+        // (2026-09-10), and it is one because the lamp changes WHICH GESTURE
+        // the surface offers rather than merely whether it will succeed: with
+        // the lamp lit the horizontal move is off on every flag, so a box that
+        // still promised it would promise a gesture that no longer exists.
+        // THE CENTRED PIN IS NOT A SECOND ONE (architect 2026-09-12): under the
+        // pin the horizontal drag still exists — it is the REVERSE PAN, the
+        // flag holding the centre column while the waveform slides under it —
+        // so the box keeps TrimResize and the cursor still promises the
+        // gesture. That fork is at the arm below. It reads
         // hit_test_flag — the painter's published boxes, the same predicate the
         // press claims and the nav surface carves itself out with — so it
         // answers the LIVE marker lane and the `h` view's DIFF flags through
@@ -2417,15 +2420,6 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
-            // THE CENTRED PIN TAKES THE SAME SHAPE AS THE LAMP ABOVE (architect
-            // 2026-09-12): while it is engaged the horizontal move is REFUSED
-            // at the crossing on every flag, so a box that still promised it
-            // would promise a gesture that cannot start. The Arrow is what a
-            // point arming nothing wears everywhere in this map. It ranks below
-            // the value-drag arm because that lamp answers for the VERTICAL
-            // drag, which the pin leaves live — a value change moves no marker
-            // in time and takes nothing out from under the playhead.
-            if (centered_pin_engaged(app)) return GuiCursorKind::Arrow;
             return GuiCursorKind::TrimResize;
         }
         // The rest of the strip: the button rows (claimed far above the
@@ -10633,20 +10627,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (authoring_locked(app) ||
             !active_column_authoring_allowed(app))
             return;
-        // AND THE CENTRED PIN REFUSES THE DRAG (architect 2026-09-12): the pin
-        // promises that the playhead is always centred, and a horizontal flag
-        // drag carries the marker out from under a playhead that cannot move to
-        // meet it — the one gesture whose whole point the posture contradicts.
-        // So the drag is UNREACHABLE while the pin is engaged rather than being
-        // a keeper or a collapser of it; the arrows are the way to move a marker
-        // in time under a lit lamp, or the lamp goes out first. It reads
-        // centered_pin_engaged like every other engagement site, which by this
-        // point in the press is the lamp itself: the arming press's own click
-        // act landed the playhead through a movement owner, so any standing A/B
-        // audition is already ended. SILENT, a pointer non-event exactly like
-        // the two gates above — the press's acts (the stop, the select, the
-        // land, the region hide) all ran at the press and stand.
-        if (centered_pin_engaged(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta
         // (the strip/region catch-up pattern). begin_drag captures the pre-drag
@@ -10654,6 +10634,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // store between press and crossing — and sets app.drag.active. Fall
         // through (no return) so this same motion event applies the first delta
         // through the marker-drag branch below.
+        // IT ALSO STAMPS THE CENTRED PIN (architect 2026-09-12): begin_drag
+        // reads centered_pin_engaged once, into DragState::camera_follows, and
+        // the gesture is the REVERSE PAN for its whole length off that one bit
+        // — no refusal here, and no site below re-asks the lamp.
         // NO DOUBLE-CLICK CLEAR IS OWED HERE: the seed is the motionless
         // release's alone, so a press that becomes a drag never seeded one,
         // and on_button_press's own
@@ -10744,9 +10728,28 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // The displayed-map hops that carry the delta into the source domain
     // live inside apply_drag_motion, which anchors the proposal in the
     // DISPLAYED target domain so the painted flag tracks the pointer 1:1.
-    const double mouse_frame = static_cast<double>(app.viewport_start_sample) +
-        static_cast<double>(mouse_x - area.x) * spp;
-    marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
+    //
+    // THE PINNED DRAG MEASURES THE HAND, NOT THE SCREEN (architect 2026-09-12).
+    // The expression above READS THE VIEWPORT, which is exact while the
+    // viewport is still — the ordinary drag never scrolls it — and wrong the
+    // moment the camera moves under the hand, which is precisely what the
+    // reverse pan does: each motion re-centres on the marker, so the next
+    // event's mouse_frame would be taken against a viewport the previous
+    // event's own delta had already moved, and the marker would run away from
+    // the pointer. Under camera_follows the delta is therefore the ACCUMULATED
+    // PIXEL TRAVEL since the press times the standing spp — basis-independent,
+    // and exact because ZOOM CANNOT CHANGE MID-DRAG (the drag-modal gate
+    // swallows every chord and the wheel is blocked), so spp is a constant of
+    // the gesture. THE TWO ARE NOT BITWISE EQUAL (the viewport form adds and
+    // subtracts viewport_start_sample around a product), so the fork is
+    // explicit and the unpinned drag keeps its own expression byte for byte.
+    const double delta =
+        app.drag.camera_follows
+            ? static_cast<double>(mouse_x - app.drag.anchor_mouse_x) * spp
+            : (static_cast<double>(app.viewport_start_sample) +
+               static_cast<double>(mouse_x - area.x) * spp) -
+              app.drag.anchor_mouse_time_frame;
+    marker_drag.apply_drag_motion(delta);
     // Playhead rule: the playhead follows the dragged marker through the drag
     // inside apply_drag_motion (the crossing's click act landed it on the
     // marker, so the drag tows it by construction — the DragState ruling). The

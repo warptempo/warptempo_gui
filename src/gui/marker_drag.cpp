@@ -66,6 +66,19 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
         static_cast<double>(app.viewport_start_sample) +
         static_cast<double>(mouse_x - area.x) * spp;
 
+    // THE CENTRED PIN, READ ONCE (architect 2026-09-12): with the pin engaged
+    // this drag is the REVERSE PAN — the flag holds the window's centre column
+    // and the waveform slides under it, the nudge made continuous — so the
+    // whole fork is this one bit, stamped here and never re-asked (the
+    // contract, and the four readers, are at DragState::camera_follows).
+    // NO SIGN FLIPS ANYWHERE: the store proposal stays today's (the marker's
+    // frame follows the pointer's travel) and the CAMERA follows the marker,
+    // so the waveform slides the other way by itself.
+    // The PIXEL anchor is the pinned delta's own: with the viewport moving per
+    // motion event, the hand's travel is the only reading that stays true.
+    d.camera_follows = centered_pin_engaged(app);
+    d.anchor_mouse_x = mouse_x;
+
     // Compute scalar delta_min / delta_max as the dragged marker's ACTIVE-domain
     // wall headroom (architect 2026-07-23, retiring the earlier source-domain
     // bounds and their target-view squash).
@@ -111,7 +124,24 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // upper with 0: the interval always contains 0, the no-motion identity
     // clamp(0) == 0 holds on every reachable grab, and a centered grab (0 already
     // inside) is unaffected.
-    {
+    //
+    // THE PINNED DRAG TAKES NO VIEWPORT CLAMP AT ALL (architect 2026-09-12).
+    // The clamp's whole premise is that the VIEWPORT STANDS STILL while the
+    // marker moves, so pushing the marker past an edge would hide it; under
+    // camera_follows the camera follows the marker, which is exactly why it
+    // cannot go offscreen — the flag sits at the centre column and the
+    // waveform slides beneath it. Applying it anyway would be worse than
+    // pointless: these bounds are ABSOLUTE active-domain frames taken against
+    // the viewport AT THE CROSSING, where the marker is wherever the press
+    // found it (the pre-paint hook is paused under the pending, so the pin has
+    // not re-centred it yet), so a flag grabbed near the left edge would be
+    // free to travel right and stuck after a few pixels left — the first
+    // derive having since put it in the middle of the window with nothing on
+    // screen to explain the wall. What remains for the pinned gesture is what
+    // the ruling names for its ends: the data walls above, the marker stopping
+    // at 0 / EOF while the viewport clamps at the song's ends, where the flag
+    // walks off-centre exactly as the pin itself does.
+    if (!d.camera_follows) {
         const auto vb = viewport_marker_bounds(app, audio);
         double vp_lb = static_cast<double>(vb.first)  - fwd_orig;
         double vp_ub = static_cast<double>(vb.second) - fwd_orig;
@@ -312,14 +342,33 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
-    // THROUGH THE CARRY: the flag drag is a TIME ACT — it moves a marker in
-    // time under a playhead that follows it — so the ride writes no centred
-    // pin, per motion event or at the commit below. SINCE 2026-09-12 THE CARRY
-    // IS SIMPLY THE HONEST ENTRY FOR A MOVEMENT WITH NOTHING TO COLLAPSE: the
-    // pin REFUSES this gesture outright at the crossing (input_pointer.cpp), so
-    // a lit lamp never reaches here and the drag is neither a keeper of the
-    // posture nor a collapser of it. The rule is at AppState::centered_mode.
+    // THROUGH THE CARRY (architect 2026-09-11): the flag drag is a TIME ACT —
+    // it moves a marker in time under a playhead that follows it, which is what
+    // the centered posture exists for — so the ride must not put the `y` lamp
+    // out, per motion event or at the commit below. The drag is a KEEPER, and
+    // since 2026-09-12 it is the strongest one there is: under a lit pin this
+    // gesture IS the pin's own motion, so the posture has nothing to answer
+    // for. The rule is at AppState::centered_mode.
     viewport.carry_playhead_to(sample);
+    // AND UNDER THE PIN THE CAMERA FOLLOWS THE MARKER, PER MOTION EVENT
+    // (architect 2026-09-12) — the REVERSE PAN: the flag holds the window's
+    // centre column and the waveform slides under it. Literally "the camera
+    // follows the playhead riding the marker": the carry above has just written
+    // playhead_cursor_sample to the marker's ridden position, and
+    // derive_centered_viewport reads exactly that field — so this is the pin's
+    // ONE derivation body, not a second one, and it writes neither camera lamp
+    // and no follow bit (the autonomous mover's own rule, stated there). It
+    // brings the pan's full write with it — waveform damage, the top strip and
+    // the SYNCHRONOUS plate rebuild — which is the grab-pan's proven per-motion
+    // budget, and it is why this gesture is out of the displayed-basis freeze:
+    // the basis it paints against is the one it has just moved.
+    // THE FIRST MOTION MAY JUMP, and that is accepted: the pre-paint hook is
+    // paused for the pending press, so at the crossing the marker still sits
+    // wherever the press found it, and this first derive centres it in one step
+    // of up to half a window. The press's own land had already made that
+    // centring due — the hook would have performed it a tick after the release
+    // — so the jump is the pin arriving early, not the drag inventing a move.
+    if (app.drag.camera_follows) viewport.derive_centered_viewport();
     // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
     // marker and HID the trim region overlay, so a marker drag runs with the
     // overlay already down, and the carry above hides as the movement owner it
@@ -344,16 +393,17 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
-// THE DRAG IS A TIME ACT AND THE TWO CAMERA LAMPS READ IT DIFFERENTLY
-// (architect 2026-09-11, the pin's half superseded 2026-09-12): the playhead
-// ride and this land go through the CARRY, which writes no centred pin — and it
-// owes none, the gesture being UNREACHABLE while the pin is engaged (the
-// crossing refuses it: a horizontal drag would carry the marker out from under
-// a playhead the pin holds centred) — while the commit LIGHTS the walk's
-// framing lamp, that one on the NET-CHANGED path alone, a wander-back drag
+// THE DRAG IS A TIME ACT AND THE TWO CAMERA LAMPS READ IT AS ONE (architect
+// 2026-09-11): the playhead ride and this land go through the CARRY, which
+// declines the centered posture's collapse, and the commit LIGHTS the walk's
+// framing lamp — that one on the NET-CHANGED path alone, a wander-back drag
 // having moved no marker in time. Both rules are stated at their fields
 // (AppState::centered_mode, set_center_on_next_marker) and neither is restated
-// here.
+// here. UNDER THE PIN THE COMMIT DERIVES NOTHING OF ITS OWN (2026-09-12): the
+// land below moves the cursor from the ridden position to the column-snapped
+// one, at most a column, and the pre-paint hook — unpaused the moment the
+// gesture ends — re-derives on that landed cursor in the frame this commit's
+// own damage already produces, exactly as it does after every other land.
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read
@@ -383,6 +433,19 @@ void MarkerDragOps::commit_drag() {
     // stored-equals-shown holds even inside a worker publish window where
     // displayed != live. The commit-time land below stays on the LIVE
     // map deliberately — post-commit placement truth, the Tab basis.
+    //
+    // THE COLUMN IS ASKED OF THE VIEWPORT, AND UNDER THE PIN THAT VIEWPORT IS
+    // THE ONE THE FLAG IS PAINTED IN (2026-09-12): both helpers below read the
+    // LIVE basis — app.viewport_start_sample and painter_samples_per_pixel
+    // (warp_frame_map_view.cpp) — which for the unfrozen pinned drag is the
+    // viewport the LAST motion's derive wrote, and that derive's own
+    // kick_waveform_sync rendered the plate and rebuilt the flag cache against
+    // it synchronously before returning. So live == plate == what the hand last
+    // saw, and stored-equals-shown holds for this gesture exactly as it does
+    // for the still-viewport one. The grid recovery is exact too:
+    // derive_centered_viewport clamps through clamp_viewport_start, which snaps
+    // every rest to a whole-pixel grid point, which is the premise
+    // displayed_grid_position_at_column reads.
     const int64_t total    = audio.total_frames();
     const int64_t eof_wall = total - 1;
     const std::vector<WarpFrameMapSegment>& dmap =
@@ -508,9 +571,9 @@ void MarkerDragOps::commit_drag() {
     // the playhead lands on the committed frame directly; a phase reset drag in
     // its target home maps through the post-commit map.
     if (land_playhead) {
-        // The carry, the motion arm's own reason: a time act writes no centred
-        // pin, and this one cannot run under a lit pin at all — the crossing
-        // refuses the gesture there (AppState::centered_mode).
+        // The carry, the motion arm's own reason: a time act keeps the centered
+        // posture (AppState::centered_mode) — and a drag begun under the pin is
+        // the posture's own motion, so there could be nothing here to collapse.
         viewport.carry_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }

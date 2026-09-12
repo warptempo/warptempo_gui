@@ -450,6 +450,27 @@ struct DragState {
     // apply_drag_motion carries it into the source domain through the
     // displayed map's two hops (the uniform-rate model at its header).
     double              anchor_mouse_time_frame = 0.0;
+    // THE CAMERA-FOLLOWS BIT (architect 2026-09-12): the CENTRED PIN was
+    // ENGAGED when this drag began, so this gesture is the REVERSE PAN — the
+    // flag holds the window's centre column and the waveform slides under it,
+    // the nudge made continuous. Set ONCE, at the threshold crossing, from
+    // centered_pin_engaged; the drag derives the camera itself, per motion
+    // event, through the pin's one derivation body; and the DISPLAYED BASIS IS
+    // NOT FROZEN for it (displayed_basis_frozen names this field, the freeze's
+    // one deliberate non-member among the absolute drags). NO SITE RE-ASKS THE
+    // LAMP MID-DRAG: nothing can flip it under a held button — the drag-modal
+    // gate swallows every chord — but the contract is this FIELD'S and not the
+    // lamp's, so a gesture ends the way it began whatever the lamp does. Its
+    // readers are the delta expression at the live motion arm
+    // (input_pointer.cpp), the per-motion derive and the begin-time viewport
+    // clamp (marker_drag.cpp), and the freeze predicate below.
+    bool                camera_follows = false;
+    // Press position in WINDOW PIXELS — the camera_follows delta's anchor, and
+    // read on that path alone. The pinned drag measures the hand's travel in
+    // PIXELS rather than in active-domain frames because the viewport the frame
+    // reading is taken against is being rewritten by the gesture itself; off
+    // the pin the frame anchor above is the one anchor and this is unread.
+    int                 anchor_mouse_x = 0;
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     // No per-drag map copy: mid-drag target-view translation (paint, the
@@ -459,7 +480,10 @@ struct DragState {
     // target_view_warp_frame_map_cached) when cold. The displayed map is
     // frozen FROM THE AIMED PRESS to the release (displayed_basis_frozen, the
     // membership's one owner — the pending press joined 2026-08-22, since the
-    // crossing converts the press's stored press_x) by THREE gates working
+    // crossing converts the press's stored press_x; a drag begun under the
+    // CENTRED PIN is that predicate's one non-member, deriving its own camera
+    // per motion so its basis MUST move — camera_follows below, and the
+    // predicate's last paragraph) by THREE gates working
     // together: the
     // freeze gate in maybe_enqueue_waveform_render suppresses any NEW
     // dispatch, on_waveform_render_done DROPS a job that was already in
@@ -967,12 +991,13 @@ struct EditorTextDragState {
 // and still open no editor (read-only protects the AUTHORED MUSICAL CONTENT —
 // the marker stores and the engine settings — and a selection is navigation),
 // so the plain arm itself is unconditional: even a press whose drag will refuse
-// must arm, because the motionless release still owes the SEED. SINCE
-// 2026-09-12 THERE IS A THIRD, THE CENTRED PIN, refusing the horizontal drag in
-// the same silent shape for a reason of its own: the pin promises a playhead
-// held at the window's centre and a drag would carry the marker out from under
-// it. The crossing is where all three stand, and the VALUE DRAG lamp forks
-// ahead of them into the vertical gesture, which the pin leaves live.
+// must arm, because the motionless release still owes the SEED. THE GATES ARE
+// TWO — the lock and the home-view binding — and the VALUE DRAG lamp forks
+// ahead of them into the vertical gesture. THE CENTRED PIN IS NOT A GATE
+// (architect 2026-09-12): under a lit pin the horizontal drag is the REVERSE
+// PAN, not a refusal — the flag holds the centre column and the waveform
+// slides under it — so the crossing stamps DragState::camera_follows and
+// begins the gesture exactly as it does at rest.
 //
 // Session-only, never serialized. Cleared on the crossing (either the drag
 // takes over or the arm is spent), on release / lost button, by the force-end
@@ -5009,7 +5034,8 @@ struct AppState {
     // 2026-09-11 sentence as the KEEPER LIST it always was): CENTERED KEEPS
     // THROUGH EXACTLY Ctrl+Tab (the A/B switch), Shift+Space (the audition),
     // BARE SPACE AND THE SCRUB'S PLAY (project audio from the playhead), THE
-    // Left/Right NUDGE, ITS OWN BARE `y`, AND THE S/T TRANSLATION — the W/P
+    // Left/Right NUDGE AND THE FLAG DRAG (the two acts that move a marker in
+    // TIME), ITS OWN BARE `y`, AND THE S/T TRANSLATION — the W/P
     // switch and bare 1/2/3 compose that same pair of handlers and move
     // nothing, and the waveform magnification is a picture gain with no zoom
     // level and no camera — AND EVERYTHING ELSE THAT MOVES THE CAMERA OR THE
@@ -5021,14 +5047,19 @@ struct AppState {
     // trim write, and every act that rewrites the warp map or a flag's value
     // under it.
     //
-    // THE FLAG DRAG IS NEITHER A KEEPER NOR A COLLAPSER: it is UNREACHABLE
-    // while the pin is engaged (architect 2026-09-12 — the pin promises a
-    // centred playhead and a horizontal drag would pull the marker out from
-    // under it, so the crossing refuses, silently, at input_pointer.cpp). Its
-    // ride and its commit land through Viewport::carry_playhead_to /
-    // carry_playhead_on_marker still, which is simply the honest entry for a
-    // movement with no posture to answer for: under a dark lamp there is
-    // nothing to collapse, and a lit lamp never reaches the gesture.
+    // THE FLAG DRAG IS THE STRONGEST KEEPER OF ALL, BECAUSE UNDER THE PIN IT
+    // IS A REVERSE PAN (architect 2026-09-12, an EXPERIMENT BUILD he is trying
+    // on glass before it is ruled final): the flag holds the window's centre
+    // column and the WAVEFORM SLIDES UNDER IT, the marker moving in the music
+    // by exactly the hand's travel — the nudge made continuous. So the drag is
+    // not merely something the posture survives, it is the posture's own
+    // motion: each motion event carries the playhead onto the dragged marker
+    // and then re-derives the camera through the pin's one body
+    // (MarkerDragOps::apply_drag_motion, off DragState::camera_follows —
+    // stamped at the crossing from centered_pin_engaged and the whole of the
+    // gesture's fork). Its ride and its commit land through
+    // Viewport::carry_playhead_to / carry_playhead_on_marker, the movement
+    // owners minus this write, exactly as the nudge's do.
     //
     // THE COLLAPSE HAS ONE BODY (collapse_centered_posture, below), reached by
     // most owners through the composed postures_after_movement /
@@ -10901,10 +10932,10 @@ inline bool transport_session_live(const AppState& a) {
 // (GuiAbAudition::start), so an audition run to its end leaves the pin lit and
 // holding.
 //
-// FOUR READERS, the pin's ENGAGEMENT sites and nothing else (re-greped
-// 2026-09-11):
+// FIVE READERS, the pin's ENGAGEMENT sites and nothing else (re-greped
+// 2026-09-12):
 //   * the pre-paint hook's RESTING half and its PLAYING half (main.cpp), the
-//     pin's one derivation point;
+//     pin's derivation point for every road that LANDS a playhead;
 //   * the LAUNCH SEED's fork (GuiPlaybackLifecycle::launch_playback_window),
 //     an ordinary engagement site since the evening of 2026-09-01: the act's
 //     phase stands there (GuiAbAudition::launch_phase writes it before the
@@ -10913,7 +10944,16 @@ inline bool transport_session_live(const AppState& a) {
 //   * GuiPlaybackLifecycle::set_centered_mode's off->on edge, which is
 //     unreachable under a standing act since 2026-09-11 (the toggle refuses
 //     there) and stays the edge's own question: the derivation body is never
-//     called while the act stands.
+//     called while the act stands;
+//   * THE FLAG DRAG'S THRESHOLD CROSSING (MarkerDragOps::begin_drag,
+//     2026-09-12), the only reader that STAMPS rather than asks: the drag
+//     under an engaged pin is the REVERSE PAN and derives the camera itself
+//     per motion event, so the engagement is read ONCE into
+//     DragState::camera_follows and the gesture runs off that bit alone. It
+//     is an engagement site for the same reason the launch seed is — it
+//     decides whether the pin's derivation happens — and an A/B audition
+//     cannot be standing there anyway, the arming press's own land having
+//     ended it.
 // EVERY OTHER READER OF centered_mode IS THE PREFERENCE and reads the field
 // direct, and since the key left the schema 2026-09-11 there are just TWO
 // (re-greped that day): the lamp's face (redesign_button_selected's
@@ -17385,7 +17425,9 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // that carries the repaired damage (both conditions at that block). A state
 // belongs iff it is
 // an ABSOLUTE drag on a PAINTED
-// subject — the marker drag and the trim drags — or the PENDING PRESS that
+// subject — the marker drag (EXCEPT under the centred pin, where it is a pan
+// and derives its own camera; the last paragraph of this block) and the trim
+// drags — or the PENDING PRESS that
 // AIMS one (pending_marker_press, pending_trim_drag), OR — the value drag,
 // argued in full at the bottom of this block — a drag that writes the LIVE
 // STORE per motion event, where the freeze runs the other way and protects
@@ -17426,8 +17468,28 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // drag's own road out, unchanged. (Its own PENDING press is already a member
 // above: the same pending arms both drags, so the freeze covers this gesture
 // from the press through the crossing and on to the release with no gap.)
+//
+// AND THE MARKER DRAG UNDER THE CENTRED PIN IS THE DELIBERATE NON-MEMBER
+// (architect 2026-09-12 — the `!app.drag.camera_follows` term below): begun
+// with the pin engaged, that drag IS A PAN — the flag holds the window's
+// centre column and the waveform slides under it — so it DERIVES THE CAMERA
+// PER MOTION EVENT (Viewport::derive_centered_viewport, called from
+// apply_drag_motion) and takes that body's synchronous plate rebuild every
+// time. Freezing it would be exactly backwards: what it paints against is the
+// basis the gesture itself has just moved, so the promote must run EVERY FRAME
+// or the plate, the flag pixels and the item geometry would part company for
+// the drag's whole length. It belongs to the GRAB-PAN'S class rather than the
+// absolute drags' — a live-basis gesture that renders synchronously — and it
+// needs no protection from a worker publish either: the synchronous rebuild
+// has already drained the worker and republished the fingerprint at the hand's
+// own cadence. Nothing in its arithmetic depends on the basis it moves, which
+// is what makes the exception safe rather than merely necessary: its delta is
+// PIXEL travel from the press (DragState::anchor_mouse_x), not a frame reading
+// taken against a viewport. THE PENDING PRESS THAT AIMS IT STAYS A MEMBER
+// UNCONDITIONALLY — the crossing still converts a stored press_x, and before
+// the crossing there is no bit to read.
 inline bool displayed_basis_frozen(const AppState& app) {
-    return app.drag.active ||
+    return (app.drag.active && !app.drag.camera_follows) ||
            app.trim_drag.active ||
            app.value_drag.active ||
            app.pending_marker_press.active ||

@@ -820,11 +820,21 @@ void Viewport::center_viewport_on_playhead() {
 // owners, the translations/reseats, the restores, the A/B tab switch AND the
 // playback scanner's per-frame advance — recenters through the pre-paint
 // hook (main.cpp), which reads the resting-or-scanning cursor once per frame
-// and calls THIS body; no mutator scatters a recenter call of its own. The
-// other two callers are the toggle's own chokepoint (set_centered_mode's
-// off->on edge, so the invariant starts holding at the toggle) and the launch
+// and calls THIS body; NO MUTATOR SCATTERS A RECENTER CALL OF ITS OWN, with
+// the one exception named below, which is a GESTURE rather than a road that
+// lands a playhead. The
+// other callers are the toggle's own chokepoint (set_centered_mode's
+// off->on edge, so the invariant starts holding at the toggle), the launch
 // seed (launch_playback_window's visibility fork), which centers the scanner
-// where follow would left-edge-align it. ALL THREE ASK ONE PREDICATE SINCE
+// where follow would left-edge-align it, and — since 2026-09-12 — THE FLAG
+// DRAG UNDER THE PIN (MarkerDragOps::apply_drag_motion), the one MUTATOR that
+// derives, and it does so because the gesture IS this pin's motion: the flag
+// holds the centre column while the waveform slides under it, so each motion
+// event carries the playhead onto the dragged marker and then calls this body
+// on it. That caller reads no predicate here — it stamped the engagement at
+// its own crossing (DragState::camera_follows) and the pre-paint hook stays
+// paused for its whole life, so the two never derive the same frame twice.
+// THE OTHER THREE ASK ONE PREDICATE SINCE
 // 2026-09-01 — centered_pin_engaged (app_state.h), the lamp's preference
 // narrowed by the A/B audition, which disregards the pin for its whole
 // duration — so no caller reads the lamp's field direct and nothing derives
