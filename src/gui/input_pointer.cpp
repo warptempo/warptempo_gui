@@ -1603,12 +1603,16 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // no store at all — lands through the identical expression instead of a second
 // copy of it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
+// THE MARKER FORM IS TWO ENTRY POINTS SINCE 2026-09-11 — carry_playhead_on_marker
+// and the land that composes it with the CENTERED POSTURE'S COLLAPSE — and the
+// list above is the LAND's: every member of it is an act the posture goes out
+// on. The carry's one caller is named at its declaration (input_handler.h).
 // The shared write, defined below the two entry points that share it.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport, int64_t src_frame);
 
-void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
-                             Viewport& viewport, int hit) {
+void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                              Viewport& viewport, int hit) {
     // THE HIDE IS THE LAND'S, not the caller's, since 2026-08-19 — this is the
     // second of the rule's two movement owners (the rule and its exemptions are
     // at clear_region_highlight, input_handler.h). It sits ABOVE the store
@@ -1624,8 +1628,23 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     // TRANSLATION or a provable no-op, neither of which is a movement. A class
     // statement: the complete clearing-owner inventory is at
     // GuiAuditionSequence (app_state.h).
+    // IT IS IN THE CARRY RATHER THAN THE LAND BELOW, exactly as
+    // Viewport::carry_playhead_to holds it: a TIME ACT declines the centered
+    // posture's collapse, never the act's end.
     clear_audition_sequence(app);
     reseat_playhead_on_marker(app, audio, viewport, hit);
+}
+
+// THE MARKER MOVEMENT OWNER — the carry above plus the centered posture's
+// collapse, Viewport::move_playhead_to's marker form (2026-09-11). The rule is
+// stated once at AppState::centered_mode; the ORDER is load-bearing the same
+// way it is there — the carry's clear of the audition runs first, so a land
+// that interrupts the act ends it AND puts the lamp out, while the act's own
+// `c` lands (made while its phase stands) find the collapse a no-op.
+void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                             Viewport& viewport, int hit) {
+    carry_playhead_on_marker(app, audio, viewport, hit);
+    collapse_centered_posture(app);
 }
 
 // THE MARKER RESEAT — the same store lookup and the same write with NO hide, for
@@ -1670,6 +1689,12 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
     // The A/B audition's end, this entry point's half of it — the argument is
     // at the marker form above, the inventory at GuiAuditionSequence.
     clear_audition_sequence(app);
+    // AND THE CENTERED POSTURE'S COLLAPSE, after that clear and for the same
+    // reason the marker form takes it (the rule at AppState::centered_mode).
+    // This form has NO CARRY TWIN: its callers are all `h`-view commands and no
+    // time act holds a bare source frame — one is owed an argument of its own
+    // before it is written.
+    collapse_centered_posture(app);
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 

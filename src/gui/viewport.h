@@ -238,7 +238,25 @@ struct Viewport {
     // (input_handler.h). The hide is UNCONDITIONAL — a Home that lands on the
     // frame the cursor already holds still hides, which is the 2026-08-15 ruling
     // the bottom row's ungreyed skip buttons rest on.
+    // SINCE 2026-09-11 IT IS THE CARRY BELOW PLUS THE CENTERED POSTURE'S
+    // COLLAPSE, in that order: the playhead's position in the music changing is
+    // the collapse's rule as much as the hide's (the rule is at
+    // AppState::centered_mode).
     void move_playhead_to(int64_t new_sample);
+    // THE CARRY — the movement, WITHOUT the centered posture's collapse, for
+    // the TIME ACTS (architect 2026-09-11): the acts that move a marker in time
+    // under a playhead that follows it are exactly what the `y` posture is for,
+    // so they must not put its lamp out. Everything else about it is
+    // move_playhead_to's, the overlay hide and the audition's end included —
+    // this is not a reseat.
+    // A CLASS STATEMENT WITH ITS COMPLETE LIST HERE, and it is TWO acts at
+    // three call sites (re-greped 2026-09-11): the Left/Right POSITION NUDGE's
+    // follow of the nudged marker (position_nudge.cpp) and the FLAG DRAG's
+    // per-motion carry and its commit re-land (marker_drag.cpp). Named rather
+    // than spelled as a flag on the mover, for the reason the reseat carries:
+    // "skip the rule this time" is a hand-listed inventory in disguise. Do not
+    // add a caller without an argument for why the act is a time act.
+    void carry_playhead_to(int64_t new_sample);
     // THE RESEAT — the identical write with NO hide, for the callers whose write
     // is not a movement (contract at the definition, viewport.cpp). Named rather
     // than spelled as a flag on the mover: "skip the rule this time" would be the

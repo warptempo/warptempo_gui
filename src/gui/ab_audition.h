@@ -77,13 +77,24 @@ struct GuiInputHandler;
 // `phase` stands — the launch seed included, since launch_phase writes the
 // phase BEFORE it launches and the act's road into the launch body runs no
 // clear (the flag that named the act by its entry for the first hours of
-// 2026-09-01 retired that evening). The lamp is untouched (this act writes no
-// field and it reports the standing preference), and the pin re-engages at
-// the act's end, on the resting cursor `c` has already centered.
+// 2026-09-01 retired that evening). The pin re-engages at the act's end, on
+// the resting cursor `c` has already centered.
+// AND THE ACT ARMS THE LAMP (architect 2026-09-11): start() writes the posture
+// TRUE once its first play has launched, so an audition run to its end leaves
+// the pin lit and holding — the act is an alignment listen and the posture is
+// the alignment tool. For the act's duration the lamp is out of the user's
+// hands: bare `y` cards on kCenteredAuditionCard, the icon-row button greys,
+// and the posture's collapse is a no-op (collapse_centered_posture), so the
+// act's own two `c` commands, its tab switches and its four plays put out
+// nothing. An act INTERRUPTED by a movement ends dark, the movement owner
+// clearing the sequence ahead of its own collapse; one ended by bare Space or
+// Ctrl+Tab ends lit.
 //
 // ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
 // CLEARS THE SEQUENCE unconditionally (a land is a movement, the inventory at
-// GuiAuditionSequence), so every one of the three calls sits in a window where
+// GuiAuditionSequence) AND collapses the centered posture behind that clear —
+// which is the second reason those windows matter now, a `c` landing inside one
+// putting out the lamp the act is about to arm. So every one of the three calls sits in a window where
 // the sequence is already Idle — the press-time pair before the first launch
 // (the refusal guard has returned by then, and launch_phase's own phase write
 // comes after both), and the switch-back call after the switch and BEFORE

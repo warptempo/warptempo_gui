@@ -2955,13 +2955,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // a frame follows and THIS line reads the result once, instead of
             // a recenter call scattered across those owners. EDGE-TRIGGERED
             // on the memory's four terms (its contract at the declaration):
-            // the (tab, audio view, cursor) TRIPLE — a manual pan at rest
-            // moves the viewport and none of the three, so it simply works
-            // and the next playhead change, or an A/B or S/T switch (each tab
-            // being its own virtual playhead), re-pins; by the same token a
-            // programmatic framing (bring_span_into_view on the group undo/redo
-            // restore, the trim bar's double-click zoom) stands until one
-            // does — PLUS THE SUBJECT, which is the STOP
+            // the (tab, audio view, cursor) TRIPLE — the next playhead change,
+            // or an A/B or S/T switch (each tab being its own virtual
+            // playhead), re-pins. IT NO LONGER HAS TO ANSWER FOR A PAN
+            // (2026-09-11): a pan, a zoom and a span framing each COLLAPSE the
+            // posture now (the rule at AppState::centered_mode), so a camera
+            // the user moved cannot stand under a lit lamp waiting for one of
+            // the terms to trip — what still can is a RESTORE's own
+            // keep-visible scroll, which trips the cursor term anyway — PLUS
+            // THE SUBJECT, which is the STOP
             // EDGE: a stop swaps the painted playhead from the scanner back
             // to the cursor while all three of those are unchanged, so the
             // last derivation's subject being the SCANNER is itself due here

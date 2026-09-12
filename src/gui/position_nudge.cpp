@@ -101,7 +101,13 @@ PositionNudgePrologue position_nudge_prologue(
         // precede the land, which commits a new cursor position.
         playback_lifecycle.stop_playback_if_playing();
         selection.collapse_to_focused();
-        land_playhead_on_marker(app, audio, viewport, focused);
+        // THROUGH THE CARRY, NOT THE LAND (architect 2026-09-11): the nudge is
+        // a TIME ACT — it moves a marker in time under a playhead that follows
+        // it, which is what the centered posture exists for — so it must not
+        // put the `y` lamp out. Everything else the land does it still does,
+        // the trim overlay's hide and the A/B audition's end included; the
+        // posture's rule is at AppState::centered_mode.
+        carry_playhead_on_marker(app, audio, viewport, focused);
     }
     r.ok      = true;
     r.merge   = merge;
@@ -204,16 +210,19 @@ void finish_position_nudge(
     // full call).
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
-    // (e) playhead follows the nudged marker's committed frame.
-    viewport.move_playhead_to(
+    // (e) playhead follows the nudged marker's committed frame — THROUGH THE
+    // CARRY, the prologue's own reason one line per act: a time act keeps the
+    // centered posture (AppState::centered_mode).
+    viewport.carry_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
     // (f) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,
     // and discarding nothing — the trim stands behind it. IT NEEDS NO CALL OF
-    // ITS OWN since 2026-08-19: the follow at (e) goes through move_playhead_to
-    // and the prologue's collapse through land_playhead_on_marker, and both are
-    // movement owners that hide (the rule at clear_region_highlight,
-    // input_handler.h). Groups are never
+    // ITS OWN since 2026-08-19: the follow at (e) goes through the viewport
+    // carry and the prologue's collapse through the marker carry, and both
+    // carry the movement owner's hide (the rule at clear_region_highlight,
+    // input_handler.h) — the carries decline the centered posture's collapse
+    // and nothing else. Groups are never
     // moved (the doctrine at the declarations), so there is no extent to
     // maintain here.
     // (g) view-independent target preview.

@@ -61,7 +61,9 @@ struct GuiTargetRender;
 // sel." A HYBRID THIRD FORM IS EXPLICITLY REJECTED: a verb is EITHER
 // group-capable OR collapses to the focus with the playhead landed on it; there is
 // no third answer, and "collapse to last selected" means exactly
-// collapse_to_focused + land_playhead_on_marker, the shape below.
+// collapse_to_focused + the marker land, the shape below (this prologue takes
+// the land's CARRY form, the nudge being a time act — the centered posture's
+// rule is at AppState::centered_mode).
 // THE COLLAPSE+LAND SITES, one form and TWO of them (re-derived by grep over
 // Selection::collapse_to_focused's callers, 2026-07-30): this prologue serving
 // both position nudges, and Ctrl+N (warpmarkers_ops.cpp). The singleton tempo

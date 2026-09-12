@@ -726,13 +726,19 @@ void GuiPlaybackLifecycle::toggle_follow() {
 // one gesture chokepoint, toggle_follow's sibling above.
 void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
     const bool was_off = !app.centered_mode;
-    app.centered_mode = desired;
-    // THE EDGE READS THE ENGAGEMENT, NOT THE FIELD (architect 2026-09-01): a
-    // `y` pressed while an A/B audition stands records the preference and
-    // lights the lamp — the act never writes this field — but derives nothing,
-    // so the derivation body is never called under a standing act and the pin
-    // starts holding when the act ends, which the memory's own void at the
-    // sequence's end makes due (clear_audition_sequence, app_state.h).
+    // THE FIELD'S ONE WRITE (write_centered_posture, app_state.h), which this
+    // toggle composes with the recenter below: the collapse and the A/B
+    // audition's arm assign through that same body, so the three roads onto
+    // the posture cannot drift.
+    write_centered_posture(app, desired);
+    // THE EDGE READS THE ENGAGEMENT, NOT THE FIELD (architect 2026-09-01): the
+    // pin derives nothing while an A/B audition stands. SINCE 2026-09-11 THIS
+    // TOGGLE IS UNREACHABLE THERE — bare `y` cards on kCenteredAuditionCard
+    // and the button greys, the posture being the act's for its duration — so
+    // the term now guards a state no press can produce, and it stays as the
+    // engagement's own question rather than as a second spelling of the
+    // refusal. (Until that day the press recorded the preference mid-act and
+    // lit the lamp while deriving nothing.)
     if (was_off && centered_pin_engaged(app)) {
         // THE TOGGLE ITSELF RECENTERS — the invariant starts holding at the
         // press, not at the next playhead change. During live playback the

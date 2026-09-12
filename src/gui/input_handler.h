@@ -593,6 +593,19 @@ void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
+// THE MARKER CARRY — the land above WITHOUT the centered posture's collapse,
+// Viewport::carry_playhead_to's marker form and its exact twin (architect
+// 2026-09-11): the acts that move a marker in TIME under a following playhead
+// are what the `y` posture is for, so they must not put its lamp out. The hide
+// and the A/B audition's end are the land's and stay here; only the collapse
+// is declined.
+// ONE CALLER, the complete list (re-greped 2026-09-11): the Left/Right POSITION
+// NUDGE's group-collapse prologue, which lands the playhead on the focus it
+// collapsed to (position_nudge.cpp). The posture's whole rule and the carry's
+// other three call sites are at AppState::centered_mode and viewport.h.
+void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                              Viewport& viewport, int hit);
+
 // THE SAME LAND WITHOUT THE HIDE — the non-hiding entry point for the two
 // callers whose write is a RESEAT rather than a movement: the S/T flip's
 // re-express of a surviving focus (a translation) and the coincidence

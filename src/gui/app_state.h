@@ -2337,7 +2337,10 @@ enum class RedesignButton {
     // playback's and playback is removed from the view whole, the centered
     // derivation reads the same resting cursor the view's lanes read, so the
     // mode's allowlist admits `y` and the derived partition keeps this face
-    // lit.
+    // lit. IT GREYS IN ONE STATE (architect 2026-09-11): while the A/B
+    // audition stands the posture is not the user's to change — the act
+    // disregards the pin and arms it — so the face is disabled lit or unlit
+    // and bare `y` cards (the rule is at AppState::centered_mode).
     IconCentered,
     // CENTER ON NEXT MARKER (architect 2026-09-04) — the `n` lamp, closing the
     // viewport-class group behind Follow and the centered pin, which is the
@@ -4986,16 +4989,46 @@ struct AppState {
     // statement there); THE PIN READS NO CHASE BIT (2026-09-11, when follow
     // became a one-shot and follow_engaged narrowed to the chase alone): while
     // the lamp stands the camera is a FUNCTION of the playhead and nothing
-    // else, so a pan during playback is re-derived away on the next frame —
-    // the pin and the chase no longer share a suppression, and what a pan does
-    // to this lamp is this lamp's own rule.
+    // else, and what a pan does to this lamp is this lamp's own rule, stated
+    // in the next paragraph.
+    //
+    // THE RULE, AND IT STANDS HERE ALONE (architect 2026-09-11): CENTERED
+    // COLLAPSES ON EVERY ACT THAT MOVES THE CAMERA OR THE PLAYHEAD'S POSITION
+    // IN THE MUSIC OR THE MAP, EXCEPT THE TIME ACTS, THE AUDITION, THE A/B
+    // SWITCH AND BARE SPACE. What the posture is FOR is the pair of tabs: one
+    // tab held as the reference while the other's picture shifts under a
+    // playhead that does not move, so the two placements can be lined up by
+    // eye. So it survives exactly the acts that move a marker in TIME — the
+    // Left/Right nudge and the flag drag, which take the named non-collapsing
+    // entries Viewport::carry_playhead_to / carry_playhead_on_marker — plus
+    // Shift+Space, Ctrl+Tab and bare Space, and it goes out on every zoom, the
+    // Tab block, any pointer playhead placement or marker click, any pan, and
+    // the tempo steps and the value drag's commit. THE COLLAPSE HAS ONE BODY
+    // (collapse_centered_posture, below) and its owners are the playhead
+    // MOVEMENT owners, the three zoom appliers, the pan funnel
+    // Viewport::scroll_viewport and the warp tempo write's tail — each calling
+    // it in one line and restating none of this.
+    // THE TRIM FAMILY IS THE ONE ASYMMETRY, and it is by construction rather
+    // than by exemption: every trim write parks the playhead by writing the
+    // cursor DIRECT (park_playhead_at_trim_start), so it passes no movement
+    // owner and reaches no collapse, and a trim gesture leaves the lamp as it
+    // found it.
+    //
+    // THE A/B AUDITION ARMS IT: Shift+Space leaves the lamp LIT when its
+    // sequence reaches its first play (GuiAbAudition::start), the act being
+    // the one road onto the posture besides its own toggle. While the act
+    // stands the lamp is out of the user's hands — the button greys, bare `y`
+    // cards, and the collapse is a no-op — and the pin itself is disengaged
+    // (centered_pin_engaged).
     //
     // THIS FIELD IS THE PREFERENCE, NOT THE ENGAGEMENT (architect 2026-09-01):
     // the A/B audition disregards the pin for its whole duration, so every
     // site that asks "is the pin ON right now" reads centered_pin_engaged
     // (below, where the two reader classes are inventoried) and this field is
-    // read direct only by the lamp's face and the lamp's own setter — the
-    // preference the act never changes.
+    // read direct only by the lamp's face and the lamp's own toggle argument.
+    // It is ASSIGNED through write_centered_posture (below) and by nothing
+    // else — the toggle, the audition's arm and the collapse are its three
+    // roads.
     bool    centered_mode          = false;
 
     // CENTER ON NEXT MARKER — the lamp on bare `n` (architect 2026-09-04),
@@ -10691,6 +10724,17 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // second owner, because the FACES read one predicate.
 const char* iter_bound_step_kind_refusal(const AppState& a);
 
+// IS THE A/B AUDITION STANDING — the act's one running bit in both halves
+// (`phase`, which a REST carries exactly as a PLAY does), named once so the
+// sites that ask it read one spelling. Its readers each state their own
+// reason: the transport-session statement below, the centered pin's
+// engagement (centered_pin_engaged), the centered posture's collapse
+// (collapse_centered_posture) and the centered lamp's face, tooltip and key
+// refusal — the lamp being out of the user's hands for the act's duration.
+inline bool audition_sequence_standing(const AppState& a) {
+    return a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
+}
+
 // IS A TRANSPORT SESSION LIVE — the GUI-side statement, ONE owner (2026-08-30):
 // the playhead scanner is active, or the A/B audition sequence stands in any
 // phase (a REST between its plays is transport-live: the act is one session
@@ -10706,8 +10750,7 @@ const char* iter_bound_step_kind_refusal(const AppState& a);
 // buys is recorded at GuiPlaybackLifecycle::toggle_playback; it is not
 // folded in here because a face must read what the painter reads.
 inline bool transport_session_live(const AppState& a) {
-    return a.playhead_scanner_active ||
-           a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
+    return a.playhead_scanner_active || audition_sequence_standing(a);
 }
 
 // IS THE CENTERED PIN ENGAGED — the `y` lamp's PREFERENCE (a.centered_mode,
@@ -10717,16 +10760,23 @@ inline bool transport_session_live(const AppState& a) {
 // opens each half with the `c` command on its tab; under a lit lamp the camera
 // would then scroll the waveform under a static line for each of the four
 // bounded plays. So WHILE THE SEQUENCE STANDS THE PIN IS OFF — in a play or in
-// one of its rests alike, `phase` being the act's one running bit across both
-// halves — and the plays behave exactly as they do with centered=false: `c`
-// frames, the scanner walks across a static viewport, and follow's own edge
-// check applies as it always did. THE PREFERENCE IS UNTOUCHED: the act writes
-// no field, the lamp stays lit (it reports the standing posture), and the pin
-// re-engages the moment the sequence ends — the memory's own void at that end
-// makes the next pre-paint due (clear_audition_sequence).
+// one of its rests alike (audition_sequence_standing above, the act's one
+// running bit across both halves) — and the plays behave exactly as they do
+// with centered=false: `c` frames, the scanner walks across a static viewport,
+// and follow's own edge check applies as it always did. THE LAMP IS OUT OF THE
+// USER'S HANDS FOR THE ACT'S DURATION (architect 2026-09-11): it stays as it
+// stands — the button greys and bare `y` cards on kCenteredAuditionCard, so
+// the preference cannot change mid-act — and the act's own camera acts (its
+// two `c` commands, its tab switches, its plays) collapse nothing
+// (collapse_centered_posture's leading return). The pin re-engages the moment
+// the sequence ends, the memory's own void at that end making the next
+// pre-paint due (clear_audition_sequence), AND THE ACT ARMS THE LAMP: a
+// sequence that reaches its first play writes the posture true
+// (GuiAbAudition::start), so an audition run to its end leaves the pin lit and
+// holding.
 //
-// FOUR READERS, the pin's ENGAGEMENT sites and nothing else (grep
-// `centered_mode`, whole tree, 2026-09-01):
+// FOUR READERS, the pin's ENGAGEMENT sites and nothing else (re-greped
+// 2026-09-11):
 //   * the pre-paint hook's RESTING half and its PLAYING half (main.cpp), the
 //     pin's one derivation point;
 //   * the LAUNCH SEED's fork (GuiPlaybackLifecycle::launch_playback_window),
@@ -10734,9 +10784,10 @@ inline bool transport_session_live(const AppState& a) {
 //     phase stands there (GuiAbAudition::launch_phase writes it before the
 //     launch, and the act's road runs no clear), while a user launch arrives
 //     cleared by its own entry; the four-case argument is at the fork;
-//   * GuiPlaybackLifecycle::set_centered_mode's off->on edge, so a `y` pressed
-//     mid-act records the preference and lights the lamp while deriving
-//     nothing, and the derivation body is never called under a standing act.
+//   * GuiPlaybackLifecycle::set_centered_mode's off->on edge, which is
+//     unreachable under a standing act since 2026-09-11 (the toggle refuses
+//     there) and stays the edge's own question: the derivation body is never
+//     called while the act stands.
 // EVERY OTHER READER OF centered_mode IS THE PREFERENCE and reads the field
 // direct, and since the key left the schema 2026-09-11 there are just TWO
 // (re-greped that day): the lamp's face (redesign_button_selected's
@@ -10745,8 +10796,43 @@ inline bool transport_session_live(const AppState& a) {
 // The settings editor's commit, the load and the four sidecar writers were
 // readers until that cut and are gone with the key.
 inline bool centered_pin_engaged(const AppState& a) {
-    return a.centered_mode &&
-           a.audition_sequence.phase == GuiAuditionSequence::Phase::Idle;
+    return a.centered_mode && !audition_sequence_standing(a);
+}
+
+// THE CENTERED POSTURE'S ONE FIELD WRITE (architect 2026-09-11). Every road
+// that lights or puts out the `y` lamp assigns through here and nowhere else,
+// so the three of them cannot drift: the TOGGLE
+// (GuiPlaybackLifecycle::set_centered_mode, which composes this with its
+// off->on recenter — the gesture chokepoint bare `y` and the icon-row button
+// share), the A/B audition's ARM (GuiAbAudition::start, after its first play
+// has launched) and the COLLAPSE below, which the movement owners, the zoom
+// appliers, the pan funnel and the tempo tail call. It is a bare assignment:
+// the lamp's face repaints through the per-tick comparator, so no writer of
+// this field owes damage, and nothing here derives — a write that must also
+// recenter says so at its own site.
+inline void write_centered_posture(AppState& a, bool lit) {
+    a.centered_mode = lit;
+}
+
+// PUT THE CENTERED POSTURE OUT — the collapse, whose whole rule is stated once
+// at the field's declaration (AppState::centered_mode) and restated nowhere:
+// the lamp goes out on every act that moves the camera or the playhead's
+// position in the music or the map, except the time acts, the audition, the
+// A/B switch and bare Space. Each owner calls this in one line after its own
+// decision and states only its own class.
+//
+// IT IS A NO-OP WHILE THE A/B AUDITION STANDS, and that is the arm the act is
+// built on: the act opens each half with the `c` command, switches tabs and
+// plays four bounded windows, and every one of those is an act this collapse
+// would otherwise answer for — while the lamp is exactly what the act leaves
+// lit. A MOVEMENT THAT ENDS THE ACT STILL COLLAPSES, because the movement
+// owners clear the sequence FIRST and call this AFTER the clear (the ordering
+// is load-bearing at all three of them), so a click or a walk that interrupts
+// an audition ends it and puts the lamp out in one press, while bare Space and
+// Ctrl+Tab end it with the lamp lit.
+inline void collapse_centered_posture(AppState& a) {
+    if (audition_sequence_standing(a)) return;
+    write_centered_posture(a, false);
 }
 
 // WHERE A Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
@@ -12442,6 +12528,13 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
 // stands until the act really ends. (launch_phase's clear on a refused launch
 // IS an end — the phase it wrote a moment earlier stands — and the void it
 // fires is the re-engagement the pin is owed there.)
+// AND IT IS THE COLLAPSE'S RELEASE (2026-09-11): collapse_centered_posture is
+// a no-op while the act stands, so the three MOVEMENT OWNERS that call this
+// ahead of their collapse are what lets an interrupting click, walk or land
+// put the lamp out in the same press that ends the act — while the ends that
+// do NOT pass a movement owner (bare Space's stop, Ctrl+Tab, the act's own
+// last natural end) leave it lit, which is the whole of what "the audition
+// arms the posture" means.
 inline void clear_audition_sequence(AppState& a) {
     if (a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle)
         a.centered_derived_cursor = -1;
@@ -12775,6 +12868,17 @@ inline constexpr const char* kAddToSelectionLitCard =
     "Turn off add to selection first";
 inline constexpr const char* kValueDragLitCard =
     "Turn off value drag first";
+
+// THE CENTERED LAMP'S AUDITION SENTENCE (architect 2026-09-11). The A/B
+// audition disregards the pin for its whole duration and LEAVES THE LAMP LIT
+// at its end, so the posture is out of the user's hands while the act stands:
+// the button greys and bare `y` cards with this. One clause, sentence case,
+// and it names the STATE rather than a way out — the way out is the act
+// ending, which needs no instruction (bare Space stops it) — which is what
+// separates it from the lock's three sentences above. NO HINT CONSTANT AND NO
+// ACCELERATOR: the greyed face wears the bare card, as the lock's members do.
+inline constexpr const char* kCenteredAuditionCard =
+    "Centered viewport is not in force while the audition runs";
 
 // THE ITERATION LOCK'S UNDO PAIR (architect 2026-09-10: "They just don't go in
 // the undo stack at all; they're considered transient by design" — so while
@@ -13875,13 +13979,29 @@ inline bool redesign_button_enabled(const AppState& a,
         // or off for a play in flight — and the lock admits it (follow is
         // navigation, not authored content). Its lamp reports the arm.
         case RedesignButton::IconFollow:
-        // THE CENTERED LAMP MIRRORS NOTHING EITHER (2026-08-31, R11), on
-        // follow's exact answer: bare `y` toggles the pin in either direction
-        // on any loaded piece and the lock admits it. In the `h` view it
-        // stays LIVE through the derived partition — `y` is on the mode's
-        // allowlist, the derivation reading the same cursor the view's lanes
-        // read — where Follow greys.
+            return true;
+        // THE CENTERED LAMP MIRRORS ONE REFUSAL (2026-08-31, R11; the audition
+        // arm architect 2026-09-11): bare `y` toggles the pin in either
+        // direction on any loaded piece and the lock admits it, so on follow's
+        // exact answer it would be always-live — EXCEPT WHILE THE A/B AUDITION
+        // STANDS. The act disregards the pin whole and LEAVES THE LAMP LIT at
+        // its end (the arm is GuiAbAudition::start's), so the posture is not
+        // the user's to change mid-act: the key refuses on
+        // kCenteredAuditionCard and this face says so, wearing that sentence
+        // on its hint. IT GREYS LIT OR UNLIT ALIKE, because "not in force" is
+        // true of the posture in either state, and the painter needs nothing
+        // for that: a dead SELECTED toggle keeps its fill and its outline
+        // MUTED by kRedesignDisabledMix rather than dropped (the icon row's
+        // ladder, paint_handler.cpp, whose own examples are Follow left on in
+        // the `h` view and the cumulative reading) — "true, but not yours right
+        // now", which is the sentence this state wants. In
+        // the `h` view it stays LIVE through the derived partition — `y` is on
+        // the mode's allowlist, the derivation reading the same cursor the
+        // view's lanes read — where Follow greys, and no audition can stand in
+        // there (playback is removed from the view whole), so the two answers
+        // never compose.
         case RedesignButton::IconCentered:
+            return !audition_sequence_standing(a);
         // THE CENTER-ON-NEXT-MARKER LAMP MIRRORS NOTHING EITHER (2026-09-04),
         // on the same answer as the two above it: bare `n` toggles the walk's
         // framing in either direction on any loaded piece and the lock admits
@@ -16309,6 +16429,16 @@ inline RedesignTooltipText redesign_button_tooltip(
     }
     if (b == RedesignButton::IconValueDrag && a.add_to_selection) {
         return {kAddToSelectionLitCard, nullptr};
+    }
+    // THE CENTERED LAMP'S AUDITION REASON (architect 2026-09-11), the three
+    // above it in shape exactly: while the A/B audition stands the posture is
+    // not the user's to change — the act disregards the pin and leaves the
+    // lamp lit — so the face greys and wears the card bare `y` would raise
+    // (kCenteredAuditionCard). It composes with no other fork here: this
+    // button is in neither iteration_lock_greys nor the three-lamp exclusion,
+    // the lock admitting `y` as navigation.
+    if (b == RedesignButton::IconCentered && audition_sequence_standing(a)) {
+        return {kCenteredAuditionCard, nullptr};
     }
     // GRID ITERATIONS' TWO REASONS, IN BARE `i`'S OWN ORDER. This button greys
     // for two reasons that CAN stand together — a locked tab ANYWHERE in the

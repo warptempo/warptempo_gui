@@ -204,16 +204,19 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
-// move_playhead_to: THE MOVEMENT OWNER — the reseat below, with the trim region
-// overlay's HIDE and the A/B audition's END in front of it. Reaching this
-// function means the playhead's POSITION IN THE MUSIC is changing, and that is
-// the whole hide rule; the rule, its second owner and its exemptions are stated
-// once at clear_region_highlight (input_handler.h). UNCONDITIONAL, never gated
-// on whether the write moved anything: a Home pressed on the frame the cursor
+// carry_playhead_to: THE CARRY — the movement owner's whole body except the
+// centered posture's collapse (the reseat below, with the trim region overlay's
+// HIDE and the A/B audition's END in front of it). Reaching this function means
+// the playhead's POSITION IN THE MUSIC is changing, and that is the whole hide
+// rule; the rule, its second owner and its exemptions are stated once at
+// clear_region_highlight (input_handler.h). UNCONDITIONAL, never gated on
+// whether the write moved anything: a Home pressed on the frame the cursor
 // already holds still hides, which is what the bottom row's ungreyed skip
 // buttons promise (architect 2026-08-15, the record at their case in
 // redesign_button_enabled).
-void Viewport::move_playhead_to(int64_t new_sample) {
+// ITS OWN CALLERS ARE THE TIME ACTS and are inventoried at the declaration
+// (viewport.h); every other command takes move_playhead_to below.
+void Viewport::carry_playhead_to(int64_t new_sample) {
     clear_region_highlight(app, *this);
     // A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION, and it is the hide rule's own
     // membership: what the act promises is that the pair of plays it makes on
@@ -223,8 +226,24 @@ void Viewport::move_playhead_to(int64_t new_sample) {
     // which writes the cursor direct) ends neither. This is a class statement:
     // the complete clearing-owner inventory is at GuiAuditionSequence
     // (app_state.h) and is not to be restated here.
+    // IT IS HERE RATHER THAN IN THE MOVER BELOW so that a TIME ACT still ends
+    // the act it interrupts: the carry declines the collapse, never the end.
     clear_audition_sequence(app);
     reseat_playhead_to(new_sample);
+}
+
+// move_playhead_to: THE MOVEMENT OWNER — the carry above plus the centered
+// posture's collapse, and nothing else. The playhead's position in the music
+// changing is the collapse's rule exactly as it is the hide's (the rule is
+// stated once at AppState::centered_mode): a click, a walk, a skip or a land
+// puts the `y` lamp out, while the two time acts take the carry.
+// THE ORDER IS LOAD-BEARING: the carry's clear of the A/B audition runs FIRST,
+// so a movement that interrupts the act finds the sequence already Idle and the
+// collapse writes — where the act's own movements, made while its phase stands,
+// find the collapse a no-op (collapse_centered_posture, app_state.h).
+void Viewport::move_playhead_to(int64_t new_sample) {
+    carry_playhead_to(new_sample);
+    collapse_centered_posture(app);
 }
 
 // reseat_playhead_to: update playhead, keep viewport so playhead stays
@@ -436,6 +455,15 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
+    // A ZOOM PUTS THE CENTERED POSTURE OUT (the rule is at
+    // AppState::centered_mode): past the return above the level really moves,
+    // which is the whole test — `c`, `0`, ctrl+wheel and the icon row's four
+    // zoom buttons all land here, and the WAVEFORM MAGNIFICATION does not (it
+    // is a picture gain, not a zoom, and writes no level). A zoom that lands on
+    // the level already standing collapses nothing, exactly as it repaints
+    // nothing.
+    collapse_centered_posture(app);
+
     // A ZOOM WRITE THAT MOVES THE LEVEL LEAVES THE CEILING, so bare `0`'s
     // whole-song state goes with it (ViewState::whole_song_visible, whose
     // declaration owns the ruling and names all four clears). It runs BEFORE
@@ -550,6 +578,15 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_engaged = false;
+    // AND THE CENTERED POSTURE COLLAPSES ON EITHER AXIS TOO (the rule is at
+    // AppState::centered_mode), on the same test and for the same reading of
+    // it: a frame that moved the level is a ZOOM and a frame that moved only
+    // the viewport is a PAN, and the posture goes out on both — so the nav
+    // drag's ctrl zoom phase, the two-finger pinch and the overview lane's edge
+    // drags each put the lamp out as the pan funnel does. Gated on NOTHING ELSE
+    // — unlike the chase's clear above there is no playback term, the posture
+    // being a resting camera rule as much as a playing one.
+    if (level_changed || vp_changed) collapse_centered_posture(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -604,6 +641,13 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
         std::fabs(app.zoom_level - old_level) < 1e-9) {
         return;
     }
+
+    // THE FRAMING PUTS THE CENTERED POSTURE OUT (the rule is at
+    // AppState::centered_mode): past the return above either the level or the
+    // start really moved, so this is a zoom, a pan, or both at once — the trim
+    // bar's span-framing double-click and the group undo/redo restore's
+    // zoom-out-to-fit arm being what reach here.
+    collapse_centered_posture(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -699,6 +743,16 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // nothing else, and the next play chases only if the lamp was armed
         // for it.
         if (playback.is_playing()) app.follow_engaged = false;
+        // AND EVERY PAN PUTS THE CENTERED POSTURE OUT (architect 2026-09-11;
+        // the rule is at AppState::centered_mode). Until that day a pan under a
+        // lit lamp was simply re-derived away on the next frame — a lamp that
+        // reported a camera the user had just taken somewhere else — and the
+        // ruling made the pan the posture's end instead. This funnel covers the
+        // whole class by construction, exactly as the chase's clear above does;
+        // the strip drag writes the viewport itself and collapses at its own
+        // site. NO PLAYBACK TERM: the posture holds at rest too, so a pan at
+        // rest ends it as one during playback does.
+        collapse_centered_posture(app);
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too — the flags carry their own text now, so this one
@@ -777,12 +831,13 @@ void Viewport::center_viewport_on_playhead() {
 // synchronous plate rebuild, so a per-frame recenter during playback rides
 // exactly the budget a grab-pan frame already proved. NO PREDICTOR RESYNC —
 // the per-frame case is the continuous pan's (a per-frame re-anchor would
-// step the scanner), and at rest there is no predictor to resync. AND NO
-// FOLLOW SUPPRESSION: this is the autonomous mover itself, not a user pan, so
-// it must never write follow_engaged — the follow chase's own bit, which this
-// body neither reads nor produces (since 2026-09-11 the pin reads no chase
-// bit at all: while its lamp stands the camera is a function of the playhead,
-// so a pan during playback is re-derived away on the next frame).
+// step the scanner), and at rest there is no predictor to resync. AND IT
+// PRODUCES NOTHING THE USER'S OWN PAN PRODUCES: this is the AUTONOMOUS MOVER,
+// not a user pan, so it writes neither the follow chase's bit (follow_engaged,
+// which it neither reads nor produces) nor the centered posture's own collapse
+// — a body that collapsed the lamp it derives for would put itself out on its
+// first frame. What a USER pan does to the lamp is the pan funnel's line
+// (scroll_viewport, above; the rule at AppState::centered_mode).
 bool Viewport::derive_centered_viewport() {
     if (audio.total_frames() <= 0) return false;
     // Split-playhead, center_viewport_on_playhead's own ternary: during

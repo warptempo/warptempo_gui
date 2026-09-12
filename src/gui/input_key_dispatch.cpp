@@ -8894,6 +8894,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::Y:
+        // THE A/B AUDITION OWNS THE LAMP WHILE IT RUNS (architect 2026-09-11):
+        // the act disregards the pin for its whole duration and ARMS it at its
+        // end, so the posture is not the user's to change mid-act. The key
+        // cards where the icon-row button greys — the product's rule, the face
+        // reading this same predicate — and the card is one clause naming the
+        // state, the way out being the act's own end. Ranked ahead of the
+        // toggle so the setter stays a pure write chokepoint.
+        if (audition_sequence_standing(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kCenteredAuditionCard);
+            break;
+        }
         // Toggle the centered pin (2026-08-31, R11). The full body — the
         // off→on edge's immediate recenter through the one derivation body —
         // lives in GuiPlaybackLifecycle::set_centered_mode, shared with the

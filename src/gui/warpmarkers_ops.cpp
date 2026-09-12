@@ -558,6 +558,11 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // keyboard — the one divergence the gesture must never have. The step and the
 // drag are the same act with two hands.
 //
+// IT IS ALSO WHERE THE CENTERED POSTURE COLLAPSES (architect 2026-09-11): the
+// rule is at AppState::centered_mode, and a tempo write is its MAP clause — the
+// two keyboard cent-step arms and the value drag's commit all put the `y` lamp
+// out through this one line, none of them spelling it.
+//
 // THE RE-LAND IS A TRANSLATION, NOT A MOVEMENT, which is why it goes through
 // reseat_playhead_to and never through a movement owner: the focus did not
 // change and the playhead did not leave it — the marker's IMAGE moved under a
@@ -588,6 +593,16 @@ void GuiWarpMarkersOps::toggle_disabled() {
 void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
                            Viewport& viewport,
                            GuiTargetRender& target_render) {
+    // THE CENTERED POSTURE COLLAPSES HERE (architect 2026-09-11; the rule is at
+    // AppState::centered_mode): a tempo write MOVES THE MAP, so every image
+    // downstream of the stepped marker changes column under a resting camera —
+    // the one thing the posture's pair-of-tabs reading cannot survive. All
+    // three of this body's callers reach it on their CHANGED path alone (each
+    // returns above on a write that landed the value already standing), so the
+    // collapse is the write's, not the press's. The re-land below is a
+    // TRANSLATION and takes the reseat, which collapses nothing of its own —
+    // this line is why the tail owes the posture anything at all.
+    collapse_centered_posture(app);
     if (app.active_audio_view == 'T') {
         viewport.kick_waveform_sync();
         const std::vector<GuiWarpMarker>& mv_post = app.warpmarkers.markers();

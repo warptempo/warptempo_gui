@@ -332,9 +332,14 @@ struct GuiPlaybackLifecycle {
     // off→on edge recenters IMMEDIATELY through the one derivation body — the
     // invariant starts holding at the toggle — and during live playback also
     // resyncs the predictor, the one-shot jump re-anchoring it like any
-    // discrete pan. THE EDGE IS THE PIN'S ENGAGEMENT, NOT THE FIELD'S (2026-09-01):
-    // with an A/B audition standing the field is set and the lamp lights, but
-    // nothing derives until the act ends.
+    // discrete pan. THE EDGE IS THE PIN'S ENGAGEMENT, NOT THE FIELD'S
+    // (2026-09-01).
+    // IT IS NOT THE FIELD'S ONLY WRITER (2026-09-11): it composes
+    // write_centered_posture (app_state.h) with the recenter above, and the
+    // collapse and the A/B audition's arm assign through that same body — the
+    // posture's rule and its three roads are stated at AppState::centered_mode.
+    // The TOGGLE is refused while an audition stands (bare `y` cards, the
+    // button greys), so this entry is unreachable there.
     void set_centered_mode(bool desired);
 
 private:

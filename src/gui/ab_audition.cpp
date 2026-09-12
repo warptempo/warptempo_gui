@@ -184,7 +184,22 @@ void GuiAbAudition::start() {
     // (the constants' own note, app_state.h). A refusal here is unreachable in
     // practice (the frame was just validated against the same domain) and
     // would end the act on the other tab, the interrupt rule's own answer.
-    launch_phase(Phase::OtherFirst, home);
+    //
+    // AND THE ACT ARMS THE CENTERED POSTURE (architect 2026-09-11) — the lamp
+    // is what the sequence LEAVES LIT, the act being an alignment listen and
+    // the posture the alignment tool. AT THE POINT OF NO RETURN and not at the
+    // press: a refused first launch arms nothing, so the write sits on the
+    // launch's own true, past every gate above. It is the field write alone
+    // (write_centered_posture, app_state.h) and NEEDS NO DERIVATION: the pin is
+    // disengaged for the act's whole duration (centered_pin_engaged), so
+    // nothing would derive if it asked, and the memory's cursor void at the
+    // act's end (clear_audition_sequence) makes the first resting pre-paint
+    // after it due — deriving on the cursor this act's `c` already centred, so
+    // the posture starts holding invisibly. A sequence interrupted by a
+    // collapsing act ends DARK (the movement owner clears the sequence, then
+    // collapses); one ended by bare Space or Ctrl+Tab ends LIT.
+    if (launch_phase(Phase::OtherFirst, home))
+        write_centered_posture(app, true);
 }
 
 void GuiAbAudition::advance_after_natural_end(
@@ -214,6 +229,18 @@ void GuiAbAudition::advance_after_natural_end(
             // arm's ordering rule: the command can clear the sequence, so it
             // must not run after a rest has been written (the header).
             apply_working_zoom();
+            // AND THE ACT RE-ASSERTS THE CENTERED POSTURE HERE (the arm's
+            // other half; the rule is at AppState::centered_mode). This is the
+            // one step the act takes with its sequence momentarily IDLE — the
+            // tick's stop body cleared it before this advance and the arm below
+            // has not written it back — so the `c` above runs OUTSIDE
+            // collapse_centered_posture's standing guard and could put the lamp
+            // out through its focused land or its zoom. The act owns the lamp
+            // for its whole duration, so it writes it back here rather than
+            // teaching the collapse about a window: start()'s arm and this line
+            // are the act's two writes and they say the same thing — a sequence
+            // still running leaves the posture lit.
+            write_centered_posture(app, true);
             arm_rest(Phase::HomeFirst, ended.home_tab, kAuditionSwitchGapMs);
             return;
         case Phase::HomeFirst:
@@ -248,6 +275,11 @@ void GuiAbAudition::apply_working_zoom() {
     // nothing; with a focus it lands, and that land is the one write this
     // whole act can make to a resting cursor (the header's two paragraphs
     // carry the case and the ordering the three call sites obey).
+    // WHAT IT DOES TO THE CENTERED LAMP IS THE CALL SITE'S, not this
+    // cluster's: inside the act's standing phase the collapse is a no-op, and
+    // at the two sites where the sequence is momentarily Idle — start()'s
+    // pre-launch pair and the switch-back above — the act's own write of the
+    // posture follows (the rule at AppState::centered_mode).
     if (input != nullptr) input->run_center_command();
 }
 

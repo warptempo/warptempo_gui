@@ -312,11 +312,17 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
-    viewport.move_playhead_to(sample);
+    // THROUGH THE CARRY (architect 2026-09-11): the flag drag is a TIME ACT —
+    // it moves a marker in time under a playhead that follows it, which is what
+    // the centered posture exists for — so the ride must not put the `y` lamp
+    // out, per motion event or at the commit below. The rule is at
+    // AppState::centered_mode.
+    viewport.carry_playhead_to(sample);
     // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
     // marker and HID the trim region overlay, so a marker drag runs with the
-    // overlay already down, and the carry above goes through a movement owner
-    // anyway (the rule at clear_region_highlight, input_handler.h) — a guarded
+    // overlay already down, and the carry above hides as the movement owner it
+    // is built from does (the rule at clear_region_highlight, input_handler.h)
+    // — a guarded
     // no-op on every motion event. The group live-track that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).
@@ -489,7 +495,9 @@ void MarkerDragOps::commit_drag() {
     // the playhead lands on the committed frame directly; a phase reset drag in
     // its target home maps through the post-commit map.
     if (land_playhead) {
-        viewport.move_playhead_to(
+        // The carry, the motion arm's own reason: a time act keeps the centered
+        // posture (AppState::centered_mode).
+        viewport.carry_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
     // The dragged marker's STEM moves at commit under the full-waveform
@@ -498,7 +506,7 @@ void MarkerDragOps::commit_drag() {
     // stems since row 5 — nothing here keys on selection).
     // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
     // marker and HID the trim region overlay, nothing during the drag shows one,
-    // and the commit re-land above goes through a movement owner regardless.
+    // and the commit re-land above carries the movement owner's hide regardless.
     // The extent re-derive that used to snap a live-tracked group span back to its
     // resting extent here died with the group drag (architect 2026-07-29 — groups
     // are never moved; the doctrine is at the head of position_nudge.h).
