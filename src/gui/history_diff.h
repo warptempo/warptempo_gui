@@ -28,11 +28,13 @@ class GuiHistoryPrefetch;
 // walk this visit could not bootstrap (GuiInputHandler::set_history_delta);
 // the CHECKPOINT ACT'S, which raises it for the same reason
 // (open_history_commit_editor); the prefetch arrival that closes a standing
-// view, which does both; run_history_commit's !active arm, which raises it
-// bare; and the two DEAD-BUTTON TOOLTIPS that name it as the reason the walk
-// lamp and Save-and-Commit are greyed (redesign_button_tooltip's stateful
-// overload). It lives beside the reason it prefixes rather than in one of the
-// readers, so no reader can drift from the producer.
+// view, which does both; and run_history_commit's !active arm, which raises
+// it bare. It lives beside the reason it prefixes rather than in one of the
+// readers, so no reader can drift from the producer. (TWO DEAD-BUTTON
+// TOOLTIPS said it too from 2026-09-04 to 2026-09-12 — the walk lamp's and
+// Save-and-Commit's, over the faces this fact greys. A tooltip names the act
+// and states no reason now, so the fact is the KEYS' cards', which append the
+// clone-specific clause a constant tooltip line could not carry anyway.)
 //
 // THE ENTRY IS NO LONGER AMONG THEM (architect 2026-09-04): a bootstrap the
 // remote walk cannot answer opens the view on the LOCAL walk instead of

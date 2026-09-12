@@ -320,13 +320,17 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     writes by hand is a sentence. A LAMP'S "Toggle <Mode> (<key>)" IS A NAME
 //     under this — Qt names a checkable action the same way ("Show Audio
 //     Thumbnails") — the lamp FACE, never the words, carrying the state.
-//   * A DESCRIPTION IS SENTENCE CASE — a label, a field prefix, a tooltip that
-//     is a STATE or a REASON rather than an act ("At the trim end (End)",
-//     "Markers are placed in source view (S)", "Committing the checkpoint
-//     (Ctrl+S)"), the SECOND modifier line (always a whole sentence with
-//     terminal punctuation: "Press Shift for the A/B audition."), a card, a
-//     prompt (a question), the row-8 state cell, and a panel's row labels and
-//     prose.
+//   * A DESCRIPTION IS SENTENCE CASE — a label, a field prefix, the SECOND
+//     modifier line of a tooltip (always a whole sentence with terminal
+//     punctuation: "Press Shift for the A/B audition."), a card, a prompt (a
+//     question), the row-8 state cell, and a panel's row labels and prose.
+//     A TOOLTIP'S FIRST LINE IS NEVER IN THIS CLASS any more (architect
+//     2026-09-12): it named a STATE or a REASON on a handful of buttons until
+//     then ("At the trim end (End)", "Markers are placed in source view (S)",
+//     "Committing the checkpoint (Ctrl+S)"), and that whole class was ruled
+//     out — a tooltip is the act's NAME, the grey is the message and the
+//     reason is the key's card — so the only sentence-case text a tooltip
+//     carries is its second line.
 //   * SO ONE ACT SPLITS BY SURFACE, and that is the rule doing its work rather
 //     than a carve-out: a CARD naming an act stays a sentence because a card
 //     is a description ("BPM iterations work in source view"), while the

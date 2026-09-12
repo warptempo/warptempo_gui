@@ -78,12 +78,16 @@ bool GuiSaveOps::save() {
     //
     // SILENT, and the face is the message — THIS ARM ALONE (architect
     // 2026-09-02, ruling the write arms and the locale arm below onto cards):
-    // the Save button reads "Committing..." and is disabled off this same bit
-    // (redesign_button_enabled, app_state.h), so a refusal here is a consumed
-    // nothing the user was already told about. The one state that reads the
-    // roster as unreadable says it itself: the picker's Ctrl+S arm asks this
-    // bit ahead of the call and raises the picker's own sentence
-    // (route_picker_key, input_key_dispatch.cpp).
+    // the Save button is DISABLED off this same bit (redesign_button_enabled,
+    // app_state.h), so a refusal here is a consumed nothing the user was
+    // already told about. The grey is the whole cue since 2026-09-12, the
+    // button having also worn the words — the "Committing..." label until
+    // 2026-08-12 and the "Committing the checkpoint (Ctrl+S)" hint after it,
+    // both gone with their classes. The two states that read the roster as
+    // unreadable say it themselves: the picker's Ctrl+S arm asks this bit
+    // ahead of the call and raises the picker's own sentence (route_picker_key,
+    // input_key_dispatch.cpp), and the `h` view's Ctrl+S cards
+    // kCheckpointPublishing at run_history_commit.
     if (app.history_checkpoint_in_flight) return false;
 
     // Startup's locale_check.h tripwire covers launch; this catches a

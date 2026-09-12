@@ -77,8 +77,10 @@ enum class Icon {
     // SAVE's OTHER face: while the history mode stands, Ctrl+S saves and then
     // commits the checkpoint, so the button wears the commit icon — and keeps
     // it while the checkpoint publishes (the swap's owner is
-    // redesign_button_icon, its hint the tooltip override's "Save and Commit"
-    // / "Committing the checkpoint"; the mode is AppState::HistoryMode). It
+    // redesign_button_icon, its hint the tooltip override's "Save and Commit";
+    // the publishing hint "Committing the checkpoint" went on 2026-09-12 with
+    // the state-and-reason class, the grey saying it now; the mode is
+    // AppState::HistoryMode). It
     // was RENDER's second face until 2026-08-08, when the act moved onto the
     // save chord; the WORDS moved off the button whole when row 2's labeled
     // faces died at the 2026-08-12 relayout — the glyph swap says it now.

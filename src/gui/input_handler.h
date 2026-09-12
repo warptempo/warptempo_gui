@@ -4085,8 +4085,9 @@ private:
     // WHAT THE BIT GOVERNS IS UNDO AND REDO AND NOTHING ELSE. Lit, a step whose
     // restore would move the viewport refuses, cards and leaves both stacks
     // untouched; the verdict has one owner,
-    // undo_step_permitted_by_viewport_lamp (app_state.h), which the Ctrl+Z arm,
-    // the two buttons' faces and their tooltips' reasons all read. The bit
+    // undo_step_permitted_by_viewport_lamp (app_state.h), which the Ctrl+Z arm
+    // and the two buttons' faces read — the tooltips read it too until
+    // 2026-09-12, when a tooltip stopped stating reasons. The bit
     // reaches no camera, no walk and no other act.
     //
     // What it does: writes the field. No damage call — the lamp's face and the

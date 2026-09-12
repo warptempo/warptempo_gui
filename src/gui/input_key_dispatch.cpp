@@ -3520,13 +3520,13 @@ void GuiInputHandler::run_history_commit(const std::string& title) {
     // face exists only inside the view — the view has just closed and `h`
     // refuses to reopen one while the bit stands — so that half is structural,
     // kept because it is not a second decision. What the user actually sees is
-    // the GLOBAL one: the same bit greys the Save button in every view and
-    // puts "Committing the checkpoint" on its TOOLTIP — the "Committing..."
-    // LABEL died with row 2's labeled faces at the 2026-08-12 relayout, and
-    // this note named its deleted owner until a 2026-08-15 re-grep
-    // (redesign_button_enabled / redesign_button_glyph_swapped / the stateful
-    // tooltip overload are the live readers), mirroring the save lockout
-    // above.
+    // the GLOBAL one: the same bit greys the Save button in every view, and
+    // the grey is now the whole of it — the "Committing..." LABEL died with
+    // row 2's labeled faces at the 2026-08-12 relayout and the "Committing the
+    // checkpoint (Ctrl+S)" TOOLTIP on 2026-09-12, when a tooltip stopped
+    // reporting a state (redesign_button_enabled and
+    // redesign_button_glyph_swapped are the live readers), mirroring the save
+    // lockout above.
     history_commit_worker.dispatch(
         std::move(job),
         [this](GuiHistoryCommitOutcome outcome) {
@@ -4866,10 +4866,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
     if (plan.refusal == IterationSweepRefusal::NoBracketAuthored) {
         // AND IT SAYS SO (architect 2026-08-30): with iteration mode on,
         // Ctrl+Alt+R IS the sweep, so a chord that renders nothing at all
-        // must not look like a chord that rendered silently. The card is the
-        // KEYBOARD's answer now that the Render button greys on this same
-        // verdict: the button carries the sentence on its hint instead, and a
-        // greyed press raises nothing.
+        // must not look like a chord that rendered silently. THE CARD IS THE
+        // WHOLE ANSWER since 2026-09-12: the Render button greys on this same
+        // verdict and carried the sentence on its hint until then, and a
+        // tooltip states no reason any more — the grey is the button's cue and
+        // this card is the key's.
         std::fprintf(stderr,
             "warptempo_gui: render-iterations: No iter ranges "
             "authored; nothing to render\n");

@@ -5176,8 +5176,9 @@ struct AppState {
     // WHAT IT DOES: while it stands, an undo or redo whose restore would move
     // the viewport is a consumed no-op that cards, and the stacks are left
     // untouched. The question "would it move the viewport" has ONE owner,
-    // undo_restore_within_viewport (below), which the refusal, the Undo/Redo
-    // buttons' faces and their tooltips' reasons all read. Nothing else in the
+    // undo_restore_within_viewport (below), which the refusal and the
+    // Undo/Redo buttons' faces read — their tooltips said the reason too
+    // until 2026-09-12, when a tooltip stopped stating one. Nothing else in the
     // product asks this bit: it does not reach the camera, the walk or any
     // other act — it only decides whether one step runs at all.
     bool    restrict_undo_to_viewport = false;
@@ -10373,7 +10374,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // drag) stay SILENT, gesture-class, the unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
-// NINE CALL SITES, re-greped 2026-09-02 (every one answers TRUE in
+// EIGHT CALL SITES, re-greped 2026-09-12 (every one answers TRUE in
 // every P-column state through this body's own P arm):
 // the keyboard drop (input_handler.cpp), the `m` bpm open
 // (input_key_dispatch.cpp — its own warp-column test sits ahead, so `m` is
@@ -10386,10 +10387,13 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // buttons' face and a wall stopped being something this sentence may be raised
 // for), the COMPOSED PREDICATE horizontal_arrow_step_actionable (the Left /
 // Right buttons' face, which composes this rule with the wall), the DROP
-// BUTTON'S FACE (redesign_button_enabled, the twin rule's arm) and the TWO
-// TOOLTIP READERS the truthful-tooltips ruling added — the Drop button's
-// stateful fork and the arrow pair's (redesign_button_tooltip's overload),
-// each saying the card's own sentence where the act would refuse. marker_selection_verb_-
+// BUTTON'S FACE (redesign_button_enabled, the twin rule's arm) and the ONE
+// TOOLTIP READER left — the arrow pair's fork
+// (redesign_button_tooltip's overload), which DROPS THE STEP-LADDER LINE
+// where every rung refuses alike. The Drop button's fork read this too from
+// 2026-09-01 to 2026-09-12, saying the card's own sentence over a lit button;
+// a tooltip states no reason now, and the plain lift still reaches the chord,
+// which cards. marker_selection_verb_-
 // actionable LEFT the callers with the opening: its P-column home term
 // became structurally true and the predicate is the selection atom alone
 // (its site records the succession).
@@ -11691,9 +11695,13 @@ int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
 // mover's unconditional hide (RegionState::shown), or a landing that
 // differs from the resting cursor. Every term is an act write read from the
 // act's own owner, never a restatement. FOUR READERS: run_playhead_end_jump
-// and the `h` view's own jump arm (each refusing WITH A CARD when its form
-// would change nothing) and the two skip faces (redesign_button_enabled,
-// asking both forms and greying only when neither would act).
+// and the `h` view's own jump arm (each refusing SILENTLY when its form would
+// change nothing — a benign one-dimensional refusal already at its state, the
+// 2026-08-31 ruling, the playhead's own position being the tell) and the two
+// skip faces (redesign_button_enabled, asking both forms and greying only
+// when neither would act). THE STATEFUL TOOLTIP was a fifth until 2026-09-12,
+// asking both forms to say "At the trim start/end" over the half-dead face;
+// a tooltip states no state now, and the grey is the button's whole cue.
 bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
                                   bool forward, bool whole_piece);
 
@@ -12836,11 +12844,12 @@ inline bool span_columns_visible(const AppState& a, const GuiAudio& audio,
 }
 
 // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE PREDICATE (architect 2026-09-04):
-// true when restoring `entry` would leave the camera where it stands. THREE
-// READERS and no fourth answer anywhere — the act's refusal (the Ctrl+Z arm,
-// input_handler.cpp), the Undo and Redo BUTTONS' faces (redesign_button_enabled
-// below) and their tooltips' reasons (redesign_button_tooltip's stateful
-// overload). The face does not restate the act's condition; it asks it.
+// true when restoring `entry` would leave the camera where it stands. TWO
+// READERS and no third answer anywhere — the act's refusal (the Ctrl+Z arm,
+// input_handler.cpp) and the Undo and Redo BUTTONS' faces
+// (redesign_button_enabled below); the tooltips read it too until 2026-09-12,
+// when a tooltip stopped stating reasons. The face does not restate the act's
+// condition; it asks it.
 //
 // IT IS ASKED ONLY WHILE THE LAMP STANDS. Dark, no caller consults it and every
 // step runs as it always has.
@@ -12943,9 +12952,11 @@ inline bool undo_restore_within_viewport(const AppState& a,
 
 // THE LAMP READ OF A WHOLE STEP: true when the step from `stack` is permitted
 // to run — vacuously true while the lamp is dark, and true with it lit only
-// when the step's top entry would leave the camera put. It exists so the three
+// when the step's top entry would leave the camera put. It exists so its
 // readers ask ONE question rather than each spelling "the lamp is up AND the
-// entry is outside"; an EMPTY stack answers true here and is refused by
+// entry is outside" — the Ctrl+Z arm's refusal and the two buttons' faces
+// since 2026-09-12, their tooltips' reasons having been the third until a
+// tooltip stopped stating one; an EMPTY stack answers true here and is refused by
 // history_step_actionable, which is the term that owns emptiness.
 inline bool undo_step_permitted_by_viewport_lamp(
         const AppState& a, const GuiAudio& audio,
@@ -13080,13 +13091,12 @@ inline bool history_revert_actionable(const AppState& a) {
 // A run that succeeds under a standing visit does not change it — the next `h`
 // bootstraps afresh.
 //
-// SIX READERS, re-greped on this name and paired act-to-face so no glyph can
+// FIVE READERS, re-greped on this name and paired act-to-face so no glyph can
 // disagree with its key: the WALK LAMP'S ACT (GuiInputHandler::set_history_-
 // delta, which refuses a switch toward the remote walk and cards the reason)
 // and its FACE (redesign_button_enabled's HistoryWalk arm); the CHECKPOINT ACT
 // (open_history_commit_editor, which cards the same sentence) and Save's face,
-// composed one predicate down at history_checkpoint_actionable; the DEAD-BUTTON
-// TOOLTIP fork that names the reason over both of those greyed faces; and the
+// composed one predicate down at history_checkpoint_actionable; and the
 // FAILED-SCAN ARRIVAL (on_history_prefetch_ready), which is the odd one out —
 // it does not refuse an act but CARVES A FALLBACK VISIT OUT of the closer that
 // ends a visit whose remote premise failed, such a visit never having had that
@@ -13116,10 +13126,10 @@ inline bool history_remote_walk_available(const AppState& a) {
 // (open_history_commit_editor: the publishing card, then the one-dimensional
 // silence for an empty delta) and the FACE reads this predicate — the same two
 // terms, composed once, in the act's own order.
-// TWO READERS: redesign_button_enabled's Save arm (scoped to the mode, the
-// button being the plain disk save everywhere else) and the tooltip's
-// in-flight override one line over, which reads the bit directly because it
-// names WHAT IS HAPPENING rather than what a press would do.
+// ONE READER: redesign_button_enabled's Save arm (scoped to the mode, the
+// button being the plain disk save everywhere else). The tooltip's in-flight
+// override was the second, reading the bit directly to name what was
+// happening; it went on 2026-09-12, when a tooltip stopped reporting a state.
 inline bool history_checkpoint_actionable(const AppState& a) {
     return a.history_mode.active &&
            history_remote_walk_available(a) &&
@@ -13225,23 +13235,27 @@ inline std::size_t history_walk_step_landing(
 // raise that card: a greyed button raises none, and a breach that greys the
 // button in silence is a breach nobody sees.
 //
-// THREE READERS: the sweep's own refusals (run_iteration_sweep_render,
-// input_key_dispatch.cpp, which raises each sentence at its own arm), the
+// TWO READERS: the sweep's own refusals (run_iteration_sweep_render,
+// input_key_dispatch.cpp, which raises each sentence at its own arm) and the
 // Render button's face while the mode is on and no cancel face outranks it
-// (redesign_button_enabled below), and the stateful tooltip, whose first line
-// becomes the card the greyed press would have raised. The face reads this
+// (redesign_button_enabled below). THE STATEFUL TOOLTIP WAS A THIRD until
+// 2026-09-12, answering the card the greyed press would have raised; a
+// tooltip states no reason any more, so the grey is the button's whole share
+// of this verdict. The face reads this
 // per tick while the mode stands; the walk is the two stores', tens of markers
 // each, and it allocates nothing — the phase arm's window walk is at most
 // kIterHopMax landings per bracketed reset over a memoized map.
 inline constexpr std::size_t kMaxIterSweepCells = 1000;
 
 // THE TWO SENTENCES, ONE SPELLING EACH. They live here rather than at the
-// dispatch that raises them because the TOOLTIP reads them too — a face, not a
-// second raiser — and notifications.h, the home for sentences several
-// translation units raise, includes this header rather than the other way
-// round. The `Hint` form is the card's sentence plus this roster's accelerator
-// (the table's own rule); the static_asserts keep the pair in step, and keep
-// the cap's spelling in step with the cap.
+// dispatch that raises them because the SWEEP PLAN's owner is here, and
+// notifications.h, the home for sentences several translation units raise,
+// includes this header rather than the other way round. EACH IS A CARD AND
+// ONLY A CARD since 2026-09-12: a `Hint` twin — the same sentence plus this
+// roster's accelerator — stood beside each for the greyed Render button to
+// wear, with a static_assert keeping the pair in step, and both went with the
+// reason-and-state tooltip class. The cap's static_assert stays: the sentence
+// spells the number.
 //
 // THE FIRST SENTENCE MEANS "ON THE LIT COLUMN" since 2026-09-10 — the sweep
 // reads one column's store and the lamp says which — and it keeps its wording:
@@ -13249,13 +13263,8 @@ inline constexpr std::size_t kMaxIterSweepCells = 1000;
 // the lamp was lit in.
 inline constexpr const char* kIterSweepNoBracketCard =
     "No iteration ranges are authored";
-inline constexpr const char* kIterSweepNoBracketHint =
-    "No iteration ranges are authored (Ctrl+Alt+R)";
 inline constexpr const char* kIterSweepOverCapCard =
     "Grid iterations refused: the marker brackets make more than 1000 cells";
-inline constexpr const char* kIterSweepOverCapHint =
-    "Grid iterations refused: the marker brackets make more than 1000 cells "
-    "(Ctrl+Alt+R)";
 // (THERE IS NO THIRD SENTENCE ANY MORE — architect 2026-09-10. A phase
 // bracket that had run off its walls was the plan's third refusal for one day,
 // on the reasoning that a dozen writers could move a wall under a standing
@@ -13263,36 +13272,16 @@ inline constexpr const char* kIterSweepOverCapHint =
 // bracket stands the mode is lit, and while it is lit the piece is locked.)
 static_assert(kMaxIterSweepCells == 1000,
               "kIterSweepOverCapCard spells the cap; move both together");
-static_assert(
-    std::string_view(kIterSweepNoBracketHint).starts_with(
-        std::string_view(kIterSweepNoBracketCard)),
-    "the hint is the card's sentence plus the accelerator");
-static_assert(
-    std::string_view(kIterSweepOverCapHint).starts_with(
-        std::string_view(kIterSweepOverCapCard)),
-    "the hint is the card's sentence plus the accelerator");
-// THE RESTRICT-UNDO-TO-VIEWPORT REFUSAL'S FOUR STRINGS (architect 2026-09-04),
-// the iteration sweep's shape one refusal over: a CARD sentence per direction
-// — one clause, sentence case, raised by the key that refuses — and a HINT
-// that is that sentence plus the accelerator, worn by the greyed button under
-// the tooltips-on-disabled ruling. The button is dead, the KEY is not, and it
-// is the key that raises the sentence.
+// THE RESTRICT-UNDO-TO-VIEWPORT REFUSAL'S TWO SENTENCES (architect
+// 2026-09-04): one clause per direction, sentence case, raised by the key that
+// refuses (input_handler.cpp's Ctrl+Z arm). EACH HAD A `Hint` TWIN — the same
+// sentence plus the accelerator, worn by the greyed button — and both went on
+// 2026-09-12 with the class: a tooltip names the act, the grey says the press
+// would do nothing, and the reason is the key's card.
 inline constexpr const char* kUndoOutsideViewCard =
     "Undo is outside the view";
-inline constexpr const char* kUndoOutsideViewHint =
-    "Undo is outside the view (Ctrl+Z)";
 inline constexpr const char* kRedoOutsideViewCard =
     "Redo is outside the view";
-inline constexpr const char* kRedoOutsideViewHint =
-    "Redo is outside the view (Ctrl+Shift+Z)";
-static_assert(
-    std::string_view(kUndoOutsideViewHint).starts_with(
-        std::string_view(kUndoOutsideViewCard)),
-    "the hint is the card's sentence plus the accelerator");
-static_assert(
-    std::string_view(kRedoOutsideViewHint).starts_with(
-        std::string_view(kRedoOutsideViewCard)),
-    "the hint is the card's sentence plus the accelerator");
 
 // THE ITERATION LOCK'S SENTENCE (architect 2026-09-10, on what grid iterations
 // admits: "Nothing that can ever land in the undo history should be allowed,
@@ -14080,9 +14069,10 @@ inline bool playback_launch_playable(const AppState& a,
 // pass or a ref inside a coincident-collapsed group, whose composed value is
 // the RAW store's and not what the render applies). The acts fork their
 // sentence on it (input_key_dispatch.cpp), the Copy value face reads the
-// boolean wrapper below, and the tooltip overload forks its first line on
-// the stack verdict alone — the one grey a glance at the flag does not
-// explain. The gate's full contract is at its second declaration with the
+// boolean wrapper below, and the tooltip overload asks it for the SHIFT
+// LINE alone — its first line forked on the stack verdict from 2026-09-02 to
+// 2026-09-12, until a tooltip stopped stating reasons. The gate's full
+// contract is at its second declaration with the
 // hit-test declarations below; the enum and the wrapper are named here
 // ahead of them because the Copy value arm reads the wrapper and this
 // predicate is inline in the header.
@@ -14091,10 +14081,11 @@ PayloadEligibility payload_eligibility(const AppState& app,
                                        const GuiAudio& audio, int idx);
 bool payload_eligible_marker(const AppState& app, const GuiAudio& audio,
                              int idx);
-// THE STACK REFUSAL'S ONE SENTENCE, said by both chords (their raise sites,
-// input_key_dispatch.cpp); the tooltip overload's Copy value arm restates it
-// with the accelerator appended, line1 being a literal. The other two
-// sentences are the acts' own, at their raise sites.
+// THE STACK REFUSAL'S ONE SENTENCE, said by both chords and by nothing else
+// (their raise sites, input_key_dispatch.cpp). The tooltip overload's Copy
+// value arm restated it with the accelerator appended until 2026-09-12, when
+// a tooltip stopped stating reasons; the other two sentences are the acts'
+// own, at their raise sites.
 inline constexpr const char* kValueInCollapsedStack =
     "The focused marker shares its frame with another, so its value is not "
     "what the render applies";
@@ -15409,10 +15400,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // carry the camera off the picture on screen, so the face has to grey
         // exactly there. It ASKS the act's predicate rather than restating it
         // — undo_step_permitted_by_viewport_lamp (above) is the one owner the
-        // refusal, this face and the tooltip's reason all read, and it is
+        // refusal and this face read (the tooltip's reason read it too until
+        // 2026-09-12, when that class of line left the roster), and it is
         // vacuously true while the lamp is dark, so nothing changes for a user
         // who never lights it. Ranked after the stack term because emptiness is
-        // the older and simpler answer and each button owes ONE reason.
+        // the older and simpler answer.
         case RedesignButton::Undo:
             return !active_view_state(a).read_only &&
                    history_step_actionable(a, a.history.undo_stack) &&
@@ -16091,35 +16083,37 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 // fork there reads the predicate the ACT or the FACE already reads — never a
 // restated condition.
 //
-// AND IT NAMES THE ACT ONLY — A REFUSAL'S REASON IS CARD LANGUAGE (architect
-// 2026-09-12): a greyed button says what it is, and WHY it is dead is answered
-// at the KEY, which is the road with a press to answer. The whole class of
-// lock- and lamp-refusal lines is deleted from the overload below — grid
-// iterations' "Turn off … first" in all its forms, the read-only tab's
-// sentence on Grid Iterations, the three lamp exclusions, the centered lamp's
-// audition sentence — on his own two grounds: that language "belongs in a
-// card", and it had drifted into being worn by some greyed buttons and not
-// others. THE GREY IS THE MESSAGE. What survives in the overload is every line
-// that is NOT a mode's refusal: the ones that name the act the press will
-// actually run (Edit Flag's addressed cell, the two bound-step names, Render's
-// "Cancel"), the ones that report a STATE the screen does not otherwise show
-// (Save's "Committing the checkpoint", the history walk's "History is
-// unavailable", the skips' "At the trim end"), and a handful of REASONS OF
-// ANOTHER KIND that name a fact about the subject rather than a mode to switch
-// off — the sweep's own verdict, the drop's home view, the value pair's
-// collapsed stack, the restrict-undo lamp's "outside the view" — which this
-// ruling did not reach. Plus the modifier lines, which the static_assert below
-// still binds to the admissions.
+// AND IT NAMES THE ACT ONLY — A TOOLTIP IS A NAME, NOT A REASON AND NOT A
+// STATE (architect 2026-09-12, in two steps the same day: first the lock's and
+// the lamps' "Turn off … first" lines, then every line that was left of the
+// class). His rule: "cards for card-like info; tooltips for tooltips only;
+// disabled — or the lamp off — IS the message." A greyed button says what it
+// is; WHY it is dead is answered at the KEY, which is the road with a press to
+// answer. DELETED FROM THE OVERLOAD BELOW, in that order: grid iterations'
+// "Turn off … first" in all its forms, the read-only tab's sentence on Grid
+// Iterations, the three lamp exclusions, the centered lamp's audition
+// sentence; then Save's "Committing the checkpoint (Ctrl+S)", the walk lamp's
+// and Save's "History is unavailable", the iteration sweep's two verdicts on
+// Render, the restrict-undo lamp's "Undo/Redo is outside the view", the drop's
+// "Markers are placed in source view (S)", Copy Resolved Value's
+// collapsed-stack sentence and the two skips' "At the trim start/end".
+//
+// WHAT SURVIVES IN THE OVERLOAD IS TWO THINGS AND NO THIRD: (1) a fork that
+// NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit", Render's "Cancel"
+// and "Render Grid Iterations", Play's "Stop", the two zoom buttons' and
+// Center's landing names, the bound-step names and Edit Flag's addressed cell
+// — and (2) the DROPPING of a modifier line where the modified press does
+// nothing different in this state, which the static_assert below still binds
+// to the admissions. Nothing there may state a reason or report a state.
 //
 // THE CASE IS THE PRODUCT'S TWO-CLASS RULE, NOT THIS TABLE'S (the
 // capitalization block, paint_handler.cpp, owns it and this comment states
-// only its own class): a LINE 1 THAT NAMES THE ACT is the control's name and
-// is TITLE CASE ("Drop Marker (S)", "Toggle Trim Region ([)"), a line 1 that
-// is a STATE or a REASON instead — the stateful overload's forks — is a
-// description and stays sentence case ("At the trim end (End)", "Markers are
-// placed in source view (S)"), and LINE 2 IS ALWAYS A SENTENCE. It read
-// sentence case throughout from 2026-09-01 until the evening of 2026-09-03,
-// when the rule that explains kdenlive's own strings landed.
+// only its own class): LINE 1 IS ALWAYS A NAME and so always TITLE CASE
+// ("Drop Marker (S)", "Toggle Trim Region ([)"), and LINE 2 IS ALWAYS A
+// SENTENCE. It read sentence case throughout from 2026-09-01 until the evening
+// of 2026-09-03, when the rule that explains kdenlive's own strings landed;
+// the sentence-case LINE 1 that rule admitted — a state or a reason — has had
+// no producer since 2026-09-12.
 //
 // A LAMP BUTTON'S TEXT NAMES THE TOGGLE (architect, the
 // same day: "use toggle-based wording so it's always accurate"): "Toggle
@@ -16651,20 +16645,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   surface that runs the save first belongs on the save's own slot, and Render
 //   went back to being a render in every mode.
 //
-//   SAVE OR THE WALK LAMP, ON A VISIT THAT OPENED ON THE LOCAL FALLBACK
-//   (2026-09-04) → "History is unavailable", the sentence the two keys' cards
-//   carry with the clone-specific reason appended. Both faces are greyed by one
-//   predicate (history_remote_walk_available), so both name it; Save's fork is
-//   ranked under the publishing hint above and over the act's own name below,
-//   each button owing ONE reason.
-//
-//   SAVE, WITH A CHECKPOINT PUBLISHING → the same commit icon, DISABLED, in
-//   EVERY view (the act outlives the view it was launched from), the hint
-//   "Committing the checkpoint (Ctrl+S)". Ranked FIRST because it is the
-//   outermost fact: while the worker
-//   is writing the three sidecars no save may run at all (GuiSaveOps::save's own
-//   term, whose mirror this face is). Three literal dots died with the label;
-//   the hint spells the act in prose.
+//   (SAVE'S TWO OTHER FORKS ARE DELETED — 2026-09-12, with the reason-and-
+//   state class as a whole. One answered "History is unavailable" on a visit
+//   that had opened on the local fallback, shared with the walk lamp on the
+//   greying predicate's own reading; the other answered "Committing the
+//   checkpoint (Ctrl+S)" while a checkpoint published, ranked outermost. Both
+//   were a REASON and a STATE rather than a name, and the face already says
+//   the button is dead in each. The FACTS are untouched: the two keys still
+//   card the bootstrap's reason (bare `g` at the walk's one switch owner,
+//   Ctrl+S at run_history_commit, each appending the clone-specific clause a
+//   constant line could never carry), and while a checkpoint publishes
+//   Ctrl+S in the `h` view cards kCheckpointPublishing while the ordinary
+//   save returns silently on the face — GuiSaveOps::save's own standing arm.)
 //
 //   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
 //   the queue — never the automatic preview) → the dialog-cancel glyph, the
@@ -16685,13 +16677,46 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   nothing at all since 2026-08-14 (the 2026-08-12 relayout hid it in there,
 //   and the 2026-08-13 revision already painted it again).
 //
-// THESE HINTS NAME ACTS, SO THEY ARE TITLE CASE — the product's two-class
-// rule, whose owner is the capitalization block (paint_handler.cpp) and whose
-// other half this overload also carries: the forks below that answer with a
-// STATE or a REASON instead of an act ("Committing the checkpoint (Ctrl+S)",
-// "At the trim end (End)", "Markers are placed in source view (S)") are
-// descriptions and stay sentence case. "Save and Commit" is the string with
-// the longest history here: a capital C from 2026-08-04 as the product's one
+// A TOOLTIP IS THE ACT'S NAME AND NOTHING ELSE (architect 2026-09-12,
+// completing the truthful-tooltips ruling): "cards for card-like info;
+// tooltips for tooltips only; disabled — or the lamp off — IS the message."
+// A hint is the NAME of the act, in Title Case with its key, plus the
+// MODIFIER LINE where the modified press does something different. It is
+// never a reason and never a state. So this overload may do exactly two
+// things, and every fork below is one of them:
+//
+//   (1) FORK THE NAME where the press means something else NOW. Save reads
+//   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
+//   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
+//   Play reads "Stop (Space)" while the transport is live, Zoom in reads
+//   "Center on Playhead (Ctrl+=)" at the floor, Full zoom out reads "Back to
+//   Working Zoom (0)" or "Back to Previous Zoom (0)" at the ceiling, Center
+//   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
+//   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
+//   press would do in that state — which is what a name is for.
+//
+//   (2) DROP A MODIFIER LINE the constant table carries, where the modified
+//   press does nothing different in this state. It may drop a line; it may
+//   never add a sentence.
+//
+// THE REASON-AND-STATE FORKS ARE DELETED WHOLE (the same ruling): the lock's
+// and the lamps' "Turn off … first" lines went on 2026-09-12 with the class's
+// first half, and the rest went with its second — "History is unavailable",
+// "Committing the checkpoint (Ctrl+S)", the iteration sweep's two refusals,
+// "Undo/Redo is outside the view", "Markers are placed in source view (S)",
+// the collapsed-stack sentence, and the two skips' "At the trim start/end".
+// THE GREY IS THE MESSAGE AND THE REASON LIVES AT THE KEY'S CARD: a greyed
+// button raises no card, so nothing was lost by its hint going quiet, while
+// every one of those chords still says its sentence when the KEY is pressed —
+// except the two skips, whose benign already-at-the-bound refusal is silent
+// by the messaging ruling on every surface.
+//
+// WHAT SURVIVES IS TITLE CASE BECAUSE IT IS ALL NAMES — the product's
+// two-class rule, whose owner is the capitalization block (paint_handler.cpp):
+// with the descriptions gone this overload carries the NAME half alone, and
+// the only sentence-case text left on a tooltip is a second line, which is a
+// description by construction. "Save and Commit" is the string with the
+// longest history here: a capital C from 2026-08-04 as the product's one
 // named exception, lowercased 2026-09-01 when that exception was retired, and
 // capital again the evening of 2026-09-03 — not as a favourite this time but
 // as an instance, a control's name like every other.
@@ -16741,32 +16766,17 @@ inline RedesignTooltipText redesign_button_tooltip(
     // would name, and "Tab A (Ctrl+Tab)" would have been a lie about the act.
     // Ctrl+Tab switches tabs in the view now, so the ordinary hint is true
     // there and the tabs carry it in every state.)
-    // THE SAVE BUTTON'S TWO OVERRIDES, in the label's own rank order. A
-    // publishing checkpoint outranks the view because it outlives it; inside the
-    // view the button IS the act. Both are one-line forms: Save admits no
-    // modified press in any state (it is in neither
-    // redesign_button_shift_admits nor redesign_button_ctrl_admits), so neither
-    // can grow a second line. THE IN-FLIGHT HINT SHOWS ON A DEAD BUTTON, per the
-    // 2026-08-07 tooltips-on-disabled ruling, and names what the button is doing
-    // rather than what a press would do — there is no press here, and the face
-    // already says as much.
-    if (b == RedesignButton::Save && a.history_checkpoint_in_flight) {
-        return {"Committing the checkpoint (Ctrl+S)", nullptr};
-    }
-    // THE TWO DEAD-BUTTON REASONS THE LOCAL FALLBACK ADDED (2026-09-04), in
-    // the iteration sweep's and the undo lamp's own shape: where a visit
-    // opened with no remote walk, the walk lamp and Save-and-Commit are both
-    // greyed by that one predicate, so each names it. The words are the
-    // product's one spelling of the fact (kHistoryUnavailable, history_diff.h)
-    // — the CARDS the two keys raise append the clone-specific reason, which a
-    // constant tooltip line cannot carry, and the shorter sentence is the true
-    // half of the same one. Save's clause is ranked under the in-flight
-    // override above and over the act's own name below, each button owing ONE
-    // reason and this being the standing one.
-    if ((b == RedesignButton::HistoryWalk || b == RedesignButton::Save) &&
-        a.history_mode.active && !history_remote_walk_available(a)) {
-        return {kHistoryUnavailable, nullptr};
-    }
+    // THE SAVE BUTTON'S ONE OVERRIDE: inside the `h` view the button IS the
+    // checkpoint act, so it takes that act's name. It is a one-line form —
+    // Save admits no modified press in any state (it is in neither
+    // redesign_button_shift_admits nor redesign_button_ctrl_admits), so it
+    // cannot grow a second line. (ITS TWO OTHER FORKS STOOD AHEAD OF THIS ONE
+    // until 2026-09-12, the in-flight "Committing the checkpoint (Ctrl+S)"
+    // outermost and the local fallback's "History is unavailable" — shared
+    // there with the walk lamp — under it. Both were a state and a reason, and
+    // the whole class left this overload: a greyed button states no reason,
+    // and the two keys' cards, which append the clone-specific clause a
+    // constant line could not carry, are where the fact is said.)
     if (b == RedesignButton::Save && a.history_mode.active) {
         return {"Save and Commit (Ctrl+S)", nullptr};
     }
@@ -16792,72 +16802,38 @@ inline RedesignTooltipText redesign_button_tooltip(
     if (b == RedesignButton::Render && a.render_cancel_face) {
         return {"Cancel", nullptr};
     }
-    // RENDER'S ITERATION HINT FORKS ON THE SWEEP'S OWN VERDICT (2026-09-02,
-    // the four-tier review's R-10): where the face greys, the first line is
-    // THE CARD THE PRESS WOULD HAVE RAISED had the button stayed live — Drop
-    // marker's shape one fork over, and what a dead button owes a user under
-    // the tooltips-on-disabled ruling. The predicate is the face's own, read
-    // once for the answer rather than asked twice. Every greyed form keeps the
-    // chord in the line: the button is dead, but the KEY is not, and it is the
-    // key that raises the sentence.
+    // RENDER WITH THE MODE ON NAMES THE SWEEP, in every state. (IT FORKED ON
+    // THE SWEEP'S OWN VERDICT from 2026-09-02 to 2026-09-12, answering the
+    // card the press would have raised — "No iteration ranges are authored",
+    // "Grid iterations refused: …" — wherever the plan greyed the face. That
+    // was a REASON on a tooltip, and the class is gone: the grey says the
+    // press would do nothing, and Ctrl+Alt+R still cards each sentence at its
+    // own arm in run_iteration_sweep_render, which is the road that has a
+    // press to answer.)
     if (b == RedesignButton::Render && a.iteration_mode_enabled) {
-        switch (iteration_sweep_plan(a).refusal) {
-            case IterationSweepRefusal::NoBracketAuthored:
-                return {kIterSweepNoBracketHint, nullptr};
-            case IterationSweepRefusal::OverCellCap:
-                return {kIterSweepOverCapHint, nullptr};
-            case IterationSweepRefusal::None:
-                break;
-        }
         return {"Render Grid Iterations (Ctrl+Alt+R)", nullptr};
     }
-    // (THE LOCK'S AND THE LAMPS' REFUSAL LINES STOOD HERE from 2026-09-10 to
-    // 2026-09-12 and are DELETED WHOLE — the Toggle Marker Column lamp's
-    // "Turn off grid iterations first (P)", Walk both tabs' bare card, the
-    // shared fork over iteration_lock_greys that gave every other greyed member
-    // the same sentence, the three lamp-exclusion lines, Grid Iterations'
-    // read-only line and Undo's and Redo's "Turn off grid iterations to
-    // undo/redo". THE ARCHITECT RULED THE WHOLE CLASS OUT (2026-09-12): that
+    // (THE REFUSAL LINES STOOD HERE AND ARE DELETED WHOLE — 2026-09-12, in
+    // the day's two steps. FIRST the lock's and the lamps', which had stood
+    // since 2026-09-10: the Toggle Marker Column lamp's "Turn off grid
+    // iterations first (P)", Walk both tabs' bare card, the shared fork over
+    // iteration_lock_greys that gave every other greyed member the same
+    // sentence, the three lamp-exclusion lines, Grid Iterations' read-only
+    // line and Undo's and Redo's "Turn off grid iterations to undo/redo".
+    // THEN the rest of the class, the restrict-undo-to-viewport pair among
+    // them: from 2026-09-04 Undo and Redo wore "Undo is outside the view
+    // (Ctrl+Z)" / "Redo is outside the view (Ctrl+Shift+Z)" wherever the lamp
+    // greyed the face, with two lock terms spelled into the condition to keep
+    // the rank once the lock's own fork went — and both terms went with the
+    // fork they ranked against. THE ARCHITECT RULED THE WHOLE CLASS OUT: that
     // kind of language "belongs in a card", and it was applied inconsistently —
     // some greyed buttons wore a reason and others did not — so A TOOLTIP NAMES
     // THE ACT, THE GREY IS THE MESSAGE, AND THE REASON LIVES AT THE KEY'S CARD.
     // Nothing about the cards changed: every one of those chords still says its
     // sentence when the KEY is pressed, which is the road that has a press to
-    // answer. A greyed button raises no card and now states no reason either.)
-
-    // UNDO'S AND REDO'S RESTRICT-UNDO-TO-VIEWPORT REASON (architect
-    // 2026-09-04), the iteration sweep's shape exactly: where the lamp greys
-    // the face, the line is THE CARD THE PRESS WOULD HAVE RAISED had the
-    // button stayed live, which is what a dead button owes a user under the
-    // tooltips-on-disabled ruling. The predicate is the face's own and the
-    // act's own, read once for the answer rather than asked twice.
-    //
-    // BOTH LOCKS OUTRANK IT, AND THEY ARE WHY THE TWO LOCK TERMS ARE SPELLED
-    // IN THE CONDITION: on a locked tab the KEY never reaches the lamp at all
-    // (read_only_key_blocked drops Ctrl+Z ahead of every other gate), and under
-    // a lit grid-iterations lamp it is refused for the lock's own reason
-    // (iteration_lock_key_blocked admits the chord only so its arm can card the
-    // lock's sentence) — so in either state naming the lamp's reason would be a
-    // hint about a refusal that is not the one standing. The ITERATION term is
-    // spelled here since 2026-09-12, when the lock's own tooltip line was
-    // deleted with its whole class: until then the lock's fork stood above this
-    // one and outranked it by ORDER, and with that fork gone the rank has to be
-    // a term. Under either lock the pair keeps the ordinary hint.
-    //
-    // THE EMPTY STACK NEEDS NO TERM: the predicate answers true on one, so an
-    // empty stack falls through to the constant table exactly as before —
-    // emptiness has never carried a hint of its own, and each dead button owes
-    // ONE reason.
-    if ((b == RedesignButton::Undo || b == RedesignButton::Redo) &&
-        !active_view_state(a).read_only && !a.iteration_mode_enabled) {
-        const std::vector<UndoEntry>& stack = (b == RedesignButton::Undo)
-            ? a.history.undo_stack : a.history.redo_stack;
-        if (!undo_step_permitted_by_viewport_lamp(a, audio, stack)) {
-            return {(b == RedesignButton::Undo) ? kUndoOutsideViewHint
-                                                : kRedoOutsideViewHint,
-                    nullptr};
-        }
-    }
+    // answer — the lamp's pair at input_handler.cpp's Ctrl+Z arm
+    // (kUndoOutsideViewCard / kRedoOutsideViewCard) like all the others. A
+    // greyed button raises no card and now states no reason either.)
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
     // one button over bare Space, so the hint names whichever act the press
     // will run — "Stop" while the transport is live (a plain audition, or an
@@ -16924,21 +16900,26 @@ inline RedesignTooltipText redesign_button_tooltip(
             if (!center_command_lands_on_focus(a))
                 return {"Center on Playhead (C)", nullptr};
             break;
-        // THE TWO SKIPS, both lines forked on the acts' own owners. THE
-        // SECOND LINE DROPS where the bare and the whole-piece landings
-        // coincide, AND THE COMPARE IS THE LANDING OWNER'S OWN
-        // (playhead_skip_landing_frame, viewport.cpp, asked in both arms —
-        // codex round A, 2026-09-01): the shape this restated until then (a
-        // full trim window, or the `h` view taking the whole-piece arm for
-        // every jump) missed the case where only the RELEVANT bound sits at
-        // its song wall — with trim [0, x] bare Home and Ctrl+Home both land
-        // on frame 0 — and the two shapes fall out of the compare anyway, so
-        // "Press Ctrl to ignore the trim window" now advertises the ctrl form
-        // exactly where it lands somewhere else. THE FIRST LINE says the
-        // cursor is already at the bound when the bare form is dead and the
-        // ctrl form alone lights the face — the face's own two reads of
-        // playhead_end_jump_actionable, asked in the face's order — because
-        // "Go to start" would then name the press's dead half.
+        // THE TWO SKIPS: the SECOND LINE DROPS where the bare and the
+        // whole-piece landings coincide, AND THE COMPARE IS THE LANDING
+        // OWNER'S OWN (playhead_skip_landing_frame, viewport.cpp, asked in
+        // both arms — codex round A, 2026-09-01): the shape this restated
+        // until then (a full trim window, or the `h` view taking the
+        // whole-piece arm for every jump) missed the case where only the
+        // RELEVANT bound sits at its song wall — with trim [0, x] bare Home
+        // and Ctrl+Home both land on frame 0 — and the two shapes fall out of
+        // the compare anyway, so "Press Ctrl to ignore the trim window"
+        // advertises the ctrl form exactly where it lands somewhere else.
+        //
+        // (THE FIRST LINE FORKED TOO from 2026-09-01 to 2026-09-12, saying
+        // "At the trim start (Home)" / "At the trim end (End)" where the bare
+        // form was dead and the ctrl twin alone lit the face. That was a
+        // STATE on a tooltip and it left with the class. Nothing replaces it
+        // at the key: standing already at the bound is a benign
+        // one-dimensional refusal, which is SILENT on every surface by the
+        // messaging ruling — the playhead is visibly on the bound, and the
+        // name that stands is still the name of the press the ctrl twin will
+        // run.)
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportSkipForward: {
             const bool forward = b == RedesignButton::TransportSkipForward;
@@ -16947,35 +16928,22 @@ inline RedesignTooltipText redesign_button_tooltip(
                                             /*whole_piece=*/false) ==
                 playhead_skip_landing_frame(a, audio, forward,
                                             /*whole_piece=*/true);
-            const char* const line2 =
-                coincide ? nullptr : "Press Ctrl to ignore the trim window.";
-            const bool bare_live =
-                playhead_end_jump_actionable(a, audio, forward,
-                                             /*whole_piece=*/false);
-            const bool ctrl_live =
-                playhead_end_jump_actionable(a, audio, forward,
-                                             /*whole_piece=*/true);
-            if (!bare_live && ctrl_live) {
-                return {forward ? "At the trim end (End)"
-                                : "At the trim start (Home)",
-                        line2};
-            }
-            return {forward ? "Go to End (End)" : "Go to Start (Home)",
-                    line2};
+            if (coincide)
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         }
         // DROP MARKER: in the P column the shifted press refuses as already
         // crossed (phase_reset_drop_crossing_actionable, the shift act's own
-        // head), so its line drops; in T+W the plain press cards "Markers
-        // are placed in source view" (active_column_authoring_allowed, bare
-        // `s`'s own gate) while the crossing keeps the face lit, so the first
-        // line says what the press will say and the live twin keeps its line.
+        // head), so its line drops — the one thing this arm does. (IN T+W IT
+        // ALSO SAID "Markers are placed in source view (S)" from 2026-09-01
+        // to 2026-09-12, the card the plain press raises. That was a REASON,
+        // and it left with the class; the plain press still raises the card
+        // itself — the button never greys on that refusal under the twin
+        // rule, so its plain lift reaches the chord and the chord answers —
+        // while the shift line stays, the crossing being live exactly there.)
         case RedesignButton::IconMarkerDrop:
             if (!phase_reset_drop_crossing_actionable(a))
                 return {"Drop Marker (S)", nullptr};
-            if (!active_column_authoring_allowed(a)) {
-                return {"Markers are placed in source view (S)",
-                        "Press Shift to drop a phase reset in target view."};
-            }
             break;
         // COPY RESOLVED VALUE: the shift line exists iff the shifted press
         // would jump, which is BOTH of the jump's own questions asked in the
@@ -16983,33 +16951,19 @@ inline RedesignTooltipText redesign_button_tooltip(
         // gate both chords run first, and the face's own enabled term above)
         // and then value_source_marker, which names the marker to land on or
         // −1. Neither condition is restated here; each is read from its owner.
-        // THE STACK REFUSAL FORKS THE FIRST LINE (2026-09-02, R-16): a pass or
-        // a ref inside a coincident-collapsed group greys the face on a
-        // verdict the flag does not explain — it looks exactly like an
-        // eligible pass — so line 1 is the card's own sentence, the KEY's
-        // words under the greyed face (the Drop marker arm's shape); the
-        // other greys keep the act's name, the tooltips-on-disabled ruling's
-        // own shape, their reason being on the flag itself (an owner's
-        // number, a disabled blend, no focus at all). The line was gated on
-        // the source lookup ALONE from 2026-09-01 until codex round B that
-        // same day, which advertised the jump under a GREYED face — the
-        // example then was a resolvable pass focused with iteration mode on,
-        // a grey the gate no longer produces — where Shift+`j` answered "The
-        // focused marker has no resolved value" and never jumped. The
-        // composer runs ONCE PER ANSWER since codex round A (2026-09-01), the
-        // owner memoizing on the store generation, the focus and the frame
-        // count; it ran at each paint of the hint until then, which the paint
-        // path's per-damage-rectangle redraw made a real cost during playback.
+        // (THE STACK REFUSAL FORKED THE FIRST LINE from 2026-09-02 to
+        // 2026-09-12, answering kValueInCollapsedStack plus the accelerator
+        // where a pass or a ref inside a coincident-collapsed group greys the
+        // face on a verdict the flag does not explain. It was a REASON on a
+        // tooltip and went with the class; bare `j` and Shift+`j` both card
+        // that very sentence, which is where it belongs.) The composer runs
+        // ONCE PER ANSWER since codex round A (2026-09-01), the owner
+        // memoizing on the store generation, the focus and the frame count;
+        // it ran at each paint of the hint until then, which the paint path's
+        // per-damage-rectangle redraw made a real cost during playback.
         case RedesignButton::IconCopyValue: {
             const PayloadEligibility verdict =
                 payload_eligibility(a, audio, a.last_selected_marker);
-            if (verdict == PayloadEligibility::CollapsedStack) {
-                // kValueInCollapsedStack plus the accelerator — spelled here
-                // because line1 is a literal (the Drop marker arm's shape).
-                return {"The focused marker shares its frame with another, "
-                        "so its value is not what the render applies (J)",
-                        nullptr};
-            }
             // (AN ITERATION-LOCK TERM STOOD HERE for one afternoon on
             // 2026-09-10, dropping the line while the jump's target tab was
             // locked under a lit lamp. The piece-wide exclusion ruled that
