@@ -359,9 +359,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // pressed in, and a typed same-column commit is the same press asking
         // the same question. One press, one answer, whatever the column.
         // Red flash plus card, this surface's shape, on the GENERIC sentence
-        // (kIterationLockCard) the gate itself says for every chord it eats —
-        // the accelerator-bearing kIterationLockColumnHint is the greyed
-        // button's tooltip and not a card.
+        // (kIterationLockCard) the gate itself says for every chord it eats.
+        // The greyed Toggle Marker Column button states nothing: since
+        // 2026-09-12 a tooltip names the act and the reason lives here, at the
+        // press that has something to answer.
         if (app.iteration_mode_enabled) {
             app.settings_editor.red = true;
             viewport.invalidate_modal_dialog_area();

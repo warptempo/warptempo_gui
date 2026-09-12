@@ -1302,6 +1302,14 @@ void GuiFlagEditor::enter_bpm_mode() {
         mv[owner].bpm_hi             = 0;
     }
 
+    // AND THE SELECTION IS SPENT (architect 2026-09-12, the lamps resolved by
+    // use case): "use bpm" is one of the acts he named — the run has been
+    // handed to the sweep, so Add to selection's building pass is over. It
+    // stands past this route's five bails, on the flag flip itself, and it is
+    // the LAMP's write alone: the selected run stays selected, being the span's
+    // own cue (selection_consumed, app_state.h, where the class and its
+    // inventory live).
+    selection_consumed(app);
     app.bpm_mode_enabled = true;
     viewport.invalidate_top_strip();
 }

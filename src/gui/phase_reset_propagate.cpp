@@ -410,6 +410,15 @@ void PhaseResetPropagate::paste_apply() {
     const int n = static_cast<int>(mv.size());
     if (anchor < 0 || anchor >= n) return;
 
+    // THE SELECTION IS SPENT (architect 2026-09-12, the lamps resolved by use
+    // case): the confirmation is answered and the paste is running, which is
+    // one of the acts he named — "copy/paste reset/measure" — so Add to
+    // selection's building pass ends here. Past the three belts above and ahead
+    // of the walk's own matched==0 report, which says what the act FOUND rather
+    // than refusing the press (selection_consumed, app_state.h, where the class
+    // and its inventory live).
+    selection_consumed(app);
+
     const int64_t song_end_frame = target_render.audio.total_frames();
     std::vector<DestBlock> dest_blocks =
         walk_named_blocks(mv, anchor, n, song_end_frame);
@@ -676,6 +685,13 @@ void PhaseResetPropagate::paste_state_apply() {
     const auto& mv = app.warpmarkers.markers();
     const int n = static_cast<int>(mv.size());
     if (anchor < 0 || anchor >= n) return;
+
+    // THE SELECTION IS SPENT, its sibling paste's line for its sibling's
+    // reason (architect 2026-09-12): past the belts, ahead of the run's own
+    // report and of the `any_change` test (selection_consumed, app_state.h).
+    // The write is the LAMP's and not the selection's — the members stay
+    // selected, exactly as they do after every other act in the class.
+    selection_consumed(app);
 
     const int64_t song_end_frame = target_render.audio.total_frames();
     const std::vector<DestBlock> dest_blocks =

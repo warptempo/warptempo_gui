@@ -701,6 +701,16 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // buttons grey on the same predicate, so no lift reaches it.
     if (!tempo_cent_step_actionable(app))
         return "Select a warp marker to change its tempo";
+    // AND THE SELECTION IS SPENT HERE, FOR BOTH ARMS (architect 2026-09-12,
+    // the lamps resolved by use case): a press that reaches this line has a
+    // warp marker selected and is stepping its tempo, which is the moment Add
+    // to selection's building pass ends — "in fact I have already acted." It
+    // stands past the subject refusal above and AHEAD of the group fork, the
+    // wall and every value-shaped tail, so the singleton and the group say it
+    // once between them and a step that lands the value already standing still
+    // spends the selection it acted on. The writer carries the class's whole
+    // inventory (selection_consumed, app_state.h).
+    selection_consumed(app);
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below is UNCHANGED
     // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,

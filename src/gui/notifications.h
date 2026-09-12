@@ -311,23 +311,24 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // have drifted away from.
 //
 // THE TAIL IS A CONSTANT IN app_state.h SINCE 2026-09-10
-// (kReadOnlyChordCardSuffix), and for that header's own third-home reason: a
-// FACE reads this English now — the Grid Iterations button's read-only line
-// is `I` plus this very tail, spelled as a literal because
-// RedesignTooltipText carries literals — so the words live where the faces
-// are compiled and this composer is one of their two readers rather than a
-// second spelling.
+// (kReadOnlyChordCardSuffix), for that header's own third-home reason: a FACE
+// read this English then — the Grid Iterations button's read-only line was `I`
+// plus this very tail — so the words went where the faces are compiled. That
+// second reader went on 2026-09-12 with the whole refusal-reason tooltip
+// class, leaving this composer the tail's ONE reader; the constant stays where
+// it is, this header including app_state.h and not the reverse.
 inline std::string read_only_chord_card(const std::string& chord) {
     return chord + kReadOnlyChordCardSuffix;
 }
 
 // THE ITERATION LOCK'S SENTENCE IS kIterationLockCard AND IT LIVES IN
-// app_state.h, beside the sweep's two verdict cards and for the same reason
-// this header states above: A FACE READS IT — the Toggle Marker Column
-// button's hint is that sentence plus its accelerator — and app_state.h is
-// where the faces are compiled, this header including it and not the reverse.
-// It is the read-only sentence's sibling all the same, and the composer below
-// is where the two meet.
+// app_state.h, beside the sweep's two verdict cards, on the reason this header
+// states above — a FACE read it, the Toggle Marker Column button's hint being
+// that sentence plus its accelerator — and it stays there now that no face
+// does: the refusal-reason tooltips went on 2026-09-12, and this header
+// includes app_state.h and not the reverse, so the literal is reachable where
+// it stands. It is the read-only sentence's sibling all the same, and the
+// composer below is where the two meet.
 
 // THE ONE COMPOSER THE LOCK'S CARD FORKS AT, and the fork CHOOSES rather than
 // ranks: the two locks are MUTUALLY EXCLUSIVE since 2026-09-10

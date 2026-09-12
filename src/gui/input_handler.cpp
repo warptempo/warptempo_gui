@@ -1973,6 +1973,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     : "Select a marker to convert");
             return;
         }
+        // THE SELECTION IS SPENT (architect 2026-09-12): a press past the
+        // refusal above is a marker verb acting on what Add to selection built,
+        // so the building pass ends here — at the act's entry, ahead of the
+        // op's own collapse and of every changed-path test inside it. The class
+        // and its whole inventory are at selection_consumed (app_state.h).
+        selection_consumed(app);
         warpops.toggle_inherits();
         return;
     }
@@ -2000,6 +2006,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 "Select a marker to enable or disable");
             return;
         }
+        // THE SELECTION IS SPENT, ON BOTH COLUMNS (architect 2026-09-12): the
+        // line stands past the carded refusal and AHEAD of the column fork, so
+        // a disable is a disable whichever store it writes — the co-equal axes
+        // rule — and neither op spells the lamp (selection_consumed,
+        // app_state.h).
+        selection_consumed(app);
         if (app.active_markers_view == 'P') {
             phase_resets.toggle_phase_reset_disabled();
             return;
@@ -2063,6 +2075,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 "Select a marker to delete");
             return;
         }
+        // THE SELECTION IS SPENT, ON BOTH COLUMNS (architect 2026-09-12), the
+        // Ctrl+D arm's twin above: past the carded refusal, ahead of the column
+        // fork, and spelled at neither op (selection_consumed, app_state.h).
+        selection_consumed(app);
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
             return;

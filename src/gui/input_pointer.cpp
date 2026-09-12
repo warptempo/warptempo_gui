@@ -2415,6 +2415,17 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         const int flag_hit = hit_test_flag(app, audio, x, y);
         if (flag_hit >= 0) {
             if (app.value_drag_enabled) {
+                // AND ADD TO SELECTION ANSWERS AHEAD OF THE TARGET (architect
+                // 2026-09-12, the ruling that let the two lamps stand lit
+                // together): while the sticky ctrl stands, EVERY plain flag
+                // press takes the membership-toggle branch, which acts at the
+                // press and arms nothing, so no crossing can begin this drag on
+                // any flag. The pair is harmless exactly because of that — and
+                // this is where the map says so, the Arrow being what a point
+                // arming nothing wears everywhere in it. One term, ranked
+                // first: the target rule below has nothing to add once the
+                // gesture cannot begin.
+                if (app.add_to_selection) return GuiCursorKind::Arrow;
                 return value_drag_target(app, audio, flag_hit,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
@@ -4215,12 +4226,13 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // what makes a cell reachable at all. THE `k` FOLD RIDES THE SAME RULE: a
 // lit Add to selection turns a plain press into the toggle, so a `k`-lit
 // press on a MEASURE box is the no-op too (the measure is "every other box");
-// on the two BOUND cells the pair cannot compose AT ALL, the two lamps being
-// MUTUALLY EXCLUSIVE since 2026-09-10 (architect, that evening: NO SILENT
-// SWAPS) — bare `k` is refused while grid iterations stands
-// (iteration_lock_key_blocked) and bare `i` refuses while Add to selection
-// stands (its own arm, on kAddToSelectionLitCard), each with a card, a greyed
-// button and the reason in its tooltip. Neither ever clears the other.
+// on the two BOUND cells the pair cannot compose AT ALL, and it is THIS no-op
+// that is the reason: with the sticky ctrl lit the cells could not be
+// addressed by pointer, so bare `k` is refused while grid iterations stands
+// (iteration_lock_key_blocked, with the button greyed) and bare `i`'s ON edge
+// PUTS ADD TO SELECTION OUT (architect 2026-09-12, selection_consumed —
+// raising the cells is an act that ends a selecting pass). Lit-and-lit has no
+// producer from either side.
 // It runs the stop, the three-way selection fork, the
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
@@ -8140,9 +8152,9 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // ADD TO SELECTION EACH GAINED A RESTING REFUSAL ON 2026-09-10, both
         // out of the iteration lock: the march is delta (a)'s own member and
         // greys through iteration_lock_greys, while ADD TO SELECTION mirrors
-        // THE TWO LAMPS IT CANNOT STAND BESIDE — grid iterations (the lock
-        // again, bare `k` being delta (a)'s fourth member) and the VALUE DRAG,
-        // the exclusion read from its other side. The READ-ONLY lock still
+        // THE ONE LAMP IT CANNOT STAND BESIDE — grid iterations, bare `k`
+        // being delta (a)'s fourth member (the VALUE DRAG was a second until
+        // 2026-09-12, when the two lamps were allowed to stand lit together). The READ-ONLY lock still
         // does not carry either of them, a selection and a walk being
         // navigation; it is the second lock that reaches them (the arms are at
         // redesign_button_enabled).

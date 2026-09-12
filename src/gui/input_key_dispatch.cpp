@@ -696,24 +696,23 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // not put the lamp out; he ruled the road shut rather than widen the wider
 // list, so the padlock greys and cards `Turn off grid iterations first`.
 //
-// AND BARE `k`, ADD TO SELECTION (architect 2026-09-10, that evening: NO
-// SILENT SWAPS — "every mutual exclusion is a refusal with a card, a greyed
-// button and the reason in its tooltip, the lock's own shape"). It is the
-// PADLOCK'S shape rather than the column switch's: the sticky ctrl writes no
-// store and pushes nothing, so the undo domain has no interest in it either,
-// and what the refusal protects is the MODE'S OWN SURFACE. A lit sticky ctrl
-// turns a PLAIN flag click into a membership toggle, and a plain click is
-// exactly how a bound cell is addressed — with both lamps lit the cells could
-// not be reached at all, and a modified press on a cell is now the pointer's
-// own non-event (run_marker_click_act). It refuses UNCONDITIONALLY, both
+// AND BARE `k`, ADD TO SELECTION (architect 2026-09-10, kept by his 2026-09-12
+// re-ruling of the lamps). It is the PADLOCK'S shape rather than the column
+// switch's: the sticky ctrl writes no store and pushes nothing, so the undo
+// domain has no interest in it either, and what the refusal protects is the
+// MODE'S OWN SURFACE. A lit sticky ctrl turns a PLAIN flag press into a
+// MODIFIED one, and a modified press on a Lower or Upper cell is the pointer's
+// SILENT NO-OP (run_marker_click_act) — so with both lamps lit the bound cells
+// could not be addressed by pointer at all. It refuses UNCONDITIONALLY, both
 // directions of its own toggle, for the padlock's own reason: forking on the
 // direction would need a face to fork on a state the pair makes unreachable.
 // The IconAddToSelection button greys with it (iteration_lock_greys,
-// app_state.h) and its tooltip wears this gate's card. THE OTHER HALF OF THAT
-// PAIR IS NOT A CHORD THIS GATE CAN ASK either: bare `i` refuses to LIGHT the
-// lamp while add to selection stands, its own arm carding
-// kAddToSelectionLitCard beside its any-tab-locked refusal — so, as with the
-// padlock, the composed state is unreachable from both sides.
+// app_state.h). THE OTHER HALF OF THAT PAIR IS NOT A REFUSAL ANY MORE and was
+// never a chord this gate could ask: bare `i`'s ON edge PUTS ADD TO SELECTION
+// OUT (architect 2026-09-12, its own arm calling selection_consumed — raising
+// the cells is an act that ends a selecting pass), where until then it refused
+// under it on a card. So the composed state still has no producer, by a write
+// on one side and this refusal on the other.
 //
 // THE OTHER HALF OF THE READ-ONLY RULE IS NOT A CHORD AT ALL and so is not
 // here either: bare `i`
@@ -1894,8 +1893,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // refuses to create cannot arise for it to leave.
         //
         // THE FACE FOLLOWS THE KEY: the Toggle History View button greys while
-        // the lamp stands (iteration_lock_greys, app_state.h) and wears this
-        // card on its hint. The view's OWN buttons — Load in place, Revert and
+        // the lamp stands (iteration_lock_greys, app_state.h), and the grey is
+        // all it says — the sentence is this press's, the refusal-reason
+        // tooltip class having gone on 2026-09-12. The view's OWN buttons — Load in place, Revert and
         // the walk's four — need nothing: they are dead outside the view by
         // their own resting term, and the view can no longer open under a lit
         // lamp for them to light in.
@@ -3309,6 +3309,13 @@ GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
 
     // PASS TWO — write. The snapshot is taken here, after the last refusal
     // point, so a refused paste pushes no undo entry and copies no store.
+    // AND THE SELECTION IS SPENT HERE for the same reason it is snapshotted
+    // here (architect 2026-09-12, the lamps resolved by use case): a paste is
+    // one of the acts he named, and this is the first line past the last thing
+    // that can refuse it — a refused paste consumed nothing. It stands ahead of
+    // the `changed` test below, an offset-zero self-paste having acted all the
+    // same (selection_consumed, app_state.h, where the class lives).
+    selection_consumed(app);
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     bool                       changed   = false;
     for (size_t k = 0; k < matched; ++k) {
@@ -7549,6 +7556,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                                  kSelectOneRun);
             return true;
         }
+        // THE SELECTION IS SPENT (architect 2026-09-12, the lamps resolved by
+        // use case): a copy is one of the acts he named — "copy/paste
+        // reset/measure" — so a press past the three gates above ends Add to
+        // selection's building pass, whatever the capture then turns out to
+        // hold. Past every refusal and ahead of the empty-clipboard answer
+        // below, which reports what the act found rather than refusing the
+        // press (selection_consumed, app_state.h, where the class lives).
+        selection_consumed(app);
         phase_reset_propagate.copy_from_selection();
         // THE COPY SAYS SO, and says WHICH of the two things it did: a
         // clipboard write paints nothing (the reasoning is at bare `j`'s own
@@ -7675,6 +7690,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                                  kSelectOneRun);
             return true;
         }
+        // THE SELECTION IS SPENT, its Ctrl+P twin's line for its twin's reason
+        // (architect 2026-09-12): past the three gates, ahead of the empty
+        // capture's own answer (selection_consumed, app_state.h).
+        selection_consumed(app);
         copy_measures_from_selection();
         // Its Ctrl+P twin's two answers in this clipboard's words, for the
         // twin's reasons (the card is the arm's; the empty capture is the
@@ -7795,25 +7814,21 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                 read_only_chord_card(spell_chord(key, mods)));
             return true;
         }
-        // AND ADD TO SELECTION REFUSES IT TOO (architect 2026-09-10, the same
-        // evening: NO SILENT SWAPS — every mutual exclusion is a refusal with
-        // a card, a greyed button and the reason in its tooltip). The sticky
-        // ctrl turns a PLAIN flag click into a membership toggle, and a plain
-        // click is exactly what addresses a bound cell, so the two modes want
-        // the same press for different things; he ruled the pair apart at
-        // every road rather than let one silently clear the other. FLAT, like
-        // the lock's arm above it: the chord refuses while the lamp stands,
-        // whichever way this toggle would have gone — and the off edge loses
-        // nothing by it, since bare `k` refuses under a lit lamp in the same
-        // words at the keyboard gate (iteration_lock_key_blocked), so "lit and
-        // lit" is unreachable from either side. THE FACE READS THIS SAME BIT
-        // (redesign_button_enabled's IconIter arm) and its tooltip wears this
-        // same sentence.
-        if (app.add_to_selection) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kAddToSelectionLitCard);
-            return true;
-        }
+        // ADD TO SELECTION NEEDS NO REFUSAL HERE AND NO LONGER HAS ONE
+        // (architect 2026-09-12, the lamps resolved by use case: "most of the
+        // conflicts are conflicts because they indicate different use cases; we
+        // analyze the use cases and target them as such"). The pair really
+        // cannot stand together — the sticky ctrl turns a PLAIN flag press into
+        // a modified one, and a modified press on a bound cell is the pointer's
+        // silent non-event, so the cells would be unreachable — but the USE
+        // CASES are sequential rather than rival: raising the bound cells is an
+        // act that says the selecting is over. So the ON EDGE below PUTS THAT
+        // LAMP OUT, through the act class's own writer, and the card that stood
+        // here is deleted. THE OTHER DIRECTION IS STILL A REFUSAL, because
+        // there the two orders differ: bare `k` under a lit lamp would take the
+        // cells away rather than finish a pass, so the gate eats it with the
+        // lock's own card (iteration_lock_key_blocked) and Add to Selection
+        // greys.
         if (app.iteration_mode_enabled) {
             // Turning iteration mode OFF wipes BOTH stores' session-only iter
             // brackets — exiting the mode is the clear (wipe_iter_state,
@@ -7847,18 +7862,29 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // lamp not at all. The bracket there is a hop count the arrows and the
         // bound editor author, and the column has no payload the drag reaches.
         //
-        // IT IS A COMPANION WRITE, NOT A SWAP, so it is no part of the lamps'
-        // "card, never swap" rule (which governs their EXCLUSIONS): it turns
-        // nothing off, it refuses nothing, and it cannot light an excluded
-        // pair — bare `k` refuses under a lit lamp and this arm refuses under
-        // a lit `k` above, so Add to selection is dark by the time the write
-        // is reached. A lit Value drag makes it a no-op write.
+        // IT IS A COMPANION WRITE, NOT A SWAP: it turns nothing off, it
+        // refuses nothing, and it cannot compose a forbidden pair, there being
+        // none left for it — the value drag and add to selection may stand lit
+        // together since 2026-09-12. A lit Value drag makes it a no-op write.
+        //
+        // AND THE ON EDGE SPENDS THE SELECTION, ON BOTH COLUMNS (architect
+        // 2026-09-12): the bound cells are addressed one marker at a time and
+        // by a PLAIN press, so entering the mode is exactly the moment a built
+        // selection has been handed over to the act — the same use-case edge
+        // every marker verb takes, said through the one writer
+        // (selection_consumed, app_state.h, where the class's inventory and its
+        // placement rule live). BOTH COLUMNS because both paint cells: the warp
+        // column's cents and the phase column's hops are addressed by the same
+        // press. It is the ON edge alone, with the value drag's companion —
+        // leaving the mode leaves both lamps exactly as they stand.
         //
         // THE DAMAGE IS BOTH LANES where the write happens: the Grid
-        // Iterations lamp is the icon row's and the Value drag lamp the bottom
-        // row's, and a mode toggle must light in the frame it was asked for.
-        if (app.iteration_mode_enabled && app.active_markers_view == 'W') {
-            app.value_drag_enabled = true;
+        // Iterations lamp is the icon row's and the two toggled lamps the
+        // bottom row's, and a mode toggle must light in the frame it was asked
+        // for rather than on the per-tick face comparator's next pass.
+        if (app.iteration_mode_enabled) {
+            selection_consumed(app);
+            if (app.active_markers_view == 'W') app.value_drag_enabled = true;
             viewport.invalidate_rect(bottom_row_area(app));
         }
         viewport.invalidate_top_strip();
@@ -8093,19 +8119,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // having been deleted that day (the whole contract, the posture and the
     // shift rule are at AppState::add_to_selection).
     //
-    // ITS GATES ARE THE TWO LAMPS IT CANNOT STAND BESIDE, and nothing else
-    // (architect 2026-09-10, NO SILENT SWAPS: every mutual exclusion is a
-    // refusal with a card, a greyed button and the reason in its tooltip).
-    // GRID ITERATIONS refuses it a dispatch ABOVE this arm — bare `k` is delta
-    // (a)'s newest member at iteration_lock_key_blocked, so the gate cards
-    // `Turn off grid iterations first` and this body never runs; the cells are
-    // addressed by a PLAIN click, which is the very press this mode spends.
-    // THE VALUE DRAG refuses it here, in its own words, the same exclusion one
-    // lamp over: that mode is a plain press that becomes a drag, and this one
-    // turns a plain press into a toggle. Both are FLAT — the chord refuses
-    // while the other lamp stands, whichever way this toggle would have gone —
-    // and neither costs an off edge, each of the two partners refusing to
-    // light while THIS lamp stands, so no pair is ever both lit.
+    // ITS ONE GATE IS GRID ITERATIONS, and it is refused a dispatch ABOVE this
+    // arm — bare `k` is a member of iteration_lock_key_blocked's delta (a), so
+    // the gate cards `Turn off grid iterations first` and this body never runs.
+    // The reason is the cells' reachability: while this lamp stands a plain
+    // flag press is a MODIFIED press, and a modified press on a bound cell is
+    // the pointer's silent no-op, so the mode's own authoring surface could not
+    // be addressed at all. It is FLAT — the chord refuses while the lamp
+    // stands, whichever way this toggle would have gone — and it costs no off
+    // edge, since bare `i`'s ON edge puts THIS lamp out (architect 2026-09-12)
+    // and lit-and-lit therefore has no producer.
+    // THE VALUE DRAG IS NO LONGER A GATE (the same ruling): the two lamps may
+    // both stand lit, harmlessly by construction — with this one lit no flag
+    // press arms anything, so that mode's drag simply never begins and the
+    // cursor answers Arrow on the flag (AppState::value_drag_enabled).
     //
     // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
     // columns and both audio views (a selection is not authored content, so
@@ -8123,11 +8150,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // drift on the NEXT tick, and a mode toggle must light in the frame it was
     // asked for.
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
-        if (app.value_drag_enabled) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kValueDragLitCard);
-            return true;
-        }
         app.add_to_selection = !app.add_to_selection;
         viewport.invalidate_rect(bottom_row_area(app));
         return true;
@@ -8143,16 +8165,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // written by its own toggle alone (the whole contract for both is at
     // AppState::value_drag_enabled).
     //
-    // ITS ONE GATE IS ADD TO SELECTION (architect 2026-09-10, NO SILENT
-    // SWAPS: every mutual exclusion is a refusal with a card, a greyed button
-    // and the reason in its tooltip). While that lamp stands a plain flag
-    // press is a membership toggle that arms nothing, so the drag this mode
-    // exists for could never begin — the cost that used to be RECORDED as a
-    // dead corner of the two lamps' composition, and is refused outright now.
-    // FLAT, whichever way this toggle would have gone, and it costs no off
-    // edge: bare `k` refuses to light while THIS lamp stands, in its own
-    // words, so the pair is never both lit. THE FACE READS THIS SAME BIT
-    // (redesign_button_enabled's IconValueDrag arm) and wears this sentence.
+    // IT HAS NO GATE AT ALL (architect 2026-09-12, the lamps resolved by use
+    // case, retiring the one it carried from 2026-09-10). ADD TO SELECTION used
+    // to refuse it: while that lamp stands a plain flag press is a membership
+    // toggle that arms nothing, so the drag this mode exists for can never
+    // begin. That is still true and it is exactly why no refusal is owed — the
+    // composed state is HARMLESS rather than wrong, the two lamps describing
+    // two different passes over the same flags, and THE CURSOR IS WHAT TELLS
+    // THE TRUTH ABOUT IT: the flag arm of the cue map answers Arrow, never
+    // ValueDrag, while add to selection is lit (pointer_cursor_kind,
+    // input_pointer.cpp), so nothing promises a gesture that will not begin.
+    // The face greys for nothing (redesign_button_enabled's IconValueDrag arm).
     //
     // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
     // columns and both audio views (WHICH flags the drag can act on is the
@@ -8171,11 +8194,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (refresh_pointer_cursor), so the flag under a resting pointer changes
     // its cue on this very press with nothing arranged for it.
     if (key == GuiKeys::X && !ctrl && !shift && !alt) {
-        if (app.add_to_selection) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kAddToSelectionLitCard);
-            return true;
-        }
         app.value_drag_enabled = !app.value_drag_enabled;
         viewport.invalidate_rect(bottom_row_area(app));
         return true;
