@@ -105,9 +105,20 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //     properties that made it its own number are untouched by the move: it
 //     gates the TAP arm alone, and the held-key arm beside it consults no
 //     clock at all.
+//   * and, since 2026-09-11, THE HOVER TOOLTIP'S DWELL (kTooltipDelayMs,
+//     render.h), which is not a hold of the hand's at all and is listed with
+//     the two windows above for that reason: it is how long a pointer must
+//     REST before the hint appears. It joins the beat because a HELD button
+//     is a resting pointer — on glass a long press is a held finger and the
+//     dwell elapses under it — so the tooltip's appearance is the moment the
+//     hold has been long enough for the shift-modified act, and the cue to
+//     release is the hint itself. The two mechanisms stay independent (the
+//     dwell and the hold neither reset, suppress nor feed the other); it is
+//     the number they are now one on. It carried its own 700 until then.
 // So a keyboard hold, a chrome shift hold, a touch region hold, a held
-// button's first repeat, a double tap and a re-tapped nudge all land on the
-// same beat rather than on numbers that happen to be near each other.
+// button's first repeat, a double tap, a re-tapped nudge and a hover dwell all
+// land on the same beat rather than on numbers that happen to be near each
+// other.
 //
 // 575 ms BY CONVENTION WITH THE COMPOSITOR'S KEY-REPEAT DELAY, matched
 // DELIBERATELY and not by coincidence: it is the architect's own labwc

@@ -3782,7 +3782,7 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     }
     // AND IT OWNS THIS SURFACE'S TOOLTIP DWELL (2026-08-13, when the modal
     // buttons took hints instead of bracketed accelerators): the same helper
-    // and the same 700ms tick the roster's walk uses, keyed on the Dialog half
+    // and the same hold-beat tick the roster's walk uses, keyed on the Dialog half
     // of the owner's index space. EVERY dialog button has a hint, so there is
     // no membership term here — the hit alone decides, and the painter's stash
     // carries the text.
@@ -7902,7 +7902,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // advertising a swallowed press is an accepted cost) — and both of the
     // branches that keep it live call this function, so without this line every
     // motion under a prompt or an editor would stamp a fresh dwell and the tick
-    // would raise a FLOATING hint over the modal 700ms later. A hint is not a
+    // would raise a FLOATING hint over the modal one dwell later. A hint is not a
     // face: it is a second surface, it hangs past the strip, and the chord it
     // names is exactly what the modal gate is swallowing. Forcing "no owner" here
     // rather than gating the tick keeps the stamp and the hide in one place — the
@@ -8351,12 +8351,19 @@ void GuiInputHandler::finish_chrome_press_release(
         // tick, nothing polled, and no state beyond the int64 the arm already
         // carries.
         //
-        // NO FEEDBACK IS NEEDED WHILE THE HOLD RUNS — architect-RULED
-        // 2026-08-13, closing the open question this arc left rather than
-        // leaving it as a gap: the gesture exists for the TOUCH PANEL, and
-        // TOOLTIPS DO NOT SHOW THERE, so the surface the hint would have to
-        // ride is one the gesture's only user never sees. The beat passes
-        // silently, the act shows at the lift, and none is to be built.
+        // NOTHING IS BUILT FOR THE FEEDBACK, AND THE TOOLTIP IS IT —
+        // architect-RULED 2026-09-11, superseding the 2026-08-13 answer that
+        // no feedback was needed (which reasoned that the gesture exists for
+        // the TOUCH PANEL and tooltips do not show there). A hover surface
+        // never fires from a MOVING finger, but a finger RESTING on a button
+        // is a resting held pointer and the dwell elapses under it exactly as
+        // it does under a held mouse button — so the hint the press's own
+        // re-stamped dwell already raises IS the cue, and kTooltipDelayMs
+        // reads kHoldBeatMs (render.h) so it arrives at the instant this term
+        // starts answering true. See it, let go, get the shifted twin. Still
+        // nothing is polled or ticked FOR THE HOLD: the span is measured at
+        // the lift, and the dwell is the tooltip's own machinery, independent
+        // of this arm in every way but the number.
         //
         // AND IT REACHES NO CTRL-ADMITTING BUTTON, by construction rather than
         // by an exclusion (architect 2026-08-24): the two SKIPS admit CTRL for

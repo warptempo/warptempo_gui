@@ -4095,10 +4095,13 @@ inline int double_click_slack_px() {
 // click-and-lift and just short of the point where a user would assume the
 // press was lost.
 //
-// IT PASSES SILENTLY AND IS RULED TO (architect 2026-08-13): the gesture is the
-// TOUCH PANEL's, and tooltips do not show there, so a hint at the beat would
-// ride a surface the gesture's only user never sees. No feedback is to be
-// built for this constant; the ruling's home is the read site.
+// THE TOOLTIP IS THE BEAT'S CUE AND NOTHING IS BUILT FOR IT (architect
+// 2026-09-11, superseding the 2026-08-13 ruling that the beat passes silently
+// because tooltips do not show on glass — a RESTING finger is a resting held
+// pointer, and the dwell elapses under a long press there as it does under a
+// held mouse button). kTooltipDelayMs reads kHoldBeatMs too (render.h), so the
+// hint appears exactly as this constant is crossed; the ruling's home is the
+// read site.
 constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 
 // ONE generic Chebyshev pixel distance a press must travel before it becomes a
@@ -5465,8 +5468,13 @@ struct AppState {
     // otherwise. That is bare `x`'s posture exactly (value_drag_enabled below,
     // whose declaration used to name this bit as its one point of departure)
     // and bare `z`'s (restrict_undo_to_viewport): the three session lamps are
-    // one family, in no settings vocabulary, never serialized, and cleared by
-    // nothing but their own toggles for as long as the project stays open.
+    // one family, in no settings vocabulary, never serialized, and lit and put
+    // out by their own toggles for as long as the project stays open. THIS bit
+    // and `restrict_undo_to_viewport` have no other writer at all; the value
+    // drag's lamp took two COMPANION writes on 2026-09-11 (grid iterations
+    // lights it on the warp column, every render chord there puts it out), and
+    // they are recorded at its own declaration — none of the three is ever put
+    // out by another lamp's toggle, which is the exclusions' whole rule.
     //
     // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN. The bit
     // lives on this AppState, which run_project constructs fresh for each
@@ -5526,16 +5534,34 @@ struct AppState {
     // arms nothing), and a mode a finger can turn on is what glass needs — the
     // very argument Add to selection was seated on.
     //
-    // A SESSION TOOL POSTURE: it describes what the POINTER does, so it is
-    // cleared by NOTHING — bare `x` and its own button are the only writers,
-    // in both directions. It is bare `z`'s shape (the restrict-undo lamp) and,
+    // A SESSION TOOL POSTURE: it describes what the POINTER does, so it
+    // survives every act that is not about it. THREE WRITER CLASSES, and the
+    // list is the whole of them:
+    //   * BARE `x` AND ITS OWN BUTTON, the toggle, in both directions;
+    //   * THE GRID ITERATIONS LAMP'S ON EDGE ON THE WARP COLUMN (architect
+    //     2026-09-11), which lights this one with it — tuning a cents bracket
+    //     is a cell-dragging job, so the mode that raises the cells raises the
+    //     gesture that works them. The ON edge alone: leaving that mode leaves
+    //     this lamp standing, and on the phase-reset column `i` touches it not
+    //     at all (bare `i`'s arm, input_key_dispatch.cpp);
+    //   * EVERY RENDER CHORD, ON THE WARP COLUMN (architect 2026-09-11) —
+    //     Ctrl+Alt+R in both of its modes and Ctrl+Alt+Shift+R — which put it
+    //     OUT at the point of dispatch, a render meaning DONE the same way it
+    //     means done for the grid-iterations lamp beside it
+    //     (render_puts_value_drag_out, input_key_dispatch.cpp, where the rule
+    //     and its edges live). The BPM sweep's own dispatch is not one of
+    //     them: it is a dialog's commit, not a render chord.
+    // NONE OF THE THREE IS AN EXCLUSION — the exclusions card and never swap,
+    // and neither of the two writes above refuses anything or raises a card.
+    // It is bare `z`'s shape (the restrict-undo lamp) and,
     // since 2026-09-10, its NEIGHBOUR'S TOO: `add_to_selection` above used to
     // be a per-selection posture that every Selection mutator cleared, and the
     // architect gave it this one instead, so the three lamps now share it
     // whole — in no settings vocabulary, never serialized, never in the undo
     // domain, and per-project state that is dark at every project open, a
     // reopen as much as a launch (the family's record is at add_to_selection
-    // above, with the reason no load can leave it lit).
+    // above, with the reason no load can leave it lit). The two companion
+    // writes above are this lamp's alone; its neighbours take neither.
     //
     // ITS GATES: legal in both columns and both audio views (the target rule
     // asks the column itself), legal on a LOCKED TAB and under the ITERATION
@@ -6733,9 +6759,10 @@ struct AppState {
     // shift term the carried bit feeds — so a physical Shift+click and a long
     // press are two routes to one dispatch rather than two dispatches. The
     // elapsed span is measured at the RELEASE, so nothing polls and nothing
-    // ticks, AND THE HOLD IS RULED TO NEED NO FEEDBACK (architect 2026-08-13):
-    // it exists for the touch panel, where tooltips do not show at all, so the
-    // one surface a hint could ride is invisible to the gesture's only user.
+    // ticks FOR THE HOLD, AND THE FEEDBACK IS THE TOOLTIP THE PRESS ALREADY
+    // RAISES (architect 2026-09-11, superseding the 2026-08-13 "no feedback"
+    // ruling): the dwell reads the same beat, so the hint comes up as the mark
+    // is crossed, on glass as on the mouse.
     // The rule is stated at the read site (finish_chrome_press_release).
     //
     // `inside` is THE FEINT'S BIT, the modal arm's `press_inside` on the

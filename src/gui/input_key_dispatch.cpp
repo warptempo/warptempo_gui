@@ -4204,6 +4204,41 @@ bool GuiInputHandler::keyboard_modal_editor_active() const {
 
 namespace {
 
+// A RENDER PUTS THE VALUE DRAG LAMP OUT ON THE WARP COLUMN (architect
+// 2026-09-11: "if it's turned on, hitting Render should turn it off, just the
+// same as it turns off iterations mode — toggle value drag is another of these
+// things that should automatically be disabled by certain commands, render
+// being one of them"). A render means DONE — the same reasoning that empties
+// the grid-iterations lamp at the sweep's own dispatch — so the posture the
+// fine-tuning was done in does not outlive the command that ends it.
+//
+// ONE OWNER FOR THE THREE RENDER CHORDS that reach it: Ctrl+Alt+R in both of
+// its modes (the deliverable and the grid sweep) and Ctrl+Alt+Shift+R's
+// archival cell. Every caller writes AT THE POINT OF DISPATCH, past every
+// refusal, so a refused render puts nothing out and a command parked behind a
+// killed render — which is committed to run either way — puts it out with the
+// rest.
+//
+// THE WARP COLUMN ONLY, as the `i` lamp's own companion write is: a phase
+// sweep, or a deliverable pressed while P is lit, is not the warp column's
+// work and leaves the lamp exactly as it stands.
+//
+// IT IS NOT ONE OF THE LAMPS' EXCLUSIONS — those card and never swap. Nothing
+// is refused here and no card is raised: the command runs and the lamp simply
+// goes dark, which is what the screen then shows.
+//
+// A VALUE DRAG IN FLIGHT IS UNTOUCHED. The lamp is read at the CROSSING that
+// begins the gesture and by the cursor map, never by the live gesture itself
+// (which runs off `value_drag.active`), so one already running goes on writing
+// and commits at its release like every other pointer gesture — pointer
+// gestures have no cancel, and this is not one.
+void render_puts_value_drag_out(AppState& app, Viewport& viewport) {
+    if (app.active_markers_view != 'W') return;
+    if (!app.value_drag_enabled) return;
+    app.value_drag_enabled = false;
+    viewport.invalidate_rect(bottom_row_area(app));
+}
+
 // THE MODAL FOCUS RING'S TAB SHAPE — the ONE predicate four sites read (the
 // keyboard-modal gate's admission, the ring's own walk, the completion arm
 // that must fire on the FORWARD shape alone, and repeat_eligible's ring arm
@@ -5077,6 +5112,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // view.
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
+    // AND THE VALUE DRAG LAMP GOES OUT WITH IT ON THE WARP COLUMN, on the same
+    // "committed to run either way" footing as the wipe above: the rule and
+    // its whole argument are at render_puts_value_drag_out.
+    render_puts_value_drag_out(app, viewport);
     viewport.invalidate_top_strip();
     // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR did,
     // 2026-08-29: the mode bit is one of the eligibility terms the resolved
@@ -5197,6 +5236,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             cmd.single      = true;
             cmd.reqs.push_back(std::move(req));
             kill_running_render_and_park(std::move(cmd));
+            render_puts_value_drag_out(app, viewport);
             return true;
         }
 
@@ -5204,6 +5244,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // fires on the GUI thread when the render finishes (success,
         // failure, or cancel).
         dispatch_single_archival_render(std::move(req));
+        // THE LAMP GOES OUT HERE, past every refusal above and on both roads —
+        // dispatched, or parked behind a killed render, which is committed to
+        // run — so a render that never started puts nothing out
+        // (render_puts_value_drag_out carries the rule).
+        render_puts_value_drag_out(app, viewport);
         return true;
     }
 
@@ -5298,6 +5343,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
             cmd.miscellaneous = true;   // late-bind the cell at the pump
             cmd.reqs.push_back(std::move(req));
             kill_running_render_and_park(std::move(cmd));
+            render_puts_value_drag_out(app, viewport);
             return true;
         }
         std::string folder, basename;
@@ -5308,6 +5354,10 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         req.batch_folder   = std::move(folder);
         req.batch_basename = std::move(basename);
         dispatch_single_archival_render(std::move(req));
+        // The same write the unshifted chord takes, on both of this route's
+        // roads: the rule is at render_puts_value_drag_out. A cell whose
+        // folder could not be allocated returns above it and puts nothing out.
+        render_puts_value_drag_out(app, viewport);
         return true;
     }
 
@@ -7759,6 +7809,34 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             flag_editor.wipe_iter_state();
         }
         app.iteration_mode_enabled = !app.iteration_mode_enabled;
+        // THE ON EDGE LIGHTS VALUE DRAG ON THE WARP COLUMN (architect
+        // 2026-09-11: "in warp mode, iterations mode toggles value drag on").
+        // Tuning a warp marker's cents bracket is a cell-dragging job, so the
+        // mode that raises the cells raises the gesture that works them, and
+        // the hand is spared a second key it would press every time anyway.
+        //
+        // THE ON EDGE ONLY — he ruled the off edge out of it in the same
+        // breath, so leaving the mode leaves the lamp exactly as it stands;
+        // the drag is useful on a flag's tempo with no bracket in sight.
+        //
+        // AND THE WARP COLUMN ONLY: on the phase-reset column this touches the
+        // lamp not at all. The bracket there is a hop count the arrows and the
+        // bound editor author, and the column has no payload the drag reaches.
+        //
+        // IT IS A COMPANION WRITE, NOT A SWAP, so it is no part of the lamps'
+        // "card, never swap" rule (which governs their EXCLUSIONS): it turns
+        // nothing off, it refuses nothing, and it cannot light an excluded
+        // pair — bare `k` refuses under a lit lamp and this arm refuses under
+        // a lit `k` above, so Add to selection is dark by the time the write
+        // is reached. A lit Value drag makes it a no-op write.
+        //
+        // THE DAMAGE IS BOTH LANES where the write happens: the Grid
+        // Iterations lamp is the icon row's and the Value drag lamp the bottom
+        // row's, and a mode toggle must light in the frame it was asked for.
+        if (app.iteration_mode_enabled && app.active_markers_view == 'W') {
+            app.value_drag_enabled = true;
+            viewport.invalidate_rect(bottom_row_area(app));
+        }
         viewport.invalidate_top_strip();
         // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR
         // did, 2026-08-29: the mode bit is one of the eligibility terms
@@ -8034,9 +8112,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // `x` (no modifiers): toggle THE VALUE DRAG, the flag's vertical drag
     // (architect 2026-09-10). It is bare `k`'s shape one line up, exactly —
     // one bit, flipped both ways by one key, with the bottom row's button
-    // dispatching this same chord — and the ONE route that writes the bit at
-    // all: it is cleared by nothing, which its neighbour has been too since
-    // 2026-09-10 (the whole contract is at AppState::value_drag_enabled).
+    // dispatching this same chord — and the only route that writes the bit in
+    // BOTH directions: the two companion writes beside it are one-way and
+    // warp-column-only (grid iterations' on edge lights it, a render chord
+    // puts it out — render_puts_value_drag_out above). Its neighbour is
+    // written by its own toggle alone (the whole contract for both is at
+    // AppState::value_drag_enabled).
     //
     // ITS ONE GATE IS ADD TO SELECTION (architect 2026-09-10, NO SILENT
     // SWAPS: every mutual exclusion is a refusal with a card, a greyed button

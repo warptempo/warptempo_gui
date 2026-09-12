@@ -6994,7 +6994,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
-// end to end — the same 700ms dwell, the same box, the same painter, the same
+// end to end — the same hold-beat dwell, the same box, the same painter, the same
 // AppState::redesign_tooltip state, whose owner names either surface now. The
 // TEXT is composed per button from the word it wears plus the key it
 // dispatches (modal_dialog_button_hint, app_state.h) and published in the

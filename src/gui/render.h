@@ -2,6 +2,7 @@
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
+#include "gui_input.h"        // kHoldBeatMs for the tooltip dwell
 
 #include <cairo/cairo.h>
 #include <cmath>
@@ -2391,8 +2392,16 @@ inline int playhead_head_half_px(int device_row, double s) {
 // so the box follows the font instead of a literal that could drift from it;
 // the run loop only needs to know it can never exceed this. 60 clears the
 // two-line form (51 at 100%) with room for a font whose metrics run larger.
+//
+// THE DWELL IS THE PRODUCT'S HOLD BEAT, not a number of its own. A tooltip
+// under a HELD button is a resting pointer's dwell either way — which is
+// exactly what a finger's long press is on glass — so tying the dwell to
+// kHoldBeatMs makes the tooltip's APPEARANCE the cue that the hold has crossed
+// into its shifted meaning: see the hint, release for the modified act. The
+// two mechanisms stay independent (a hover dwell and a press hold neither
+// reset, suppress nor feed the other); it is the NUMBER that is one.
 inline constexpr int     kTooltipDamageHeightPx = 60;
-inline constexpr int64_t kTooltipDelayMs        = 700;  // kdenlive-ish; architect-tunable
+inline constexpr int64_t kTooltipDelayMs        = kHoldBeatMs;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
