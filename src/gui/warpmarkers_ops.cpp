@@ -558,10 +558,13 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // keyboard — the one divergence the gesture must never have. The step and the
 // drag are the same act with two hands.
 //
-// IT IS ALSO WHERE THE CENTERED POSTURE COLLAPSES (architect 2026-09-11): the
-// rule is at AppState::centered_mode, and a tempo write is its MAP clause — the
-// two keyboard cent-step arms and the value drag's commit all put the `y` lamp
-// out through this one line, none of them spelling it.
+// IT IS ALSO WHERE THE TWO CAMERA LAMPS ANSWER FOR A TEMPO WRITE (architect
+// 2026-09-11): the centered posture COLLAPSES (the rule is at
+// AppState::centered_mode, and a tempo write is its MAP clause) and the walk's
+// framing lamp GOES OUT (the caller inventory is at
+// set_center_on_next_marker, app_state.h) — the two keyboard cent-step arms
+// and the value drag's commit reach both through these two lines, none of them
+// spelling either.
 //
 // THE RE-LAND IS A TRANSLATION, NOT A MOVEMENT, which is why it goes through
 // reseat_playhead_to and never through a movement owner: the focus did not
@@ -603,6 +606,15 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
     // TRANSLATION and takes the reseat, which collapses nothing of its own —
     // this line is why the tail owes the posture anything at all.
     collapse_centered_posture(app);
+    // AND THE WALK'S FRAMING LAMP GOES OUT HERE (architect 2026-09-11, in his
+    // words: if he is modifying tempos he does not want the walk centring on
+    // every Tab). The two lamps read the SAME EVENT — a tempo write — so the
+    // second line sits beside the first and neither of this body's three
+    // callers spells either; the caller inventory and the changed-path
+    // argument are at the writer (set_center_on_next_marker, app_state.h). It
+    // is silent and moves no camera: the bit is read at the next bare Tab
+    // walk, and the lamp going dark is the whole message.
+    set_center_on_next_marker(app, false);
     if (app.active_audio_view == 'T') {
         viewport.kick_waveform_sync();
         const std::vector<GuiWarpMarker>& mv_post = app.warpmarkers.markers();

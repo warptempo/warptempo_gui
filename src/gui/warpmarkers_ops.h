@@ -21,13 +21,18 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame);
 
 // EVERYTHING A WARP-COLUMN TEMPO WRITE OWES AFTER ITS OWN DAMAGE (2026-09-10):
-// in TARGET view the synchronous re-warp and the focused marker's re-land on
-// its post-write image, then — in every view — the preview trigger. THREE
+// the TWO CAMERA LAMPS a tempo act answers for — the centered posture's
+// collapse and the walk's framing lamp put out (2026-09-11) — then, in TARGET
+// view, the synchronous re-warp and the focused marker's re-land on its
+// post-write image, then — in every view — the preview trigger. THREE
 // CALLERS, and they are three because the SUBJECT is one: the singleton cent
 // step, the group cent step (both in warpmarkers_ops.cpp) and the VALUE DRAG's
 // commit (value_drag.cpp), which writes the same field with a pointer instead
-// of an arrow. The full argument, the re-land's translation-not-movement rule
-// and the retired region belts live at the definition.
+// of an arrow. ALL THREE REACH THIS BODY ON THEIR CHANGED PATH ALONE — each
+// returns above on a write that lands the value already standing — which is
+// what makes the two lamp lines the WRITE's and not the press's. The full
+// argument, the re-land's translation-not-movement rule and the retired region
+// belts live at the definition.
 void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
                            Viewport& viewport,
                            GuiTargetRender& target_render);

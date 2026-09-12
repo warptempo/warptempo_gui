@@ -310,7 +310,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
     // CENTER ON NEXT MARKER (architect 2026-09-04) — the centered pin's shape
     // exactly, one lamp further along the same group: bare `n`, a TOGGLE
-    // reading the live bit its own chord flips. Live on a locked tab (bare `n`
+    // reading the live bit — which since 2026-09-11 the ACT FAMILY writes as
+    // well as this chord (a tempo act puts it out, a time act lights it; the
+    // inventory is at set_center_on_next_marker, app_state.h), the face being
+    // truthful either way because it reads the bit and not the press. Live on a locked tab (bare `n`
     // is navigation, on the lock's allowlist) and DEAD in the `h` view, where
     // Tab denotes the diff-flag cycle and the mode's allowlist drops the
     // chord, so the derived partition greys this face in there.

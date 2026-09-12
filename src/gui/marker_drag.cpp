@@ -342,6 +342,14 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
+// THE DRAG IS A TIME ACT AND THE TWO CAMERA LAMPS READ IT AS ONE (architect
+// 2026-09-11): the playhead ride and this land go through the CARRY, which
+// declines the centered posture's collapse, and the commit LIGHTS the walk's
+// framing lamp — that one on the NET-CHANGED path alone, a wander-back drag
+// having moved no marker in time. Both rules are stated at their fields
+// (AppState::centered_mode, set_center_on_next_marker) and neither is restated
+// here.
+//
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read
 // it through the DragOverlay). On commit the proposal column-snaps
@@ -500,6 +508,16 @@ void MarkerDragOps::commit_drag() {
         viewport.carry_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
+    // AND THE WALK'S FRAMING LAMP LIGHTS, ON THE CHANGED PATH ALONE (architect
+    // 2026-09-11, in his words: if he is adjusting time he does want the walk
+    // centred). The flag drag is the other TIME act, the nudge's pointer twin,
+    // so it writes the same bit through the same one writer
+    // (set_center_on_next_marker, app_state.h, which carries the four-caller
+    // inventory) — but the gate here is net_changed and NOT land_playhead: a
+    // wander-back drag still lands the playhead, to erase the motion arm's
+    // rounding drift, and it moved no marker in time, so it is not the act the
+    // lamp answers for. Silent, history-less, and no camera moves at the write.
+    if (net_changed) set_center_on_next_marker(app, true);
     // The dragged marker's STEM moves at commit under the full-waveform
     // invalidate_waveform_area above: the drag shifts its frame, so its
     // always-on stem repaints at the committed column (every enabled marker

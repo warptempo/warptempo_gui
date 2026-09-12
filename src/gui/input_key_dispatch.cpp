@@ -8923,14 +8923,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
         break;
     case GuiKeys::N:
-        // Toggle the Center on next marker lamp (2026-09-04). The setter is
-        // GuiInputHandler::set_center_on_next_marker, shared with the icon-row
-        // button's synthesized chord and with nothing else.
-        // History-less, one-shot, the centered
-        // pin's own shape — and nothing moves at the press: the bit is read at
-        // the next BARE Tab walk, through marker_walk_frame, and by nothing
-        // else (the Ctrl+Shift+Tab march states its own framing).
-        set_center_on_next_marker(!app.center_on_next_marker);
+        // Toggle the Center on next marker lamp (2026-09-04). The writer is
+        // the free function set_center_on_next_marker (app_state.h), where the
+        // whole caller inventory lives: this press is the MANUAL road, shared
+        // with the icon-row button's synthesized chord, and the tempo family's
+        // tail and the two time acts write the same bit from their own changed
+        // paths since 2026-09-11. History-less, one-shot, the centered pin's
+        // own shape — and nothing moves at the press: the bit is read at the
+        // next BARE Tab walk, through marker_walk_frame, and by nothing else
+        // (the Ctrl+Shift+Tab march states its own framing).
+        set_center_on_next_marker(app, !app.center_on_next_marker);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

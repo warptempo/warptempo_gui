@@ -321,15 +321,24 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     for the RESOLVED READOUT this tail's selection used to move; that
 //     readout retired whole with the one-day status bar that carried it, and
 //     the call went with it.);
-// (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
+// (e) PLAYHEAD FOLLOW: carry_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
 //     identity in warp's source home, a real map in phase's target home;
-//     committed_focused_frame is reorder-independent). move_playhead_to owns the
-//     clamp, invalidation, and keep-visible edge-align, writing the cursor field
-//     only (playback was stopped by the twin, past its wall clamp and ahead of
-//     its first write — and by the prologue's collapse arm before that on a 2+
-//     press; either way this tail always runs stopped).
-// (f) THE REGION: a position nudge HIDES the trim region overlay,
+//     committed_focused_frame is reorder-independent). The CARRY is the
+//     movement owner minus the centered posture's collapse (2026-09-11 — a
+//     nudge is a time act), and it owns the clamp, invalidation, and
+//     keep-visible edge-align exactly as move_playhead_to does, writing the
+//     cursor field only (playback was stopped by the twin, past its wall clamp
+//     and ahead of its first write — and by the prologue's collapse arm before
+//     that on a 2+ press; either way this tail always runs stopped).
+// (f) THE WALK'S FRAMING LAMP: a time act LIGHTS Center on next marker
+//     (architect 2026-09-11), through the one writer
+//     set_center_on_next_marker (app_state.h), which carries the four-caller
+//     inventory. The tail is the honest site for it because the twins' own
+//     post-clamp identity no-op returns ahead of every write, so reaching here
+//     IS the committed move; the write is silent, history-less and moves no
+//     camera.
+// (g) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
 //     singleton — and it discards nothing, the trim standing behind it. It owes
 //     no call of its own: (e) above and the prologue's collapse land are both
@@ -337,7 +346,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     input_handler.h).
 //     There is no overlay-preserving arm any more: the extent re-derive died
 //     with the group nudge.
-// (g) target_render.trigger.
+// (h) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
 // warp's SOURCE home view, where the source waveform pixels do not depend on the
@@ -353,14 +362,14 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // invalidate, playhead, region). The COMMITTED BYTES are identical for every
 // input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
-// only — not the cursor), move_playhead_to does not read undo
+// only — not the cursor), the carry does not read undo
 // state, and the region hide reads only the region. ONE
 // knowingly-accepted delta rides the unification, phase-only (the warp twin
 // already had this shape) and harmless, recorded here so the next reader need
 // not re-derive it; a second one dissolved with the coalesce clock and is kept
 // below as (2) so it is not re-discovered as an open cost.
 //
-// (1) HOVER-POPUP ordering. move_playhead_to can conditionally recompute the hover
+// (1) HOVER-POPUP ordering. The playhead move can conditionally recompute the hover
 // after a viewport shift, and the undo push clears it; the phase twin historically
 // recomputed-then-cleared while the warp twin cleared-then-maybe-recomputed, so the
 // unified tail gives both the warp behavior — a nudge that shifts the viewport with
@@ -372,7 +381,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // the TAP ARM restored a clock to coalescing (architect 2026-08-01), recorded in
 // full so it is not re-derived as an oversight. The phase pre-image moved the
 // playhead THEN recorded; the unified tail records THEN moves the playhead, so a
-// possible SYNCHRONOUS kick_waveform_sync (move_playhead_to runs one when the
+// possible SYNCHRONOUS kick_waveform_sync (the playhead move runs one when the
 // follow shifts the viewport — the offscreen-focused case) falls AFTER the
 // accepted-event timestamp record_gesture stamps. The window to the next press is
 // therefore measured from before that render rather than after it, i.e. the render's

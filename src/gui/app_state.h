@@ -2345,8 +2345,10 @@ enum class RedesignButton {
     // CENTER ON NEXT MARKER (architect 2026-09-04) — the `n` lamp, closing the
     // viewport-class group behind Follow and the centered pin, which is the
     // company it keeps: a session camera posture wearing a lamp on the
-    // live bit its own chord flips (center_on_next_marker). All four lamps in
-    // this run — Follow, the centered pin, this one and Restrict undo to
+    // live bit (center_on_next_marker) — which since 2026-09-11 the ACT FAMILY
+    // writes as well as bare `n`, a tempo act putting it out and a time act
+    // lighting it (the inventory is at set_center_on_next_marker). All four
+    // lamps in this run — Follow, the centered pin, this one and Restrict undo to
     // viewport below — have been session postures since 2026-09-11, at their
     // own ruled default at every project open and serialized nowhere. What it governs is
     // the Tab / Shift+Tab marker walk's FRAMING and nothing else — lit, the
@@ -5052,6 +5054,11 @@ struct AppState {
     // this bit says. The lamp keeps the preference for the moment the pin comes
     // down and does not grey, which is Follow's own precedent for a preference
     // the pin supersedes.
+    //
+    // ITS WRITERS ARE THE ACT FAMILY SINCE 2026-09-11 (architect): bare `n` is
+    // the MANUAL toggle, a TEMPO act puts the lamp out and a TIME act lights
+    // it — the whole inventory, and why each site sits on its caller's changed
+    // path, is at the one writer set_center_on_next_marker (below).
     //
     // ITS ONE READER IS marker_walk_frame (below), which the three bare Tab
     // arms call and nothing else does. The walk itself does not read this bit:
@@ -12057,6 +12064,45 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 // none.
 enum class MarkerLandingFrame { Center, FollowPage };
 
+// THE CENTER-ON-NEXT-MARKER LAMP'S ONE FIELD WRITE (architect 2026-09-04 for
+// the lamp, 2026-09-11 for the act family that writes it). It lives beside the
+// bit's one reader (marker_walk_frame, below) and out here rather than on the
+// input handler because THREE OF ITS FOUR CALLERS HOLD NO HANDLER: the tempo
+// write's shared tail and the two time acts are free bodies in their own
+// translation units, and a second spelling is how the four would drift.
+//
+// THE FOUR CALLERS ARE THREE CLASSES (architect 2026-09-11 — a pass spent on
+// TEMPO wants the walk to hold the picture still, a pass spent on TIME wants
+// the walk to bring it along):
+//   THE MANUAL TOGGLE — bare `n`, which the icon row's own button reaches by
+//     synthesizing that press;
+//   THE TEMPO FAMILY'S ONE TAIL — warp_tempo_write_tail (warpmarkers_ops.cpp)
+//     writes FALSE at its head, so the singleton cent step, the group cent
+//     step and the value drag's tempo commit all put the lamp out through that
+//     one line and none of them spells it, exactly as they collapse the
+//     centered posture there;
+//   THE TWO TIME ACTS — both write TRUE: the Left/Right position nudge's
+//     committed landing (finish_position_nudge, position_nudge.cpp, both
+//     columns) and the flag drag's changed commit (MarkerDragOps::commit_drag,
+//     marker_drag.cpp). They are the same two acts that take the non-collapsing
+//     carry, for the same reason.
+// EVERY ACT SITE RUNS ON ITS OWN CHANGED PATH ALONE, so a nudge already at its
+// wall, a drag that wanders back to its column and a step that lands the value
+// already standing all leave the lamp exactly where it was: the lamp answers a
+// write, not a press.
+//
+// It is a bare assignment, and the lamp's whole nature is in what it does not
+// do: SESSION-ONLY and serialized nowhere, HISTORY-LESS (no undo entry, no
+// dirty bit), SILENT (no card — the lamp is the message), and OWED NO DAMAGE,
+// the face repainting through the per-tick comparator like every other
+// stateful button face with no glyph swapping on this bit. THE CAMERA DOES NOT
+// MOVE AT THE WRITE either way: the bit is read at the NEXT bare Tab walk, so
+// lighting it frames nothing already on screen and putting it out un-frames
+// nothing.
+inline void set_center_on_next_marker(AppState& a, bool lit) {
+    a.center_on_next_marker = lit;
+}
+
 // The Center on next marker lamp read as a framing choice — the bare Tab /
 // Shift+Tab / IsoLeftTab arms' own answer and nobody else's, the lamp
 // governing that walk alone. It lives out here rather than inside the walk so
@@ -15133,9 +15179,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // the live bit bare `y` flips, so the lit face and the pin cannot
         // drift.
         case RedesignButton::IconCentered: return a.centered_mode;
-        // The center-on-next-marker lamp (2026-09-04): the same toggle
-        // pattern again, reading the live bit bare `n` flips, so the lit face
-        // and the walk's behaviour cannot drift.
+        // The center-on-next-marker lamp (2026-09-04): the same pattern
+        // again, reading the live bit itself, so the lit face and the walk's
+        // behaviour cannot drift. It is the one lamp in this run whose bit has
+        // writers besides its own chord — a tempo act puts it out and a time
+        // act lights it (set_center_on_next_marker above) — and the face needs
+        // no term for that: it reads the bit, so it is truthful whoever wrote
+        // it, and the per-tick comparator repaints it.
         case RedesignButton::IconCenterOnNext:
             return a.center_on_next_marker;
         // The restrict-undo-to-viewport lamp (2026-09-04): the same toggle

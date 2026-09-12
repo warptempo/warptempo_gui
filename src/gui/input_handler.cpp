@@ -4205,11 +4205,3 @@ void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
     app.restrict_undo_to_viewport = desired;
 }
 
-void GuiInputHandler::set_center_on_next_marker(bool desired) {
-    // The contract — sole writer, history-less, no damage, camera untouched —
-    // is at the declaration (input_handler.h), which also states the scope:
-    // this toggle governs the bare Tab walk alone. Its ONE caller is the
-    // bare-`n` arm, which the icon row's button reaches by synthesizing that
-    // press; the key left the schema 2026-09-11, so there is no commit road.
-    app.center_on_next_marker = desired;
-}

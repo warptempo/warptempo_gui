@@ -215,7 +215,17 @@ void finish_position_nudge(
     // centered posture (AppState::centered_mode).
     viewport.carry_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
+    // (f) THE WALK'S FRAMING LAMP LIGHTS (architect 2026-09-11, in his words:
+    // if he is adjusting time he does want the walk centred). A position nudge
+    // is a TIME act, the same class the carry above exists for, and this tail
+    // is reached only after a committed move — both twins return on their
+    // post-clamp identity no-op before any write — so the lamp answers the
+    // nudge that MOVED the marker and never the one that hit its wall. The
+    // caller inventory and the write's whole nature (session-only,
+    // history-less, silent, no damage, no camera) are at the writer,
+    // set_center_on_next_marker (app_state.h).
+    set_center_on_next_marker(app, true);
+    // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,
     // and discarding nothing — the trim stands behind it. IT NEEDS NO CALL OF
     // ITS OWN since 2026-08-19: the follow at (e) goes through the viewport
@@ -225,6 +235,6 @@ void finish_position_nudge(
     // and nothing else. Groups are never
     // moved (the doctrine at the declarations), so there is no extent to
     // maintain here.
-    // (g) view-independent target preview.
+    // (h) view-independent target preview.
     target_render.trigger();
 }
