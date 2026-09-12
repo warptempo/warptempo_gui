@@ -468,18 +468,18 @@ PhaseHopWindow phase_reset_hop_window(const AppState& app,
     //
     // The two walks, outward from the identity cell, stopping at the first k
     // that breaks a wall. At most kIterHopMax landings a side, each one seed
-    // search over a monotone map.
+    // search over a monotone map. Each records the INTERVAL alone: the loop's
+    // own bound is the digit wall and the break is the piece edge, and no
+    // reader asks which of the two closed a side (the struct says why).
     for (int k = 1; k <= kIterHopMax; ++k) {
         const int64_t f = phase_reset_hop_cell_frame(rest, k, map);
-        if (f > last_frame) { out.max_wall = PhaseHopWall::PieceEdge; break; }
-        out.k_max    = k;
-        out.max_wall = PhaseHopWall::Digit;
+        if (f > last_frame) break;
+        out.k_max = k;
     }
     for (int k = -1; k >= -kIterHopMax; --k) {
         const int64_t f = phase_reset_hop_cell_frame(rest, k, map);
-        if (f < 0)          { out.min_wall = PhaseHopWall::PieceEdge; break; }
-        out.k_min    = k;
-        out.min_wall = PhaseHopWall::Digit;
+        if (f < 0) break;
+        out.k_min = k;
     }
     return out;
 }

@@ -18,6 +18,8 @@ inline std::unexpected<std::string> prefix_line_error(int ln, std::string msg) {
 // Strict whole-token bool parser: the two-token vocabulary shared by the
 // settings schemas (the per-tab read_only keys). The writer emits
 // only `true`/`false`, so those are the sole accepted spellings.
+// (architect approval 2026-09-11 — the settings-key retirement's own grant;
+// this comment named a retired key.)
 inline bool parse_bool_token(const std::string& s, bool& out) {
     if (s == "true")  { out = true;  return true; }
     if (s == "false") { out = false; return true; }

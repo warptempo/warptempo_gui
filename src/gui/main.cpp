@@ -3172,7 +3172,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner at the center column, so the chase's own leaves-the-window
         // test simply never fires. The two movers share the AIMING terms and
         // nothing else since 2026-09-11 — the pin reads no chase bit, and a
-        // pan that ends the chase leaves the pin deriving.
+        // CHANGED PAN ends the chase and collapses the pin through their
+        // respective owners, both in Viewport::scroll_viewport's changed
+        // branch — the chase's clear under that branch's playback term, the
+        // posture's collapse under none — so a pan during playback leaves
+        // neither mover running, and a pan at rest ends the posture that was
+        // the only one there.
         // THE BIT IS THE PLAY'S, NOT THE LAMP'S: follow is a one-shot, so
         // this asks whether the play IN FLIGHT is chasing (the launch that
         // spent the armed lamp is what turned it on; every pan turns it off,

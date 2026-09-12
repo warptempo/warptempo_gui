@@ -332,6 +332,12 @@ void GuiWarpMarkersOps::delete_selected_marker() {
                         /*touched_snapshot=*/std::move(live_idx),
                         /*touched_live=*/{});
     undo.recompute_dirty();
+    // THE CENTERED POSTURE COLLAPSES (the rule is at AppState::centered_mode):
+    // a delete reshapes the map from the deleted marker onward, which is the
+    // rule's MAP clause, the same one the tempo tail answers for. Past the
+    // empty-batch return above, so this is the changed path; the re-land below
+    // is a TRANSLATION and collapses nothing of its own.
+    collapse_centered_posture(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
     // delete reshapes the map from the deleted marker onward, so in W+target
@@ -515,6 +521,13 @@ void GuiWarpMarkersOps::toggle_disabled() {
     app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
+    // THE CENTERED POSTURE COLLAPSES (the rule is at AppState::centered_mode):
+    // a disabled marker stops shaping its segment, which moves the map — the
+    // rule's MAP clause. Past the `changed` return above, so this is the
+    // changed path. (Ctrl+N needs no line of its own: it lands the playhead on
+    // the collapsed focus through land_playhead_on_marker, a MOVEMENT owner,
+    // and collapses there.)
+    collapse_centered_posture(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
     // disabled marker stops shaping its segment (and a disabled label_def

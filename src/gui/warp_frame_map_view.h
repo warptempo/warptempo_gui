@@ -512,22 +512,22 @@ int64_t phase_reset_hop_cell_frame(
 const std::vector<WarpFrameMapSegment>& live_warp_frame_map(
     const AppState& app, const GuiAudio& audio);
 
-// WHICH WALL CLOSED A SIDE of the hop window below. Every side is closed by
-// exactly one of the two, so the kind is always meaningful.
-enum class PhaseHopWall {
-    Digit,      // +/-kIterHopMax — "past nine it is no longer the phase reset"
-    PieceEdge,  // the cell would land before frame 0 or past total_frames - 1
-};
-
-// THE LEGAL HOP INTERVAL for the phase reset at `idx`, and what closed it on
-// each side. k_min <= 0 <= k_max ALWAYS: the identity cell renders the resting
-// store, so 0 is inside the window whatever else is around, exactly as the
-// warp bracket's clamp window always contains the zero delta.
+// THE LEGAL HOP INTERVAL for the phase reset at `idx`. k_min <= 0 <= k_max
+// ALWAYS: the identity cell renders the resting store, so 0 is inside the
+// window whatever else is around, exactly as the warp bracket's clamp window
+// always contains the zero delta.
+//
+// THE INTERVAL IS THE WHOLE ANSWER, and there is no wall-KIND beside it: both
+// readers want the numbers — the editor refuses a value outside them and the
+// step clamps into them — and neither has ever forked on which wall closed a
+// side. (A per-side wall-kind enum rode this struct while the editor's refusal
+// spelled a different sentence per wall; the sentence collapsed into one and
+// the enum lost its last reader with it. The two walls themselves are not
+// gone — they are what the walk below closes each side on, and the DIGIT
+// ceiling survives exactly as the numeric bound the step clamps at.)
 struct PhaseHopWindow {
-    int          k_min    = 0;
-    int          k_max    = 0;
-    PhaseHopWall min_wall = PhaseHopWall::Digit;
-    PhaseHopWall max_wall = PhaseHopWall::Digit;
+    int k_min = 0;
+    int k_max = 0;
 };
 
 // THE PHASE BRACKET'S WALLS, ONE OWNER. Walks k outward from 0 on each side

@@ -112,9 +112,14 @@ constexpr GuiKey kLeftClickKey = GuiKeys::E;
 //     is a resting pointer — on glass a long press is a held finger and the
 //     dwell elapses under it — so the tooltip's appearance is the moment the
 //     hold has been long enough for the shift-modified act, and the cue to
-//     release is the hint itself. The two mechanisms stay independent (the
-//     dwell and the hold neither reset, suppress nor feed the other); it is
-//     the number they are now one on. It carried its own 700 until then.
+//     release is the hint itself — which is why THE HOLD'S OWN STAMP FEEDS THE
+//     DWELL on the one surface where both run at once: an admitted roster
+//     press seeds the dwell from the press's clock
+//     (GuiInputHandler::seed_roster_tooltip_dwell), so the hint is raised as
+//     this beat is crossed rather than a loop interval later. Nothing else
+//     couples them — neither resets or suppresses the other, and the dwell is
+//     still the pointer's own on every surface with no press on it. It
+//     carried its own 700 until then.
 // So a keyboard hold, a chrome shift hold, a touch region hold, a held
 // button's first repeat, a double tap, a re-tapped nudge and a hover dwell all
 // land on the same beat rather than on numbers that happen to be near each

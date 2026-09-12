@@ -816,6 +816,23 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     const int64_t playhead_source_frame = active_domain_to_source_frame(
         app, viewport.audio, app.playhead_cursor_sample);
 
+    // DOES THIS RESTORE MOVE THE MAP? Read while both sides are still in hand
+    // — the entry's own snapshot against the live store `before_w` copied
+    // above, and the entry's engine scale against the live one — because the
+    // two lines below consume both. The warp list and the engine `scale` are
+    // the warp map's whole input set (build_warp_frame_map's slope product),
+    // so a phase-only entry and a settings-only entry that moved no scale
+    // answer false. The list question is asked through the product's own
+    // same-map owner, warp_rows_equal (app_state.h), the same comparator
+    // proposed_display_context asks to decide whether a restore installs the
+    // map that is already built; its row identity is the WHOLE struct, so a
+    // measure-only or bpm-only entry answers true here and collapses — the
+    // conservative side of the one owner, and the price of not minting a
+    // second definition of "the same map".
+    const bool restore_moves_map =
+        !warp_rows_equal(entry.snapshot, before_w) ||
+        entry.settings.engine_settings.scale != app.engine_settings.scale;
+
     // Restore engine settings before the marker swap. Marker entries get their
     // settings field populated from app at push time (carry-everywhere), so the
     // restore is a no-op for marker-only ops. Settings-only entries get the
@@ -832,6 +849,17 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // selections' liveness rule, and both died 2026-07-29.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
+
+    // THE CENTERED POSTURE COLLAPSES ON A RESTORE THAT MOVED THE MAP (the rule
+    // is at AppState::centered_mode, whose MAP clause this is), on the verdict
+    // taken above — so undoing a delete, a tempo, a disable, a flag commit, a
+    // marker's position or a scale puts the lamp out exactly as the act itself
+    // does, while a phase-only entry and a settings-only entry that moved no
+    // scale leave it lit. THE RE-LAND BELOW STAYS A TRANSLATION and takes no
+    // collapse of its own (the reseat collapses nothing anywhere), and neither
+    // do the three view-axis restores: the tab switch is the A/B keeper by
+    // ruling, and the column and audio-view switches are translations.
+    if (restore_moves_map) collapse_centered_posture(app);
 
     // THE MAP-CHANGE RE-LAND, the shape the product already owns for a map
     // rebuilt under a STANDING view (the family contract is at the head of

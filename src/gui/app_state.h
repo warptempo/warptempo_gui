@@ -5008,16 +5008,52 @@ struct AppState {
     // entries Viewport::carry_playhead_to / carry_playhead_on_marker — plus
     // Shift+Space, Ctrl+Tab and bare Space, and it goes out on every zoom, the
     // Tab block, any pointer playhead placement or marker click, any pan, and
-    // the tempo steps and the value drag's commit. THE COLLAPSE HAS ONE BODY
-    // (collapse_centered_posture, below) and its owners are the playhead
-    // MOVEMENT owners, the three zoom appliers, the pan funnel
-    // Viewport::scroll_viewport and the warp tempo write's tail — each calling
-    // it in one line and restating none of this.
+    // every act that rewrites the warp map under it.
+    //
+    // THE COLLAPSE HAS ONE BODY (collapse_centered_posture, below) and each
+    // owner calls it in one line and restates none of this. THE OWNER
+    // INVENTORY, re-derived by grep, in three classes:
+    //   * THE PLAYHEAD MOVEMENT OWNERS — Viewport::move_playhead_to,
+    //     land_playhead_on_marker and land_playhead_on_source_frame
+    //     (input_pointer.cpp). Every click, walk, skip, drop and land reaches
+    //     one of the three.
+    //   * THE CAMERA OWNERS — the three zoom appliers
+    //     (Viewport::apply_zoom_change, ::apply_strip_drag_zoom,
+    //     ::apply_zoom_to_start), the pan funnel Viewport::scroll_viewport,
+    //     and THE TYPED VIEWPORT MOVE, the settings editor's
+    //     `tab_<a|b>_viewport_start=` on the ACTIVE tab (settings_editor.cpp) —
+    //     the one camera write that reaches no funnel and no applier, which is
+    //     why it owes a line of its own. It collapses on the CLAMPED answer;
+    //     the INACTIVE tab's arm is parking, not a camera move, and takes none.
+    //   * THE MAP-CHANGING FAMILY, every one of them on its own CHANGED path:
+    //     the warp tempo write's tail (warp_tempo_write_tail — the two cent
+    //     step arms and the value drag's commit), the warp DELETE and the
+    //     Ctrl+D disable toggle (warpmarkers_ops.cpp), the flag editor's
+    //     PAYLOAD commit on canonical_changed (flag_editor.cpp), the typed
+    //     engine `scale` commit (settings_editor.cpp), the recipe apply both
+    //     load-in-place roads share (apply_recipe_in_place,
+    //     input_key_dispatch.cpp), the `h` view's REVERT on its warp arm
+    //     (run_history_revert, same file), and the undo/redo RESTORE where the
+    //     restored warp list or engine scale differs from the live one
+    //     (undo.cpp). Ctrl+N needs no line: it lands the playhead on the
+    //     collapsed focus and collapses through the movement owner.
+    // THE PHASE-RESET COLUMN IS NOT IN THAT FAMILY AND THIS IS THE ONE PLACE
+    // IT IS SAID: a phase reset is no warp-map input, so no phase write moves
+    // an image — the phase delete, the phase disable toggle and the phase
+    // revert arm collapse nothing, and a phase DROP collapses only through the
+    // movement owner its own seat takes.
     // THE TRIM FAMILY IS THE ONE ASYMMETRY, and it is by construction rather
     // than by exemption: every trim write parks the playhead by writing the
     // cursor DIRECT (park_playhead_at_trim_start), so it passes no movement
     // owner and reaches no collapse, and a trim gesture leaves the lamp as it
     // found it.
+    // THE KEEPERS, stated as a set so no site has to argue its own silence:
+    // the TIME ACTS (the Left/Right nudge and the flag drag, through the two
+    // carry entries), the A/B AUDITION (the collapse is a no-op while its
+    // sequence stands — the body below says why), the A/B SWITCH (Ctrl+Tab),
+    // BARE SPACE, the TRIM family above, the WAVEFORM MAGNIFICATION (a picture
+    // gain, no zoom level and no camera), and every TRANSLATION — the reseat
+    // entries, the S/T and W/P switches, and the restore's own re-land.
     //
     // THE A/B AUDITION ARMS IT: Shift+Space leaves the lamp LIT when its
     // sequence reaches its first play (GuiAbAudition::start), the act being
@@ -6945,7 +6981,11 @@ struct AppState {
     // WHO WRITES IT: the two hover walks, each for its own surface and each
     // through the one arming helper (GuiInputHandler::arm_tooltip_dwell) —
     // recompute_redesign_button_hover for the roster, update_modal_dialog_hover
-    // for a standing dialog — plus hide_shift_tooltip, which clears it.
+    // for a standing dialog — plus hide_shift_tooltip, which clears it, and
+    // the ROSTER PRESS SEED (seed_roster_tooltip_dwell), the one writer that
+    // is not a hover walk: it stamps the dwell from the press's own clock so
+    // the hint arrives as the shift hold's beat is crossed, and it asks the
+    // roster walk's own refusals before it does.
     struct RedesignTooltip {
         enum class Surface { Roster, Dialog };
         struct Owner {

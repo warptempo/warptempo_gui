@@ -477,16 +477,17 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
         // before the request (phase_reset_hop_window, warp_frame_map_view.h).
         //
         // ONLY ONE WALL CAN ARRIVE HERE, AND IT IS THE PIECE'S EDGE, so the
-        // refusal names it outright rather than reading the window's wall
-        // kind: THE GRAMMAR BOUNDS THE DIGIT BEFORE THE WINDOW IS ASKED —
+        // refusal names it outright and the window hands back numbers alone:
+        // THE GRAMMAR BOUNDS THE DIGIT BEFORE THE WINDOW IS ASKED —
         // parse_signed_hops takes a sign and ONE digit and the field cannot
         // hold a third byte (kMaxPendingCharsIterHop, text_editor.h), so a
         // committed value already lies inside [-kIterHopMax, kIterHopMax],
-        // which is the very interval PhaseHopWall::Digit closes. A typed `+10`
-        // never reaches this test; it is refused as a full field or by the
-        // grammar sentence above. The Digit wall itself is not dead — the
-        // STEP clamps into this same window and stops at +/-9 there
-        // (phase_iter_bound_step_landing) — it simply has no typed road.
+        // the very interval the digit wall closes. A typed `+10` never reaches
+        // this test; it is refused as a full field or by the grammar sentence
+        // above. THE DIGIT CEILING ITSELF IS NOT DEAD — it survives as the
+        // NUMERIC bound the STEP clamps at, stopping at +/-9 there
+        // (phase_iter_bound_step_landing) — it simply has no typed road, which
+        // is why this site reads the interval and never a wall kind.
         const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
         if (value < w.k_min || value > w.k_max) {
             refuse("the cell would leave the piece");
@@ -893,6 +894,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // Unconditional by ruling — rationale at GuiTargetRender::trigger. Any
     // store change repaints and triggers.
     undo.recompute_dirty();
+    // THE CENTERED POSTURE COLLAPSES (the rule is at AppState::centered_mode):
+    // canonical_changed IS the map-input set on this surface — a tempo, a
+    // scale, a label definition or reference, the disabled bit — so a commit
+    // that reaches this line moved the map, the rule's MAP clause. Past the
+    // canonical_changed return above, so this is the changed path, and the
+    // re-land below is a TRANSLATION that collapses nothing of its own.
+    collapse_centered_posture(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
     // VALUE surface — tempo, label_def / label_ref, per-marker scale, the

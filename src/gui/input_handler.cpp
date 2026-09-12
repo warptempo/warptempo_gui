@@ -4204,4 +4204,3 @@ void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
     // key to commit it from.
     app.restrict_undo_to_viewport = desired;
 }
-

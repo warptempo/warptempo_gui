@@ -4077,6 +4077,14 @@ void GuiInputHandler::run_history_revert() {
         if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
         else       undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
+        // AND THE CENTERED POSTURE COLLAPSES ON THE WARP ARM (the rule is at
+        // AppState::centered_mode): a warp revert rewrites the map, the rule's
+        // MAP clause, exactly as the load-in-place's whole-recipe write does.
+        // THE PHASE ARM IS CARVED OUT BY THE SAME MAP ARGUMENT THE RE-LAND
+        // BELOW TAKES — phase resets are no warp-map input, so a phase revert
+        // moves no image and the lamp has nothing to answer for. Inside the
+        // `changed` block, so this is the changed path.
+        if (!phase) collapse_centered_posture(app);
         // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
         // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
         // cursor's NUMBER was expressed in, and keeping that number would move
@@ -5466,6 +5474,19 @@ void GuiInputHandler::apply_recipe_in_place(
     // (reset_displayed_target_basis, app_state.h, which carries the membership
     // and names its two callers).
     reset_displayed_target_basis(app);
+
+    // AND THE CENTERED POSTURE COLLAPSES (the rule is at
+    // AppState::centered_mode): this body replaced the warp store and the
+    // engine block in the two lines above, which is the rule's MAP clause in
+    // its widest form — the whole recipe. UNCONDITIONAL, because this body has
+    // no unchanged path: every road here has already committed to installing
+    // the recipe, and a recipe byte-equal to the live one is not a case any
+    // caller distinguishes. IT IS THE POSTURE ALONE: the load leaves the three
+    // SESSION LAMPS (`k`, `x`, `z`) untouched by being a store write and not a
+    // settings load, and the two sweep-mode bits are view state the act does
+    // not touch either — what moves here is the map, which is this lamp's own
+    // business and no other's.
+    collapse_centered_posture(app);
 
     // The LIVE camera stays exactly where the user left it, but the DOMAIN it
     // sits in may have moved: a target-view session's total is derived from the

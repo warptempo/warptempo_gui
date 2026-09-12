@@ -1722,10 +1722,12 @@ struct GuiInputHandler {
     // no key press reaches. Showing is NOT here: the run loop's
     // tick owns the dwell, comparing AppState::redesign_tooltip.hover_ms against
     // the delay. Damages the strip and the box's last painted rect.
-    // NO ROSTER DWELL RUNS UNDER A MODAL SURFACE:
-    // recompute_redesign_button_hover refuses to stamp one while a prompt or a
-    // keyboard-modal editor is up (the
-    // rule is stated there), so a roster tooltip cannot come back under one,
+    // NO ROSTER DWELL RUNS UNDER A MODAL SURFACE: both roster stampers —
+    // recompute_redesign_button_hover and the press seed
+    // (seed_roster_tooltip_dwell) — refuse one while a prompt, a
+    // keyboard-modal editor or one of the three list owners is up, through the
+    // shared tooltip_dwell_suppressed (the rule is stated at the walk's
+    // stamp), so a roster tooltip cannot come back under one,
     // which the per-tick recompute and the hover that stays live under modals
     // would otherwise let it do. THE MODAL'S OWN BUTTONS DO carry hints since
     // 2026-08-13 — a different surface in the same one dwell state, armed by
@@ -1737,6 +1739,27 @@ struct GuiInputHandler {
     // running dwell when the owner is unchanged, and hides when there is none.
     // The owner's two-surface encoding is at AppState::RedesignTooltip.
     void arm_tooltip_dwell(AppState::RedesignTooltip::Owner o);
+
+    // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's
+    // ONE expression, asked by the roster's hover walk
+    // (recompute_redesign_button_hover) and by the press seed below, which is
+    // the only other route that can start a roster dwell. The full rationale
+    // is at the walk's stamp; it lives in a predicate because two sites now
+    // need the same answer and an inline copy would be an inventory to keep.
+    bool tooltip_dwell_suppressed() const;
+
+    // THE LONG PRESS'S CUE STARTS AT THE PRESS. kTooltipDelayMs IS
+    // kChromeShiftHoldMs (render.h), so the hint is the long press's own cue
+    // and must arrive as the beat is crossed — but every press hides the
+    // tooltip and zeroes its dwell, and only the next settled hover walk would
+    // re-stamp it, with a clock started one loop interval late. So the
+    // admitted roster arm seeds the owner and the dwell from the press's own
+    // stamp; the walk then finds that owner unchanged and keeps the running
+    // dwell (arm_tooltip_dwell's rule), rather than starting a second one.
+    // It asks exactly the two terms the walk asks before stamping — the modal
+    // suppression above and the CONSTANT tooltip membership — plus the hover
+    // zone, so a button the walk would refuse a dwell is refused one here too.
+    void seed_roster_tooltip_dwell(RedesignButton b, int64_t press_ms);
 
     // THE CHROME ACT'S TWO HALVES (architect 2026-08-13, act-at-release — the
     // authoritative rule is kdenlive-redesign.md's act-at-release section;

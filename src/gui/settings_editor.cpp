@@ -408,8 +408,21 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             if (v == app.viewport_start_sample) { unchanged(); return true; }
             // Assign-then-clamp: the same idiom every viewport mutation uses;
             // the clamp owns out-of-range constructively.
+            const int64_t before = app.viewport_start_sample;
             app.viewport_start_sample = v;
             clamp_viewport_start(app, audio);
+            // THE TYPED CAMERA MOVE PUTS THE CENTERED POSTURE OUT (the rule is
+            // at AppState::centered_mode): this is the ACTIVE tab's viewport
+            // written direct — the one camera write in the product that reaches
+            // no pan funnel and no zoom applier — so it owes the collapse
+            // itself, and it owes it on the CLAMPED answer: a value the clamp
+            // pulls back onto the one already standing moved no camera and
+            // collapses nothing, exactly as it repaints nothing. THE INACTIVE
+            // TAB'S ARM BELOW IS PARKING, NOT A CAMERA MOVE, and takes none —
+            // the band it writes is restored (and clamped) at the next tab-in,
+            // where Ctrl+Tab's own keeper rule governs.
+            if (app.viewport_start_sample != before)
+                collapse_centered_posture(app);
             viewport.invalidate_waveform_area();
             viewport.kick_waveform_sync();
         } else {
@@ -616,7 +629,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     }
 
     // A tab_a_/tab_b_ prefix with an unrecognized suffix is not a GUI-kind
-    // key; fall through so the engine path reports "unknown engine key".
+    // key; fall through to the common fallback's "unknown settings key".
     return false;
 }
 
@@ -665,11 +678,21 @@ void GuiSettingsEditor::commit() {
     // canonical engine set; validate the value through the same helper
     // the file-load deserializer uses. Capture-before-mutate so the
     // snapshot on the undo stack reflects the pre-edit settings.
+    //
+    // THE NOUN IS `settings key`, NOT `engine key`, and that is the accurate
+    // one: this is the COMMON FALLBACK — every road above it has declined the
+    // key, so what lands here is a device key misspelt, a GUI key misspelt, a
+    // RETIRED key typed from memory (the three camera postures) or a word that
+    // was never a key at all, and only the last group has anything to do with
+    // the engine. Naming the engine told the user the key was in the wrong
+    // FAMILY when the truth is that the product has no such key. No shim and no
+    // special case for the retired three: they are unknown keys and they hear
+    // the unknown key's sentence.
     if (!is_canonical_engine_key(key)) {
         app.settings_editor.red = true;
         viewport.invalidate_modal_dialog_area();
         const std::string refusal =
-            "Settings edit rejected: unknown engine key '" + key + "'";
+            "Settings edit rejected: unknown settings key '" + key + "'";
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;
@@ -782,9 +805,22 @@ void GuiSettingsEditor::commit() {
     const int64_t playhead_source_frame =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
 
+    const double scale_before = app.engine_settings.scale;
     SettingsSnapshot pre = capture_current_settings(app);
     app.engine_settings = std::move(candidate);
     undo.push_settings_undo(std::move(pre));
+
+    // A SCALE COMMIT MOVES THE MAP, SO THE CENTERED POSTURE COLLAPSES (the rule
+    // is at AppState::centered_mode, whose MAP clause this is — the warp tempo
+    // write's tail takes it for the same reason). `scale` is the engine block's
+    // one warp-map input (build_warp_frame_map's slope product); every other key
+    // in this block is provenance and moves no image, so the collapse asks the
+    // field rather than the commit. IN BOTH AUDIO VIEWS, as the tempo tail is:
+    // the map is the map whichever domain is on screen. Past the no-op gate
+    // above by construction, so this is the changed path already, and the
+    // re-land below is a TRANSLATION that collapses nothing of its own.
+    if (app.engine_settings.scale != scale_before)
+        collapse_centered_posture(app);
 
     std::fprintf(stderr,
         "warptempo_gui: Setting applied: %s=%s\n",
