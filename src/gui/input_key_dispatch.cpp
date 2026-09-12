@@ -4852,10 +4852,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
 
     // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02, the four-tier
     // review's R-10). Both refusals below are decided by iteration_sweep_plan
-    // (app_state.h), the ONE owner the Render button's enabled arm and its
-    // tooltip read too, so the button greys exactly where this dispatch would
-    // refuse and the sentence a greyed press would have raised is the one its
-    // hint already carries. Nothing is counted twice: the owner walks the same
+    // (app_state.h), which has TWO readers — its own boolean face
+    // iteration_sweep_actionable, which the Render button's enabled arm asks,
+    // and this dispatch — so the button greys exactly where this body would
+    // refuse, the grey being the roster's whole message and the card below the
+    // key's. Nothing is counted twice: the owner walks the same
     // store through the same eligibility predicate this body does, and no
     // hand-rolled product survives here — the LIT COLUMN'S store in both
     // cases, the owner and this body forking on the one stamp. THE BREACH
@@ -5225,11 +5226,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // what keeps the Render button honest, its "Render Grid Iterations" face
     // following the same bit from either view — and since 2026-09-02 that
     // face also greys wherever the sweep would refuse before it dispatched,
-    // both faces reading iteration_sweep_plan (app_state.h), the verdict this
-    // body's own two refusals read. The sweep's own body carries no
-    // view assumption (it builds per-cell marker copies off the LIT COLUMN'S
-    // store and renders are view-independent); its success-tail wipe is the
-    // granted home-view-binding exception recorded at
+    // reading iteration_sweep_plan (app_state.h) through its boolean face,
+    // the verdict this body's own two refusals read. The sweep's own body
+    // carries no view assumption (it builds per-cell marker copies off the
+    // LIT COLUMN'S store and renders are view-independent); its success-tail
+    // wipe is the granted home-view-binding exception recorded at
     // run_iteration_sweep_render.
     if (ctrl && alt && !shift &&
         key == GuiKeys::R) {

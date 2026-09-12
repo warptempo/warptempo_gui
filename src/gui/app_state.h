@@ -16263,8 +16263,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE UNDO POSTURE'S LAMP (2026-09-04), one line: bare `z` toggles and
         // has no shifted twin. It NAMES THE TOGGLE like the three above — the
         // state is the lamp's to tell — and it names the SWITCH, never what
-        // the switch makes conditional; Undo's and Redo's own hints carry that
-        // (the stateful overload below).
+        // the switch makes conditional. Where the lamp refuses a step, the
+        // Undo or Redo button simply greys and Ctrl+Z cards the reason; no
+        // tooltip anywhere says it (the rule at this table's head).
         case RedesignButton::IconRestrictUndo:
             return {"Toggle Restrict Undo to Viewport (Z)", nullptr};
         // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
@@ -16321,8 +16322,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // Cumulative toggle beside it owns "reading". The hint shows over a
         // DEAD button outside the `h` view, the tooltips-on-disabled ruling's
         // own case (architect 2026-08-07), exactly as its four neighbours' do.
-        // INSIDE the view the stateful overload forks it once, naming the
-        // bootstrap as the reason when the visit opened on the local fallback.
+        // IT IS THIS ONE STRING IN EVERY STATE: the stateful overload forked
+        // it inside the view until 2026-09-12, naming the bootstrap where a
+        // visit had opened on the local fallback, and that line went with the
+        // reason class — the button greys there and bare `g` cards the reason.
         case RedesignButton::HistoryWalk:
             return {"Toggle History Walk (G)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
@@ -16412,13 +16415,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // on every dead face — a live ctrl twin keeps the button lit and the
         // ctrl-click reachable instead — and the tooltips-on-disabled ruling
         // (a disabled icon still explains itself) says the line stays; the
-        // keys keep the act. THE OVERLOAD FORKS BOTH LINES (2026-09-01): on a
-        // face the ctrl twin alone keeps lit the first line says the cursor
-        // is already at the bound, and the line drops where the two forms
-        // land on one frame — the landing owner's own compare
-        // (playhead_skip_landing_frame in both arms since codex round A,
-        // where a restated trim shape stood for one day and missed the
-        // single bound already at its song wall).
+        // keys keep the act. THE OVERLOAD FORKS THE SECOND LINE ALONE: it
+        // drops where the bare and the whole-piece form land on one frame —
+        // the landing owner's own compare, playhead_skip_landing_frame asked
+        // in both arms (a restated trim shape stood there for one day in
+        // 2026-09-01 and missed the single bound already at its song wall).
+        // (THE FIRST LINE FORKED TOO from 2026-09-01 to 2026-09-12, reporting
+        // an already-at-the-bound cursor on a face the ctrl twin alone kept
+        // lit. It was a STATE on a tooltip and went with that class; the
+        // refusal it described is the messaging file's benign one-dimensional
+        // silence, so neither surface says it now.)
         case RedesignButton::TransportSkipBack:
             return {"Go to Start (Home)",
                     "Press Ctrl to ignore the trim window."};
@@ -16469,11 +16475,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // beyond dropping — it takes the reader to target view, where the
         // lead-in seed and its overlay live,
         // and drops the reset at the cursor's own instant once it arrives.
-        // THIS ROW IS THE S-VIEW WARP-COLUMN TRUTH (2026-09-01, the
-        // overload): in the P column the shifted press refuses as already
-        // crossed and the line drops, and in T+W the plain press cards
-        // "Markers are placed in source view", which the first line then
-        // says — the tooltip saying what the press will say.
+        // THE OVERLOAD TOUCHES THE SECOND LINE ALONE (2026-09-01): in the P
+        // column the shifted press refuses as already crossed, so the line
+        // drops. (It forked the FIRST line too until 2026-09-12, saying
+        // "Markers are placed in source view (S)" in T+W where the plain
+        // press cards exactly that. The line was a REFUSAL'S REASON and went
+        // with the class: the button never greys on that refusal under the
+        // twin rule, so the plain lift reaches the chord and the chord cards.)
         case RedesignButton::IconMarkerDrop:
             return {"Drop Marker (S)",
                     "Press Shift to drop a phase reset in target view."};
@@ -17544,15 +17552,19 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 // had one (architect, the four-tier review's R-16). A ref whose definition is
 // missing entirely stays Eligible — resolved_marker_payload already yields an
 // empty string for that case and both acts refuse an empty payload, so it
-// never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-02: the
+// never surfaces a stale tempo. ITS FOUR CALLERS, re-greped 2026-09-12: the
 // VALUE PAIR (2026-08-29) — bare `j`, which copies the focused marker's
 // resolved value to the system clipboard, and Shift+`j`, which jumps to the
 // marker that value came from (both read the verdict and fork their card on
 // it) — the COPY VALUE BUTTON'S disabled face since 2026-08-30
 // (redesign_button_enabled, the truthful-buttons ruling; the boolean wrapper,
 // so the button greys exactly where both chords refuse), and the tooltip
-// overload's Copy value arm (the verdict, for the stack's own first line; the
-// wrapper for the shift line's drop). The audio identity is what the red-flag
+// overload's Copy value arm, which reads the VERDICT and decides ONE thing
+// with it — whether the SHIFT line exists, the jump's first question asked in
+// the jump's own order. (That arm forked the FIRST line on the stack's own
+// sentence from 2026-09-02 to 2026-09-12; it was a reason on a tooltip and
+// went with the class, the two chords carding it as they always did.) The
+// audio identity is what the red-flag
 // cache keys on (sample rate and frame count), which is why the gate takes
 // it. It was `popup_eligible_marker` — the hover popup's name, kept
 // through that popup's death in row 5, through the bottom strip's readout and

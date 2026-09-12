@@ -265,11 +265,15 @@
 // beside the mirror's own single-in-flight refusal and which the close road's
 // gate joined on 2026-09-04, all three still in that one file; the two mode
 // routers' catch-all tails were a third until their catch-alls went silent
-// with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence a FACE reads rather
-// than a second site raises: the grid-iteration sweep's two verdict cards live
-// at app_state.h beside iteration_sweep_plan, whose readers are the dispatch
-// that raises them and the Render button's tooltip, because this header
-// includes app_state.h and not the reverse. The third item below is not a sentence at all
+// with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence that
+// belongs beside the VERDICT it spells rather than beside its one raiser: the
+// grid-iteration sweep's two cards live at app_state.h next to
+// iteration_sweep_plan, the owner whose refusal each of them names, because
+// this header includes app_state.h and not the reverse. They are raised from
+// one translation unit — the sweep's own dispatch — the Render button reading
+// only the verdict, its grey being the roster's whole message since the
+// refusal-reason tooltip class went on 2026-09-12. The third item below is
+// not a sentence at all
 // but the one COMPOSER several sites share, lowercase_initial, homed here for
 // the same reason.
 //

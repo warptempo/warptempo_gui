@@ -1559,8 +1559,11 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             // THE ACT'S OWN OWNER, asked here rather than restated — the key
             // this arm presses asks the very same predicate inside the act —
             // and both arms carry it since the walk gave Previous a wall of its
-            // own (the root's first row); Next's has been the folder's last
-            // file since 2026-09-04.
+            // own (the root's first row). EACH WALL FORKS ON THE TRANSPORT as
+            // its act does: while LIVE, Next stops at the item folder's last
+            // wav (its rule since 2026-09-04) and Previous always lands; AT
+            // REST both ask the BAND — the listing's last row for Next, row 0
+            // of the root for Previous.
             if (!render_player_next_actionable(app)) {
                 publish_media_state();
                 return;

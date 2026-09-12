@@ -40,10 +40,16 @@ inline constexpr uint32_t kCarStableCodeBase = 1000;
 // THE IDLE FAMILY WENT SILENT LAST (architect 2026-08-31, R5, the
 // one-dimensional rule): kNoPlayerItem ("No render is loaded to play") — Play
 // with no item, the two folder-end jumps (which walk the TRANSPORT ITEM's
-// folder and so have nothing to walk without one), and every seek road, Home
-// and End among them — and kSeekWhileIdle ("Start playback before seeking"),
-// which the two seek keys, bare Home, bare End, the car's absolute seek and
-// the scrub's own press all met. A BENIGN REFUSAL ALREADY AT ITS STATE SAYS
+// folder and so have nothing to walk without one), and every seek road — and
+// kSeekWhileIdle ("Start playback before seeking"), which the two seek keys,
+// the car's absolute seek and the scrub's own press met, bare Home and bare
+// End with them while the plain pair was still a seek. THAT PAIR LEFT THE
+// SEEK ROADS ON 2026-09-12: at rest Home and End WALK THE BAND a row per
+// press (a row above or a folder above; a row below), so they meet no seek at
+// all, and Home's one surviving seek is the LIVE arm's reseek to the item's
+// start past the previous-track window.
+//
+// A BENIGN REFUSAL ALREADY AT ITS STATE SAYS
 // NOTHING: the modal row IS the state both name — an empty transport and an
 // idle one rest with the clock at zero and the slider at its left end — so the
 // row is the answer and a sentence only repeats it. THE REFUSALS THEMSELVES
