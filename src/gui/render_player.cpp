@@ -194,6 +194,18 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // reads (render_player_button_enabled).
     damage_band();
     damage_row();
+    // THE HEAD UNIT WITH IT: a rebuild reseats the band, and with nothing
+    // sounding the band IS the published title (the rule at
+    // publish_media_state), so every entry is a display edge — the open's
+    // root listing, a folder entered, and the Up act's root entry, which is
+    // why neither open() nor up() carries a tail push of its own any more.
+    // UNDER THE UP ACT THIS PUSH IS THE LAST WORD OVER THE STOP BODY'S FORK,
+    // whose paused still carries the item the unload ahead of this entry has
+    // since dropped; it lands last because the entry is the last thing that
+    // act does. The gate is the movers' own: a LIVE transport publishes its
+    // item whatever listing is on the screen — a folder entered mid-play
+    // changes nothing the head unit shows.
+    if (rp.transport != Transport::Live) publish_media_state();
 }
 
 void GuiRenderPlayer::enter(Folder folder, const std::filesystem::path& dir,
@@ -245,15 +257,16 @@ void GuiRenderPlayer::up() {
     // What is UP'S OWN is the root entry — the listing rebuilt with no item
     // and SEATED ON THE FOLDER JUST LEFT (architect 2026-09-11: the press was
     // made in that folder and the band lands on it, rather than on row 0 as
-    // it did from 2026-09-04 to that day) — and the head unit's push, which
-    // must be THE LAST WORD: the stop body's fork inside the unload has
-    // already published a paused state carrying the very item this act is
-    // dropping. REPEAT ONE IS UNTOUCHED: the lamp is session state that an
-    // open() resets and nothing else writes, and going up a folder is not an
-    // open.
+    // it did from 2026-09-04 to that day). THE HEAD UNIT'S PUSH RIDES THAT
+    // ENTRY and this act carries none of its own: the stop body's fork inside
+    // the unload has already published a paused state carrying the very item
+    // this act is dropping, and the entry's own push — the last thing to run
+    // here, with the item's fields already cleared — is what supersedes it,
+    // naming the folder the band just landed on. REPEAT ONE IS UNTOUCHED: the
+    // lamp is session state that an open() resets and nothing else writes,
+    // and going up a folder is not an open.
     unload_item(UnloadTail::Up);
     enter(Folder::Root, {}, came_from);
-    publish_media_state();
 }
 
 void GuiRenderPlayer::open_row(int index) {
@@ -301,10 +314,24 @@ void GuiRenderPlayer::open_row(int index) {
 // on the two highlight movers since 2026-08-30, because the Load in place
 // button's face reads the highlight (render_player_button_enabled) and a
 // face edge must reach a repaint through the row's one damage owner.
+//
+// AND THE HEAD UNIT'S PUSH BESIDE IT (architect 2026-09-12, from the car):
+// with nothing sounding the published title is the HIGHLIGHTED ROW, so a band
+// move is a display edge like any other and each mover pushes AFTER its write
+// and its damage. THE GATE IS `transport != Live`, because a live title is
+// the item whatever the band is doing — walking the band under a playing item
+// changes nothing the head unit shows, and a push per keystroke over a binder
+// is not free. The two wrappers are the whole pointer-and-keyboard road here
+// — the router's Up / Down and the row lift's first half
+// (folder_overlay_highlight_row's player arm) — the third writer being
+// rebuild_rows, which pushes in its own body, while play_wav's seat writes
+// the widget direct and publishes at its tail with the item it just bound.
 void GuiRenderPlayer::move_highlight(int delta) {
     if (folder_overlay::move_highlight(app, delta)) {
         damage_band();
         damage_row();
+        if (app.render_player.transport != Transport::Live)
+            publish_media_state();
     }
 }
 
@@ -312,6 +339,8 @@ void GuiRenderPlayer::set_highlight(int index) {
     if (folder_overlay::set_highlight(app, index)) {
         damage_band();
         damage_row();
+        if (app.render_player.transport != Transport::Live)
+            publish_media_state();
     }
 }
 
@@ -1183,14 +1212,16 @@ bool GuiRenderPlayer::open() {
     app.folder_overlay       = AppState::FolderOverlay{};
     app.folder_overlay.owner = AppState::FolderOverlay::Owner::Player;
     // The open names no folder to seat on: the root listing takes its top.
+    // THE HEAD UNIT IS PUBLISHED BY THAT REBUILD and the open adds no push of
+    // its own: the session goes ACTIVE with the mode (R7) and its title is
+    // the placeholder the fresh band names — the first batch folder, or `tmp/`
+    // itself with nothing listed. Every field the push reads is written above
+    // this line.
     rebuild_rows({});
     // A modal OPEN damages the whole window: the row's chrome greys, the band
     // appears over the waveform, and the modal row has no rect before its
     // first paint.
     viewport.invalidate_all();
-    // The head unit: the session goes ACTIVE with the mode (R7) — no item,
-    // stopped (the inventory at the declaration).
-    publish_media_state();
     return true;
 }
 
@@ -1284,7 +1315,11 @@ void GuiRenderPlayer::close() {
     viewport.invalidate_all();
     // The head unit: the session goes INACTIVE with the mode, and the audio
     // focus is abandoned on the consuming side (the inventory at the
-    // declaration).
+    // declaration). THIS IS THE ONE STOPPED PUSH, and what a console shows
+    // AFTER it — the architect's Accord holds a "Track 01" with live controls
+    // — is the console's own idle picture over a connected A2DP source, not
+    // this product's: the push calls setActive(false), so there is no session
+    // of ours left for it to read.
     publish_media_state();
 }
 
@@ -1518,8 +1553,33 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     }
 }
 
+namespace {
+
+// THE ONE SPELLING THE FOUR TITLE ARMS SHARE: `path` relative to the project
+// folder (the source's own parent) — `tmp/<batch>/NN.wav`, a batch cell being
+// the only item the player can bind since it moved inside `tmp/`
+// (`render/<title>.wav` was the deliverable's spelling until 2026-09-01) —
+// lexically, with no filesystem call, and in generic form so the separator is
+// `/` by construction. A FOLDER WEARS A TRAILING SLASH, `tmp/` and
+// `tmp/<batch>/`: the `tree` / `ls -p` convention, which is how the listing
+// reads to the eye and how a head unit's one line of text can say "this is
+// somewhere to go" without a word of prose.
+std::string media_title_spelling(const AppState&              app,
+                                 const std::filesystem::path& path,
+                                 bool                         folder) {
+    std::string s =
+        path.lexically_relative(
+                std::filesystem::path(app.source_audio_path).parent_path())
+            .generic_string();
+    if (folder && !s.empty() && s.back() != '/') s += '/';
+    return s;
+}
+
+}  // namespace
+
 void GuiRenderPlayer::publish_media_state() {
-    const AppState::RenderPlayer& rp = app.render_player;
+    const AppState::RenderPlayer&  rp = app.render_player;
+    const AppState::FolderOverlay& ov = app.folder_overlay;
     // NO REPEAT MODE IS PUBLISHED and no media command maps to one: the lamp
     // (R26) is the app's own state, the head unit shows what is playing and
     // its buttons are the transport's, and a repeat mode nothing can set from
@@ -1528,23 +1588,53 @@ void GuiRenderPlayer::publish_media_state() {
     st.session_active = rp.active;
     st.playing        = rp.active && rp.transport == Transport::Live;
     st.artist         = app.project_name;
-    if (rp.active && !rp.item.empty() && rp.frames > 0) {
-        // THE ITEM'S SPELLING WITH ITS FOLDER, relative to the project
-        // folder (the source's own parent): `tmp/<batch>/NN.wav`, a batch cell
-        // being the only item the player can bind since it moved inside `tmp/`
-        // (`render/<title>.wav` was the deliverable's spelling until
-        // 2026-09-01) — lexically, no filesystem call, and in generic form so
-        // the separator is `/` by construction.
-        st.title = rp.item
-                       .lexically_relative(
-                           std::filesystem::path(app.source_audio_path)
-                               .parent_path())
-                       .generic_string();
+    // THE CLOSE'S PUSH IS THE ONE EMPTY TITLE: an inactive session is the
+    // only thing that may say STOPPED (the rule and its reason are at the
+    // declaration), and every arm below it names something.
+    if (!rp.active) {
+        gui.publish_media_state(st);
+        return;
+    }
+    // THE TITLE IS ONE FUNCTION OF (transport, item, highlight), and this is
+    // the whole of it. The band is asked through the act's own owner — the
+    // row the head unit's Play would act on, not a second reading of the
+    // listing — and its -1 means two things at once, the item's own row and
+    // no row at all, which is exactly why the item arm takes both.
+    const int  act       = render_player_highlight_act_row(app);
+    const bool have_item = !rp.item.empty() && rp.frames > 0;
+    if (have_item && (rp.transport == Transport::Live || act < 0)) {
+        // THE ITEM — what sounds while it is live, and what the next Play
+        // resumes while it is not, with the clock at the point that Play
+        // would start from (render_player_position is the engine's cursor
+        // live and the resume point at rest, so one reader serves both).
+        st.title = media_title_spelling(app, rp.item, false);
         const int64_t rate = audio.sample_rate();
         if (rate > 0) {
             st.duration_ms = rp.frames * 1000 / rate;
             st.position_ms = render_player_position(app, playback) * 1000 / rate;
         }
+    } else if (act >= 0) {
+        // THE HIGHLIGHTED ROW AS A PAUSED PLACEHOLDER: a wav that is not the
+        // item, or a folder — and the act's owner answers only those two
+        // kinds above -1, so the fork is the same one the play face takes
+        // (render_player_play_face). THE CLOCK IS 0 OF 0 because the row this
+        // names is not playing and has no point to resume from: a paused item
+        // waiting under a walked-away band publishes its own duration and
+        // resume point one arm up, where the band is back on it.
+        const Row& r = ov.rows[static_cast<size_t>(act)];
+        st.title     = media_title_spelling(app, r.path,
+                                            r.kind == Row::Kind::Folder);
+    } else {
+        // NOTHING BOUND AND NO ROW TO NAME — a listing emptied under the
+        // player, the batch folder's cells deleted from outside while it
+        // stood: the LISTED FOLDER names itself, `tmp/` at the root and
+        // `tmp/<batch>/` inside a batch, so the title is never empty while
+        // the session stands.
+        st.title = media_title_spelling(
+            app,
+            rp.folder == Folder::Root ? project_batch_root(app.source_audio_path)
+                                      : rp.batch_dir,
+            true);
     }
     gui.publish_media_state(st);
 }

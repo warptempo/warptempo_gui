@@ -86,9 +86,22 @@ struct GuiMediaState {
     // buttons reach nothing.
     bool        session_active = false;
     bool        playing        = false;
-    // The wav's spelling with its folder, relative to the project
-    // (`tmp/3_bpm/01.wav`); empty with no item. The player has lived inside
-    // `tmp/` since 2026-09-01, so `render/` is not a spelling this carries.
+    // WHAT THE TITLE NAMES, relative to the project folder and in generic
+    // form: the ITEM while it sounds (`tmp/3_bpm/01.wav`), and with NOTHING
+    // SOUNDING THE HIGHLIGHTED ROW — the file, or the folder with a trailing
+    // slash (`tmp/3_bpm/`), that the head unit's own Play would start — as a
+    // PAUSED PLACEHOLDER. IT IS NEVER EMPTY WHILE `session_active` IS TRUE,
+    // and that is the point rather than a tidiness: a session that says
+    // STOPPED leaves a head unit reading the Bluetooth stream instead, which
+    // is still streaming silence and shows as "playing", after which its one
+    // toggle sends the wrong direction forever. The title is empty exactly at
+    // the close's inactive push. THE PLACEHOLDER IS METADATA AND NEVER A FILE
+    // — a silent wav on disk would be listed by the player, mirrored by
+    // Synchronize and played by the auto-advance. The one function of
+    // (transport, item, highlight) is stated at
+    // GuiRenderPlayer::publish_media_state and read nowhere else. The player
+    // has lived inside `tmp/` since 2026-09-01, so `render/` is not a
+    // spelling this carries.
     std::string title;
     // The project's name; the album is the artist on the consuming side.
     std::string artist;

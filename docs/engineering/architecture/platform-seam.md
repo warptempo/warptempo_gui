@@ -973,11 +973,23 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   `NewString` (not `NewStringUTF`, whose modified UTF-8 CheckJNI aborts on a
   four-byte sequence), inside a local frame. That method builds the
   `MediaMetadata` (TITLE = the wav's spelling with its folder, ARTIST and ALBUM
-  = the project's name, DURATION) and the `PlaybackState` (PLAYING / PAUSED /
-  STOPPED with the position, every action declared, and THE SPEED THE RATE OF
+  = the project's name, DURATION) and the `PlaybackState` (with the position,
+  every action declared, and THE SPEED THE RATE OF
   PLAYBACK — 1.0 for PLAYING and 0.0 otherwise, since a controller
   extrapolates the position off that speed from the moment of the push and a
-  resting transport must not have its clock run on), calls
+  resting transport must not have its clock run on). **THE STATE IS PLAYING OR
+  PAUSED WHILE THE PLAYER STANDS AND STOPPED EXACTLY AT THE INACTIVE PUSH**
+  (architect 2026-09-12, from the car): the sliver's fork is `!active` →
+  STOPPED, `playing` → PLAYING, else PAUSED, and it carried a second stopped
+  arm on an empty title until that day. A standing player with nothing bound
+  publishes a PAUSED PLACEHOLDER naming the highlighted row instead — the
+  title is never empty while the session is active — because a head unit
+  honours a session's PAUSED but falls back to what it can see for itself
+  when handed a stopped one, and what it can see is an A2DP stream still
+  carrying silence, which it shows as playing, after which its one toggle
+  sends the wrong direction forever (the title rule and its four arms are
+  `GuiRenderPlayer::publish_media_state`'s, render-player.md's car section the
+  behaviour). It calls
   `setActive(active)` — THE SESSION IS ACTIVE ONLY WHILE THE RENDER PLAYER
   STANDS (R7), created in `onCreate` on the UI thread so its callbacks land
   there and released in `onDestroy` — and owns the AUDIO FOCUS machine:

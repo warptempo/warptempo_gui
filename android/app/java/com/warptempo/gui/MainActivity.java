@@ -367,8 +367,13 @@ public class MainActivity extends NativeActivity {
     // head unit's own clock from `positionMs` at speed 1.0, which is what the
     // (state, position, speed) triple means. Metadata: TITLE is the wav's
     // spelling with its folder, ARTIST and ALBUM are the project's name,
-    // DURATION the item's length. State: PLAYING / PAUSED with an item,
-    // STOPPED with none (an empty title). setActive follows the player's
+    // DURATION the item's length. State: STOPPED EXACTLY AT THE INACTIVE
+    // PUSH; a standing player is PLAYING or PAUSED and NEVER STOPPED, its
+    // title never empty -- with nothing bound the native side sends a PAUSED
+    // PLACEHOLDER naming the highlighted row, because a head unit handed a
+    // stopped session falls back to what it can see, an A2DP stream still
+    // carrying silence, and shows that as playing (the rule is at
+    // GuiRenderPlayer::publish_media_state). setActive follows the player's
     // open and close. Every setter here is a binder call and is callable from
     // any attached thread; the lock is against onDestroy's release on the UI
     // thread. Focus: requested when a push says playing and none is held;
@@ -386,7 +391,7 @@ public class MainActivity extends NativeActivity {
         session.setMetadata(meta.build());
 
         final int state;
-        if (!active || title.isEmpty()) {
+        if (!active) {
             state = PlaybackState.STATE_STOPPED;
         } else if (playing) {
             state = PlaybackState.STATE_PLAYING;

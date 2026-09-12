@@ -657,22 +657,57 @@ struct GuiRenderPlayer {
     void on_media_command(GuiMediaCommand cmd);
 
     // THE ONE OWNER OF WHAT THE HEAD UNIT SHOWS: builds GuiMediaState from
-    // app.render_player and the one position reader (render_player_position)
-    // and hands it to GuiPlatform::publish_media_state. THE EDGE INVENTORY,
-    // re-derived by grep at each retell (TWELVE call sites across EIGHT
-    // functions — eleven across eight before the Play arm's act-side refusal
-    // took its own push, eight across seven before on_media_command's first
-    // three re-publishes landed on 2026-09-04, seven across six before up()
-    // took its own push earlier that day): open() —
-    // active, no item, stopped; play_wav's tail and toggle_pause's resume arm
+    // app.render_player, THE BAND and the one position reader
+    // (render_player_position) and hands it to
+    // GuiPlatform::publish_media_state.
+    //
+    // THE TITLE IS ONE FUNCTION OF (transport, item, highlight), stated once
+    // in the body and read nowhere else. LIVE: the ITEM — its spelling
+    // relative to the project folder, its duration, its position. NOT LIVE
+    // (Paused or Idle): THE HIGHLIGHTED ROW, PAUSED — the same row
+    // play_button_act would act on (render_player_highlight_act_row), because
+    // THE HEAD UNIT'S PLAY IS THE TABLET'S PLAY BUTTON and a paused display
+    // should name what that press starts: the item's own row, or no
+    // actionable row with an item bound, gives the ITEM with its duration and
+    // its resume point; another wav gives THAT WAV at 0 of 0; a folder gives
+    // its spelling WITH A TRAILING SLASH (`tmp/3_bpm/` — the `tree` / `ls -p`
+    // convention, the listing's own shape to the eye); and no rows at all —
+    // a listing emptied while the player stood, the one road there is, since
+    // the opener refuses to open with nothing to play — gives the LISTED
+    // FOLDER's own spelling with the slash (`tmp/` at the root).
+    //
+    // WHY A PLACEHOLDER AT ALL (architect 2026-09-12, from the car): the
+    // session must NEVER say STOPPED while the player stands. A head unit
+    // honours a session's PAUSED, but a stopped session with empty metadata
+    // sends it back to what it can see for itself — a Bluetooth stream still
+    // carrying silence, which it shows as "playing" — and its one toggle then
+    // sends the wrong direction forever. So the states the player publishes
+    // are PLAYING and PAUSED, and STOPPED with an empty title belongs to the
+    // close's inactive push alone. THE PLACEHOLDER IS METADATA AND NEVER A
+    // FILE: a silent wav on disk would be listed by the player, mirrored by
+    // Synchronize and played by the auto-advance.
+    //
+    // THE EDGE INVENTORY, re-derived by grep at each retell (THIRTEEN call
+    // sites across NINE functions — twelve across eight before the band's
+    // three writers took the placeholder's own edges and open() and up() gave
+    // up their tail pushes for it, eleven across eight before the Play arm's
+    // act-side refusal took its own push, eight across seven before
+    // on_media_command's first three re-publishes landed on 2026-09-04):
+    // play_wav's tail and toggle_pause's resume arm
     // — the two writers of the LIVE state, playing; THE STOP BODY'S PLAYER FORK
     // (GuiPlaybackLifecycle::stop_playback_if_playing, through its
     // back-pointer) — the one place every player stop passes, paused, which
     // covers the pause, the natural end's last-wav rest, the dead
     // device, the rebind ahead of the next item and the Up act's own stop;
-    // up() — active, no item, stopped, the same push open() makes and THE
-    // LAST WORD OVER THAT FORK, whose paused still carries the item this act
-    // is unloading; seek_to — both arms, so
+    // THE BAND'S THREE WRITERS — move_highlight, set_highlight and
+    // rebuild_rows — EACH GATED ON `transport != Live`, since the highlight
+    // is a term of the title only where the item is not: the two wrappers
+    // carry the router's Up/Down walk and the pointer's row lift, and
+    // rebuild_rows carries EVERY entry, which is why open() and up() have no
+    // tail push of their own any more — open()'s listing publishes the
+    // session active with its placeholder, and up()'s root entry is THE LAST
+    // WORD OVER THAT FORK, whose paused still carries the item the unload
+    // ahead of it has since dropped; seek_to — both arms, so
     // the head unit's clock stays honest (which is also what publishes the
     // car Stop's seek to the top, that command being a pause and then this
     // seek);
@@ -686,12 +721,12 @@ struct GuiRenderPlayer {
     // standing one AS AN ANSWER TO THE PRESS, which is what keeps a head unit
     // whose display has drifted from sending the same dead verb forever (the
     // reasoning is at those arms; the focus losses are not among them); and
-    // close() — inactive. NO PER-TICK PUSH: a
+    // close() — inactive. NO PER-TICK PUSH, the band's edges included: a
     // playing position advances on the head unit's own clock from the last
-    // push at speed 1.0. Title = the item's path relative to the project
-    // folder (`tmp/3_bpm/01.wav` — the player lists `tmp/` alone), artist = the
-    // project's name, duration and position in milliseconds at the project
-    // source's rate (the item is at that rate by the decode's own equality).
+    // push at speed 1.0. Artist = the project's name; duration and position
+    // in milliseconds at the project source's rate (the item is at that rate
+    // by the decode's own equality) and 0 for every placeholder but the
+    // item's own.
     void publish_media_state();
 
 private:

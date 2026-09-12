@@ -76,8 +76,9 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         // — the pause, the natural end, the dead device, the close, the Up
         // act's unload, the rebind ahead of the next item — so the push lives
         // inside it and no caller can forget it. The callers that go on to a
-        // "playing", an "inactive" or an unloaded push (play_wav's tail, the
-        // close, up()) supersede this one a moment later, two binder calls
+        // "playing", an "inactive" or a PLACEHOLDER push (play_wav's tail,
+        // the close, and the Up act through its root entry's rebuild_rows)
+        // supersede this one a moment later, two binder calls
         // where one would do; accepted, the
         // alternative being one push per caller that the next caller
         // forgets — and under up() the supersession is load-bearing rather
