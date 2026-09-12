@@ -14,19 +14,39 @@
 // destination's actual durations. Single-slot, in-memory only — never
 // persisted to any sidecar, cleared on app exit.
 
-// `source_frame`, `source_start_frame`, and `source_end_frame` carry absolute source-
-// domain geometry so paste_state_apply can apply a boundary-aware count
-// using the same N-sample guard on both clipboard and destination sides.
-// paste_apply materializes every placement at its fractional_position
-// regardless of boundary proximity; with the shared lead-in tolerance
-// applied at capture, fractional_position may be slightly negative for a
-// lead-in placement and paste_apply 0-clamps the materialized time.
+// `anchor_source_frame`, `source_start_frame` and `source_end_frame` carry
+// absolute source-domain geometry so paste_state_apply can apply a
+// boundary-aware count using the same guard window on both clipboard and
+// destination sides.
+//
+// WHAT IS CAPTURED AND SCALED IS THE ANCHOR, NOT THE RESET (architect
+// 2026-09-11): a reset's anchor is the musical point it was AIMED at — its own
+// frame carried kPhaseResetLeadInSamples output samples forward, the T+P drop's
+// subtraction read backwards — so a reset dropped on a label definition with
+// Shift+S carries the same relationship to the label REFERENCE however the two
+// sections' tempos differ. The derivation, the membership rule, the boundary
+// ruling and the identity fallback are stated once at the anchor block in
+// phase_reset_propagate.cpp; this header carries only what the fields mean.
 struct ClipboardPlacement {
-    // Approximate range (-guard/duration, 1.0). A lead-in reset captured
-    // up to the guard before the block start yields a small negative
-    // fraction; paste_apply clamps the materialized time to 0.
+    // The ANCHOR's position inside the capturing block, (anchor - start) /
+    // duration. NOT clamped to [0, 1]: an anchor may fall before a block's
+    // start (a reset nudged off the boundary by hand, inside the guard) or
+    // past its end, and the fraction is scaled as it stands — the anchor is a
+    // musical point and the section boundary is not a wall on it. paste_apply
+    // walls the materialized FRAME at [0, total - 1] and nothing else.
     double  fractional_position = 0.0;
-    int64_t source_frame         = 0;   // absolute capture-time source frames
+    // The anchor this placement was captured by, in capture-time source frames
+    // (fractional — an anchor is an intermediate, never an authored position).
+    // Held rather than recomputed because it is what the COPY decided
+    // membership by: paste_state_apply re-buckets the flat placement list
+    // against its own windows and must bucket by the same quantity the capture
+    // did, or the two acts disagree about which block a reset belongs to.
+    // (THE CAPTURED RESET'S OWN FRAME WAS A FIELD HERE until 2026-09-12 and is
+    // deleted with the anchor ruling: paste_state_apply's bucketing was its one
+    // reader, and nothing else in the family ever wanted the frame a placement
+    // came from — a paste materializes new resets from the fraction, and the
+    // state paste pairs them in order.)
+    double  anchor_source_frame = 0.0;
     bool    disabled            = false;
 };
 

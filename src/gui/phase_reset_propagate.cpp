@@ -29,12 +29,129 @@ namespace {
 // marker counts toward); each use converts it once to frames
 // (guard * sample_rate) because block extents and reset positions are
 // whole int64 source frames, widened into the double guard-window
-// arithmetic. A phase reset within the guard before a section
-// end (or before a section start) counts toward the next chronological
+// arithmetic. A phase reset whose ANCHOR falls within the guard before a
+// section end (or before a section start) counts toward the next chronological
 // labeled section by shifting every block's membership window backward by
 // this amount. Shared membership window across all three propagate
 // actions: copy_from_selection, paste_apply, and paste_state_apply.
+//
+// THE WINDOW IS ASKED OF THE ANCHOR, NOT OF THE RESET (architect 2026-09-11,
+// the block below): a reset aimed at a marker has its anchor ON that marker,
+// so the drop's own lead-in no longer needs the guard to be bucketed with the
+// section it was dropped into — which is why the constant can stay an
+// authoring tolerance. What it still covers is the hand nudge: a reset the
+// user moved a little off a boundary by eye, whose anchor lands just short of
+// the marker it belongs to.
 constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
+
+// -- THE ANCHOR: WHERE A RESET WAS AIMED ------------------------------------
+//
+// THE PROPAGATE CARRIES THE ANCHOR, NOT THE FRAME (architect 2026-09-11):
+// "instead of subtracting N/2 to derive the hop, add N/2 to re-derive where it
+// was hopped from, and linearly scale the hopped-from, not the place where the
+// phase reset landed."
+//
+// THE PROBLEM IT ANSWERS. The T+P drop authors a reset
+// kPhaseResetLeadInSamples (kN/2) OUTPUT samples BEFORE the playhead — the
+// derivation's one prose home is
+// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead — so the
+// musical point the user marked is not the reset's own frame but the frame
+// whose target image lies kN/2 output samples ahead of it. Scaling the RESET's
+// fraction preserves the proportion and loses that distance, because the
+// lead-in's SOURCE length is the local slope's: kN/2 output samples is ~46 ms
+// of source at unity tempo and ~186 ms at tempo 4. A reset dropped with
+// Shift+S ON a label definition therefore did not land the lead-in ahead of
+// the label REFERENCE when the two sections ran at different tempos — and
+// dropping on the marker is the preferred way to place a reset near one
+// (offset by the lead-in, and by hops while iterating), so that was the common
+// case rather than an edge.
+//
+// THE PAIR BELOW IS HIS ROUND TRIP. phase_reset_anchor_frame carries a reset
+// FORWARD to its anchor; phase_reset_frame_for_anchor re-derives a reset from
+// an anchor exactly as the drop does. The paste therefore needs NO marker
+// special case: a reset that sat on a marker comes back the lead-in ahead of
+// the corresponding destination marker by the arithmetic alone.
+//
+// THE MAP IS THE TARGET MAP'S, IN EITHER AUDIO VIEW. Both legs take a map
+// parameter and every caller here passes the LIVE target-view map
+// (live_warp_frame_map, warp_frame_map_view.h) — the map a render would use,
+// which is the map the phase-reset lattice cells are computed under and NOT
+// the DISPLAYED one (displayed_or_live_target_map, which exists to keep
+// painted items locked to a blitted plate through a worker publish window):
+// this act authors data rather than placing pixels, so it takes the render's
+// map, exactly as a hop cell does. It takes it whichever audio view the chord
+// was pressed in, the propagate being a W-mode gesture in both. The
+// ACTIVE-domain pair (source_frame_to_active_domain /
+// active_domain_to_source_frame) is deliberately not used: it is the IDENTITY
+// in source view, which would turn the round trip into a bare +kN/2 / -kN/2 on
+// SOURCE frames there — the wrong domain for an output-sample length, and a
+// different answer for the same clipboard depending on which view the user
+// happened to be in.
+//
+// MEMBERSHIP IS THE ANCHOR'S, IN ALL THREE ACTS: a reset belongs to the block
+// whose guard window contains its ANCHOR — the copy's capture, the paste's
+// per-block overwrite window, and the state paste's buckets on both sides. A
+// Shift+S reset on a marker then has its anchor on that marker, fraction ~0,
+// and belongs to that marker's block by construction; and the paste's clear
+// window finds the destination's own lead-in reset the same way, which is what
+// a placement paste is replacing.
+//
+// THE FRACTION IS NOT CLAMPED (architect 2026-09-11, "let it run past"). An
+// anchor near a section's end can fall past that section, and a fraction past
+// 1.0 or below 0.0 is scaled as it stands: the anchor is a musical point and
+// the section boundary is not a wall on it. A reset dropped on the NEXT marker
+// has its anchor on that marker and belongs to the next block, which is the
+// wanted answer rather than a case to guard. Only the materialized frame's own
+// [0, total - 1] wall clamps anything.
+//
+// TWO APPROXIMATIONS, RECORDED RATHER THAN GUARDED. (1) The Shift+S lead-in is
+// EXACTLY reversible — a fixed kN/2 output samples under one map — and the
+// propagate is a FINAL act, run once the tempos have settled, which is the
+// premise the round trip rests on. (2) A GRID ITERATION HOP is a session
+// bracket baked into the authored frame by a load in place, so a hopped
+// reset's anchor is "near the marker" rather than on it; the paste carries
+// that nearness across as a musical offset and the destination's own seed
+// quantizes it back onto its lattice — linear is the accepted approximation. A
+// reset dropped in S+P took no lead-in at all; the round trip is uniform
+// either way and stays self-consistent, its only residue the second-order
+// difference in the lead-in's SOURCE length between the two sections.
+//
+// A REFUSED MAP IS THE IDENTITY IN BOTH LEGS, AND NO BRANCH SPELLS IT. The
+// live cache holds an EMPTY map when the build fails (TargetWarpFrameMapCache,
+// whose build_error is what tells a failed build apart from a legitimately
+// identity state), and map_source_to_target / map_target_to_source are the
+// identity on an empty map — so the anchor degenerates to frame + kN/2, the
+// re-derivation to anchor - kN/2, and the kN/2 cancels exactly, leaving this
+// propagate's arithmetic as it stood before the anchor. A branch on
+// build_error would be a second spelling of that same answer. An empty warp
+// STORE is not that case at all: it resolves to the frame-0 1.00 seed and
+// builds an ordinary map.
+
+// A reset's anchor: its target image carried kN/2 output samples forward and
+// mapped back to source. A DOUBLE — an anchor is an intermediate musical
+// point, never an authored position, so it takes no snap; snap_authored_frame
+// is owed at the paste's materialization, the one place a double becomes an
+// authored frame.
+double phase_reset_anchor_frame(
+    int64_t reset_source_frame,
+    const std::vector<WarpFrameMapSegment>& map) {
+    const double tgt =
+        map_source_to_target(static_cast<double>(reset_source_frame), map);
+    return map_target_to_source(
+        tgt + static_cast<double>(kPhaseResetLeadInSamples), map);
+}
+
+// The inverse: the reset that AIMS at `anchor_source_frame` — the drop's own
+// arithmetic evaluated at that point. A target image below the map's first
+// anchor maps back to its first source frame, which is the drop's own clamp of
+// the offset playhead at 0; callers snap and wall the result regardless.
+double phase_reset_frame_for_anchor(
+    double anchor_source_frame,
+    const std::vector<WarpFrameMapSegment>& map) {
+    const double tgt = map_source_to_target(anchor_source_frame, map);
+    return map_target_to_source(
+        tgt - static_cast<double>(kPhaseResetLeadInSamples), map);
+}
 
 // THE TWO PASTES' SHARED "NOTHING HAPPENED" SENTENCE (architect 2026-08-30,
 // the strictness ruling; kept 2026-08-31 when the switch under it left). Its
@@ -146,6 +263,12 @@ void PhaseResetPropagate::copy_from_selection() {
 
     const int n = static_cast<int>(mv.size());
     const int64_t song_end_frame = target_render.audio.total_frames();
+    // THE MAP BOTH ANCHOR LEGS TAKE: the live target-view map, whichever audio
+    // view this copy was pressed in (the anchor block above). The reference
+    // stays good across this body — the cache is keyed on the WARP store's
+    // generation and the audio identity, and a copy mutates neither.
+    const std::vector<WarpFrameMapSegment>& map =
+        live_warp_frame_map(app, target_render.audio);
 
     // Section-based copy (architect 2026-07-23): each selected marker
     // contributes the block IT owns — from its time to the end of the section
@@ -197,18 +320,18 @@ void PhaseResetPropagate::copy_from_selection() {
             continue;
         }
         // The seconds-domain guard constant, converted once to frames —
-        // block extents and reset positions are whole int64 source frames
-        // widened into the double window math.
+        // block extents are whole int64 source frames widened into the double
+        // window math, which the anchors are already in.
         const double guard = kPhaseResetBoundaryGuardSeconds *
             static_cast<double>(target_render.audio.sample_rate());
-        // Membership window shifts back by the guard so a lead-in phase
-        // reset (authored just before this block's owning marker) is
-        // captured as part of this block; the fractional anchor stays at
-        // the true marker time, so a lead-in reset gets a small negative
-        // fractional_position and round-trips to the same lead-in offset.
+        // Membership window shifts back by the guard, and the window is asked
+        // of each reset's ANCHOR (the anchor block above): a reset AIMED at
+        // this block's owning marker has its anchor on the marker and is
+        // captured here by construction, while the guard still catches an
+        // anchor a hand nudge left just short of the boundary.
         // Song-end block (its extent ends at the song end): keep the shifted
-        // LOWER bound (lead-ins before the final marker still belong to it) but
-        // use the UNSHIFTED upper bound. The end guard exists to reassign the
+        // LOWER bound (an anchor a hand nudge left just short of the final
+        // marker still belongs to it) but use the UNSHIFTED upper bound. The end guard exists to reassign the
         // tail to the NEXT section's owner; at song end there is no next owner,
         // so the guard would orphan the tail instead — the final block owns its
         // section through the last frame. The capture follows the SOURCE
@@ -224,12 +347,14 @@ void PhaseResetPropagate::copy_from_selection() {
                               ? static_cast<double>(b.end)
                               : std::max(lo, b.end - guard);
         for (const auto& t : tv) {
-            const double t_time = t.time_frame;
-            if (t_time < lo)  continue;
-            if (t_time >= hi) continue;
+            const double anchor = phase_reset_anchor_frame(t.time_frame, map);
+            if (anchor < lo)  continue;
+            if (anchor >= hi) continue;
             ClipboardPlacement p;
-            p.fractional_position = (t_time - b.start) / duration;
-            p.source_frame         = t.time_frame;
+            // The ANCHOR's fraction, not the reset's — what the paste scales.
+            // Unclamped at both ends by ruling (the anchor block above).
+            p.fractional_position = (anchor - b.start) / duration;
+            p.anchor_source_frame = anchor;
             p.disabled            = t.disabled;
             cb.placements.push_back(p);
         }
@@ -363,8 +488,20 @@ void PhaseResetPropagate::paste_apply() {
     // owned by nobody. The prompt's own contract is what governs — "existing
     // phase resets in matched ranges will be cleared" — and the span is inside
     // the matched range now that the disabled marker is not a boundary.
+    //
+    // AND THE WINDOW IS ASKED OF THE DESTINATION RESET'S ANCHOR (architect
+    // 2026-09-11), the capture's own rule read across: what a placement paste
+    // replaces in a block is the reset AIMED at that block, and a destination
+    // reset dropped on the destination marker is exactly that even where its
+    // own frame sits further back than the guard.
     const double guard = kPhaseResetBoundaryGuardSeconds *
         static_cast<double>(target_render.audio.sample_rate());
+    // The live target-view map, as at the capture (the anchor block above). The
+    // reference is good for the whole body: the cache is keyed on the WARP
+    // store's generation and the audio identity, and this act writes only the
+    // phase reset store.
+    const std::vector<WarpFrameMapSegment>& map =
+        live_warp_frame_map(app, target_render.audio);
     for (size_t i = 0; i < matched; ++i) {
         // Song-end destination block: keep the shifted lower bound but use the
         // UNSHIFTED upper bound — the end guard reassigns the tail to the next
@@ -377,21 +514,30 @@ void PhaseResetPropagate::paste_apply() {
                               ? static_cast<double>(dest_blocks[i].end)
                               : std::max(lo, dest_blocks[i].end - guard);
         out.erase(std::remove_if(out.begin(), out.end(),
-            [lo, hi](const GuiPhaseResetMarker& m) {
-                return m.time_frame >= lo && m.time_frame < hi;
+            [lo, hi, &map](const GuiPhaseResetMarker& m) {
+                const double anchor =
+                    phase_reset_anchor_frame(m.time_frame, map);
+                return anchor >= lo && anchor < hi;
             }), out.end());
     }
-    // Per-block materialization. The fractional anchor and duration stay
-    // at the true dst_start / dst_end, so a negative fractional_position
-    // (captured from a lead-in placement) lands the marker in the lead-in
-    // before dst_start. Clamp to 0 per the universal no-negative-time
-    // rule; insert_marker does not clamp.
+    // Per-block materialization, in two steps (architect 2026-09-11). The
+    // fraction is scaled at the true dst_start / dst_end into the destination
+    // ANCHOR — the musical point this reset is aimed at over here — and the
+    // reset is then RE-DERIVED FROM THAT ANCHOR EXACTLY AS THE DROP DOES
+    // (phase_reset_frame_for_anchor: the anchor's target image, less the
+    // lead-in, back to source). That is what makes a reset which sat on a
+    // marker land the lead-in ahead of the CORRESPONDING destination marker
+    // with no marker special case anywhere in this loop — and it is why a
+    // fraction outside [0, 1] is scaled as it stands: an anchor is a musical
+    // point, so the block's edges are not walls on it. Clamp to 0 per the
+    // universal no-negative-time rule; insert_marker does not clamp.
     //
     // The overwrite semantics live entirely in the per-block membership-
-    // window clear above. Materialized placements land wherever rescaling
-    // puts them — possibly outside the cleared windows (a lead-in scaled
-    // by a longer destination block, a near-end placement scaled by a
-    // shorter one), possibly coinciding exactly with surviving
+    // window clear above. Materialized placements land wherever the rescaled
+    // ANCHOR puts them — possibly on a frame whose own anchor sits outside the
+    // cleared window (an anchor scaled past its block's end, one carried below
+    // its start, or a lead-in whose source length differs between the two
+    // sections), possibly coinciding exactly with surviving
     // pre-existing resets or with each other (a strongly shrunken block,
     // or the zero clamp). Coincident resets simply stack and are legal in
     // the store: the parser normalizes them at render/preview time
@@ -425,14 +571,20 @@ void PhaseResetPropagate::paste_apply() {
             // named. Clamped after the snap to the column's
             // absolute range — 0 (the universal no-negative-position rule)
             // and the marker EOF wall, total - 1, the single wall both
-            // marker columns share; the walls win. The upper clamp is now
-            // load-bearing: the STORE-FINAL destination block ends at the
-            // song end (total_frames), so a near-end placement can rescale to
-            // total_frames itself — one past the wall — and the clamp pins it
-            // to total - 1 (interior blocks end at warp markers, which
-            // already wall at total - 1).
-            nm.time_frame = std::clamp<int64_t>(snap_authored_frame(
-                dst_start + p.fractional_position * dst_dur), 0, reset_wall);
+            // marker columns share; the walls win. The upper clamp is
+            // load-bearing and more so under the unclamped fraction: the
+            // STORE-FINAL destination block ends at the song end
+            // (total_frames) and an anchor may be scaled past its block's own
+            // end, so an anchor at or beyond total_frames can re-derive to a
+            // frame the wall has to pin (interior blocks end at warp markers,
+            // which already wall at total - 1). The lower clamp is the
+            // mirror, the re-derivation subtracting the lead-in.
+            const double anchor_dst =
+                dst_start + p.fractional_position * dst_dur;
+            nm.time_frame = std::clamp<int64_t>(
+                snap_authored_frame(
+                    phase_reset_frame_for_anchor(anchor_dst, map)),
+                0, reset_wall);
             nm.disabled     = p.disabled;
             // NO MEASURE IS CARRIED, and that is by construction rather than by
             // omission: `nm` is a FRESH marker, so its measure field rests
@@ -535,19 +687,37 @@ void PhaseResetPropagate::paste_state_apply() {
     // both sides).
     const double n_guard = kPhaseResetBoundaryGuardSeconds *
         static_cast<double>(target_render.audio.sample_rate());
+    // The live target-view map, for the destination side's anchors (the
+    // clipboard's were captured with the placements). Same reference lifetime
+    // as the placement paste's: this act writes disabled flags on the phase
+    // reset store and touches no warp marker.
+    const std::vector<WarpFrameMapSegment>& map =
+        live_warp_frame_map(app, target_render.audio);
 
     // Flat list of every clipboard placement so we can bucket the
-    // clipboard side by absolute source_frame against block windows,
-    // mirroring the destination-side bucketing. Capture produces
-    // block-ordered, within-block-time-ordered placements, so a flat
-    // concatenation is already source_frame-ordered; sort defensively.
+    // clipboard side by absolute ANCHOR against block windows, mirroring the
+    // destination-side bucketing.
+    //
+    // THE BUCKETING KEY IS THE ANCHOR ON BOTH SIDES (architect 2026-09-11),
+    // because the CAPTURE decided membership by the anchor: bucketing by the
+    // reset's own frame here would put a reset the copy captured under one
+    // block into a different one, and the two sides' windows would disagree by
+    // the lead-in's source length — which differs per section, so the
+    // disagreement is asymmetric and would surface as a spurious count
+    // mismatch. The clipboard's anchors are the capture's own
+    // (anchor_source_frame); the destination's are computed here against the
+    // live map, exactly as the placement paste's clear window computes them.
+    //
+    // Capture produces block-ordered, within-block-time-ordered placements,
+    // and the anchor is monotone in the frame under one map, so a flat
+    // concatenation is already anchor-ordered; sort defensively.
     std::vector<const ClipboardPlacement*> all_placements;
     for (const auto& cb : clip_blocks)
         for (const auto& p : cb.placements)
             all_placements.push_back(&p);
     std::sort(all_placements.begin(), all_placements.end(),
         [](const ClipboardPlacement* a, const ClipboardPlacement* b) {
-            return a->source_frame < b->source_frame;
+            return a->anchor_source_frame < b->anchor_source_frame;
         });
 
     // Snapshot pre-state up front; we commit a single undo entry only
@@ -579,10 +749,11 @@ void PhaseResetPropagate::paste_state_apply() {
             break;
         }
 
-        // Shifted membership window [start - N, end - N) on both sides.
-        // A near-end marker of the previous interval (within N before
-        // this block's start) migrates into this block; a near-end
-        // marker of this block (within N before its end) migrates out
+        // Shifted membership window [start - N, end - N) on both sides, asked
+        // of each reset's ANCHOR (the block at the head of this file).
+        // A near-end marker of the previous interval (whose anchor is within N
+        // before this block's start) migrates into this block; a near-end
+        // marker of this block (anchored within N before its end) migrates out
         // into the next interval. If the next interval is unlabeled or
         // past the compared range, the marker falls off — symmetrically
         // on both sides. Clamp hi >= lo so a pathologically tiny block
@@ -606,22 +777,24 @@ void PhaseResetPropagate::paste_state_apply() {
                 : std::max(src_lo, clip_blocks[i].source_end_frame - n_guard);
 
         // Windowed clipboard placements (migration applied). Globally
-        // bucketed by source_frame so a near-end placement originally
+        // bucketed by anchor so a near-end placement originally
         // captured under block i-1 lands in block i's window when i-1
         // and i are adjacent labeled blocks.
         std::vector<const ClipboardPlacement*> windowed_clip;
         for (const auto* p : all_placements) {
-            const double t = p->source_frame;
+            const double t = p->anchor_source_frame;
             if (t < src_lo)  continue;
             if (t >= src_hi) continue;
             windowed_clip.push_back(p);
         }
 
-        // Windowed destination markers (markers_ is time-ordered).
+        // Windowed destination markers (markers_ is time-ordered, and the
+        // anchor is monotone in the frame under one map, so these indices come
+        // out ascending and the pairing below walks both sides in order).
         std::vector<int> dest_indices;
         dest_indices.reserve(windowed_clip.size());
         for (size_t k = 0; k < out.size(); ++k) {
-            const double t = out[k].time_frame;
+            const double t = phase_reset_anchor_frame(out[k].time_frame, map);
             if (t < dst_lo)  continue;
             if (t >= dst_hi) continue;
             dest_indices.push_back(static_cast<int>(k));
