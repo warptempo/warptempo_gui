@@ -180,12 +180,19 @@ struct RenderRequest {
     // single-in-flight worker contract fences (dispatch asserts idle,
     // completion runs after do_render returned).
     //
-    // NULL FOR THE TARGET PREVIEW, deliberately rather than "set for
-    // uniformity": the buffer route skips the disk rungs entirely and its label
-    // already distinguishes reuse from synthesis on the GUI thread BEFORE
-    // dispatch (target_render.cpp), so wiring it here would add a second writer
-    // to a flag with no second reader — the kind of silent divergence the null
-    // default makes impossible. do_render null-checks at its one write.
+    // SET BY ONE DISPATCHER, the SINGLE archival render's
+    // (dispatch_single_archival_render). It is NULL everywhere else,
+    // deliberately rather than "set for uniformity", and both nulls have the
+    // same reason — a flag with no reader must have no writer, which is the
+    // kind of silent divergence the null default makes impossible:
+    //   * THE TARGET PREVIEW: the buffer route skips the disk rungs entirely
+    //     and its label already distinguishes reuse from synthesis on the GUI
+    //     thread BEFORE dispatch (target_render.cpp).
+    //   * A SWEEP'S CELLS since 2026-09-11: a batch's progress line is state
+    //     written into the status slot at each cell's dispatch and retracted at
+    //     the batch's terminal, so nothing on that road waits for a signal
+    //     (dispatch_next_batch_entry, input_render_dispatch.cpp).
+    // do_render null-checks at its one write.
     std::atomic<bool>* synthesis_started = nullptr;
 };
 

@@ -8522,6 +8522,16 @@ struct AppState {
     // visual feedback while no other UI is updating. Driven by the shared batch
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status".
+    // THE TWO RENDER-SIDE WRITERS ARE NOT THE SAME KIND OF WRITER. A SWEEP's
+    // "Rendering N of M <label>..." is STATE: the batch writes it into this
+    // string at each cell's dispatch and takes it down only at its terminal, so
+    // the line stands across the whole run, reuse-served cells included. A
+    // SINGLE archival render's "Rendering..." is a report about the WORKER —
+    // synthesis is happening — so it is parked at the dispatch and lands here
+    // only once the worker signals that boundary, and a rung-served one never
+    // appears at all (the machinery and both rulings are at
+    // input_render_dispatch.cpp's park/promote pair and at
+    // dispatch_next_batch_entry).
     // IT COEXISTS WITH prompt.active AS STATE and NEEDS NO MODAL TEST OF ITS
     // OWN: an archival render runs on, so dirtying the project and pressing
     // Ctrl+Q raises the close prompt over a live run (the prompt cancels

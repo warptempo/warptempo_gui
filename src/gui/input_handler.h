@@ -2385,13 +2385,14 @@ struct GuiInputHandler {
     // could answer with stays one-shot, the definition's ring arm saying why.
     bool repeat_eligible(GuiKey key, GuiInputState mods) const;
 
-    // Per-iteration promotion check for the archival status message, wired from
-    // main.cpp's on_tick beside the preview label's own tick (the reason the
-    // tick is the observer is stated at both sites). The message is composed and
-    // PARKED at dispatch and written to the status slot only once the worker
-    // reports that synthesis actually began, so a render served by one of
-    // do_render's reuse rungs says nothing at all. Cheap: one empty-string test
-    // per tick when nothing is parked.
+    // Per-iteration promotion check for the SINGLE archival render's status
+    // message, wired from main.cpp's on_tick beside the preview label's own tick
+    // (the reason the tick is the observer is stated at both sites). The message
+    // is composed and PARKED at dispatch and written to the status slot only
+    // once the worker reports that synthesis actually began, so a render served
+    // by one of do_render's reuse rungs says nothing at all. A sweep's line does
+    // not come this way — it is state, written at the cell's dispatch. Cheap:
+    // one empty-string test per tick when nothing is parked.
     void tick_promote_render_status();
 
     // Per-iteration transition writer for the Render button's mid-render
@@ -2452,19 +2453,25 @@ private:
     // written by park_render_status / tick_promote_render_status /
     // finalize_render_run and by nothing else.
     //
-    // pending_status_text_ is the composed message ("Rendering..." for a single
-    // render, "Rendering N of M <label>..." for a sweep entry) waiting for
-    // permission to appear. Parked by park_render_status at the two archival
-    // dispatch sites instead of being written to app.queue_progress_text, copied
+    // THE SINGLE ARCHIVAL RENDER IS THE WHOLE CLIENTELE. A sweep's "Rendering N
+    // of M <label>..." is STATE — which cell the sweep is at — and is written
+    // into the shared slot at each cell's dispatch and retracted only at the
+    // batch's terminal, so none of these three fields runs for a batch cell
+    // (dispatch_next_batch_entry carries that ruling, and finalize_render_run is
+    // what leaves them resting for it).
+    //
+    // pending_status_text_ is the composed message ("Rendering...") waiting for
+    // permission to appear. Parked by park_render_status at the single archival
+    // dispatch site instead of being written to app.queue_progress_text, copied
     // into the slot by tick_promote_render_status, and cleared there and at
     // finalize_render_run — so a render served by a reuse rung, which never
     // fires the signal, simply drops its message at the completion with nothing
     // ever painted.
     //
     // status_promoted_ says the text currently in the SHARED slot is ours, and
-    // exists so a park and the finalize can retract it (a sweep cell's "3 of 8"
-    // must not linger over the reuse cells that follow, and a finished session
-    // leaves no line behind) without ever erasing another owner's message — the
+    // exists so the finalize can retract it (a finished session leaves no line
+    // behind, and a cancelled sweep's line goes down at the same terminal)
+    // without ever erasing another owner's message — the
     // preview's "Updating..." lives in the same slot and is cleared by its own
     // owner. The mirror's "Synchronizing..." is not a third owner of the slot:
     // it is derived below whatever the slot holds, at the cell's one reader
@@ -2472,11 +2479,11 @@ private:
     // to yield to it and never has to preserve it.
     //
     // synthesis_started_ is the flag do_render stores true at its synthesis
-    // boundary (RenderRequest::synthesis_started carries its address; the
-    // ownership argument is at that field). The GUI thread resets it at each
-    // dispatch — before the worker can run, so a previous session's true can
-    // never promote the next session's message, which is what keeps a sweep's
-    // reuse cells silent after a synthesis cell — and again at finalize.
+    // boundary (RenderRequest::synthesis_started carries its address, and only
+    // the single render's request does; the ownership argument is at that
+    // field). The GUI thread resets it at the dispatch — before the worker can
+    // run, so a previous session's true can never promote the next session's
+    // message — and again at finalize.
     //
     // The signal says synthesis BEGAN, never that it will finish, so the
     // promotion also asks the dispatcher whether the parked message's session is
@@ -2528,20 +2535,24 @@ private:
     void dispatch_next_batch_entry();
 
     // Finalize the current single-render-or-batch run on the GUI thread:
-    // clear queue_running, take down the state-cell text if this session
-    // promoted one (status_promoted_ is that test, so a rung-served run and
-    // another owner's line are both left alone), invalidate the bottom strip,
+    // clear queue_running, take down the state-cell text if this session put
+    // one there (status_promoted_ is that test, so a rung-served single render
+    // and another owner's line are both left alone, while a batch's line — the
+    // one it wrote at every cell's dispatch — comes down HERE and nowhere
+    // else), invalidate the bottom strip,
     // and drop the deferred status message with its signal. The summary log is
     // the caller's concern.
     void finalize_render_run();
 
-    // Arm the deferred status message for an entry about to be dispatched, and
-    // retire the outgoing one's: retract a message THIS owner promoted (a sweep
-    // cell's count must not outlive its cell), reset the synthesis signal, park
-    // the new text. Called by both archival dispatch sites immediately before
+    // Arm the deferred status message for the SINGLE archival render about to
+    // be dispatched: reset the synthesis signal, park the new text. Called by
+    // dispatch_single_archival_render — its one caller since the sweeps started
+    // writing their line into the slot directly — immediately before
     // async_renderer.dispatch, which is what makes the reset's
-    // before-the-worker-runs ordering structural. Full rationale at the
-    // definition.
+    // before-the-worker-runs ordering structural. It retracts nothing: a
+    // dispatch happens only on an idle worker and every terminal passes through
+    // finalize_render_run, so it can never arrive over a message of its own.
+    // Full rationale at the definition.
     void park_render_status(std::string text);
 
     // Re-establish a cold/stale target buffer after a successful archival

@@ -380,7 +380,9 @@ struct Viewport {
     // membership is "this route changes what the LANE shows", which is the
     // progress line's writers, the mirror's two edges and the dirty mark's one
     // transition owner, twelve sites:
-    //   * input_render_dispatch's THREE (the promote, the park's retraction,
+    //   * input_render_dispatch's THREE (the promote, the BATCH'S OWN WRITE at
+    //     each cell's dispatch — which took the park's retraction's place in
+    //     this list on 2026-09-11, a sweep's line being state — and
     //     finalize_render_run);
     //   * target_render's SIX (the "Updating..." stamp, the run hold's late
     //     clear, the TWO context-ending clears — the target view leaving and

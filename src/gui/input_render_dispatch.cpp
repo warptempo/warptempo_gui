@@ -253,11 +253,15 @@ void GuiInputHandler::finalize_render_run() {
     app.queue_running          = false;
     app.queue_cancel_requested = false;
     // The slot clear is an ownership test, not a sweep: only a session that
-    // promoted its message into the shared cell has anything of its own
-    // standing there, and status_promoted_ is the bit that records it —
-    // park_render_status asks the same question for the same reason. A
-    // rung-served session never promoted and so erases nothing here, and a
-    // sibling's string in the slot is not ours to take down: a preview's
+    // put a message of its own into the shared cell has anything standing
+    // there, and status_promoted_ is the bit that records it — raised by the
+    // per-tick promotion for a single render and by the batch's own direct
+    // write at each cell's dispatch. THIS IS WHERE A SWEEP'S LINE COMES DOWN,
+    // and the only place it does: the line stands across every cell of the
+    // batch and is retracted at the terminal, cancelled or complete
+    // (dispatch_next_batch_entry owns that ruling). A rung-served SINGLE render
+    // never promoted and so erases nothing here, and a sibling's string in the
+    // slot is not ours to take down: a preview's
     // "Updating..." belongs to the run hold and is cleared by its own owner.
     // The mirror's "Synchronizing..." is not in the slot at all — it is derived
     // below whatever the slot holds (process_line_text, paint_handler.cpp) —
@@ -277,9 +281,12 @@ void GuiInputHandler::finalize_render_run() {
     // it. Every terminal branch of an archival session reaches this one
     // function (the single render's on_done and the
     // batch's out-of-entries and cancelled terminal), so this is the whole
-    // cleanup. The signal reset is belt-and-braces — each dispatch resets it
-    // too — and keeps the resting state honest between runs; it is safe here
-    // because a completion runs on the GUI thread after do_render returned.
+    // cleanup — AND IT IS WHAT A BATCH LEANS ON: a sweep parks nothing and
+    // arms no signal, so it needs both to be resting when it starts, and every
+    // road into a batch passes through here first. The signal reset is
+    // belt-and-braces for the single render — its own dispatch resets it too —
+    // and keeps the resting state honest between runs; it is safe here because
+    // a completion runs on the GUI thread after do_render returned.
     pending_status_text_.clear();
     synthesis_started_.store(false);
     status_promoted_ = false;
@@ -291,28 +298,29 @@ void GuiInputHandler::finalize_render_run() {
 }
 
 void GuiInputHandler::park_render_status(std::string text) {
-    // THE ONE OWNER of "an archival entry is about to be dispatched": it retires
-    // the outgoing entry's status and arms the incoming one's.
+    // THE ONE OWNER of "a single archival render is about to be dispatched":
+    // it arms the message that render will show if — and only if — the worker
+    // reports crossing into synthesis.
     //
-    // THE RETRACTION IS THE HALF THAT IS NOT OBVIOUS. Within a sweep each cell
-    // parks its own message, and a cell that SYNTHESIZED had its message
-    // promoted into the slot; if the next cell is then served by a reuse rung it
-    // promotes nothing, and without this the previous cell's "Rendering 3 of 8"
-    // would sit on the strip through however many byte-copy cells follow —
-    // naming an entry that finished and a count that is no longer true. Clearing
-    // only what WE promoted is what keeps this from reaching across owners: a
-    // preview's "Updating..." in the shared slot is not ours to erase.
-    if (status_promoted_) {
-        // Invalidate before clearing, the ordering every status-clear path here
-        // keeps.
-        viewport.invalidate_status_cell_area();
-        app.queue_progress_text.clear();
-        status_promoted_ = false;
-    }
-    // BEFORE THE DISPATCH BY CONSTRUCTION (both callers park, then dispatch):
-    // this reset is what stops the PREVIOUS session's fired signal from
-    // promoting the incoming message instantly, which is exactly what a reuse
-    // cell following a synthesis cell would otherwise do.
+    // NO RETRACTION ARM HERE, AND NOTHING TO RETRACT. One existed while the
+    // sweeps parked their cells through this body: a cell that had synthesized
+    // left its "Rendering 3 of 8" promoted in the slot, and the next cell's
+    // park took it down so a stale count could not sit through the byte-copy
+    // cells that followed. The sweeps write their line into the slot directly
+    // now (dispatch_next_batch_entry says why), so THE SOLE CALLER IS THE
+    // SINGLE ARCHIVAL RENDER, and it can never arrive here over a message of
+    // its own: every road to a dispatch — the two chords, and the worker-idle
+    // pump behind a killed render — runs only with the worker idle, the worker
+    // goes idle only inside the completion event that invokes the session's
+    // on_done on the GUI thread, and every terminal branch of every archival
+    // session passes through finalize_render_run, which clears the slot and
+    // status_promoted_ with it. So the arm had exactly one producer, that
+    // producer is gone, and the arm goes with it rather than standing as a
+    // condition nothing can raise.
+    //
+    // BEFORE THE DISPATCH BY CONSTRUCTION (the caller parks, then dispatches):
+    // this reset is what stops a PREVIOUS session's fired signal from promoting
+    // the incoming message instantly.
     synthesis_started_.store(false);
     pending_status_text_ = std::move(text);
 }
@@ -334,6 +342,10 @@ void GuiInputHandler::tick_render_cancel_face() {
 }
 
 void GuiInputHandler::tick_promote_render_status() {
+    // THE SINGLE ARCHIVAL RENDER'S MESSAGE, and nobody else's, since the sweeps
+    // stopped parking (dispatch_next_batch_entry): a batch cell's line is state
+    // written straight into the slot, so nothing on this road runs for one.
+    //
     // THE TICK IS THE OBSERVER because the event being watched happens on the
     // WORKER thread: do_render stores the signal as it crosses into synthesis,
     // and nothing on the GUI thread is woken by that — the completion eventfd
@@ -365,10 +377,10 @@ void GuiInputHandler::tick_promote_render_status() {
     // legitimate and must keep working — an archival command that preempts a
     // running preview parks AFTER the kill, on a session dispatched fresh, and
     // its promotion rightly replaces the stale "Updating..." the run hold left
-    // standing. The park's session is unambiguous because both park sites park
-    // and then dispatch in the same GUI-thread call, and no dispatch can happen
-    // while the worker is busy — so the token this reads is always the parked
-    // message's own. Refusing in place rather than clearing keeps ONE owner for
+    // standing. The park's session is unambiguous because the park site parks
+    // and then dispatches in the same GUI-thread call, and no dispatch can
+    // happen while the worker is busy — so the token this reads is always the
+    // parked message's own. Refusing in place rather than clearing keeps ONE owner for
     // the park's death (finalize_render_run, which every terminal branch
     // reaches); the check simply keeps answering no until then.
     if (async_renderer.current_session_cancelled()) return;
@@ -378,8 +390,9 @@ void GuiInputHandler::tick_promote_render_status() {
     // the contract, and the emptiness above is the test that enforces it.
     pending_status_text_.clear();
     // Records that the text now in the shared slot is OURS, which is what lets
-    // the next park retract it and keeps that retraction from touching another
-    // owner's message.
+    // finalize_render_run's guarded clear take it down at the run's terminal
+    // without ever touching another owner's message. The batch's direct write
+    // raises the same bit for the same reason.
     status_promoted_ = true;
     viewport.invalidate_status_cell_area();
 }
@@ -394,10 +407,13 @@ void GuiInputHandler::tick_promote_render_status() {
 // degenerate-span guard and the frame-class gating — and every link was sound.
 // Three facts explain the report, none of them a bug:
 //   * THE RUNG SILENCE IS THE 2026-08-08 RULING ITSELF. do_render's three
-//     reuse rungs all return ABOVE the synthesis_started store, so an archival
-//     render served by an up-to-date artifact, a project-artifact byte copy or
-//     a render-cache publish shows NOTHING — which is the point of parking the
-//     message. Re-rendering an unchanged recipe is exactly that case.
+//     reuse rungs all return ABOVE the synthesis_started store, so a SINGLE
+//     archival render served by an up-to-date artifact, a project-artifact byte
+//     copy or a render-cache publish shows NOTHING — which is the point of
+//     parking the message. Re-rendering an unchanged recipe is exactly that
+//     case. (A SWEEP'S CELLS ARE NO LONGER IN THIS CLASS: a batch's line is
+//     state and stands across the whole run, rung-served cells included —
+//     dispatch_next_batch_entry, 2026-09-11.)
 //   * THE PREVIEW HAS THE SAME SHAPE: stamp_updating fires only on the
 //     synthesis miss and on trigger()'s busy branch, so a preview resolved on
 //     either synchronous rung (undo/redo A->B->A, an S->T entry with a current
@@ -474,6 +490,10 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     // engine is touched. "Rendering..." means synthesis is happening — not that
     // a command was issued — so it waits until the worker reports crossing that
     // boundary, and a rung-served render never shows it at all.
+    // THE RULE IS THIS RENDER'S ALONE, and the park exists for it alone: a
+    // SWEEP's line reports which cell the sweep is at, which is state the batch
+    // knows before the cell runs, so it is written straight into the slot
+    // (dispatch_next_batch_entry, which carries the split).
     park_render_status("Rendering...");
     req.synthesis_started = &synthesis_started_;
     async_renderer.dispatch(std::move(req),
@@ -690,7 +710,10 @@ void GuiInputHandler::dispatch_next_batch_entry() {
             // gone by then either way. A COMPLETE sweep says nothing (a
             // render's completion is not notified), and a CANCELLED one says
             // nothing either: the cancel is his deliberate act, and the state
-            // cell going blank at the press is its answer.
+            // cell going blank as the cancel lands is its answer — the sweep's
+            // line stands from its first cell's dispatch until this terminal,
+            // whichever branch reaches it, and this clear (finalize_render_run,
+            // just below) is the one that takes it down.
             // WHAT M COUNTS IS DISPATCHED CELLS (recorded 2026-09-02):
             // `batch_.reqs` holds the cells the BUILD produced, and a cell the
             // build itself rejected (compute_base_tempo_scale or
@@ -774,16 +797,70 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                   "Rendering %d of %d %s...",
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
-    // PARKED, NOT SHOWN — same rule as the single render (rationale at
-    // dispatch_single_archival_render), and this is where it earns most: a
-    // sweep's cells are individually rung-served or synthesized, so the row
-    // counts up only across the cells that actually rendered something and a run
-    // of reuse cells passes in silence. The park is also what RETRACTS the
-    // previous cell's message when that cell did show one — see the owner.
-    park_render_status(buf);
+    // A SWEEP'S LINE IS STATE, WRITTEN STRAIGHT INTO THE SLOT (architect
+    // 2026-09-11, on the tablet's 90 Hz panel, where the line BLINKED once per
+    // cell). The single render's park/promote machinery is the wrong shape for
+    // a batch: each cell parked its own message, a cell that had synthesized
+    // had its message promoted, and the NEXT cell's park retracted it — so the
+    // cell went blank at every hand-off and stayed blank until the incoming
+    // cell crossed the synthesis boundary and the following tick observed it.
+    // That gap is a frame or more, and it is the blink.
+    //
+    // The fix is the messaging split itself, not a clock: what a sweep's line
+    // reports is STATE — which cell the sweep is at, true right now and
+    // replaced as it changes — where a single render's "Rendering..." is a
+    // report about the WORKER ("synthesis is happening"), which only the
+    // worker's own signal can honestly time. So the line is derived from the
+    // batch, which knows both numbers before the cell runs: it is written here
+    // at the dispatch and comes down only at the batch's terminal, with no
+    // hold, no minimum display span and no hysteresis anywhere in it.
+    //
+    // WHAT THE COUNT MEANS CHANGES WITH THAT, and to the truer meaning: it
+    // counts DISPATCHED cells as it ticks up, where the park counted only the
+    // cells that SYNTHESIZED — a run of reuse cells used to pass in silence
+    // under a stale number. A cell served by a reuse rung now shows its line
+    // for the instant the rung takes, which is truthful (the sweep IS at that
+    // cell) and too brief to see. Dispatched cells are also what the terminal's
+    // "Rendered N of M" counts M in, so the line and the summary agree.
+    //
+    // THE SINGLE ARCHIVAL RENDER KEEPS THE PARK, deliberately and not as
+    // residue: there "Rendering..." means synthesis is happening, and a
+    // rung-served single render still shows nothing (the 2026-08-08 ruling,
+    // stated at dispatch_single_archival_render). The machinery stays whole for
+    // it; the batch simply stops using it.
+    //
+    // THE FOUR MECHANICS OF THE DIRECT WRITE:
+    //  * status_promoted_ = true records that the string in the shared slot is
+    //    OURS, which is what lets finalize_render_run's guarded clear take the
+    //    sweep's last line down at the terminal.
+    //  * invalidate BEFORE the overwrite, the ordering every status write here
+    //    keeps.
+    //  * NOTHING IS PARKED AND NO SIGNAL IS ARMED: pending_status_text_ rests
+    //    empty through the whole batch — nothing on this road parks, and a
+    //    batch starts either from the resting state or out of a previous run's
+    //    finalize_render_run, which clears the parked string and the signal
+    //    together — so the per-tick promotion returns on its first test for the
+    //    run's whole length, and the request below carries no
+    //    synthesis_started pointer: a flag with no reader would only be a
+    //    second writer of a resting state (the field's contract,
+    //    render_pipeline.h).
+    //  * THE SLOT IS TAKEN UNCONDITIONALLY, as the promotion takes it. None of
+    //    the promotion's own tests survives a write made at the dispatch: there
+    //    is no parked string to test, the worker's idleness is this write's
+    //    precondition rather than a reason to withhold, the synthesis signal is
+    //    exactly what this ruling drops, and the cancelled-session test cannot
+    //    apply at all — the write happens BEFORE the dispatch, on a session
+    //    that is not yet running and so cannot have been killed. A preview's
+    //    "Updating..." standing in the slot is replaced here for the reason the
+    //    promotion replaces it: a batch reaches this line either on an idle
+    //    worker or out of the pump that ran after its kill drained, so the
+    //    preview that wrote it is dead or superseded, and an explicit command
+    //    outranks a derived preview.
+    viewport.invalidate_status_cell_area();
+    app.queue_progress_text = buf;
+    status_promoted_        = true;
 
     RenderRequest req = std::move(batch_.reqs[batch_.next_index]);
-    req.synthesis_started = &synthesis_started_;
     // The cell's own names, read BEFORE the request is moved onto the worker
     // (a moved-from request names nothing): they are what a failed cell's
     // removal composes its paths from.
