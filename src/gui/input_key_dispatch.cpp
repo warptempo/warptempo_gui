@@ -8886,23 +8886,22 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::F:
         // Toggle follow mode. The full body (off→on edge resync) lives in
-        // GuiPlaybackLifecycle::set_follow_mode, shared with the settings
-        // editor's `follow=` commit.
+        // GuiPlaybackLifecycle::set_follow_mode, shared with the icon-row
+        // button's synthesized chord and with nothing else.
         playback_lifecycle.set_follow_mode(!app.follow_mode);
         break;
     case GuiKeys::Y:
         // Toggle the centered pin (2026-08-31, R11). The full body — the
         // off→on edge's immediate recenter through the one derivation body —
         // lives in GuiPlaybackLifecycle::set_centered_mode, shared with the
-        // settings editor's `centered=` commit and the icon-row button's
-        // synthesized chord. History-less, one-shot, follow's own shape.
+        // icon-row button's synthesized chord and with nothing else.
+        // History-less, one-shot, follow's own shape.
         playback_lifecycle.set_centered_mode(!app.centered_mode);
         break;
     case GuiKeys::Z:
         // Toggle the Restrict undo to viewport lamp (2026-09-04). The setter
         // is GuiInputHandler::set_restrict_undo_to_viewport, shared with the
-        // icon-row button's synthesized chord and with nothing else — the bit
-        // is session-only, so there is no settings commit to share it with.
+        // icon-row button's synthesized chord and with nothing else.
         // History-less, one-shot, the centered pin's own shape — and nothing
         // moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
@@ -8910,9 +8909,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::N:
         // Toggle the Center on next marker lamp (2026-09-04). The setter is
-        // GuiInputHandler::set_center_on_next_marker, shared with the settings
-        // editor's `center_on_next_marker=` commit and with the icon-row
-        // button's synthesized chord. History-less, one-shot, the centered
+        // GuiInputHandler::set_center_on_next_marker, shared with the icon-row
+        // button's synthesized chord and with nothing else.
+        // History-less, one-shot, the centered
         // pin's own shape — and nothing moves at the press: the bit is read at
         // the next BARE Tab walk, through marker_walk_frame, and by nothing
         // else (the Ctrl+Shift+Tab march states its own framing).

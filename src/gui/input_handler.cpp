@@ -4199,17 +4199,17 @@ void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
     // The contract — sole writer, session-only, history-less, no damage — is at
     // the declaration (input_handler.h), which also states the scope: this bit
     // is read by undo_restore_within_viewport's caller and by nothing else. The
-    // two callers are the bare-`z` arm, which the icon row's button reaches by
-    // synthesizing that press, and nothing else: there is no settings key to
-    // commit it from.
+    // ONE caller is the bare-`z` arm, which the icon row's button reaches by
+    // synthesizing that press, and there is nothing else: there is no settings
+    // key to commit it from.
     app.restrict_undo_to_viewport = desired;
 }
 
 void GuiInputHandler::set_center_on_next_marker(bool desired) {
     // The contract — sole writer, history-less, no damage, camera untouched —
     // is at the declaration (input_handler.h), which also states the scope:
-    // this toggle governs the bare Tab walk alone. The two callers are the
+    // this toggle governs the bare Tab walk alone. Its ONE caller is the
     // bare-`n` arm, which the icon row's button reaches by synthesizing that
-    // press, and the settings editor's `center_on_next_marker=` commit.
+    // press; the key left the schema 2026-09-11, so there is no commit road.
     app.center_on_next_marker = desired;
 }

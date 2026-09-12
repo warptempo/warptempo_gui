@@ -1941,9 +1941,6 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
 struct GuiHistoryGuiSide {
     ViewState   tab_a;
     ViewState   tab_b;
-    bool        follow              = false;
-    bool        centered            = false;
-    bool        center_on_next_marker = true;
     char        active_audio_view   = 'S';
     char        active_markers_view = 'W';
     char        active_tab_view     = 'A';
@@ -1969,9 +1966,6 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     eff_active.playhead_cursor_sample = app.playhead_cursor_sample;
     eff_active.trim                   = app.trim;
 
-    gui->follow              = app.follow_mode;
-    gui->centered            = app.centered_mode;
-    gui->center_on_next_marker = app.center_on_next_marker;
     gui->active_audio_view   = app.active_audio_view;
     gui->active_markers_view = app.active_markers_view;
     gui->active_tab_view     = app.active_tab_view;
@@ -1982,8 +1976,7 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
 std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
                                          const EngineSettings&    engine) {
     const NonEngineSettingsSnapshot snap{
-        gui.tab_a, gui.tab_b, gui.follow, gui.centered,
-        gui.center_on_next_marker,
+        gui.tab_a, gui.tab_b,
         gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
         gui.waveform_magnification_level};
     return format_settings_text(snap, engine);

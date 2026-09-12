@@ -26,9 +26,6 @@ enum class SettingKind {
     ActiveAudioViewChar,
     ActiveMarkersViewChar,
     ActiveTabViewChar,
-    FollowFlag,
-    CenteredFlag,
-    CenterOnNextMarkerFlag,
     WaveformMagnificationLevel,
     TrimBegin_A,
     TrimEnd_A,
@@ -72,30 +69,15 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
-    { "follow",                      SettingKind::FollowFlag,           EngineField::Title,                   "true"     },
-    // KEEP VIEWPORT CENTERED ON PLAYHEAD (2026-08-31), follow's sibling in
-    // every mechanical respect and its neighbour on disk: the `y` lamp's
-    // persisted preference, a required GUI-kind boolean defaulting off. While
-    // it is lit the viewport is DERIVED from the playhead
-    // (Viewport::derive_centered_viewport is the one derivation body); the
-    // key itself is a display preference like follow and reaches no render
-    // input.
-    { "centered",                    SettingKind::CenteredFlag,         EngineField::Title,                   "false"    },
-    // CENTER ON NEXT MARKER (2026-09-04), the third boolean session pref and
-    // `centered`'s neighbour on disk: whether the Tab / Shift+Tab marker walk
-    // FRAMES its landing. Its default is TRUE because framing is what the walk
-    // did before the key existed. Like follow and centered it is a display
-    // preference and reaches no render input; unlike them it governs ONE act,
-    // the Tab walk. The paired march states its own framing at both of its
-    // steps (MarkerLandingFrame::Center, by its own statement) and the A/B
-    // audition frames through the center command; neither asks this bit.
-    { "center_on_next_marker",       SettingKind::CenterOnNextMarkerFlag, EngineField::Title,                 "true"     },
     // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
     // `playback_speed` retired whole; `gui_scale`, `audio_player` and
     // `projects_repo` moved to the per-device config, device_config.h, where
-    // `audio_player` then retired whole 2026-08-28. The
-    // parser-side record of all four, and the consequence for a sidecar still
-    // carrying one, is at kCanonicalSettingsKeys, settings_file.cpp.)
+    // `audio_player` then retired whole 2026-08-28. THREE MORE LEFT IT
+    // 2026-09-11 — `follow`, `centered` and `center_on_next_marker`, the
+    // camera postures, which are session state in AppState now and are
+    // serialized nowhere. The parser-side record of all seven, and the
+    // consequence for a sidecar still carrying one, is at
+    // kCanonicalSettingsKeys, settings_file.cpp.)
     // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification
     // LEVEL, a count of doublings in the range settings_file.h owns for both
     // products. 0 is the untouched picture and the template's stamp. The
@@ -147,12 +129,6 @@ std::optional<std::string> format_nonengine_value(
             return std::string(1, gui.active_markers_view);
         case SettingKind::ActiveTabViewChar:
             return std::string(1, gui.active_tab_view);
-        case SettingKind::FollowFlag:
-            return std::string(gui.follow ? "true" : "false");
-        case SettingKind::CenteredFlag:
-            return std::string(gui.centered ? "true" : "false");
-        case SettingKind::CenterOnNextMarkerFlag:
-            return std::string(gui.center_on_next_marker ? "true" : "false");
         case SettingKind::WaveformMagnificationLevel:
             // Plain digits, the one canonical spelling validate_gui_setting's
             // range arm accepts (parse_authored_frame): the default
@@ -420,8 +396,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // format_nonengine_value always yields a value — a trim bound recalls as its
     // actual frame (`tab_a_trim_begin=0`), matching what Ctrl+S writes.
     const NonEngineSettingsSnapshot gui{
-        eff_a, eff_b, app.follow_mode, app.centered_mode,
-        app.center_on_next_marker,
+        eff_a, eff_b,
         app.active_audio_view, app.active_markers_view, app.active_tab_view,
         app.waveform_magnification_level};
     return format_nonengine_value(desc->kind, gui);

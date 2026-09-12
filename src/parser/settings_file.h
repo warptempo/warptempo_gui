@@ -211,36 +211,10 @@ struct SettingsFile {
 
     // Every canonical key is required, so the reader always assigns these
     // fields; the member initializers below are construction-state only.
-    bool   follow                  = true;
-    // KEEP VIEWPORT CENTERED ON PLAYHEAD — the `y` lamp's persisted
-    // preference, `follow`'s sibling in every mechanical respect: a required
-    // GUI-kind boolean on the same parse_bool_token grammar, default false.
-    // While the lamp is lit the GUI derives the viewport from the playhead;
-    // the CLI parses the key and ignores it like every other GUI-kind key.
-    // Checkpoints committed before the key leave the `h` walk through the
-    // same strict gate every schema addition costs — NO migration and no
-    // reader leniency, the magnification key's precedent exactly.
-    // (architect approval 2026-08-31 — "the parser's non-engine-modifying
-    // keys are ok to touch".)
-    bool   centered                = false;
-    // Center on next marker — whether the Tab / Shift+Tab marker walk FRAMES
-    // its landing. It is `follow`'s and `centered`'s mechanical twin: a
-    // required GUI-kind boolean on the same parse_bool_token grammar,
-    // defaulting TRUE because framing the walk is what the product has always
-    // done. With it off the walk lands without recentering and the viewport
-    // only advances when the landing would otherwise be offscreen. The CLI
-    // parses the key and ignores it like every other GUI-kind key, and a
-    // checkpoint committed before it leaves the `h` walk through the same
-    // strict gate every schema addition costs — no migration, no reader
-    // leniency, the magnification key's precedent.
-    // (architect approval 2026-09-04 — the same grant `follow`'s and
-    // `centered`'s siblings were taken under: the parser's
-    // non-engine-modifying keys are ok to touch.)
-    bool   center_on_next_marker   = true;
     char   active_audio_view       = 'S';   // S | T
     char   active_markers_view     = 'W';   // W | P
     char   active_tab_view         = 'A';   // A | B
-    // (FIVE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
+    // (EIGHT FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with
     // row 7's monospace deletion, architect approval 2026-08-01; `gui_scale`,
     // `audio_player`, `projects_repo` and `playback_speed` went 2026-08-27,
@@ -255,7 +229,14 @@ struct SettingsFile {
     // product sizes text from a setting, nothing in either product plays at a
     // speed other than the source's own, nothing in either product spawns a
     // player, and the repository that is the
-    // projects home is the one user's one device's fact, not each piece's.)
+    // projects home is the one user's one device's fact, not each piece's.
+    // `follow`, `centered` and `center_on_next_marker` went 2026-09-11
+    // (architect approval 2026-09-11): the three camera postures answer what
+    // the user is doing right now rather than what the piece determines, so
+    // they are the GUI's own per-project session state and no product reads
+    // them from a file — a sidecar or checkpoint still carrying one is
+    // load-fatal here by the unknown-key refusal, no migration and no reader
+    // leniency.)
     // THE WAVEFORM'S VISUAL MAGNIFICATION — the DOUBLING COUNT of the
     // ladder above, whose gain the GUI derives and applies at the tip mapping
     // of every waveform picture (the plate and the overview strip alike),
@@ -349,7 +330,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // `*_hash` keys, and no free-text GUI-kind key is left in the schema — the
 // free-text keys that remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
-    bool        b    = false;   // follow, centered, center_on_next_marker, tab_X_read_only
+    bool        b    = false;   // tab_X_read_only
     char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*, waveform_magnification_level
     double      d    = 0.0;     // tab_X_zoom

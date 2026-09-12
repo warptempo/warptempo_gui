@@ -667,7 +667,7 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
 }
 
 // Set follow mode (contract at the header declaration). Shared by the bare-`f`
-// toggle and the settings editor's `follow=` commit.
+// toggle and the icon-row button that synthesizes that chord.
 void GuiPlaybackLifecycle::set_follow_mode(bool desired) {
     const bool was_off = !app.follow_mode;
     app.follow_mode = desired;

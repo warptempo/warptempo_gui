@@ -474,9 +474,6 @@ RenderOutcome do_render(const RenderRequest& req,
                 existed = existed_before(st_path);
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,
-                    req.authoring.follow,
-                    req.authoring.centered,
-                    req.authoring.center_on_next_marker,
                     /*active_audio_view=*/'T',
                     req.authoring.active_markers_view,
                     req.authoring.active_tab,

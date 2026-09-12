@@ -16,7 +16,7 @@ inline std::unexpected<std::string> prefix_line_error(int ln, std::string msg) {
 }
 
 // Strict whole-token bool parser: the two-token vocabulary shared by the
-// settings schemas (`follow`, the per-tab read_only keys). The writer emits
+// settings schemas (the per-tab read_only keys). The writer emits
 // only `true`/`false`, so those are the sole accepted spellings.
 inline bool parse_bool_token(const std::string& s, bool& out) {
     if (s == "true")  { out = true;  return true; }

@@ -306,9 +306,10 @@ struct GuiPlaybackLifecycle {
     // well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);
 
-    // Set follow mode to `desired`. Shared by the bare-`f` toggle (which passes
-    // !app.follow_mode) and the settings editor's `follow=` commit (which passes
-    // the parsed value) so the two stay one implementation. An off→on edge
+    // Set follow mode to `desired`. Shared by the bare-`f` toggle (which
+    // passes !app.follow_mode) and the icon-row button that synthesizes that
+    // chord, which since the `follow` key left the schema 2026-09-11 are the
+    // whole membership. An off→on edge
     // during live playback clears the manual-pan suppression and resyncs so
     // follow resumes paging, not just the one initial jump; with playback
     // stopped (the settings editor is modal, so its open stopped playback) the
@@ -317,9 +318,10 @@ struct GuiPlaybackLifecycle {
 
     // Set the centered pin to `desired` — the `y` lamp's one gesture
     // chokepoint (2026-08-31, R11), set_follow_mode's sibling: shared by the
-    // bare-`y` toggle (which passes !app.centered_mode), its icon-row button
-    // (which synthesizes that chord) and the settings editor's `centered=`
-    // commit. History-less; persisted by the ordinary Ctrl+S like follow. The
+    // bare-`y` toggle (which passes !app.centered_mode) and its icon-row
+    // button (which synthesizes that chord), the whole membership since the
+    // `centered` key left the schema 2026-09-11. History-less and serialized
+    // nowhere — the pin is a session posture like follow. The
     // off→on edge recenters IMMEDIATELY through the one derivation body — the
     // invariant starts holding at the toggle — and during live playback also
     // clears the manual-pan suppression and resyncs, follow's own re-engage

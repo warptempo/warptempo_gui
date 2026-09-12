@@ -162,8 +162,8 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // `tab_X_read_only=false` with them as a self-unlock beside bare `o` and the
 // icon row's toggle. That is the ruling working rather than a hole, and it is
 // why the READ-ONLY arm in commit() stays engine-only: the GUI-kind keys are
-// band rather than authored content — view state, follow, centered,
-// center_on_next_marker, the magnification level, the per-tab viewport, zoom, playhead, trim and the
+// band rather than authored content — view state, the magnification level,
+// the per-tab viewport, zoom, playhead, trim and the
 // read_only bit itself — and have been read-only-legal since 2026-08-07, so
 // none of them owes a read-only gate here.
 //
@@ -190,7 +190,6 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // AND THE REST DO NOT, each because its own chord is live under a lit lamp:
 // `active_audio_view=` is bare `t` (the S/T flip the lock never touches, and
 // the audio half of 1/2/3 with it), `active_tab_view=` is Ctrl+Tab,
-// `follow=`/`centered=`/`center_on_next_marker=` are bare `f`/`y`/`n`,
 // `waveform_magnification_level=` is the `=`/`-` pair, and the per-tab
 // `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
 // viewport and trim band, which neither lock protects. The delta's other two
@@ -311,30 +310,12 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     const warptempo_settings::GuiSettingValue& gv = **g;
 
     // -- non-tab GUI keys ------------------------------------------------
-    if (key == "follow") {
-        if (gv.b == app.follow_mode) { unchanged(); return true; }
-        playback_lifecycle.set_follow_mode(gv.b);
-        applied(); return true;
-    }
-    if (key == "centered") {
-        // History-less, through the same chokepoint the bare-`y` toggle and
-        // its icon-row button use (set_centered_mode, follow's shape): the
-        // off->on edge recenters immediately, so a typed `centered=true` is
-        // one more caller of the toggle's own body, never a parallel writer.
-        if (gv.b == app.centered_mode) { unchanged(); return true; }
-        playback_lifecycle.set_centered_mode(gv.b);
-        applied(); return true;
-    }
-    if (key == "center_on_next_marker") {
-        // History-less, through the same chokepoint bare `n` and its icon-row
-        // button use (set_center_on_next_marker): a typed
-        // `center_on_next_marker=false` is one more caller of the lamp's own
-        // setter, never a parallel writer. Nothing moves at the commit — the
-        // bit is read at the next Tab walk.
-        if (gv.b == app.center_on_next_marker) { unchanged(); return true; }
-        input->set_center_on_next_marker(gv.b);
-        applied(); return true;
-    }
+    // (`follow=`, `centered=` and `center_on_next_marker=` had arms here
+    // until 2026-09-11. The three camera postures left the schema whole that
+    // day, so they are UNKNOWN to this editor now and take the unknown-key
+    // refusal below — red flash and a card — like any other name that is not
+    // a settable key. Their lamps are reached by their own bare chords and
+    // their own icon-row buttons and by nothing else.)
     if (key == "waveform_magnification_level") {
         // History-less and APPLIED LIVE, through the SAME chokepoint the TWO
         // hotkeys (bare `=` and bare `-`), the TWO icon-row buttons that
@@ -1101,8 +1082,7 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // follow, centered, center_on_next_marker, gui_scale,
-    // waveform_magnification_level,
+    // gui_scale, waveform_magnification_level,
     // projects_repo, projects_path, sync_path — the last four the device
     // config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical

@@ -758,11 +758,10 @@ void Viewport::center_viewport_on_playhead() {
 // playback scanner's per-frame advance — recenters through the pre-paint
 // hook (main.cpp), which reads the resting-or-scanning cursor once per frame
 // and calls THIS body; no mutator scatters a recenter call of its own. The
-// other three callers are the toggle's own chokepoint (set_centered_mode's
-// off->on edge, so the invariant starts holding at the toggle), the settings
-// editor's `centered=` commit through that same chokepoint, and the launch
+// other two callers are the toggle's own chokepoint (set_centered_mode's
+// off->on edge, so the invariant starts holding at the toggle) and the launch
 // seed (launch_playback_window's visibility fork), which centers the scanner
-// where follow would left-edge-align it. ALL FOUR ASK ONE PREDICATE SINCE
+// where follow would left-edge-align it. ALL THREE ASK ONE PREDICATE SINCE
 // 2026-09-01 — centered_pin_engaged (app_state.h), the lamp's preference
 // narrowed by the A/B audition, which disregards the pin for its whole
 // duration — so no caller reads the lamp's field direct and nothing derives

@@ -73,14 +73,6 @@ std::string format_default_settings_template(const std::string& stem,
 struct NonEngineSettingsSnapshot {
     const ViewState&   tab_a;
     const ViewState&   tab_b;
-    bool               follow;
-    // The `y` lamp's persisted preference (2026-08-31): keep the viewport
-    // centered on the playhead. A display preference like follow, per piece.
-    bool               centered;
-    // The Tab walk's framing lamp (2026-09-04): whether a marker walk
-    // recenters the viewport on its landing. Follow's and centered's kind of
-    // thing exactly — a per-piece display preference reaching no render input.
-    bool               center_on_next_marker;
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;
@@ -92,7 +84,11 @@ struct NonEngineSettingsSnapshot {
     int                waveform_magnification_level;
     // (`projects_repo` LEFT THIS SNAPSHOT 2026-08-27 with its key — the
     // repository is the device config's, device_config.h; the sidecar carries
-    // exactly what is about the piece.)
+    // exactly what is about the piece. `follow`, `centered` and
+    // `center_on_next_marker` left it 2026-09-11 with theirs — the three
+    // camera postures are what the user is DOING, not what the piece
+    // determines, so they are session state in AppState and nothing
+    // serializes them.)
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared

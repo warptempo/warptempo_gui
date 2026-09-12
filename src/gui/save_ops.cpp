@@ -148,9 +148,6 @@ bool GuiSaveOps::save() {
     if (!app.settings_path.empty()) {
         const NonEngineSettingsSnapshot gui{
             app.tab_a, app.tab_b,
-            app.follow_mode,
-            app.centered_mode,
-            app.center_on_next_marker,
             app.active_audio_view,
             app.active_markers_view,
             app.active_tab_view,

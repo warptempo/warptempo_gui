@@ -2329,8 +2329,8 @@ enum class RedesignButton {
     // that fits it existed.)
     IconFollow,
     // KEEP VIEWPORT CENTERED ON PLAYHEAD (architect 2026-08-31, R11) — the
-    // `y` lamp, FOLLOW'S NEIGHBOUR by design: a viewport-class preference
-    // exactly like it, sitting beside it at the zoom group's tail. It wears
+    // `y` lamp, FOLLOW'S NEIGHBOUR by design: a viewport-class session
+    // posture exactly like it, sitting beside it at the zoom group's tail. It wears
     // a lamp reading the live bit its own chord flips (centered_mode), stays
     // LIVE on a locked tab (bare `y` is navigation, on the lock's allowlist)
     // and stays LIVE in the `h` view too — unlike Follow, whose chase is
@@ -2341,8 +2341,11 @@ enum class RedesignButton {
     IconCentered,
     // CENTER ON NEXT MARKER (architect 2026-09-04) — the `n` lamp, closing the
     // viewport-class group behind Follow and the centered pin, which is the
-    // company it keeps: a per-piece camera preference wearing a lamp on the
-    // live bit its own chord flips (center_on_next_marker). What it governs is
+    // company it keeps: a session camera posture wearing a lamp on the
+    // live bit its own chord flips (center_on_next_marker). All four lamps in
+    // this run — Follow, the centered pin, this one and Restrict undo to
+    // viewport below — have been session postures since 2026-09-11, at their
+    // own ruled default at every project open and serialized nowhere. What it governs is
     // the Tab / Shift+Tab marker walk's FRAMING and nothing else — lit, the
     // walk recenters on its landing; dark, the walk lands and the camera holds
     // unless the landing was offscreen, in which case follow's own page brings
@@ -4857,7 +4860,7 @@ struct AppState {
 
     // Live working copy of the active view's state — exactly the three view
     // fields immediately below, playhead / zoom / viewport (follow_mode after
-    // them is session-global, not a per-tab mirror). The SELECTION is NOT one of
+    // them is a session posture, not a per-tab mirror). The SELECTION is NOT one of
     // them: it lives here alone and is parked nowhere, see selected_markers.
     // This is an INTENTIONAL cache of the active view's per-view slot, not
     // accidental duplication: the paint path and the input handlers touch
@@ -4869,7 +4872,15 @@ struct AppState {
     int64_t playhead_cursor_sample = 0;
     double  zoom_level             = kWorkingZoomLevel;
     int64_t viewport_start_sample  = 0;
-    bool    follow_mode            = true;
+    // FOLLOW THE PLAYHEAD — the `f` lamp. A SESSION POSTURE in the
+    // add_to_selection family (the family's record is at that declaration
+    // below): it answers what the user is doing right now rather than what the
+    // piece determines, so it is in no settings vocabulary, is never
+    // serialized, is never in the undo domain, is not carried by `'`, and
+    // starts DARK at every project open — a reopen as much as a launch —
+    // because run_project constructs this AppState fresh each time. Its
+    // writers are bare `f`, its icon-row button, and the setter they share.
+    bool    follow_mode            = false;
 
     // True when the user has taken the viewport away from the chase for the
     // current playback session, which stops follow_scroll_if_needed from
@@ -4935,8 +4946,11 @@ struct AppState {
     bool    follow_overridden_for_session = false;
 
     // KEEP VIEWPORT CENTERED ON PLAYHEAD — the `y` lamp (architect
-    // 2026-08-31, R11), session-global like follow_mode and persisted beside
-    // it as the required GUI-kind key `centered` (default false). While it is
+    // 2026-08-31, R11). A SESSION POSTURE in the add_to_selection family (the
+    // family's record is at that declaration below): it is in no settings
+    // vocabulary, is never serialized, is never in the undo domain, is not
+    // carried by `'`, and starts DARK at every project open, a reopen as much
+    // as a launch. While it is
     // lit the viewport DERIVES from the playhead: the playhead's frame sits
     // at the window's center column at the STANDING zoom (the lamp never
     // writes zoom — press `c` once and the lamp holds the picture),
@@ -4951,13 +4965,17 @@ struct AppState {
     // the A/B audition disregards the pin for its whole duration, so every
     // site that asks "is the pin ON right now" reads centered_pin_engaged
     // (below, where the two reader classes are inventoried) and this field is
-    // read direct only by the lamp's face, the settings editor, the load and
-    // the sidecar writers — the preference the act never changes.
+    // read direct only by the lamp's face and the lamp's own setter — the
+    // preference the act never changes.
     bool    centered_mode          = false;
 
     // CENTER ON NEXT MARKER — the lamp on bare `n` (architect 2026-09-04),
-    // session-global like the two above and persisted beside them as the
-    // required GUI-kind key `center_on_next_marker` (default true). It governs
+    // a session posture like the two above and in the same add_to_selection
+    // family (that declaration carries the family's record): in no settings
+    // vocabulary, never serialized, never in the undo domain, not carried by
+    // `'`. It is the family's one member whose ruled default is ON, so it
+    // starts LIT at every project open — framing the walk is what the walk has
+    // always done. It governs
     // ONE act: whether the bare Tab / Shift+Tab marker walk FRAMES its
     // landing. Lit, the walk recenters the viewport on the marker it lands on,
     // which is what the walk has always done. Dark, the walk lands without
@@ -4984,11 +5002,11 @@ struct AppState {
     bool    center_on_next_marker  = true;
 
     // RESTRICT UNDO TO VIEWPORT — the lamp on bare `z` (architect 2026-09-04).
-    // SESSION-ONLY AND NEVER SERIALIZED, which is what separates it from the
-    // three camera bits above it: those are per-piece preferences the sidecar
-    // carries, this is a posture the user takes for a few minutes and drops.
-    // It is in no settings vocabulary, `'` does not carry it, and every launch
-    // starts it OFF.
+    // SESSION-ONLY AND NEVER SERIALIZED, which since 2026-09-11 is what it
+    // SHARES with the three camera bits above it rather than what separates it
+    // from them: all four are session postures now, in no settings vocabulary,
+    // uncarried by `'`, and at their own ruled default at every project open
+    // (dark for this one).
     //
     // WHAT IT DOES: while it stands, an undo or redo whose restore would move
     // the viewport is a consumed no-op that cards, and the stacks are left
@@ -10677,7 +10695,7 @@ inline bool transport_session_live(const AppState& a) {
 // halves — and the plays behave exactly as they do with centered=false: `c`
 // frames, the scanner walks across a static viewport, and follow's own edge
 // check applies as it always did. THE PREFERENCE IS UNTOUCHED: the act writes
-// no field, the lamp stays lit (it reports what is persisted), and the pin
+// no field, the lamp stays lit (it reports the standing posture), and the pin
 // re-engages the moment the sequence ends — the memory's own void at that end
 // makes the next pre-paint due (clear_audition_sequence).
 //
@@ -10694,11 +10712,12 @@ inline bool transport_session_live(const AppState& a) {
 //     mid-act records the preference and lights the lamp while deriving
 //     nothing, and the derivation body is never called under a standing act.
 // EVERY OTHER READER OF centered_mode IS THE PREFERENCE and reads the field
-// direct: the lamp's face (redesign_button_selected's IconCentered arm), the
-// settings editor's unchanged-compare and `centered=` commit
-// (settings_editor.cpp), the load (file_loader.cpp) and the four sidecar
-// writers (settings_io.cpp's snapshot, save_ops.cpp, input_render_dispatch.cpp,
-// history_diff.cpp).
+// direct, and since the key left the schema 2026-09-11 there are just TWO
+// (re-greped that day): the lamp's face (redesign_button_selected's
+// IconCentered arm) and bare `y`'s own toggle argument
+// (input_key_dispatch.cpp, which passes !app.centered_mode into the setter).
+// The settings editor's commit, the load and the four sidecar writers were
+// readers until that cut and are gone with the key.
 inline bool centered_pin_engaged(const AppState& a) {
     return a.centered_mode &&
            a.audition_sequence.phase == GuiAuditionSequence::Phase::Idle;

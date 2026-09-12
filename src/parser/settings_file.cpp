@@ -96,19 +96,20 @@ using warptempo_parse::prefix_line_error;
 // with his eyes open: a `renders/` recipe written before the cut refuses `'`,
 // and every checkpoint committed before it drops out of the `h` walk through
 // the same strict gate.
+//
+// THREE MORE KEYS LEFT THE SCHEMA 2026-09-11 (architect approval 2026-09-11):
+// `follow`, `centered` and `center_on_next_marker` are SESSION POSTURES, not
+// the piece's — they answer what the user is doing right now rather than what
+// the piece determines, so a stored value is wrong as often as right; they are
+// per-project GUI state now, in no settings vocabulary and on no sidecar. The
+// consequence is the standing one: a `.settings`, a `renders/` recipe or a
+// checkpoint still carrying one of the three is load-fatal in both products by
+// the unknown-key refusal below — no migration, no reader leniency, the
+// recipe refusing `'` and the checkpoint dropping out of the `h` walk, exactly
+// as for every key retired before them.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    // `centered` landed 2026-08-31 (architect approval 2026-08-31 — "the
-    // parser's non-engine-modifying keys are ok to touch"): follow's sibling,
-    // the `y` lamp's persisted viewport preference. Every checkpoint
-    // committed before it leaves the `h` walk through this same strict gate —
-    // the accepted precedent, no migration and no reader leniency.
-    // `center_on_next_marker` landed 2026-09-04 (architect approval
-    // 2026-09-04, on the same grant the two above were taken under): the Tab walk's framing
-    // lamp, `centered`'s neighbour on disk. Its default is TRUE, which is the
-    // behaviour that stood before the key existed.
-    "follow", "centered", "center_on_next_marker",
     "waveform_magnification_level",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
@@ -261,33 +262,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return std::nullopt;  // unrecognized tab suffix: not a GUI-kind key
     }
 
-    if (key == "follow") {
-        // Bools share parse_bool_token schema-wide (same grammar as the
-        // per-tab read_only keys).
-        bool v = false;
-        if (!parse_bool_token(value, v))
-            return err("must be true or false");
-        out.b = v;
-        return R(out);
-    }
-    if (key == "centered") {
-        // Follow's sibling: the same shared bool grammar, one canonical
-        // spelling per value (architect approval 2026-08-31).
-        bool v = false;
-        if (!parse_bool_token(value, v))
-            return err("must be true or false");
-        out.b = v;
-        return R(out);
-    }
-    if (key == "center_on_next_marker") {
-        // The third of the boolean session prefs, on the same shared grammar
-        // (architect approval 2026-09-04).
-        bool v = false;
-        if (!parse_bool_token(value, v))
-            return err("must be true or false");
-        out.b = v;
-        return R(out);
-    }
     if (key == "active_audio_view") {
         if (value != "S" && value != "T") return err("must be S or T");
         out.c = value[0];
@@ -472,12 +446,6 @@ std::expected<SettingsFile, std::string> read_settings_file(
             } else if (suffix == "trim_end") {
                 tab->trim.end_frame = gv.i64;
             }
-        } else if (key == "follow") {
-            out.follow = gv.b;
-        } else if (key == "centered") {
-            out.centered = gv.b;
-        } else if (key == "center_on_next_marker") {
-            out.center_on_next_marker = gv.b;
         } else if (key == "active_audio_view") {
             out.active_audio_view = gv.c;
         } else if (key == "active_markers_view") {

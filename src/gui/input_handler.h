@@ -3977,9 +3977,9 @@ private:
     void set_tab_read_only(char tab_view, bool value);
 
     // THE CENTER-ON-NEXT-MARKER LAMP'S ONE SETTER (architect 2026-09-04) —
-    // set_tab_read_only's shape, and the same two-road membership: bare `n`,
-    // which the icon row's own button reaches by synthesizing that press, and
-    // the settings editor's `center_on_next_marker=` commit.
+    // set_tab_read_only's shape with ONE road rather than two since the
+    // `center_on_next_marker` key left the schema 2026-09-11: bare `n`, which
+    // the icon row's own button reaches by synthesizing that press.
     //
     // THIS TOGGLE GOVERNS THE BARE TAB WALK ALONE — bare Tab, Shift+Tab and
     // IsoLeftTab, whose three arms are the only callers of marker_walk_frame
@@ -3992,19 +3992,20 @@ private:
     //
     // What it does: writes the field. No damage call — the lamp's face rides
     // the per-tick comparator like every other stateful button face, and no
-    // glyph swaps on this bit. History-less, like every GUI-kind key's
-    // gesture: no undo entry, no dirty bit, and the value persists on the next
-    // ordinary Ctrl+S. The camera does not move at the toggle either way: the
+    // glyph swaps on this bit. History-less and serialized nowhere — no undo
+    // entry, no dirty bit, no sidecar line: the lamp is a session posture in
+    // the add_to_selection family, lit at every project open by its own ruled
+    // default. The camera does not move at the toggle either way: the
     // bit is read at the NEXT walk, so lighting it re-frames nothing that is
     // already on screen.
     void set_center_on_next_marker(bool desired);
 
     // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE SETTER (architect 2026-09-04) —
-    // set_center_on_next_marker's shape with ONE road instead of two: bare `z`,
-    // which the icon row's own button reaches by synthesizing that press. There
-    // is no settings-editor road, because there is no key: the bit is
-    // SESSION-ONLY (AppState::restrict_undo_to_viewport), off at every launch,
-    // in no sidecar and in no vocabulary.
+    // set_center_on_next_marker's shape, one road apiece: bare `z`, which the
+    // icon row's own button reaches by synthesizing that press. There is no
+    // settings-editor road, because there is no key: the bit is SESSION-ONLY
+    // (AppState::restrict_undo_to_viewport), off at every launch, in no
+    // sidecar and in no vocabulary.
     //
     // WHAT THE BIT GOVERNS IS UNDO AND REDO AND NOTHING ELSE. Lit, a step whose
     // restore would move the viewport refuses, cards and leaves both stacks

@@ -44,21 +44,16 @@ struct AuthoringSnapshot {
     // the request does not otherwise carry. Types match the AppState fields
     // they are captured from.
     char        active_markers_view = 'W';   // 'W' or 'P'
-    bool        follow              = true;
-    // The `y` centered lamp (2026-08-31), follow's sibling in the schema and
-    // here: carried into the entry's .settings, never a render input.
-    bool        centered            = false;
-    // The Center on next marker lamp (2026-09-04), the third boolean session
-    // pref: carried into the entry's .settings, never a render input.
-    bool        center_on_next_marker = true;
     // The waveform PICTURE's magnification LEVEL, carried into the entry's
     // .settings like every other always-emitted key. It reaches no render
     // input: the gain it stands for scales pixels, never samples.
     int         waveform_magnification_level = 0;  // the schema's [0, 4]
-    // (FOUR FIELDS LEFT THIS BLOCK 2026-08-27 with their keys — playback_speed
-    // retired; gui_scale, audio_player and projects_repo moved to the
-    // per-device config, audio_player retiring there 2026-08-28. An entry's
-    // `.settings` carries exactly what a source's
+    // (SEVEN FIELDS LEFT THIS BLOCK WITH THEIR KEYS — playback_speed retired
+    // 2026-08-27; gui_scale, audio_player and projects_repo moved to the
+    // per-device config the same day, audio_player retiring there 2026-08-28;
+    // follow, centered and center_on_next_marker left the schema 2026-09-11,
+    // being session postures the GUI holds in AppState and serializes
+    // nowhere. An entry's `.settings` carries exactly what a source's
     // does, so this block tracks that schema and nothing else.)
 
     // Dispatch-time browse position, captured on the TARGET axis: the

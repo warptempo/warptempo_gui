@@ -25,20 +25,18 @@
 void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
                                      const SettingsFile& sf) {
     app.engine_settings = sf.engine;
-    app.follow_mode         = sf.follow;
-    // The centered lamp loads with follow. The derivation memory resets with
-    // it so the first pre-paint under a lit lamp derives the camera from the
-    // loaded playhead — the invariant holds from the session's first frame
-    // (the derivation point is main.cpp's pre-paint hook).
-    app.centered_mode               = sf.centered;
+    // NO CAMERA POSTURE LOADS HERE: follow, centered and center_on_next_marker
+    // are session state the piece does not determine, so they left the schema
+    // 2026-09-11 and rest at their AppState defaults for the life of the
+    // project. What survives the cut is the CENTERED DERIVATION MEMORY, which
+    // is the load's own "no derivation stands" seed and not a loaded value: a
+    // fresh view must never inherit the other file's derivation point, and the
+    // seed is correct with the lamp dark (the derivation point is main.cpp's
+    // pre-paint hook).
     app.centered_derived_cursor     = -1;
     app.centered_derived_tab        = 0;
     app.centered_derived_audio_view = 0;
     app.centered_derived_scanner    = false;
-    // The Tab walk's framing lamp loads with the two above (2026-09-04): a
-    // plain preference with no derivation memory of its own, read at the next
-    // walk and nowhere else.
-    app.center_on_next_marker       = sf.center_on_next_marker;
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER
@@ -574,9 +572,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
         };
         apply(sf.tab_a, app.tab_a);
         apply(sf.tab_b, app.tab_b);
-        // Engine block plus the scalar session prefs (follow, centered,
-        // center_on_next_marker,
-        // active_audio_view, active_markers_view, active_tab_view,
+        // Engine block plus the scalar view state (active_audio_view,
+        // active_markers_view, active_tab_view,
         // waveform_magnification_level), VALUES ONLY. The
         // one side effect that consumes these (on_resize) stays below where it
         // always ran.
