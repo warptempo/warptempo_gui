@@ -645,172 +645,6 @@ void apply_post_restore_rules_impl(Selection& selection,
     selection.replace_selection(std::move(target_set), focus);
 }
 
-// WHAT THE TWO CAMERA LAMPS OWE A RESTORE — the ONE data-derived
-// classification in the product, and the architect's own justification for it
-// (2026-09-12): every other site classifies itself by the ACT it is, but at a
-// restore the act is gone and only its EFFECT remains, so the effect is the
-// only honest thing to ask. The question is asked of the entry's own diff, per
-// column, before the swap installs it.
-//
-// THE FIVE ARMS, and the two lamps' answers are the mirror images they are
-// everywhere else:
-//   * TRANSLATION — no row touched on either column and the engine `scale`
-//     unchanged (a settings-only entry that moved no map, a typed `notes=`).
-//     The restore moved nothing the user can see move: NEITHER LAMP IS
-//     WRITTEN.
-//   * POSITION-ONLY — the column's two stores hold THE SAME ROWS UP TO
-//     `time_frame` and are not identical. This is the undo of a TIME ACT, so
-//     it answers as the nudge and the flag drag do: the centred pin KEEPS (no
-//     collapse) and the walk's framing lamp LIGHTS.
-//   * VALUE-ONLY — every row keeps its `time_frame` INDEX-WISE and some row
-//     differs in one or more value fields (a tempo, a payload, a measure, a
-//     disabled bit). The pin collapses and the walk's lamp goes OUT: position
-//     is not a value.
-//   * ANYTHING ELSE — a marker COUNT change on the differing column, both
-//     kinds in one entry, both columns touched, or the engine `scale`
-//     differing: the sweeping default, the movement class (collapse, lamp ON).
-//   * THE NON-DEFAULT ARMS APPLY ONLY WHERE THE COUNTS MATCH, which is what
-//     makes any row-to-row reading meaningful at all: rows can only be paired
-//     while both sides hold the same number of them.
-//
-// THE POSITION-ONLY ARM IS ORDER-INSENSITIVE AND THE VALUE-ONLY ARM IS
-// INDEX-WISE, and the asymmetry is the acts' own (architect 2026-09-12). A
-// TIME ACT MAY REORDER THE STORE: the nudge and the flag drag both let a
-// marker cross its neighbours and then re-sort by time
-// (reorder_markers_by_time), so after such an entry the same index names two
-// different markers and a row-for-row walk reads a pure move as a move AND a
-// value change — the sweeping arm, collapsing the very pin the position-only
-// arm exists to keep. So the position question is asked of the MULTISET: the
-// column is position-only when every row of the snapshot matches exactly one
-// unmatched row of the live store with its position equalized, which is
-// `differs_beyond_time` — the same comparator, asked pairwise instead of
-// index-wise, so no second field list is minted. A VALUE CHANGE REORDERS
-// NOTHING (positions are what the sort reads), so index pairing is exact
-// there and stays.
-//
-// THE VALUE QUESTION IS ASKED FIRST, and the order is load-bearing: two rows
-// that SWAP their values keep every position and satisfy the multiset test as
-// well, so a multiset-first reading would call a value swap a move. Asking
-// "did any position change at its own index" first sends that case to the
-// value arm, where it belongs, and leaves the multiset to the entries that
-// actually moved a row.
-//
-// THE MATCH IS A GREEDY O(n^2) WALK AND THAT IS EXACT, not an approximation:
-// "equal in every field but `time_frame`" is an EQUIVALENCE relation (it is
-// field equality over a fixed field set), so the rows fall into classes and
-// the two multisets agree iff a greedy first-fit pairs them all — there is no
-// augmenting path to miss. It runs once per restore over a few hundred rows
-// at most, beside a vector swap and a synchronous plate render.
-//
-// IT CONSUMES NO PRODUCER'S HINTS, deliberately: the drag and the nudge carry
-// `touched_snapshot` / `touched_live` for the post-restore SELECTION, but only
-// some producers write them, so reading them here would make the verdict
-// depend on which act recorded the entry. The classification is DATA-DERIVED
-// AND UNIFORM — it asks the two stores and nothing else — which is the same
-// property the whole five-arm reading rests on.
-//
-// TWO RESIDUES, recorded rather than fixed, both on the harmless side of the
-// same reading: a position-only entry whose crossing rows happen to be equal
-// in everything but time is still trivially position-only (the multiset
-// matches, which is the right answer for a move); and an entry that SWAPS TWO
-// MARKERS' WHOLE IDENTITIES — every value field of one written onto the other
-// and vice versa, at positions that also swap — reads as position-only though
-// it is mixed. No act in the product produces that; it is a measure-zero
-// misread of a keeping arm, and the cost is one lamp left standing.
-//
-// BOTH COLUMNS ARE ASKED, the co-equal axes rule: a phase reset's row is
-// `time_frame`, `disabled` and `measure`, so a phase position-only restore
-// keeps the pin and a phase measure-only restore is a value change.
-//
-// THE FIELD QUESTION IS NOT RE-SPELLED HERE: warp_row_fields_differ answers
-// "this row moved at all" and warp_row_differs_beyond_time (app_state.h,
-// beside it) answers "it moved in something other than its position", the
-// second being the first asked of a copy with the position equalized — so a
-// field added to the row is answered by both at once.
-//
-// THE ACCEPTED COST, recorded rather than fixed: a BPM-bracket-only entry
-// reads as VALUE-ONLY, the session bpm fields being members of row identity.
-// That is the conservative side of one owner and the price of not minting a
-// second definition of what a row is.
-enum class RestorePostureClass { Translation, PositionOnly, ValueOnly, Sweeping };
-
-// ONE COLUMN'S OWN READING, the four the arms above are composed from. Mixed
-// carries the count change too: an add or a remove is sweeping by the arms'
-// rule, and a pairing has nothing to stand on there.
-enum class ColumnDiffClass { Untouched, PositionOnly, ValueOnly, Mixed };
-
-template <class M, class FieldsDiffer, class BeyondTime>
-ColumnDiffClass classify_column_diff(const std::vector<M>& after,
-                                     const std::vector<M>& before,
-                                     FieldsDiffer fields_differ,
-                                     BeyondTime   differs_beyond_time) {
-    if (after.size() != before.size()) return ColumnDiffClass::Mixed;
-
-    // ONE INDEX-WISE PASS ANSWERS TWO OF THE FOUR: whether the column moved at
-    // all, and whether any position moved at its own index.
-    bool any_row_differs       = false;
-    bool times_equal_index_wise = true;
-    for (std::size_t i = 0; i < after.size(); ++i) {
-        if (fields_differ(after[i], before[i])) any_row_differs = true;
-        if (after[i].time_frame != before[i].time_frame)
-            times_equal_index_wise = false;
-    }
-    if (!any_row_differs) return ColumnDiffClass::Untouched;
-    // VALUE-ONLY, AND IT IS ASKED FIRST (the head of this block argues the
-    // order): no position moved at its index, so the store cannot have been
-    // re-sorted and the rows that differ differ in a value.
-    if (times_equal_index_wise) return ColumnDiffClass::ValueOnly;
-
-    // POSITION-ONLY, ORDER-INSENSITIVELY: every snapshot row must match one
-    // unmatched live row in everything but its position. Greedy first-fit,
-    // exact because the relation is an equivalence (the head of this block
-    // carries that argument too).
-    std::vector<bool> matched(before.size(), false);
-    for (const M& row : after) {
-        bool paired = false;
-        for (std::size_t j = 0; j < before.size(); ++j) {
-            if (matched[j]) continue;
-            if (differs_beyond_time(row, before[j])) continue;
-            matched[j] = true;
-            paired     = true;
-            break;
-        }
-        if (!paired) return ColumnDiffClass::Mixed;
-    }
-    return ColumnDiffClass::PositionOnly;
-}
-
-RestorePostureClass classify_restore_postures(
-        const std::vector<GuiWarpMarker>& after_w,
-        const std::vector<GuiWarpMarker>& before_w,
-        const std::vector<GuiPhaseResetMarker>& after_t,
-        const std::vector<GuiPhaseResetMarker>& before_t,
-        bool scale_differs) {
-    if (scale_differs) return RestorePostureClass::Sweeping;
-
-    // BOTH COLUMNS ASK THE SAME QUESTION, the co-equal axes rule; only the row
-    // comparators differ.
-    const ColumnDiffClass w =
-        classify_column_diff(after_w, before_w, warp_row_fields_differ,
-                             warp_row_differs_beyond_time);
-    const ColumnDiffClass t =
-        classify_column_diff(after_t, before_t, phase_reset_row_fields_differ,
-                             phase_reset_row_differs_beyond_time);
-    if (w == ColumnDiffClass::Mixed || t == ColumnDiffClass::Mixed)
-        return RestorePostureClass::Sweeping;
-
-    const bool w_touched = (w != ColumnDiffClass::Untouched);
-    const bool t_touched = (t != ColumnDiffClass::Untouched);
-    if (!w_touched && !t_touched) return RestorePostureClass::Translation;
-    // BOTH COLUMNS TOUCHED IS SWEEPING whatever each of them says on its own:
-    // an entry that moved two kinds at once is larger than either reading.
-    if (w_touched && t_touched)   return RestorePostureClass::Sweeping;
-
-    return ((w_touched ? w : t) == ColumnDiffClass::PositionOnly)
-               ? RestorePostureClass::PositionOnly
-               : RestorePostureClass::ValueOnly;
-}
-
 }  // namespace
 
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
@@ -981,29 +815,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // compares and is read unconditionally.
     const int64_t playhead_source_frame = active_domain_to_source_frame(
         app, viewport.audio, app.playhead_cursor_sample);
-
-    // WHAT THE TWO CAMERA LAMPS OWE THIS RESTORE, read while both sides are
-    // still in hand — the entry's own snapshots against the live stores
-    // `before_w` / `before_t` copied above, and the entry's engine scale
-    // against the live one — because the lines below consume all of them. The
-    // classification and its five arms are at classify_restore_postures, above
-    // in this file, and the verdict is applied past the swap.
-    const RestorePostureClass restore_postures = classify_restore_postures(
-        entry.snapshot, before_w, entry.phase_reset_snapshot, before_t,
-        entry.settings.engine_settings.scale != app.engine_settings.scale);
-    // AND THE TWO LAMPS AS THEY STAND RIGHT NOW, captured with the verdict
-    // because the ARMS THAT KEEP need something to put back. NOTHING BETWEEN
-    // THIS LINE AND THE VISUAL TAIL WRITES EITHER BIT, re-greped: the engine
-    // and store swaps write data, the map-change re-land is a reseat, and the
-    // W/P and S/T restores write their bands and cursors direct (their
-    // re-express is `reseat_playhead_on_marker`, their auto-select the same) —
-    // so these two ARE the preference the user held when the step was pressed,
-    // and the tail's land is the first writer below them. (The stop at this
-    // body's head has already ended any standing A/B audition, so a pin
-    // captured true here is the pin that act armed, and a keeping arm hands it
-    // back lit — which is what the act promises when what ends it keeps.)
-    const bool centered_before = app.centered_mode;
-    const bool walk_lamp_before = app.center_on_next_marker;
 
     // Restore engine settings before the marker swap. Marker entries get their
     // settings field populated from app at push time (carry-everywhere), so the
@@ -1319,50 +1130,22 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // have already seated, each of them going through Selection::seat_focus.
     // The axis survives as session state; only its ride on an entry is gone.)
 
-    // AND THE TWO CAMERA LAMPS TAKE THE VERDICT CLASSIFIED BEFORE THE SWAP — so
-    // undoing a NUDGE keeps the centred pin and lights the walk's framing lamp
-    // exactly as the act itself does, undoing a tempo step or a retyped flag
-    // puts both out, and anything larger — a delete, a scale, a mixed entry —
-    // takes the sweeping movement answer. A restore that moved no row and no
-    // scale writes neither. The POSITION arm writes the walk lamp DIRECT
-    // because that is what the two TIME ACTS do (set_center_on_next_marker,
-    // app_state.h): the whole point of the arm is that it declines the
-    // collapse, so it cannot take a composed body that carries one.
+    // AND THE TWO CAMERA LAMPS TAKE THE MOVEMENT CLASS, UNCONDITIONALLY
+    // (architect 2026-09-12): every undo and every redo collapses the centred
+    // pin and lights the walk's framing lamp, a settings-only entry included.
+    // A RESTORE IS AN ACT OF THE MOVEMENT CLASS LIKE THE ACTS IT UNDOES, NOT A
+    // SIMULATION OF THEM — the classification that read the entry's own diff
+    // and handed each arm the answer its act would have given existed only to
+    // make undo and redo imitate the act at the other end of the entry, and
+    // that imitation is dropped whole. The pin is one bare `y` or one
+    // Shift+Space away; the rule's home is AppState::centered_mode.
     //
-    // IT IS LAST IN THIS BODY, AND THAT PLACEMENT IS THE VERDICT'S WHOLE FORCE:
-    // the visual tail above LANDS the playhead on the restored focus through
-    // the movement owner and may recentre or frame through a zoom applier, and
-    // every one of those writes the movement class on its own — they are the
-    // restore's own RE-EXPRESSION of the state it just installed, not acts the
-    // user took, so the entry's classification has the last word over them. The
-    // map-change re-land is a TRANSLATION and writes nothing anywhere, and the
-    // three view-axis restores write nothing either: the tab switch is the A/B
-    // keeper by ruling, and the column and audio-view switches are
-    // translations. Running last also puts it past the land's clear of any
-    // standing A/B audition, so the composed bodies' own guard cannot swallow
-    // it.
-    //
-    // WHICH IS WHY THE KEEPING ARMS PUT THE LAMPS BACK RATHER THAN MERELY
-    // DECLINING TO WRITE THEM, and the put-back is what "the last word" MEANS
-    // here: the tail has already collapsed the centred pin through its land and
-    // lit the walk lamp with it, so an arm that only skipped its own write
-    // would hand the user the tail's answer instead of the entry's — undoing a
-    // NUDGE would lose the pin, which is the one case that arm exists for. The
-    // two bits are the ones captured with the verdict, above the tail; this is
-    // the FOURTH road onto write_centered_posture (app_state.h names the three
-    // others).
-    switch (restore_postures) {
-        case RestorePostureClass::Translation:
-            write_centered_posture(app, centered_before);
-            set_center_on_next_marker(app, walk_lamp_before);
-            break;
-        case RestorePostureClass::PositionOnly:
-            write_centered_posture(app, centered_before);
-            set_center_on_next_marker(app, true);
-            break;
-        case RestorePostureClass::ValueOnly: postures_after_value_change(app); break;
-        case RestorePostureClass::Sweeping:  postures_after_movement(app);     break;
-    }
+    // IT IS LAST IN THIS BODY because the visual tail above lands the playhead
+    // through the movement owner and may frame through a zoom applier: this
+    // line is then the same answer written once more, and running past the
+    // land's clear of any standing A/B audition is what keeps the composed
+    // body's own guard from swallowing it.
+    postures_after_movement(app);
 
     recompute_dirty();
     viewport.invalidate_waveform_area();

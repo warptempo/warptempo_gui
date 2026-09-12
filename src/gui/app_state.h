@@ -450,31 +450,6 @@ struct DragState {
     // apply_drag_motion carries it into the source domain through the
     // displayed map's two hops (the uniform-rate model at its header).
     double              anchor_mouse_time_frame = 0.0;
-    // THE CAMERA-FOLLOWS BIT (architect 2026-09-12): the CENTRED PIN was
-    // ENGAGED when this drag began, so this gesture is the REVERSE PAN — the
-    // flag holds the window's centre column and the waveform slides under it,
-    // the nudge made continuous. Set ONCE, at the threshold crossing, from
-    // centered_pin_engaged — WHICH THE ARMING PRESS LEAVES STANDING, the
-    // plain flag press landing through the carry and deferring both camera
-    // lamps to its motionless release (PendingMarkerPress above), so a pin
-    // lit before the press is lit here and this bit is reachable at all; the
-    // drag derives the camera itself, per motion
-    // event, through the pin's one derivation body; and the DISPLAYED BASIS IS
-    // NOT FROZEN for it (displayed_basis_frozen names this field, the freeze's
-    // one deliberate non-member among the absolute drags). NO SITE RE-ASKS THE
-    // LAMP MID-DRAG: nothing can flip it under a held button — the drag-modal
-    // gate swallows every chord — but the contract is this FIELD'S and not the
-    // lamp's, so a gesture ends the way it began whatever the lamp does. Its
-    // readers are the delta expression at the live motion arm
-    // (input_pointer.cpp), the per-motion derive and the begin-time viewport
-    // clamp (marker_drag.cpp), and the freeze predicate below.
-    bool                camera_follows = false;
-    // Press position in WINDOW PIXELS — the camera_follows delta's anchor, and
-    // read on that path alone. The pinned drag measures the hand's travel in
-    // PIXELS rather than in active-domain frames because the viewport the frame
-    // reading is taken against is being rewritten by the gesture itself; off
-    // the pin the frame anchor above is the one anchor and this is unread.
-    int                 anchor_mouse_x = 0;
     double              delta_min = -std::numeric_limits<double>::infinity();
     double              delta_max =  std::numeric_limits<double>::infinity();
     // No per-drag map copy: mid-drag target-view translation (paint, the
@@ -484,10 +459,7 @@ struct DragState {
     // target_view_warp_frame_map_cached) when cold. The displayed map is
     // frozen FROM THE AIMED PRESS to the release (displayed_basis_frozen, the
     // membership's one owner — the pending press joined 2026-08-22, since the
-    // crossing converts the press's stored press_x; a drag begun under the
-    // CENTRED PIN is that predicate's one non-member, deriving its own camera
-    // per motion so its basis MUST move — camera_follows below, and the
-    // predicate's last paragraph) by THREE gates working
+    // crossing converts the press's stored press_x) by THREE gates working
     // together: the
     // freeze gate in maybe_enqueue_waveform_render suppresses any NEW
     // dispatch, on_waveform_render_done DROPS a job that was already in
@@ -958,29 +930,15 @@ struct EditorTextDragState {
 // CTRL arm nothing — they have no drag to become and their click has already
 // committed — and a CONSUMED double-click open arms nothing either (the editor
 // owns input, and the consume must preempt the drag arm). A MOTIONLESS RELEASE
-// seeds the next Marker double-click candidate AND WRITES THE TWO CAMERA LAMPS
-// (2026-09-12), and nothing else (the seed is a release act by family rule —
-// only the release knows the press stayed still).
+// seeds the next Marker double-click candidate and nothing else (the seed is a
+// release act by family rule — only the release knows the press stayed still).
 //
-// THE POSTURE WRITE IS THE THIRD THING THIS RECORD DEFERS, and the third
-// clause is what puts it here (architect 2026-09-12): a plain flag press is
-// the ONE press on this surface whose identity is not certain at the press, so
-// the one act whose answer depends on which edge it reaches waits for that
-// edge. The press LANDS THE PLAYHEAD THROUGH THE CARRY
-// (carry_playhead_on_marker — the land minus that write alone, so the stop,
-// the select, the hide and the audition's end all still run at the press); the
-// MOTIONLESS RELEASE then runs postures_after_movement, a click being a
-// movement like any other; and the CROSSING leaves the lamps alone, because a
-// drag begun under a lit centred pin IS that posture's own motion — the
-// reverse pan (marker_drag.h), whose whole fork is a sample of the pin the
-// press must therefore not have collapsed. The MODIFIED arms are certain at
-// the press and take the ordinary land. THE ABNORMAL ENDS — a lost button,
-// the force-end finalizer, the touch layer's hard end — write no posture for
-// the same reason they seed nothing: none of them is a clean click sequence.
-// NOTHING ON SCREEN MOVES A FRAME LATER FOR IT: this record is a member of
-// any_pointer_gesture_active, which pauses the pin's own derivation for the
-// whole pending window, so the collapse arrives in the same event as the
-// release and no frame is ever painted between the two.
+// THE TWO CAMERA LAMPS ARE NOT DEFERRED: the plain arm lands through the
+// movement owner like every other marker click, so the centred pin collapses
+// and the walk's framing lamp lights AT THE PRESS — a click and a drag now
+// answer the same way (the drag collapses at its own crossing,
+// marker_drag.h), so the press's identity decides nothing about the posture
+// and there is nothing for this record to hold.
 // A CROSSING of drag_moved_threshold_px() (Chebyshev from the press; the one
 // generic 8px gate shared by every press-becomes-drag surface) begins the
 // reposition drag — the click's acts already stand from the press, so the
@@ -1018,11 +976,10 @@ struct EditorTextDragState {
 // so the plain arm itself is unconditional: even a press whose drag will refuse
 // must arm, because the motionless release still owes the SEED. THE GATES ARE
 // TWO — the lock and the home-view binding — and the VALUE DRAG lamp forks
-// ahead of them into the vertical gesture. THE CENTRED PIN IS NOT A GATE
-// (architect 2026-09-12): under a lit pin the horizontal drag is the REVERSE
-// PAN, not a refusal — the flag holds the centre column and the waveform
-// slides under it — so the crossing stamps DragState::camera_follows and
-// begins the gesture exactly as it does at rest.
+// ahead of them into the vertical gesture. THE CENTRED PIN GATES NOTHING
+// HERE: a drag begins under a lit lamp exactly as it does at rest and
+// COLLAPSES it at the crossing, the movement class like every other camera
+// mover (AppState::centered_mode).
 //
 // Session-only, never serialized. Cleared on the crossing (either the drag
 // takes over or the arm is spent), on release / lost button, by the force-end
@@ -5059,8 +5016,8 @@ struct AppState {
     // 2026-09-11 sentence as the KEEPER LIST it always was): CENTERED KEEPS
     // THROUGH EXACTLY Ctrl+Tab (the A/B switch), Shift+Space (the audition),
     // BARE SPACE AND THE SCRUB'S PLAY (project audio from the playhead), THE
-    // Left/Right NUDGE AND THE FLAG DRAG (the two acts that move a marker in
-    // TIME), ITS OWN BARE `y`, AND THE S/T TRANSLATION — the W/P
+    // Left/Right NUDGE (the act that moves a marker in TIME under a playhead
+    // that follows it), ITS OWN BARE `y`, AND THE S/T TRANSLATION — the W/P
     // switch and bare 1/2/3 compose that same pair of handlers and move
     // nothing, and the waveform magnification is a picture gain with no zoom
     // level and no camera — AND EVERYTHING ELSE THAT MOVES THE CAMERA OR THE
@@ -5072,24 +5029,18 @@ struct AppState {
     // trim write, and every act that rewrites the warp map or a flag's value
     // under it.
     //
-    // THE FLAG DRAG IS THE STRONGEST KEEPER OF ALL, BECAUSE UNDER THE PIN IT
-    // IS A REVERSE PAN (architect 2026-09-12, an EXPERIMENT BUILD he is trying
-    // on glass before it is ruled final): the flag holds the window's centre
-    // column and the WAVEFORM SLIDES UNDER IT, the marker moving in the music
-    // by exactly the hand's travel — the nudge made continuous. So the drag is
-    // not merely something the posture survives, it is the posture's own
-    // motion: each motion event carries the playhead onto the dragged marker
-    // and then re-derives the camera through the pin's one body
-    // (MarkerDragOps::apply_drag_motion, off DragState::camera_follows —
-    // stamped at the crossing from centered_pin_engaged and the whole of the
-    // gesture's fork). Its ride and its commit land through
-    // Viewport::carry_playhead_to / carry_playhead_on_marker, the movement
-    // owners minus this write, exactly as the nudge's do — AND SO DOES ITS
-    // ARMING PRESS, which is what makes the keeper reachable at all: a plain
-    // flag press that collapsed the pin on the way down would leave the
-    // crossing nothing to stamp, so that press defers its posture write to
-    // the motionless release, where a click and only a click collapses
-    // (PendingMarkerPress).
+    // THE FLAG DRAG IS A COLLAPSER AND THE NUDGE IS THE KEEPER (architect
+    // 2026-09-12): a horizontal drag carries the marker out from under a
+    // playhead the pin holds centred, which is a camera act however it is
+    // dressed, so the gesture COLLAPSES THE POSTURE ONCE, AT ITS THRESHOLD
+    // CROSSING (MarkerDragOps::begin_drag's success — the point at which the
+    // press's identity is certain), and everything after that runs under a
+    // dark lamp. Its motion ride and its commit still land through
+    // Viewport::carry_playhead_to / carry_playhead_on_marker, which by then is
+    // simply the honest entry for a movement with nothing left to collapse —
+    // the walk's framing lamp is the commit's own answer on the net-changed
+    // path, and a lamp answers a WRITE. Relighting the pin is one bare `y` or
+    // one Shift+Space away.
     //
     // THE COLLAPSE HAS ONE BODY (collapse_centered_posture, below), reached by
     // most owners through the composed postures_after_movement /
@@ -5101,14 +5052,14 @@ struct AppState {
     //     (input_pointer.cpp). Every click, walk, skip, drop and land reaches
     //     one of the three. (The walk's own landing takes the collapse-only
     //     sibling land_playhead_on_marker_for_walk, for the walk lamp's reason
-    //     and not for this one: it collapses exactly as the owner does.) THE
-    //     PLAIN MARKER CLICK IS THE ONE ROAD THAT COLLAPSES AT ITS RELEASE
-    //     (2026-09-12): its press lands through the CARRY and its motionless
-    //     release runs the composed body, because that press's identity is
-    //     not certain until then — a click here, a drag at the crossing, and
-    //     the drag is the keeper above. The two MODIFIED arms collapse at the
-    //     press through the owner like everything else. The whole argument is
-    //     at PendingMarkerPress.
+    //     and not for this one: it collapses exactly as the owner does.) ALL
+    //     THREE MARKER-CLICK ARMS take the owner AT THE PRESS, the plain one
+    //     included: a click and a drag answer the posture alike, so the
+    //     press's identity decides nothing here.
+    //   * THE FLAG DRAG'S THRESHOLD CROSSING (MarkerDragOps::begin_drag), the
+    //     one collapse that belongs to a GESTURE rather than to a landing:
+    //     the drag's own ride and commit take the carry, so the crossing is
+    //     where the act says what it is.
     //   * THE CAMERA OWNERS — the three zoom appliers
     //     (Viewport::apply_zoom_change, ::apply_strip_drag_zoom,
     //     ::apply_zoom_to_start), the pan funnel Viewport::scroll_viewport,
@@ -5137,16 +5088,10 @@ struct AppState {
     //     authoring roads — the two bound steps (warpmarkers_ops.cpp,
     //     phaseresetmarkers_ops.cpp), the two bound editor commits
     //     (flag_editor.cpp) and the value drag's bound motion (value_drag.cpp).
-    //   * THE UNDO/REDO RESTORE CLASSIFIES ITSELF BY ITS OWN DIFF (undo.cpp,
-    //     where the five arms and the architect's argument for the one
-    //     data-derived classification in the product stand): a position-only
-    //     restore KEEPS the posture, a value-only restore collapses, anything
-    //     larger collapses, and a restore that moved no row and no scale is a
-    //     translation that writes neither lamp. ITS KEEPING ARMS PUT BOTH BITS
-    //     BACK rather than merely declining to write them: the restore's own
-    //     visual tail lands the playhead through a movement owner and may frame
-    //     through a zoom applier, so the verdict runs LAST and restores what
-    //     stood — the fourth road onto write_centered_posture below.
+    //   * THE UNDO/REDO RESTORE, UNCONDITIONALLY (Undo::restore_history_entry,
+    //     undo.cpp): every undo and every redo takes the movement class —
+    //     a settings-only entry included — because a restore is an act of the
+    //     movement class like the acts it undoes, not a simulation of them.
     // THE PHASE-RESET COLUMN IS NOT IN THE MAP FAMILY AND THIS IS THE ONE PLACE
     // IT IS SAID: a phase reset is no warp-map input, so no phase write moves
     // an image — the phase delete, the phase disable toggle and the phase
@@ -10979,10 +10924,10 @@ inline bool transport_session_live(const AppState& a) {
 // (GuiAbAudition::start), so an audition run to its end leaves the pin lit and
 // holding.
 //
-// FIVE READERS, the pin's ENGAGEMENT sites and nothing else (re-greped
+// FOUR READERS, the pin's ENGAGEMENT sites and nothing else (re-greped
 // 2026-09-12):
 //   * the pre-paint hook's RESTING half and its PLAYING half (main.cpp), the
-//     pin's derivation point for every road that LANDS a playhead;
+//     pin's one derivation point;
 //   * the LAUNCH SEED's fork (GuiPlaybackLifecycle::launch_playback_window),
 //     an ordinary engagement site since the evening of 2026-09-01: the act's
 //     phase stands there (GuiAbAudition::launch_phase writes it before the
@@ -10991,16 +10936,7 @@ inline bool transport_session_live(const AppState& a) {
 //   * GuiPlaybackLifecycle::set_centered_mode's off->on edge, which is
 //     unreachable under a standing act since 2026-09-11 (the toggle refuses
 //     there) and stays the edge's own question: the derivation body is never
-//     called while the act stands;
-//   * THE FLAG DRAG'S THRESHOLD CROSSING (MarkerDragOps::begin_drag,
-//     2026-09-12), the only reader that STAMPS rather than asks: the drag
-//     under an engaged pin is the REVERSE PAN and derives the camera itself
-//     per motion event, so the engagement is read ONCE into
-//     DragState::camera_follows and the gesture runs off that bit alone. It
-//     is an engagement site for the same reason the launch seed is — it
-//     decides whether the pin's derivation happens — and an A/B audition
-//     cannot be standing there anyway, the arming press's own land having
-//     ended it.
+//     called while the act stands.
 // EVERY OTHER READER OF centered_mode IS THE PREFERENCE and reads the field
 // direct, and since the key left the schema 2026-09-11 there are just TWO
 // (re-greped that day): the lamp's face (redesign_button_selected's
@@ -11014,19 +10950,14 @@ inline bool centered_pin_engaged(const AppState& a) {
 
 // THE CENTERED POSTURE'S ONE FIELD WRITE (architect 2026-09-11). Every road
 // that lights or puts out the `y` lamp assigns through here and nowhere else,
-// so the FOUR of them cannot drift (re-greped 2026-09-12): the TOGGLE
+// so the THREE of them cannot drift (re-greped 2026-09-12): the TOGGLE
 // (GuiPlaybackLifecycle::set_centered_mode, which composes this with its
 // off->on recenter — the gesture chokepoint bare `y` and the icon-row button
 // share), the A/B audition's ARM (GuiAbAudition::start, after its first play
-// has launched, and its switch-back step's re-assert), the COLLAPSE below —
+// has launched, and its switch-back step's re-assert), and the COLLAPSE below —
 // which the two composed posture bodies call for the movement owners, the zoom
-// appliers, the pan funnel, the trim park and the value and map families — and,
-// since 2026-09-12, THE UNDO/REDO RESTORE'S KEEPING ARMS (undo.cpp), which PUT
-// THE PIN BACK as it stood before the restore's own visual tail collapsed it.
-// That fourth road is a put-back rather than a preference change: the tail's
-// land and framing are the restore's re-expression of the state it just
-// installed, so the ENTRY'S classification has the last word over them, and a
-// keeping arm that merely declined to write would hand back the tail's answer. It is a bare assignment:
+// appliers, the pan funnel, the trim park, the value and map families and the
+// undo/redo restore, and which the flag drag's own crossing calls direct. It is a bare assignment:
 // the lamp's face repaints through the per-tick comparator, so no writer of
 // this field owes damage, and nothing here derives — a write that must also
 // recenter says so at its own site.
@@ -11044,10 +10975,13 @@ inline void write_centered_posture(AppState& a, bool lit) {
 // MOST OWNERS DO NOT CALL IT DIRECTLY: the same events write the walk's framing
 // lamp too, so they go through the two composed bodies further down this header
 // (postures_after_movement, postures_after_value_change), which compose this
-// with set_center_on_next_marker. What calls THIS one alone is the road where
-// only one lamp has an answer: the bare Tab walk's own landing, which must not
-// write the lamp that governs it (land_playhead_on_marker_for_walk,
-// input_pointer.cpp).
+// with set_center_on_next_marker. TWO ROADS CALL THIS ONE ALONE, each because
+// only one lamp has an answer there (re-greped 2026-09-12): the bare Tab
+// walk's own landing, which must not write the lamp that governs it
+// (land_playhead_on_marker_for_walk, input_pointer.cpp); and THE FLAG DRAG'S
+// THRESHOLD CROSSING (MarkerDragOps::begin_drag), whose walk-lamp answer
+// belongs to its COMMIT and to the net-changed path alone, so the crossing
+// owes the pin its collapse and the walk lamp nothing.
 //
 // IT IS A NO-OP WHILE THE A/B AUDITION STANDS, and that is the arm the act is
 // built on: the act opens each half with the `c` command, switches tabs and
@@ -12300,30 +12234,23 @@ enum class MarkerLandingFrame { Center, FollowPage };
 //     playhead movement owners, the three zoom appliers, the pan funnel, the
 //     typed viewport move, the trim family's park, the map-changing acts
 //     that are not value changes (the warp delete, Ctrl+D, the typed `scale=`,
-//     apply_recipe_in_place, the `h` revert's warp arm) and THE PLAIN FLAG
-//     PRESS'S MOTIONLESS RELEASE (input_pointer.cpp, 2026-09-12), which calls
-//     the composed body itself because its press landed through the carry —
-//     the one act in this class that answers at a later edge than its own
-//     press, the argument at PendingMarkerPress. None of them spells the
-//     write;
+//     apply_recipe_in_place, the `h` revert's warp arm) and THE UNDO/REDO
+//     RESTORE, which takes this class unconditionally — every undo and every
+//     redo, a settings-only entry included (Undo::restore_history_entry,
+//     undo.cpp). None of them spells the write;
 //   THE VALUE CLASS, through postures_after_value_change below — FALSE: the
 //     tempo family's one tail (warp_tempo_write_tail, so the singleton cent
 //     step, the group cent step and the value drag's tempo commit all go out
 //     through one line), the flag editor's payload and measure commits, and the
 //     iteration bracket's four authoring roads (the two bound steps, the two
 //     bound editor commits, the value drag's bound motion);
-//   THE TWO TIME ACTS, which write TRUE DIRECT because they are the acts that
-//     DECLINE the centered collapse and so cannot take the composed body: the
+//   THE TWO ACTS THAT MOVE A MARKER IN TIME, which write TRUE DIRECT: the
 //     Left/Right position nudge's committed landing (finish_position_nudge,
-//     position_nudge.cpp, both columns) and the flag drag's changed commit
-//     (MarkerDragOps::commit_drag, marker_drag.cpp). They are the same two acts
-//     that take the non-collapsing carry, for the same reason;
-//   THE UNDO/REDO RESTORE'S TWO KEEPING ARMS (undo.cpp), which also write
-//     DIRECT and for the same shape of reason: the entry's own classification
-//     runs LAST, past a visual tail that has already lit this lamp through a
-//     movement owner, so a POSITION-ONLY restore writes TRUE (the nudge's own
-//     answer) and a TRANSLATION restore PUTS BACK what stood. Its other two
-//     arms take the composed bodies like every other site.
+//     position_nudge.cpp, both columns), which DECLINES the centered collapse
+//     and so cannot take a composed body that carries one; and the flag drag's
+//     changed commit (MarkerDragOps::commit_drag, marker_drag.cpp), whose pin
+//     went out at the gesture's own crossing and whose lamp answers the WRITE
+//     the commit is — a wander-back drag moved no marker and lights nothing.
 // THE BARE TAB WALK IS THE ONE CARVE-OUT AND IT IS STRUCTURAL: THE WALK MUST
 // NOT WRITE THE LAMP THAT GOVERNS IT. Its landing is a movement owner, so an ON
 // write there would relight a dark lamp on the first step and the dark state
@@ -12491,33 +12418,6 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
     // comparator's own reason (2026-09-10): the bracket left the undo domain,
     // every push strips it from the snapshot it takes, and a term with no
     // producer is a term that lies about what an entry can hold.
-}
-
-// DOES THIS ROW PAIR DIFFER IN ANYTHING BUT ITS POSITION — the question the
-// undo/redo restore's self-classification asks of each touched row (undo.cpp,
-// where the five arms and their argument stand): a row that differs in
-// `time_frame` ALONE is a POSITION change and one that differs elsewhere is a
-// VALUE change, and the two lamps answer them oppositely.
-//
-// It lives here, beside the comparators, because it is those comparators asked
-// a second way and must never become a second field list: the body equalizes
-// the position on a copy and hands the pair to the one row comparator, so a
-// field added there is answered here by construction. The copy is a whole
-// marker row, which is cheap beside the restore it serves (one vector swap and
-// one synchronous plate render) and is the price of having exactly one
-// enumeration of what a row is.
-inline bool warp_row_differs_beyond_time(const GuiWarpMarker& a,
-                                         const GuiWarpMarker& b) {
-    GuiWarpMarker probe = b;
-    probe.time_frame = a.time_frame;
-    return warp_row_fields_differ(a, probe);
-}
-
-inline bool phase_reset_row_differs_beyond_time(const GuiPhaseResetMarker& a,
-                                                const GuiPhaseResetMarker& b) {
-    GuiPhaseResetMarker probe = b;
-    probe.time_frame = a.time_frame;
-    return phase_reset_row_fields_differ(a, probe);
 }
 
 // WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
@@ -17476,9 +17376,7 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // that carries the repaired damage (both conditions at that block). A state
 // belongs iff it is
 // an ABSOLUTE drag on a PAINTED
-// subject — the marker drag (EXCEPT under the centred pin, where it is a pan
-// and derives its own camera; the last paragraph of this block) and the trim
-// drags — or the PENDING PRESS that
+// subject — the marker drag and the trim drags — or the PENDING PRESS that
 // AIMS one (pending_marker_press, pending_trim_drag), OR — the value drag,
 // argued in full at the bottom of this block — a drag that writes the LIVE
 // STORE per motion event, where the freeze runs the other way and protects
@@ -17519,28 +17417,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // drag's own road out, unchanged. (Its own PENDING press is already a member
 // above: the same pending arms both drags, so the freeze covers this gesture
 // from the press through the crossing and on to the release with no gap.)
-//
-// AND THE MARKER DRAG UNDER THE CENTRED PIN IS THE DELIBERATE NON-MEMBER
-// (architect 2026-09-12 — the `!app.drag.camera_follows` term below): begun
-// with the pin engaged, that drag IS A PAN — the flag holds the window's
-// centre column and the waveform slides under it — so it DERIVES THE CAMERA
-// PER MOTION EVENT (Viewport::derive_centered_viewport, called from
-// apply_drag_motion) and takes that body's synchronous plate rebuild every
-// time. Freezing it would be exactly backwards: what it paints against is the
-// basis the gesture itself has just moved, so the promote must run EVERY FRAME
-// or the plate, the flag pixels and the item geometry would part company for
-// the drag's whole length. It belongs to the GRAB-PAN'S class rather than the
-// absolute drags' — a live-basis gesture that renders synchronously — and it
-// needs no protection from a worker publish either: the synchronous rebuild
-// has already drained the worker and republished the fingerprint at the hand's
-// own cadence. Nothing in its arithmetic depends on the basis it moves, which
-// is what makes the exception safe rather than merely necessary: its delta is
-// PIXEL travel from the press (DragState::anchor_mouse_x), not a frame reading
-// taken against a viewport. THE PENDING PRESS THAT AIMS IT STAYS A MEMBER
-// UNCONDITIONALLY — the crossing still converts a stored press_x, and before
-// the crossing there is no bit to read.
 inline bool displayed_basis_frozen(const AppState& app) {
-    return (app.drag.active && !app.drag.camera_follows) ||
+    return app.drag.active ||
            app.trim_drag.active ||
            app.value_drag.active ||
            app.pending_marker_press.active ||

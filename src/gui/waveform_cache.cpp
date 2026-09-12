@@ -186,10 +186,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // Full dispatch freeze while the displayed basis is frozen — the DISPATCH
     // HALF of the two-gate freeze whose MEMBERSHIP has ONE owner,
     // displayed_basis_frozen (app_state.h, beside the basis owners): the
-    // absolute painted-subject drags — marker (except under the CENTRED PIN,
-    // where the drag is a pan and derives its own camera per motion event, so
-    // its basis must move; the predicate carries the argument) and trim —
-    // PLUS, since
+    // absolute painted-subject drags — marker and trim — PLUS, since
     // 2026-08-22, the two PENDING presses that aim them, because the freeze
     // contract's "the one job in flight at the grab" means the AIMED PRESS,
     // not the 8px crossing (the crossing converts the press's stored press_x,

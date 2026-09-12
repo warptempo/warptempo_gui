@@ -17,25 +17,13 @@ struct GuiTargetRender;
 // flag's plain drag is the VERTICAL one (ValueDragOps, value_drag.{h,cpp}) and
 // this one does not begin at all, on any flag — "we never allow multi-axis
 // dragging; flags move up and down or not at all" (architect 2026-09-10).
-// UNDER THE CENTRED PIN IT IS A REVERSE PAN (architect 2026-09-12): while the
-// `y` lamp is engaged the view promises a playhead held at the window's centre,
-// so the FLAG HOLDS THE CENTRE COLUMN AND THE WAVEFORM SLIDES UNDER IT — the
-// marker moving in the music by exactly the hand's travel, the Left/Right nudge
-// made continuous. NO SIGN IS FLIPPED AND THE REVERSAL FALLS OUT: the store
-// proposal is the ordinary one (the marker's frame follows the pointer) and the
-// CAMERA follows the marker, so the picture moves the other way by itself; the
-// ends need nothing, the marker clamping at 0 / EOF and the viewport at the
-// song's ends, where the flag walks off-centre exactly as the pin does. THE
-// WHOLE FORK IS ONE BIT, DragState::camera_follows, stamped at the crossing
-// from centered_pin_engaged and read at four sites (its contract carries them);
-// off the pin the gesture is unchanged in every particular. THE ARMING PRESS
-// IS WHAT LEAVES A LIT PIN TO STAMP: it lands through the carry and defers
-// both camera lamps to the edge that knows whether the press was a click
-// (PendingMarkerPress, app_state.h), so the pin the user lit survives the
-// press that starts this gesture. It is therefore the
-// pin's strongest KEEPER rather than a collapser — the drag IS the posture's
-// own motion — and it is the displayed-basis freeze's one deliberate
-// non-member, the camera moving per motion event.
+// AND IT COLLAPSES THE CENTRED PIN (architect 2026-09-12): a horizontal drag
+// carries the marker out from under a playhead the `y` lamp holds at the
+// window's centre, so the gesture is a camera act and takes the movement
+// class — the collapse runs ONCE, in begin_drag, at the crossing where the
+// press's identity becomes certain, and the ride and the commit below then
+// run under a dark lamp. The pin is one bare `y` or one Shift+Space away
+// afterwards; the rule's home is AppState::centered_mode.
 // Shared by the warp and phase reset views and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —

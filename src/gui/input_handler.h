@@ -595,27 +595,18 @@ void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
-// THE MARKER CARRY — the land above WITHOUT the two camera lamps' write,
+// THE MARKER CARRY — the land above WITHOUT the centered posture's collapse,
 // Viewport::carry_playhead_to's marker form and its exact twin (architect
 // 2026-09-11): the acts that move a marker in TIME under a following playhead
 // are what the `y` posture is for, so they must not put its lamp out. The hide
-// and the A/B audition's end are the land's and stay here; only the posture
-// write is declined.
-// TWO ACTS CALL IT DIRECT, the complete list (re-greped 2026-09-12):
-//   * the Left/Right POSITION NUDGE's group-collapse prologue, which lands the
-//     playhead on the focus it collapsed to (position_nudge.cpp) — a TIME ACT,
-//     which is what declines the write;
-//   * THE PLAIN FLAG PRESS's click act (run_marker_click_act, input_pointer.cpp
-//     — its modified arms take the LAND), which declines it for a different
-//     reason: the write is DEFERRED rather than refused, because that press's
-//     identity is not certain yet. It becomes a click at the motionless
-//     release, which writes both lamps there (postures_after_movement), or a
-//     drag at the crossing, where an intact centred pin is the whole of the
-//     reverse pan's fork.
-// The two LAND entries below compose it — the movement owner and the walk's —
-// and they are the only other callers. The posture's whole rule and the
-// frame-shaped carry's own call sites are at AppState::centered_mode and
-// viewport.h.
+// and the A/B audition's end are the land's and stay here; only the collapse
+// is declined.
+// ONE ACT CALLS IT DIRECT, the complete list (re-greped 2026-09-12): the
+// Left/Right POSITION NUDGE's group-collapse prologue, which lands the playhead
+// on the focus it collapsed to (position_nudge.cpp). The two LAND entries below
+// compose it — the movement owner and the walk's — and they are the only other
+// callers. The posture's whole rule and the frame-shaped carry's own call sites
+// are at AppState::centered_mode and viewport.h.
 void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
                               Viewport& viewport, int hit);
 

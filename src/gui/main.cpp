@@ -2983,11 +2983,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // PAUSED while a pointer gesture or a finger is live, the follow
             // chase's own aiming rule below: a former carrying the playhead
             // mid-drag must not have the waveform recentered under it; the
-            // release's landing re-derives on the next frame.
-            // THE FLAG DRAG UNDER THE PIN IS THE ONE GESTURE THAT DERIVES FOR
-            // ITSELF (2026-09-12, the reverse pan): it calls the body per
-            // motion event, and this pause is exactly what keeps the two from
-            // deriving the same frame twice. The scanner
+            // release's landing re-derives on the next frame. The scanner
             // gate keeps the one-tick window between the flag's drop and the
             // tick's stop body from reading a stale scanner.
             // AND THE PIN'S OWN ENGAGEMENT LEADS THE TERMS since 2026-09-01
@@ -3092,10 +3088,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // pair and the overview pair run only when the pin did not move the
         // camera: lamp unlit, the aiming pause (a live gesture or finger), or
         // the derivation CLAMPED at the song's ends, where the playhead walks
-        // off-center across a wall-parked viewport. The pinned FLAG DRAG, the
-        // one gesture that derives for itself (2026-09-12), cannot be live in
-        // this half at all — its arming press stopped playback — so the pause
-        // is here for the other gestures alone.
+        // off-center across a wall-parked viewport.
         // THE FIFTH QUIET CASE IS THE A/B AUDITION (architect 2026-09-01):
         // centered_pin_engaged (app_state.h) leads the terms here as it does
         // at the resting half, so the act's four bounded plays scroll no

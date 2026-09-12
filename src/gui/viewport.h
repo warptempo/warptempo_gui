@@ -245,20 +245,27 @@ struct Viewport {
     // AppState::centered_mode, app_state.h).
     void move_playhead_to(int64_t new_sample);
     // THE CARRY — the movement, WITHOUT either camera lamp's write, for the
-    // TIME ACTS (architect 2026-09-11): the acts that move a marker in time
-    // under a playhead that follows it are exactly what the `y` posture is for,
-    // so they must not put its lamp out — and they light the WALK's lamp from
-    // their own commits instead, that write being on a changed path this
-    // per-motion entry knows nothing about. Everything else about it is
+    // acts that MOVE A MARKER IN TIME under a playhead that follows it
+    // (architect 2026-09-11): they light the WALK's lamp from their own
+    // commits instead, that write being on a changed path this per-motion
+    // entry knows nothing about. Everything else about it is
     // move_playhead_to's, the overlay hide and the audition's end included —
     // this is not a reseat.
     // A CLASS STATEMENT WITH ITS COMPLETE LIST HERE, and it is TWO acts at
-    // three call sites (re-greped 2026-09-12): the Left/Right POSITION NUDGE's
-    // follow of the nudged marker (position_nudge.cpp) and the FLAG DRAG's
-    // per-motion carry and its commit re-land (marker_drag.cpp). Named rather
+    // three call sites (re-greped 2026-09-12), which decline the centred pin's
+    // collapse for two different reasons:
+    //   * the Left/Right POSITION NUDGE's follow of the nudged marker
+    //     (position_nudge.cpp) — the one act the `y` posture is FOR, so it
+    //     must not put that lamp out;
+    //   * the FLAG DRAG's per-motion carry and its commit re-land
+    //     (marker_drag.cpp), which has NOTHING LEFT TO COLLAPSE: the gesture
+    //     put the pin out at its own threshold crossing (architect
+    //     2026-09-12, MarkerDragOps::begin_drag), so a mover carrying the
+    //     collapse here would only repeat it per motion event.
+    // Named rather
     // than spelled as a flag on the mover, for the reason the reseat carries:
     // "skip the rule this time" is a hand-listed inventory in disguise. Do not
-    // add a caller without an argument for why the act is a time act.
+    // add a caller without an argument for why its act declines the write.
     void carry_playhead_to(int64_t new_sample);
     // THE RESEAT — the identical write with NO hide, for the callers whose write
     // is not a movement (contract at the definition, viewport.cpp). Named rather

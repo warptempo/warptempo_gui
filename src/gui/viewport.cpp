@@ -214,8 +214,9 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // already holds still hides, which is what the bottom row's ungreyed skip
 // buttons promise (architect 2026-08-15, the record at their case in
 // redesign_button_enabled).
-// ITS OWN CALLERS ARE THE TIME ACTS and are inventoried at the declaration
-// (viewport.h); every other command takes move_playhead_to below.
+// ITS OWN CALLERS ARE THE TWO ACTS THAT MOVE A MARKER IN TIME and are
+// inventoried at the declaration (viewport.h); every other command takes
+// move_playhead_to below.
 void Viewport::carry_playhead_to(int64_t new_sample) {
     clear_region_highlight(app, *this);
     // A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION, and it is the hide rule's own
@@ -226,8 +227,9 @@ void Viewport::carry_playhead_to(int64_t new_sample) {
     // which writes the cursor direct) ends neither. This is a class statement:
     // the complete clearing-owner inventory is at GuiAuditionSequence
     // (app_state.h) and is not to be restated here.
-    // IT IS HERE RATHER THAN IN THE MOVER BELOW so that a TIME ACT still ends
-    // the act it interrupts: the carry declines the collapse, never the end.
+    // IT IS HERE RATHER THAN IN THE MOVER BELOW so that a carrying act still
+    // ends the act it interrupts: the carry declines the posture write, never
+    // the end.
     clear_audition_sequence(app);
     reseat_playhead_to(new_sample);
 }
@@ -237,7 +239,7 @@ void Viewport::carry_playhead_to(int64_t new_sample) {
 // music changing is the centered collapse's rule exactly as it is the hide's
 // (the rule is stated once at AppState::centered_mode): a click, a skip or a
 // land puts the `y` lamp out and lights the walk's framing lamp, while the two
-// time acts take the carry.
+// acts that move a marker in time take the carry.
 // THE ORDER IS LOAD-BEARING: the carry's clear of the A/B audition runs FIRST,
 // so a movement that interrupts the act finds the sequence already Idle and the
 // postures write — where the act's own movements, made while its phase stands,
@@ -820,21 +822,11 @@ void Viewport::center_viewport_on_playhead() {
 // owners, the translations/reseats, the restores, the A/B tab switch AND the
 // playback scanner's per-frame advance — recenters through the pre-paint
 // hook (main.cpp), which reads the resting-or-scanning cursor once per frame
-// and calls THIS body; NO MUTATOR SCATTERS A RECENTER CALL OF ITS OWN, with
-// the one exception named below, which is a GESTURE rather than a road that
-// lands a playhead. The
-// other callers are the toggle's own chokepoint (set_centered_mode's
-// off->on edge, so the invariant starts holding at the toggle), the launch
+// and calls THIS body; no mutator scatters a recenter call of its own. The
+// other two callers are the toggle's own chokepoint (set_centered_mode's
+// off->on edge, so the invariant starts holding at the toggle) and the launch
 // seed (launch_playback_window's visibility fork), which centers the scanner
-// where follow would left-edge-align it, and — since 2026-09-12 — THE FLAG
-// DRAG UNDER THE PIN (MarkerDragOps::apply_drag_motion), the one MUTATOR that
-// derives, and it does so because the gesture IS this pin's motion: the flag
-// holds the centre column while the waveform slides under it, so each motion
-// event carries the playhead onto the dragged marker and then calls this body
-// on it. That caller reads no predicate here — it stamped the engagement at
-// its own crossing (DragState::camera_follows) and the pre-paint hook stays
-// paused for its whole life, so the two never derive the same frame twice.
-// THE OTHER THREE ASK ONE PREDICATE SINCE
+// where follow would left-edge-align it. ALL THREE ASK ONE PREDICATE SINCE
 // 2026-09-01 — centered_pin_engaged (app_state.h), the lamp's preference
 // narrowed by the A/B audition, which disregards the pin for its whole
 // duration — so no caller reads the lamp's field direct and nothing derives
