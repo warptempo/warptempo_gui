@@ -2650,13 +2650,15 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker. The zoom is
-    // untouched — AT THE CURRENT ZOOM LEVEL, which the cycle never changes
-    // (architect 2026-08-05, "no zoom on Tab", reverting the same-day
-    // working-zoom landing this carried for one commit; `c` remains the direct
-    // route to kWorkingZoomLevel, and `0`'s second arm reaches it through `c`
-    // when its tab has stamped no return level). A step that focuses nothing
-    // does nothing at all.
+    // playback and move the playhead onto the newly focused marker. At the
+    // working zoom or coarser the zoom is untouched (architect 2026-08-05, "no
+    // zoom on Tab", reverting the same-day working-zoom landing this carried
+    // for one commit); a level strictly finer than working snaps up to working
+    // ahead of a step that lands (architect 2026-09-13,
+    // Viewport::snap_zoom_to_working_if_finer). `c` remains the direct route to
+    // kWorkingZoomLevel from any level, and `0`'s second arm reaches it through
+    // `c` when its tab has stamped no return level. A step that focuses
+    // nothing does nothing at all.
     //
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing

@@ -408,20 +408,10 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall, the
     // warp twin's rule verbatim again: the prologue asks the same landing ahead
     // of the coalesce stamp, so a SINGLETON at its wall refuses there instead.
+    // (The press's playback stop and its working-zoom snap are the prologue's,
+    // the warp twin's statement verbatim — position_nudge_prologue.)
     if (committed_f == orig_f)
         return std::nullopt;
-    // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
-    // first write (the keyboard stop rule's refusal gating, at
-    // stop_playback_if_playing's declaration in playback_lifecycle.h): a position
-    // nudge collapses the selection to point form and takes the playhead with it.
-    // On a 2+ press the prologue's collapse arm already stopped; this second call
-    // early-returns on the stopped session, so the double call is free.
-    playback_lifecycle.stop_playback_if_playing();
-    // A FINER ZOOM SNAPS UP TO WORKING before the write, the landing re-asked
-    // on the working lattice — the warp twin's placement and its reasoning
-    // verbatim (Viewport::snap_zoom_to_working_if_finer owns the ruling).
-    if (viewport.snap_zoom_to_working_if_finer())
-        committed_f = position_nudge_landing(app, audio, orig_f, step_columns);
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
     // Identity hint: the nudged reset in PRE-reorder snapshot coordinates (the

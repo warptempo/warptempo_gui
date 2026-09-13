@@ -320,15 +320,24 @@ struct Viewport {
     //     Shift+Tab, IsoLeftTab) and each of the Ctrl+Shift+Tab paired march's
     //     two steps, past the walk's wall and its same-marker cell step (a cell
     //     step lands nothing and does not snap);
-    //   * GuiWarpMarkersOps::nudge_selected_markers and
-    //     GuiPhaseResetMarkersOps::nudge_selected_phase_resets — the marker
-    //     nudge on both columns at every magnitude, past the prologue and the
-    //     post-clamp identity no-op;
+    //   * position_nudge_prologue (position_nudge.cpp) — the marker nudge on
+    //     both columns (GuiWarpMarkersOps::nudge_selected_markers,
+    //     GuiPhaseResetMarkersOps::nudge_selected_phase_resets) at every
+    //     magnitude, ONE call past the prologue's refusal verdict, its stop and
+    //     a 2+ press's collapse and land: a singleton is past its wall there,
+    //     and a group's collapse is its committed act, so a group whose focus
+    //     then finds its wall in the twin has still snapped, while a walled
+    //     singleton refused ahead of it and leaves the camera alone;
     //   * GuiInputHandler::run_waveform_lane_playhead_step — the playhead step
     //     at every magnitude, past its wall.
     // Key and the Left / Right / Walk buttons alike, the buttons synthesizing
     // those chords. NOT snapping: the drops, Shift+J and the A/B audition (both
     // already run `c`), `c` itself, pointer gestures, undo / redo.
+    // THE SHORT-SOURCE EXCEPTION: for a source shorter than one working-zoom
+    // viewport the file's effective fit ceiling is itself finer than working,
+    // apply_zoom_change clamps the request to it, and the snap saturates there
+    // exactly as `c` does — such a file authors on that finer lattice, the
+    // same exception tools/sidecar_snap_common.h records for the lattice.
     bool snap_zoom_to_working_if_finer();
     void follow_scroll_if_needed();
 

@@ -161,20 +161,24 @@ struct PositionNudgePrologue {
 // Selection::collapse_to_focused, the convention that keeps the land at the site
 // which hands the marker lane a focus). The step below is therefore always the
 // SINGLETON op on `focused`, bit-for-bit what a singleton selection always got.
-// THE COLLAPSE ARM OWNS ITS OWN PLAYBACK STOP, immediately ahead of the collapse:
-// a real collapse is a write and the land moves the cursor, so the keyboard stop
-// rule (playback_lifecycle.h) demands the stop there — while a SINGLETON press
-// carries no collapse and stops in its TWIN instead, past the post-clamp identity
-// check and immediately ahead of the twin's first write. That placement is the
-// rule's refusal gating made exact: a press that writes nothing stops nothing, and
-// the only recorded deviation (an unconditional stop at this prologue's head) is
-// gone.
-// A press that then refuses at its wall keeps the collapse — the collapse is the
-// press's own committed act, not a prelude to the step (its damage is
-// collapse_to_focused's own, so a refused press repaints correctly), and the
-// stop it paid stands with it. That is the 2+ press's path alone since the wall
-// joined (1): a SINGLETON at its wall now refuses ahead of everything, having
-// nothing to collapse and nothing to stop.
+// THE PROLOGUE OWNS THE PRESS'S ONE PLAYBACK STOP, immediately ahead of the
+// collapse: past (1) every press acts — a 2+ press collapses and lands, a
+// singleton is past its wall and its step moves the marker — so the keyboard
+// stop rule (playback_lifecycle.h) demands the stop there for both shapes, and
+// the rule's refusal gating stays exact (a press that writes nothing refused
+// at (1) and stopped nothing).
+// Then (4) THE WORKING-ZOOM SNAP (architect 2026-09-13,
+// Viewport::snap_zoom_to_working_if_finer, whose declaration carries the
+// ruling and the inventory): a zoom strictly finer than working is set to
+// working here, ONCE for both twins, behind the stop and the land so the zoom
+// centres on the resting cursor on the focus, and ahead of each twin's
+// landing, which is therefore asked on the working lattice.
+// A 2+ press that then refuses at its wall in the twin keeps the collapse, the
+// land, the stop and the snap — the collapse is the press's own committed act,
+// not a prelude to the step (its damage is collapse_to_focused's own, so a
+// refused press repaints correctly). That is the 2+ press's path alone since
+// the wall joined (1): a SINGLETON at its wall refuses ahead of everything,
+// having nothing to collapse, nothing to stop and nothing to snap.
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
 // normalizes the resulting arrangement at render/preview time, there is no
 // gesture pin.
@@ -279,7 +283,7 @@ int64_t stepped_anchor_frame(
 // THREE READERS: both nudge twins, whose committed frame this IS
 // (GuiWarpMarkersOps::nudge_selected_markers,
 // GuiPhaseResetMarkersOps::nudge_selected_phase_resets — each still owns its
-// own store read, its post-clamp identity no-op and its stop), and
+// own store read and its post-clamp identity no-op), and
 // marker_nudge_actionable (app_state.h), the Left / Right buttons' marker-lane
 // wall term, which compares this landing against the resting frame.
 //
@@ -324,9 +328,9 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     identity in warp's source home, a real map in phase's target home;
 //     committed_focused_frame is reorder-independent). The movement owner owns
 //     the clamp, invalidation, and keep-visible edge-align, writing the
-//     cursor field only (playback was stopped by the twin, past its wall clamp
-//     and ahead of its first write — and by the prologue's collapse arm before
-//     that on a 2+ press; either way this tail always runs stopped).
+//     cursor field only (playback was stopped by the prologue, past its
+//     refusal verdict and ahead of the first write, so this tail always runs
+//     stopped).
 // (f) KEEP CENTERED WHILE NUDGING: Viewport::recenter_after_nudge, which with
 //     the `y` lamp lit recenters the viewport on the playhead (e) just landed
 //     (the rule at AppState::keep_centered_while_nudging). Every press that reaches this

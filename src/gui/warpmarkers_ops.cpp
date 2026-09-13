@@ -1557,24 +1557,11 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // SINGLETON at its wall never gets this far (the wall no-op touches
     // nothing — the rule is at the prologue), while a group press passes that
     // term unconditionally, collapses, lands, and then finds its wall here.
+    // (The press's playback stop and its working-zoom snap are the prologue's,
+    // past its refusal verdict and ahead of this landing, which is therefore
+    // asked on the working lattice — position_nudge_prologue.)
     if (committed_f == orig_f)
         return std::nullopt;
-    // THE SINGLETON PRESS'S STOP, past every refusal and immediately ahead of the
-    // first write (the keyboard stop rule's refusal gating, at
-    // stop_playback_if_playing's declaration in playback_lifecycle.h): a position
-    // nudge collapses the selection to point form and takes the playhead with it.
-    // On a 2+ press the prologue's collapse arm already stopped; this second call
-    // early-returns on the stopped session, so the double call is free.
-    playback_lifecycle.stop_playback_if_playing();
-    // A FINER ZOOM SNAPS UP TO WORKING before the write, and the landing is
-    // re-asked on the working lattice (Viewport::snap_zoom_to_working_if_finer
-    // carries the ruling and the inventory). It sits behind the stop so the
-    // zoom centres on the resting cursor, and behind the identity no-op
-    // because that verdict is the same at both levels: a landing equals its
-    // origin only at the wall the step points into, and a wall is a frame,
-    // not a column.
-    if (viewport.snap_zoom_to_working_if_finer())
-        committed_f = position_nudge_landing(app, audio, orig_f, step_columns);
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Identity hint (the diff matcher is identity-blind for a column-snapped move

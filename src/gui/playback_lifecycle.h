@@ -93,9 +93,9 @@ struct GuiPlaybackLifecycle {
     //   * COLLAPSE-TO-POINT COMMANDS STOP: a command whose act collapses the
     //     selection to its point form takes the playhead with it, so it stops —
     //     both position nudges (the collapse to point form IS the reason they
-    //     stop; each pays it at its own first write — the shared prologue's
-    //     collapse arm for a 2+ press, each twin past its wall clamp for a
-    //     singleton)
+    //     stop; both pay it once, in the shared prologue past its refusal
+    //     verdict — the singleton's wall included — and ahead of the first
+    //     write)
     //     and `c`. The S/T switch `t` stops on its own standing ruling, the audio
     //     domain flipping under the running session.
     //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the Up/Down tempo cent

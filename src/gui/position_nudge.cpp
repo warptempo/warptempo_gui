@@ -20,7 +20,8 @@
 // 2026-08-31 — position_nudge_landing below, one owner for both columns, the
 // twins' two verbatim copies collapsed into it when the Left / Right buttons'
 // face needed the landing as a const owner to compare against. What stays in
-// each twin is its own STORE read, its post-clamp identity no-op and its stop.
+// each twin is its own STORE read and its post-clamp identity no-op; the stop
+// and the working-zoom snap live in the prologue.
 
 PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
@@ -89,20 +90,29 @@ PositionNudgePrologue position_nudge_prologue(
     // the site that hands the marker lane a focus is the site that owes it a land.
     // The step every caller runs after this is therefore always the singleton op.
     // The tail's unconditional hide takes the trim region overlay with it.
+    // THE PRESS'S STOP — the collapse-to-point class of the keyboard stop rule
+    // (architect 2026-07-30, stated at stop_playback_if_playing's declaration,
+    // playback_lifecycle.h), placed by that rule's refusal gating: past
+    // marker_nudge_actionable EVERY PRESS ACTS — a 2+ press collapses and lands
+    // below, and a singleton's wall was the predicate's last term, so its step
+    // moves the marker (a landing equals its origin only at the wall the step
+    // points into, at any zoom) — and this is immediately ahead of the first
+    // write. ONE stop for both shapes; it precedes the land, which commits a
+    // new cursor position.
+    playback_lifecycle.stop_playback_if_playing();
     if (app.selected_markers.size() >= 2) {
-        // THE COLLAPSE ARM'S STOP — the collapse-to-point class of the keyboard
-        // stop rule (architect 2026-07-30, stated at stop_playback_if_playing's
-        // declaration, playback_lifecycle.h), placed by that rule's refusal
-        // gating: a REAL COLLAPSE is about to happen (the membership replace is a
-        // write and the land moves the cursor), so the stop is owed HERE, past
-        // every refusal above and immediately ahead of the first write. A
-        // singleton press collapses nothing and stops nothing here — its own stop
-        // sits in each twin, past the post-clamp identity check. The stop must
-        // precede the land, which commits a new cursor position.
-        playback_lifecycle.stop_playback_if_playing();
         selection.collapse_to_focused();
         land_playhead_on_marker(app, audio, viewport, focused);
     }
+    // A FINER ZOOM SNAPS UP TO WORKING HERE, ONCE, for both columns and both
+    // shapes (Viewport::snap_zoom_to_working_if_finer carries the ruling and
+    // the inventory): this is the one place where the press is known to act —
+    // a group has already collapsed and landed (its own committed act, even
+    // when the step then finds its wall in the twin), a singleton is past its
+    // wall. It sits behind the stop and the land so the zoom centres on the
+    // resting cursor on the focus, and ahead of each twin's landing, which is
+    // therefore asked on the working lattice.
+    viewport.snap_zoom_to_working_if_finer();
     r.ok      = true;
     r.merge   = merge;
     r.focused = focused;
@@ -213,7 +223,9 @@ void finish_position_nudge(
     // step, a held key's repeats and a held arrow button's fires included,
     // because each of them runs this tail. This tail is the nudge's CHANGED
     // path (each twin returns on its post-clamp identity no-op before reaching
-    // it), so a walled press recenters nothing. The rule is at
+    // it), so a walled press recenters nothing — a 2+ press walled after its
+    // collapse keeps the collapse, the land and the prologue's zoom snap, and
+    // nothing more. The rule is at
     // AppState::keep_centered_while_nudging, the body at Viewport::recenter_after_nudge.
     viewport.recenter_after_nudge();
     // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,

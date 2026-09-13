@@ -1842,13 +1842,15 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
     land_playhead_on_source_frame(
         app, audio, viewport,
         app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
-    // THE LIVE FAMILY'S LANDING, MIRRORED: the live cycle recenters on its
-    // stop AT THE CURRENT ZOOM, follow mode not gating it, and this does the
-    // same over the diff-flag list, reading the flag it just landed on. The
-    // working-zoom snap both families carried for one commit is REVERTED
-    // (architect 2026-08-05, "no zoom on Tab", same day it landed) — a walk
-    // must not re-frame the view under the reader, in here least of all,
-    // where the whole delta is what is being read.
+    // THE HISTORY WALK RECENTERS AT THE CURRENT ZOOM, follow mode not gating
+    // it, reading the flag it just landed on. The working-zoom snap both
+    // families carried for one commit is REVERTED for this walk (architect
+    // 2026-08-05, "no zoom on Tab", same day it landed) — a walk must not
+    // re-frame the view under the reader, in here least of all, where the
+    // whole delta is what is being read. THE ONE RECORDED ASYMMETRY: the LIVE
+    // walk keeps that revert only at the working zoom or coarser, and snaps a
+    // strictly finer level up to working first (architect 2026-09-13,
+    // Viewport::snap_zoom_to_working_if_finer); this walk takes no snap.
     viewport.center_viewport_on_playhead();
     // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
     // above either returned or picked a different index), so the full-window
