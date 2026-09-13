@@ -2099,13 +2099,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
     // guard here — adjust_tempo_cents returns at once unless the warp view is
     // active with a non-empty selection and a valid focus, and SINCE 2026-08-30
-    // it hands back the sentence for that refusal — and for its two target-view
-    // payload refusals, its remaining NO-CHANGE arm (a source-view label ref)
-    // and the group's wall — for this arm to card: the fact is the act's, the
-    // card is the dispatch's. THE SINGLETON'S BRACKET END IS SILENT since
-    // 2026-08-31 and the Up / Down buttons GREY on it instead
-    // (tempo_cent_step_direction_actionable, app_state.h), the group's wall
-    // greying AND carding beside it. `=` / `-` are the waveform magnification keys and
+    // it hands back the sentence for that refusal — and for the singleton's
+    // kind refusal (a label ref in either view, a coincident-collapse member
+    // in target view) and the group's wall — for this arm to card: the fact is
+    // the act's, the card is the dispatch's. THE SINGLETON'S BRACKET END IS
+    // SILENT since 2026-08-31 and the Up / Down buttons GREY on it instead
+    // (tempo_cent_step_direction_actionable, app_state.h), the kind refusal
+    // (since 2026-09-13) and the group's wall greying AND carding beside it. `=` / `-` are the waveform magnification keys and
     // Ctrl+`=` / Ctrl+`-` the zoom keys (see below).
     //
     // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare

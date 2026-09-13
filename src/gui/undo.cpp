@@ -412,8 +412,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // tempo_cent_step_direction_actionable) and the group cent step (through
     // tempo_cent_step_group_actionable). THE DISCRIMINATOR IS THE FACE, NOT THE
     // CARD: a refusal the button greys on runs ahead of the stamp — the group
-    // step's card moves with it — while a refusal that keeps a LIVE face stays
-    // behind it, so both surfaces poison alike there.
+    // step's card moves with it, and since 2026-09-13 so does the singleton
+    // cent step's carded KIND refusal, asked just ahead of its wall — while a
+    // refusal that keeps a LIVE face stays behind it, so both surfaces poison
+    // alike there.
     // WHAT IT COSTS, accepted: a refused wall press no longer ends the previous
     // burst, so a later press of the same kind can merge into it (the tap arm
     // within kTapCoalesceMs, or a repeat behind a mid-hold flip). That is

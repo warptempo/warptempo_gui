@@ -513,8 +513,12 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
     // is no ordering left to keep.)
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_hops))
         return std::nullopt;
-    // THE KIND REFUSAL, with a live face and a card, as the tempo step's
-    // value-shaped tails are.
+    // THE KIND REFUSAL, on a card and behind a LIVE face — the one kind
+    // refusal under the vertical arrows that still keeps one since the tempo
+    // step's began greying (2026-09-13), and a BELT rather than a live
+    // refusal: a bound cell is addressed only where its cell paints, and while
+    // the lamp stands the lock refuses every act that could take the carrier
+    // away, so no reachable state answers it (iter_bound_step_kind_refusal).
     if (const char* refusal = iter_bound_step_kind_refusal(app))
         return refusal;
     const auto& pv_const = app.phaseresetmarkers.markers();

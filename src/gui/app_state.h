@@ -548,7 +548,8 @@ struct DragState {
 // at the stepped value — one seed body for the two hands
 // (warp_tempo_step_start, warpmarkers_ops.h). A LABEL REF is still no target,
 // having no tempo of its own to walk from, and neither is a
-// coincident-collapse member (value_drag_target, below).
+// coincident-collapse member, while A DISABLED MARKER IS, as the singleton
+// arrow step steps one (architect 2026-09-13; value_drag_target, below).
 //
 // IT IS THE MARKER DRAG'S SIBLING, NOT ITS STATE: DragState above holds a
 // POSITION proposal in the displayed domain with walls, an overlay and a
@@ -10171,12 +10172,15 @@ inline bool tempo_cent_step_column_allowed(const AppState& app) {
 //     was made for — he is deliberate with his presses — and greying is a
 //     face the row already wears in the `h` view. The predicate is unchanged
 //     through all three states; only its reader count moved.
-// What was live-faced under both mirrors, and still is, is the VALUE-shaped
-// tail that needs the act's own resolution run: a label ref, and in target
-// view a coincident-collapse member (a PASS left this list on 2026-09-13, when
-// the target-view step began freezing it as source view does). THE TEMPO BRACKET WALL
-// LEFT THAT LIST on 2026-08-31 (R3): the DIRECTIONAL predicate below faces it,
-// so Up greys on the bracket's max and Down on its min.
+// What was live-faced under both mirrors was the VALUE-shaped tail, on the
+// claim that it needed the act's own resolution run. THAT LIST IS EMPTY since
+// 2026-09-13: THE TEMPO BRACKET WALL left it on 2026-08-31 (R3), a PASS left
+// it when the target-view step began freezing it as source view does, and the
+// KIND REFUSAL — a label ref in either view, a coincident-collapse member in
+// target view — left it the same day, the claim being false for both (a ref is
+// a plain field and the collapse test reads a memoized cache). The DIRECTIONAL
+// predicate below faces all of it: the bracket's max greys Up and its min
+// Down, and the kind refusal greys both.
 inline bool tempo_cent_step_actionable(const AppState& app) {
     return tempo_cent_step_column_allowed(app) &&
            marker_selection_standing(app) && marker_focus_standing(app);
@@ -10196,53 +10200,35 @@ inline int64_t tempo_cent_step_landing(int64_t start_cents,
                       kTempoMaxCents);
 }
 
-// THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): its verdict is
-// `Steps` when EVERY SURVIVING selected marker could take a step of
-// `delta_cents` — no pass, no label ref, no coincident-collapse member, none
-// that would leave the tempo bracket under the WHOLE step (the "already AT
-// the bracket edge" compare until the step ladder landed the same day, and
-// the identical test at the bare ±1: a member is out of bracket after one
-// cent iff it was resting on that edge) — `Walled` when one could not, and
-// `Empty` when nothing survives. THE SURVIVORS ARE THE MEMBERS THE ACT SEES
-// (architect 2026-09-02, the four-tier review's R-12 — "a disabled marker is
-// invisible to the act", the `m` BPM sweep's rule asked of this step): an
-// effectively disabled member (effective_disabled, warpmarkers.h — its own
-// bit, or a reference whose definition is disabled) is SKIPPED, not walled —
-// not counted, not stepped, every field untouched — and GROUP RIGIDITY is
-// applied to the survivors; a selection whose every member is invisible is
-// the EMPTY step, refused as the singleton refuses an empty selection. Until
-// that day a disabled member walled the whole press ("its tempo is
-// render-filtered, so a write would be inaudible" — true, and exactly why it
-// is now passed over instead: an inaudible write neither deforms the group
-// nor serves it). THE MAGNITUDE MATTERS HERE, unlike at the singleton — the
-// group arm adds RAW and clamping one member would pool it against its
-// neighbours, which is exactly what GROUP RIGIDITY refuses — so the ten-cent
-// chord walls a selection the one-cent chord would move. THE TWIN RULE IS
-// ANSWERED BY MONOTONICITY: a longer step in the same direction walls a
-// SUPERSET, so the BARE step the face hands this is the widest admitted answer
-// and the button greys exactly when no admitted variant would act. Defined in
-// warpmarkers_ops.cpp immediately above the act, which reads the VERDICT as
-// its own whole-press refusal, one sentence per refusing verdict
+// THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): true when EVERY
+// selected marker could take a step of `delta_cents` — no pass, no label ref,
+// no coincident-collapse member, none that would leave the tempo bracket under
+// the WHOLE step (the "already AT the bracket edge" compare until the step
+// ladder landed the same day, and the identical test at the bare ±1: a member
+// is out of bracket after one cent iff it was resting on that edge) — and
+// false when one could not. A DISABLED MEMBER IS A MEMBER (architect
+// 2026-09-13): it counts, walls on the same terms and steps, as the singleton
+// and the value drag step a disabled marker. From 2026-09-02 (the four-tier
+// review's R-12, "a disabled marker is invisible to the act" asked of this
+// step) until that ruling a disabled member was SKIPPED and the scan answered
+// a three-way verdict whose EMPTY arm refused an all-disabled selection; with
+// the skip gone that arm had no producer and went with its enum, the BPM and
+// grid-iteration sweeps keeping the invisibility rule for renders. THE
+// MAGNITUDE MATTERS HERE, unlike at the singleton — the group arm adds RAW and
+// clamping one member would pool it against its neighbours, which is exactly
+// what GROUP RIGIDITY refuses — so the ten-cent chord walls a selection the
+// one-cent chord would move. THE TWIN RULE IS ANSWERED BY MONOTONICITY: a
+// longer step in the same direction walls a SUPERSET, so the BARE step the
+// face hands this is the widest admitted answer and the button greys exactly
+// when no admitted variant would act. Defined in warpmarkers_ops.cpp
+// immediately above the act, which reads it as its own whole-press refusal
 // (adjust_tempo_cents_group, all-or-nothing by GROUP RIGIDITY — the
-// justification is at the act; the unified wall policy is at the head of
-// position_nudge.h). The 2+ arm of the directional predicate below reads the
-// boolean face, which is the whole point of the extraction: the face may not
-// restate the terms the act already owns, and the act's mutation loop skips
-// on the same `effective_disabled` call the scan skips on.
-enum class TempoCentStepGroupVerdict {
-    Steps,   // every survivor takes the whole step
-    Walled,  // a survivor is a pass, a ref, collapsed, or cannot take the step
-    Empty,   // no survivor: every selected member is effectively disabled
-};
-TempoCentStepGroupVerdict tempo_cent_step_group_verdict(const AppState& a,
-                                                        const GuiAudio& audio,
-                                                        int64_t delta_cents);
-inline bool tempo_cent_step_group_actionable(const AppState& a,
-                                             const GuiAudio& audio,
-                                             int64_t delta_cents) {
-    return tempo_cent_step_group_verdict(a, audio, delta_cents) ==
-           TempoCentStepGroupVerdict::Steps;
-}
+// justification is at the definition; the unified wall policy is at the head
+// of position_nudge.h). The 2+ arm of the directional predicate below reads
+// it too, which is the whole point of the extraction: the face may not restate
+// the terms the act already owns.
+bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
+                                      int64_t delta_cents);
 
 // WOULD A CENT STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
 // Up / Down face, asked past tempo_cent_step_actionable above (architect
@@ -10262,22 +10248,25 @@ inline bool tempo_cent_step_group_actionable(const AppState& a,
 //     max, Down on its min, and that refusal is SILENT at the key since
 //     2026-08-31 (a benign one-dimensional refusal already at its state — the
 //     focused marker's value is the one place to glance), so here the grey is
-//     the whole cue.
-// WHAT IT STILL ANSWERS TRUE FOR, and deliberately: the VALUE-SHAPED TAILS
-// that keep a live face and a card — a label ref in either view ("A label
-// reference has no tempo of its own"), and in target view a
-// coincident-collapse member — and a PASS in both views, which always freezes
-// and so always changes. Each tail is a fact about the marker's KIND or its
-// render identity rather than a wall its value rests on, each needs the act's
-// own resolution run, and each says so on a card the grey would swallow.
-// THE TOOLTIP'S MODIFIER LINE IS WHAT THAT COSTS, and it is paid at the line
-// rather than at the face (2026-09-02, R-17e): the target-view half of those
-// tails is magnitude-blind, so all three rungs card the same sentence, and the
-// Up / Down hint drops its ladder line there on that refusal's own owner
-// (tempo_cent_step_target_view_refusal). The face is untouched. (The
-// source-view label ref cards the same sentence on every rung too, but the
-// owner answers nullptr in source view, so the line stands there — a recorded
-// asymmetry the 2026-09-13 ruling did not reach.)
+//     the whole cue;
+//   * a singleton whose focus the step refuses on its KIND — a label ref in
+//     either view ("A label reference has no tempo of its own"), and in
+//     target view a coincident-collapse member ("That marker shares its frame
+//     with another") — greys BOTH directions, asked of the act's own owner
+//     (tempo_cent_step_kind_refusal_for, below), and that refusal KEEPS ITS
+//     CARD at the key (architect 2026-09-13: "shouldn't we grey out the
+//     up/down for label refs in source? we grey out Left for a marker at 0"):
+//     it is a fact about the marker's kind rather than a value resting on a
+//     wall, so the grey and the card stand together, the group arm's shape.
+//     From 2026-08-31 to that ruling the kind refusal kept a LIVE face, on
+//     the claim that it needed the act's own resolution run — false for a
+//     ref, a plain field, and for the collapse test, which reads the red
+//     cache's memoized collapse subset.
+// WHAT IT STILL ANSWERS TRUE FOR, and deliberately: a PASS in both views,
+// which always freezes and so always changes. THE TOOLTIP'S MODIFIER LINE drops
+// on the kind refusal (2026-09-02, R-17e, widened to source view 2026-09-13):
+// it is magnitude-blind, so all three rungs refuse alike and the Up / Down
+// hint shows the one-line form, read off the same owner.
 // Defined in warpmarkers_ops.cpp beside both step arms.
 //
 // THE TWIN RULE IS RESOLVED, AND IT COSTS THIS PREDICATE NOTHING (2026-08-31,
@@ -10290,7 +10279,8 @@ inline bool tempo_cent_step_group_actionable(const AppState& a,
 //   * the SINGLETON arm compares tempo_cent_step_landing against the resting
 //     value, and for a positive delta that landing is min(start + d, max),
 //     which equals `start` iff start IS max — the same for d = 1, 3 and 10, so
-//     the arm is MAGNITUDE-INVARIANT and the bare step speaks for all three;
+//     the arm is MAGNITUDE-INVARIANT and the bare step speaks for all three,
+//     and its KIND term never reads the magnitude at all;
 //   * the GROUP arm walls a SUPERSET as the step grows (its own declaration
 //     argues it), so the bare step is the WIDEST admitted answer.
 // Either way the pair greys exactly when every variant would refuse, which is
@@ -10300,17 +10290,20 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           int64_t delta_cents);
 
-// WOULD A CENT STEP REFUSE ON THE FOCUS'S KIND IN TARGET VIEW — the sentence
-// it would card with, or nullptr (architect 2026-09-02, the four-tier
-// review's R-17e). It is the SINGLETON arm's target-view block lifted whole:
-// the LABEL-REFERENCE refusal ("A label reference has no tempo of its own", the
-// same literal source view's tail cards, since a reference refuses in both
-// views) and the COINCIDENT-COLLAPSE one ("That marker shares its frame with
-// another", asked of the red cache's collapse subset), with source view, a GROUP
-// press and a stale focus all answering nullptr because none of them is this
-// refusal's business — the group arm's own refusals are the wall scan's, and
-// the belt says nothing by GuiOpRefusal's contract. Defined in
-// warpmarkers_ops.cpp beside the act.
+// WOULD A CENT STEP REFUSE ON THE FOCUS'S KIND — the sentence it would card
+// with, or nullptr (architect 2026-09-02, the four-tier review's R-17e, as the
+// TARGET view's block; ONE VERDICT FOR BOTH VIEWS since 2026-09-13). It is the
+// SINGLETON arm's kind refusal lifted whole: the LABEL-REFERENCE refusal in
+// EITHER audio view ("A label reference has no tempo of its own" — until that
+// ruling the source-view reference was refused at the act's no-change tail
+// with the same literal, where neither the face nor the tooltip could ask it)
+// and, in target view alone, the COINCIDENT-COLLAPSE one ("That marker shares
+// its frame with another", asked of the red cache's collapse subset), with the
+// P column, a GROUP press and a stale focus all answering nullptr because none
+// of them is this refusal's business — the group arm's own refusals are the
+// wall scan's, and the belt says nothing by GuiOpRefusal's contract. A
+// DISABLED marker is not refused (architect 2026-09-13, "disabled should be
+// steppable"). Defined in warpmarkers_ops.cpp beside the act.
 //
 // A PASS IS NOT REFUSED (architect 2026-09-13: "why not just allow tempo step
 // by collapsing the inherit as we already do in S+W?"): the singleton step
@@ -10331,29 +10324,26 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // cursor promising a gesture the crossing would then refuse. Fixing it at the
 // caller would have been a second reading of these three tests.
 //
-// THREE READERS ACROSS THE TWO FORMS, and they are three because the CARD,
-// the LINE and the CUE must say the same thing:
-//   * the FOCUS form — GuiWarpMarkersOps::adjust_tempo_cents' target-view
-//     block, whose refusal this IS, and the Up / Down buttons' MODIFIER LINE
-//     in the stateful tooltip overload below, which drops where it answers
-//     non-null (the truthful-tooltips rule applied to the one case the
-//     recorded VALUE-SHAPED TAILS exception leaves lit: the face stays live
-//     and the key cards, but the plain, the shifted and the ctrl press all
-//     card THIS same sentence, so "Press Shift for a 3-step, Ctrl for 10."
-//     names three rungs that do nothing different);
-//   * the INDEX form — value_drag_target below, the gesture's ONE predicate,
-//     which the crossing and the cursor map share.
+// FOUR READERS ACROSS THE TWO FORMS, and they are four because the CARD, the
+// GREY, the LINE and the CUE must say the same thing:
+//   * the FOCUS form — GuiWarpMarkersOps::adjust_tempo_cents' singleton arm,
+//     whose refusal this IS (asked ahead of the wall and the coalesce stamp),
+//     and the Up / Down buttons' MODIFIER LINE in the stateful tooltip
+//     overload below, which drops where it answers non-null (the plain, the
+//     shifted and the ctrl press all refuse alike, so "Press Shift for a
+//     3-step, Ctrl for 10." would name three rungs that do nothing different
+//     — the measure axis's grey drops its line on the same reasoning);
+//   * the INDEX form — tempo_cent_step_direction_actionable's singleton arm,
+//     THE UP / DOWN FACE, asked of the focus it has already range-checked;
+//     and value_drag_target below, the gesture's ONE predicate, which the
+//     crossing and the cursor map share.
 // The GROUP short-circuit lives on the focus form alone: a group press is not
 // this refusal's business (the group arm's refusals are the wall scan's),
-// while the drag presses one flag whatever the selection holds. Neither form
-// is a term of tempo_cent_step_direction_actionable: that predicate answers
-// TRUE here on purpose (the tails' record at its declaration), and this owner
-// adds no face.
-const char* tempo_cent_step_target_view_refusal_for(const AppState& a,
-                                                    const GuiAudio& audio,
-                                                    int idx);
-const char* tempo_cent_step_target_view_refusal(const AppState& a,
-                                                const GuiAudio& audio);
+// while the drag presses one flag whatever the selection holds.
+const char* tempo_cent_step_kind_refusal_for(const AppState& a,
+                                             const GuiAudio& audio, int idx);
+const char* tempo_cent_step_kind_refusal(const AppState& a,
+                                         const GuiAudio& audio);
 
 // DOES THIS COLUMN CARRY GRID ITERATIONS RIGHT NOW — the mode's ONE
 // column-shaped question. `column` is 'W' or 'P'.
@@ -10671,7 +10661,7 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // PHASE-RESET column every reset is a carrier, so the one refusal there is the
 // DISABLED one, in that column's own words. Magnitude-blind on both, so the Up/Down
 // tooltip drops its ladder line on it exactly as it drops it on
-// tempo_cent_step_target_view_refusal. TWO READERS: the act's card (either
+// tempo_cent_step_kind_refusal. TWO READERS: the act's card (either
 // act's) and the tooltip's line. Defined in warpmarkers_ops.cpp, where its
 // warp arm's atoms live; the phase arm is two lines beside it rather than a
 // second owner, because the FACES read one predicate.
@@ -11811,7 +11801,7 @@ inline bool value_drag_posture(const AppState& a) {
 // (architect 2026-09-13): the posture arms the payload in T view alone
 // (value_drag_posture, above), and the arm asks the view itself so the rule
 // holds in this predicate rather than by its readers' ordering. THE KIND GATE
-// IS THE ARROWS' OWN, IN ITS INDEX FORM (tempo_cent_step_target_view_refusal_for):
+// IS THE ARROWS' OWN, IN ITS INDEX FORM (tempo_cent_step_kind_refusal_for):
 // in T view a label ref or a coincident-collapse member is refused, and the
 // drag asks the same owner rather than a second reading of it — ABOUT THE
 // MARKER IT WAS ASKED ABOUT — so over either the cursor shows the Arrow, the
@@ -11824,9 +11814,14 @@ inline bool value_drag_posture(const AppState& a) {
 // RESTING HOVER, before any press has selected the flag under the pointer, so
 // reading last_selected_marker would let one flag's kind decide another flag's
 // cue. The COLUMN is asked outright: a phase reset's payload is a POSITION and
-// has no value to step, so this arm is warp-only. A DISABLED marker is refused
-// through the cascade's one owner, effective_disabled, because the write would
-// be render-inert. iter_bracket_carrier and iter_popup_eligible_marker are not
+// has no value to step, so this arm is warp-only. A DISABLED MARKER IS A TARGET
+// (architect 2026-09-13, "disabled should be steppable"): the singleton arrow
+// step steps one, so the drag does too, and what the arm admits is exactly
+// what that step would step — an owner or a pass, not a label ref, not a
+// collapse member (a disabled marker is never one), not under the lock. From
+// 2026-09-10 to that ruling the arm refused one through effective_disabled on
+// the argument that the write would be render-inert, which the arrows had
+// never asked. iter_bracket_carrier and iter_popup_eligible_marker are not
 // the composition: they answer "this marker can carry a bracket" and "the sweep
 // reads this marker", not "this flag has a tempo to drag".
 //
@@ -11848,8 +11843,7 @@ inline bool value_drag_posture(const AppState& a) {
 //
 // EVERYTHING ELSE IS FALSE: the measure box (a score position, not a number —
 // the arrows say so on a card and the pointer says it in silence), a phase
-// reset's payload, a ref, a collapse member, a disabled marker, a payload in
-// source view.
+// reset's payload, a ref, a collapse member, a payload in source view.
 // THE POINTER'S REFUSAL IS SILENT everywhere in this gesture: a pointer
 // gesture's non-event is its own answer, the flag drag's standing rule.
 inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
@@ -11867,12 +11861,10 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return false;
         if (a.active_audio_view != 'T') return false;
-        // The arrows' target-view kind refusal, asked of its one owner about
-        // THIS marker: a label ref and a coincident-collapse member refuse, so
-        // what passes is an owner or a pass (which the drag freezes).
-        if (tempo_cent_step_target_view_refusal_for(a, audio, idx))
-            return false;
-        if (effective_disabled(mv, idx)) return false;
+        // The arrows' kind refusal, asked of its one owner about THIS marker:
+        // a label ref and a coincident-collapse member refuse, so what passes
+        // is an owner or a pass (which the drag freezes), enabled or disabled.
+        if (tempo_cent_step_kind_refusal_for(a, audio, idx)) return false;
         return true;
     }
     case MarkerCell::Lower:
@@ -13039,7 +13031,7 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // THE BPM SWEEP'S OPEN VERDICT (2026-09-04, with the BPM ITERATIONS button's
 // return to the icon row) — bare `m`'s WHOLE guard ladder as one const owner,
 // the iteration sweep's plan above in the sibling act's domain and
-// tempo_cent_step_group_verdict's shape in a longer one.
+// tempo_cent_step_group_actionable's shape in a longer one.
 //
 // IT IS EXTRACTED RATHER THAN MIRRORED, which is the roster's structural rule:
 // a face never restates an act's condition, it reads the predicate the act's
@@ -13069,7 +13061,7 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // TWO READERS: the bare `m` dispatch (input_key_dispatch.cpp) and the BPM
 // Iterations button's face (redesign_button_enabled below), which composes it
 // with the read-only lock. Defined in warpmarkers_ops.cpp beside
-// tempo_cent_step_group_verdict, the other const owner over this store.
+// tempo_cent_step_group_actionable, the other const owner over this store.
 enum class BpmSweepRefusal {
     None,             // the editor would open on `owner`
     WrongColumn,      // the phase-reset column carries no tempo to sweep
@@ -13305,11 +13297,12 @@ inline bool playback_launch_playable(const AppState& a,
 // READS THE PREDICATE ITS ACT REFUSES ON — never a restatement — so a face
 // and its chord are one decision, the shape Undo/Redo always had. What stays
 // lit through a refusal is exactly what a per-tick face CANNOT know, and each
-// such case is named at its arm: the value-shaped tails that need the act's
-// own resolution run (under Up/Down a label ref, or a coincident-collapse
-// member in target view; an empty
-// payload under Copy value — the BRACKET WALL left this list on 2026-08-31,
-// the directional predicate facing it; the LEAD-IN OFFSET left it on 2026-08-30,
+// such case is named at its arm: the value-shaped tail that needs the act's
+// own resolution run (an empty payload under Copy value — the BRACKET WALL
+// left this list on 2026-08-31, the directional predicate facing it; Up/Down's
+// KIND REFUSAL, a label ref or a coincident-collapse member in target view,
+// left it on 2026-09-13, the same predicate asking the act's own kind owner;
+// the LEAD-IN OFFSET left it on 2026-08-30,
 // the architect reversing its recorded seam: Play's face reads the REAL
 // launch position through space_launch_would_play below), and the refusals
 // that live on disk (Play renders, the history opener). The walls — frame 0
@@ -14418,12 +14411,15 @@ inline bool redesign_button_enabled(const AppState& a,
         //   for the walk pair's all-disabled store and nothing-ahead. "Walls
         //   are the one refusal class this roster has never mirrored" is
         //   SUPERSEDED wherever it once stood.)
-        //   * THE VALUE-SHAPED TAILS THAT REMAIN: a label ref and, in target
-        //     view, a pass or a coincident-collapse member under Up/Down; an
-        //     empty payload under Copy value. Each is a fact about the
-        //     marker's KIND or its render identity rather than a wall its
-        //     value rests on, each needs the act's own resolution run, and
-        //     each still says so on a card the grey would swallow.
+        //   * THE VALUE-SHAPED TAIL THAT REMAINS: an empty payload under Copy
+        //     value, which needs the act's own composition run and says so on
+        //     a card. (UP / DOWN'S KIND REFUSAL LEFT THIS LIST on 2026-09-13 —
+        //     a label ref in either view, a coincident-collapse member in
+        //     target view; a pass had left it that morning by freezing —
+        //     the architect: "shouldn't we grey out the up/down for label refs
+        //     in source? we grey out Left for a marker at 0". The ref is a
+        //     plain field and the collapse test a memoized cache read, so the
+        //     face asks the act's own owner and greys, the key still carding.)
         //   (THE BRACKET WALL LEFT THIS LIST on 2026-08-31, R3 of the
         //   refinement arc: Up greys with the focused owner resting on the
         //   tempo bracket's max and Down on its min, through the act's own
@@ -14659,8 +14655,10 @@ inline bool redesign_button_enabled(const AppState& a,
             }
             if (!tempo_cent_step_actionable(a)) return false;
             // AND THE DIRECTIONAL HALF since 2026-08-31 (architect, R3): the
-            // singleton's bracket end and the group's whole refusal, both
-            // through the acts' own owners (the ruling is at the predicate).
+            // singleton's bracket end and the group's whole refusal, and since
+            // 2026-09-13 the singleton's KIND refusal (a label ref in either
+            // view, a collapse member in target view), all through the acts'
+            // own owners (the ruling is at the predicate).
             if (!tempo_cent_step_direction_actionable(a, audio, delta))
                 return false;
             break;
@@ -16506,10 +16504,19 @@ inline RedesignTooltipText redesign_button_tooltip(
         // word comes back from the constant table so the direction is spelled
         // once.
         //
-        // UP / DOWN: the target view's KIND refusal
-        // (tempo_cent_step_target_view_refusal — a label ref or a
-        // coincident-collapse member), which is magnitude-blind by
-        // construction. The BRACKET wall is deliberately not here: it is
+        // UP / DOWN: the tempo step's KIND refusal
+        // (tempo_cent_step_kind_refusal — a label ref in either view, a
+        // coincident-collapse member in target view), which is magnitude-blind
+        // by construction. THE FACE GREYS ON IT TOO since 2026-09-13
+        // (tempo_cent_step_direction_actionable), and THE DROP STAYS on the
+        // measure axis's precedent just below: a modifier line exists where
+        // the modified press does something different in that state, and on a
+        // dead face every rung is equally dead, so the ladder line would name
+        // three rungs that differ in nothing. It is not a reason line — it
+        // removes a line and adds none, the grey carrying the message. Until
+        // that ruling the drop fired in target view alone, the owner answering
+        // nullptr in source view while the source-view ref refused on every
+        // rung all the same; the one owner closes that asymmetry. The BRACKET wall is deliberately not here: it is
         // directional and magnitude-DEPENDENT — a member three cents from the
         // max takes the bare step and refuses the ctrl one — and it GREYS the
         // face on the bare rung anyway (tempo_cent_step_direction_actionable),
@@ -16541,7 +16548,7 @@ inline RedesignTooltipText redesign_button_tooltip(
                                   ? nullptr
                                   : redesign_button_tooltip(b).line2};
             }
-            if (tempo_cent_step_target_view_refusal(a, audio))
+            if (tempo_cent_step_kind_refusal(a, audio))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         }
