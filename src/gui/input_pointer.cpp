@@ -213,8 +213,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // act on 2026-09-04 and `[` stands on its mnemonic alone, looking like the
     // begin-trim endcap. OF THE TWO CHORDS IT HAS LEFT BEHIND, Ctrl+Shift+X
     // (2026-08-16 to 2026-08-18) is UNBOUND and answers nothing anywhere under
-    // the strict-modifier rule, while bare `x` (2026-08-18 to 2026-08-24) IS
-    // THE VALUE DRAG LAMP since 2026-09-10 — the row below in this table.
+    // the strict-modifier rule, and so is bare `x` (2026-08-18 to 2026-08-24)
+    // since 2026-09-13 — it was the VALUE DRAG LAMP's chord from 2026-09-10
+    // until that lamp was deleted for a posture the view derives.
     //
     // A TOGGLE, click face, not a radio: it reads and flips the overlay's
     // VISIBILITY, and the lamp the 2026-08-16 momentary ruling refused is safe
@@ -655,28 +656,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // navigation, not authored content.
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
-    // THE VALUE DRAG LAMP (architect 2026-09-10), the verb group's NINTH and
-    // the row's second lamp: BARE `x`, which was free — it was the Show trim
-    // region button's chord from 2026-08-18 until the trim family moved onto
-    // the bracket on 2026-08-24 and has bound nothing since (the record is at
-    // that button's row above), and the architect picked it back for its
-    // position under the hand: "right above alt, which is my control."
-    // It is a MODE toggle like its neighbour, so the button's lamp reads the
-    // same bit the key flips and button-is-its-chord holds literally: the
-    // press dispatches bare `x` through on_key at the LIFT, while the KEY acts
-    // at the press.
-    //
-    // ITS GATES ARE ADD TO SELECTION'S PLUS ONE: the `h` view consumes bare
-    // `x` and greys the button with the group, the READ-ONLY lock ADMITS it
-    // (flipping the bit authors nothing, and the drag's own target rule
-    // refuses every locked cell for itself) — and so does the ITERATION lock,
-    // which is the addition: the lamp is the road to the bound cells, so it is
-    // deliberately not in iteration_lock_greys.
-    //
-    // NO MODIFIER ADMISSION AND NO REPEAT: the mode has one shifted twin
-    // nowhere, and a toggle repeats onto itself.
-    {RedesignButton::IconValueDrag,
-     GuiKeys::X,      false, false, false, false, true},                             // bare x
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
     // behind a separator and ahead of the arrows. THREE BUTTONS, THREE CHORDS
     // — no hold, no double-click, no modifier gesture on the surface — and the
@@ -736,8 +715,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
 // every RedesignButton but the THREE menu anchors carries a chord here — 51
-// rows against the roster's 54 since 2026-09-09'S HELP DELETION, which moved
-// the ROSTER ALONE: the anchor carried no chord, so this table did not feel
+// rows against the roster's 54 since 2026-09-13'S VALUE DRAG LAMP DELETION,
+// which took bare `x`'s row out with its button (a chord, so the pair moved
+// together; the gesture's posture is the view's now, value_drag_posture). It
+// was 52 against 55 from 2026-09-10'S VALUE DRAG LAMP, the same pair's
+// arrival closing the bottom row's verb group, and 51 against 54 from
+// 2026-09-09'S HELP DELETION, which moved the ROSTER ALONE: the anchor carried no chord, so this table did not feel
 // it (the addend's own succession is at the static_assert below).
 // It was 51 against 55 from 2026-09-04'S ITERATIONS DELETION, which
 // moved BOTH numbers in one act and is the SERIES RELOCATION'S OWN SHAPE RUN
@@ -2065,20 +2048,23 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // producers.
     // AND THE VALUE DRAG KEEPS ITS OWN, on the same rule (2026-09-10): the
     // thing being dragged is a VALUE, so the vertical resize the flag box
-    // wears under a lit lamp stays TRUE for the whole gesture. The record is
+    // wears under the posture stays TRUE for the whole gesture. The record is
     // that it is live — one shape, a number sliding up and down — and there is
     // no position to re-derive from (this drag leaves the flag box by
     // definition, exactly as a bound drag leaves the band). Capture-free, so
     // there is a visible cursor to keep.
     if (app.value_drag.active) return GuiCursorKind::ValueDrag;
-    // THE PENDING ARM IS THE SAME ARM FOR BOTH DRAGS, and under a lit lamp it
-    // has to ask the lamp's question: sub-threshold the pointer still rests on
-    // the flag box it pressed, where the hover arm below answers ValueDrag on
-    // an actionable cell and the ARROW on every other one, so the pending
-    // reads the same predicate and the cue cannot flip at the crossing. A
-    // marker drag cannot be live here at all while the lamp stands — the
-    // crossing begins one gesture or none — so `drag.active` needs no term.
-    if (app.value_drag_enabled && app.pending_marker_press.active) {
+    // THE PENDING ARM IS THE SAME ARM FOR BOTH DRAGS, and where the view makes
+    // the flag's plain drag the vertical one it has to ask the posture's
+    // question (value_drag_posture, app_state.h): sub-threshold the pointer
+    // still rests on the flag box it pressed, where the hover arm below
+    // answers ValueDrag on an actionable cell and the ARROW on every other
+    // one, so the pending reads the same predicates and the cue cannot flip at
+    // the crossing. A marker drag cannot be live here at all while the posture
+    // stands — the crossing begins one gesture or none — so `drag.active`
+    // needs no term. (Nothing a pending press can outlive moves the posture:
+    // the drag-modal gate swallows every chord that could switch a view.)
+    if (value_drag_posture(app) && app.pending_marker_press.active) {
         return value_drag_target(app, audio, app.pending_marker_press.marker,
                                  app.pending_marker_press.cell)
                    ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
@@ -2331,15 +2317,18 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // exception to this map's usual derive-one-arm-per-press-branch shape,
         // and the architect's: a flag box is the marker, and the marker is a
         // thing you slide along the timeline. The plain press's own gesture IS
-        // the drag in a live view at home; where the drag refuses (off the
-        // column's home view, a read-only tab) or does not exist (the `h`
-        // view's diff flags, which take clicks alone) the box still wears it,
-        // one shape for the one surface. THE EXCEPTIONS ARE THE TWO LAMPS —
-        // the VALUE DRAG (2026-09-10) and ADD TO SELECTION (2026-09-12) — and
-        // they are exceptions because each changes WHICH GESTURE the surface
-        // offers rather than merely whether it will succeed: with either lit
-        // the horizontal move is off on every flag, so a box that still
-        // promised it would promise a gesture that no longer exists.
+        // the drag in a live view at home; where the drag refuses (a
+        // read-only tab) or does not exist (the `h` view's diff flags, which
+        // take clicks alone) the box still wears it, one shape for the one
+        // surface. THE EXCEPTIONS ARE THE VALUE DRAG'S POSTURE (2026-09-10,
+        // the view's own since 2026-09-13 — which is also why the warp column's
+        // off-home view no longer reaches this resting answer: target view on
+        // that column IS the posture) and the ADD TO SELECTION lamp
+        // (2026-09-12) — and they are exceptions because each changes WHICH
+        // GESTURE the surface offers rather than merely whether it will
+        // succeed: under either the horizontal move is off on every flag, so a
+        // box that still promised it would promise a gesture that no longer
+        // exists.
         // Those forks are at the arms below. It reads
         // hit_test_flag — the painter's published boxes, the same predicate the
         // press claims and the nav surface carves itself out with — so it
@@ -2348,14 +2337,15 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // modifier arms by their own rank (a ctrl or shift press on a flag is a
         // selection act, which carries no cue) and AHEAD of the strip's Arrow,
         // which is what used to answer here.
-        // THE VALUE DRAG LAMP TAKES THIS ARM WHILE IT STANDS (architect
-        // 2026-09-10), and it is the map's standing rule applied rather than
-        // an exception to it: under a lit lamp the flag's plain drag is the
-        // VERTICAL one, so a box whose cell the drag can act on wears the
-        // vertical resize — and a box it cannot act on arms NOTHING at all
-        // (the horizontal move is off on every flag while the lamp stands), so
-        // it wears the Arrow, which is what a point arming nothing shows
-        // everywhere in this map. The question is the gesture's own owner,
+        // THE VALUE DRAG POSTURE TAKES THIS ARM WHILE IT STANDS (architect
+        // 2026-09-10 for the gesture, 2026-09-13 for the posture being the
+        // view's — value_drag_posture, app_state.h), and it is the map's
+        // standing rule applied rather than an exception to it: there the
+        // flag's plain drag is the VERTICAL one, so a box whose cell the drag
+        // can act on wears the vertical resize — and a box it cannot act on
+        // arms NOTHING at all (the horizontal move is off on every flag while
+        // the posture stands), so it wears the Arrow, which is what a point
+        // arming nothing shows everywhere in this map. The question is the gesture's own owner,
         // value_drag_target, asked with the cell the same published boundaries
         // resolve for a press (hit_test_flag_cell) — one answer for the cue
         // and for the crossing.
@@ -2367,7 +2357,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // the membership-toggle branch, which acts at the press and arms
             // NOTHING (run_marker_click_act's `toggle` term, this file), so no
             // crossing can begin a drag of either axis on any flag. That is
-            // true whatever the value drag lamp says, so the term is ranked
+            // true whatever the value drag posture says, so the term is ranked
             // first and outside it: the Arrow is what a point arming nothing
             // wears everywhere in this map, and a box still promising the
             // horizontal move would promise a gesture the press cannot begin.
@@ -2380,11 +2370,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // changes nothing a diff flag does and must change nothing it
             // wears: in there the box keeps the ruled one-shape-for-the-one-
             // surface answer below. The value drag's own term needs no such
-            // fork — its predicate answers false whole in the view, at its own
+            // fork — its posture answers false whole in the view, at its own
             // declaration.
             if (app.add_to_selection && !app.history_mode.active)
                 return GuiCursorKind::Arrow;
-            if (app.value_drag_enabled) {
+            if (value_drag_posture(app)) {
                 return value_drag_target(app, audio, flag_hit,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
@@ -10603,20 +10593,29 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // that whole gesture (see marker_drag.h), so the one off-home flag
         // drag left — a WARP flag in target view, the P column dragging in
         // both audio views since 2026-08-30 — is the silent
-        // navigation-class refusal.
-        // THE VALUE DRAG FORKS AHEAD OF BOTH (architect 2026-09-10): while
-        // the lamp stands the flag's plain drag is the VERTICAL one, so the
-        // crossing begins that gesture or NONE — "we never allow multi-axis
-        // dragging; flags move up and down or not at all". The return is
-        // unconditional for that reason: a flag the value drag cannot act on
-        // does not fall back to the horizontal move under a lit lamp, it
-        // simply does not drag. The two AUTHORING GATES are not skipped, they
-        // are ASKED INSIDE the target rule instead — value_drag_target reads
+        // navigation-class refusal. SINCE 2026-09-13 THE POSTURE BELOW TAKES
+        // EVERY T+W CROSSING FIRST (target view on the warp column IS the
+        // value drag's posture), so the home-view term under it no longer
+        // answers any press; it stays as the binding's named flag-drag
+        // consumer (active_column_authoring_allowed's inventory), stating the
+        // rule the posture was derived from.
+        // THE VALUE DRAG FORKS AHEAD OF BOTH (architect 2026-09-10): wherever
+        // the view makes it so — target view on the warp column, and the phase
+        // column under grid iterations (value_drag_posture, app_state.h, where
+        // the whole rule is stated, 2026-09-13) — the flag's plain drag is the
+        // VERTICAL one, so the crossing begins that gesture or NONE — "we
+        // never allow multi-axis dragging; flags move up and down or not at
+        // all". The return is unconditional for that reason: a flag the value
+        // drag cannot act on does not fall back to the horizontal move under
+        // the posture, it simply does not drag. (Nothing is lost by it: T+W is
+        // where the home-view binding refuses the horizontal warp drag, and
+        // the lit lamp's lock refuses the horizontal phase-reset drag.) The
+        // two AUTHORING GATES are not skipped, they are ASKED INSIDE the target rule instead — value_drag_target reads
         // authoring_locked for the payload and the tab's read-only bit for a
         // bound cell, each cell answering for what it authors — and the
         // home-view gate has nothing to say here, this gesture moving no
         // marker at all. Silent either way, as this whole surface is.
-        if (app.value_drag_enabled) {
+        if (value_drag_posture(app)) {
             // The begin is followed by THIS EVENT'S OWN MOTION, which is the
             // marker drag's fall-through said as a call: the crossing is
             // already 8 px from the press, so the first apply folds the whole

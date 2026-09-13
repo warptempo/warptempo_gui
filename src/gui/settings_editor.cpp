@@ -170,13 +170,13 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
 // engine-key arm in commit() asks authoring_locked for both locks at once —
-// but its keyboard gate refuses SEVEN chords the read-only allowlist admits
+// but its keyboard gate refuses EIGHT chords the read-only allowlist admits
 // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
-// bare `p`, bare `k`, the three absolute view selectors and the paired
-// march), so a GUI-kind key whose chokepoint is one of those chords owes a
-// gate of its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
-// validate_gui_setting's whole key set (2026-09-10), TWO KEYS OWE ONE AND
-// BOTH CARRY IT, EACH IN THE SHAPE ITS OWN CHORD REFUSES IN:
+// bare `p`, bare `k`, bare `t`, the three absolute view selectors and the
+// paired march), so a GUI-kind key whose chokepoint is one of those chords
+// owes a gate of its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
+// validate_gui_setting's whole key set (2026-09-13), THREE KEYS OWE ONE AND
+// ALL THREE CARRY IT, EACH IN THE SHAPE ITS OWN CHORD REFUSES IN:
 //   * `active_markers_view=` — bare `p` (and the column half of 1/2/3) —
 //     BOTH DIRECTIONS, the gate standing AHEAD of the no-op gate: the chord
 //     refuses whichever column it is pressed in, so a typed same-column
@@ -187,9 +187,13 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 //     of either tab refuses while an UNLOCK commits, an unlock only widening
 //     what is reachable, and an unchanged value is the ordinary no-op with
 //     nothing for the lock to exclude.
+//   * `active_audio_view=` — bare `t` (and the audio half of 1/2/3), since
+//     2026-09-13, when grid iterations became target-view-only — asking the
+//     REQUESTED value, `S` refused: under a lit lamp the view IS target
+//     (AppState::iteration_mode_enabled's invariant), so a typed `S` is the
+//     one spelling that could move it and a typed `T` is the ordinary no-op.
 // AND THE REST DO NOT, each because its own chord is live under a lit lamp:
-// `active_audio_view=` is bare `t` (the S/T flip the lock never touches, and
-// the audio half of 1/2/3 with it), `active_tab_view=` is Ctrl+Tab,
+// `active_tab_view=` is Ctrl+Tab,
 // `waveform_magnification_level=` is the `=`/`-` pair, and the per-tab
 // `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
 // viewport and trim band, which neither lock protects. The delta's other two
@@ -334,6 +338,22 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         applied(); return true;
     }
     if (key == "active_audio_view") {
+        // THE ITERATION LOCK REFUSES THE SWITCH BACK TO SOURCE (architect
+        // 2026-09-13: grid iterations lives in target view alone), the typed
+        // spelling of bare `t`'s refusal at the keyboard gate
+        // (iteration_lock_key_blocked's delta (a)). It asks the REQUESTED
+        // value rather than the direction of a flip: under a lit lamp the view
+        // is target by invariant, so `S` is the only value that could move it,
+        // and a typed `T` falls to the no-op below. Red flash plus card, the
+        // column arm's own shape and sentence.
+        if (app.iteration_mode_enabled && gv.c == 'S') {
+            app.settings_editor.red = true;
+            viewport.invalidate_modal_dialog_area();
+            std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIterationLockCard);
+            return true;
+        }
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
         // The bare-`t` route (no editor-state guard); it flips S<->T.
         input->handle_active_audio_view_toggle();

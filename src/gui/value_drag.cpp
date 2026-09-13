@@ -34,8 +34,9 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
     // THE TARGET RULE, asked of its one owner and asked HERE rather than at the
     // caller, so the crossing and the cursor map cannot answer it differently
     // (value_drag_target, app_state.h). A refusal is SILENT and writes nothing:
-    // a pointer gesture's non-event is its own answer, and under a lit lamp a
-    // flag that cannot be dragged simply does not drag.
+    // a pointer gesture's non-event is its own answer, and where the view makes
+    // this the flag's plain drag (value_drag_posture) a flag that cannot be
+    // dragged simply does not drag.
     if (!value_drag_target(app, audio, marker, cell)) return false;
 
     const char column = app.active_markers_view;
@@ -220,23 +221,6 @@ void ValueDragOps::commit() {
     // camera through the reseat).
     ValueDragState st = std::move(app.value_drag);
     app.value_drag = ValueDragState{};
-
-    // THE DRAG SPENDS THE LAMP (architect 2026-09-13: "x should be a one-shot,
-    // like follow: once you toggle x on, the next time you drag a flag up or
-    // down, x is released"). Every end of a drag that BEGAN spends it, AHEAD
-    // of both early returns below, so a bound drag and a tempo drag that
-    // wandered back to where it started spend it exactly as a netted change
-    // does; a press that never crossed never reached `begin` and spends
-    // nothing, follow's refused launch. WHILE GRID ITERATIONS IS LIT THE LAMP
-    // IS NOT SPENT: tuning brackets is many cell drags in a row, so the mode
-    // holds the lamp for its whole span and its exit puts it out
-    // (GuiFlagEditor::wipe_iter_state). The whole writer inventory is at
-    // AppState::value_drag_enabled. The bottom row owes the damage here, the
-    // lamp going dark in the frame of the release.
-    if (!app.iteration_mode_enabled && app.value_drag_enabled) {
-        app.value_drag_enabled = false;
-        viewport.invalidate_rect(bottom_row_area(app));
-    }
 
     // A BOUND DRAG COMMITS NOTHING AT ALL: every write it made already stands
     // in the store and already damaged the lane, a bracket pushes no undo

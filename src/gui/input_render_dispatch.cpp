@@ -121,9 +121,9 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.view_zoom_level = app.zoom_level;
     if (app.active_audio_view == 'T') {
         // Already target-axis: take the live values verbatim. A SWEEP CELL
-        // REACHES THIS ARM TOO since 2026-08-07 (the iteration sweep dispatches
-        // from either audio view now that iteration mode is target-legal), and
-        // it diverges here exactly as it does in the source arm below — the
+        // REACHES THIS ARM, and since 2026-09-13 ONLY THIS ARM (grid
+        // iterations lives in target view alone,
+        // AppState::iteration_mode_enabled), and it diverges here — the
         // cell's own per-cell markers describe a different map than the live
         // one these values are expressed in — with the same answer: the wav-arm
         // writer clamp brings an out-of-domain browse position back in.
@@ -135,9 +135,9 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
         // anchor, so the captured position is the target image of the
         // on-screen playhead with its screen column preserved. At dispatch
         // the live stores equal the request's stores for plain dispatches,
-        // so the live map IS the entry's axis; a sweep cell rewrites markers
-        // per cell and diverges, which the wav-arm writer clamp brings back
-        // in-domain. If the live map cannot build (tripwire-class only),
+        // so the live map IS the entry's axis (a sweep cell, which rewrites
+        // markers per cell, never reaches this arm since 2026-09-13, the mode
+        // living in target view alone). If the live map cannot build (tripwire-class only),
         // fall back to the untranslated live values: the writer clamp keeps
         // them in-domain, and such a dispatch would surface the worker's own
         // resolve->build stderr refusal.

@@ -9,21 +9,18 @@ struct GuiTargetRender;
 
 // THE FLAG'S VALUE DRAG — the second plain-flag drag and the ONE pointer
 // gesture that changes a marker's VALUE (architect 2026-09-10). It runs only
-// while the VALUE DRAG lamp stands (bare `x`; the mode's whole contract is at
-// AppState::value_drag_enabled), where a plain flag press-and-drag steps the
-// pressed cell's value VERTICALLY and the horizontal marker drag is off on
-// every flag: "we never allow multi-axis dragging; flags move up and down or
-// not at all."
-//
-// THE LAMP IS A ONE-SHOT (architect 2026-09-13): the commit of a drag that
-// began puts it out, whatever the drag netted, except while grid iterations
-// is lit, where the mode holds it for its whole span (ValueDragOps::commit
-// carries the spend; the writer inventory is at the lamp's declaration).
+// where the VIEW makes it the flag's plain drag — TARGET view on the warp
+// column, and the phase column's cells while grid iterations is lit (architect
+// 2026-09-13, retiring the bare `x` lamp that decided it before; the whole
+// rule is at value_drag_posture, app_state.h) — where a plain flag
+// press-and-drag steps the pressed cell's value VERTICALLY and the horizontal
+// marker drag is off on every flag: "we never allow multi-axis dragging; flags
+// move up and down or not at all."
 //
 // THE PRESS IS THE MARKER DRAG'S: run_marker_click_act runs at the press
 // (stop, select, land, address the cell, hide the trim overlay) and arms
 // PendingMarkerPress; the crossing of the shared drag threshold forks on the
-// lamp and begins exactly one of the two gestures. So this unit owns no press
+// posture and begins exactly one of the two gestures. So this unit owns no press
 // path, no selection write and no playhead write — a value change is not a
 // movement, and the press already put the playhead where it belongs.
 //
@@ -44,7 +41,9 @@ struct GuiTargetRender;
 // the step's own three fields: `tempo_inherits` false, the landed cents, and
 // the effective scale that keeps the freeze lossless. A LABEL REF is still no
 // target, having no tempo of its own; in TARGET view a pass is none either,
-// the arrows' own kind refusal ruling there (value_drag_target, app_state.h).
+// the arrows' own kind refusal ruling there (value_drag_target, app_state.h)
+// — and target view is the only view the posture arms the payload in since
+// 2026-09-13, so the conversion is not reached from a press today.
 //
 // THE TARGET RULE IS NOT HERE EITHER: value_drag_target (app_state.h) answers
 // which flags and which cells this gesture may touch, and the CURSOR MAP reads
@@ -70,7 +69,7 @@ struct GuiTargetRender;
 // a map bisection over hypothetical builds, a predecessor-eligibility walk and
 // a group seed — was deleted with its keyboard twin on 2026-07-29 and stays
 // deleted and unproposed; the record is at the head of marker_drag.h. This is
-// a lamp-gated vertical STEP of the same values the arrows step, with no map
+// a view-gated vertical STEP of the same values the arrows step, with no map
 // arithmetic anywhere in it, and it is the architect's own ruling of
 // 2026-09-10.)
 struct ValueDragOps {

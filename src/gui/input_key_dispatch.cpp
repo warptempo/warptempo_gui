@@ -521,8 +521,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // move to a spelling change. Of the keys the pair left, Shift+X answers
     // nothing here or anywhere, as Ctrl+Shift+X has not since 2026-08-18 (the
     // strict-modifier rule makes an unbound combination a no-op everywhere),
-    // while bare `x` is the VALUE DRAG LAMP since 2026-09-10 and has its own
-    // admission below.
+    // and so does bare `x` since 2026-09-13 (the VALUE DRAG LAMP's chord from
+    // 2026-09-10, deleted with that lamp for a posture the view derives).
     const bool is_trim_region_toggle =
         (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft);
     const bool is_trim_maximize =
@@ -538,24 +538,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // navigation. Bare-exact, exactly the dispatch arm's own spelling.
     const bool is_add_to_selection =
         (!ctrl && !shift && !alt && key == GuiKeys::K);
-    // THE VALUE DRAG LAMP (architect 2026-09-10), admitted on the same
-    // standard as its neighbour above and with one clause more: the chord
-    // flips a session bit that changes what a PLAIN FLAG DRAG means, and the
-    // bit itself writes no store, no undo entry and no dirty flag. WHAT THE
-    // DRAG GOES ON TO DO IS GATED WHERE IT HAPPENS: value_drag_target
-    // (app_state.h) refuses the base tempo on a locked tab — authored musical
-    // content — and refuses a bound cell there too, which is the bound step's
-    // own verdict at this very gate (bare Up/Down are not on this list). So
-    // the lock loses nothing by admitting the switch, and the button stays lit
-    // on a locked tab exactly as bare `k`'s does. Bare-exact, exactly the
-    // dispatch arm's own spelling.
-    //
-    // IT PASSES THE ITERATION LOCK THROUGH THIS SAME ENTRY and needs no delta
-    // of its own there: iteration_lock_key_blocked falls through to this list,
-    // and the lamp is the ROAD to the bound cells the lock exists to leave
-    // open — refusing it would refuse the mode's own authoring surface.
-    const bool is_value_drag =
-        (!ctrl && !shift && !alt && key == GuiKeys::X);
     // BARE `l` — THE RENDER PLAYER (2026-08-28) — is admitted on the header's
     // own standard: it plays a rendered wav through the engine and authors
     // nothing; the player's one authoring act, the Load in place button,
@@ -647,7 +629,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
              is_trim_region_toggle || is_trim_maximize ||
-             is_add_to_selection || is_value_drag ||
+             is_add_to_selection ||
              is_play_renders || is_av_sync_stats ||
              is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source);
@@ -680,7 +662,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // first tests below.
 //
 // DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, and
-// FOUR MEMBERS wide: THE W/P COLUMN SWITCH's four chords — bare `p` and the
+// FIVE MEMBERS wide: THE W/P COLUMN SWITCH's four chords — bare `p` and the
 // three ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3, which run the `t` and `p`
 // handlers and so carry the column with them (architect 2026-09-10: the mode
 // is lit for the column you are IN, which is also what retired the stamped
@@ -721,17 +703,28 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // can ask, and between the two halves the composed state is unreachable from
 // either side. (A per-tab switch refusal stood between them for one afternoon
 // that day and was deleted with the state it answered.)
-// BARE `t` IS NOT ONE of them and stays admitted: the mode is
-// target-legal and a bracket reads no audio view. NEITHER IS Ctrl+Tab, and
-// that is by construction rather than by exception — the two tabs SHARE the
-// warp and phase-reset stores, so a bracket is common to both tabs and a
-// plain switch can strand nothing.
+//
+// AND BARE `t`, THE S/T SWITCH (architect 2026-09-13: grid iterations lives in
+// target view alone). Bare `i` pressed in source view crosses to target
+// before it lights the mode, so under a lit lamp the view IS target
+// (AppState::iteration_mode_enabled's invariant) and every `t` would go T->S —
+// which is why the refusal is UNCONDITIONAL rather than a direction test: the
+// only direction a press can have is the refused one. Bare 1 was already
+// refused above as a column-quartet member and is the same answer's second
+// road; 2 and 3 name target and would move only the column. The Toggle Audio
+// View lamp greys with it (iteration_lock_greys, app_state.h) and the settings
+// editor's typed `active_audio_view=S` refuses beside it on the same card.
+// Until that ruling `t` was admitted here, the mode having been target-legal
+// in BOTH views and a bracket reading no audio view.
+// Ctrl+Tab IS NOT ONE of them, and that is by construction rather than by
+// exception — the two tabs SHARE the warp and phase-reset stores, so a bracket
+// is common to both tabs and a plain switch can strand nothing.
 //
 // EVERY OTHER AUTHORING CHORD this mode has to hold back is already off the
 // list above — the vertical arrows on any modifier, bare Return, bare `/`,
 // Delete, Ctrl+D, Ctrl+N, bare `s` and Shift+S, `;`, the three propagate
 // PASTES, and Ctrl+Z / Ctrl+Shift+Z — so the base answers for all of them and
-// this delta subtracts the three above alone. BARE `h` IS THE ONE AUTHORING
+// this delta subtracts its own members alone. BARE `h` IS THE ONE AUTHORING
 // ROAD THIS GATE DOES NOT ANSWER, and it is refused a dispatch earlier
 // instead: the history vocabulary is claimed above this gate
 // (handle_history_mode_key, below), so the view's ENTRY carries the lock's
@@ -791,7 +784,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // key's card). Its members are the four marker verbs, the Measure, the
 // Toggle Marker Column lamp, the Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
-// lane, and — since 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
+// lane, THE TOGGLE AUDIO VIEW LAMP (2026-09-13, bare `t`'s face), and — since
+// 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
 // quartet's other three chords, WALK BOTH TABS, delta (a)'s second member,
 // THE PADLOCK, its third, ADD TO SELECTION, its fourth, and BPM ITERATIONS,
 // which left delta (b) that evening. NO ARM THERE
@@ -825,15 +819,16 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     const bool alt   = mods.alt;
     // DELTA (a), ahead of every admission: the W/P column switch, BARE `o`
     // (the read-only toggle — the lock's own reachability, the header), BARE
-    // `k` (ADD TO SELECTION — the header's fourth member) and the paired
-    // march. Bare-exact on all six and ctrl-and-shift exact on the
-    // march, exactly as their dispatch arms spell them. (They lived in an
+    // `k` (ADD TO SELECTION — the header's fourth member), BARE `t` (the S/T
+    // switch back to source — its fifth, 2026-09-13) and the paired march.
+    // Bare-exact on all seven and ctrl-and-shift exact on the march, exactly
+    // as their dispatch arms spell them. (They lived in an
     // owner of their own until 2026-09-10, so that the gate could ask them
     // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
     // state unreachable, and the owner went with it.)
     if (!alt && !ctrl && !shift &&
         (key == GuiKeys::O || key == GuiKeys::P || key == GuiKeys::K ||
-         key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+         key == GuiKeys::T || key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
          key == GuiKeys::Digit3))
         return true;
     if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
@@ -5077,7 +5072,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
     //
     // IN TARGET VIEW THIS TAIL IS A GRANTED HOME-VIEW-BINDING EXCEPTION
     // (architect 2026-08-07, with the ruling that iteration mode is
-    // TARGET-LEGAL — the sweep dispatches from either audio view now). The
+    // TARGET-LEGAL — and since 2026-09-13 target view is the only view the
+    // mode, and so the sweep, can stand in: AppState::iteration_mode_enabled). The
     // wipe writes the WARP store, which off warp's
     // home view the binding would otherwise refuse; it was what gated this
     // whole command to source view (bdf4336, 2026-07-22), and that gate is
@@ -5090,10 +5086,6 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // state it clears is the very state this command just consumed. Every other route out of the mode already runs
     // this same clear, so nothing about the mode's lifecycle changed with the
     // view.
-    // THE WIPE ALSO PUTS THE VALUE DRAG LAMP OUT, on both columns and on the
-    // same "committed to run either way" footing: the mode held that lamp lit
-    // and this is the mode's exit. A sweep refused above returns before here
-    // and leaves both lamps standing (the rule is at wipe_iter_state).
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
     viewport.invalidate_top_strip();
@@ -5169,12 +5161,12 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
     // under tmp/, the same refusals — and there is no second chord for it.
     // The single render below is the mode-off meaning, unchanged. THE
-    // SWEEP DISPATCHES FROM EITHER AUDIO VIEW since 2026-08-07 (the mode is
-    // TARGET-LEGAL): the bit alone selects the command, and target view needs
-    // no clause of its own for the opposite reason it needed none before — the
-    // mode can now REST in target, and the arm below fires there. This is also
+    // SWEEP DISPATCHES FROM TARGET VIEW, the one view the mode can stand in
+    // since 2026-09-13 (AppState::iteration_mode_enabled; from 2026-08-07 it
+    // could rest in either): the bit alone selects the command, and no view
+    // clause is owed. This is also
     // what keeps the Render button honest, its "Render Grid Iterations" face
-    // following the same bit from either view — and since 2026-09-02 that
+    // following the same bit — and since 2026-09-02 that
     // face also greys wherever the sweep would refuse before it dispatched,
     // reading iteration_sweep_plan (app_state.h) through its boolean face,
     // the verdict this body's own two refusals read. The sweep's own body
@@ -7681,7 +7673,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // 2026-09-09 (the arm below carries the ruling; the P-column card it used
     // to answer with is deleted with the premise that a phase reset had
     // nothing to iterate), AND IT LIGHTS THE MODE FOR THE COLUMN IT IS
-    // PRESSED IN, which the lock then holds still. The
+    // PRESSED IN, which the lock then holds still — IN TARGET VIEW, crossing
+    // there first when pressed in source (2026-09-13). The
     // editor-active branch above already swallows any
     // keystroke while a popup edit is in flight, so this code only
     // runs with no active editor. Toggling repaints the top strip
@@ -7709,19 +7702,23 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // second lamp, no second key and no column term on this button — and
         // no other column to stand on while lit.
         //
-        // AND NO AUDIO-VIEW TEST EITHER — both views, on both columns
-        // (architect 2026-08-07, iteration mode is TARGET-LEGAL; the deleted
-        // S->T wipe's record is in switch_active_audio_view_to,
-        // input_handler.cpp). It read active_column_authoring_allowed until
-        // then, which pinned the toggle to warp's SOURCE home. The relaxation
-        // is about MODE STATE rather than authoring, which is why it is not a
-        // home-view-binding exception: the bit selects what Ctrl+Alt+R means
-        // and what the flags show. THE READ-ONLY LOCK IS NOW THE WHOLE OF
-        // WHAT THE GRID ITERATIONS BUTTON'S FACE READS
-        // (redesign_button_enabled, app_state.h) — the column term went with
-        // this one, and the toggle is meaningful in either direction on any
-        // loaded piece — and the lock refuses `i` for the same one reason in
-        // every view: the key is not on read_only_key_blocked's allowlist, a
+        // AND THE MODE LIVES IN TARGET VIEW ALONE (architect 2026-09-13), so
+        // the ON edge pressed in SOURCE view CROSSES TO TARGET FIRST — Shift+S's
+        // crossing shape (drop_phase_reset_in_target_view, input_handler.cpp),
+        // below, past every refusal. The column is unchanged (S+W lights in
+        // T+W, S+P in T+P). While the lamp stands the lock refuses every road
+        // back to source (bare `t` joins iteration_lock_key_blocked's delta
+        // (a)), so the OFF edge always runs in target and needs no crossing;
+        // the invariant is stated once at AppState::iteration_mode_enabled.
+        // (From 2026-08-07 until this ruling the mode was TARGET-LEGAL in both
+        // views and this arm had no audio-view term at all; before that it
+        // read active_column_authoring_allowed, which pinned the toggle to
+        // warp's SOURCE home.) THE READ-ONLY LOCK IS STILL THE WHOLE OF WHAT
+        // THE GRID ITERATIONS BUTTON'S FACE READS (redesign_button_enabled,
+        // app_state.h) — a press in source view is live, its crossing being
+        // part of the act, so the face greys for no view (the twin rule) —
+        // and the lock refuses `i` for the same one reason in every view:
+        // the key is not on read_only_key_blocked's allowlist, a
         // view-independent gate that runs above this dispatch, which answers
         // whenever the ACTIVE tab is locked.
         //
@@ -7767,6 +7764,22 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // cells away rather than finish a pass, so the gate eats it with the
         // lock's own card (iteration_lock_key_blocked) and Add to Selection
         // greys.
+        // THE CROSSING, ON THE ON EDGE ALONE AND PAST EVERY REFUSAL ABOVE (the
+        // gate's read-only and modal refusals and the piece-wide lock just
+        // above), so a refused `i` switches nothing. switch_active_audio_view_to
+        // is the SAME chokepoint bare `t` runs, in its SET-TO spelling, so
+        // every invariant it owns — the entry validation, the domain
+        // translation of playhead and viewport, the editor teardown, the
+        // re-warp — arrives by construction. A REFUSED ENTRY STOPS THE WHOLE
+        // PRESS with the mode still dark: the entry gate refuses silently on
+        // one stderr line (the tripwire class, unreachable from
+        // program-written input), and lighting the mode in source view is the
+        // one state the ruling deletes. The verdict is read off the state the
+        // chokepoint writes, as Shift+S and the absolute selectors read it.
+        if (!app.iteration_mode_enabled && app.active_audio_view == 'S') {
+            switch_active_audio_view_to('T');
+            if (app.active_audio_view != 'T') return true;   // entry refused
+        }
         if (app.iteration_mode_enabled) {
             // Turning iteration mode OFF wipes BOTH stores' session-only iter
             // brackets — exiting the mode is the clear (wipe_iter_state,
@@ -7783,29 +7796,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // neither disk nor a render — and since 2026-09-10 it pushes no
             // undo entry either, the bracket having left the undo domain, so
             // the clear is FINAL and the mode's own lamp is the warning.
-            // The wipe also puts the VALUE DRAG lamp out, the mode that held
-            // it lit ending (the rule is at wipe_iter_state).
             flag_editor.wipe_iter_state();
         }
         app.iteration_mode_enabled = !app.iteration_mode_enabled;
-        // THE ON EDGE LIGHTS VALUE DRAG, ON BOTH COLUMNS (architect 2026-09-11
-        // for the warp column, 2026-09-13 for both). Tuning a bracket is a
-        // cell-dragging job — the warp column's cents and the phase column's
-        // hops are both value-drag targets wherever the cells paint
-        // (value_drag_target's bound arm, over marker_paints_iter_cells) — so
-        // the mode that raises the cells raises the gesture that works them,
-        // and the hand is spared a second key it would press every time anyway.
-        //
-        // AND THE MODE HOLDS IT FOR ITS WHOLE SPAN: a drag under the lit mode
-        // does not spend the one-shot (ValueDragOps::commit), and leaving the
-        // mode by either road puts it out (wipe_iter_state). Bare `x` still
-        // turns it off by hand mid-mode, and then it stays off.
-        //
-        // IT IS A COMPANION WRITE, NOT A SWAP: it turns nothing off, it
-        // refuses nothing, and it cannot compose a forbidden pair, there being
-        // none left for it — the value drag and add to selection may stand lit
-        // together since 2026-09-12. A lit Value drag makes it a no-op write.
-        //
         // AND THE ON EDGE SPENDS THE SELECTION, ON BOTH COLUMNS (architect
         // 2026-09-12): the bound cells are addressed one marker at a time and
         // by a PLAIN press, so entering the mode is exactly the moment a built
@@ -7818,13 +7811,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // exactly as it stands.
         //
         // THE DAMAGE IS BOTH LANES where the write happens: the Grid
-        // Iterations lamp is the icon row's and the two toggled lamps the
+        // Iterations lamp is the icon row's and the Add to Selection lamp the
         // bottom row's, and a mode toggle must light in the frame it was asked
-        // for rather than on the per-tick face comparator's next pass (the off
-        // edge's bottom-row damage is the wipe's own).
+        // for rather than on the per-tick face comparator's next pass.
         if (app.iteration_mode_enabled) {
             selection_consumed(app);
-            app.value_drag_enabled = true;
             viewport.invalidate_rect(bottom_row_area(app));
         }
         viewport.invalidate_top_strip();
@@ -8069,10 +8060,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // stands, whichever way this toggle would have gone — and it costs no off
     // edge, since bare `i`'s ON edge puts THIS lamp out (architect 2026-09-12)
     // and lit-and-lit therefore has no producer.
-    // THE VALUE DRAG IS NO LONGER A GATE (the same ruling): the two lamps may
-    // both stand lit, harmlessly by construction — with this one lit no flag
-    // press arms anything, so that mode's drag simply never begins and the
-    // cursor answers Arrow on the flag (AppState::value_drag_enabled).
+    // THE VALUE DRAG IS NO GATE: its posture (the view's since 2026-09-13)
+    // may stand beside this lamp harmlessly by construction — with this one
+    // lit no flag press arms anything, so that drag simply never begins and
+    // the cursor answers Arrow on the flag (value_drag_posture, app_state.h).
     //
     // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
     // columns and both audio views (a selection is not authored content, so
@@ -8095,49 +8086,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `x` (no modifiers): toggle THE VALUE DRAG, the flag's vertical drag
-    // (architect 2026-09-10). It is bare `k`'s shape one line up, exactly —
-    // one bit, flipped both ways by one key, with the bottom row's button
-    // dispatching this same chord — and the only route that writes the bit in
-    // BOTH directions: the other three writers are one-way (a value drag's
-    // release spends it outside grid iterations, grid iterations' on edge
-    // lights it and the mode's exit puts it out). Its neighbour's toggle
-    // stands beside the act class's off edge (the whole contract for both is
-    // at AppState::value_drag_enabled and AppState::add_to_selection).
-    //
-    // IT HAS NO GATE AT ALL (architect 2026-09-12, the lamps resolved by use
-    // case, retiring the one it carried from 2026-09-10). ADD TO SELECTION used
-    // to refuse it: while that lamp stands a plain flag press is a membership
-    // toggle that arms nothing, so the drag this mode exists for can never
-    // begin. That is still true and it is exactly why no refusal is owed — the
-    // composed state is HARMLESS rather than wrong, the two lamps describing
-    // two different passes over the same flags, and THE CURSOR IS WHAT TELLS
-    // THE TRUTH ABOUT IT: the flag arm of the cue map answers Arrow, never
-    // ValueDrag, while add to selection is lit (pointer_cursor_kind,
-    // input_pointer.cpp), so nothing promises a gesture that will not begin.
-    // The face greys for nothing (redesign_button_enabled's IconValueDrag arm).
-    //
-    // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
-    // columns and both audio views (WHICH flags the drag can act on is the
-    // gesture's own question, asked per press at value_drag_target), legal on
-    // a LOCKED tab and under the ITERATION LOCK — read_only_key_blocked admits
-    // it and iteration_lock_key_blocked falls through to that admission, the
-    // lamp being the road to the bound cells — and unreachable in the `h`
-    // view, whose allowlist consumes it above this dispatch. It stops no
-    // playback and hides no overlay: turning the mode on IS NOT a pointer act.
-    //
-    // THE REPAINT IS THE BOTTOM LANE'S, its neighbour's fork verbatim: the
-    // lamp lives there, and a mode toggle must light in the frame it was asked
-    // for rather than on the per-tick face comparator's next pass. THE CURSOR
-    // NEEDS NO CALL HERE: the zone map is re-resolved once per run-loop
-    // iteration from the platform's settled-state hook
-    // (refresh_pointer_cursor), so the flag under a resting pointer changes
-    // its cue on this very press with nothing arranged for it.
-    if (key == GuiKeys::X && !ctrl && !shift && !alt) {
-        app.value_drag_enabled = !app.value_drag_enabled;
-        viewport.invalidate_rect(bottom_row_area(app));
-        return true;
-    }
+    // (BARE `x` TOGGLED THE VALUE DRAG LAMP HERE from 2026-09-10 until
+    // 2026-09-13, when the architect deleted the lamp, its button and its bit
+    // for a posture the view derives — value_drag_posture, app_state.h. The
+    // chord is unbound and says nothing.)
 
     // `l` (no modifiers): "Play renders" — THE RENDER PLAYER (architect
     // design 2026-08-28, retiring the external `audio_player` spawn whole):

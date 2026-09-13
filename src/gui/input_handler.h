@@ -3905,8 +3905,11 @@ private:
     // land-in-target tail, and — both since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
-    // each through that axis's owner, and drop_phase_reset_in_target_view,
-    // Shift+S's trip to target view ahead of its lead-in drop.
+    // each through that axis's owner, drop_phase_reset_in_target_view,
+    // Shift+S's trip to target view ahead of its lead-in drop, and — since
+    // 2026-09-13 — bare `i`'s ON edge in source view, which crosses to target
+    // before it lights grid iterations (handle_mode_keys'
+    // `i` arm, input_key_dispatch.cpp).
     void switch_active_audio_view_to(char target_view);
     void handle_active_audio_view_toggle();
 

@@ -380,13 +380,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     selection.clear_selection();
     app.active_markers_view    = 'W';
     app.drag = DragState{};
-    // The flag's OTHER drag, cleared with its sibling (2026-09-10). The LAMP
-    // is deliberately not cleared beside it: `value_drag_enabled` is a session
-    // tool posture, written by its own toggle, by its own drag's spend and by
-    // grid iterations' on edge and exit (its declaration carries the rule),
-    // and a LOAD is none of them;
-    // so is the sticky ctrl below since the same day — this body resets the
-    // in-flight GESTURE state and leaves every lamp standing.
+    // The flag's OTHER drag, cleared with its sibling (2026-09-10). It has no
+    // lamp to leave standing since 2026-09-13 — whether a flag drag is this
+    // one is the view's answer (value_drag_posture) — and the sticky ctrl
+    // below is a lamp this body leaves standing: it resets the in-flight
+    // GESTURE state alone.
     app.value_drag = ValueDragState{};
     app.region_drag = RegionDragState{};
     app.pending_marker_press = PendingMarkerPress{};
@@ -402,16 +400,14 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // mutators are the anchor's only owners).
     app.shift_range_anchor = -1;
     // The STICKY CTRL does NOT ride that belt (architect 2026-09-10). It is a
-    // session TOOL POSTURE now, in the family the two lamps beside it are
-    // already in — this body clears none of the three (`add_to_selection`,
-    // `value_drag_enabled` — the record for that one is at the ValueDragState
-    // reset above — and `restrict_undo_to_viewport`), and it has nothing to
-    // clear either: this is the FRESH AppState's own first load, load_file
-    // having exactly one caller (main.cpp's project entry), so all three are
-    // already dark when it runs. Their writers are their own toggles — plus,
-    // for the value drag, the companion writes recorded at its declaration,
-    // and for the sticky ctrl the act class at selection_consumed — and a project reopen builds a new AppState rather
-    // than loading into this one; the contract is at
+    // session TOOL POSTURE now, in the family the lamp beside it is already
+    // in — this body clears neither (`add_to_selection` and
+    // `restrict_undo_to_viewport`), and it has nothing to clear either: this
+    // is the FRESH AppState's own first load, load_file having exactly one
+    // caller (main.cpp's project entry), so both are already dark when it
+    // runs. Their writers are their own toggles — plus, for the sticky ctrl,
+    // the act class at selection_consumed — and a project reopen builds a new
+    // AppState rather than loading into this one; the contract is at
     // AppState::add_to_selection.
     // (The displayed hit map AND the trim region overlay's visibility are reset in
     // apply_settings_engine_and_prefs, this load's own view-establishment

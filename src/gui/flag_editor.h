@@ -128,10 +128,7 @@ struct GuiFlagEditor {
     // became a refusal; the load in place is NOT a
     // route since 2026-09-02 — it leaves the mode bit alone, the record at
     // apply_recipe_in_place). It also puts an addressed BOUND cell back on
-    // the payload, the cells going with the mode, and puts the VALUE DRAG
-    // lamp out on both columns, the mode that held it lit ending (the lamp's
-    // one exit write; its inventory is at AppState::value_drag_enabled).
-    // HISTORY-LESS since
+    // the payload, the cells going with the mode. HISTORY-LESS since
     // 2026-09-10: the clear pushes nothing at all, the bracket having left the
     // undo domain whole, so a wipe is final; callers own the mode flip and
     // repaint.

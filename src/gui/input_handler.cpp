@@ -660,7 +660,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // VALUE (2026-09-10 — the flag's vertical drag under the Value Drag lamp,
+    // VALUE (2026-09-10 — the flag's vertical drag, armed by the view since
+    // 2026-09-13 (value_drag_posture),
     // which writes the live store per motion and so must swallow every chord
     // exactly as its horizontal sibling does) /
     // trim / region drags, the one nav drag and its pending
@@ -2255,8 +2256,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // rides the same key so the pair stays one surface. Shift+X is UNBOUND and
     // answers nothing anywhere, exactly as Ctrl+Shift+X has since 2026-08-18,
     // and under strict modifier validation an unbound combination is a
-    // consumed no-op everywhere; BARE `x` IS THE VALUE DRAG LAMP since
-    // 2026-09-10, which took the free letter. Only the spelling
+    // consumed no-op everywhere; BARE `x` is unbound too since 2026-09-13
+    // (the VALUE DRAG LAMP took the free letter on 2026-09-10 and left with
+    // it). Only the spelling
     // moved: the two acts and the button are untouched.
     //
     // THE SHIFT FORM ARRIVES AS BracketLeft PLUS THE SHIFT BIT, not as a `{`
@@ -3768,9 +3770,14 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // binding's fifth ruled exception, active_column_authoring_allowed,
     // app_state.h), so the iter grammar is typed wherever the editor opens.
     // The editor teardown one line above still runs, symmetric now and for a
-    // different reason. The settings-editor
-    // active_audio_view=T commit routes through this same edge and inherits
-    // the persistence exactly as it inherited the wipe.)
+    // different reason. SINCE 2026-09-13 THE MODE NEVER CROSSES THIS EDGE AT
+    // ALL: it lives in target view alone, bare `i` crossing S -> T through
+    // this very chokepoint before it lights, and every caller that could name
+    // 'S' under a lit lamp refusing ahead of it (bare `t` and bare 1 at the
+    // iteration lock's gate, the settings editor's typed
+    // `active_audio_view=S`, and the undo/redo restore, which the lock
+    // refuses whole) — the invariant is at AppState::iteration_mode_enabled,
+    // and this body takes no term for it.)
 
     // Target-view playback is rebound to the rendered target buffer once it is
     // ready, and Space is gated while that buffer is unavailable or updating.

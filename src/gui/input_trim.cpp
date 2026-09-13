@@ -507,8 +507,9 @@ void GuiInputHandler::handle_trim_maximize() {
 // maximizer below. OF THE TWO KEYS IT LEFT, Shift+X (the maximizer's) is
 // UNBOUND and answers nothing anywhere under the strict-modifier rule, exactly
 // as Ctrl+Shift+X has since 2026-08-18, while bare `x` (this act's chord from
-// 2026-08-18, and, for the retired set-from-region act, from long before) IS
-// THE VALUE DRAG LAMP since 2026-09-10. ONLY THE SPELLING MOVED: the two acts,
+// 2026-08-18, and, for the retired set-from-region act, from long before) was
+// the VALUE DRAG LAMP's from 2026-09-10 and is unbound since that lamp's
+// deletion on 2026-09-13. ONLY THE SPELLING MOVED: the two acts,
 // the button and its shift admission are untouched.
 //
 // The button inherited the scissors' SHIFT ADMISSION, so a shift-click or a

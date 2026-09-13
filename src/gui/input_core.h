@@ -74,15 +74,16 @@
 // degrade, the two spellings being one shape with two conventional names; the
 // fallback chain is the loader's, at kCursorKindNames.
 //
-// VALUEDRAG IS THE EIGHTH (architect 2026-09-10, with the Value Drag lamp):
+// VALUEDRAG IS THE EIGHTH (architect 2026-09-10, with the value drag):
 // `ns-resize`, the vertical twin of the trim bridge's `ew-resize`, worn over a
-// flag box whose cell the VALUE DRAG can step while the lamp stands — the
+// flag box whose cell the VALUE DRAG can step wherever the view arms it
+// (value_drag_posture, app_state.h, since 2026-09-13) — the
 // tempo on an owning flag, a bound on a purple cell — and kept for the whole
 // gesture by the live-drag rule the marker, trim and overview drags already
 // take. It is the second kind with an ALT NAME (`size_ver`), the same
 // two-conventional-spellings shape the I-beam has; Breeze ships a third
 // (`sb_v_double_arrow`) as a symlink of the same image, so two lookups reach
-// every theme that has the shape at all. A flag box the lamp cannot act on
+// every theme that has the shape at all. A flag box the drag cannot act on
 // wears the ARROW, never this — the map's standing rule that a point arming
 // nothing shows the arrow.
 enum class GuiCursorKind {

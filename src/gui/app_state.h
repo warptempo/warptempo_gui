@@ -519,9 +519,10 @@ struct DragState {
 // -- THE VALUE DRAG (architect 2026-09-10) ----------------------------------
 //
 // THE FLAG'S OTHER DRAG, and the ONE gesture that changes a marker's VALUE
-// with the pointer. While the VALUE DRAG lamp stands (AppState::
-// value_drag_enabled, below, where the mode's whole contract lives) a plain
-// flag press-and-drag steps a value VERTICALLY — one step per
+// with the pointer. Wherever the VIEW makes it the flag's plain drag
+// (value_drag_posture, below, where the posture's whole contract lives — target
+// view on the warp column, and the phase column's cells under grid iterations)
+// a plain flag press-and-drag steps a value VERTICALLY — one step per
 // kValueDragPxPerStep authored pixels of travel, UP = INCREASE, measured from
 // the press's own y — and THE HORIZONTAL MARKER DRAG IS OFF ON EVERY FLAG (the
 // architect: "we never allow multi-axis dragging; flags move up and down or
@@ -543,7 +544,7 @@ struct DragState {
 // POSITION proposal in the displayed domain with walls, an overlay and a
 // commit-time column snap, and none of that has a meaning here — a value has
 // no map, no column and no reorder. The two never stand together (the crossing
-// forks on the lamp and begins exactly one of them), and each keeps its own
+// forks on the posture and begins exactly one of them), and each keeps its own
 // record so neither has to carry a field the other reads.
 //
 // NOTHING HERE IS A CANCEL ORIGIN, the standing rule: pointer gestures have no
@@ -968,8 +969,9 @@ struct EditorTextDragState {
 // the marker stores and the engine settings — and a selection is navigation),
 // so the plain arm itself is unconditional: even a press whose drag will refuse
 // must arm, because the motionless release still owes the SEED. THE GATES ARE
-// TWO — the lock and the home-view binding — and the VALUE DRAG lamp forks
-// ahead of them into the vertical gesture.
+// TWO — the lock and the home-view binding — and the VALUE DRAG's posture
+// (value_drag_posture, the view's own answer) forks ahead of them into the
+// vertical gesture.
 //
 // Session-only, never serialized. Cleared on the crossing (either the drag
 // takes over or the arm is spent), on release / lost button, by the force-end
@@ -1963,11 +1965,11 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's NINETEEN — the transport
+// 2026-09-01), then the bottom row's EIGHTEEN — the transport
 // three, the FOUR SINGLE-MARKER VERBS with the COPY VALUE button (2026-08-29),
 // the EDIT FLAG BUTTON (2026-08-27),
 // the MARKER MEASURE (2026-08-19),
-// ADD TO SELECTION (2026-08-18) and the VALUE DRAG LAMP (2026-09-10) behind
+// ADD TO SELECTION (2026-08-18) behind
 // them, the MARKER-WALK three
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
@@ -2199,8 +2201,9 @@ enum class RedesignButton {
     // accidentally instead of `c`, and it can mess up the viewport", the show
     // half FRAMING the trim span then; the framing left the act on 2026-09-04
     // and `[` stands on its mnemonic alone, looking like the begin-trim endcap.
-    // Of the chords it has left behind, Ctrl+Shift+X is unbound; bare `x` is
-    // the VALUE DRAG LAMP since 2026-09-10.
+    // Of the chords it has left behind, Ctrl+Shift+X is unbound, and so is
+    // bare `x` since 2026-09-13 (the VALUE DRAG LAMP's chord from 2026-09-10
+    // until that lamp's deletion).
     //
     // A TOGGLE WITH A LAMP, where the 2026-08-16 ruling made it deliberately
     // MOMENTARY and stateless. The hole that ruling avoided cannot occur under
@@ -2434,9 +2437,10 @@ enum class RedesignButton {
     // from and no column for a tooltip to name.
     // ITS GATES ARE THE READ-ONLY LOCK — the PIECE's, either tab's bit — AND
     // THE ADD TO SELECTION LAMP (2026-09-10, the lamp exclusions' evening):
-    // the lamp is admitted in BOTH COLUMNS and both audio views, the toggle
-    // being MODE STATE rather than authoring (the record is at the `i` arm,
-    // input_key_dispatch.cpp), and what refuses it is a locked tab or a lit
+    // the lamp is admitted in BOTH COLUMNS and both audio views — pressed in
+    // source view it crosses to target first, the mode living there alone
+    // since 2026-09-13 (the record is at the `i` arm,
+    // input_key_dispatch.cpp) — and what refuses it is a locked tab or a lit
     // sticky ctrl, which takes away the plain click the bound cells are
     // addressed by. Its glyph is mathmode, the italic f beside a
     // multiplication cross.
@@ -2596,7 +2600,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. NINETEEN buttons in four groups, in painted order (the enum
+    // detection. EIGHTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2606,9 +2610,10 @@ enum class RedesignButton {
     // (2026-08-18: drop = bare `s`, delete = Delete, disable = Ctrl+D, inherit
     // = Ctrl+N) WITH THE EDIT FLAG BUTTON (2026-08-27, bare Enter — the flag
     // editor's third road), THE MARKER MEASURE (2026-08-19, bare `/`) AND ADD
-    // TO SELECTION (bare `k`, the sticky ctrl
-    // — 2026-08-18, later the same day as the verbs) AND THE VALUE DRAG LAMP
-    // CLOSING THEM (bare `x`, 2026-09-10), THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
+    // TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
+    // — 2026-08-18, later the same day as the verbs; the VALUE DRAG LAMP on
+    // bare `x` stood behind it from 2026-09-10 to 2026-09-13),
+    // THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
     // next = Tab, walk both tabs = Ctrl+Shift+Tab), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
@@ -2948,53 +2953,11 @@ enum class RedesignButton {
     // that gate's delta (a) and this button is in iteration_lock_greys, because
     // the mode takes away the PLAIN flag click the bound cells are addressed by
     // — a modified press on a bound cell being the pointer's silent non-event.
-    // THE VALUE DRAG LAMP EXCLUDES IT NO LONGER (architect 2026-09-12): the two
-    // may both stand lit, neither face greying on the other's bit.
+    // THE VALUE DRAG'S POSTURE EXCLUDES IT NOT AT ALL: the posture is the
+    // view's (value_drag_posture) and this lamp may stand lit under it.
     // It keeps the group's Icon* naming: a roster
     // id names the button, not the lane it sits in.
     IconAddToSelection,
-    // THE VALUE DRAG LAMP — the verb group's NINTH and the row's SECOND lamp
-    // (architect 2026-09-10), seated immediately behind Add to selection
-    // because the two are one idea an axis apart: "Add to Selection is there
-    // to replace ctrl-click, so we can add the other one, which is
-    // ctrl-drag." Bare `x` (free since 2026-08-24, when the trim family moved
-    // onto the bracket), Breeze's transform-move-vertical, and a MODE rather
-    // than an act: while it is lit a plain flag press-and-drag steps the
-    // pressed CELL'S VALUE up and down — the base tempo on a flag that owns
-    // one, a bound on a purple cell — and the horizontal marker drag is off on
-    // every flag. Nothing about the CLICK is new; the mode only decides which
-    // drag the crossing begins. The whole contract, the target rule and the
-    // lock reasoning are at AppState::value_drag_enabled.
-    //
-    // THE ARCHITECT PUT IT ON THIS ROW AND NOT THE ICON ROW, on his own
-    // arithmetic that morning: "there's plenty of room there, no need to
-    // calculate anything; what pays the price is the message: messages will be
-    // even shorter on the tablet, and that's fine, that's accepted." The
-    // state cell right of the clock is the row's elastic tenant and it is what
-    // a ninth verb spends — 34 authored px of it — which is the accepted cost
-    // rather than a collision the row has to answer (the row carries no
-    // collision rule; the arithmetic lives at the painter,
-    // paint_bottom_row_buttons_and_clock).
-    //
-    // IT WEARS THE SELECTED FACE, being a mode, off the live bit its own chord
-    // flips — the roster's standing rule and its neighbour's exactly.
-    //
-    // ITS GATES ARE ITS NEIGHBOUR'S, with one addition and one subtraction:
-    // the `h`
-    // view GREYS it through the derived partition (bare `x` is neither the
-    // mode's vocabulary nor on its allowlist), the READ-ONLY LOCK LEAVES IT
-    // LIT (turning the mode on authors nothing, and the target rule refuses
-    // every locked cell for itself) — and so does the ITERATION LOCK, which is
-    // the addition: this lamp is the ROAD to the bound cells, so it is not in
-    // iteration_lock_greys and bare `x` passes iteration_lock_key_blocked
-    // through the base list. THERE IS NO SUBTRACTION: this lamp and its
-    // neighbour MAY BOTH STAND LIT since 2026-09-12 (architect, the lamps
-    // resolved by use case), harmlessly — Add to selection makes a plain flag
-    // press a membership toggle that arms nothing, so this mode's drag simply
-    // never begins and the cursor answers Arrow on the flag rather than
-    // promising it (the account is at AppState::value_drag_enabled). Neither
-    // face greys on the other and neither key refuses for it.
-    IconValueDrag,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
     // cluster, behind a separator and ahead of the four arrows): previous
     // marker (Shift+Tab), next marker (Tab) and walk both tabs
@@ -3024,9 +2987,9 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SIX in row 1, two
-// in row 3, TWENTY-EIGHT in row 4 and NINETEEN in the bottom row — 55. Of
+// in row 3, TWENTY-EIGHT in row 4 and EIGHTEEN in the bottom row — 54. Of
 // those,
-// FIFTY-TWO carry a chord in kToolbarChords and THREE are the dropdown
+// FIFTY-ONE carry a chord in kToolbarChords and THREE are the dropdown
 // anchors (File, Edit and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
@@ -3038,6 +3001,9 @@ enum class RedesignButton {
 // carrying a chord that was free rather than one the keyboard already had),
 // and what it spends is the STATE CELL's ground, which the architect ruled
 // accepted at the landing.
+// 54 SINCE 2026-09-13'S VALUE DRAG LAMP DELETION: that box and bare `x` left
+// together (the gesture's posture is the view's now, value_drag_posture) —
+// 55 − 1, split 52 + 3 back to 51 + 3.
 // 54 SINCE 2026-09-09'S HELP DELETION (the anchor alone, no chord row moving:
 // 51 + 4 to 51 + 3), and 55 since 2026-09-04'S ITERATIONS DELETION, whose arithmetic is a NET GAIN
 // OF ONE over one deletion and two additions — the 2026-08-27 Series
@@ -3179,14 +3145,20 @@ enum class RedesignButton {
 // lamps into one group — a member changing groups and a leader deleted, which
 // moves the COUNT not at all and the width by the one separator it drops.)
 // 55 = 54 + THE VALUE DRAG LAMP (architect 2026-09-10): one more pure chord
-// addition inside an existing group — IconValueDrag on bare `x`, closing the
+// addition inside an existing group — the Toggle Value Drag button on bare
+// `x`, closing the
 // bottom row's marker-verb group behind Add to selection — so the split goes
 // 51 + 3 to 52 + 3, one box and one 2px gap join the row's right block and no
 // separator or group boundary moves. What that box spends is the STATE CELL's
 // ground, 34 authored px of it, which the architect ruled accepted at the
 // landing (the arithmetic is at the painter,
 // paint_bottom_row_buttons_and_clock).
-inline constexpr int kRedesignButtonCount = 55;
+// 54 = 55 − THE VALUE DRAG LAMP (architect 2026-09-13): the gesture stayed and
+// its lamp went, the posture becoming a pure function of the view
+// (value_drag_posture) — so that button and bare `x` leave together, the
+// split going 52 + 3 back to 51 + 3, and the state cell gets its 34 authored
+// px back.
+inline constexpr int kRedesignButtonCount = 54;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3288,7 +3260,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
-        case RedesignButton::IconValueDrag:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
@@ -3301,19 +3272,19 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — NINETEEN since 2026-09-10: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-09-13: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION, (2026-08-27)
-// the EDIT FLAG BUTTON, (2026-08-29) the COPY VALUE button and (2026-09-10)
-// the VALUE DRAG LAMP landing
-// behind them, the MARKER-WALK GROUP's three (2026-08-15) and the four
+// the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button landing
+// behind them (the VALUE DRAG LAMP stood last in that group from 2026-09-10
+// to its deletion 2026-09-13), the MARKER-WALK GROUP's three (2026-08-15) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
 // until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these nineteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3341,7 +3312,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
-        case RedesignButton::IconValueDrag:
         case RedesignButton::TransportWalkPrev:
         case RedesignButton::TransportWalkNext:
         case RedesignButton::TransportWalkBoth:
@@ -5396,15 +5366,16 @@ struct AppState {
     // the lamp is still lit after it; a Tab walk, `p`, Ctrl+Tab, a waveform
     // click, a marker drop, an undo restore and a LOAD IN PLACE all leave it
     // lit, and the plain flag press keeps taking the ctrl branch until an act
-    // consumes what was built. That is bare `x`'s posture exactly
-    // (value_drag_enabled below) and bare `z`'s (restrict_undo_to_viewport):
-    // the three session lamps are one family, in no settings vocabulary, never
-    // serialized, and per-project state for as long as the project stays open.
-    // `restrict_undo_to_viewport` is written by its own toggle alone; this bit
-    // and the value drag's each took COMPANION WRITES — this one the act class
-    // below (selection_consumed), that one its own drag's spend and grid
-    // iterations' on edge and exit — and every one of them is a USE CASE
-    // beginning or ending, never one lamp's toggle reaching across to another.
+    // consumes what was built. That is bare `z`'s posture exactly
+    // (restrict_undo_to_viewport): the two session lamps are one family, in
+    // no settings vocabulary, never serialized, and per-project state for as
+    // long as the project stays open. `restrict_undo_to_viewport` is written
+    // by its own toggle alone; this bit took a COMPANION WRITE, the act class
+    // below (selection_consumed), a USE CASE ending rather than one lamp's
+    // toggle reaching across to another. (Bare `x`'s VALUE DRAG lamp was the
+    // family's third member from 2026-09-10 until 2026-09-13, when the
+    // architect deleted it for a posture derived from the view —
+    // value_drag_posture.)
     //
     // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN. The bit
     // lives on this AppState, which run_project constructs fresh for each
@@ -5450,102 +5421,11 @@ struct AppState {
     // longer a refusal at all — bare `i`'s ON edge calls selection_consumed and
     // puts this lamp out, the mode being a use case that ends the selecting —
     // so the pair cannot stand together and neither road cards for it.
-    // THE VALUE DRAG IS NO LONGER AN EXCLUSION EITHER (the same ruling): the
-    // two lamps may both stand lit, harmlessly and by construction, and the
-    // account is at AppState::value_drag_enabled below.
+    // THE VALUE DRAG IS NO EXCLUSION EITHER: its posture may stand true
+    // beside this lamp harmlessly and by construction — a plain flag press
+    // under the sticky ctrl arms nothing, so no drag of either axis can begin
+    // (the account is at value_drag_posture).
     bool          add_to_selection = false;
-
-    // THE VALUE DRAG LAMP (architect 2026-09-10) — bare `x`, the bottom row's
-    // SECOND lamp, seated beside Add to selection in the marker-verb group
-    // because the two are the same idea one axis apart: "Add to Selection is
-    // there to replace ctrl-click, so we can add the other one, which is
-    // ctrl-drag." Dragging a flag left and right has always moved the marker;
-    // there was NO POINTER ROAD TO THE BASE TEMPO at all, which is why the
-    // Ctrl / Shift Up/Down ladder is the only spelling and why it is
-    // cumbersome on glass, where there is no Ctrl to hold.
-    //
-    // WHAT IT CHANGES, and the whole of it: while it stands, a PLAIN flag
-    // press-and-drag is the VALUE DRAG — one step per kValueDragPxPerStep
-    // authored pixels of vertical travel, up increasing — and the horizontal
-    // marker drag is OFF ON EVERY FLAG ("we never allow multi-axis dragging;
-    // flags move up and down or not at all"). THE PRESS ITSELF IS UNTOUCHED:
-    // it still stops playback, selects, lands the playhead, addresses the cell
-    // and hides the trim region overlay, all at the press through
-    // run_marker_click_act, and ctrl-click and shift-click are untouched too —
-    // both act at the press and arm nothing, so neither can become a drag and
-    // neither needed a rule here. WHICH FLAGS AND WHICH CELLS answer is one
-    // predicate, value_drag_target (below); a press on anything else is the
-    // silent non-event a refused pointer gesture always is.
-    //
-    // IT IS THE ROAD ON BOTH PLATFORMS AND CARRIES NO MODIFIER, deliberately:
-    // a ctrl-drag cannot exist (the flag's ctrl press acts at the press and
-    // arms nothing), and a mode a finger can turn on is what glass needs — the
-    // very argument Add to selection was seated on.
-    //
-    // A ONE-SHOT, FOLLOW'S SHAPE (architect 2026-09-13: "x should be a
-    // one-shot, like follow: once you toggle x on, the next time you drag a
-    // flag up or down, x is released. Tempo stepping doesn't count, because
-    // the promise is value drag"). The lamp promises ONE value drag: the drag
-    // spends it, and nothing that is not a value drag does. It describes what
-    // the POINTER's next vertical drag will be, so it survives every act that
-    // is not about it — a tempo step, a bound step, an editor commit, a
-    // render, a walk, an undo — exactly as follow's armed lamp survives
-    // everything but the launch that spends it. FOUR WRITERS, and the list is
-    // the whole of them:
-    //   * BARE `x` AND ITS OWN BUTTON, the toggle, in both directions and the
-    //     only route that can put the lamp out by hand
-    //     (input_key_dispatch.cpp's bare `x` arm);
-    //   * THE SPEND, AT THE COMMIT OF A VALUE DRAG THAT BEGAN
-    //     (ValueDragOps::commit, value_drag.cpp), which puts it OUT whether
-    //     or not the drag netted a change — a wander-back drag still spent
-    //     the promise. A press that never crossed the drag threshold never
-    //     began the gesture and spends nothing, follow's refused launch. NOT
-    //     WHILE GRID ITERATIONS IS LIT: tuning brackets is many cell drags in
-    //     a row, so the mode holds the lamp for its whole span;
-    //   * THE GRID ITERATIONS LAMP'S ON EDGE, ON BOTH COLUMNS (architect
-    //     2026-09-11 for warp, 2026-09-13 for both), which LIGHTS it — tuning
-    //     a bracket is a cell-dragging job, the cents and the hop cells both
-    //     being targets (value_drag_target's bound arm), so the mode that
-    //     raises the cells raises the gesture that works them (bare `i`'s arm,
-    //     input_key_dispatch.cpp);
-    //   * THE MODE'S EXIT, BY EITHER ROAD, ON BOTH COLUMNS (architect
-    //     2026-09-13), which puts it OUT — bare `i`'s off edge and the grid
-    //     sweep's dispatch both run GuiFlagEditor::wipe_iter_state, which is
-    //     where the write lives. The deliverable and archival render chords
-    //     and the BPM sweep do not touch it.
-    // NONE OF THE FOUR IS AN EXCLUSION: not one of them refuses anything or
-    // raises a card.
-    //
-    // IT MAY STAND LIT BESIDE ADD TO SELECTION, AND THE PAIR IS HARMLESS BY
-    // CONSTRUCTION (architect 2026-09-12, retiring the mutual refusal of
-    // 2026-09-10 with its two cards): while that lamp stands EVERY plain flag
-    // press takes the membership-toggle branch, which acts at the press and
-    // ARMS NOTHING (run_marker_click_act, input_pointer.cpp), so no pending
-    // press exists for a crossing to turn into a drag — this gesture simply
-    // never begins, and neither does the horizontal marker drag, which this
-    // lamp switches off on every flag. THE CURSOR SAYS SO rather than promising
-    // what it cannot deliver: while add to selection is lit the cue map's flag
-    // arm answers Arrow on EVERY flag of the live lane — neither ValueDrag nor
-    // the resting TrimResize, since neither drag can begin — that term being
-    // ranked ahead of this lamp's own and asked outside it, and forked on the
-    // `h` view, whose diff flags the sticky ctrl does not reach
-    // (pointer_cursor_kind, input_pointer.cpp). It is the map's standing rule
-    // that a point arming nothing wears the Arrow.
-    //
-    // It is bare `z`'s shape (the restrict-undo lamp) and its NEIGHBOUR'S too:
-    // the three lamps are one family — in no settings vocabulary, never
-    // serialized, never in the undo domain, and per-project state that is dark
-    // at every project open, a reopen as much as a launch (the family's record
-    // is at add_to_selection above, with the reason no load can leave it lit).
-    //
-    // ITS GATES: legal in both columns and both audio views (the target rule
-    // asks the column itself), legal on a LOCKED TAB and under the ITERATION
-    // LOCK — the lamp is the ROAD to the bound cells, so a lock that refused
-    // it would refuse the mode's own authoring surface — and consumed by the
-    // `h` VIEW, whose allowlist drops bare `x` and whose derived partition
-    // greys the button, exactly as bare `k` is treated. It stops no playback
-    // and pushes no undo entry: turning the mode on authors nothing.
-    bool          value_drag_enabled = false;
 
     // STEMS ARE NO LONGER A SELECTION VISUAL AT ALL (row 5, architect). Every
     // ENABLED marker of the active column stems, always, in its class's
@@ -5779,7 +5659,7 @@ struct AppState {
     DragState     drag;
 
     // THE FLAG'S VALUE DRAG (2026-09-10), the marker drag's sibling and never
-    // its neighbour: the crossing forks on the VALUE DRAG lamp and begins
+    // its neighbour: the crossing forks on the VALUE DRAG's posture and begins
     // exactly one of the two, so at most one of these records is ever live.
     // Cleared at every gesture end through the same three roads (release /
     // lost button / the force-end finalizer, all of which COMMIT) and by the
@@ -8495,18 +8375,28 @@ struct AppState {
     // string and hand it over directly. The PHASE-RESET clipboard above is a
     // different concept and stays.)
 
-    // Iteration mode. Toggled by plain `i` IN EITHER COLUMN, in EITHER AUDIO
-    // VIEW. Session-only (off at load, lost on app
-    // close); it survives the W/P marker-view switch AND the S/T audio-view
-    // switch in both directions — ITERATION MODE IS TARGET-LEGAL (architect
-    // 2026-08-07, superseding his 2026-07-23 ruling that entering target view
-    // wipes the brackets and exits the mode; the deleted wipe's record is at
-    // switch_active_audio_view_to, input_handler.cpp, and the sweep
-    // dispatches from either view too). BRACKET AUTHORING FOLLOWED THE EDITOR
-    // ON 2026-08-24: it was source-only only because the flag editor was, and
-    // the editor is now the home-view binding's fifth ruled exception
-    // (active_column_authoring_allowed, below), so a bracket is typed in
-    // either view. When true, every eligible marker's flag ON THE LIT COLUMN
+    // Iteration mode. Toggled by plain `i` IN EITHER COLUMN. Session-only
+    // (off at load, lost on app close).
+    //
+    // IT LIVES IN TARGET VIEW ALONE, AND THAT IS AN INVARIANT, NOT A CHECK
+    // (architect 2026-09-13): WHILE THIS BIT IS TRUE, active_audio_view IS
+    // 'T'. Two roads hold it and nothing else needs to: bare `i` pressed in
+    // SOURCE view CROSSES TO TARGET FIRST, through the S/T chokepoint, and a
+    // refused entry stops the whole press with the mode still dark (the arm
+    // in input_key_dispatch.cpp, Shift+S's crossing shape); and while the lamp
+    // stands every road back to source refuses — bare `t` and bare 1 at the
+    // iteration lock's gate (iteration_lock_key_blocked's delta (a)), the
+    // Toggle Audio View lamp and the view bar's selectors greying with them,
+    // the settings editor's typed `active_audio_view=S` on the lock's card,
+    // and the undo/redo restore, Shift+S, the load in place and the `h` entry
+    // all refused under the lock for their own reasons. So no reader forks on
+    // source-view iterations and none may: there is no such state. (From
+    // 2026-08-07 until this ruling the mode was TARGET-LEGAL IN BOTH VIEWS and
+    // survived the S/T switch in both directions, superseding the 2026-07-23
+    // ruling that entering target view wiped the brackets; the deleted wipe's
+    // record is at switch_active_audio_view_to, input_handler.cpp.) It
+    // survives the W/P marker-view switch by never meeting one: the lock
+    // refuses that too, below. When true, every eligible marker's flag ON THE LIT COLUMN
     // grows two BOUND CELLS to its right (render_flags — every carrier the
     // sweep reads; a disabled owner carries no bracket to show), so the mode
     // is visible directly on the flags (it is a flag-cache fingerprint field
@@ -11565,9 +11455,12 @@ inline const ViewState& active_view_state(const AppState& a) {
 // TOGGLE ITSELF (architect 2026-09-10, that morning): the padlock refuses
 // while the lamp is lit, which is what makes the TWO LOCKS MUTUALLY
 // EXCLUSIVE and this predicate's two reasons never both true at once (the
-// paragraph below). Bare `t` and the audio
-// view stay live, the mode being target-legal and the brackets reading no
-// audio view. AND THE `h` HISTORY VIEW'S ENTRY REFUSES (the view's own acts
+// paragraph below) — AND BARE `t` BACK TO SOURCE VIEW (architect
+// 2026-09-13): grid iterations lives in target view alone, so the S/T switch
+// refuses while the lamp stands (the Toggle Audio View lamp greys with it and
+// the settings editor's typed `active_audio_view=S` refuses beside it; the
+// invariant is at AppState::iteration_mode_enabled). AND THE `h` HISTORY
+// VIEW'S ENTRY REFUSES (the view's own acts
 // push history and two modal views are not composed), which is the one
 // refusal this lock does NOT keep at the gate: the history vocabulary is
 // claimed a dispatch above it, so the arm that opens the view carries the
@@ -11678,10 +11571,9 @@ inline bool any_tab_read_only(const AppState& a) {
 //     ITERATIONS was the other and is a MEMBER now, its swap ruled out), and
 //     SAVE,
 //     RENDER, the trim family, playback, the zoom and magnification family,
-//     the audio-view lamp, THE A/B TAB SWITCH, the two single-tab walk
+//     THE A/B TAB SWITCH, the two single-tab walk
 //     buttons (bare Tab and Shift+Tab step the cells, the mode's own surface),
-//     Copy resolved value and THE VALUE DRAG LAMP (the road to the bound
-//     cells), every one of
+//     and Copy resolved value, every one of
 //     which the lock ADMITS (the allowlist's two deltas are stated once at
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
 //     The tab switch left this list for one afternoon on 2026-09-10, as a
@@ -11717,6 +11609,13 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // The Toggle Marker Column lamp — the lock's W/P delta, the mode being
         // lit for the column you are in.
         case RedesignButton::IconMarkerColumn:
+        // THE TOGGLE AUDIO VIEW LAMP (architect 2026-09-13): grid iterations
+        // lives in TARGET view alone, so the S/T switch back to source is one
+        // of the acts the lock refuses (bare `t` at the gate, the delta's
+        // newest member). Unconditional for the column lamp's reason: under a
+        // lit lamp the view IS target (AppState::iteration_mode_enabled's
+        // invariant), so every press of this toggle would go T->S.
+        case RedesignButton::IconAudioView:
         // The Toggle History View button — the view's own acts push history,
         // and two modal views are not composed, so the ENTRY refuses
         // (handle_history_mode_key, input_key_dispatch.cpp).
@@ -11822,15 +11721,69 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     }
 }
 
+// IS THE FLAG'S PLAIN DRAG THE VALUE DRAG HERE — the gesture's POSTURE, a
+// pure function of WHERE YOU ARE (architect 2026-09-13: "get rid of that icon,
+// reclaim that real estate on the tablet, and simply automate it"). From
+// 2026-09-10 until that ruling a lamp answered this — bare `x` and the bottom
+// row's Toggle Value Drag button over a stored session bit — and all three are
+// deleted; nothing stored replaces them. THE WHOLE RULE, stated once:
+//   * TARGET VIEW ON THE WARP COLUMN — YES, always. The home-view binding
+//     already refuses the horizontal warp drag there
+//     (active_column_authoring_allowed), so the one drag the flag could offer
+//     in T+W is the vertical one, and a pass, a ref or a collapse member that
+//     the arrows refuse in T view stays the target rule's silent non-event;
+//   * TARGET VIEW ON THE PHASE COLUMN — YES ONLY WHILE GRID ITERATIONS IS LIT,
+//     where the hop cells are the drag's targets and the lock refuses the
+//     horizontal move anyway; dark, NO, so the horizontal phase-reset drag
+//     stays available in T+P, where that column authors;
+//   * SOURCE VIEW, EITHER COLUMN — NO: the warp column authors positions
+//     there, and grid iterations cannot be lit in source view at all (bare
+//     `i` crosses to target first and the lock refuses the way back — the
+//     invariant is at AppState::iteration_mode_enabled), so no S-view cell
+//     exists for the posture to reach;
+//   * THE `h` HISTORY VIEW — NO: its flags are the mode's DIFF flags, whose
+//     plain press is the mode's own focus click and arms no PendingMarkerPress,
+//     and whose indices belong to a different list, so the cursor map keeps
+//     the ruled one-shape-for-the-one-surface answer there.
+// WHAT THE POSTURE DOES, and the whole of it: while it is true a PLAIN flag
+// press-and-drag is the VALUE DRAG — one step per kValueDragPxPerStep authored
+// pixels of vertical travel, up increasing — and the horizontal marker drag is
+// OFF on every flag ("we never allow multi-axis dragging; flags move up and
+// down or not at all"). THE PRESS ITSELF IS UNTOUCHED: it still stops
+// playback, selects, lands the playhead, addresses the cell and hides the trim
+// region overlay at the press (run_marker_click_act), and ctrl-click and
+// shift-click act at the press and arm nothing, so neither can become a drag.
+// The posture says WHETHER the gesture is armed; value_drag_target below says
+// ON WHAT, and a press on a non-target — a pass in T view, a measure, a phase
+// reset's payload — is the silent non-event.
+//
+// IT MAY BE TRUE WHILE ADD TO SELECTION IS LIT, harmlessly and by
+// construction: the sticky ctrl turns every plain flag press into the
+// membership toggle, which arms nothing, so no crossing exists to begin either
+// drag — and the cursor map's flag arm asks that lamp FIRST and answers the
+// Arrow on the live lane (pointer_cursor_kind, input_pointer.cpp).
+//
+// THREE READERS, re-grepped 2026-09-13: the THRESHOLD CROSSING
+// (input_pointer.cpp's pending-marker-press arm, which begins the value drag
+// or nothing while this is true), and the CURSOR MAP twice — its pending arm
+// and its flag hover arm — so the cue cannot flip at the crossing.
+inline bool value_drag_posture(const AppState& a) {
+    if (a.history_mode.active) return false;
+    if (a.active_audio_view != 'T') return false;
+    if (a.active_markers_view == 'W') return true;
+    return a.iteration_mode_enabled;
+}
+
 // CAN THE VALUE DRAG STEP THIS CELL RIGHT NOW — the gesture's ONE target rule
 // (architect 2026-09-10), asked with a marker index and the cell a press
-// landed on. `idx` indexes the ACTIVE column's store (the drag has no other
-// subject) and an out-of-range index answers false through the owners below.
+// landed on, and asked only where value_drag_posture above is true. `idx`
+// indexes the ACTIVE column's store (the drag has no other subject) and an
+// out-of-range index answers false through the owners below.
 //
-// TWO READERS AND THAT IS THE POINT: the THRESHOLD CROSSING, which begins the
-// drag only where this is true, and the CURSOR MAP's flag arm, which shows
-// the vertical-resize cue only where this is true and the Arrow everywhere
-// else on a flag. The cue promises the gesture because both read one answer —
+// THREE READERS AND THAT IS THE POINT: the THRESHOLD CROSSING's begin
+// (ValueDragOps::begin), which begins the drag only where this is true, and
+// the CURSOR MAP's pending and flag arms, which show the vertical-resize cue
+// only where this is true and the Arrow everywhere else on a flag. The cue promises the gesture because both read one answer —
 // the map's standing rule, and the reason this is a predicate rather than a
 // test inside the crossing.
 //
@@ -11868,22 +11821,25 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // (tempo_cent_step_target_view_refusal_for): in T view a pass, a ref or a
 // coincident-collapse member is refused, and the drag asks the same owner
 // rather than a second reading of it — ABOUT THE MARKER IT WAS ASKED ABOUT.
-// SO A PASS IS A TARGET IN SOURCE VIEW AND NOT IN TARGET VIEW, and that split
-// is the arrows' and not this gesture's: in T view only a marker that owns its
-// tempo can be stepped at all, so there the cursor shows the Arrow over a pass
-// and the drag does not begin — the cue saying what the arrow key would card.
+// SO A PASS IS NO TARGET IN TARGET VIEW, which is the only view the payload
+// arm is asked in since the posture moved to the view (value_drag_posture,
+// above), and that refusal is the arrows' and not this gesture's: in T view
+// only a marker that owns its tempo can be stepped at all, so there the cursor
+// shows the Arrow over a pass and the drag does not begin — the cue saying
+// what the arrow key would card. (The pass arm above still converts the pass
+// the arrows convert in SOURCE view; the drag simply never reaches it there.)
 // The focus-shaped form would have been the wrong subject here: the cursor
 // map asks this at a RESTING HOVER, before any press has selected the flag
 // under the pointer, so reading last_selected_marker would let one flag's
-// kind decide another flag's cue. Source view answers null, so the term costs
-// the ordinary case nothing. The COLUMN is asked outright: a phase reset's
+// kind decide another flag's cue. The COLUMN is asked outright: a phase reset's
 // payload is a POSITION and has no value to step, so this arm is warp-only.
 //
 // THE BOUND ARM IS THE PAINTED CELLS' — marker_paints_iter_cells, the same
 // predicate the Tab walk stops on, so the drag can never step a bound on a
 // flag showing no cells. THE ITERATION LOCK IS NOT A REFUSAL HERE, which is
-// the lamp's whole purpose (the cells ARE the mode's authoring surface, and
-// the bound step is what iteration_lock_key_blocked admits for the arrows);
+// the posture's phase-column half's whole purpose (the cells ARE the mode's
+// authoring surface, and the bound step is what iteration_lock_key_blocked
+// admits for the arrows);
 // READ-ONLY IS, and it is the bound step's own verdict — bare Up/Down are not
 // on read_only_key_blocked's allowlist, so the keyboard refuses a bound step
 // on a locked tab and the pointer refuses it here.
@@ -11896,15 +11852,10 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
                               int idx, MarkerCell cell) {
     if (idx < 0) return false;
-    // THE `h` VIEW ANSWERS FALSE WHOLE, and it is the CURSOR MAP that needs
-    // this rather than the gesture: in there hit_test_flag resolves to the
-    // mode's own DIFF flags, whose indices belong to a different list
-    // entirely, so asking this predicate with one would be asking about
-    // another marker. The gesture itself cannot begin in the view at all —
-    // the mode's flag presses go through their own router and arm no
-    // PendingMarkerPress — so this term costs nothing and buys the map an
-    // honest answer with the lamp left lit from before the visit.
-    if (a.history_mode.active) return false;
+    // (THE `h` VIEW'S FALSE-WHOLE TERM STOOD HERE from 2026-09-10 for the
+    // cursor map, which could ask with a lamp left lit from before the visit.
+    // It is value_drag_posture's since 2026-09-13: every reader asks the
+    // posture first and the posture answers false in the view.)
     const char column = a.active_markers_view;
     switch (cell) {
     case MarkerCell::Payload: {
@@ -12219,8 +12170,8 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 // THE VALUE DRAG'S TEMPO COMMIT IS A MEMBER OF THE CLASS WITH NO LINE OF ITS
 // OWN, and it needs none by construction: while this lamp stands a plain flag
 // press takes the membership-toggle branch and ARMS NOTHING, so no value drag
-// can ever begin (the pair's harmlessness is argued at
-// AppState::value_drag_enabled) — a call there could not run.
+// can ever begin (the pair's harmlessness is argued at value_drag_posture) —
+// a call there could not run.
 //
 // WHAT IS NOT A CALLER, and why:
 //   * THE LEFT / RIGHT POSITION NUDGE — a group press REFUSES WHOLE
@@ -12966,8 +12917,9 @@ inline constexpr const char* kIterationLockCard =
 // pairs they answered: "most of the conflicts are conflicts because they
 // indicate different use cases; we analyze the use cases and target them as
 // such." Grid iterations' ON edge now PUTS ADD TO SELECTION OUT instead of
-// refusing under it, and the value drag and add to selection may both stand
-// lit, harmlessly and by construction — so all three refusals are gone and no
+// refusing under it, and the value drag and add to selection could both stand
+// lit, harmlessly and by construction (the value drag's lamp itself is gone
+// since 2026-09-13, its posture the view's) — so all three refusals are gone and no
 // reader is left for either sentence. The lock's own kIterationLockCard above
 // is untouched: bare `k` under a lit lamp still refuses, because the sticky
 // ctrl would leave the bound cells unreachable by pointer.)
@@ -13961,7 +13913,6 @@ inline bool redesign_button_enabled(const AppState& a,
         // (row 3 is the A/B tabs in every state).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
-        case RedesignButton::IconAudioView:
         // THE TRIM REGION TOGGLE MIRRORS NOTHING (2026-08-16, unchanged when
         // it became a toggle on 2026-08-18), and for a stronger reason than
         // the trim scissors it outlived: it HAS no refusal to mirror. Its one
@@ -14301,10 +14252,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // it lit exactly as it leaves the chord live, and this face mirrors
         // the ITERATION half of the gate alone — which loses nothing, a lit
         // lamp implying a writable active tab since the two locks stopped
-        // composing (authoring_locked). ITS AUDIO-VIEW TWIN STAYS NEVER-GREY beside the
-        // never-grey group above: the mode is target-legal and a bracket
-        // reads no audio view, so bare `t` is admitted under both locks.
+        // composing (authoring_locked). ITS AUDIO-VIEW TWIN JOINED THIS ARM
+        // ON 2026-09-13 (architect: grid iterations lives in target view
+        // alone, so bare `t` back to source refuses under the lamp) and on the
+        // same footing: bare `t` is read-only-legal, so the iteration half is
+        // the whole of what its face mirrors. It stood in the never-grey group
+        // above until then, the mode having been target-legal in both views.
         case RedesignButton::IconMarkerColumn:
+        case RedesignButton::IconAudioView:
             return !iteration_lock_greys(a, b);
         // THE VIEW BAR'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
         // and they left the never-grey group above for it: bare 1/2/3 COMPOSE
@@ -14367,10 +14322,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // TERM went with the arm's, along with the P-column card it greyed
         // beside. The press lights the mode for the column it lands in
         // (2026-09-10) and the face still has nothing to say about that: `i`
-        // acts in either column, lighting one or turning the mode off. Both audio views as
-        // before (the toggle is mode state rather
-        // than authoring, the 2026-08-07 relaxation at the arm itself), and
-        // the toggle is meaningful in either direction on any loaded piece.
+        // acts in either column, lighting one or turning the mode off. AND IN
+        // BOTH AUDIO VIEWS, WITH NO VIEW TERM (architect 2026-09-13): the mode
+        // lives in target view alone, but a press in source view is live —
+        // it crosses to target and then lights — so the twin rule leaves the
+        // face lit there; the crossing's refused entry is the tripwire class
+        // and says its stderr line, as Shift+S's does.
         //
         // AND THE READ-ONLY HALF OF THE LOCK IS THE WHOLE LOCK HERE
         // (2026-09-10): the ITERATION lock cannot grey the lamp that turns it
@@ -14396,9 +14353,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // whatever the sticky ctrl is doing. The exclusion's other direction
         // stands and is the membership above: bare `k` under a lit lamp would
         // leave the cells unreachable by pointer, so Add to Selection greys
-        // there. (The third lamp, the VALUE DRAG, composes with this mode
-        // freely — it is the road to the bound cells — and, since the same
-        // ruling, with Add to selection too.)
+        // there. (The VALUE DRAG composes with this mode freely — under it
+        // the posture is armed on both columns, the cells being its targets —
+        // and it has had no lamp since 2026-09-13.)
         case RedesignButton::IconIter:
             return !any_tab_read_only(a);
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
@@ -14451,8 +14408,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // its allowlist), THE FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT
         // FLAG BUTTON, THE MARKER MEASURE and ADD TO SELECTION (bare `j`,
         // bare Return, bare `k` and bare `/` are consumed in there like the
-        // verbs' four chords) and THE VALUE DRAG LAMP (bare `x`, 2026-09-10)
-        // — FOURTEEN of the nineteen. The two SKIPS and
+        // verbs' four chords) — THIRTEEN of the eighteen. The two SKIPS and
         // the MARKER-WALK GROUP'S THREE stay lit, being the mode's own
         // absolute jumps, its diff-flag cycle and (since 2026-08-18) the march
         // that composes that cycle with the A/B switch; the architect
@@ -14810,33 +14766,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // sticky ctrl would take away the plain click the bound cells are
         // addressed by, so bare `k` is delta (a)'s fourth member and the gate
         // cards the lock's own sentence. THE VALUE DRAG IS NOT A SECOND REASON
-        // any more (architect 2026-09-12): the two lamps may both stand lit,
-        // the pair being harmless by construction (AppState::value_drag_enabled
-        // carries the account), so the term that greyed this face under that
-        // one is gone with the refusal it mirrored.
+        // (architect 2026-09-12, and its lamp deleted 2026-09-13): its posture
+        // may stand true under this lamp, harmless by construction
+        // (value_drag_posture carries the account).
         // Its LAMP, not its enabled bit, is what reports the mode
         // (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
             if (iteration_lock_greys(a, b)) return false;
-            break;
-        // THE VALUE DRAG LAMP MIRRORS NOTHING AND NEVER GREYS (architect
-        // 2026-09-12, retiring its one partner term): bare `x` used to refuse
-        // while ADD TO SELECTION stood, and the two may now both stand lit —
-        // that mode turns a plain flag press into a membership toggle that arms
-        // nothing, so this mode's drag simply never begins and the cursor
-        // answers Arrow on the flag rather than promising it
-        // (AppState::value_drag_enabled carries the account).
-        // Nothing else was ever here: its chord authors nothing, so the READ-ONLY arm
-        // above deliberately does not carry it, and neither does the ITERATION
-        // half (iteration_lock_greys) — this lamp is the ROAD to the bound
-        // cells the lock exists to leave open, which is the one thing it does
-        // not share with its neighbour. WHICH FLAGS THE DRAG CAN THEN
-        // ACT ON is the gesture's own question, asked per press at
-        // value_drag_target — a per-marker fact this face has no business
-        // blinking on. The `h` VIEW greys it through
-        // the DERIVED partition at the top of this body. Its LAMP, not its
-        // enabled bit, is what reports the mode.
-        case RedesignButton::IconValueDrag:
             break;
         // THE FIVE HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
         // ICON ROW's own settled rule, which is where they live again since
@@ -15081,19 +15017,18 @@ inline bool redesign_button_enabled(const AppState& a,
             return ab_audition_preflight_ok(a, audio, playback,
                                             target_render);
         default:
-            // REACHED BY EXACTLY TEN IDS, re-derived by walking the first
-            // switch 2026-09-10 (NINE were named on 2026-08-30 and the count
-            // had missed the VALUE DRAG lamp when it landed beside Add to
-            // selection; twelve earlier that day, before the transport three
-            // took arms of their own above) — the bottom
+            // REACHED BY EXACTLY NINE IDS, re-derived by walking the first
+            // switch 2026-09-13 (ten from 2026-09-10 while the VALUE DRAG
+            // lamp stood beside Add to selection; nine named on 2026-08-30;
+            // twelve earlier that day, before the transport three took arms
+            // of their own above) — the bottom
             // row's members that break out of the first switch to take the
             // loading/blank guard and have nothing further to say here: the
-            // marker-walk three, the four arrows, COPY VALUE and THE TWO
-            // LAMPS. All ten
+            // marker-walk three, the four arrows, COPY VALUE and ADD TO
+            // SELECTION. All nine
             // refuse ahead of that break on their own predicate since the
-            // truthful-buttons ruling — the two lamps since 2026-09-10, when
-            // their exclusions became refusals and each learned to read its
-            // partner's bit; the ruling, the 2026-08-15 reversal it
+            // truthful-buttons ruling — Add to selection on the iteration
+            // lock's membership; the ruling, the 2026-08-15 reversal it
             // supersedes and the
             // per-pair successions are at that block. The row's remaining
             // members are the four SINGLE-MARKER VERBS, the EDIT FLAG BUTTON
@@ -15240,12 +15175,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // fill and line toward the ground rather than dropping them, exactly
         // as it does for the Cumulative toggle up in row 4.
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
-        // THE ROW'S SECOND LAMP (2026-09-10), its neighbour's pattern exactly:
-        // it reads the live bit bare `x` flips, so the lit face and the
-        // gesture cannot drift, and it composes with the `h` view's dead face
-        // the same way — the disabled blend mixes fill and line toward the
-        // ground rather than dropping them.
-        case RedesignButton::IconValueDrag: return a.value_drag_enabled;
         // The iteration button's pattern exactly: a TOGGLE reading the live bit
         // its own chord flips, so the lamp and the mode cannot drift.
         case RedesignButton::IconHistory: return a.history_mode.active;
@@ -16181,14 +16110,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // ruling above.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
-        // THE VALUE DRAG LAMP (2026-09-10), the line beside it in every
-        // respect: a MODE, so the hint NAMES THE TOGGLE (the lamp rule at this
-        // table's head), ONE LINE (it admits no shift press) and NO GESTURE
-        // HINT — the words never explain that the mode turns a flag drag
-        // vertical, which is the product's standing rule about UI text and
-        // what HELP is for.
-        case RedesignButton::IconValueDrag:
-            return {"Toggle Value Drag (X)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
         // marker" are HELP's own words for the bare Tab cycle; "Walk both
         // tabs" was the Navigation dropdown's own row for Ctrl+Shift+Tab, and
