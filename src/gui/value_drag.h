@@ -15,6 +15,11 @@ struct GuiTargetRender;
 // every flag: "we never allow multi-axis dragging; flags move up and down or
 // not at all."
 //
+// THE LAMP IS A ONE-SHOT (architect 2026-09-13): the commit of a drag that
+// began puts it out, whatever the drag netted, except while grid iterations
+// is lit, where the mode holds it for its whole span (ValueDragOps::commit
+// carries the spend; the writer inventory is at the lamp's declaration).
+//
 // THE PRESS IS THE MARKER DRAG'S: run_marker_click_act runs at the press
 // (stop, select, land, address the cell, hide the trim overlay) and arms
 // PendingMarkerPress; the crossing of the shared drag threshold forks on the

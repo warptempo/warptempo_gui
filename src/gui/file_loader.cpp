@@ -390,9 +390,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     app.drag = DragState{};
     // The flag's OTHER drag, cleared with its sibling (2026-09-10). The LAMP
     // is deliberately not cleared beside it: `value_drag_enabled` is a session
-    // tool posture, written by its own toggle and by two companion writes on
-    // the warp column (grid iterations' on edge lights it, a render chord puts
-    // it out — its declaration carries the rule), and a LOAD is none of them;
+    // tool posture, written by its own toggle, by its own drag's spend and by
+    // grid iterations' on edge and exit (its declaration carries the rule),
+    // and a LOAD is none of them;
     // so is the sticky ctrl below since the same day — this body resets the
     // in-flight GESTURE state and leaves every lamp standing.
     app.value_drag = ValueDragState{};
@@ -417,8 +417,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // clear either: this is the FRESH AppState's own first load, load_file
     // having exactly one caller (main.cpp's project entry), so all three are
     // already dark when it runs. Their writers are their own toggles — plus,
-    // for the value drag alone, the two warp-column companion writes recorded
-    // at its declaration — and a project reopen builds a new AppState rather
+    // for the value drag, the companion writes recorded at its declaration,
+    // and for the sticky ctrl the act class at selection_consumed — and a project reopen builds a new AppState rather
     // than loading into this one; the contract is at
     // AppState::add_to_selection.
     // (The displayed hit map AND the trim region overlay's visibility are reset in

@@ -5566,9 +5566,9 @@ struct AppState {
     // serialized, and per-project state for as long as the project stays open.
     // `restrict_undo_to_viewport` is written by its own toggle alone; this bit
     // and the value drag's each took COMPANION WRITES — this one the act class
-    // below (selection_consumed), that one the value class and the render
-    // chords — and every one of them is a USE CASE beginning or ending, never
-    // one lamp's toggle reaching across to another.
+    // below (selection_consumed), that one its own drag's spend and grid
+    // iterations' on edge and exit — and every one of them is a USE CASE
+    // beginning or ending, never one lamp's toggle reaching across to another.
     //
     // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN. The bit
     // lives on this AppState, which run_project constructs fresh for each
@@ -5646,36 +5646,39 @@ struct AppState {
     // arms nothing), and a mode a finger can turn on is what glass needs — the
     // very argument Add to selection was seated on.
     //
-    // A SESSION TOOL POSTURE: it describes what the POINTER does, so it
-    // survives every act that is not about it. FOUR WRITER CLASSES, and the
-    // list is the whole of them:
+    // A ONE-SHOT, FOLLOW'S SHAPE (architect 2026-09-13: "x should be a
+    // one-shot, like follow: once you toggle x on, the next time you drag a
+    // flag up or down, x is released. Tempo stepping doesn't count, because
+    // the promise is value drag"). The lamp promises ONE value drag: the drag
+    // spends it, and nothing that is not a value drag does. It describes what
+    // the POINTER's next vertical drag will be, so it survives every act that
+    // is not about it — a tempo step, a bound step, an editor commit, a
+    // render, a walk, an undo — exactly as follow's armed lamp survives
+    // everything but the launch that spends it. FOUR WRITERS, and the list is
+    // the whole of them:
     //   * BARE `x` AND ITS OWN BUTTON, the toggle, in both directions and the
-    //     only route that can put the lamp out by hand;
-    //   * THE VALUE CLASS, ON BOTH COLUMNS (architect 2026-09-12, the lamps
-    //     resolved by use case), which LIGHTS it: every act that moves a flag's
-    //     own number — the tempo step and this drag's own commit, both bound
-    //     steps, both bound editor commits, the payload commit and the measure
-    //     commit — says a hand is working values, and this is the pointer's
-    //     road to that work. ONE LINE says it for all of them
-    //     (postures_after_value_change, below, where the class and its caller
-    //     inventory live); the measure is the one member the drag cannot act
-    //     on, and the simpler rule was chosen over an exception for it;
-    //   * THE GRID ITERATIONS LAMP'S ON EDGE ON THE WARP COLUMN (architect
-    //     2026-09-11), which lights this one with it — tuning a cents bracket
-    //     is a cell-dragging job, so the mode that raises the cells raises the
-    //     gesture that works them. The ON edge alone: leaving that mode leaves
-    //     this lamp standing, and on the phase-reset column `i` touches it not
-    //     at all (bare `i`'s arm, input_key_dispatch.cpp);
-    //   * EVERY RENDER CHORD, ON THE WARP COLUMN (architect 2026-09-11) —
-    //     Ctrl+Alt+R in both of its modes and Ctrl+Alt+Shift+R — which put it
-    //     OUT at the point of dispatch, a render meaning DONE the same way it
-    //     means done for the grid-iterations lamp beside it
-    //     (render_puts_value_drag_out, input_key_dispatch.cpp, where the rule
-    //     and its edges live). The BPM sweep's own dispatch is not one of
-    //     them: it is a dialog's commit, not a render chord.
+    //     only route that can put the lamp out by hand
+    //     (input_key_dispatch.cpp's bare `x` arm);
+    //   * THE SPEND, AT THE COMMIT OF A VALUE DRAG THAT BEGAN
+    //     (ValueDragOps::commit, value_drag.cpp), which puts it OUT whether
+    //     or not the drag netted a change — a wander-back drag still spent
+    //     the promise. A press that never crossed the drag threshold never
+    //     began the gesture and spends nothing, follow's refused launch. NOT
+    //     WHILE GRID ITERATIONS IS LIT: tuning brackets is many cell drags in
+    //     a row, so the mode holds the lamp for its whole span;
+    //   * THE GRID ITERATIONS LAMP'S ON EDGE, ON BOTH COLUMNS (architect
+    //     2026-09-11 for warp, 2026-09-13 for both), which LIGHTS it — tuning
+    //     a bracket is a cell-dragging job, the cents and the hop cells both
+    //     being targets (value_drag_target's bound arm), so the mode that
+    //     raises the cells raises the gesture that works them (bare `i`'s arm,
+    //     input_key_dispatch.cpp);
+    //   * THE MODE'S EXIT, BY EITHER ROAD, ON BOTH COLUMNS (architect
+    //     2026-09-13), which puts it OUT — bare `i`'s off edge and the grid
+    //     sweep's dispatch both run GuiFlagEditor::wipe_iter_state, which is
+    //     where the write lives. The deliverable and archival render chords
+    //     and the BPM sweep do not touch it.
     // NONE OF THE FOUR IS AN EXCLUSION: not one of them refuses anything or
-    // raises a card — each is a use case beginning or ending, which is what the
-    // architect ruled these lamps resolve by.
+    // raises a card.
     //
     // IT MAY STAND LIT BESIDE ADD TO SELECTION, AND THE PAIR IS HARMLESS BY
     // CONSTRUCTION (architect 2026-09-12, retiring the mutual refusal of
@@ -12416,27 +12419,10 @@ inline void postures_after_movement(AppState& a) {
     set_center_on_next_marker(a, true);
 }
 
-// AND THE VALUE CLASS LIGHTS THE VALUE DRAG (architect 2026-09-12, the lamps
-// resolved by use case): a hand that has just moved a flag's number is a hand
-// working values, and the value drag is the pointer's road to that same work,
-// so the act that says "this pass has begun" turns the gesture on rather than
-// waiting to be asked. It is the class's third write and it rides every member
-// of it — the tempo step and the drag's own commit, both bound steps, both
-// bound editor commits, the payload commit and the measure commit, on BOTH
-// COLUMNS — because the simpler rule is the better one: the measure is the one
-// member the drag cannot act on, and lighting the lamp there is useless rather
-// than wrong. The MOVEMENT class writes nothing of the kind: a camera or a
-// position is not a value.
-//
-// IT COMPOSES WITH THE LAMP'S OTHER WRITERS AND OVERRIDES NONE (the whole
-// inventory is at AppState::value_drag_enabled): grid iterations' ON edge
-// lights it on the warp column and every render chord there puts it out, both
-// unchanged, and bare `x` remains the only route that can put it out by hand.
 inline void postures_after_value_change(AppState& a) {
     if (audition_sequence_standing(a)) return;
     collapse_centered_posture(a);
     set_center_on_next_marker(a, false);
-    a.value_drag_enabled = true;
 }
 
 // THE SELECTION HAS BEEN SPENT (architect 2026-09-12, the lamps resolved by use

@@ -1007,15 +1007,29 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // 2026-09-04): the cells go with the mode, so a Lower or Upper axis
 // (AppState::addressed_cell) falls back to Payload here, ahead of the
 // bracket test, because this body is the one thing every exit from the mode
-// runs — there is no single mode setter, the three writers of the off edge
+// runs — there is no single mode setter, the two writers of the off edge
 // each flip the bit themselves after calling this — so a step outside the
 // mode can only ever be the tempo step, on either column. An addressed
 // MEASURE is left alone: that cell is not the mode's. History-less like
 // everything else here: the axis is a session address, not content.
+// AND IT PUTS THE VALUE DRAG LAMP OUT, ON BOTH COLUMNS (architect 2026-09-13),
+// for the same reason the axis falls back here: this body is the one thing
+// both exits run. The mode lights that lamp at its ON edge and holds it lit
+// for its whole span — a drag under the mode does not spend it, tuning
+// brackets being many cell drags in a row (ValueDragOps::commit) — so leaving
+// the mode, by bare `i` or by the sweep's dispatch, is where the lamp the mode
+// held goes out. A lamp the user put out mid-mode with bare `x` makes it a
+// no-op. Owed its own damage, unlike the rest of this body: the lamp is the
+// BOTTOM row's and both callers damage only the top strip. The whole writer
+// inventory is at AppState::value_drag_enabled.
 void GuiFlagEditor::wipe_iter_state() {
     if (app.addressed_cell == MarkerCell::Lower ||
         app.addressed_cell == MarkerCell::Upper) {
         app.addressed_cell = MarkerCell::Payload;
+    }
+    if (app.value_drag_enabled) {
+        app.value_drag_enabled = false;
+        viewport.invalidate_rect(bottom_row_area(app));
     }
     // The two scans read the stores CONST, so a bracketless exit bumps neither
     // generation and rebuilds no cache: markers_mut is what bumps, and it is
