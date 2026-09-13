@@ -4797,8 +4797,10 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         two callers are Space's play edge and the scrub launch, and the
 //         launch body's only other caller is launch_bounded_audition, the
 //         act's own), and the act's launch needs no clear because the act IS
-//         the standing phase: launch_phase writes it before launching, so the
-//         launch body's seed fork reads the act off the state.
+//         the standing phase, written by launch_phase before it calls the
+//         body DIRECTLY — the body itself reads no phase and forks by no act;
+//         the distinction is structural alone, this entry being the only
+//         road a non-act launch ever takes.
 //     (3) THE TARGET_RENDER CLEARS, three of them, because those bodies
 //         deactivate the scanner without the stop body and the tick's
 //         natural-end branch therefore never sees their session end: trigger()'s

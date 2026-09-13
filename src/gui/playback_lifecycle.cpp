@@ -356,7 +356,9 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // IS NOT THE ACT'S (the body's two callers are this and
     // launch_bounded_audition), and the act's own launches need no clear: the
     // act IS the standing phase, written by GuiAbAudition::launch_phase before
-    // its launch so the body's seed fork can read it. The edge inventory is at
+    // it calls the body DIRECTLY — the body itself reads no phase and
+    // branches by no act; the distinction is structural alone, carried by
+    // which entry a launch reached it through. The edge inventory is at
     // GuiAuditionSequence (app_state.h), owner (2).
     clear_audition_sequence(app);
     if (!launch_playback_window(launch_pos, active_view_play_end()))

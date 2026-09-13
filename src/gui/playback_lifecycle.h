@@ -350,8 +350,11 @@ private:
     // above and the bounded audition — so the gates, the scanner seed, the
     // follow check and the launch damage are written once. It clears no
     // sequence: the view-end entry has already cleared it for a user launch,
-    // and the bounded audition arrives with the act's phase standing, which is
-    // which is how the body knows the act (the contract at the definition).
+    // and the bounded audition arrives with the act's phase already standing
+    // — the body itself reads no phase and branches by no act; the
+    // distinction between a user launch and the act's own is structural
+    // alone, carried by which entry reached it (the contract at the
+    // definition).
     // THE PRODUCT HAS A SECOND LAUNCH BODY SINCE 2026-08-28, and it is
     // recorded here as well as at its own head: the RENDER PLAYER's
     // (GuiRenderPlayer::play_wav / toggle_pause / seek_to, render_player.h)
