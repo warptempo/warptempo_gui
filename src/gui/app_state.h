@@ -2435,14 +2435,18 @@ enum class RedesignButton {
     // and the LIVE COLUMN IS STABLE from there, the W/P switch being one of
     // the acts the lock refuses, so there is no other column to see it lit
     // from and no column for a tooltip to name.
-    // ITS GATES ARE THE READ-ONLY LOCK — the PIECE's, either tab's bit — AND
-    // THE ADD TO SELECTION LAMP (2026-09-10, the lamp exclusions' evening):
-    // the lamp is admitted in BOTH COLUMNS and both audio views — pressed in
-    // source view it crosses to target first, the mode living there alone
-    // since 2026-09-13 (the record is at the `i` arm,
-    // input_key_dispatch.cpp) — and what refuses it is a locked tab or a lit
-    // sticky ctrl, which takes away the plain click the bound cells are
-    // addressed by. Its glyph is mathmode, the italic f beside a
+    // ITS ONE GATE IS THE READ-ONLY LOCK — the PIECE's, either tab's bit
+    // (2026-09-10's exclusion: no tab can be locked while the lamp is lit,
+    // so a locked OTHER tab is this arm's own refusal too, on the same
+    // card). ADD TO SELECTION NO LONGER REFUSES IT (2026-09-12, the lamps
+    // resolved by use case): a lit lamp is ADMITTED and CONSUMED by an
+    // accepted ON edge (selection_consumed, both columns) rather than
+    // blocking one — the reverse direction (bare `k` under a lit `i`) is
+    // the one surviving card, the cells being unreachable under a sticky
+    // ctrl. THE MODE LIVES IN TARGET VIEW ALONE since 2026-09-13: pressed
+    // in source view the ON edge crosses to target first, a refused entry
+    // stopping the whole press (the record is at the `i` arm,
+    // input_key_dispatch.cpp). Its glyph is mathmode, the italic f beside a
     // multiplication cross.
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
