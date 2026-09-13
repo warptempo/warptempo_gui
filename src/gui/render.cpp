@@ -2623,11 +2623,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // byte-cap refusal.
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
+    // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
+    // pass for this column reads, so the field and the boxes riding it wear
+    // the red their resting twins wear on both columns.
     const bool red_class =
-        !phase &&
-        warp_red_flag_set_cached(
-            app, audio.sample_rate(),
-            static_cast<long>(audio.total_frames())).red.count(idx) > 0;
+        phase
+            ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
+            : warp_red_flag_set_cached(
+                  app, audio.sample_rate(),
+                  static_cast<long>(audio.total_frames())).red.count(idx) > 0;
     // THE SELECTED PAIR IS THE ADDRESSED CELL'S ALONE (the flag pass's own
     // rule, render_flags): this field is bright iff the marker is selected
     // and the cell it edits is the focus's addressed cell — which every

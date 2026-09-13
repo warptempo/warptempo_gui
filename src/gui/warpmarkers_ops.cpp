@@ -905,7 +905,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // edit of the one marker's own field, disabled or not.
 // The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits), a ref
 // (non-empty label_ref) — the singleton step's payload predicates — a
-// coincident-collapsed ENABLED marker (warp_red_flag_set_cached — the resolver
+// coincident-collapsed ENABLED marker (warp_red_flag_set_cached's `collapsed`,
+// never its paint cue `red` — the resolver
 // replaces the stack with one 1.00 owner, so the write is render-inert), or
 // a marker that cannot take the WHOLE step without leaving the tempo bracket
 // (the edge compare's generalization, R12 — at the bare ±1 the two are the
@@ -930,22 +931,29 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
                                       int64_t delta_cents) {
     const auto& mv = a.warpmarkers.markers();
     const int   n  = static_cast<int>(mv.size());
-    const std::set<int>& red = warp_red_flag_set_cached(
-        a, audio.sample_rate(), static_cast<long>(audio.total_frames())).red;
+    const std::set<int>& collapsed = warp_red_flag_set_cached(
+        a, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).collapsed;
     for (int idx : a.selected_markers) {
         if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
         const GuiWarpMarker& m = mv[idx];
         if (m.tempo_inherits || !m.label_ref.empty()) return false;
-        // THE RED TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13, Sol
+        // THE COLLAPSE TERM, NOT THE PAINT CUE. The cache's `red` also carries
+        // the participation-blind coincidence (a marker sharing its frame with
+        // a DISABLED one paints red, architect 2026-09-13), which the render
+        // does not normalize, so a wall on `red` would refuse a render-live
+        // step. `collapsed` is the render's verdict; the red set's other
+        // producer, the pass-2 fallback, reddens only passes and refs, both
+        // walled above whatever their disabled bit, so nothing else of `red`
+        // was ever a wall here.
+        // THE TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13, Sol
         // round 5's P1). The parser's collapse set
-        // (warp_coincident_collapse_members, copied into the red cache) marks
-        // the WHOLE raw run, disabled rows included, once two or more
-        // effectively enabled rows share the frame; a disabled row in that run
-        // is no stack member for the render — the resolver filters it before
-        // it collapses — so it steps like any disabled marker. The red set's
-        // other producer, the pass-2 fallback, reddens only passes and refs,
-        // both walled above whatever their disabled bit.
-        if (red.count(idx) && !effective_disabled(mv, idx)) return false;
+        // (warp_coincident_collapse_members) marks the WHOLE raw run, disabled
+        // rows included, once two or more effectively enabled rows share the
+        // frame; a disabled row in that run is no stack member for the render
+        // — the resolver filters it before it collapses — so it steps like any
+        // disabled marker.
+        if (collapsed.count(idx) && !effective_disabled(mv, idx)) return false;
         // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
         // bracket edge" (2026-08-31, with the step ladder — R12): the group
         // arm ADDS delta_cents raw, so with the ten-cent chord a member three

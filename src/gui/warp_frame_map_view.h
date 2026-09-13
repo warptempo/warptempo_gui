@@ -85,20 +85,33 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
     const AppState& app, int sample_rate, long total_frames);
 
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
-// render resolves to the 1.00 normalization fallback, so their flags paint the
-// row-5 red class (kMarkerFlagFillRed / kMarkerFlagEdgeRed, stem
-// kMarkerStemRed) regardless of selection — red takes no selection swap, so the
-// normalization cue is never masked. Two contributors, both computed
-// SILENTLY from the display path (no resolver run, no stderr, no
-// frozen-parser dependency): (1) the exact-frame COLLAPSE — a marker sharing
-// its frame with 2+ effectively-enabled markers (marker_effectively_disabled
-// for the enabled test, matching the render's survivor filter), every member
-// reddened, so a coincident stack reads as one red flag mirroring the render's
-// single stderr line; (2) a REF/PASS fallback via marker_effective — a
-// dangling label ref, an extreme-ratio label ref, or a pass whose inheritance
-// walk terminates on a surviving enabled ref, all of which resolve to
-// source_idx == -1. The frame-0 seed is synthetic (no marker) and never
-// reddens.
+// flags paint the row-5 red class (kMarkerFlagFillRed / kMarkerFlagEdgeRed,
+// stem kMarkerStemRed) regardless of selection — red takes no selection swap,
+// so the cue is never masked. `red` is a PAINT cue with two meanings: the
+// render normalizes this marker, OR this marker shares its frame with another.
+// Three contributors, all computed SILENTLY from the display path (no resolver
+// run, no stderr, no frozen-parser dependency): (1) the exact-frame COLLAPSE —
+// a marker sharing its frame with 2+ effectively-enabled markers
+// (marker_effectively_disabled for the enabled test, matching the render's
+// survivor filter), every member reddened, so a coincident stack reads as one
+// red flag mirroring the render's single stderr line; (2) a REF/PASS fallback
+// via marker_effective — a dangling label ref, an extreme-ratio label ref, or
+// a pass whose inheritance walk terminates on a surviving enabled ref, all of
+// which resolve to source_idx == -1; (3) the PARTICIPATION-BLIND COINCIDENCE
+// (architect 2026-09-13: coincident markers are never intentional, always
+// accidental, so the red stays) — every row of a run of 2+ rows at one frame,
+// DISABLED ROWS COUNTED, so disabling one of two coincident markers does not
+// put the red out; the render collapses nothing there, and (3) is the one
+// contributor that is not a render normalization. (3) contains (1), which is
+// kept as its own step because `collapsed` below is its verdict. The frame-0
+// seed is synthetic (no marker) and never reddens.
+//
+// WIDENING THE CUE WIDENS NO REFUSAL: no act, face or card reads `red`. The
+// act and face readers that ask whether the render normalizes a marker read
+// `collapsed` (the one normalization that is not already walled on the
+// marker's kind — pass-2 reddens only passes and refs), so `red` has only
+// painters for readers: the two flag passes (waveform_cache.cpp) and the open
+// marker-lane field's face (render.cpp).
 //
 // Keyed on the warp store generation plus the audio identity (total_frames
 // feeds marker_effective's last-segment envelope distance). It reads the
@@ -114,19 +127,23 @@ struct WarpRedFlagCache {
     long long markers_gen  = -1;
     int       sample_rate  = 0;
     long      total_frames = 0;
-    std::set<int> red;   // red warp-marker store indices
+    std::set<int> red;   // red warp-marker store indices — PAINT readers only
     // THE COLLAPSE MEMBERS ALONE — pass 1's own subset of `red`, the
     // classifier's verdict (warp_coincident_collapse_members) kept apart from
-    // the pass-2 fallbacks it is unioned with above. `red` answers "does the
-    // render normalize this marker"; this answers WHICH WAY, for the one
-    // reader that needs the distinction: the value pair's gate
-    // (payload_eligibility, app_state.cpp) refuses a pass or a ref that sits
-    // in a collapsed stack — the composer resolves such a member against the
-    // RAW store, the ruled authored/display split, so its value is not what
-    // the render applies — while the pass-2 fallbacks it must NOT refuse on
-    // resolve against the projection and so already read out as the render's
-    // own 1.00 (or as the empty payload). Filled in the same pass that fills
-    // `red`, under the same key; no second computation anywhere.
+    // the pass-2 fallbacks and the pass-3 coincidence it is unioned with
+    // above. This is the RENDER-TRUTHFUL answer the act and face readers
+    // take: the value pair's gate (payload_eligibility, app_state.cpp)
+    // refuses a pass or a ref that sits in a collapsed stack — the composer
+    // resolves such a member against the RAW store, the ruled
+    // authored/display split, so its value is not what the render applies —
+    // while the pass-2 fallbacks it must NOT refuse on resolve against the
+    // projection and so already read out as the render's own 1.00 (or as the
+    // empty payload); the group tempo step's wall, the singleton step's kind
+    // refusal and the BPM sweep's owner refusal ask it too. Like pass 1 itself
+    // it marks the WHOLE raw run, disabled rows included, once 2+ effectively
+    // enabled rows share the frame, so a reader that means "a stack member for
+    // the render" composes it with the enabled test. Filled in the same pass
+    // that fills `red`, under the same key; no second computation anywhere.
     std::set<int> collapsed;
 };
 
@@ -137,19 +154,23 @@ struct WarpRedFlagCache {
 const WarpRedFlagCache& warp_red_flag_set_cached(
     const AppState& app, int sample_rate, long total_frames);
 
-// Phase-reset sibling (the now-resolved naming symmetry): a coincident group
-// of 2+ effectively-enabled (not disabled) phase resets sharing one exact
-// frame reddens every member, mirroring build_phase_reset_source_frames'
-// exact-equal collapse (one stderr line per group at render). Phase resets
+// Phase-reset sibling (the now-resolved naming symmetry): a group of 2+ phase
+// resets sharing one exact frame reddens every member, WHATEVER THEIR DISABLED
+// BITS — the warp set's participation-blind coincidence (3) on this column
+// (architect 2026-09-13: coincidence is never intentional). It contains the
+// render normalization, build_phase_reset_source_frames' exact-equal collapse
+// of 2+ ENABLED resets (one stderr line per group at render); phase resets
 // carry no tempo, labels, or inheritance, so collapse is their ONLY
-// normalization — there is no marker_effective analog. Keyed on the
-// phase-reset store generation alone (the same-frame count is independent of
-// sample rate and length); the same committed-store / drag-freeze rule as the
-// warp set.
+// normalization — there is no marker_effective analog. No `collapsed` subset
+// is kept here, asymmetric with the warp set by reader count: `red`'s one
+// reader is the phase-reset flag pass, a painter, and no act or face on this
+// column asks whether the render collapses a reset. Keyed on the phase-reset
+// store generation alone (the same-frame count is independent of sample rate
+// and length); the same committed-store / drag-freeze rule as the warp set.
 struct PhaseResetRedFlagCache {
     bool      valid       = false;
     long long markers_gen = -1;
-    std::set<int> red;   // red phase-reset store indices
+    std::set<int> red;   // red phase-reset store indices — PAINT readers only
 };
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(

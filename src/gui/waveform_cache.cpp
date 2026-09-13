@@ -1219,7 +1219,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // disjoint bands — nothing to arbitrate between them.)
 
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
-    // fallback, painted the hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed
+    // fallback OR that share their frame with another row of their own store,
+    // disabled or not (the caches' contract, warp_frame_map_view.h), painted
+    // the hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed
     // pair with the kMarkerStemRed stem whatever their selection state
     // (resolve_flag_face — a disabled red marker blends that same pair toward
     // the lane ground and stays recognisably red).

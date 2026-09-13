@@ -142,6 +142,22 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
             c.red.insert(k);
     }
 
+    // Pass 3 — participation-blind coincidence: every row of a run of 2+ rows
+    // at one frame, disabled or not. The store is time-sorted, so a run is
+    // adjacent equal frames. This is the paint cue alone (the header's
+    // contract): the render collapses nothing where fewer than two of the run
+    // are enabled, and `collapsed` stays pass 1's.
+    int i = 0;
+    while (i < n) {
+        int j = i + 1;
+        while (j < n && mv[static_cast<size_t>(j)].time_frame ==
+                            mv[static_cast<size_t>(i)].time_frame)
+            ++j;
+        if (j - i >= 2)
+            for (int k = i; k < j; ++k) c.red.insert(k);
+        i = j;
+    }
+
     c.markers_gen  = gen;
     c.sample_rate  = sample_rate;
     c.total_frames = total_frames;
@@ -156,20 +172,20 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     if (c.valid && c.markers_gen == gen) return c;
 
     c.red.clear();
-    // Exact-frame collapse, the phase-reset sibling of the warp resolver's
-    // stage-2 normalization (build_phase_reset_source_frames): disabled resets
-    // are skipped, and a run of 2+ enabled resets sharing one frame collapses
-    // to one event. The store is time-sorted, so a coincident group is a run of
-    // adjacent equal frames; redden every member of a run with 2+ enabled.
+    // Participation-blind coincidence, the warp set's pass 3 on this column:
+    // redden every member of a run of 2+ resets sharing one frame, disabled
+    // rows counted. It contains the render's exact-frame collapse
+    // (build_phase_reset_source_frames skips disabled resets and collapses a
+    // run of 2+ enabled ones to one event), so no separate enabled count is
+    // needed for the cue. The store is time-sorted, so a coincident group is a
+    // run of adjacent equal frames.
     const std::vector<GuiPhaseResetMarker>& pr = app.phaseresetmarkers.markers();
     const int n = static_cast<int>(pr.size());
     int i = 0;
     while (i < n) {
         int j = i + 1;
         while (j < n && pr[j].time_frame == pr[i].time_frame) ++j;
-        int enabled = 0;
-        for (int k = i; k < j; ++k) if (!pr[k].disabled) ++enabled;
-        if (enabled >= 2)
+        if (j - i >= 2)
             for (int k = i; k < j; ++k) c.red.insert(k);
         i = j;
     }
