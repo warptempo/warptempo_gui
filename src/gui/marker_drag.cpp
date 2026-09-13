@@ -336,9 +336,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
-// The two zoom lamps (Center on next marker, Keep centered while nudging) are
-// the zoom's and this commit writes neither, and no drag recenters the viewport (the `y` lamp's one act is the Left/Right
-// nudge, AppState::keep_centered_while_nudging).
+// The keep-centered lamp's zoom write is the zoom's and this commit makes
+// none, and no drag recenters the viewport (the `y` lamp's one act is the
+// Left/Right nudge, AppState::keep_centered_while_nudging).
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read

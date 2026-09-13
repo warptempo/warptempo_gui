@@ -1534,7 +1534,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-eight (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
     // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
     // back from the menu row since 2026-09-04, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
@@ -2661,9 +2661,9 @@ private:
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
     // about the camera and reads no preference of its own — follow mode never
-    // gated it, and the Center on next marker lamp does not gate it either.
-    // The lamp governs the BARE Tab walk alone, so the three bare arms pass
-    // marker_walk_frame(app) (app_state.h, the lamp's one reader) while the
+    // gated it. The zoom governs the BARE Tab walk's framing alone (architect
+    // 2026-09-13), so the three bare arms pass
+    // marker_walk_frame(app) (app_state.h, its one owner) while the
     // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::Center outright.
     // The parameter carries no default precisely so a future third caller
     // cannot inherit either answer by saying nothing.
@@ -2678,8 +2678,8 @@ private:
     // seat's purple boxes in painted order, then the next marker — and this
     // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
     // and damages the marker lane, and does NOTHING else: no select, no
-    // playhead land, no framing, so `frame` and the Center on next marker lamp
-    // it carries govern marker-to-marker steps alone. A marker step runs the
+    // playhead land, no framing, so `frame` governs marker-to-marker steps
+    // alone. A marker step runs the
     // gate, the select and the jump as it always has and then seats the step's
     // cell behind them. THE MARCH MEETS NO CELL AT ALL: it is refused while
     // grid iterations is lit (the lock's keyboard gate), so its two calls are

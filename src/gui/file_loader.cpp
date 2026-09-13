@@ -25,10 +25,10 @@
 void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
                                      const SettingsFile& sf) {
     app.engine_settings = sf.engine;
-    // NO CAMERA POSTURE LOADS HERE: follow, keep_centered_while_nudging and
-    // center_on_next_marker are session state the piece does not determine, so
-    // they left the schema 2026-09-11; the two zoom lamps are seeded from the
-    // opening zoom at load_file's tail (seed_zoom_lamps).
+    // NO CAMERA POSTURE LOADS HERE: follow and keep_centered_while_nudging
+    // are session state the piece does not determine, so they left the schema
+    // 2026-09-11; the keep-centered lamp is seeded from the opening zoom at
+    // load_file's tail (seed_keep_centered_zoom).
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER
@@ -831,12 +831,12 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // timestamp); nothing gates or modals in the GUI.
     target_render.ensure_ready();
 
-    // THE TWO ZOOM LAMPS START FROM THE OPENING ZOOM (architect 2026-09-13):
-    // Center on next marker and Keep centered while nudging are both lit iff
-    // the parsed tab's level, as the resize re-clamp above left it, is at the
+    // THE KEEP-CENTERED LAMP STARTS FROM THE OPENING ZOOM (architect
+    // 2026-09-13): Keep centered while nudging is lit iff the parsed tab's
+    // level, as the resize re-clamp above left it, is at the
     // working zoom or finer, and the zoom commit's edge record is seeded to the
-    // same side (seed_zoom_lamps, app_state.h).
-    seed_zoom_lamps(app);
+    // same side (seed_keep_centered_zoom, app_state.h).
+    seed_keep_centered_zoom(app);
 
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;

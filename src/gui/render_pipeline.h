@@ -52,8 +52,8 @@ struct AuthoringSnapshot {
     // 2026-08-27; gui_scale, audio_player and projects_repo moved to the
     // per-device config the same day, audio_player retiring there 2026-08-28;
     // follow, centered and center_on_next_marker left the schema 2026-09-11,
-    // being session postures the GUI holds in AppState and serializes
-    // nowhere. An entry's `.settings` carries exactly what a source's
+    // being session postures (the third deleted whole 2026-09-13) the GUI
+    // serializes nowhere. An entry's `.settings` carries exactly what a source's
     // does, so this block tracks that schema and nothing else.)
 
     // Dispatch-time browse position, captured on the TARGET axis: the

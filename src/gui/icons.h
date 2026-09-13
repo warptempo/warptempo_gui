@@ -222,11 +222,6 @@ enum class Icon {
     // the center column. A fresh verbatim transcription for the `y` centered
     // lamp beside Follow.
     AlignHorizontalCenter,  // Toggle keep centered while nudging (`y`)
-    // Breeze's zoom-next (2026-09-04, the architect's pick): a magnifier with
-    // a chevron pointing forward out of its lens — bringing the NEXT thing
-    // into view, which is what the Tab walk's framing does. A verbatim 22px
-    // transcription for the Center on next marker lamp.
-    ZoomNext,            // Toggle center on next marker (`n`)
     // Breeze's timeline-lift (2026-09-04, the architect's pick): a clip's two
     // end brackets with a red cross between them — a stretch of timeline the
     // editor declines to travel. The lamp it wears refuses an undo whose
@@ -625,7 +620,10 @@ enum class Icon {
 // lamp's own drift, recorded below, one icon's latch the whole cost); the
 // value here is a re-COUNT of the enumerators, which happens to land back on
 // the stale spelling.
-inline constexpr int kIconCount = 58;
+// 57 SINCE 2026-09-13, THE CENTER ON NEXT MARKER LAMP'S DELETION, later the
+// same day: 58 − zoom-next, the enumerator, the def and the asset leaving with
+// the button that wore it (a re-COUNT of the enumerators).
+inline constexpr int kIconCount = 57;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

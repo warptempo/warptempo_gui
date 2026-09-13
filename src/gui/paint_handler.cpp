@@ -1052,14 +1052,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // center column. It joins the group rather than opening one, so the row
     // gains one box and one 2px gap and no separator moves.
     {RedesignButton::IconKeepCenteredWhileNudging, icons::Icon::AlignHorizontalCenter},
-    // THE CENTER-ON-NEXT-MARKER LAMP (2026-09-04) closes the same group behind
-    // the keep-centered lamp: Breeze's zoom-next, a magnifier ring with a chevron
-    // stepping forward out of it — the walk bringing its next stop into view.
-    // It joins the group rather than opening one, so the row gains one box and
-    // one 2px gap and no separator moves.
-    {RedesignButton::IconCenterOnNext, icons::Icon::ZoomNext},
     // THE RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04) closes the same group
-    // behind the Center on next marker lamp, "it is also a viewport gesture"
+    // behind the keep-centered lamp, "it is also a viewport gesture"
     // being the architect's own reason for moving it here from the toolbar
     // group, where it had stood between Redo and Render for the hours of its
     // first day. What it decides is whether an undo or redo may take the CAMERA
@@ -2675,8 +2669,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-EIGHT members
-    // in SIX groups since 2026-09-04, RE-COUNTED off the roster enum and the
+    // separator-divided groups of 32x32 buttons — TWENTY-SEVEN members
+    // in SIX groups since 2026-09-13, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE TWO VIEW LAMPS
     // sharing one group since the second of that day's rulings deleted the
@@ -2687,10 +2681,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // until that ruling), then the zoom four (2026-08-12), the waveform
     // magnification pair (2026-08-26), FOLLOW, which came in from the
     // dissolved mass-marker group the same day, THE KEEP-CENTERED LAMP beside
-    // it (2026-08-31, R11), THE CENTER ON NEXT MARKER LAMP and THE RESTRICT
-    // UNDO TO VIEWPORT LAMP closing the group
-    // (both 2026-09-04, the second arriving from the toolbar group later that
-    // day because it is a viewport gesture too) — THE ITERATION PAIR (the BPM
+    // it (2026-08-31, R11), and THE RESTRICT UNDO TO VIEWPORT LAMP closing
+    // the group (2026-09-04, arriving from the toolbar group later that day
+    // because it is a viewport gesture too) — THE ITERATION PAIR (the BPM
     // opener and grid iteration mode, back from the deleted menu row later
     // that same day) — the RENDER-ENTRY group
     // (listen and the READ-ONLY toggle, the architect's own order on
@@ -2701,7 +2694,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-eight paint on every
+    // hiding/showing icons in top icon row"): all twenty-seven paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2717,9 +2710,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 28·32 + (28−6)·2 + (6−1)·9 = 8 + 896 + 44 + 45 = 993px,
+    //   8 + 27·32 + (27−6)·2 + (6−1)·9 = 8 + 864 + 42 + 45 = 959px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 1001.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 967.
+    //
+    // THE CENTER ON NEXT MARKER DELETION'S ARITHMETIC (architect 2026-09-13):
+    // the row lost ONE BOX and ONE GAP — −32 and −2 off the 993 the Iterations
+    // deletion had left it, no separator moving — so it stands at 959 authored
+    // px, the keep-centered lamp's 2026-08-31 width reached from the other
+    // direction. THE TABLET FIT CEILING GOES 232 → 240: the walk fits while
+    // 959·factor ≤ 2304, 959·2.40 = 2301.6, and 241 overruns by seven device
+    // px. The tablet's first-run 225 clears it by 146 device px (959·2.25 =
+    // 2157.75 against 2304) — 65 of the panel's 1024 logical px at that scale.
     //
     // THE ITERATIONS DELETION'S ARITHMETIC (architect 2026-09-04, the day's
     // fourth row ruling and its only ADDITION): the row gained TWO BOXES, ONE
@@ -2773,13 +2775,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 230 rather than 232 — 1001 is
-    // the ink plus the pad, 1001·2.30 = 2302 fits and 231 overruns — but the
+    // (Counting the trailing pad the ceiling is 238 rather than 240 — 967 is
+    // the ink plus the pad, 967·2.38 = 2301.5 fits and 239 overruns — but the
     // pad is ground, not ink, so the icons themselves are the thing measured.)
-    // The laptop clears it outright at 1001 of 1920; the retired Pi panel's
-    // 1024 at 100% would have cleared it by 23.
+    // The laptop clears it outright at 967 of 1920; the retired Pi panel's
+    // 1024 at 100% would have cleared it by 57.
     //
-    // (It was 918px at twenty-six in five groups for the hours of 2026-09-04
+    // (It was 993px at twenty-eight in six groups from 2026-09-04 until the
+    // Center on Next Marker deletion of 2026-09-13; 918px at twenty-six in
+    // five groups for the hours of 2026-09-04
     // between the regrouping and the Iterations deletion; 925px at twenty-six
     // in six groups earlier that day,
     // between the restrict-undo lamp landing in the toolbar group and the
@@ -2799,9 +2803,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
     // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
-    // against its panel — and after the Iterations deletion there are 70 of
-    // those device px left at 225%, so the NEXT addition is the one that
-    // crops.)
+    // against its panel — and after the Center on Next Marker deletion there
+    // are 146 of those device px left at 225%, room for one more member, a
+    // second one cropping.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground

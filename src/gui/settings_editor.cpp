@@ -318,8 +318,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // until 2026-09-11. The three camera postures left the schema whole that
     // day, so they are UNKNOWN to this editor now and take the unknown-key
     // refusal below — red flash and a card — like any other name that is not
-    // a settable key. Their lamps are reached by their own bare chords and
-    // their own icon-row buttons and by nothing else.)
+    // a settable key. The two surviving lamps are reached by their own bare
+    // chords and their own icon-row buttons and by nothing else; the third,
+    // center_on_next_marker, was deleted 2026-09-13, the Tab walk's framing
+    // being the zoom's at the landing.)
     if (key == "waveform_magnification_level") {
         // History-less and APPLIED LIVE, through the SAME chokepoint the TWO
         // hotkeys (bare `=` and bare `-`), the TWO icon-row buttons that
@@ -446,9 +448,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         const double v = gv.d;
         if (active) {
             if (v == app.zoom_level) { unchanged(); return true; }
-            // A discrete zoom through the applier, which is also the two
-            // zoom lamps' COMMIT; the parked arm below commits
-            // nothing until its tab-in (commit_zoom_lamps,
+            // A discrete zoom through the applier, which is also the
+            // keep-centered lamp's zoom COMMIT; the parked arm below commits
+            // nothing until its tab-in (commit_keep_centered_zoom,
             // app_state.h).
             viewport.apply_zoom_change(v);
         } else {

@@ -458,11 +458,11 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     const int64_t visible = samples_visible(app, audio);
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
-    // AND EVERY CALLER HERE IS A DISCRETE ZOOM, SO THIS IS A COMMIT: the two
-    // zoom lamps answer the level just landed if it crossed the
+    // AND EVERY CALLER HERE IS A DISCRETE ZOOM, SO THIS IS A COMMIT: the
+    // keep-centered lamp answers the level just landed if it crossed the
     // working zoom (the rule and the road inventory at
-    // commit_zoom_lamps, app_state.h).
-    commit_zoom_lamps(app);
+    // commit_keep_centered_zoom, app_state.h).
+    commit_keep_centered_zoom(app);
 
     invalidate_waveform_area();
     // Harmless over-damage: a zoom moves the viewport, never the playhead or
@@ -556,10 +556,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_engaged = false;
     // THIS APPLIER COMMITS NO ZOOM, `final` included: every caller is a
-    // continuous gesture, and the two zoom lamps are written at the
+    // continuous gesture, and the keep-centered lamp is written at the
     // gesture's END (the three end sites are inventoried at
-    // commit_zoom_lamps, app_state.h), so a drag that swings
-    // across the working zoom and back does not flicker the lamps.
+    // commit_keep_centered_zoom, app_state.h), so a drag that swings
+    // across the working zoom and back does not flicker the lamp.
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -619,9 +619,9 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
     // double-click and the group undo/redo restore's zoom-out-to-fit arm being
     // what reach here. BOTH ARE DISCRETE, so this is a zoom COMMIT for the
-    // two zoom lamps, which a pan-only framing leaves where they
-    // stand (commit_zoom_lamps, app_state.h).
-    commit_zoom_lamps(app);
+    // keep-centered lamp, which a pan-only framing leaves where it
+    // stands (commit_keep_centered_zoom, app_state.h).
+    commit_keep_centered_zoom(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at

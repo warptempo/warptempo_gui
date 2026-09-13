@@ -155,19 +155,20 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
 // tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (232 since 2026-09-04 — the walk's own paragraph below) are
+// ceiling (240 since 2026-09-13 — the walk's own paragraph below) are
 // untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 993 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-eight-button left-to-right walk runs past the window's right edge —
-// the tablet's own 225 clears it by 31 (2304/2.25 = 1024 logical px) and 232
-// is the fit ceiling on that panel since the ITERATIONS MENU WAS DELETED on
-// 2026-09-04 and its two commands came back to the row as a group of their
-// own: two boxes, one gap and one separator, seventy-five authored px (250 at
+// 959 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-seven-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it by 65 (2304/2.25 = 1024 logical px) and 240
+// is the fit ceiling on that panel since the CENTER ON NEXT MARKER LAMP WAS
+// DELETED on 2026-09-13, one box and one gap off the row (232 at the 993-px
+// walk the ITERATIONS MENU'S DELETION left on 2026-09-04, when its two
+// commands came back to the row as a group of their own, 250 at
 // the 918-px walk the same day's regrouping left, 249 at the
 // 925-px walk the restrict-undo lamp had left before it, 258 at the 891-px walk
-// the Center on next marker lamp left before that, 268 at the 857-px walk the
+// the since-deleted Center on next marker lamp left before that, 268 at the 857-px walk the
 // radio collapse left, 240 at the 959-px walk the
 // keep-centered lamp left on 2026-08-31, and 249 at the 2026-08-27 relocation's own
 // 925-px walk, which is the 925 reached from the other direction; 250 was

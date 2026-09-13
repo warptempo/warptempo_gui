@@ -397,12 +397,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // by the same answer.
     const bool is_keep_centered_while_nudging =
         (key == GuiKeys::Y && !ctrl && !shift && !alt);
-    // CENTER ON NEXT MARKER, bare `n` (2026-09-04): the keep-centered lamp's own
-    // reasoning again — the bit decides where the CAMERA goes after a Tab
-    // walk and authors nothing the lock protects. Its button stays lit on a
-    // locked tab by the same answer.
-    const bool is_center_on_next =
-        (key == GuiKeys::N && !ctrl && !shift && !alt);
     // RESTRICT UNDO TO VIEWPORT, bare `z` (2026-09-04): the same reasoning
     // once more — the bit decides whether an undo RUNS and authors nothing the
     // lock protects, so the switch is admitted on a locked tab and its button
@@ -621,7 +615,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
-             is_follow || is_keep_centered_while_nudging || is_center_on_next ||
+             is_follow || is_keep_centered_while_nudging ||
              is_restrict_undo ||
              is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
@@ -8714,11 +8708,12 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     //
     // IT FRAMES BOTH TABS, DELIBERATELY AND BY ITS OWN STATEMENT (architect
     // 2026-09-04): both steps pass MarkerLandingFrame::Center, so the march
-    // centres on each tab's new focus whatever the Center on next marker lamp
-    // says. The lamp governs the bare Tab walk, and the march is a different
-    // act that composes that walk rather than a Tab press wearing modifiers —
-    // when framing lived inside cycle_marker_focus the march inherited the
-    // lamp, which is the shape the required parameter now forbids.
+    // centres on each tab's new focus whatever the zoom is. The zoom governs
+    // the bare Tab walk's framing (marker_walk_frame), and the march is a
+    // different act that composes that walk rather than a Tab press wearing
+    // modifiers — when framing lived inside cycle_marker_focus the march
+    // inherited the walk's policy, which is the shape the required parameter
+    // now forbids.
     //
     // BOTH STEPS FRAME BECAUSE THE VIEWPORT IS SAVED BETWEEN THEM, and that is
     // the whole point of a paired march: switch_active_tab_view_to pushes the
@@ -8751,11 +8746,11 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     }
 
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
-    // marker, moving the playhead to it and framing PER THE LAMP —
-    // marker_walk_frame(app) (app_state.h) is the Center on next marker bit's
-    // one reader, and these three arms are its only callers: lit, the walk
-    // recentres at the current zoom the way it always has; dark, the camera
-    // holds and only an offscreen landing pages in, follow's way. The Ctrl+Tab
+    // marker, moving the playhead to it and framing PER THE ZOOM —
+    // marker_walk_frame(app) (app_state.h), whose only callers are these
+    // three arms: at the working zoom or finer the walk recentres at the
+    // current zoom; coarser, the camera holds and only an offscreen landing
+    // pages in, follow's way. The Ctrl+Tab
     // branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
@@ -8949,7 +8944,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // AppState::keep_centered_while_nudging). The icon-row button
         // synthesizes this chord. This press is the MANUAL road, while a
         // committed zoom crossing the working level writes the same bit
-        // (commit_zoom_lamps, app_state.h); it leaves the zoom's edge record
+        // (commit_keep_centered_zoom, app_state.h); it leaves the zoom's edge record
         // untouched, so the toggle stands until the zoom next crosses the line.
         // History-less, one-shot, legal during the A/B audition, and it moves
         // nothing at the press: the next nudge centres. IN TARGET VIEW ON THE
@@ -8971,19 +8966,6 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
-        break;
-    case GuiKeys::N:
-        // Toggle the Center on next marker lamp (2026-09-04). The writer is
-        // the free function set_center_on_next_marker (app_state.h), where the
-        // whole caller inventory lives: this press is the MANUAL road, shared
-        // with the icon-row button's synthesized chord, while a committed zoom
-        // crossing the working level writes the same bit since 2026-09-13. It
-        // leaves the zoom's edge record untouched, so the toggle stands until
-        // the zoom next crosses the line. History-less, one-shot, the keep-centered lamp's
-        // own shape — and nothing moves at the press: the bit is read at the
-        // next BARE Tab walk, through marker_walk_frame, and by nothing else
-        // (the Ctrl+Shift+Tab march states its own framing).
-        set_center_on_next_marker(app, !app.center_on_next_marker);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

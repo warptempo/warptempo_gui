@@ -310,17 +310,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // derived partition keeps the face lit) and on a locked tab (navigation,
     // the lock's allowlist).
     {RedesignButton::IconKeepCenteredWhileNudging, GuiKeys::Y, false, false, false, false, true},   // bare y
-    // CENTER ON NEXT MARKER (architect 2026-09-04) — the keep-centered lamp's shape
-    // exactly, one lamp further along the same group: bare `n`, a TOGGLE
-    // reading the live bit — which since 2026-09-13 the ZOOM writes as
-    // well as this chord (a committed zoom crossing the working level; the
-    // inventory is at set_center_on_next_marker, app_state.h), the face being
-    // truthful either way because it reads the bit and not the press. Live on a locked tab (bare `n`
-    // is navigation, on the lock's allowlist) and DEAD in the `h` view, where
-    // Tab denotes the diff-flag cycle and the mode's allowlist drops the
-    // chord, so the derived partition greys this face in there.
-    {RedesignButton::IconCenterOnNext,
-     GuiKeys::N, false, false, false, false, true},                                // bare n
     // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the same shape again,
     // closing the same group: bare `z`, a TOGGLE reading the live bit its own
     // chord flips. It shares its letter with the pair it governs, which is the
@@ -714,11 +703,14 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 51
-// rows against the roster's 54 since 2026-09-13'S VALUE DRAG LAMP DELETION,
-// which took bare `x`'s row out with its button (a chord, so the pair moved
-// together; the gesture's posture is the view's now, value_drag_posture). It
-// was 52 against 55 from 2026-09-10'S VALUE DRAG LAMP, the same pair's
+// every RedesignButton but the THREE menu anchors carries a chord here — 50
+// rows against the roster's 53 since 2026-09-13'S CENTER ON NEXT MARKER
+// DELETION, which took bare `n`'s row out with its button (a chord, so the
+// pair moved together; the Tab walk's framing is the zoom's at the landing
+// now, marker_walk_frame). It was 51 against 54 earlier that day, from the
+// VALUE DRAG LAMP DELETION, which took bare `x`'s row out with its button (a
+// chord, so the pair moved together; the gesture's posture is the view's now,
+// value_drag_posture). It was 52 against 55 from 2026-09-10'S VALUE DRAG LAMP, the same pair's
 // arrival closing the bottom row's verb group, and 51 against 54 from
 // 2026-09-09'S HELP DELETION, which moved the ROSTER ALONE: the anchor carried no chord, so this table did not feel
 // it (the addend's own succession is at the static_assert below).
@@ -3328,10 +3320,10 @@ void GuiInputHandler::end_touch_nav() {
     clear_touch_zoom_seat(app, viewport);
     if (playback.is_playing()) playback.resync_predictor();
     // AND THE PINCH COMMITS ITS ZOOM HERE, at the one body every touch end
-    // reaches, never per frame (commit_zoom_lamps,
+    // reaches, never per frame (commit_keep_centered_zoom,
     // app_state.h). A pan-only gesture finds the level where the last commit
     // left it and writes nothing.
-    commit_zoom_lamps(app);
+    commit_keep_centered_zoom(app);
 }
 
 // The pan-zone query's body (contract at the declaration): THE NAVIGATION
@@ -7386,9 +7378,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             // THE GESTURE'S END IS ITS ZOOM COMMIT, whichever phase it ended
             // in: a ctrl phase released mid-drag committed nothing at its
             // ctrl-up, and a pan-only drag finds the level on the side the
-            // last commit left it (commit_zoom_lamps,
+            // last commit left it (commit_keep_centered_zoom,
             // app_state.h, where the end sites are inventoried).
-            commit_zoom_lamps(app);
+            commit_keep_centered_zoom(app);
             return;
         }
         // The motionless zoom-phase press painted a stem from the press (or
@@ -7422,8 +7414,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             apply_overview_drag_at(x, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
             // The edge drags' zoom commits at the drag's end
-            // (commit_zoom_lamps, app_state.h).
-            commit_zoom_lamps(app);
+            // (commit_keep_centered_zoom, app_state.h).
+            commit_keep_centered_zoom(app);
         }
         app.overview_drag = OverviewDragState{};
         return;
@@ -7621,8 +7613,8 @@ void GuiInputHandler::finalize_active_drags() {
             if (zooming) viewport.kick_waveform_sync();
             end_strip_pointer_capture();
             // A force-end is still the gesture's end, so it is the zoom's
-            // commit (commit_zoom_lamps, app_state.h).
-            commit_zoom_lamps(app);
+            // commit (commit_keep_centered_zoom, app_state.h).
+            commit_keep_centered_zoom(app);
         }
         app.scroll_drag = ScrollDragState{};
         if (zooming) viewport.invalidate_waveform_area();
@@ -7641,8 +7633,8 @@ void GuiInputHandler::finalize_active_drags() {
         if (app.overview_drag.moved && playback.is_playing())
             playback.resync_predictor();
         // The zoom's commit at the force-end, as at the release
-        // (commit_zoom_lamps, app_state.h).
-        if (app.overview_drag.moved) commit_zoom_lamps(app);
+        // (commit_keep_centered_zoom, app_state.h).
+        if (app.overview_drag.moved) commit_keep_centered_zoom(app);
         app.overview_drag = OverviewDragState{};
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
@@ -7694,9 +7686,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-eight — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-seven — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 55, the enum's
+// eighteen since 2026-08-29: 53, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -10266,8 +10258,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (app.overview_drag.moved) {
                 apply_overview_drag_at(mouse_x, /*final_event=*/true);
                 // The zoom's commit, the release's own
-                // (commit_zoom_lamps, app_state.h).
-                commit_zoom_lamps(app);
+                // (commit_keep_centered_zoom, app_state.h).
+                commit_keep_centered_zoom(app);
             }
             app.overview_drag = OverviewDragState{};
             return;
@@ -10318,8 +10310,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
                 // The zoom's commit, the release's own
-                // (commit_zoom_lamps, app_state.h).
-                commit_zoom_lamps(app);
+                // (commit_keep_centered_zoom, app_state.h).
+                commit_keep_centered_zoom(app);
             }
             return;
         }

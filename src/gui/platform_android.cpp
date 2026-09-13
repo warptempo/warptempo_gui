@@ -493,16 +493,18 @@ GuiPlatform::~GuiPlatform() {
 // glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
 // logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
 // the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 232 % (the icon row's walk has been 993 authored px since the
-// architect deleted the Iterations menu on 2026-09-04 and its two commands came
-// back to the row as a group of their own, which cost the walk two boxes, one
-// gap and one separator; the ceiling was 250 at the 918-px walk the same day's
+// fit ceiling is 240 % (the icon row's walk has been 959 authored px since the
+// architect deleted the Center on next marker lamp on 2026-09-13, one box and
+// one gap off the row; the ceiling was 232 at the 993-px walk the Iterations
+// menu's deletion left on 2026-09-04, which cost the walk two boxes, one
+// gap and one separator, 250 at the 918-px walk the same day's
 // regrouping left, 249 at the 925-px
 // walk before that, 258 at the 891-px one, 268 at the
 // 857-px walk the radio collapse left, 240 at the 959-px walk before that day
 // and 249 at the 2026-08-27 relocation's own 925-px one) and anything past it
-// crops the rightmost history icons. 225 CLEARS IT BY 31 LOGICAL PX, the
-// narrowest margin this row has run at on the panel.
+// crops the rightmost history icons. 225 CLEARS IT BY 65 LOGICAL PX (it cleared
+// by 31 at the 993-px walk, the narrowest margin this row has run at on the
+// panel).
 // 250 was tried as the TEMPLATE for one afternoon on 2026-08-27 for the
 // finger's sake — a
 // marker flag has to be tappable without the second tap of a double-tap landing

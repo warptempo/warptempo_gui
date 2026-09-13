@@ -74,8 +74,8 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // `projects_repo` moved to the per-device config, device_config.h, where
     // `audio_player` then retired whole 2026-08-28. THREE MORE LEFT IT
     // 2026-09-11 — `follow`, `centered` and `center_on_next_marker`, the
-    // camera postures, which are session state in AppState now and are
-    // serialized nowhere. The parser-side record of all seven, and the
+    // camera postures, which were session state in AppState from then (the
+    // third deleted whole 2026-09-13) and are serialized nowhere. The parser-side record of all seven, and the
     // consequence for a sidecar still carrying one, is at
     // kCanonicalSettingsKeys, settings_file.cpp.)
     // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification

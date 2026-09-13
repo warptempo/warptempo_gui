@@ -87,8 +87,8 @@ struct NonEngineSettingsSnapshot {
     // exactly what is about the piece. `follow`, `centered` and
     // `center_on_next_marker` left it 2026-09-11 with theirs — the three
     // camera postures are what the user is DOING, not what the piece
-    // determines, so they are session state in AppState and nothing
-    // serializes them.)
+    // determines, so they became session state in AppState (the third
+    // deleted whole 2026-09-13) and nothing serializes them.)
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared

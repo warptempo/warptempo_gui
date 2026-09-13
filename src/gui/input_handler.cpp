@@ -2562,7 +2562,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // not moved, so there is no OTHER marker to select, the playhead is
     // already sitting on this one — it is what made it the seat — and moving
     // it would be a movement in the music that hides the trim overlay for no
-    // reason. THE CENTER ON NEXT MARKER LAMP AND `frame` GOVERN
+    // reason. `frame` GOVERNS
     // MARKER-TO-MARKER STEPS ALONE for the same reason: there is no new marker
     // to frame, and a recentre here would move the camera under a user reading
     // the cell he just stepped onto.
@@ -2595,13 +2595,12 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // moves the playhead onto it and treats the camera as `frame` says.
     //
     // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
-    // (architect 2026-09-04, rebuilding the walk when the Center on next
-    // marker lamp landed). The walk moves focus and lands the playhead; the
-    // camera is its caller's statement, forwarded untouched. The lamp governs
-    // the BARE Tab walk alone, so the three bare arms hand this
-    // marker_walk_frame(app) while the Ctrl+Shift+Tab paired march — a
-    // different act, which always centres — hands it
-    // MarkerLandingFrame::Center. Putting the lamp read in here is what made
+    // (architect 2026-09-04). The walk moves focus and lands the playhead; the
+    // camera is its caller's statement, forwarded untouched. The zoom governs
+    // the BARE Tab walk's framing alone (architect 2026-09-13), so the three
+    // bare arms hand this marker_walk_frame(app) while the Ctrl+Shift+Tab
+    // paired march — a different act, which always centres — hands it
+    // MarkerLandingFrame::Center. Putting the policy read in here is what made
     // the march inherit it, which is the shape the required parameter exists
     // to prevent: framing cannot be acquired by saying nothing.
     // Otherwise byte-identical to the `c` gesture's marker jump — the zoom is
@@ -2623,9 +2622,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // happen behind the gate above: the select just focused the landing that
     // gate proved. Nothing here reads it; the return exists for the other
     // caller (run_center_command).
-    // A step is a movement like any other through the land owner; it writes no
-    // Center on next marker lamp, because no land does (the zoom writes that
-    // lamp, set_center_on_next_marker).
+    // A step is a movement like any other through the land owner.
     jump_playhead_to_focused_marker(frame);
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because
@@ -2710,8 +2707,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // synchronous rebuild here — no second call in this function's tail. The
     // unmoved path (EOF-clamped no-op) needs none.
     //
-    // `frame` IS THE CALLER'S TOO (architect 2026-09-04, the Center on next
-    // marker lamp), and it selects between these two lines and nothing else:
+    // `frame` IS THE CALLER'S TOO (architect 2026-09-04), and it selects between these two lines and nothing else:
     // the land above already happened, so a FollowPage landing still moves the
     // focus and the playhead — the camera simply stays where the user left it.
     // THE FollowPage ARM IS FOLLOW'S PAGE, not a second scroll spelling:
@@ -2723,7 +2719,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     //
     // WHO PASSES WHAT, re-grepped 2026-09-13: `c` (run_center_command) and the
     // Ctrl+Shift+Tab paired march both state Center; the three bare Tab arms
-    // state marker_walk_frame(app), the lamp's one reader. Shift+`j` and the
+    // state marker_walk_frame(app), the zoom's answer. Shift+`j` and the
     // A/B audition reach the camera through run_center_command by name and so
     // take its Center with it.
     switch (frame) {
