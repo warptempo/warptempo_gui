@@ -4450,7 +4450,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // demands it), costs bounded like the tempo step. The single condition
     // covers both: shift distinguishes undo from redo, and repeat recomputes
     // modifiers live, so a shift pressed mid-hold flips to redo — consistent
-    // with the platform's live-modifier rule.
+    // with the platform's live-modifier rule. THE UNDO AND REDO BUTTONS ASK
+    // THIS SAME TERM since 2026-09-13, both rows carrying `repeats` in
+    // kToolbarChords (input_pointer.cpp), so key and button walk the history
+    // at one speed; the button's chord is built from its row at the press and
+    // does not flip on a live shift. A repeat that finds the stack empty is
+    // silent at the dispatch arm (input_handler.cpp).
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
     // Ctrl+= / Ctrl+- (the horizontal ZOOM step since 2026-08-27) repeat
@@ -4462,7 +4467,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // ICON-ROW BUTTONS DO NOT REPEAT AT ALL and never asked this: they carry
     // no `repeats` in kToolbarChords (input_pointer.cpp), which is the chrome
     // hold's whole membership, so a held zoom button is one step at its lift
-    // like every other non-repeating button. The MAGNIFICATION pair's buttons
+    // like every other non-repeating button (the Undo / Redo buttons, which
+    // do carry it, ask about Ctrl+Z above). The MAGNIFICATION pair's buttons
     // DO carry it, and what they ask this predicate about is the BARE
     // spelling of these same two keys, answered by the arrows' term above —
     // so on that pair the key and the button walk at one speed by

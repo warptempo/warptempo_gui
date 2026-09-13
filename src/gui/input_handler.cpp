@@ -1764,11 +1764,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the cross-tab case the active tab's own lock cannot explain (the
         // keyboard gate above already answers a locked ACTIVE tab). ONE CARD
         // PER PRESS: the ops' own guard is the belt behind this and stays
-        // silent, and both buttons grey on the same predicate, so no lift
-        // reaches this line.
+        // silent, and both buttons grey on the same predicate, so neither a
+        // lift nor a held button's fire reaches this line.
         const std::vector<UndoEntry>& stack =
             shift ? app.history.redo_stack : app.history.undo_stack;
         if (!history_step_actionable(app, stack)) {
+            // A HELD Ctrl+Z THAT RUNS OUT OF HISTORY STOPS SILENTLY (architect
+            // 2026-09-13): a SYNTHESIZED REPEAT meeting the empty stack is a
+            // benign one-dimensional refusal already at its state — the hold
+            // walked the history to its end, and the restores it just ran are
+            // the screen's answer. A DELIBERATE press keeps the card, the
+            // counter-class rule (messaging.md) standing for it. The other
+            // tab's lock below is not a wall the hold ran into but a reason,
+            // so it cards on a repeat too, once per burst through
+            // HeldRepeatDispatchScope. The held BUTTON never reaches this
+            // line: its face greys on the same predicate and its burst rests
+            // there (tick_chrome_press_repeat).
+            if (stack.empty() && mods.synthesized_repeat) return;
             notifications.notify(
                 AppState::NotificationClass::Normal,
                 stack.empty()

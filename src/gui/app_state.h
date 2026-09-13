@@ -6628,8 +6628,9 @@ struct AppState {
     // 2026-08-13 deletion of the arrows' repeat: the touch panel has no
     // keyboard, so a held arrow BUTTON is the panel's only nudge run). A press
     // on a button whose chord row sets `repeats` — the bottom row's four
-    // cardinal arrows and, since 2026-08-26, the icon row's WAVEFORM
-    // MAGNIFICATION PAIR; the membership is the `repeats` column itself,
+    // cardinal arrows, since 2026-08-26 the icon row's WAVEFORM
+    // MAGNIFICATION PAIR and since 2026-09-13 its UNDO / REDO; the membership
+    // is the `repeats` column itself,
     // kToolbarChords, input_pointer.cpp, and is not re-listed anywhere —
     // arms a synthesized-repeat burst alongside the act:
     //   * `repeat_due_ms` is the CLOCK_MONOTONIC stamp of the next fire, and 0
@@ -15455,8 +15456,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // but before the next tick found repeat_fired still false and dispatched the
 // SHIFT step where the user was owed a plain one, so the hold's term carries
 // `!tc.repeats` — the exclusion read off the `repeats` column itself, never a
-// second list — and the whole repeat-eligible set (these four and the
-// magnification pair, which admits no shift anyway) is outside the hold-as-
+// second list — and the whole repeat-eligible set (these four, and the
+// magnification pair and Undo / Redo, which admit no shift anyway) is outside the hold-as-
 // shift reading by construction. A held arrow gives the stream of its PLAIN
 // step, which is the faster road anyway; a NON-repeating shift-admitting
 // button keeps the hold as its road to its twin, unchanged. THE CONSEQUENCE IS

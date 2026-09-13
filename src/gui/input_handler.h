@@ -1785,7 +1785,9 @@ struct GuiInputHandler {
     // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
     // 2026-08-16), driven from the run loop beside the hover recompute. While a
     // press stands on a `repeats` button — the bottom row's four cardinal
-    // arrows — this synthesizes that button's chord on the keyboard's own
+    // arrows, the magnification pair and Undo / Redo, the column in
+    // kToolbarChords being the membership — this synthesizes that button's
+    // chord on the keyboard's own
     // cadence, the first fire a hold beat after the press and the rest at the
     // compositor's advertised repeat rate. One kind compare and one integer
     // compare when idle; every firing condition lives in the body, and the

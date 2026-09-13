@@ -281,7 +281,9 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // held-BUTTON producer beside it (tick_chrome_press_repeat, whose
             // repeat-eligible members are the four cardinal arrows and, since
             // 2026-08-26, the waveform magnification pair, which fires here
-            // and pushes nothing — the membership is kToolbarChords' own
+            // and pushes nothing, and since 2026-09-13 Undo / Redo, whose
+            // restores push nothing through this body and clear the stamp
+            // (restore_history_entry) — the membership is kToolbarChords' own
             // `repeats` column, never a second list) buys the same property
             // from its own edge, the physical
             // key delivery (main.cpp's set_on_key hook), the only edge that

@@ -2616,7 +2616,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             input_handler.recompute_redesign_button_hover();
 
         // THE CHROME BUTTON HOLD-REPEAT (architect 2026-08-16): while a press
-        // stands on one of the bottom row's four cardinal arrows, this
+        // stands on a button whose chord row carries `repeats` (the bottom
+        // row's four cardinal arrows, the magnification pair, Undo / Redo), this
         // synthesizes its chord on the keyboard's own cadence — a hold beat,
         // then the compositor's advertised repeat rate — stamped as a repeat so
         // the undo coalescing is the held key's own rule. One kind compare when

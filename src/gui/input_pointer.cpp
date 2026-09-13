@@ -118,17 +118,22 @@ struct ToolbarChord {
     // REPEATS: a held press on this button synthesizes its own chord over and
     // over — the pointer twin of holding the key (the bottom row's four
     // cardinal arrows from 2026-08-16, joined by the waveform magnification
-    // pair on 2026-08-26 — see below). The press arms the burst
+    // pair on 2026-08-26 and by UNDO AND REDO on 2026-09-13 — see below). The
+    // press arms the burst
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
     // suppresses the lift's own act. Defaulted, so the rows that do not repeat
-    // need no eighth column. SIX ROWS CARRY IT since 2026-08-26, when the
-    // WAVEFORM MAGNIFICATION PAIR joined the four arrows — a ladder
+    // need no eighth column. EIGHT ROWS CARRY IT since 2026-09-13: the four
+    // arrows; the WAVEFORM MAGNIFICATION PAIR (2026-08-26) — a ladder
     // step is a continuous step gesture like an arrow, and the pair is the
-    // touch panel's only road to the setting. Those two push no undo entry at
-    // all (the key is history-less), so the opener flip below is vacuous for
-    // them.
+    // touch panel's only road to the setting; and UNDO / REDO (architect
+    // 2026-09-13, "like the Left/Right nudge") — stepping through history is
+    // the continuous step gesture their held chords already were at
+    // repeat_eligible, and the buttons are glass's only road to it. Neither
+    // pair pushes an undo entry of its own (the setting is history-less, and
+    // a restore records nothing and clears the coalesce stamp), so the opener
+    // flip below is vacuous for both.
     bool           repeats = false;
 };
 
@@ -170,9 +175,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The toolbar four — icon-row members since the 2026-08-12 relayout
     // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
     // only the face and the band changed hands).
+    //
+    // UNDO AND REDO REPEAT (architect 2026-09-13): a held button walks the
+    // history at the held Ctrl+Z's own cadence, the arm asking repeat_eligible
+    // about the row's own ctrl (and Redo's shift) columns. Neither admits a
+    // modifier, so the long-press exclusion at the lift costs them nothing.
+    // A burst that runs out of history meets the GREYED face on its next fire
+    // (history_step_actionable's empty-stack term, through
+    // redesign_button_enabled) and rests there under the held pointer, the
+    // magnification pair's ladder end in the same shape; the same pause holds
+    // for the Restrict-undo lamp's verdict and the other tab's lock. The
+    // held KEY's own wall is silent at the dispatch arm (input_handler.cpp).
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
-    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true},   // Ctrl+Z
-    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true},   // Ctrl+Shift+Z
+    {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false, true,  true},   // Ctrl+Z
+    {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false, true,  true},   // Ctrl+Shift+Z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false, true},   // Ctrl+Alt+R (+Shift)
     // Row 3 — the tabs. Both halves carry the SAME chord: with two tabs the
     // toggle IS the direct select, and the radio flag is what makes a press on
@@ -487,7 +503,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // 2026-08-16, reversing his own 2026-08-13 deletion of the same gesture,
     // which he finds did not hold up in practice; the column is the whole
     // membership and no list restates it — the magnification pair joined on
-    // 2026-08-26): the touch panel has no
+    // 2026-08-26, Undo and Redo on 2026-09-13): the touch panel has no
     // keyboard beside the synthetic one, so a HELD ARROW BUTTON is the panel's
     // only nudge run, and the substitutes the deletion counted on — dragging
     // the marker, typing the tempo in the editor — do not cover it.
@@ -677,9 +693,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone. The eighth
-    // column is `repeats`, which these four set — as does the waveform
-    // magnification pair above since 2026-08-26; the column IS the
-    // membership (the contract is at ToolbarChord::repeats).
+    // column is `repeats`, which these four set — as do the waveform
+    // magnification pair above since 2026-08-26 and Undo / Redo since
+    // 2026-09-13; the column IS the membership (the contract is at
+    // ToolbarChord::repeats).
     //
     // THEIR MODIFIER COLUMNS STAY FALSE and that is the split these four make
     // visible (2026-08-31, R12 — THE STEP LADDER): the table's `shift` and
@@ -8179,8 +8196,9 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // press before the arm ever runs), so no second admission is asked
         // here and the predicate is asked about exactly the chord the burst
         // will fire. The magnification pair carries neither and is unmoved;
-        // the zoom stepping pair's own ctrl comes from tc.ctrl, this table's
-        // column, and is ORed in like any other row's.
+        // Undo's and Redo's ctrl (and Redo's shift) come from tc.ctrl /
+        // tc.shift, this table's columns, and are ORed in like any other
+        // row's, so the arm asks about exactly Ctrl+Z / Ctrl+Shift+Z.
         //
         // THE LONG-PRESS TERM IS STILL ABSENT AND NOW FOR A SECOND REASON: no
         // repeating row could reach it before because none admitted shift, and
@@ -8406,8 +8424,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // plain one. So the exclusion is stated where it is read, off
         // kToolbarChords' own `repeats` column — the arm's membership, never a
         // second list — which makes the promised casualty guaranteed instead
-        // of timing-dependent, for the four cardinal arrows and the
-        // magnification pair alike (the pair admits no shift anyway, so the
+        // of timing-dependent, for every `repeats` row alike (the
+        // magnification pair and Undo / Redo admit no shift anyway, so the
         // term is load-bearing for the arrows). A NON-REPEATING
         // shift-admitting button is untouched: the hold is still its road to
         // its twin, on glass and on the desk.
@@ -8437,7 +8455,8 @@ void GuiInputHandler::finish_chrome_press_release(
 // THE CHROME BUTTON HOLD-REPEAT, fired from the run loop's tick (architect
 // 2026-08-16): while a press stands on a button whose chord row sets `repeats`
 // — the bottom row's four cardinal arrows and the icon row's waveform
-// magnification pair — synthesize that button's chord on the keyboard's own
+// magnification pair and Undo / Redo (the column is the membership) —
+// synthesize that button's chord on the keyboard's own
 // cadence, so a held BUTTON walks at the speed the held KEY does. It exists for the glass rig, which has no keyboard, and it
 // works there with NO TOUCH-SPECIFIC CODE: the one-finger translation delivers
 // an ordinary left press and an ordinary left release, so it arms and ends this
@@ -8460,7 +8479,10 @@ void GuiInputHandler::finish_chrome_press_release(
 // act is at the lift), so the first fire stands in for that press act. (The
 // flip is VACUOUS for the magnification pair, whose setting is
 // history-less: its bursts push no undo entry at all, so there is nothing to
-// open or merge.
+// open or merge. It is vacuous for UNDO / REDO too: a restore pushes no entry
+// through the coalescing — it pops one stack onto the other and clears the
+// coalesce stamp (Undo::restore_history_entry) — so a first fire with the bit
+// clear and the fires behind it with the bit set reach the same act.
 // The flag is set uniformly rather than forked on the row.) Fire
 // one goes out with synthesized_repeat FALSE and pushes its own entry under
 // the arrival-invalidate and the tap-window rules, and every fire behind it
@@ -8481,7 +8503,10 @@ void GuiInputHandler::finish_chrome_press_release(
 // face greys at its top and bottom rung (planner decision 53): a burst that
 // walks the ladder to its end meets the dead bit on its next fire and rests
 // there under the held pointer, greyed, nothing un-pausing it while the hold
-// stands, and the lift that ends a fired burst is consumed), a
+// stands, and the lift that ends a fired burst is consumed — and since
+// 2026-09-13 THE HISTORY'S END for Undo / Redo in the same shape, their faces
+// greying on an empty stack, a locked target tab and the Restrict-undo lamp's
+// verdict through history_step_actionable and its companions), a
 // rate of 0 PAUSES (stated at its own line), and lost eligibility DISARMS — a
 // context that revoked the burst ends it
 // rather than parking it. One fire per due tick, the next scheduled from NOW
