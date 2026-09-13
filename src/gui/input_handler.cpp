@@ -1124,7 +1124,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // THE RULED EXCEPTIONS ARE ENUMERATED AT ONE SITE,
     // active_column_authoring_allowed (app_state.h); the members that
     // dispatch from here are the bare UP/DOWN TEMPO CENT STEP in W+target
-    // (owner-only there, singleton and group — the whole tempo surface since
+    // (singleton and group, the singleton freezing a pass as it does in
+    // source view since 2026-09-13 — the whole tempo surface since
     // 2026-07-29, when the pointer tempo drag and the bare Left/Right
     // tempo-image step were deleted, marker_drag.h, leaving bare Left/Right in
     // W+target a consumed refusal at the split below), the phase-reset

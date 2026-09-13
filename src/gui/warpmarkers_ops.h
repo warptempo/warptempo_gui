@@ -35,10 +35,13 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
                            GuiTargetRender& target_render);
 
 // WHERE A TEMPO STEP STARTS FROM — the cents it walks from and the typed scale
-// it carries with it, for ONE warp marker. ONE CALLER since 2026-09-13: the
-// singleton cent step's own loop (adjust_tempo_cents, warpmarkers_ops.cpp). The
-// VALUE DRAG shared it from 2026-09-10 until the drag became target-view-only,
-// where a pass is refused and an owner's seed is its own authored cents.
+// it carries with it, for ONE warp marker. TWO CALLERS AND THE SAME REASON
+// warp_tempo_write_tail has three (2026-09-10): the singleton cent step's own
+// loop (adjust_tempo_cents, warpmarkers_ops.cpp) and the VALUE DRAG's begin
+// (ValueDragOps::begin, value_drag.cpp) seed the same act with two hands, so
+// the seed is one body or it is a divergence waiting to happen. (The drag's
+// call was deleted for a few hours on 2026-09-13, while target view refused a
+// pass; it came back when the arrow step began freezing one there.)
 //
 // AN OWNER ANSWERS ITS OWN AUTHORED FIELDS. A PASS ANSWERS THE PROJECTION:
 // marker_effective (warp_frame_map_build.h, the engine-side owner) resolved
@@ -54,10 +57,10 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
 // is not a tempo — unreachable from a pass today, and a fallback rather than a
 // belt for exactly that reason.
 //
-// A LABEL REF IS NOT ITS SUBJECT: it has no tempo of its own, and the caller
-// refuses one ahead of this call (the loop's first `continue`). Handed one
-// anyway this returns the ref's own authored fields, which is the harmless
-// reading and no caller's business.
+// A LABEL REF IS NOT ITS SUBJECT: it has no tempo of its own, and both callers
+// refuse one ahead of this call (the loop's first `continue`, the value drag's
+// target rule). Handed one anyway this returns the ref's own authored fields,
+// which is the harmless reading and no caller's business.
 //
 // `resolved` is the store sliced to WarpMarker (slice_to_warp_markers,
 // warpmarkers.h) and `idx` indexes it; it is a parameter rather than a slice

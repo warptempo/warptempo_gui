@@ -540,10 +540,15 @@ struct DragState {
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
 //
-// THE PAYLOAD TARGET IS A TEMPO OWNER AND NOTHING ELSE: the payload arm is
-// asked in target view alone, where the arrows' own gate refuses a pass, a
-// label ref and a coincident-collapse member (value_drag_target, below), so
-// the drag never converts a pass — it steps an owner's own cents.
+// A PASS IS A TARGET AND THE DRAG CONVERTS IT, exactly as the arrows do
+// (architect 2026-09-10: "the pass inherits whatever it was and then applies
+// on up and down, so we should allow the drag on passes as well"; in target
+// view too since 2026-09-13, where the arrows convert it). Its start is the
+// EFFECTIVE base and scale, and the first write freezes the marker to owning
+// at the stepped value — one seed body for the two hands
+// (warp_tempo_step_start, warpmarkers_ops.h). A LABEL REF is still no target,
+// having no tempo of its own to walk from, and neither is a
+// coincident-collapse member (value_drag_target, below).
 //
 // IT IS THE MARKER DRAG'S SIBLING, NOT ITS STATE: DragState above holds a
 // POSITION proposal in the displayed domain with walls, an overlay and a
@@ -574,17 +579,30 @@ struct ValueDragState {
     // it, so no arm below has a case for it.
     MarkerCell cell    = MarkerCell::Payload;
     int        press_y = 0;    // window px: the travel is measured from here
-    // The value the press found, in the cell's own domain: the owner's
-    // authored CENTS on the payload and on a warp bound, HOPS on a phase-reset
-    // bound.
+    // The value the press found, in the cell's own domain: authored CENTS on
+    // the payload and on a warp bound, HOPS on a phase-reset bound. ON A PASS
+    // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
+    // "the pass inherits whatever it was and then applies on up and down"):
+    // the seed comes from warp_tempo_step_start (warpmarkers_ops.h), the very
+    // body the arrows' own loop reads, so the drag walks from the tempo the
+    // flag shows and the first write freezes the marker to owning at it.
     int64_t    start_value = 0;
+    // THE OTHER HALF OF THAT SEED — the typed scale the payload arm writes
+    // beside the cents. On an OWNER it is the marker's own scale, so writing
+    // it back is a no-op that keeps the arm's three writes identical to the
+    // step's; on a PASS it is the effective scale the freeze has to carry,
+    // which is what makes the conversion lossless. Neither bound arm reads it
+    // (a bound is one integer and carries no scale).
+    std::optional<double> start_scale;
     // The step count the last applied motion landed on. The motion arm returns
     // early when the count has not moved, so a hand wandering inside one step's
     // kValueDragPxPerStep writes nothing and damages nothing.
     int64_t    last_steps  = 0;
     // The TEMPO arm's undo payload, captured at the begin and pushed by the
-    // commit iff the owner's tempo_cents actually moved. Empty on a bound drag
-    // by construction — that arm pushes nothing.
+    // commit iff the marker's tempo_inherits/tempo_cents PAIR actually moved
+    // (a pass converted and dragged back to its own base moved the pair, not
+    // the cents). Empty on a bound drag by construction — that arm pushes
+    // nothing.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
 };
 
@@ -9922,7 +9940,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // status, an existence or a value edit, which were swept into the same blanket
 // refusal without the reason applying to them. The FIVE ruled
 // exceptions live at their sites: (1) the bare UP/DOWN TEMPO CENT STEP in
-// W+target (owner-only there, adjust_tempo_cents — singleton and group), which is
+// W+target (adjust_tempo_cents — singleton and group, the singleton freezing a
+// pass to owning as it does in source view since 2026-09-13), which is
 // the WHOLE tempo surface now and is dispatched without consulting this
 // predicate; (2) the
 // phase-reset propagate (a warp-view gesture that authors phase resets; its
@@ -10154,7 +10173,8 @@ inline bool tempo_cent_step_column_allowed(const AppState& app) {
 //     through all three states; only its reader count moved.
 // What was live-faced under both mirrors, and still is, is the VALUE-shaped
 // tail that needs the act's own resolution run: a label ref, and in target
-// view a pass, a ref or a coincident-collapse member. THE TEMPO BRACKET WALL
+// view a coincident-collapse member (a PASS left this list on 2026-09-13, when
+// the target-view step began freezing it as source view does). THE TEMPO BRACKET WALL
 // LEFT THAT LIST on 2026-08-31 (R3): the DIRECTIONAL predicate below faces it,
 // so Up greys on the bracket's max and Down on its min.
 inline bool tempo_cent_step_actionable(const AppState& app) {
@@ -10244,16 +10264,20 @@ inline bool tempo_cent_step_group_actionable(const AppState& a,
 //     focused marker's value is the one place to glance), so here the grey is
 //     the whole cue.
 // WHAT IT STILL ANSWERS TRUE FOR, and deliberately: the VALUE-SHAPED TAILS
-// that keep a live face and a card — a source-view label ref ("A label
-// reference has no tempo of its own"), and in target view a pass, a ref or a
-// coincident-collapse member. Each of those is a fact about the marker's KIND
-// or its render identity rather than a wall its value rests on, each needs the
-// act's own resolution run, and each says so on a card the grey would swallow.
+// that keep a live face and a card — a label ref in either view ("A label
+// reference has no tempo of its own"), and in target view a
+// coincident-collapse member — and a PASS in both views, which always freezes
+// and so always changes. Each tail is a fact about the marker's KIND or its
+// render identity rather than a wall its value rests on, each needs the act's
+// own resolution run, and each says so on a card the grey would swallow.
 // THE TOOLTIP'S MODIFIER LINE IS WHAT THAT COSTS, and it is paid at the line
 // rather than at the face (2026-09-02, R-17e): the target-view half of those
 // tails is magnitude-blind, so all three rungs card the same sentence, and the
 // Up / Down hint drops its ladder line there on that refusal's own owner
-// (tempo_cent_step_target_view_refusal). The face is untouched.
+// (tempo_cent_step_target_view_refusal). The face is untouched. (The
+// source-view label ref cards the same sentence on every rung too, but the
+// owner answers nullptr in source view, so the line stands there — a recorded
+// asymmetry the 2026-09-13 ruling did not reach.)
 // Defined in warpmarkers_ops.cpp beside both step arms.
 //
 // THE TWIN RULE IS RESOLVED, AND IT COSTS THIS PREDICATE NOTHING (2026-08-31,
@@ -10279,13 +10303,23 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // WOULD A CENT STEP REFUSE ON THE FOCUS'S KIND IN TARGET VIEW — the sentence
 // it would card with, or nullptr (architect 2026-09-02, the four-tier
 // review's R-17e). It is the SINGLETON arm's target-view block lifted whole:
-// the two PAYLOAD refusals ("In target view only a marker that owns its tempo
-// can be stepped", for a pass or a label ref) and the COINCIDENT-COLLAPSE one
-// ("That marker shares its frame with another"), with source view, a GROUP
+// the LABEL-REFERENCE refusal ("A label reference has no tempo of its own", the
+// same literal source view's tail cards, since a reference refuses in both
+// views) and the COINCIDENT-COLLAPSE one ("That marker shares its frame with
+// another", asked of the red cache's collapse subset), with source view, a GROUP
 // press and a stale focus all answering nullptr because none of them is this
 // refusal's business — the group arm's own refusals are the wall scan's, and
 // the belt says nothing by GuiOpRefusal's contract. Defined in
 // warpmarkers_ops.cpp beside the act.
+//
+// A PASS IS NOT REFUSED (architect 2026-09-13: "why not just allow tempo step
+// by collapsing the inherit as we already do in S+W?"): the singleton step
+// freezes it to owning at the value it resolves to in target view exactly as
+// in source view, the freeze being map-neutral. Until that ruling a pass and a
+// ref shared one sentence here that NAMED THE VIEW ("In target view only a
+// marker that owns its tempo can be stepped"), because the same pass WOULD
+// step in source view; with the pass gone the reference is what remains, and a
+// reference refuses in source view too, so the sentence names no view.
 //
 // TWO FORMS SINCE 2026-09-10, ONE BODY — the verdict is a fact about ONE
 // MARKER, so the INDEX form carries it and the FOCUS form is the group
@@ -11714,8 +11748,10 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 //   * TARGET VIEW ON THE WARP COLUMN — YES, always. The home-view binding
 //     refuses the horizontal warp drag there, and this arm is where the
 //     crossing enforces it (it asks no home-view test of its own after this
-//     fork), so the one drag the flag could offer in T+W is the vertical one, and a pass, a ref or a collapse member that
-//     the arrows refuse in T view stays the target rule's silent non-event;
+//     fork), so the one drag the flag could offer in T+W is the vertical one,
+//     and a ref or a collapse member that the arrows refuse in T view stays
+//     the target rule's silent non-event (a pass is a target, the drag
+//     freezing it as the arrows do);
 //   * TARGET VIEW ON THE PHASE COLUMN — YES ONLY WHILE GRID ITERATIONS IS LIT,
 //     where the hop cells are the drag's targets and the lock refuses the
 //     horizontal move anyway; dark, NO, so the horizontal phase-reset drag
@@ -11738,7 +11774,7 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // region overlay at the press (run_marker_click_act), and ctrl-click and
 // shift-click act at the press and arm nothing, so neither can become a drag.
 // The posture says WHETHER the gesture is armed; value_drag_target below says
-// ON WHAT, and a press on a non-target — a pass in T view, a measure, a phase
+// ON WHAT, and a press on a non-target — a label ref, a measure, a phase
 // reset's payload — is the silent non-event.
 //
 // IT MAY BE TRUE WHILE ADD TO SELECTION IS LIT, harmlessly and by
@@ -11776,13 +11812,14 @@ inline bool value_drag_posture(const AppState& a) {
 // (value_drag_posture, above), and the arm asks the view itself so the rule
 // holds in this predicate rather than by its readers' ordering. THE KIND GATE
 // IS THE ARROWS' OWN, IN ITS INDEX FORM (tempo_cent_step_target_view_refusal_for):
-// in T view a pass, a label ref or a coincident-collapse member is refused, and
-// the drag asks the same owner rather than a second reading of it — ABOUT THE
-// MARKER IT WAS ASKED ABOUT. So a pass is never a target and the drag never
-// converts one: it steps an owner's own cents, and over a pass the cursor shows
-// the Arrow, the cue saying what the arrow key would card. (The SOURCE-view
-// arrow step still freezes a pass to owning — warp_tempo_step_start,
-// warpmarkers_ops.h — and that is the keyboard's act alone.) The focus-shaped
+// in T view a label ref or a coincident-collapse member is refused, and the
+// drag asks the same owner rather than a second reading of it — ABOUT THE
+// MARKER IT WAS ASKED ABOUT — so over either the cursor shows the Arrow, the
+// cue saying what the arrow key would card. A PASS IS A TARGET (architect
+// 2026-09-13, the arrows freezing a pass in target view as in source view):
+// the drag seeds from its effective base and scale and freezes it to owning at
+// the first write, one seed body for the two hands (warp_tempo_step_start,
+// warpmarkers_ops.h), so over a pass the cursor answers ns-resize. The focus-shaped
 // form would have been the wrong subject here: the cursor map asks this at a
 // RESTING HOVER, before any press has selected the flag under the pointer, so
 // reading last_selected_marker would let one flag's kind decide another flag's
@@ -11811,7 +11848,8 @@ inline bool value_drag_posture(const AppState& a) {
 //
 // EVERYTHING ELSE IS FALSE: the measure box (a score position, not a number —
 // the arrows say so on a card and the pointer says it in silence), a phase
-// reset's payload, a pass, a ref, a disabled marker, a payload in source view.
+// reset's payload, a ref, a collapse member, a disabled marker, a payload in
+// source view.
 // THE POINTER'S REFUSAL IS SILENT everywhere in this gesture: a pointer
 // gesture's non-event is its own answer, the flag drag's standing rule.
 inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
@@ -11830,8 +11868,8 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         if (idx >= static_cast<int>(mv.size())) return false;
         if (a.active_audio_view != 'T') return false;
         // The arrows' target-view kind refusal, asked of its one owner about
-        // THIS marker: a pass, a label ref and a coincident-collapse member
-        // all refuse, so what passes is a tempo owner.
+        // THIS marker: a label ref and a coincident-collapse member refuse, so
+        // what passes is an owner or a pass (which the drag freezes).
         if (tempo_cent_step_target_view_refusal_for(a, audio, idx))
             return false;
         if (effective_disabled(mv, idx)) return false;
@@ -13268,8 +13306,8 @@ inline bool playback_launch_playable(const AppState& a,
 // and its chord are one decision, the shape Undo/Redo always had. What stays
 // lit through a refusal is exactly what a per-tick face CANNOT know, and each
 // such case is named at its arm: the value-shaped tails that need the act's
-// own resolution run (under Up/Down a label ref, or a pass, a ref or a
-// coincident-collapse member in target view; an empty
+// own resolution run (under Up/Down a label ref, or a coincident-collapse
+// member in target view; an empty
 // payload under Copy value — the BRACKET WALL left this list on 2026-08-31,
 // the directional predicate facing it; the LEAD-IN OFFSET left it on 2026-08-30,
 // the architect reversing its recorded seam: Play's face reads the REAL
@@ -16469,7 +16507,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // once.
         //
         // UP / DOWN: the target view's KIND refusal
-        // (tempo_cent_step_target_view_refusal — a pass, a label ref or a
+        // (tempo_cent_step_target_view_refusal — a label ref or a
         // coincident-collapse member), which is magnitude-blind by
         // construction. The BRACKET wall is deliberately not here: it is
         // directional and magnitude-DEPENDENT — a member three cents from the

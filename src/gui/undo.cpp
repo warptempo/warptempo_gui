@@ -382,8 +382,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // in record_gesture, which is why clearing here costs the tap arm nothing.
     // THE DEFECT THIS CLOSES, as derived: a physical press can REFUSE without
     // committing (the eligible refusals left here are the ineligible tempo
-    // steps — a label ref, or in target view a pass, a ref or a
-    // coincident-collapse member; the WALL refusals moved out from under this
+    // steps — a label ref, or in target view a coincident-collapse member;
+    // the WALL refusals moved out from under this
     // call, see below, and the async displayed-map flip that made the phase
     // twin's wall test the concrete producer went with them, every survivor
     // needing a COMMAND to flip),

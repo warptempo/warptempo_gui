@@ -600,7 +600,7 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
     target_render.trigger();
 }
 
-// WHERE A TEMPO STEP STARTS FROM, the arrow step's seed.
+// WHERE A TEMPO STEP STARTS FROM, one body for the arrow and the drag alike.
 // The whole argument — why a pass resolves through the PROJECTION and not the
 // raw backward walk, and why the no-owner answer is {100, nullopt} — is at the
 // declaration (warpmarkers_ops.h).
@@ -615,11 +615,19 @@ WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
     return {eff.base_cents, eff.scale};
 }
 
+// THE LABEL REFERENCE'S STEP SENTENCE, ONE LITERAL WITH TWO READERS
+// (architect 2026-09-13): the singleton arm's source-view tail below and the
+// target view's kind refusal (tempo_cent_step_target_view_refusal_for). It
+// names no view because a reference refuses in both — its tempo is the
+// definition's — so the one fact says one sentence wherever it is asked.
+static constexpr const char* kLabelRefHasNoTempoCard =
+    "A label reference has no tempo of its own";
+
 // Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
-// ONLY: a label ref is silently skipped (no tempo to nudge — convert via
-// Ctrl+N first); pass markers resolve walk-backward to get their starting
-// tempo/scale, then freeze to owning at the nudged value; owning markers
-// nudge in place. THE GROUP ARM (adjust_tempo_cents_group, below) is
+// ONLY, IN EITHER AUDIO VIEW: a label ref refuses on a card (no tempo to
+// nudge — convert via Ctrl+N first); pass markers resolve through the
+// projection to get their starting tempo/scale (warp_tempo_step_start), then
+// freeze to owning at the nudged value; owning markers nudge in place. THE GROUP ARM (adjust_tempo_cents_group, below) is
 // all-or-nothing instead: a label ref anywhere in the selection WALLS the
 // whole press, refusing before any marker changes. `delta_cents` is an
 // integer cent count (one per keypress — bare Up/Down are the only two
@@ -642,7 +650,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // truthful-buttons ruling, whose one user withdrew the flicker argument;
     // the predicate's own header carries all three states. The refusals below
     // it are value-shaped per-marker facts and they split TWO WAYS since
-    // 2026-08-31: a label ref and, in target view, a pass, a ref or a
+    // 2026-08-31: a label ref (in either view) and, in target view, a
     // coincident-collapse member keep a LIVE face and answer on a CARD (each
     // needs this act's own resolution run, which a per-tick face cannot do),
     // while THE BRACKET WALL is faced and silent — the Up / Down pair greys at
@@ -673,9 +681,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // standing, and the changed path past the tail's last refusal — and the
     // group arm carries its own line past its verdict.
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
-    // owner-only, no freeze conversion. The singleton path below is UNCHANGED
-    // (per-view behavior bit-for-bit — the source-view pass/ref->owner freeze,
-    // the target-only collapsed refusal, the constructive per-marker clamp).
+    // owner-only, no freeze conversion. The singleton path below keeps its own
+    // rules (the pass->owner freeze in both views since 2026-09-13, the
+    // target-only collapsed refusal, the constructive per-marker clamp).
     // Its refusal is ITS OWN sentence, forwarded verbatim.
     if (app.selected_markers.size() >= 2)
         return adjust_tempo_cents_group(delta_cents, synthesized_repeat);
@@ -692,7 +700,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // the FACE, not the card: a refusal the button greys on runs BEFORE the
     // stamp, a refusal that keeps a LIVE face stays behind it, both surfaces
     // poisoning alike. That is why ONLY the wall moved: the VALUE-SHAPED tails
-    // below — a source-view label ref, and in target view a pass, a ref or a
+    // below — a label ref in either view, and in target view a
     // coincident-collapse member — keep a live face and a card, so they keep
     // their place past the stamp. The supersession of the old "an early call
     // must poison for a press that goes on to refuse" clause is recorded at
@@ -739,15 +747,17 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // in target view on this column, value_drag_posture)
     // through this arm's own landing owner and this arm's own T-view refusal
     // (value_drag.cpp), so the two hands ask the same questions.
-    // W+target authors tempo only, never position. The tempo step there is
-    // OWNER-ONLY: the
-    // focus-collapse target must already own an adjustable tempo, so a pass
-    // (tempo_inherits) or a label ref refuses — on a card since 2026-08-30
-    // (the arm below names the view with the marker), with no freeze
-    // conversion, no undo entry, no dirty. Source view is UNCHANGED (the pass/ref-to-owner freeze below
-    // still applies). The owner test reads the marker's own authored fields, not
-    // the resolved projection: the question is whether this marker owns a tempo,
-    // which is payload.
+    // W+target authors tempo only, never position. The tempo step there
+    // CONVERTS A PASS exactly as source view does (architect 2026-09-13: "why
+    // not just allow tempo step by collapsing the inherit as we already do in
+    // S+W?" — Ctrl+N then Up already did it in two presses): the loop below
+    // freezes the pass to owning at the value it resolves to, a map-neutral
+    // write, and then steps it, so only what follows the marker reshapes. What
+    // target view still refuses ahead of any mutation — no undo entry, no
+    // dirty — is a LABEL REF (in source view too, carded at the tail) and a
+    // coincident-collapse member (target view alone). The ref test reads the
+    // marker's own authored fields, not the resolved projection: the question
+    // is whether this marker names a definition, which is payload.
     if (app.active_audio_view == 'T') {
         const auto& mv = app.warpmarkers.markers();
         const int f = app.last_selected_marker;
@@ -768,7 +778,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     std::vector<GuiWarpMarker> proposed = mv_const;
     // SLICE ONCE for the seed body below, which resolves a pass through the
     // projection rather than the raw backward walk; the argument for that walk
-    // lives at warp_tempo_step_start's declaration (warpmarkers_ops.h).
+    // lives at warp_tempo_step_start's declaration (warpmarkers_ops.h), the
+    // one body this arm and the VALUE DRAG's begin share.
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
@@ -812,21 +823,23 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // what can leave it untouched is:
     //   a LABEL REF, skipped whole by the loop's first `continue` because it
     //     has no tempo of its own to step. What reaches here is the SOURCE-view
-    //     ref: in target view the payload arm above already refused it in that
-    //     view's own words, so the two sentences never collide.
+    //     ref: in target view the kind refusal above already refused it, with
+    //     the same literal (kLabelRefHasNoTempoCard), so one press says it
+    //     once.
     // AN OWNER AT A BRACKET END NO LONGER REACHES HERE (2026-08-31): its
     // clamped step lands the value it already holds, and that is the wall the
     // directional predicate now refuses on at this arm's head, ahead of the
     // coalesce stamp. The silent return below is what a stale focused index
     // falls to — a belt against an invariant the selection layer keeps.
-    // A pass reaches no arm at all: it always freezes, so it always changes.
+    // A pass reaches no arm at all, in either view: it always freezes, so it
+    // always changes.
     if (!changed) {
         const int f = app.last_selected_marker;
         // In range by tempo_cent_step_actionable, which proved it above and
         // which nothing since has invalidated (no store resize on this path).
         if (f >= 0 && f < static_cast<int>(mv_const.size()) &&
             !mv_const[f].label_ref.empty())
-            return "A label reference has no tempo of its own";
+            return kLabelRefHasNoTempoCard;
         // THE BRACKET END IS SILENT (architect 2026-08-31, superseding the
         // 2026-08-30 card "The tempo is already at its limit"): a benign
         // one-dimensional refusal already at its state says nothing — the
@@ -971,25 +984,32 @@ TempoCentStepGroupVerdict tempo_cent_step_group_verdict(const AppState& a,
 // THE TARGET VIEW'S KIND REFUSAL — the contract and the readers are at the
 // declaration (app_state.h). The terms are the act's own, in the act's own
 // order: source view and a GROUP press are not this refusal's business, the
-// stale-focus belt says nothing, then the two PAYLOAD refusals and then the
+// stale-focus belt says nothing, then the LABEL-REFERENCE refusal and then the
 // coincident-collapse one.
 //
-// THE TWO PAYLOAD SENTENCES NAME THE VIEW as well as the marker (2026-08-30):
-// in SOURCE view this very marker would be stepped (the freeze converts it),
-// so a card that said only "it owns no tempo" would be false half the time.
+// A PASS IS NOT REFUSED HERE (architect 2026-09-13: "why not just allow tempo
+// step by collapsing the inherit as we already do in S+W?"). The singleton
+// step freezes it to owning at the value it resolves to in BOTH views
+// (warp_tempo_step_start), and the freeze is map-neutral — the pass takes its
+// effective base and scale — so the step then reshapes only what follows it,
+// exactly as stepping an owner does. From 2026-08-30 until that ruling a pass
+// and a ref shared one view-naming sentence here ("In target view only a
+// marker that owns its tempo can be stepped"); what remains is the REFERENCE,
+// which refuses in source view too, so it takes the source view's own
+// view-free sentence (kLabelRefHasNoTempoCard, above).
 //
 // THE COLLAPSE REFUSAL (architect 2026-07-22): a coincident group is treated
 // as ONE marker in target view, and its members' authored tempos are
 // render-inert — the resolver replaces every exact-frame group of 2+
 // effectively-enabled markers with one synthetic plain 1.00 owner. The stack
 // is fixed at the source in warp (source) view, never adjusted from target
-// view. It reuses the normalization-red set, which reddens (a) label-ref
-// fallbacks, (b) passes from a ref, and (c) coincident-collapse members — the
-// two payload checks just above have already rejected ref and pass, so for the
-// payload-OWNER that remains, red-set membership is EXACTLY the
-// coincident-collapse condition (the same argument the GROUP step's wall scan
-// makes — the two cent-step arms are the red set's two consumers here since
-// the tempo-drag predecessor walk was deleted).
+// view. It reads the red cache's COLLAPSE SUBSET (`collapsed`) and not the
+// whole red set since 2026-09-13: the red set also reddens a PASS whose walk
+// ends on a fallback reference, and with passes admitted above such a pass
+// would have carded "shares its frame" falsely. For an OWNER the two sets
+// agree exactly (the pass-2 fallbacks are refs and passes alone), so the
+// owners' answer is unchanged; the GROUP step's wall scan keeps the red set,
+// walling passes before it asks.
 //
 // THE BODY IS INDEX-SHAPED AND THE FOCUS FORM WRAPS IT (2026-09-10, codex's
 // finding): the verdict is a fact about ONE marker, so the subject is a
@@ -1006,14 +1026,12 @@ const char* tempo_cent_step_target_view_refusal_for(const AppState& a,
     const auto& mv = a.warpmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return nullptr;
     const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
-    if (m.tempo_inherits || !m.label_ref.empty())
-        return "In target view only a marker that owns its tempo can be "
-               "stepped";
-    const std::set<int>& red = warp_red_flag_set_cached(
+    if (!m.label_ref.empty()) return kLabelRefHasNoTempoCard;
+    const std::set<int>& collapsed = warp_red_flag_set_cached(
         a, audio.sample_rate(),
-        static_cast<long>(audio.total_frames())).red;
-    return red.count(idx) ? "That marker shares its frame with another"
-                          : nullptr;
+        static_cast<long>(audio.total_frames())).collapsed;
+    return collapsed.count(idx) ? "That marker shares its frame with another"
+                                : nullptr;
 }
 
 const char* tempo_cent_step_target_view_refusal(const AppState& a,
@@ -1108,8 +1126,9 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
     const int   f  = a.last_selected_marker;
     if (f < 0 || f >= static_cast<int>(mv.size())) return true;  // belt
     const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
-    // A PASS ALWAYS FREEZES and so always changes; a LABEL REF and the target
-    // view's payload refusals keep a live face and a card of their own. Only
+    // A PASS ALWAYS FREEZES (in both views) and so always changes; a LABEL
+    // REF and the target view's collapse refusal keep a live face and a card
+    // of their own. Only
     // an OWNER can rest on a wall, and its wall is the landing owner's own
     // answer.
     if (m.tempo_inherits || !m.label_ref.empty()) return true;
