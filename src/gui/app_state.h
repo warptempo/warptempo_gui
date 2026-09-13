@@ -8679,10 +8679,11 @@ struct AppState {
     // grows two BOUND CELLS to its right (render_flags — every carrier the
     // sweep reads; a disabled owner carries no bracket to show), so the mode
     // is visible directly on the flags (it is a flag-cache fingerprint field
-    // for exactly that reason). THE THREE WRITERS OF THE OFF EDGE all run
-    // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm, the sweep's
-    // fire and BPM mode's forced exit — which is where an addressed bound
-    // cell below falls back to the payload.
+    // for exactly that reason). THE TWO WRITERS OF THE OFF EDGE both run
+    // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm and the
+    // sweep's fire (BPM mode's forced exit is retired: bare `m` refuses
+    // while the lamp is lit, since 2026-09-10) — which is where an addressed
+    // bound cell below falls back to the payload.
     //
     // WHILE IT STANDS, THE PIECE IS LOCKED (architect 2026-09-10: "Nothing
     // that can ever land in the undo history should be allowed, because the
