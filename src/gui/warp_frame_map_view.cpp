@@ -118,27 +118,24 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
         }
     }
 
-    // Pass 2 — ref/pass 1.00 fallback: marker_effective is the silent
-    // per-marker resolution the hover uses; it reports the render's
-    // normalization fallback as source_idx == -1. Three cases redden: a
-    // dangling label ref (reason UndefinedLabel), an extreme-ratio label ref
-    // (reason ExtremeRatio), and a PASS whose inheritance walk terminated on a
-    // surviving enabled ref (from_ref). A pass reddens ONLY when it
-    // inherits-from-a-ref: a benign pass that inherits a real 1.00 from a
-    // synthetic prior (the frame-0 seed or a collapsed-group owner) also
-    // carries source_idx -1 but reason None and from_ref false, and the render
-    // prints no line for it — so it is EXCLUDED. An owner resolves to its own
-    // index (>= 0), never caught here (a collapse-group owner is reddened by
-    // pass 1 instead). Effectively-disabled markers do not render and are
-    // excluded.
+    // Pass 2 — the label-ref 1.00 fallback: marker_effective is the silent
+    // per-marker resolution the display surfaces use; it reports the render's
+    // normalization fallback as source_idx == -1 with a reason. Two cases
+    // redden: a dangling label ref (reason UndefinedLabel) and an
+    // extreme-ratio label ref (reason ExtremeRatio). NO PASS reddens here: the
+    // inheritance walk skips label refs to the owner behind them (architect
+    // 2026-09-13, resolve_inherited_tempo), so no pass normalizes; a pass that
+    // inherits from a synthetic prior (the frame-0 seed or a collapsed-group
+    // owner) carries source_idx -1 with reason None and is excluded by the
+    // reason test. An owner resolves to its own index (>= 0), never caught
+    // here (a collapse-group owner is reddened by pass 1 instead).
+    // Effectively-disabled markers do not render and are excluded.
     for (int k = 0; k < n; ++k) {
         if (marker_effectively_disabled(mv, static_cast<size_t>(k))) continue;
         const MarkerEffective me = marker_effective(mv, k, total_frames);
         if (me.source_idx != -1) continue;
-        const bool ref_fallback =
-            me.reason == MarkerEffective::NormalizedReason::UndefinedLabel ||
-            me.reason == MarkerEffective::NormalizedReason::ExtremeRatio;
-        if (ref_fallback || me.from_ref)
+        if (me.reason == MarkerEffective::NormalizedReason::UndefinedLabel ||
+            me.reason == MarkerEffective::NormalizedReason::ExtremeRatio)
             c.red.insert(k);
     }
 

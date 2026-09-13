@@ -94,10 +94,10 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // a marker sharing its frame with 2+ effectively-enabled markers
 // (marker_effectively_disabled for the enabled test, matching the render's
 // survivor filter), every member reddened, so a coincident stack reads as one
-// red flag mirroring the render's single stderr line; (2) a REF/PASS fallback
-// via marker_effective — a dangling label ref, an extreme-ratio label ref, or
-// a pass whose inheritance walk terminates on a surviving enabled ref, all of
-// which resolve to source_idx == -1; (3) the PARTICIPATION-BLIND COINCIDENCE
+// red flag mirroring the render's single stderr line; (2) a LABEL-REF fallback
+// via marker_effective — a dangling label ref or an extreme-ratio label ref,
+// both of which resolve to source_idx == -1 (a pass never normalizes: its walk
+// skips refs to the owner behind them, architect 2026-09-13); (3) the PARTICIPATION-BLIND COINCIDENCE
 // (architect 2026-09-13: coincident markers are never intentional, always
 // accidental, so the red stays) — every row of a run of 2+ rows at one frame,
 // DISABLED ROWS COUNTED, so disabling one of two coincident markers does not
@@ -109,7 +109,7 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // WIDENING THE CUE WIDENS NO REFUSAL: no act, face or card reads `red`. The
 // act and face readers that ask whether the render normalizes a marker read
 // `collapsed` (the one normalization that is not already walled on the
-// marker's kind — pass-2 reddens only passes and refs), so `red` has only
+// marker's kind — pass-2 reddens only refs), so `red` has only
 // painters for readers: the two flag passes (waveform_cache.cpp) and the open
 // marker-lane field's face (render.cpp).
 //

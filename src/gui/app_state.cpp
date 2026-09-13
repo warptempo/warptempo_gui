@@ -585,8 +585,8 @@ PayloadEligibility payload_eligibility(const AppState& app,
     //     identity, which is why the gate takes it. Not the whole red set,
     //     which is a paint cue: its pass-3 coincidence (a frame shared with a
     //     disabled row) is no render normalization at all, and its pass-2
-    //     members (a dangling ref, an extreme-ratio ref, a pass
-    //     whose walk ended on a ref) resolve against the projection and so
+    //     members (a dangling ref, an extreme-ratio ref) resolve against
+    //     the projection and so
     //     already read out as the render's own 1.00 or as the empty payload
     //     the acts refuse — refusing them here as a stack would name the
     //     wrong reason. This refusal carries its own sentence

@@ -943,8 +943,8 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         // a DISABLED one paints red, architect 2026-09-13), which the render
         // does not normalize, so a wall on `red` would refuse a render-live
         // step. `collapsed` is the render's verdict; the red set's other
-        // producer, the pass-2 fallback, reddens only passes and refs, both
-        // walled above whatever their disabled bit, so nothing else of `red`
+        // producer, the pass-2 fallback, reddens only refs, walled above
+        // whatever their disabled bit, so nothing else of `red`
         // was ever a wall here.
         // THE TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13, Sol
         // round 5's P1). The parser's collapse set
@@ -1015,10 +1015,11 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // effectively-enabled markers with one synthetic plain 1.00 owner. The stack
 // is fixed at the source in warp (source) view, never adjusted from target
 // view. It reads the red cache's COLLAPSE SUBSET (`collapsed`) and not the
-// whole red set since 2026-09-13: the red set also reddens a PASS whose walk
-// ends on a fallback reference, and with passes admitted above such a pass
-// would have carded "shares its frame" falsely. For an OWNER the two sets
-// agree exactly (the pass-2 fallbacks are refs and passes alone), so the
+// whole red set since 2026-09-13: the red set also carries the
+// participation-blind coincidence and the label-ref fallbacks, neither of
+// which is this refusal's reason. For an OWNER the collapse is the only
+// render normalization (the pass-2 fallbacks are refs alone — a pass never
+// normalizes since the walk skips refs, architect 2026-09-13), so the
 // owners' answer is unchanged; the GROUP step's wall scan reads the same
 // `collapsed` subset (tempo_cent_step_group_actionable, above), walling
 // passes before it asks. The cache is memoized on the store's generation,

@@ -196,8 +196,8 @@ inline std::optional<BaseTempoScale> compute_base_tempo_scale(
 // THE RESOLVER'S OWN 1.00s STAND OUTSIDE THE RESCALE (recorded asymmetry,
 // codex 2026-08-26): the rewrite moves AUTHORED values, and what the render
 // resolver normalizes it normalizes afterwards — the frame-0 seed ahead of the
-// first marker, a leading pass's fallback, a pass inheriting through an
-// enabled ref, and a ref whose implied tempo leaves the resolver's envelope
+// first marker, a leading pass's fallback, and a ref whose implied tempo
+// leaves the resolver's envelope
 // (ExtremeRatio, the lane's red flag) all render at the resolver's 1.00 in
 // the cell as they do in the source. A def's rescale can push an outside ref
 // across that envelope exactly as a cent step on the def can today; under

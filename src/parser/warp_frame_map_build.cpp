@@ -248,33 +248,32 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
     std::vector<WarpMarker> norm = normalized_surviving_markers(
         src, sample_rate, /*emit_stderr=*/true, nullptr);
 
-    // Stage 4 — pass materialization through the ref-opaque inheritance
-    // walk (resolve_inherited_tempo / resolve_inherited_tempo_scale below,
-    // the same walk the hover surfaces use, so render and hover cannot
+    // Stage 4 — pass materialization through the inheritance walk
+    // (resolve_inherited_tempo / resolve_inherited_tempo_scale below, the
+    // same walk the display surfaces use, so render and display cannot
     // disagree). Resolutions are computed against the pre-materialization
     // intermediate — passes stay transparent to each other's walks, exactly
-    // as marker_effective's projection walk sees them — then applied, so in
-    // a pass-pass-ref chain EVERY pass whose walk reaches the ref resolves
-    // to the 1.00 fallback and prints its own line.
+    // as marker_effective's projection walk sees them — then applied. The
+    // walk skips label refs to the owner behind them (architect approval
+    // 2026-09-13), so no pass normalizes and this stage prints nothing; and
+    // because it runs BEFORE stage 5, a ref that stage 5 later replaces with
+    // a plain 1.00 owner is still skipped by the passes after it.
     {
         struct PassResolution {
             size_t                idx;
             int64_t               cents;
             std::optional<double> scale;
-            bool                  from_ref;
         };
         std::vector<PassResolution> resolutions;
         for (size_t i = 0; i < norm.size(); ++i) {
             if (!norm[i].label_ref.empty() || !norm[i].tempo_inherits) {
                 continue;
             }
-            bool from_ref = false;
             const int gi = static_cast<int>(i);
             PassResolution pr;
-            pr.idx      = i;
-            pr.cents    = resolve_inherited_tempo(norm, gi, &from_ref);
-            pr.scale    = resolve_inherited_tempo_scale(norm, gi);
-            pr.from_ref = from_ref;
+            pr.idx   = i;
+            pr.cents = resolve_inherited_tempo(norm, gi);
+            pr.scale = resolve_inherited_tempo_scale(norm, gi);
             resolutions.push_back(std::move(pr));
         }
         for (const PassResolution& pr : resolutions) {
@@ -284,13 +283,6 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
             p.tempo_scale    = pr.scale;
             // label_def survives materialization: a `pass:LABEL` def is
             // concrete from here on, so stage 5 measures it like any owner.
-            if (pr.from_ref) {
-                std::fprintf(stderr,
-                    "Pass marker at %s inherits from a label ref; "
-                    "renders as tempo 1.00\n",
-                    format_timestamp(
-                        static_cast<double>(p.time_frame) / sr_d).c_str());
-            }
         }
     }
 
@@ -384,38 +376,25 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
     return out;
 }
 
-// Contract: the backward walk stops at the nearest non-disabled owner, or
-// at the nearest SURVIVING enabled label ref — the ref-hit returns the
-// 100-cents / nullopt fallback and reports it through inherited_from_ref
-// (the resolver prints its normalization line from that signal; display
-// callers pass nothing). Passes, disabled markers, and cascade-disabled
-// refs stay transparent (render-inert, they contribute no tempo
-// downstream). This walk is the total display-time resolution: no geometry
-// enters it, so no cycle is possible, and every marker list resolves to a
-// definite value, the single source of its meaning across render,
-// warpframemap, and hover — a pass at rest behind a
-// surviving enabled ref renders AND displays as tempo 1.00, and because
-// the walk itself owns that verdict the two surfaces cannot disagree.
-// Passes deliberately never inherit THROUGH a ref: a ref owns a duration
+// Contract: the backward walk stops at the nearest non-disabled owner.
+// Passes, disabled markers and EVERY label ref — enabled, disabled or
+// cascade-disabled — stay transparent (architect approval 2026-09-13: "pass
+// should ignore label ref and pass and go back to prior tempo owner"; until
+// then a surviving enabled ref terminated the walk at the 1.00 fallback).
+// This walk is the total display-time resolution: no geometry enters it, so
+// no cycle is possible, and every marker list resolves to a definite value,
+// the single source of its meaning across render, warpframemap and display.
+// A pass never inherits a ref's IMPLIED rate: a ref owns a duration
 // equation, not a rate, and its implied rate depends on segment geometry
-// including the position of the very marker that follows it, so
-// inheriting it would make a pass's tempo drift under unrelated position
-// edits — which is exactly why the ambiguity resolves to the 1.00
-// fallback instead of the ref's implied rate. Pass values must stay
-// literal, grammar-exact owner fields so that freezing a pass (tempo
-// nudge, Ctrl+N) is lossless.
-int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
-                                bool* inherited_from_ref) {
-    if (inherited_from_ref) *inherited_from_ref = false;
+// including the position of the very marker that follows it, so inheriting
+// it would make a pass's tempo drift under unrelated position edits — which
+// is why the walk SKIPS the ref to the owner behind it and copies that
+// owner's literal fields. Pass values must stay literal, grammar-exact owner
+// fields so that freezing a pass (tempo nudge, Ctrl+N) is lossless.
+int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
-        if (!m.label_ref.empty()) {
-            if (!marker_effectively_disabled(markers, static_cast<size_t>(i))) {
-                if (inherited_from_ref) *inherited_from_ref = true;
-                return 100;
-            }
-            continue;
-        }
+        if (!m.label_ref.empty()) continue;
         if (!m.tempo_inherits && !m.disabled) return m.tempo_cents;
     }
     // Reachable: a leading pass with no owner before it resolves to this
@@ -425,19 +404,13 @@ int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int inde
     return 100;
 }
 
+// The scale half of the same walk (architect approval 2026-09-13 — every
+// label ref skipped, the contract above).
 std::optional<double> resolve_inherited_tempo_scale(
-    const std::vector<WarpMarker>& markers, int index,
-    bool* inherited_from_ref) {
-    if (inherited_from_ref) *inherited_from_ref = false;
+    const std::vector<WarpMarker>& markers, int index) {
     for (int i = index - 1; i >= 0; --i) {
         const WarpMarker& m = markers[i];
-        if (!m.label_ref.empty()) {
-            if (!marker_effectively_disabled(markers, static_cast<size_t>(i))) {
-                if (inherited_from_ref) *inherited_from_ref = true;
-                return std::nullopt;
-            }
-            continue;
-        }
+        if (!m.label_ref.empty()) continue;
         if (!m.tempo_inherits && !m.disabled) {
             return m.tempo_scale;
         }
@@ -594,30 +567,26 @@ MarkerEffective marker_effective(
                                 // marker always has an image
 
         if (m.tempo_inherits) {
-            // Pass: the same ref-opaque inheritance walk the resolver's
-            // stage 4 runs, over the same pre-materialization list, so the
-            // value matches the render by construction.
-            bool from_ref = false;
-            r.base_cents = resolve_inherited_tempo(proj, img, &from_ref);
+            // Pass: the same inheritance walk the resolver's stage 4 runs,
+            // over the same pre-materialization list, so the value matches
+            // the render by construction.
+            r.base_cents = resolve_inherited_tempo(proj, img);
             r.scale      = resolve_inherited_tempo_scale(proj, img);
-            // A walk terminated by a surviving enabled label ref is the
-            // render's 1.00 fallback, not a value inherited from the ref —
-            // attributing it to the ref would mislead — so it reports with
-            // no visible source, mirroring the resolver's normalization.
-            if (from_ref) {
-                r.from_ref   = true;
-                r.source_idx = -1;
-                return r;
+            // Provenance: the immediate prior NON-REF marker in the
+            // projection — the visible source of the inherited value, not
+            // necessarily the owning marker if there is a chain of passes;
+            // every projection entry renders, so the prior is never
+            // render-inert. A label ref is skipped as the walk skips it
+            // (architect approval 2026-09-13): its own value is its implied
+            // rate, not the literal the pass copied, so naming it would
+            // mislead. A synthetic owner (a collapsed group's replacement or
+            // the frame-0 seed) maps to -1 through raw_index: attributing it
+            // to any single raw marker would mislead, so no source is named.
+            for (int k = img - 1; k >= 0; --k) {
+                if (!proj[static_cast<size_t>(k)].label_ref.empty()) continue;
+                r.source_idx = raw_index[static_cast<size_t>(k)];
+                break;
             }
-            // Provenance: the immediate prior marker in the projection —
-            // the visible source of the inherited value, not necessarily
-            // the owning marker if there is a chain of passes; every
-            // projection entry renders, so the prior is never render-inert.
-            // A synthetic owner (a collapsed group's replacement or the
-            // frame-0 seed) maps to -1 through raw_index: attributing it
-            // to any single raw marker would mislead, so the popup shows
-            // the bare resolved value with no provenance.
-            if (img > 0) r.source_idx = raw_index[img - 1];
             return r;
         }
 
@@ -664,26 +633,17 @@ MarkerEffective marker_effective(
         // idx+1 lets it return idx's resolved tempo if idx is the only
         // inheriting marker in front of an owning origin.
         const int walk = idx + 1;
-        bool from_ref = false;
-        r.base_cents = resolve_inherited_tempo(mv, walk, &from_ref);
+        r.base_cents = resolve_inherited_tempo(mv, walk);
         r.scale      = resolve_inherited_tempo_scale(mv, walk);
-        // A walk terminated by a surviving enabled label ref is the render's
-        // 1.00 fallback, not a value inherited from the ref — attributing it
-        // to the ref would mislead — so it reports with no visible source,
-        // mirroring the resolver's normalization.
-        if (from_ref) {
-            r.from_ref   = true;
-            r.source_idx = -1;
-            return r;
-        }
-        // source_idx is the immediate prior render-surviving marker — the
-        // visible source of the inherited value, not necessarily the owning
-        // marker if there is a chain of passes; cascade-disabled refs are
-        // skipped because they are render-inert and carry no tempo payload, so
-        // they can never be the visible source. (A surviving enabled ref
-        // cannot be reached here either: were the first surviving prior a
-        // ref, the walk above would have terminated on it.)
+        // source_idx is the immediate prior render-surviving NON-REF marker —
+        // the visible source of the inherited value, not necessarily the
+        // owning marker if there is a chain of passes. Every label ref is
+        // skipped as the walk skips it (architect approval 2026-09-13): a
+        // cascade-disabled ref is render-inert, and a surviving one carries
+        // its implied rate rather than the literal the pass copied, so
+        // neither can be the visible source.
         for (int i = idx - 1; i >= 0; --i) {
+            if (!mv[static_cast<size_t>(i)].label_ref.empty()) continue;
             if (!marker_effectively_disabled(mv, static_cast<size_t>(i))) {
                 r.source_idx = i;
                 break;
@@ -775,9 +735,9 @@ std::string resolved_marker_payload(
         // A first-marker pass resolves to the 1.00 default and has no prior
         // marker to attribute, so source_idx stays negative and the old text
         // printed no suffix; the same guard covers a pass whose priors are
-        // all disabled, a pass whose inheritance walk terminated on a
-        // surviving enabled label ref (the render's 1.00 fallback — a
-        // fallback has no source to name), and a pass whose visible prior is
+        // all disabled or label refs (architect approval 2026-09-13 — the
+        // walk skips refs, so a ref is never the named source), and a pass
+        // whose visible prior is
         // a synthetic projection marker — a collapsed group's replacement
         // owner or the frame-0 seed — which no raw marker can honestly be
         // named for.

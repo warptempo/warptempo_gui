@@ -40,8 +40,8 @@ struct MarkerEffective {
     // -1): the popup picks its parenthetical from this instead of
     // re-searching the raw store, which would name the wrong case for a
     // def that died in a coincidence collapse (present raw, dangling in
-    // the projection). None for every non-fallback result and for pass
-    // fallbacks.
+    // the projection). None for every non-fallback result and for every
+    // pass.
     enum class NormalizedReason { None, UndefinedLabel, ExtremeRatio };
 
     int64_t     base_cents = 0;     // integer tempo cents; 0 means "could
@@ -60,20 +60,18 @@ struct MarkerEffective {
                                     // or the frame-0 seed — that no raw
                                     // index can honestly name)
     NormalizedReason reason = NormalizedReason::None;
-    // True only when a PASS's inheritance walk terminated on a surviving
-    // enabled label ref (the render's 1.00 fallback) — distinct from a pass
-    // that inherits a real value from a synthetic prior (the frame-0 seed or a
-    // collapsed-group owner), which also carries source_idx -1 but is NOT a
-    // normalization fallback.
-    bool from_ref = false;
+    // (No from_ref. It flagged a PASS whose inheritance walk had terminated on
+    // a surviving enabled label ref — the render's 1.00 fallback — for the
+    // GUI's normalization-red set. The walk now skips every label ref to the
+    // owner behind it, so no walk terminates on one and the bit had no
+    // producer: DELETED, architect approval 2026-09-13.)
     // (No owner_idx. It named the RAW STORE INDEX of the terminal OWNER the
-    // ref-opaque backward walk landed on, and its sole consumer was the tempo
+    // backward walk landed on, and its sole consumer was the tempo
     // drag's forward-label coupling guard; that gesture — the pointer tempo
     // drag and the Left/Right tempo-image step — was deleted 2026-07-29, which
     // left the field written by three sites here and read by
     // nobody, so it is DELETED — architect 2026-07-29, an explicit surgical freeze
-    // approval. `from_ref` beside it STAYS: the GUI's normalization-red set reads it
-    // (warp_frame_map_view.cpp). resolve_inherited_tempo's matching `owner_index`
+    // approval. resolve_inherited_tempo's matching `owner_index`
     // out-parameter, which outlived the field as an unused capability, is deleted
     // too — architect 2026-07-30, a second explicit surgical approval covering
     // exactly that surface.)
@@ -191,8 +189,8 @@ std::vector<char> warp_coincident_collapse_members(
 //   3. when no survivor sits at exactly frame 0, silently prepend a plain
 //      enabled 1.00 owner there (the documented default, not ambiguity);
 //   4. materialize each pass through resolve_inherited_tempo(_scale)'s
-//      ref-opaque walk below — a walk terminated by a surviving enabled
-//      label ref yields the 1.00 fallback, with a line;
+//      walk below, which skips label refs to the nearest prior owner
+//      (architect approval 2026-09-13) — silent, no line;
 //   5. normalize label refs: a dangling ref (no def among the survivors)
 //      or a ref whose implied effective tempo lies outside the authored
 //      per-marker envelope [0.125, 8.0] becomes a plain 1.00 owner at its
@@ -202,7 +200,7 @@ std::vector<char> warp_coincident_collapse_members(
 // first element sits at exactly frame 0 and is enabled (a plain 1.00 owner
 // when seeded); every surviving label_ref is resolvable and its implied
 // tempo in-band. Input that normalizes to itself — no coincident
-// survivors, a survivor at frame 0, no ref-terminated walks, every ref
+// survivors, a survivor at frame 0, every ref
 // resolvable and in-band — yields the identical resolved list the
 // pre-normalization filter produced, so build_warp_frame_map's output is
 // byte-for-byte unchanged for such input. Returns a PLAIN std::vector: this
@@ -245,13 +243,12 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 
 // Backward inheritance walk over parser-domain markers: from `index`, scan
 // earlier markers for the nearest that OWNS its tempo — tempo_inherits ==
-// false, not a label reference, and not disabled. Disabled markers and
-// cascade-disabled refs are skipped because the engine drops them before
-// resolution, so they contribute no tempo downstream. A SURVIVING enabled
-// label ref (non-empty label_ref, not marker_effectively_disabled)
-// terminates the walk with the fallback and, when `inherited_from_ref` is
-// non-null, sets it true — the resolver prints its normalization line from
-// that signal; display callers pass nothing. Returns 100 cents (tempo
+// false, not a label reference, and not disabled. Passes, disabled markers
+// and EVERY label ref, enabled or not, are skipped (architect approval
+// 2026-09-13: a pass walks past a ref exactly as it walks past a pass): a
+// disabled marker contributes no tempo downstream, and a ref owns a duration
+// equation rather than a rate, so there is no literal for a pass to copy
+// from it — the pass takes the owner behind it. Returns 100 cents (tempo
 // 1.00) / nullopt (scale) when no owner is reached. Inheritance is a pure
 // value copy — cents copy exactly. This is the single canonical
 // inheritance walk: resolve_warp_markers_for_render and the display surfaces
@@ -263,14 +260,13 @@ resolve_warp_markers_for_render(const std::vector<WarpMarker>& src,
 // tempo drag's forward-label coupling guard — after which no caller passed it and
 // no reader existed anywhere in the tree. It is DELETED: architect 2026-07-30, an
 // explicit surgical freeze approval finishing the one the field's own deletion was
-// scoped short of. `inherited_from_ref` beside it STAYS: the resolver prints its
-// normalization line from that signal, and the GUI's normalization-red set reads
-// it; display callers pass nothing.)
-int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index,
-                                bool* inherited_from_ref = nullptr);
+// scoped short of. Nor an `inherited_from_ref` out-parameter: it reported a walk
+// terminated on a surviving enabled label ref, for the resolver's normalization
+// line and MarkerEffective::from_ref; the walk skips refs since the ruling above,
+// so it had no producer and is DELETED — architect approval 2026-09-13.)
+int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int index);
 std::optional<double> resolve_inherited_tempo_scale(
-    const std::vector<WarpMarker>& markers, int index,
-    bool* inherited_from_ref = nullptr);
+    const std::vector<WarpMarker>& markers, int index);
 
 // Effective (base_cents, scale, source, reason) a marker resolves to, for
 // display/authoring callers in hover/popup and marker operation paths.
@@ -296,10 +292,12 @@ std::optional<double> resolve_inherited_tempo_scale(
 //     verdict comes from the shared resolver-order classification helper.
 // source_idx names the marker the value is visibly taken from:
 //   owner     -> idx itself (its own tempo_cents / tempo_scale).
-//   pass      -> the immediate prior surviving marker the value is
+//   pass      -> the immediate prior surviving NON-REF marker the value is
 //                inherited from (NOT necessarily the owning marker if
-//                there's a chain of passes); on the projection path this
-//                is the prior projection entry mapped back to its raw
+//                there's a chain of passes; a label ref the walk skipped
+//                carries a different value and is never named — architect
+//                approval 2026-09-13); on the projection path this
+//                is that prior projection entry mapped back to its raw
 //                index, and a SYNTHETIC prior — a collapsed group's
 //                replacement 1.00 owner or the frame-0 seed — reports -1
 //                (attributing it to any single raw marker would mislead;
@@ -314,8 +312,6 @@ std::optional<double> resolve_inherited_tempo_scale(
 // Normalization fallbacks mirror the render resolver and report as
 // {base_cents 100, scale nullopt, source_idx -1} — no visible source,
 // because the value is a fallback, not inherited from anywhere:
-//   - a pass whose inheritance walk terminated on a surviving enabled
-//     label ref (attributing the 1.00 to the ref would mislead);
 //   - a label ref with no definition on its resolution basis (projection
 //     path: a def that died in a coincidence collapse is dangling, the
 //     render's own verdict) — reason UndefinedLabel;
@@ -340,16 +336,17 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 //
 // `source_index_out`, when non-null, receives THE MARKER THE VALUE IS TAKEN
 // FROM, and only where such a marker exists:
-//   pass      -> the immediate prior surviving marker it inherits from (NOT
-//                necessarily the owning marker if there is a chain of
-//                passes);
+//   pass      -> the immediate prior surviving non-ref marker it inherits
+//                from (NOT necessarily the owning marker if there is a chain
+//                of passes; a skipped label ref is never named — architect
+//                approval 2026-09-13);
 //   label_ref -> the label-definition marker.
 // It is LEFT UNTOUCHED in every case where no marker can honestly be named —
 // which is exactly where the retired display string dropped its parenthetical
 // provenance, so the two derivations cannot drift: a marker that does not
 // qualify at all (the "" return), a pass whose value is a normalization
-// FALLBACK (a first-marker or all-disabled-priors pass, a walk that
-// terminated on a surviving enabled label ref, a visible prior that is a
+// FALLBACK (a first-marker or all-disabled-priors pass — refs alone ahead of
+// it counting as none, architect approval 2026-09-13 — a visible prior that is a
 // SYNTHETIC projection marker — a collapsed group's replacement 1.00 owner or
 // the frame-0 seed), a pass whose visible prior does not itself resolve, and a
 // ref the render normalizes (an undefined label, or an implied effective tempo
