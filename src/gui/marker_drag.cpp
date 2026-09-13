@@ -293,9 +293,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // Reachable through the PHASE-RESET column in either audio view (both
     // are that column's authoring views since 2026-08-30; in source view the
     // map below is the identity) — a warp drag is source-home because the
-    // THRESHOLD CROSSING applies active_column_authoring_allowed before it
-    // begins the drag; the gate lives there, not at the arming press, which
-    // is unconditional.
+    // THRESHOLD CROSSING forks T+W into the value drag (value_drag_posture)
+    // before it begins this one; the gate lives there, not at the arming
+    // press, which is unconditional.
     // A marker drag can never run under live playback — the THRESHOLD
     // CROSSING stops playback (the click act's own stop, run there since
     // 2026-08-15) — so the scanner is always
@@ -509,8 +509,8 @@ void MarkerDragOps::commit_drag() {
     // No synchronous re-warp at commit: a marker drag can no longer change the
     // displayed target plate. Warp marker drags author in warp's SOURCE home
     // view only (the home-view binding, architect 2026-07-22 — the THRESHOLD
-    // CROSSING gates on active_column_authoring_allowed before beginning the
-    // drag, the arming press itself being unconditional so an off-home flag click
+    // CROSSING forks T+W into the value drag before beginning this one, the
+    // arming press itself being unconditional so an off-home flag click
     // still selects and lands, and the view cannot toggle mid-gesture since every
     // key but the Ctrl+Q hatch is swallowed while a drag
     // is active), where the source waveform has no map-dependent plate; and a phase

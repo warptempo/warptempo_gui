@@ -4196,7 +4196,7 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
 // later edge: the reposition DRAG a plain press may become (the crossing
-// begins it; the two authoring gates live there) and the double-click SEED
+// begins it; its gates live there) and the double-click SEED
 // only a motionless release may write.
 //
 // THE HIT INDEX IS THE PRESS'S OWN live hit test — the act runs in the same
@@ -4432,7 +4432,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         }
     }
     // ARM THE PENDING — the drag the plain press may become (the crossing
-    // begins it, the two authoring gates there) and the SEED its motionless
+    // begins it, its gates there) and the SEED its motionless
     // release owes. UNCONDITIONAL: even a locked tab or an off-home column
     // arms, because the release still seeds — only the DRAG is gated, at the
     // crossing (a locked tab still selects and lands; read-only protects the
@@ -6040,11 +6040,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the right button meaningless again, a right press closes nothing) — the
     // guard-free close is the LEFT press's, below.
 
-    // Mouse authoring is home-view gated like the keyboard: the marker DRAG is
-    // gated by active_column_authoring_allowed — T+W selecting and landing but
-    // MOVING NOTHING, the one off-home state left since the P column opened
-    // to both audio views (2026-08-30) — with no exception anywhere, since
-    // 2026-07-29. W+target used
+    // Mouse authoring is home-view gated like the keyboard: the marker DRAG
+    // never moves a warp flag in T+W — selecting and landing but MOVING
+    // NOTHING, the one off-home state left since the P column opened to both
+    // audio views (2026-08-30) — the crossing's value-drag posture claiming
+    // that state whole since 2026-09-13. W+target used
     // to arm the TEMPO drag on an eligible marker instead of the reposition drag
     // (the pointer half of the home-view binding's tempo exception); that whole
     // gesture is deleted (see marker_drag.h), so a W+target flag click now selects
@@ -6620,8 +6620,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // owner, run_marker_click_act: the stop, the three-way fork,
                 // the land, the region hide and the plain consume-open, which
                 // then arms the pending that becomes the reposition drag past
-                // the threshold. The two AUTHORING gates (read-only, home
-                // view) guard the DRAG and live at the crossing, never here: a
+                // the threshold. The drag's gates (the lock; the home view
+                // through the value-drag posture) live at the crossing, never here: a
                 // locked tab and an off-home column still select and still
                 // land. The contract is at PendingMarkerPress (app_state.h).
                 run_marker_click_act(mh_index, x, y, shift, /*ctrl=*/false,
@@ -10515,10 +10515,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         update_trim_drag(mouse_x);
         return;
     }
-    // Motion just continues whatever the press already armed — the
-    // home-view gate (active_column_authoring_allowed, the whole gate now that the
-    // tempo drag and its eligibility check are gone) ran once at arm time in
-    // on_button_press, so nothing here re-checks view or column; the
+    // Motion just continues whatever the press already armed — the drag's
+    // gates ran once at the threshold crossing, so nothing here re-checks view
+    // or column; the
     // SWEEP below writes TRIM, which is BAND rather than authored content, so
     // neither the home-view gate nor read-only reaches it and neither ever
     // did. Per-site translation (drag anchor capture, motion delta
@@ -10579,27 +10578,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // gate swallows every chord while this pending stands).
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
-        // THE TWO AUTHORING GATES LIVE HERE, not at the arm: they guard the
-        // DRAG (marker motion is authoring), never the click, so a LOCKED tab
-        // and an off-home column still selected and landed at the press
-        // and simply refuse to move anything. THE LOCK IS BOTH LOCKS since
-        // 2026-09-10 (authoring_locked, app_state.h): a drag writes a position
-        // and pushes an entry, so grid iterations refuses it exactly as the
-        // read-only bit does, and silently for the same reason.
-        // ONE DRAG, ONE GATE since 2026-07-29: the
-        // home-view split that used to arm the TEMPO drag instead in W+target
-        // exactly — the pointer half of the home-view binding's tempo
-        // exception, with its predecessor-eligibility walk — is DELETED with
-        // that whole gesture (see marker_drag.h), so the one off-home flag
-        // drag left — a WARP flag in target view, the P column dragging in
-        // both audio views since 2026-08-30 — is the silent
-        // navigation-class refusal. SINCE 2026-09-13 THE POSTURE BELOW TAKES
-        // EVERY T+W CROSSING FIRST (target view on the warp column IS the
-        // value drag's posture), so the home-view term under it no longer
-        // answers any press; it stays as the binding's named flag-drag
-        // consumer (active_column_authoring_allowed's inventory), stating the
-        // rule the posture was derived from.
-        // THE VALUE DRAG FORKS AHEAD OF BOTH (architect 2026-09-10): wherever
+        // THE DRAG'S GATES LIVE HERE, not at the arm: they guard the DRAG
+        // (marker motion is authoring), never the click, so a LOCKED tab and
+        // an off-home column still selected and landed at the press and simply
+        // refuse to move anything. THE LOCK IS BOTH LOCKS since 2026-09-10
+        // (authoring_locked, app_state.h): a drag writes a position and pushes
+        // an entry, so grid iterations refuses it exactly as the read-only bit
+        // does, and silently for the same reason. THE HOME-VIEW BINDING'S ONE
+        // OFF-HOME FLAG DRAG — a WARP flag in target view (the tempo drag that
+        // once armed there is deleted, see marker_drag.h; the P column drags in
+        // both audio views since 2026-08-30) — is the posture fork's below.
+        // THE VALUE DRAG FORKS AHEAD OF THE LOCK (architect 2026-09-10): wherever
         // the view makes it so — target view on the warp column, and the phase
         // column under grid iterations (value_drag_posture, app_state.h, where
         // the whole rule is stated, 2026-09-13) — the flag's plain drag is the
@@ -10610,7 +10599,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the posture, it simply does not drag. (Nothing is lost by it: T+W is
         // where the home-view binding refuses the horizontal warp drag, and
         // the lit lamp's lock refuses the horizontal phase-reset drag.) The
-        // two AUTHORING GATES are not skipped, they are ASKED INSIDE the target rule instead — value_drag_target reads
+        // two AUTHORING GATES are not skipped, they are ASKED INSIDE the
+        // target rule instead — value_drag_target reads
         // authoring_locked for the payload and the tab's read-only bit for a
         // bound cell, each cell answering for what it authors — and the
         // home-view gate has nothing to say here, this gesture moving no
@@ -10627,9 +10617,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 value_drag.apply_motion(mouse_y);
             return;
         }
-        if (authoring_locked(app) ||
-            !active_column_authoring_allowed(app))
-            return;
+        // No home-view test: T+W is the posture's, so only S+W, S+P and T+P
+        // with grid iterations dark reach here, all of them authoring views.
+        if (authoring_locked(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta
         // (the strip/region catch-up pattern). begin_drag captures the pre-drag

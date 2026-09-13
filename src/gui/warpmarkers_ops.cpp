@@ -600,7 +600,7 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
     target_render.trigger();
 }
 
-// WHERE A TEMPO STEP STARTS FROM, one body for the arrow and the drag alike.
+// WHERE A TEMPO STEP STARTS FROM, the arrow step's seed.
 // The whole argument — why a pass resolves through the PROJECTION and not the
 // raw backward walk, and why the no-owner answer is {100, nullopt} — is at the
 // declaration (warpmarkers_ops.h).
@@ -768,8 +768,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     std::vector<GuiWarpMarker> proposed = mv_const;
     // SLICE ONCE for the seed body below, which resolves a pass through the
     // projection rather than the raw backward walk; the argument for that walk
-    // lives at warp_tempo_step_start's declaration (warpmarkers_ops.h), the
-    // one body this arm and the VALUE DRAG's begin share.
+    // lives at warp_tempo_step_start's declaration (warpmarkers_ops.h).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {

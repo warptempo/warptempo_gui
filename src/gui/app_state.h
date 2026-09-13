@@ -532,13 +532,10 @@ struct DragState {
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
 //
-// A PASS IS A TARGET AND THE DRAG CONVERTS IT, exactly as the arrows do
-// (architect 2026-09-10: "the pass inherits whatever it was and then applies
-// on up and down, so we should allow the drag on passes as well"). Its start
-// is the EFFECTIVE base and scale, and the first write freezes the marker to
-// owning at the stepped value — one seed body for the two hands
-// (warp_tempo_step_start, warpmarkers_ops.h). A LABEL REF is still no target,
-// having no tempo of its own to walk from.
+// THE PAYLOAD TARGET IS A TEMPO OWNER AND NOTHING ELSE: the payload arm is
+// asked in target view alone, where the arrows' own gate refuses a pass, a
+// label ref and a coincident-collapse member (value_drag_target, below), so
+// the drag never converts a pass — it steps an owner's own cents.
 //
 // IT IS THE MARKER DRAG'S SIBLING, NOT ITS STATE: DragState above holds a
 // POSITION proposal in the displayed domain with walls, an overlay and a
@@ -569,30 +566,17 @@ struct ValueDragState {
     // it, so no arm below has a case for it.
     MarkerCell cell    = MarkerCell::Payload;
     int        press_y = 0;    // window px: the travel is measured from here
-    // The value the press found, in the cell's own domain: authored CENTS on
-    // the payload and on a warp bound, HOPS on a phase-reset bound. ON A PASS
-    // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
-    // "the pass inherits whatever it was and then applies on up and down"):
-    // the seed comes from warp_tempo_step_start (warpmarkers_ops.h), the very
-    // body the arrows' own loop reads, so the drag walks from the tempo the
-    // flag shows and the first write freezes the marker to owning at it.
+    // The value the press found, in the cell's own domain: the owner's
+    // authored CENTS on the payload and on a warp bound, HOPS on a phase-reset
+    // bound.
     int64_t    start_value = 0;
-    // THE OTHER HALF OF THAT SEED — the typed scale the payload arm writes
-    // beside the cents. On an OWNER it is the marker's own scale, so writing
-    // it back is a no-op that keeps the arm's three writes identical to the
-    // step's; on a PASS it is the effective scale the freeze has to carry,
-    // which is what makes the conversion lossless. Neither bound arm reads it
-    // (a bound is one integer and carries no scale).
-    std::optional<double> start_scale;
     // The step count the last applied motion landed on. The motion arm returns
     // early when the count has not moved, so a hand wandering inside one step's
     // kValueDragPxPerStep writes nothing and damages nothing.
     int64_t    last_steps  = 0;
     // The TEMPO arm's undo payload, captured at the begin and pushed by the
-    // commit iff the marker's tempo_inherits/tempo_cents PAIR actually moved
-    // (a pass converted and dragged back to its own base moved the pair, not
-    // the cents). Empty on a bound drag by construction — that arm pushes
-    // nothing.
+    // commit iff the owner's tempo_cents actually moved. Empty on a bound drag
+    // by construction — that arm pushes nothing.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
 };
 
@@ -968,10 +952,11 @@ struct EditorTextDragState {
 // and still open no editor (read-only protects the AUTHORED MUSICAL CONTENT —
 // the marker stores and the engine settings — and a selection is navigation),
 // so the plain arm itself is unconditional: even a press whose drag will refuse
-// must arm, because the motionless release still owes the SEED. THE GATES ARE
-// TWO — the lock and the home-view binding — and the VALUE DRAG's posture
-// (value_drag_posture, the view's own answer) forks ahead of them into the
-// vertical gesture.
+// must arm, because the motionless release still owes the SEED. THE VALUE
+// DRAG's posture (value_drag_posture, the view's own answer) forks first into
+// the vertical gesture, and it claims T+W whole — the home-view binding's one
+// off-home flag state — so the horizontal drag's one remaining gate is the
+// lock.
 //
 // Session-only, never serialized. Cleared on the crossing (either the drag
 // takes over or the arm is spent), on release / lost button, by the force-end
@@ -10043,8 +10028,9 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // the empty-lane double-click), the flag DRAG, the bare Left/Right position
 // nudge, and the `m` BPM open — which is omitted for a reason of its own,
 // rewriting tempo through a derivation over a SPAN rather than editing one
-// marker's value. Those four still consult this predicate and still refuse
-// in T+W — the NUDGE through it literally since 2026-08-29, its dispatch
+// marker's value. Those four still refuse in T+W — three of them through
+// this predicate, the flag DRAG structurally since 2026-09-13 (T+W is
+// value_drag_posture's, so the crossing's horizontal path never sees it) — the NUDGE through it literally since 2026-08-29, its dispatch
 // having hand-spelled the rule until then. WHAT THE REFUSAL LOOKS LIKE
 // (2026-08-30): the keyboard routes say "Markers are placed/moved in source
 // view" on a card and `m`'s own is "BPM iterations work in source view"
@@ -10053,11 +10039,11 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // drag) stay SILENT, gesture-class, the unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
-// EIGHT CALL SITES, re-greped 2026-09-12 (every one answers TRUE in
+// SEVEN CALL SITES, re-grepped 2026-09-13 (every one answers TRUE in
 // every P-column state through this body's own P arm):
 // the keyboard drop (input_handler.cpp), the `m` bpm open
-// (input_key_dispatch.cpp — its own warp-column test sits ahead, so `m` is
-// W-only regardless), the empty-lane double-click drop and the flag drag
+// (bpm_sweep_plan, warpmarkers_ops.cpp — its own warp-column test sits ahead,
+// so `m` is W-only regardless), the empty-lane double-click drop
 // (input_pointer.cpp), the BARE LEFT/RIGHT NUDGE'S DISPATCH (input_handler.cpp
 // — the marker-lane branch, whose card "Markers are moved in source view" is
 // this rule's own sentence; it read this owner directly until 2026-08-30, then
@@ -10096,9 +10082,9 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // (The 2026-07-24 "third exception" — a both-views
 // warp POSITION nudge — was re-ruled away the same day: there is no warp
 // position authoring in target view at all, and exception (5) does not
-// re-open that question — it admits no gesture that moves a marker.) The flag
-// DRAG and the rest of the positional family stay home-view-only through this
-// predicate.
+// re-open that question — it admits no gesture that moves a marker.) The rest
+// of the positional family stays home-view-only through this predicate, and
+// the flag DRAG through the value-drag posture's claim on T+W.
 inline bool active_column_authoring_allowed(const AppState& app) {
     return app.active_markers_view == 'P' || app.active_audio_view == 'S';
 }
@@ -11732,9 +11718,9 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // row's Toggle Value Drag button over a stored session bit — and all three are
 // deleted; nothing stored replaces them. THE WHOLE RULE, stated once:
 //   * TARGET VIEW ON THE WARP COLUMN — YES, always. The home-view binding
-//     already refuses the horizontal warp drag there
-//     (active_column_authoring_allowed), so the one drag the flag could offer
-//     in T+W is the vertical one, and a pass, a ref or a collapse member that
+//     refuses the horizontal warp drag there, and this arm is where the
+//     crossing enforces it (it asks no home-view test of its own after this
+//     fork), so the one drag the flag could offer in T+W is the vertical one, and a pass, a ref or a collapse member that
 //     the arrows refuse in T view stays the target rule's silent non-event;
 //   * TARGET VIEW ON THE PHASE COLUMN — YES ONLY WHILE GRID ITERATIONS IS LIT,
 //     where the hop cells are the drag's targets and the lock refuses the
@@ -11791,52 +11777,33 @@ inline bool value_drag_posture(const AppState& a) {
 // the map's standing rule, and the reason this is a predicate rather than a
 // test inside the crossing.
 //
-// THE PAYLOAD ARM IS THE BASE TEMPO, AND A PASS IS ONE OF ITS TARGETS
-// (architect 2026-09-10, the afternoon of the day it landed: "the pass
-// inherits whatever it was and then applies on up and down, so we should allow
-// the drag on passes as well"). The morning's rule refused a pass on the
-// argument that a keyboard step is a deliberate press while a drag is a hand
-// already committed to sliding; he overruled it, and the reason the two hands
-// now agree is the one that matters — the drag IS the arrow step, so it
-// converts a pass exactly as the arrow does: seeded from the EFFECTIVE base
-// and scale (warp_tempo_step_start, warpmarkers_ops.h — one body, read by this
-// gesture's begin and by the step's own loop) and frozen to owning at the
-// first write.
-//
-// SO THE ARM IS TWO PER-MARKER TERMS, SPELLED. A LABEL REF is refused for the
-// plain reason it has no tempo of its own to walk from — the step's own loop
-// skips it on the same `label_ref.empty()` test (adjust_tempo_cents,
-// warpmarkers_ops.cpp), which is where that fact is asked in this product; no
-// predicate names it alone. A DISABLED marker is refused through the cascade's
-// one owner, effective_disabled, because the write would be render-inert.
-// iter_bracket_carrier is NOT the composition any more and was never the right
-// one: it answers "this marker can carry a bracket", which the pass ruling
-// severed from "this flag has a tempo to drag" the moment a pass became a
-// target. iter_popup_eligible_marker is not called here for the same reason it
-// never was — it answers "the sweep reads this marker".
+// THE PAYLOAD ARM IS THE BASE TEMPO OF A TEMPO OWNER, AND ONLY IN TARGET VIEW
+// (architect 2026-09-13): the posture arms the payload in T view alone
+// (value_drag_posture, above), and the arm asks the view itself so the rule
+// holds in this predicate rather than by its readers' ordering. THE KIND GATE
+// IS THE ARROWS' OWN, IN ITS INDEX FORM (tempo_cent_step_target_view_refusal_for):
+// in T view a pass, a label ref or a coincident-collapse member is refused, and
+// the drag asks the same owner rather than a second reading of it — ABOUT THE
+// MARKER IT WAS ASKED ABOUT. So a pass is never a target and the drag never
+// converts one: it steps an owner's own cents, and over a pass the cursor shows
+// the Arrow, the cue saying what the arrow key would card. (The SOURCE-view
+// arrow step still freezes a pass to owning — warp_tempo_step_start,
+// warpmarkers_ops.h — and that is the keyboard's act alone.) The focus-shaped
+// form would have been the wrong subject here: the cursor map asks this at a
+// RESTING HOVER, before any press has selected the flag under the pointer, so
+// reading last_selected_marker would let one flag's kind decide another flag's
+// cue. The COLUMN is asked outright: a phase reset's payload is a POSITION and
+// has no value to step, so this arm is warp-only. A DISABLED marker is refused
+// through the cascade's one owner, effective_disabled, because the write would
+// be render-inert. iter_bracket_carrier and iter_popup_eligible_marker are not
+// the composition: they answer "this marker can carry a bracket" and "the sweep
+// reads this marker", not "this flag has a tempo to drag".
 //
 // BOTH LOCKS REFUSE THE PAYLOAD. Read-only refuses because a base tempo is
 // authored musical content; the ITERATION lock refuses because the tempo
 // cannot move under a bracket (the bound cells are the mode's only authoring
 // surface, and a base that moved would carry every cell with it). One term,
 // authoring_locked, says both.
-//
-// THE TARGET-VIEW GATE IS THE ARROWS' OWN, IN ITS INDEX FORM
-// (tempo_cent_step_target_view_refusal_for): in T view a pass, a ref or a
-// coincident-collapse member is refused, and the drag asks the same owner
-// rather than a second reading of it — ABOUT THE MARKER IT WAS ASKED ABOUT.
-// SO A PASS IS NO TARGET IN TARGET VIEW, which is the only view the payload
-// arm is asked in since the posture moved to the view (value_drag_posture,
-// above), and that refusal is the arrows' and not this gesture's: in T view
-// only a marker that owns its tempo can be stepped at all, so there the cursor
-// shows the Arrow over a pass and the drag does not begin — the cue saying
-// what the arrow key would card. (The pass arm above still converts the pass
-// the arrows convert in SOURCE view; the drag simply never reaches it there.)
-// The focus-shaped form would have been the wrong subject here: the cursor
-// map asks this at a RESTING HOVER, before any press has selected the flag
-// under the pointer, so reading last_selected_marker would let one flag's
-// kind decide another flag's cue. The COLUMN is asked outright: a phase reset's
-// payload is a POSITION and has no value to step, so this arm is warp-only.
 //
 // THE BOUND ARM IS THE PAINTED CELLS' — marker_paints_iter_cells, the same
 // predicate the Tab walk stops on, so the drag can never step a bound on a
@@ -11850,9 +11817,9 @@ inline bool value_drag_posture(const AppState& a) {
 //
 // EVERYTHING ELSE IS FALSE: the measure box (a score position, not a number —
 // the arrows say so on a card and the pointer says it in silence), a phase
-// reset's payload, a ref, a disabled marker. THE POINTER'S REFUSAL IS
-// SILENT everywhere in this gesture: a pointer gesture's non-event is its own
-// answer, the flag drag's standing rule.
+// reset's payload, a pass, a ref, a disabled marker, a payload in source view.
+// THE POINTER'S REFUSAL IS SILENT everywhere in this gesture: a pointer
+// gesture's non-event is its own answer, the flag drag's standing rule.
 inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
                               int idx, MarkerCell cell) {
     if (idx < 0) return false;
@@ -11867,17 +11834,13 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         if (authoring_locked(a)) return false;
         const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return false;
-        // A TEMPO OF ITS OWN TO WALK FROM — an owner has one and a PASS
-        // resolves one, so only a LABEL REF is refused here (its value is the
-        // definition's, and the step's loop skips it on this same test).
-        if (!mv[static_cast<size_t>(idx)].label_ref.empty()) return false;
-        if (effective_disabled(mv, idx)) return false;
+        if (a.active_audio_view != 'T') return false;
         // The arrows' target-view kind refusal, asked of its one owner about
-        // THIS marker. It answers null in source view, so this line is the
-        // T-view case alone.
-        if (a.active_audio_view == 'T' &&
-            tempo_cent_step_target_view_refusal_for(a, audio, idx))
+        // THIS marker: a pass, a label ref and a coincident-collapse member
+        // all refuse, so what passes is a tempo owner.
+        if (tempo_cent_step_target_view_refusal_for(a, audio, idx))
             return false;
+        if (effective_disabled(mv, idx)) return false;
         return true;
     }
     case MarkerCell::Lower:
