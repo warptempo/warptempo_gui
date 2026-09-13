@@ -1539,7 +1539,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // identity map — every commit a plain integer frame, and the working-zoom
     // authoring-grid bit-exactness claims (all source-view) hold. Crossing a
     // neighbor is legal and goes through the reorder-and-remap below.
-    const int64_t committed_f =
+    int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step_columns);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
@@ -1566,6 +1566,15 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // On a 2+ press the prologue's collapse arm already stopped; this second call
     // early-returns on the stopped session, so the double call is free.
     playback_lifecycle.stop_playback_if_playing();
+    // A FINER ZOOM SNAPS UP TO WORKING before the write, and the landing is
+    // re-asked on the working lattice (Viewport::snap_zoom_to_working_if_finer
+    // carries the ruling and the inventory). It sits behind the stop so the
+    // zoom centres on the resting cursor, and behind the identity no-op
+    // because that verdict is the same at both levels: a landing equals its
+    // origin only at the wall the step points into, and a wall is a frame,
+    // not a column.
+    if (viewport.snap_zoom_to_working_if_finer())
+        committed_f = position_nudge_landing(app, audio, orig_f, step_columns);
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Identity hint (the diff matcher is identity-blind for a column-snapped move

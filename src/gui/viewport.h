@@ -301,6 +301,35 @@ struct Viewport {
     // Left/Right nudge has just moved. The rule is at AppState::keep_centered_while_nudging;
     // the two callers are named at the definition.
     void recenter_after_nudge();
+    // THE SNAP BACK UP TO THE WORKING ZOOM (architect 2026-09-13): levels finer
+    // than kWorkingZoomLevel exist for the zoom gesture's feel, not for
+    // authoring — the working zoom is where the horizontal nudge lattice is
+    // the reproducible one — so three acts, when the active tab's level is
+    // STRICTLY finer than working, set the working zoom first and then run as
+    // they always have. At the working zoom or coarser this is a no-op and
+    // nothing about those acts changes. The write is the ORDINARY discrete
+    // zoom commit, apply_zoom_change, so the `y` lamp's edge trigger
+    // (commit_keep_centered_zoom) and the synchronous plate rebuild see it
+    // exactly as a `c` press. Returns whether the level moved.
+    // THE SNAP IS PART OF THE ACT, NOT OF THE PRESS: every caller asks it past
+    // its own refusals, so a refused or walled press leaves the camera alone.
+    // A HELD BURST SNAPS AT ITS FIRST FIRE ONLY by the condition itself: past
+    // that fire the level is the working zoom and later fires find nothing to
+    // do (no repeat-bit gate). THE CALLERS, the one inventory:
+    //   * GuiInputHandler::cycle_marker_focus — the bare Tab walk (Tab,
+    //     Shift+Tab, IsoLeftTab) and each of the Ctrl+Shift+Tab paired march's
+    //     two steps, past the walk's wall and its same-marker cell step (a cell
+    //     step lands nothing and does not snap);
+    //   * GuiWarpMarkersOps::nudge_selected_markers and
+    //     GuiPhaseResetMarkersOps::nudge_selected_phase_resets — the marker
+    //     nudge on both columns at every magnitude, past the prologue and the
+    //     post-clamp identity no-op;
+    //   * GuiInputHandler::run_waveform_lane_playhead_step — the playhead step
+    //     at every magnitude, past its wall.
+    // Key and the Left / Right / Walk buttons alike, the buttons synthesizing
+    // those chords. NOT snapping: the drops, Shift+J and the A/B audition (both
+    // already run `c`), `c` itself, pointer gestures, undo / redo.
+    bool snap_zoom_to_working_if_finer();
     void follow_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the

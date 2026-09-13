@@ -2585,6 +2585,14 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
         return;
     }
 
+    // A MARKER-TO-MARKER STEP SNAPS A FINER ZOOM UP TO WORKING first
+    // (Viewport::snap_zoom_to_working_if_finer, which carries the ruling and
+    // the inventory): past the wall and the cell step above, ahead of the
+    // select. The framing the bare arms handed in was asked at the finer level
+    // and is Center there, which is what marker_walk_frame answers at working
+    // too; the march states Center at both of its steps anyway.
+    viewport.snap_zoom_to_working_if_finer();
+
     // The marker step. Selection::cycle_selection asks marker_walk_landing
     // again on the way through, which is the same landing this step carries:
     // the same-marker arm has already returned above, so the only way here is
@@ -2605,20 +2613,22 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // the march inherit it, which is the shape the required parameter exists
     // to prevent: framing cannot be acquired by saying nothing.
     // Otherwise byte-identical to the `c` gesture's marker jump — the zoom is
-    // what separates the two commands: `c` snaps to the working level, a Tab
-    // walk keeps whatever level the user is reading at.
+    // what separates the two commands: `c` sets the working level whatever
+    // the level was, a Tab walk keeps the level the user is reading at unless
+    // it is FINER than working, which the snap above takes up to working.
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.
     //
-    // NO ZOOM ON TAB (architect 2026-08-05, reverting his own same-day ruling
-    // that had every step set kWorkingZoomLevel here): the walk is navigation
-    // and must not re-frame the view under the user, so the whole family — the
-    // three bare chords and the Ctrl+Shift+Tab lockstep march, which calls this
-    // once per tab — lands and recentres at the level it was pressed at. `c` is
-    // untouched and remains the direct route to the working zoom; `0`'s second
-    // arm reaches it through `c` whenever its tab has stamped no return level
-    // (ViewState::zoom_recall_level).
+    // NO ZOOM ON TAB AT WORKING OR COARSER (architect 2026-08-05, reverting his
+    // own same-day ruling that had every step set kWorkingZoomLevel here; the
+    // finer half re-ruled 2026-09-13 as the snap above): the walk is
+    // navigation and must not re-frame the view under the user, so the whole
+    // family — the three bare chords and the Ctrl+Shift+Tab lockstep march,
+    // which calls this once per tab — lands at the level it was pressed at
+    // wherever that level is working or coarser. `c` remains the direct route
+    // to the working zoom; `0`'s second arm reaches it through `c` whenever its
+    // tab has stamped no return level (ViewState::zoom_recall_level).
     // The jump's own false return — a missing or out-of-range focus — cannot
     // happen behind the gate above: the select just focused the landing that
     // gate proved. Nothing here reads it; the return exists for the other
@@ -2694,8 +2704,9 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
-    // working zoom right after this returns, the Tab family sets nothing at all
-    // (architect 2026-08-05, "no zoom on Tab") — so this tail frames the stop at
+    // working zoom right after this returns, the Tab family sets nothing here
+    // (architect 2026-08-05, "no zoom on Tab"; its finer-than-working snap runs
+    // in cycle_marker_focus BEFORE this is called) — so this tail frames the stop at
     // whatever level it was called at, and only `c`'s apply_zoom_change
     // re-centers after it. Follow mode does not gate it either (architect
     // 2026-07-19, reversing the earlier follow-only rule).

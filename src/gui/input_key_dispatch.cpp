@@ -8737,6 +8737,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // step's shape. So both steps here are ordinary MARKER steps: with the
     // lamp dark marker_walk_step has no cell arm to take, and with it lit this
     // arm is unreachable.
+    // EACH STEP SNAPS ITS OWN TAB'S FINER ZOOM UP TO WORKING inside
+    // cycle_marker_focus (Viewport::snap_zoom_to_working_if_finer), the second
+    // after the switch has restored the other tab's level.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus(true, MarkerLandingFrame::Center);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
@@ -8748,9 +8751,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
     // marker, moving the playhead to it and framing PER THE ZOOM —
     // marker_walk_frame(app) (app_state.h), whose only callers are these
-    // three arms: at the working zoom or finer the walk recentres at the
-    // current zoom; coarser, the camera holds and only an offscreen landing
-    // pages in, follow's way. The Ctrl+Tab
+    // three arms: at the working zoom or finer the walk recentres (a finer
+    // level first snapping up to working inside cycle_marker_focus —
+    // Viewport::snap_zoom_to_working_if_finer); coarser, the camera holds and
+    // only an offscreen landing pages in, follow's way. The Ctrl+Tab
     // branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
     // !ctrl guards below ensure Ctrl+Shift+Tab does not slip into the
@@ -8877,6 +8881,14 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // for all three (the twin rule's own resolution, at
     // horizontal_arrow_step_actionable).
     const int64_t cursor_before = app.playhead_cursor_sample;
+    // A FINER ZOOM SNAPS UP TO WORKING before the step
+    // (Viewport::snap_zoom_to_working_if_finer carries the ruling and the
+    // inventory): behind the stop, so the zoom centres on the resting cursor,
+    // and only for a step that will move — the wall test asked at the current
+    // level answers for the working one, a wall being a frame, not a column.
+    // A walled press keeps its stop, clear and hide and leaves the camera.
+    if (playhead_pixel_step_landing(app, audio, step_columns) != cursor_before)
+        viewport.snap_zoom_to_working_if_finer();
     viewport.move_playhead_pixels(step_columns);
     // KEEP CENTERED WHILE NUDGING (the rule at AppState::keep_centered_while_nudging): a
     // step that moved the cursor recenters on it while the `y` lamp is lit; a

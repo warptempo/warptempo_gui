@@ -395,7 +395,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // architect 2026-07-22), a mapped (non-identity) domain, and the EOF wall
     // is the one both columns share. Crossing a neighbor is legal and goes
     // through the reorder-and-remap below.
-    const int64_t committed_f =
+    int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step_columns);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
@@ -417,6 +417,11 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // On a 2+ press the prologue's collapse arm already stopped; this second call
     // early-returns on the stopped session, so the double call is free.
     playback_lifecycle.stop_playback_if_playing();
+    // A FINER ZOOM SNAPS UP TO WORKING before the write, the landing re-asked
+    // on the working lattice — the warp twin's placement and its reasoning
+    // verbatim (Viewport::snap_zoom_to_working_if_finer owns the ruling).
+    if (viewport.snap_zoom_to_working_if_finer())
+        committed_f = position_nudge_landing(app, audio, orig_f, step_columns);
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
     // Identity hint: the nudged reset in PRE-reorder snapshot coordinates (the

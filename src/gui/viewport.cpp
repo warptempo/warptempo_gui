@@ -801,6 +801,21 @@ void Viewport::recenter_after_nudge() {
     center_viewport_on_playhead();
 }
 
+// THE SNAP BACK UP TO THE WORKING ZOOM — the ruling and the caller inventory
+// are at the declaration (viewport.h). STRICTLY finer: the working level
+// itself snaps nothing. apply_zoom_change centres on the resting cursor (the
+// scanner while a play runs) and rebuilds the plate synchronously, and every
+// column read the callers make next — painted_column_of_source_frame,
+// authored_frame_at_column, playhead_pixel_step_landing — rides the LIVE
+// viewport start and zoom, so the act that follows steps on the new lattice
+// inside the same dispatch.
+bool Viewport::snap_zoom_to_working_if_finer() {
+    if (!(app.zoom_level < kWorkingZoomLevel)) return false;
+    const double before = app.zoom_level;
+    apply_zoom_change(kWorkingZoomLevel);
+    return app.zoom_level != before;
+}
+
 // Auto-follow during playback: when the scanner leaves the viewport,
 // scroll so the scanner lands ~10% into the new view, leaving room
 // ahead. Only the first move beyond vp_end triggers a scroll. Called
