@@ -169,7 +169,7 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 925-px walk the restrict-undo lamp had left before it, 258 at the 891-px walk
 // the Center on next marker lamp left before that, 268 at the 857-px walk the
 // radio collapse left, 240 at the 959-px walk the
-// centered lamp left on 2026-08-31, and 249 at the 2026-08-27 relocation's own
+// keep-centered lamp left on 2026-08-31, and 249 at the 2026-08-27 relocation's own
 // 925-px walk, which is the 925 reached from the other direction; 250 was
 // tried as the TEMPLATE for
 // an afternoon on 2026-08-27 and stepped back the same evening for the ~3

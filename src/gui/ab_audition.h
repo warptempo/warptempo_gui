@@ -66,13 +66,13 @@ struct GuiInputHandler;
 // last one deciding the plate that frame. Each half is therefore read at the
 // working zoom, centered, whatever level the tab was left at.
 //
-// NOTHING HERE READS OR WRITES THE CENTERED LAMP (architect 2026-09-13): its
+// NOTHING HERE READS OR WRITES THE KEEP-CENTERED LAMP (architect 2026-09-13): its
 // one act is the Left/Right nudge's recenter, so the act's `c` commands, tab
 // switches and plays behave exactly as they do with the lamp dark, and bare `y`
-// is a plain toggle while the act stands. THE CENTER ON NEXT MARKER LAMP TAKES
-// NO GUARD EITHER: it is the zoom's, and the act's `c` and its tab switches are
-// zoom commits like any other, writing the lamp exactly where they cross the
-// working level (commit_center_on_next_marker_zoom, app_state.h).
+// is a plain toggle while the act stands. NEITHER ZOOM LAMP TAKES A GUARD
+// (the Center on next marker lamp and this one): both are the zoom's, and the
+// act's `c` and its tab switches are zoom commits like any other, writing the
+// lamps exactly where they cross the working level (commit_zoom_lamps, app_state.h).
 //
 // ITS ORDERING IS LOAD-BEARING: `c` can reach land_playhead_on_marker, which
 // CLEARS THE SEQUENCE unconditionally (a land is a movement, the inventory at

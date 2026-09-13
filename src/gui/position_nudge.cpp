@@ -214,7 +214,7 @@ void finish_position_nudge(
     // because each of them runs this tail. This tail is the nudge's CHANGED
     // path (each twin returns on its post-clamp identity no-op before reaching
     // it), so a walled press recenters nothing. The rule is at
-    // AppState::centered_mode, the body at Viewport::recenter_after_nudge.
+    // AppState::keep_centered_while_nudging, the body at Viewport::recenter_after_nudge.
     viewport.recenter_after_nudge();
     // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,

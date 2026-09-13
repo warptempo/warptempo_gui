@@ -263,7 +263,7 @@ constexpr IconPath kGoJumpPaths[] = {
      "10 16 10 z "},
 };
 
-// THE CENTERED LAMP's icon (2026-08-31, R11, the brief's own pick):
+// THE KEEP-CENTERED LAMP's icon (2026-08-31, R11, the brief's own pick):
 // align-horizontal-center, two boxes threaded on one vertical center line —
 // a viewport holding its subject at the center column. Command coverage:
 // relative `m` / `h` / `v` with implicit repetition and the glued-negative

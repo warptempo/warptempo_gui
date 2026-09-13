@@ -391,13 +391,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
-    // THE CENTERED LAMP, bare `y` (2026-08-31, R11): follow's sibling and
+    // THE KEEP-CENTERED LAMP, bare `y` (2026-08-31, R11): follow's sibling and
     // admitted on follow's exact reasoning — a viewport preference is
     // navigation, not authored content. Its button stays lit on a locked tab
     // by the same answer.
-    const bool is_centered =
+    const bool is_keep_centered_while_nudging =
         (key == GuiKeys::Y && !ctrl && !shift && !alt);
-    // CENTER ON NEXT MARKER, bare `n` (2026-09-04): the centered lamp's own
+    // CENTER ON NEXT MARKER, bare `n` (2026-09-04): the keep-centered lamp's own
     // reasoning again — the bit decides where the CAMERA goes after a Tab
     // walk and authors nothing the lock protects. Its button stays lit on a
     // locked tab by the same answer.
@@ -639,7 +639,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_waveform_magnify || is_zero ||
-             is_follow || is_centered || is_center_on_next ||
+             is_follow || is_keep_centered_while_nudging || is_center_on_next ||
              is_restrict_undo ||
              is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
@@ -2678,13 +2678,13 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_waveform_magnify =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
-    // THE CENTERED LAMP, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
+    // THE KEEP-CENTERED LAMP, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
     // admitted where FOLLOW is not: follow's chase is playback's and playback
     // is removed from the view whole, so admitting `f` would admit a lamp
     // with nothing to do, while this lamp is a plain toggle that authors
     // nothing. Its icon-row button stays LIVE in the view through the derived
     // partition on this line.
-    const bool is_centered = (key == GuiKeys::Y && bare);
+    const bool is_keep_centered_while_nudging = (key == GuiKeys::Y && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
@@ -2849,7 +2849,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zoom_symbol || is_waveform_magnify || is_zero || is_centered ||
+    return !(is_zoom_symbol || is_waveform_magnify || is_zero || is_keep_centered_while_nudging ||
              is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
@@ -8931,7 +8931,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // horizontal_arrow_step_actionable).
     const int64_t cursor_before = app.playhead_cursor_sample;
     viewport.move_playhead_pixels(step_columns);
-    // KEEP CENTERED WHILE NUDGING (the rule at AppState::centered_mode): a
+    // KEEP CENTERED WHILE NUDGING (the rule at AppState::keep_centered_while_nudging): a
     // step that moved the cursor recenters on it while the `y` lamp is lit; a
     // walled step moved nothing and recenters nothing. Every magnitude and
     // every held repeat — the key's and the Left / Right buttons' — runs
@@ -8992,18 +8992,22 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::Y:
-        // Toggle the Keep Centered While Nudging lamp (2026-08-31, R11; its one
+        // Toggle the Keep centered while nudging lamp (2026-08-31, R11; its one
         // act since 2026-09-13 is the nudge's recenter — the rule at
-        // AppState::centered_mode). The icon-row button synthesizes this
-        // chord. History-less, one-shot, legal during the A/B audition, and
-        // it moves nothing at the press: the next nudge centres.
-        write_centered_posture(app, !app.centered_mode);
+        // AppState::keep_centered_while_nudging). The icon-row button
+        // synthesizes this chord. This press is the MANUAL road, while a
+        // committed zoom crossing the working level writes the same bit
+        // (commit_zoom_lamps, app_state.h); it leaves the zoom's edge record
+        // untouched, so the toggle stands until the zoom next crosses the line.
+        // History-less, one-shot, legal during the A/B audition, and it moves
+        // nothing at the press: the next nudge centres.
+        set_keep_centered_while_nudging(app, !app.keep_centered_while_nudging);
         break;
     case GuiKeys::Z:
         // Toggle the Restrict undo to viewport lamp (2026-09-04). The setter
         // is GuiInputHandler::set_restrict_undo_to_viewport, shared with the
         // icon-row button's synthesized chord and with nothing else.
-        // History-less, one-shot, the centered lamp's own shape — and nothing
+        // History-less, one-shot, the keep-centered lamp's own shape — and nothing
         // moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
@@ -9015,7 +9019,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // with the icon-row button's synthesized chord, while a committed zoom
         // crossing the working level writes the same bit since 2026-09-13. It
         // leaves the zoom's edge record untouched, so the toggle stands until
-        // the zoom next crosses the line. History-less, one-shot, the centered lamp's
+        // the zoom next crosses the line. History-less, one-shot, the keep-centered lamp's
         // own shape — and nothing moves at the press: the bit is read at the
         // next BARE Tab walk, through marker_walk_frame, and by nothing else
         // (the Ctrl+Shift+Tab march states its own framing).

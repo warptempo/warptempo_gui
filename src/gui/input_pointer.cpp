@@ -302,14 +302,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
     // which puts them past the viewport group rather than here.)
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
-    // THE CENTERED LAMP (2026-08-31, R11; its one act since 2026-09-13 is
+    // THE KEEP-CENTERED LAMP (2026-08-31, R11; its one act since 2026-09-13 is
     // the Left/Right nudge's recenter) — Follow's neighbour and its shape
     // exactly: bare `y`, a TOGGLE with a lamp on the live bit its own chord
     // flips. Live in the `h` view (the mode's allowlist admits `y`, so the
     // derived partition keeps the face lit) and on a locked tab (navigation,
     // the lock's allowlist).
-    {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
-    // CENTER ON NEXT MARKER (architect 2026-09-04) — the centered lamp's shape
+    {RedesignButton::IconKeepCenteredWhileNudging, GuiKeys::Y, false, false, false, false, true},   // bare y
+    // CENTER ON NEXT MARKER (architect 2026-09-04) — the keep-centered lamp's shape
     // exactly, one lamp further along the same group: bare `n`, a TOGGLE
     // reading the live bit — which since 2026-09-13 the ZOOM writes as
     // well as this chord (a committed zoom crossing the working level; the
@@ -761,15 +761,15 @@ constexpr ToolbarChord kToolbarChords[] = {
 // 2026-09-04'S CENTER-ON-NEXT-MARKER LAMP,
 // one pure addition inside an existing group (a chord, so the pair moved
 // together): `IconCenterOnNext` closed row 4's viewport-class group on bare
-// `n`, behind the centered lamp, and no separator or group boundary moved. It
+// `n`, behind the keep-centered lamp, and no separator or group boundary moved. It
 // was 47 against 52 earlier that day, at THE RADIO-PAIR COLLAPSE, which took
 // three rows out of this table with the three buttons the three lamps
 // replaced. It was 50 against 55 from 2026-09-03'S HELP ANCHOR, which moved the
 // ROSTER and not this table (an anchor carries no chord — the Series anchor's
 // own 2026-08-27 shape). It was 50 against 54
-// from 2026-08-31'S CENTERED LAMP, one pure
+// from 2026-08-31'S KEEP-CENTERED LAMP, one pure
 // addition inside an existing group (a chord, so the pair moved together):
-// `IconCentered` joined row 4's viewport-class group beside Follow on bare
+// `IconKeepCenteredWhileNudging` joined row 4's viewport-class group beside Follow on bare
 // `y`, and no separator or group boundary moved. It was 49 against 53 from
 // 2026-08-29'S COPY VALUE BUTTON, one pure
 // addition inside an existing group (a chord, so the pair moved together): the
@@ -3338,10 +3338,10 @@ void GuiInputHandler::end_touch_nav() {
     clear_touch_zoom_seat(app, viewport);
     if (playback.is_playing()) playback.resync_predictor();
     // AND THE PINCH COMMITS ITS ZOOM HERE, at the one body every touch end
-    // reaches, never per frame (commit_center_on_next_marker_zoom,
+    // reaches, never per frame (commit_zoom_lamps,
     // app_state.h). A pan-only gesture finds the level where the last commit
     // left it and writes nothing.
-    commit_center_on_next_marker_zoom(app);
+    commit_zoom_lamps(app);
 }
 
 // The pan-zone query's body (contract at the declaration): THE NAVIGATION
@@ -7396,9 +7396,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             // THE GESTURE'S END IS ITS ZOOM COMMIT, whichever phase it ended
             // in: a ctrl phase released mid-drag committed nothing at its
             // ctrl-up, and a pan-only drag finds the level on the side the
-            // last commit left it (commit_center_on_next_marker_zoom,
+            // last commit left it (commit_zoom_lamps,
             // app_state.h, where the end sites are inventoried).
-            commit_center_on_next_marker_zoom(app);
+            commit_zoom_lamps(app);
             return;
         }
         // The motionless zoom-phase press painted a stem from the press (or
@@ -7432,8 +7432,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             apply_overview_drag_at(x, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
             // The edge drags' zoom commits at the drag's end
-            // (commit_center_on_next_marker_zoom, app_state.h).
-            commit_center_on_next_marker_zoom(app);
+            // (commit_zoom_lamps, app_state.h).
+            commit_zoom_lamps(app);
         }
         app.overview_drag = OverviewDragState{};
         return;
@@ -7631,8 +7631,8 @@ void GuiInputHandler::finalize_active_drags() {
             if (zooming) viewport.kick_waveform_sync();
             end_strip_pointer_capture();
             // A force-end is still the gesture's end, so it is the zoom's
-            // commit (commit_center_on_next_marker_zoom, app_state.h).
-            commit_center_on_next_marker_zoom(app);
+            // commit (commit_zoom_lamps, app_state.h).
+            commit_zoom_lamps(app);
         }
         app.scroll_drag = ScrollDragState{};
         if (zooming) viewport.invalidate_waveform_area();
@@ -7651,8 +7651,8 @@ void GuiInputHandler::finalize_active_drags() {
         if (app.overview_drag.moved && playback.is_playing())
             playback.resync_predictor();
         // The zoom's commit at the force-end, as at the release
-        // (commit_center_on_next_marker_zoom, app_state.h).
-        if (app.overview_drag.moved) commit_center_on_next_marker_zoom(app);
+        // (commit_zoom_lamps, app_state.h).
+        if (app.overview_drag.moved) commit_zoom_lamps(app);
         app.overview_drag = OverviewDragState{};
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
@@ -10276,8 +10276,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             if (app.overview_drag.moved) {
                 apply_overview_drag_at(mouse_x, /*final_event=*/true);
                 // The zoom's commit, the release's own
-                // (commit_center_on_next_marker_zoom, app_state.h).
-                commit_center_on_next_marker_zoom(app);
+                // (commit_zoom_lamps, app_state.h).
+                commit_zoom_lamps(app);
             }
             app.overview_drag = OverviewDragState{};
             return;
@@ -10328,8 +10328,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
                 // The zoom's commit, the release's own
-                // (commit_center_on_next_marker_zoom, app_state.h).
-                commit_center_on_next_marker_zoom(app);
+                // (commit_zoom_lamps, app_state.h).
+                commit_zoom_lamps(app);
             }
             return;
         }

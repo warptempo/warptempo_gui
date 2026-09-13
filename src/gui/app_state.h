@@ -2329,26 +2329,31 @@ enum class RedesignButton {
     // is SUPERSEDED: the frequency argument took it in the end, once the menu
     // that fits it existed.)
     IconFollow,
-    // KEEP CENTERED WHILE NUDGING (architect 2026-08-31, R11) — the
-    // `y` lamp, FOLLOW'S NEIGHBOUR by design: a viewport-class session
-    // posture exactly like it, sitting beside it at the zoom group's tail. It wears
-    // a lamp reading the live bit its own chord flips (centered_mode), stays
+    // KEEP CENTERED WHILE NUDGING (architect 2026-08-31, R11; named
+    // 2026-09-13) — the `y` lamp, FOLLOW'S NEIGHBOUR by design: a
+    // viewport-class session posture exactly like it, sitting beside it at the
+    // zoom group's tail. It wears a lamp reading the live bit
+    // (keep_centered_while_nudging) — which its own chord flips and, like the
+    // Center on next marker lamp's, a committed zoom crossing the working
+    // level writes (commit_zoom_lamps) — and stays
     // LIVE on a locked tab (bare `y` is navigation, on the lock's allowlist)
     // and stays LIVE in the `h` view too — the mode's allowlist admits `y`, so
     // the derived partition keeps this face lit. Since 2026-09-13 its one act
     // is the Left/Right nudge's recenter (the rule is at
-    // AppState::centered_mode), and it greys in no state of its own.
-    IconCentered,
+    // AppState::keep_centered_while_nudging), and it greys in no state of its own.
+    IconKeepCenteredWhileNudging,
     // CENTER ON NEXT MARKER (architect 2026-09-04) — the `n` lamp, closing the
-    // viewport-class group behind Follow and the centered lamp, which is the
+    // viewport-class group behind Follow and the keep-centered lamp, which is the
     // company it keeps: a session camera posture wearing a lamp on the
     // live bit (center_on_next_marker) — which since 2026-09-13 the ZOOM
     // writes as well as bare `n`, a committed zoom that crosses the working
     // level lighting it on the fine side and putting it out on the coarse one
     // (the inventory is at set_center_on_next_marker). All four
-    // lamps in this run — Follow, the centered lamp, this one and Restrict undo to
+    // lamps in this run — Follow, the keep-centered lamp, this one and Restrict undo to
     // viewport below — have been session postures since 2026-09-11, at their
-    // own ruled default at every project open and serialized nowhere. What it governs is
+    // own ruled default at every project open (for this one and the
+    // keep-centered lamp, the opening zoom's side, seed_zoom_lamps) and
+    // serialized nowhere. What it governs is
     // the Tab / Shift+Tab marker walk's FRAMING and nothing else — lit, the
     // walk recenters on its landing; dark, the walk lands and the camera holds
     // unless the landing was offscreen, in which case follow's own page brings
@@ -2356,7 +2361,7 @@ enum class RedesignButton {
     //
     // LIVE ON A LOCKED TAB (bare `n` is navigation, on the lock's allowlist)
     // and DEAD IN THE `h` VIEW, which is Follow's answer rather than the
-    // centered lamp's: in there Tab denotes the diff-flag cycle, so the walk
+    // keep-centered lamp's: in there Tab denotes the diff-flag cycle, so the walk
     // this bit forks does not exist and the mode's allowlist drops the chord.
     // The derived partition greys the face on that answer with nothing
     // hand-listed.
@@ -2367,7 +2372,7 @@ enum class RedesignButton {
     // moving it here later the same day it landed, from the toolbar group,
     // where it had stood between Redo and Render touching the pair it governs:
     // what the lamp decides is whether an undo or redo may take the CAMERA
-    // somewhere else, which is the question Follow, the centered lamp and the
+    // somewhere else, which is the question Follow, the keep-centered lamp and the
     // walk's framing lamp beside it all answer for their own gestures. Lit, a
     // step whose restore would move the viewport refuses instead, cards, and
     // leaves both stacks exactly as they were.
@@ -3057,7 +3062,7 @@ enum class RedesignButton {
 // ROSTER moved and the chord table did not — 54 + 1, split 50 + 4 to 50 + 5.
 // It is the SERIES ANCHOR'S own 2026-08-27 shape less that day's two
 // deletions.
-// 54 SINCE 2026-08-31'S CENTERED LAMP: one pure chord addition inside an
+// 54 SINCE 2026-08-31'S KEEP-CENTERED LAMP: one pure chord addition inside an
 // existing group, the viewport-class group gaining a lamp on bare `y` — 53 + 1,
 // split 49 + 4 to 50 + 4, no separator and no group boundary moved.
 // 53 SINCE 2026-08-29'S COPY VALUE BUTTON: one pure chord addition inside an
@@ -3155,14 +3160,14 @@ enum class RedesignButton {
 // carrying no chord — so the roster grew by one and kToolbarChords did not,
 // which is the SERIES anchor's own 2026-08-27 shape without the two rows that
 // left with it.
-// 54 = 53 + THE CENTERED LAMP (2026-08-31, R11): IconCentered joined the zoom
+// 54 = 53 + THE KEEP-CENTERED LAMP (2026-08-31, R11): IconKeepCenteredWhileNudging joined the zoom
 // group beside Follow with bare `y`, one box and one 2px gap on the icon row's
 // walk and no new separator.
 // 53 = 52 + THE CENTER-ON-NEXT-MARKER LAMP (architect 2026-09-04): one pure
 // chord addition inside an existing group — IconCenterOnNext on bare `n`,
-// closing row 4's viewport-class group behind the centered lamp — so the split
+// closing row 4's viewport-class group behind the keep-centered lamp — so the split
 // goes 47 + 5 to 48 + 5, one box and one 2px gap join the icon row's walk and
-// no separator or group boundary moves. It is the centered lamp's own shape
+// no separator or group boundary moves. It is the keep-centered lamp's own shape
 // four days on.
 // 54 = 53 + THE RESTRICT-UNDO-TO-VIEWPORT LAMP (architect 2026-09-04, later
 // the same day): one more pure chord addition inside an existing group —
@@ -3259,7 +3264,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconWaveformMagnify:
         case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconFollow:
-        case RedesignButton::IconCentered:
+        case RedesignButton::IconKeepCenteredWhileNudging:
         case RedesignButton::IconCenterOnNext:
         case RedesignButton::IconBpm:
         case RedesignButton::IconIter:
@@ -3398,7 +3403,7 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 //
 // THE SIX GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
 // THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom four,
-// the waveform magnification pair, FOLLOW, the centered lamp, the walk's
+// the waveform magnification pair, FOLLOW, the keep-centered lamp, the walk's
 // framing lamp and the restrict-undo lamp), THE ITERATION PAIR, the
 // render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
@@ -4983,17 +4988,23 @@ struct AppState {
     // the viewport on its result at the standing zoom, clamped at the song's
     // ends (Viewport::recenter_after_nudge, whose two callers are named
     // there); NOTHING ELSE RECENTERS, and WRITING THE LAMP MOVES NOTHING in
-    // either direction — the next nudge centres. Until 2026-09-13 the lamp
-    // pinned the camera to the playhead at every frame; that promise was
-    // retired as an overpromise, and with it the pin's derivation, its
-    // collapse and the A/B audition's hold on the lamp.
+    // either direction — the next nudge centres.
+    // THE ZOOM WRITES IT TOO (architect 2026-09-13), EXACTLY AS IT WRITES
+    // center_on_next_marker below and ON THE SAME EDGE: at the working zoom or
+    // finer (zoom_level <= kWorkingZoomLevel) it is LIT, coarser it is DARK,
+    // written only when a COMMITTED zoom lands on the other side of the line
+    // from the last commit, so a hand toggle stands until the next crossing.
+    // Both lamps cross together by ruling, so ONE commit body and ONE recorded
+    // side serve both (commit_zoom_lamps, AppState::zoom_lamps_side_fine).
     // A SESSION POSTURE in the add_to_selection family (the family's record is
     // at that declaration below): in no settings vocabulary, never serialized,
-    // never in the undo domain, not carried by `'`, and DARK at every project
-    // open. ITS ONE WRITER is write_centered_posture (below), which bare `y`
-    // calls — the icon-row button synthesizes that chord — and nothing else
-    // does. Its readers are the lamp's face and the recenter body.
-    bool    centered_mode          = false;
+    // never in the undo domain, not carried by `'`, and SEEDED FROM THE OPENING
+    // ZOOM at every project open. ITS ONE FIELD WRITE is
+    // set_keep_centered_while_nudging (below), with THREE callers: bare `y`
+    // (the icon-row button synthesizes that chord), the zoom commit
+    // (commit_zoom_lamps) and the open's seed (seed_zoom_lamps). Its readers
+    // are the lamp's face and the recenter body.
+    bool    keep_centered_while_nudging = true;
 
     // CENTER ON NEXT MARKER — the lamp on bare `n` (architect 2026-09-04),
     // a session posture like the two above and in the same add_to_selection
@@ -5020,9 +5031,10 @@ struct AppState {
     // gesture that swings across the line mid-motion writes once, at its end.
     // THE THREE WRITERS, whose inventory and commit roads are at the one field
     // write set_center_on_next_marker (below): bare `n`, the zoom commit
-    // (commit_center_on_next_marker_zoom) and the project open's seed
-    // (seed_center_on_next_marker_zoom), which starts the lamp from the opening
-    // tab's own zoom rather than from a fixed default.
+    // (commit_zoom_lamps) and the project open's seed
+    // (seed_zoom_lamps), which starts the lamp from the opening
+    // tab's own zoom rather than from a fixed default. The Keep centered while
+    // nudging lamp above takes the same rule through the same two bodies.
     //
     // ITS ONE READER IS marker_walk_frame (below), which the three bare Tab
     // arms call and nothing else does. The walk itself does not read this bit:
@@ -5034,23 +5046,26 @@ struct AppState {
     // none of them asks this bit either.
     bool    center_on_next_marker  = true;
 
-    // THE SIDE OF THE WORKING ZOOM THE LAST COMMIT LANDED ON — the edge
-    // detector behind center_on_next_marker's automatic write, true for the
-    // working zoom or finer. Written by the zoom commit
-    // (commit_center_on_next_marker_zoom) and the open's seed alone, and
-    // NEVER by bare `n`: a hand toggle leaves the record where the zoom put
-    // it, which is exactly what lets the toggle stand until the next crossing.
+    // THE SIDE OF THE WORKING ZOOM THE LAST COMMIT LANDED ON — the ONE edge
+    // detector behind BOTH zoom lamps' automatic write (center_on_next_marker
+    // and keep_centered_while_nudging), true for the working zoom or finer.
+    // Written by the zoom commit (commit_zoom_lamps) and the open's seed
+    // (seed_zoom_lamps) alone, and NEVER by bare `n` or bare `y`: a hand
+    // toggle leaves the record where the zoom put it, which is exactly what
+    // lets the toggle stand until the next crossing. One record serves both
+    // lamps because it records the ZOOM, not either lamp: a hand toggle of one
+    // lamp moves neither the record nor the other lamp.
     // A level moved by something that is not a commit — the resize and
     // ceiling re-clamps — updates nothing, so the next commit still answers
     // the side the user actually lands on.
-    bool    center_on_next_marker_zoom_fine = true;
+    bool    zoom_lamps_side_fine = true;
 
     // RESTRICT UNDO TO VIEWPORT — the lamp on bare `z` (architect 2026-09-04).
     // SESSION-ONLY AND NEVER SERIALIZED, which since 2026-09-11 is what it
     // SHARES with the three camera bits above it rather than what separates it
     // from them: all four are session postures now, in no settings vocabulary,
     // uncarried by `'`, and at their own ruled default at every project open
-    // (dark for this one).
+    // (dark for this one; the two zoom lamps seeded from the opening zoom).
     //
     // WHAT IT DOES: while it stands, an undo or redo whose restore would move
     // the viewport is a consumed no-op that cards, and the stacks are left
@@ -10805,13 +10820,16 @@ inline bool transport_session_live(const AppState& a) {
     return a.playhead_scanner_active || audition_sequence_standing(a);
 }
 
-// THE `y` LAMP'S ONE FIELD WRITE (the rule is at AppState::centered_mode).
-// ONE CALLER, bare `y` (input_key_dispatch.cpp), which the icon-row button
-// reaches by synthesizing that chord. A bare assignment: the lamp's face
+// THE KEEP CENTERED WHILE NUDGING LAMP'S ONE FIELD WRITE (the rule is at
+// AppState::keep_centered_while_nudging). THREE CALLERS, re-derived by grep
+// 2026-09-13: bare `y` (input_key_dispatch.cpp), which the icon-row button
+// reaches by synthesizing that chord; the zoom commit commit_zoom_lamps and
+// the project open's seed seed_zoom_lamps (both below, beside the Center on
+// next marker lamp's own write). A bare assignment: the lamp's face
 // repaints through the per-tick comparator, so no writer owes damage, and
 // writing the lamp moves nothing — the recenter belongs to the next nudge.
-inline void write_centered_posture(AppState& a, bool lit) {
-    a.centered_mode = lit;
+inline void set_keep_centered_while_nudging(AppState& a, bool lit) {
+    a.keep_centered_while_nudging = lit;
 }
 
 // WHERE A Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
@@ -12049,10 +12067,10 @@ enum class MarkerLandingFrame { Center, FollowPage };
 // writes the bit:
 //   THE MANUAL TOGGLE — bare `n`, which the icon row's own button reaches by
 //     synthesizing that press (input_key_dispatch.cpp);
-//   THE ZOOM COMMIT — commit_center_on_next_marker_zoom (below), on the edge
+//   THE ZOOM COMMIT — commit_zoom_lamps (below), on the edge
 //     alone, called at every road that COMMITS the level the user is looking
 //     at (its inventory is at that body);
-//   THE PROJECT OPEN'S SEED — seed_center_on_next_marker_zoom (below), once,
+//   THE PROJECT OPEN'S SEED — seed_zoom_lamps (below), once,
 //     at the tail of GuiFileLoader::load_file.
 // NO ACT WRITES IT: a movement, a value change, a nudge, a flag drag, the
 // walk's own step and the undo/redo restore all leave the lamp where it
@@ -12079,14 +12097,17 @@ inline bool zoom_level_at_or_finer_than_working(double level) {
     return level <= kWorkingZoomLevel;
 }
 
-// THE ZOOM COMMIT (architect 2026-09-13) — EDGE-TRIGGERED: compares the side
-// the live level is on with the side the LAST commit landed on
-// (AppState::center_on_next_marker_zoom_fine) and, only where they differ,
-// writes the lamp to the new side and moves the record. A commit that stays
-// on its side writes nothing, so a hand toggle stands until the zoom really
-// crosses the line; and because the record is moved by commits alone,
-// everything between two commits — a gesture's own motion, a resize's
-// re-clamp — is invisible to the lamp by construction.
+// THE ZOOM COMMIT FOR BOTH ZOOM LAMPS (architect 2026-09-13) — the Center on
+// next marker lamp (`n`) and the Keep centered while nudging lamp (`y`), which
+// cross together by ruling and so share this one body and its one record.
+// EDGE-TRIGGERED: compares the side the live level is on with the side the
+// LAST commit landed on (AppState::zoom_lamps_side_fine) and, only where they
+// differ, writes BOTH lamps to the new side and moves the record. A commit
+// that stays on its side writes nothing, so a hand toggle of either lamp
+// stands until the zoom really crosses the line; and because the record is
+// moved by commits alone, everything between two commits — a gesture's own
+// motion, a resize's re-clamp — is invisible to the lamps by construction.
+// Each caller is one line and names neither lamp.
 //
 // THE COMMIT ROADS, re-derived by grep 2026-09-13 over every writer of
 // AppState::zoom_level and every caller of the three zoom appliers:
@@ -12116,22 +12137,25 @@ inline bool zoom_level_at_or_finer_than_working(double level) {
 // commits at its tab-in), and the re-clamps — clamp_viewport_start's ceiling
 // follow and the load's own level writes — which move the level without the
 // user asking.
-inline void commit_center_on_next_marker_zoom(AppState& a) {
+inline void commit_zoom_lamps(AppState& a) {
     const bool fine = zoom_level_at_or_finer_than_working(a.zoom_level);
-    if (fine == a.center_on_next_marker_zoom_fine) return;
-    a.center_on_next_marker_zoom_fine = fine;
+    if (fine == a.zoom_lamps_side_fine) return;
+    a.zoom_lamps_side_fine = fine;
     set_center_on_next_marker(a, fine);
+    set_keep_centered_while_nudging(a, fine);
 }
 
-// THE PROJECT OPEN'S SEED (architect 2026-09-13): the lamp and the commit's
-// record both start from the opening tab's own level — lit iff it is at the
-// working zoom or finer — rather than from a fixed default. An unconditional
+// THE PROJECT OPEN'S SEED FOR BOTH ZOOM LAMPS (architect 2026-09-13): the two
+// lamps and the commit's record all start from the opening tab's own level —
+// lit iff it is at the working zoom or finer — rather than from a fixed
+// default. An unconditional
 // write, called once at the tail of GuiFileLoader::load_file, after the
 // parsed tab's band has gone live and the resize re-clamp has run.
-inline void seed_center_on_next_marker_zoom(AppState& a) {
+inline void seed_zoom_lamps(AppState& a) {
     const bool fine = zoom_level_at_or_finer_than_working(a.zoom_level);
-    a.center_on_next_marker_zoom_fine = fine;
+    a.zoom_lamps_side_fine = fine;
     set_center_on_next_marker(a, fine);
+    set_keep_centered_while_nudging(a, fine);
 }
 
 // The Center on next marker lamp read as a framing choice — the bare Tab /
@@ -13539,7 +13563,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the two VIEW LAMPS
 //     (bare `t` / `p`), the zoom four, the magnification pair, follow, the
-//     CENTERED LAMP, the CENTER-ON-NEXT-MARKER lamp and the
+//     KEEP-CENTERED LAMP, the CENTER-ON-NEXT-MARKER lamp and the
 //     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
@@ -14008,17 +14032,17 @@ inline bool redesign_button_enabled(const AppState& a,
         // navigation, not authored content). Its lamp reports the arm.
         case RedesignButton::IconFollow:
             return true;
-        // THE CENTERED LAMP MIRRORS NOTHING EITHER (2026-08-31, R11): bare
+        // THE KEEP-CENTERED LAMP MIRRORS NOTHING EITHER (2026-08-31, R11): bare
         // `y` toggles the lamp in either direction on any loaded piece, the
         // lock admits it, and since 2026-09-13 the A/B audition holds no claim
         // on it. In the `h` view it stays LIVE through the derived partition —
         // `y` is on the mode's allowlist — where Follow greys.
-        case RedesignButton::IconCentered:
+        case RedesignButton::IconKeepCenteredWhileNudging:
             return true;
         // THE CENTER-ON-NEXT-MARKER LAMP MIRRORS NOTHING EITHER (2026-09-04),
         // on the same answer as the two above it: bare `n` toggles the walk's
         // framing in either direction on any loaded piece and the lock admits
-        // it. Unlike the centered lamp it GREYS IN THE `h` VIEW, which the
+        // it. Unlike the keep-centered lamp it GREYS IN THE `h` VIEW, which the
         // derived partition answers with nothing hand-listed — the mode's
         // allowlist drops `n`, Tab denoting the diff-flag cycle in there.
         case RedesignButton::IconCenterOnNext:
@@ -15084,7 +15108,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
 // buttons, row 3's tabs and row 4's TOGGLES — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
-// 2026-09-04; follow, the centered lamp, iteration, the TRIM REGION toggle (a
+// 2026-09-04; follow, the keep-centered lamp, iteration, the TRIM REGION toggle (a
 // toggle again since 2026-08-18, its lamp reading the overlay's visibility),
 // read-only, history, and the CUMULATIVE reading, which came back to this row
 // with the history group on 2026-08-18. THE
@@ -15161,10 +15185,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
             return (a.playhead_scanner_active && !audition_sequence_standing(a))
                        ? a.follow_engaged
                        : a.follow_armed;
-        // The centered lamp (2026-08-31): the same toggle pattern, reading
-        // the live bit bare `y` flips, so the lit face and the nudge's
-        // recenter cannot drift.
-        case RedesignButton::IconCentered: return a.centered_mode;
+        // The Keep centered while nudging lamp (2026-08-31): the same toggle
+        // pattern, reading the live bit itself, so the lit face and the
+        // nudge's recenter cannot drift — whoever wrote it: bare `y`, the zoom
+        // commit or the open's seed (set_keep_centered_while_nudging).
+        case RedesignButton::IconKeepCenteredWhileNudging: return a.keep_centered_while_nudging;
         // The center-on-next-marker lamp (2026-09-04): the same pattern
         // again, reading the live bit itself, so the lit face and the walk's
         // behaviour cannot drift. Its bit has writers besides its own chord —
@@ -15689,7 +15714,7 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 // is; WHY it is dead is answered at the KEY, which is the road with a press to
 // answer. DELETED FROM THE OVERLOAD BELOW, in that order: grid iterations'
 // "Turn off … first" in all its forms, the read-only tab's sentence on Grid
-// Iterations, the three lamp exclusions, the centered lamp's audition
+// Iterations, the three lamp exclusions, the keep-centered lamp's audition
 // sentence (the audition's hold on that lamp retired whole 2026-09-13); then Save's "Committing the checkpoint (Ctrl+S)", the walk lamp's
 // and Save's "History is unavailable", the iteration sweep's two verdicts on
 // Render, the restrict-undo lamp's "Undo/Redo is outside the view", the drop's
@@ -15718,7 +15743,7 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 // <Mode> (<key>)", constant in both states and true in both — the lamp says
 // which way the next press goes, and the text never has to swap between a
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
-// every lamp-carried toggle here (trim region, follow, centered viewport,
+// every lamp-carried toggle here (trim region, follow, keep centered while nudging,
 // read-only, history view, cumulative, add to selection) and by the render
 // player's Repeat one. Until then those rows named a CONSTANT ACT while the
 // lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
@@ -15847,12 +15872,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE TWO VIEWPORT LAMPS, one line each: bare `f` / bare `y` toggle
         // and neither has a shifted twin. Their texts NAME THE TOGGLE (the
         // lamp rule at this table's head, architect 2026-09-01): Follow read
-        // "Follow (F)" and the centered lamp "Keep viewport centered on
-        // playhead (Y)" — a verb that was a lie on the lit face, whose press
-        // STOPS centering — until that day.
+        // "Follow (F)" until that day. The `y` lamp's name is its act since
+        // 2026-09-13 — Keep Centered While Nudging — the lamp centring nothing
+        // but a Left/Right nudge's result.
         case RedesignButton::IconFollow: return {"Toggle Follow (F)", nullptr};
-        case RedesignButton::IconCentered:
-            return {"Toggle Centered Viewport (Y)", nullptr};
+        case RedesignButton::IconKeepCenteredWhileNudging:
+            return {"Toggle Keep Centered While Nudging (Y)", nullptr};
         // THE WALK'S FRAMING LAMP (2026-09-04), one line: bare `n` toggles and
         // has no shifted twin. It NAMES THE TOGGLE like the two above (the
         // lamp rule at this table's head) — the state is the lamp's to tell.

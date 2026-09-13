@@ -248,9 +248,8 @@ void GuiAbAudition::apply_working_zoom() {
     // nothing; with a focus it lands, and that land is the one write this
     // whole act can make to a resting cursor (the header's two paragraphs
     // carry the case and the ordering the three call sites obey).
-    // The Center on next marker lamp takes no special case: `c`'s zoom is a
-    // commit like any `c`, and writes the lamp only if it crosses the working
-    // level (commit_center_on_next_marker_zoom, app_state.h).
+    // The two zoom lamps take no special case: `c`'s zoom is a commit like
+    // any `c`, and writes the lamps only if it crosses the working level (commit_zoom_lamps, app_state.h).
     if (input != nullptr) input->run_center_command();
 }
 

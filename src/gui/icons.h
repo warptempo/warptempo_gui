@@ -221,7 +221,7 @@ enum class Icon {
     // one vertical center line — exactly a viewport holding its subject at
     // the center column. A fresh verbatim transcription for the `y` centered
     // lamp beside Follow.
-    AlignHorizontalCenter,  // Toggle centered viewport (`y`)
+    AlignHorizontalCenter,  // Toggle keep centered while nudging (`y`)
     // Breeze's zoom-next (2026-09-04, the architect's pick): a magnifier with
     // a chevron pointing forward out of its lens — bringing the NEXT thing
     // into view, which is what the Tab walk's framing does. A verbatim 22px

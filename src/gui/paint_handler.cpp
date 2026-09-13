@@ -958,7 +958,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // makes it TWENTY-SIX in SIX: the BPM and ITERATION buttons left the
     // roster for the new menu, and FOLLOW and the SHOW TRIM REGION button
     // joined the zoom group, dissolving two separator-led groups into it; the
-    // CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
+    // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX.)
     // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
     // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
@@ -1046,14 +1046,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // settling on the chevron-and-dot, which reads as GOING to a place rather
     // than as a transport control.
     {RedesignButton::IconFollow, icons::Icon::GoJump},
-    // THE CENTERED LAMP (2026-08-31, R11), Follow's neighbour at the zoom
+    // THE KEEP-CENTERED LAMP (2026-08-31, R11), Follow's neighbour at the zoom
     // group's tail: Breeze's align-horizontal-center, two boxes threaded on
     // one vertical center line — a viewport holding its subject at the
     // center column. It joins the group rather than opening one, so the row
     // gains one box and one 2px gap and no separator moves.
-    {RedesignButton::IconCentered, icons::Icon::AlignHorizontalCenter},
+    {RedesignButton::IconKeepCenteredWhileNudging, icons::Icon::AlignHorizontalCenter},
     // THE CENTER-ON-NEXT-MARKER LAMP (2026-09-04) closes the same group behind
-    // the centered lamp: Breeze's zoom-next, a magnifier ring with a chevron
+    // the keep-centered lamp: Breeze's zoom-next, a magnifier ring with a chevron
     // stepping forward out of it — the walk bringing its next stop into view.
     // It joins the group rather than opening one, so the row gains one box and
     // one 2px gap and no separator moves.
@@ -2686,7 +2686,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // had a group of its own from 2026-08-11, when the scissors opened it,
     // until that ruling), then the zoom four (2026-08-12), the waveform
     // magnification pair (2026-08-26), FOLLOW, which came in from the
-    // dissolved mass-marker group the same day, THE CENTERED LAMP beside
+    // dissolved mass-marker group the same day, THE KEEP-CENTERED LAMP beside
     // it (2026-08-31, R11), THE CENTER ON NEXT MARKER LAMP and THE RESTRICT
     // UNDO TO VIEWPORT LAMP closing the group
     // (both 2026-09-04, the second arriving from the toolbar group later that
@@ -2746,13 +2746,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // Marker lamp had left hours before it, which itself was +34 onto the 857
     // the RADIO-PAIR COLLAPSE left. THAT COLLAPSE IS THE WIDEST SINGLE CUT THE
     // ROW HAS TAKEN (959 to 857): three boxes and three gaps (−102) off the 959
-    // the centered lamp left, no separator moving, the two view groups going
+    // the keep-centered lamp left, no separator moving, the two view groups going
     // from two members to one each — and it was taken to make room for the
     // lamps that landed after it, which is exactly what the day then spent it
     // on. The ceilings walked 240 → 268 → 258 → 249 → 250 with those four
     // moves.
     //
-    // THE 959 IT SHRANK FROM WAS THE CENTERED LAMP'S (2026-08-31, R11): one box
+    // THE 959 IT SHRANK FROM WAS THE KEEP-CENTERED LAMP'S (2026-08-31, R11): one box
     // and one gap (+34) onto the 925 the Series relocation left, which had
     // moved the fit ceiling from 249 to 240 (959·2.40 = 2302, 241 clipping by
     // ~3 authored px) and left the tablet's 225 with 146 px of slack.

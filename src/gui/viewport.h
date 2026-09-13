@@ -298,7 +298,7 @@ struct Viewport {
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
     // The `y` lamp's one act: while it is lit, recenter on the playhead a
-    // Left/Right nudge has just moved. The rule is at AppState::centered_mode;
+    // Left/Right nudge has just moved. The rule is at AppState::keep_centered_while_nudging;
     // the two callers are named at the definition.
     void recenter_after_nudge();
     void follow_scroll_if_needed();

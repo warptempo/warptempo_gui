@@ -458,11 +458,11 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     const int64_t visible = samples_visible(app, audio);
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
-    // AND EVERY CALLER HERE IS A DISCRETE ZOOM, SO THIS IS A COMMIT: the Center
-    // on next marker lamp answers the level just landed if it crossed the
+    // AND EVERY CALLER HERE IS A DISCRETE ZOOM, SO THIS IS A COMMIT: the two
+    // zoom lamps answer the level just landed if it crossed the
     // working zoom (the rule and the road inventory at
-    // commit_center_on_next_marker_zoom, app_state.h).
-    commit_center_on_next_marker_zoom(app);
+    // commit_zoom_lamps, app_state.h).
+    commit_zoom_lamps(app);
 
     invalidate_waveform_area();
     // Harmless over-damage: a zoom moves the viewport, never the playhead or
@@ -556,10 +556,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_engaged = false;
     // THIS APPLIER COMMITS NO ZOOM, `final` included: every caller is a
-    // continuous gesture, and the Center on next marker lamp is written at the
+    // continuous gesture, and the two zoom lamps are written at the
     // gesture's END (the three end sites are inventoried at
-    // commit_center_on_next_marker_zoom, app_state.h), so a drag that swings
-    // across the working zoom and back does not flicker the lamp.
+    // commit_zoom_lamps, app_state.h), so a drag that swings
+    // across the working zoom and back does not flicker the lamps.
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -619,9 +619,9 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
     // double-click and the group undo/redo restore's zoom-out-to-fit arm being
     // what reach here. BOTH ARE DISCRETE, so this is a zoom COMMIT for the
-    // Center on next marker lamp, which a pan-only framing leaves where it
-    // stands (commit_center_on_next_marker_zoom, app_state.h).
-    commit_center_on_next_marker_zoom(app);
+    // two zoom lamps, which a pan-only framing leaves where they
+    // stand (commit_zoom_lamps, app_state.h).
+    commit_zoom_lamps(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -781,7 +781,7 @@ void Viewport::invalidate_all() {
 }
 
 // THE `y` LAMP'S ONE ACT (architect 2026-09-13; the rule is stated at
-// AppState::centered_mode): a Left/Right nudge that MOVED SOMETHING calls this
+// AppState::keep_centered_while_nudging): a Left/Right nudge that MOVED SOMETHING calls this
 // on its changed path, and while the lamp is lit the viewport recenters on the
 // result through center_viewport_on_playhead — the standing zoom, the clamp at
 // the song's two ends, the pan's damage and the synchronous rebuild. Both
@@ -793,7 +793,7 @@ void Viewport::invalidate_all() {
 // a held arrow button's fires reach both through the same act bodies, so the
 // recenter runs at every step.
 void Viewport::recenter_after_nudge() {
-    if (!app.centered_mode) return;
+    if (!app.keep_centered_while_nudging) return;
     center_viewport_on_playhead();
 }
 

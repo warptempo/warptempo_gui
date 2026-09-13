@@ -161,13 +161,13 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     app.trim                = target.trim;
     clamp_viewport_start(app, audio);
     // THE ENTERING BAND'S LEVEL IS A ZOOM COMMIT: the switch changes the level
-    // the user is looking at, so the Center on next marker lamp answers it if
+    // the user is looking at, so the two zoom lamps answer it if
     // it lands on the other side of the working zoom from the last commit —
     // Ctrl+Tab, the tab row, Shift+`j`, the typed `active_tab_view=`, the A/B
     // audition's switches and the undo/redo restore's tab write alike (the
-    // rule and the road inventory at commit_center_on_next_marker_zoom,
+    // rule and the road inventory at commit_zoom_lamps,
     // app_state.h). After the clamp, so it reads the level actually shown.
-    commit_center_on_next_marker_zoom(app);
+    commit_zoom_lamps(app);
     // COINCIDENCE AUTO-SELECT, the tab-entry chokepoint (the rule, the formula and
     // the authoritative call-site inventory live at auto_select_marker_at_playhead,
     // input_pointer.cpp / input_handler.h).

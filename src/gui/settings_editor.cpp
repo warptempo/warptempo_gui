@@ -426,9 +426,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         const double v = gv.d;
         if (active) {
             if (v == app.zoom_level) { unchanged(); return true; }
-            // A discrete zoom through the applier, which is also the Center on
-            // next marker lamp's zoom COMMIT; the parked arm below commits
-            // nothing until its tab-in (commit_center_on_next_marker_zoom,
+            // A discrete zoom through the applier, which is also the two
+            // zoom lamps' COMMIT; the parked arm below commits
+            // nothing until its tab-in (commit_zoom_lamps,
             // app_state.h).
             viewport.apply_zoom_change(v);
         } else {

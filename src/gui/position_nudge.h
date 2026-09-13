@@ -329,7 +329,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     that on a 2+ press; either way this tail always runs stopped).
 // (f) KEEP CENTERED WHILE NUDGING: Viewport::recenter_after_nudge, which with
 //     the `y` lamp lit recenters the viewport on the playhead (e) just landed
-//     (the rule at AppState::centered_mode). Every press that reaches this
+//     (the rule at AppState::keep_centered_while_nudging). Every press that reaches this
 //     tail moved its marker — the twins return on the post-clamp identity
 //     no-op first — so a walled press recenters nothing, and a held key's or
 //     button's repeats each run the tail and recenter at every step.
