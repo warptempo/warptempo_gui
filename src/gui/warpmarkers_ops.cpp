@@ -905,9 +905,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // edit of the one marker's own field, disabled or not.
 // The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits), a ref
 // (non-empty label_ref) — the singleton step's payload predicates — a
-// coincident-collapsed marker (warp_red_flag_set_cached — the resolver
-// replaces the stack with one 1.00 owner, so the write is render-inert; a
-// disabled member is never a stack member, so it cannot be collapsed-red), or
+// coincident-collapsed ENABLED marker (warp_red_flag_set_cached — the resolver
+// replaces the stack with one 1.00 owner, so the write is render-inert), or
 // a marker that cannot take the WHOLE step without leaving the tempo bracket
 // (the edge compare's generalization, R12 — at the bare ±1 the two are the
 // same test). Collapse is render-inert regardless of the authoring view, so it
@@ -936,8 +935,17 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
     for (int idx : a.selected_markers) {
         if (idx < 0 || idx >= n) continue;   // defensive; stale indices skipped
         const GuiWarpMarker& m = mv[idx];
-        if (m.tempo_inherits || !m.label_ref.empty() || red.count(idx))
-            return false;
+        if (m.tempo_inherits || !m.label_ref.empty()) return false;
+        // THE RED TERM IS ASKED OF AN ENABLED MEMBER ALONE (2026-09-13, Sol
+        // round 5's P1). The parser's collapse set
+        // (warp_coincident_collapse_members, copied into the red cache) marks
+        // the WHOLE raw run, disabled rows included, once two or more
+        // effectively enabled rows share the frame; a disabled row in that run
+        // is no stack member for the render — the resolver filters it before
+        // it collapses — so it steps like any disabled marker. The red set's
+        // other producer, the pass-2 fallback, reddens only passes and refs,
+        // both walled above whatever their disabled bit.
+        if (red.count(idx) && !effective_disabled(mv, idx)) return false;
         // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
         // bracket edge" (2026-08-31, with the step ladder — R12): the group
         // arm ADDS delta_cents raw, so with the ten-cent chord a member three
@@ -982,10 +990,16 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // (kLabelRefHasNoTempoCard, above).
 //
 // NOR IS A DISABLED MARKER (architect 2026-09-13, "disabled should be
-// steppable"): the singleton steps the one marker asked for, and a disabled
-// marker is never a collapse member (the resolver's stacks are of effectively
-// enabled markers), so nothing here reads effective_disabled. The GROUP arm
-// steps a disabled member too since the same day (tempo_cent_step_group_actionable).
+// steppable"): the singleton steps the one marker asked for. THE COLLAPSE ARM
+// IS ASKED OF AN ENABLED ROW ALONE (Sol round 5's P1, the same day): the
+// parser's collapse set (warp_coincident_collapse_members, frozen, copied into
+// the red cache's `collapsed`) INCLUDES the disabled rows of a collapsed run —
+// it marks the whole raw run once two or more effectively enabled rows share
+// the frame — while the resolver's stack is of effectively enabled markers
+// only, so a disabled row sitting in that run is no member for the render and
+// steps like any disabled marker. The GROUP arm steps a disabled member too
+// since the same day, its red term skipped for one on the same argument
+// (tempo_cent_step_group_actionable).
 //
 // THE COLLAPSE REFUSAL (architect 2026-07-22): a coincident group is treated
 // as ONE marker in target view, and its members' authored tempos are
@@ -1023,8 +1037,9 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
     const std::set<int>& collapsed = warp_red_flag_set_cached(
         a, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).collapsed;
-    return collapsed.count(idx) ? "That marker shares its frame with another"
-                                : nullptr;
+    return (collapsed.count(idx) && !effective_disabled(mv, idx))
+               ? "That marker shares its frame with another"
+               : nullptr;
 }
 
 const char* tempo_cent_step_kind_refusal(const AppState& a,

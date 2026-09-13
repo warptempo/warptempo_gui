@@ -10207,7 +10207,9 @@ inline int64_t tempo_cent_step_landing(int64_t start_cents,
 // ladder landed the same day, and the identical test at the bare ±1: a member
 // is out of bracket after one cent iff it was resting on that edge) — and
 // false when one could not. A DISABLED MEMBER IS A MEMBER (architect
-// 2026-09-13): it counts, walls on the same terms and steps, as the singleton
+// 2026-09-13): it counts, walls on a pass, a ref or the bracket and steps —
+// the collapse term alone skipped for it, a disabled row of a collapsed run
+// being no stack member for the render — as the singleton
 // and the value drag step a disabled marker. From 2026-09-02 (the four-tier
 // review's R-12, "a disabled marker is invisible to the act" asked of this
 // step) until that ruling a disabled member was SKIPPED and the scan answered
@@ -10303,7 +10305,10 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 // of them is this refusal's business — the group arm's own refusals are the
 // wall scan's, and the belt says nothing by GuiOpRefusal's contract. A
 // DISABLED marker is not refused (architect 2026-09-13, "disabled should be
-// steppable"). Defined in warpmarkers_ops.cpp beside the act.
+// steppable"), a disabled row inside a collapsed run included: the parser's
+// collapse set carries the whole raw run, disabled rows too, so the collapse
+// arm is asked of an enabled row alone. Defined in warpmarkers_ops.cpp beside
+// the act.
 //
 // A PASS IS NOT REFUSED (architect 2026-09-13: "why not just allow tempo step
 // by collapsing the inherit as we already do in S+W?"): the singleton step
@@ -11817,8 +11822,10 @@ inline bool value_drag_posture(const AppState& a) {
 // has no value to step, so this arm is warp-only. A DISABLED MARKER IS A TARGET
 // (architect 2026-09-13, "disabled should be steppable"): the singleton arrow
 // step steps one, so the drag does too, and what the arm admits is exactly
-// what that step would step — an owner or a pass, not a label ref, not a
-// collapse member (a disabled marker is never one), not under the lock. From
+// what that step would step — an owner or a pass, not a label ref, not an
+// ENABLED collapse member (the parser's collapse set includes a collapsed
+// run's disabled rows; the kind owner asks it of enabled rows alone), not
+// under the lock. From
 // 2026-09-10 to that ruling the arm refused one through effective_disabled on
 // the argument that the write would be render-inert, which the arrows had
 // never asked. iter_bracket_carrier and iter_popup_eligible_marker are not
