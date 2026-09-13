@@ -66,7 +66,9 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // away every unsaved change and the whole undo history with no undo of its
 // own, the destructive shape the load confirmation's FirstButton is
 // explicitly not, so a bare Enter must not answer it. `o` is OK's letter, the
-// load confirmation's.
+// load confirmation's. The stop below is every prompt's own opening act, not
+// something this one adds: playback stops, an A/B audition ends and an
+// engaged follow chase drops, exactly as raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Discard unsaved changes and reload?",
@@ -139,8 +141,9 @@ void GuiPrompt::activate_response(char k) {
 
     if (trigger == DialogTrigger::REVERT_CONFIRM) {
         // OK completes the revert through proceed (close_target_ is Revert,
-        // seated by the request that raised this); Escape leaves the session
-        // exactly as it stood, the seated reopen name unread.
+        // seated by the request that raised this); Escape keeps the authored
+        // state and the undo history as they stood (the seated reopen name
+        // unread) — the transport stays stopped, as under every prompt.
         if (k == 'o') {
             app.prompt.active = false;
             viewport.invalidate_all();

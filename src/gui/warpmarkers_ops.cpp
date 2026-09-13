@@ -1019,9 +1019,10 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // ends on a fallback reference, and with passes admitted above such a pass
 // would have carded "shares its frame" falsely. For an OWNER the two sets
 // agree exactly (the pass-2 fallbacks are refs and passes alone), so the
-// owners' answer is unchanged; the GROUP step's wall scan keeps the red set,
-// walling passes before it asks. The cache is memoized on the store's
-// generation, which is what lets the per-tick Up / Down face read it.
+// owners' answer is unchanged; the GROUP step's wall scan reads the same
+// `collapsed` subset (tempo_cent_step_group_actionable, above), walling
+// passes before it asks. The cache is memoized on the store's generation,
+// which is what lets the per-tick Up / Down face read it.
 //
 // THE BODY IS INDEX-SHAPED AND THE FOCUS FORM WRAPS IT (2026-09-10, codex's
 // finding): the verdict is a fact about ONE marker, so the subject is a

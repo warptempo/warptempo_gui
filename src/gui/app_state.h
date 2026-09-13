@@ -5462,10 +5462,14 @@ struct AppState {
     // tooltip paths.
     mutable ProposedTargetWarpFrameMapCache proposed_target_map_cache;
 
-    // Memoized red-flag sets — the marker-store indices whose render resolves
-    // to the 1.00 normalization fallback, painted in the marker lane's red class
-    // whether or not they are selected (see warp_frame_map_view.h). Mutable:
-    // refreshed from the const
+    // Memoized red-flag sets — `red` (both caches) is the marker lane's PAINT
+    // cue, painted whether or not the row is selected: the render's own
+    // normalization plus any row sharing its exact frame with another row of
+    // its own store, disabled rows included (warp_frame_map_view.h carries the
+    // full contract, including the participation-blind coincidence). Act and
+    // face readers that ask whether the render normalizes a marker read the
+    // warp cache's `collapsed` subset instead — `red`'s widened, paint-only
+    // membership has no such reader. Mutable: refreshed from the const
     // flag-cache build. Keyed on the respective store generation, so the
     // classification runs once per change, not per tick, and freezes through a
     // marker drag (the store mutates only at commit).
