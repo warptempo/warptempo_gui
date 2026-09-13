@@ -3110,8 +3110,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // WHY run() RETURNED, read before anything below dies: an exit (the
     // platform's own bit — Ctrl+Q, the WM close, a connection loss, a load
-    // that failed) ends the process; otherwise the Open project picker's
-    // seated name is the project to reopen (the loop contract, platform.h).
+    // that failed) ends the process; otherwise the seated name (the Open
+    // project picker's choice, or File → Revert's current project) is the
+    // project to reopen (the loop contract, platform.h).
     GuiProjectOutcome outcome;
     if (!gui.exit_requested()) outcome.reopen = app.reopen_project;
     // A REFUSED LOAD EXITS 1, a clean quit 0 — the loop's own reopen refusal
@@ -3286,7 +3287,8 @@ int gui_main(const char* argument) {
     // THE PROJECT LOOP. Everything ONE PER PROCESS is above; everything ONE PER
     // PROJECT is run_project's, built around the session's source and torn
     // down before it returns. run() returns for two reasons — an exit, and
-    // the Open project picker's REOPEN — and the outcome carries which. WHAT IS
+    // a REOPEN (the Open project picker's, or File → Revert's naming the
+    // project already open) — and the outcome carries which. WHAT IS
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
     // the renderer's file-scope scale (set_gui_scale_percent), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),

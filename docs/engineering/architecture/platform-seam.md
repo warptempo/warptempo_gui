@@ -401,7 +401,8 @@ drag coordinates floor instead of truncating.
   `gui_main` ahead of it either way, so the first configure is at the user's
   scale.
   `run()` returns for an EXIT (`request_exit`; `exit_requested()` true) or a
-  RUN STOP (`request_run_stop`, the Open project picker's reopen — the window and the
+  RUN STOP (`request_run_stop`, the reopen — the Open project picker's, or
+  File → Revert's on the project already open — the window and the
   input core stand; the stop bit is cleared at each `run()`'s head). The
   worker fds are re-registered per session (each setter takes -1 and, on
   Android, unwatches what it replaces); the callbacks are re-installed; the
@@ -410,7 +411,11 @@ drag coordinates floor instead of truncating.
   window or a capture — a reopen comes from a key press or a button lift on
   a modal, where none can stand. Playback is shut down and re-inited per
   session (one AAudio stream start per reopen, accepted). The unsaved-tab
-  prompt is Ctrl+Q's own with a REOPEN target (`GuiCloseTarget`, prompt.h).
+  prompt is Ctrl+Q's own with a REOPEN target (`GuiCloseTarget`, prompt.h);
+  the REVERT target completes the same run stop and asks a dirty session the
+  discard-only `Discard unsaved changes and reload?` instead. On the tablet
+  Revert's road is the File menu's row, which dispatches Ctrl+Alt+O through
+  `on_key` with no key pressed, so it needs nothing of the backend.
 - **Android stubs** (each named at its site with its Wayland twin), THREE
   since 2026-09-03 and re-greped at that count: pointer capture as no-ops (the
   notional-x FIELD survives and tracks the finger), cursor kinds stored and

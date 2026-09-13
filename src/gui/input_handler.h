@@ -3013,6 +3013,26 @@ private:
     void open_project_picker();
     void build_project_picker_rows();
     void open_project_commit(int index);
+    // FILE → REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
+    // project to its last saved state, discarding unsaved changes and the undo
+    // history. NOT A PICKER ACT and it never meets open_project_commit's
+    // same-project no-op: it seats the open project's own name in
+    // app.reopen_project and asks the one close road with the REVERT target
+    // (GuiCloseTarget, prompt.h), whose completion is the reopen's. Its own
+    // refusals, each a card: a publishing checkpoint and the project model's
+    // or the strict dry-run's refusal of the folder on disk — the picker
+    // commit's own three, for the picker commit's reasons (the teardown joins
+    // the commit worker; a load that fails never reaches a reopen). A running
+    // synchronization refuses at the close road's head
+    // (close_refused_by_external_sync). A clean session reopens with no
+    // question; a dirty one is asked "Discard unsaved changes and reload?",
+    // OK / Cancel with Cancel focused (GuiPrompt::request_close). A running
+    // render is killed by the teardown's worker join, as the picker's reopen
+    // kills one. Legal on a read-only tab, under the iteration lock and in the
+    // `h` view (the three allowlists admit is_revert_project_key); unreachable
+    // under the three list owners, whose routers consume the chord and the
+    // File menu's Revert row with it.
+    void revert_project();
     void picker_open_highlight();
     void picker_set_highlight(int index);
     void picker_move_highlight(int delta);

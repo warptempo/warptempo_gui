@@ -618,8 +618,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::J: return bare || sh;
         // Drop a warp marker / drop a phase reset from the warp column / save.
         case GuiKeys::S: return bare || sh || cl;
-        // The read-only toggle and Open project.
-        case GuiKeys::O: return bare || cl;
+        // The read-only toggle, Open project and Revert.
+        case GuiKeys::O: return bare || cl || ca;
         // The W/P flip and the three phase-reset propagate chords.
         case GuiKeys::P: return bare || cl || ca || cas;
         // The history view's toggle — bound in BOTH modes, since it is what
@@ -754,6 +754,18 @@ static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
               "`l` binds bare and shifted only — the render player and its "
               "shifted twin the AV sync stats panel — and none of the six "
               "other modifier combinations spells anything");
+// `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
+// Ctrl+Alt File → Revert — and no shifted spelling of any of them.
+static_assert(chord_is_bound(GuiKeys::O,
+                             GuiInputState{true, false, true}, false) &&
+                  chord_is_bound(GuiKeys::O,
+                                 GuiInputState{true, false, true}, true) &&
+                  !chord_is_bound(GuiKeys::O,
+                                  GuiInputState{true, true, true}, false) &&
+                  !chord_is_bound(GuiKeys::O,
+                                  GuiInputState{false, false, true}, false),
+              "Revert is Ctrl+Alt+O exactly, bound in both modes; "
+              "Ctrl+Alt+Shift+O and Alt+O spell nothing");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
                                  GuiInputState{false, true, false}, false) &&
@@ -864,6 +876,24 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
 // row dispatches this very chord through on_key like every other command row.
 inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// True for the chord that runs FILE → REVERT (architect 2026-09-13): CTRL+ALT+O
+// exactly — no shift. The act reopens the CURRENT project from disk, discarding
+// unsaved changes and the undo history, so it sits on Open's letter with alt
+// added: the same act on the session as a whole, aimed at the project already
+// open. It is a third neighbour on the letter and folds into neither: bare `o`
+// is the read-only toggle and Ctrl+O the picker. The same three readers as
+// Open's predicate and for the same reasons: on_key's dispatch arm
+// (input_handler.cpp), the read-only allowlist (read_only_key_blocked, which
+// admits it: the act writes nothing and discards only what was never saved)
+// and the `h` view's allowlist (history_mode_key_blocked, which admits it
+// beside Ctrl+O). The act is GuiInputHandler::revert_project, whose body
+// carries its own refusals; the File menu's Revert row dispatches this chord
+// through on_key like every other command row, which is also the tablet's
+// road to it. Not repeat-eligible, so a held chord reverts once.
+inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::O && mods.ctrl && !mods.shift && mods.alt;
 }
 
 // True for the chord that runs SYNCHRONIZE TO EXTERNAL STORAGE (architect

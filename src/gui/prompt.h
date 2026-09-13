@@ -14,8 +14,8 @@
 // raised by GuiInputHandler::render_player_load_in_place in the player and by
 // GuiInputHandler::history_load_in_place in the `h` view, and answered back
 // through the input-handler back-pointer below). Two entry points are exposed:
-// request_close (called by Ctrl+Q, the WM-close callback and the Open
-// prompt's commit — the ONE close road, which is why the render player's
+// request_close (called by Ctrl+Q, the WM-close callback, the Open
+// prompt's commit and File → Revert — the ONE close road, which is why the render player's
 // close and the modal editors' abandon both live inside it) and
 // activate_response (called by the keyboard
 // handler when a prompt is active). The other two former lambdas (open_unsaved,
@@ -24,16 +24,21 @@
 // save_markers is reached through save_ops. viewport, phase_reset_propagate,
 // and gui are reached directly.
 
-// WHAT A CLOSE COMPLETES — the one prompt body, two completions (architect
-// 2026-08-27, with the reopen loop). EXIT is Ctrl+Q's and the WM close's:
-// the run loop stops and the process ends. REOPEN is File → Open project's: the run
-// loop stops and gui_main's loop builds the next object set around the
-// project the prompt chose (AppState::reopen_project, already seated by the
-// commit). The unsaved-work question, its three answers, its Save-failed
-// rung and its painted-before-answering rule are IDENTICAL for both — only
-// the act the answer completes differs, which is why the target is an enum on
-// the request and not a second prompt.
-enum class GuiCloseTarget { Exit, Reopen };
+// WHAT A CLOSE COMPLETES — the one close road, three targets (architect
+// 2026-08-27, with the reopen loop; REVERT 2026-09-13). EXIT is Ctrl+Q's and
+// the WM close's: the run loop stops and the process ends. REOPEN is File →
+// Open project's: the run loop stops and gui_main's loop builds the next
+// object set around the project the prompt chose (AppState::reopen_project,
+// already seated by the commit). The unsaved-work question, its three answers,
+// its Save-failed rung and its painted-before-answering rule are IDENTICAL for
+// those two — only the act the answer completes differs, which is why the
+// target is an enum on the request and not a second prompt.
+// REVERT is File → Revert's (Ctrl+Alt+O): it COMPLETES AS A REOPEN, naming the
+// project already open, and differs in the QUESTION alone — a revert never
+// saves, so a dirty session is asked "Discard unsaved changes and reload?"
+// with OK / Cancel (REVERT_CONFIRM) instead of Save / Discard / Cancel, and a
+// clean one reopens with no question at all.
+enum class GuiCloseTarget { Exit, Reopen, Revert };
 
 struct GuiInputHandler;
 
@@ -90,9 +95,14 @@ struct GuiPrompt {
     // (close_modal_editors_no_commit). No caller restates any step, which is
     // what keeps the compositor's close — arriving with no key, so it can run
     // no keyboard arm of its own — from raising the unsaved-work prompt over
-    // a mode or an editor that is still up. Ctrl+Q, the WM-close callback
-    // and the Open project picker's open act share the road; what differs
-    // is the target.
+    // a mode or an editor that is still up. Ctrl+Q, the WM-close callback,
+    // the Open project picker's open act and File → Revert share the road;
+    // what differs is the target.
+    //
+    // THE REVERT TARGET ASKS A DIFFERENT QUESTION AND NOTHING ELSE: every step
+    // above and the refusal below run for it unchanged, and a dirty session is
+    // asked the discard-only confirmation (open_revert_confirm) where the other
+    // two targets ask the unsaved-work question.
     //
     // It can also refuse (architect 2026-09-04): a running Synchronize to
     // external storage stops the close dead at this road's head, above every
@@ -100,7 +110,7 @@ struct GuiPrompt {
     // mirror's worker has no cancel, and its join must never run under a live
     // window. The gate is one call through the back-pointer
     // (close_refused_by_external_sync), which owns the predicate, the card
-    // and the reasoning; both targets meet it.
+    // and the reasoning; every target meets it.
     void request_close(GuiCloseTarget target);
     void activate_response(char k);
 
@@ -135,9 +145,10 @@ struct GuiPrompt {
     // 2026-08-29 it is a CRITICAL NOTIFICATION CARD.
     //
     // WHAT SURVIVES THIS STRUCT ARE THE QUESTIONS ALONE — the unsaved-work
-    // question with its save-failed rung, the paste confirmation and the load
-    // confirmation — so EVERY PROMPT IN THE PRODUCT IS NOW A QUESTION, which
-    // is the messaging split's own rule read back into the type.
+    // question with its save-failed rung, the paste confirmation, the load
+    // confirmation and, since 2026-09-13, the revert confirmation — so EVERY
+    // PROMPT IN THE PRODUCT IS NOW A QUESTION, which is the messaging split's
+    // own rule read back into the type.
     //
     // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it never was
     // this one: the compositor's WM close raises the unsaved-work prompt
@@ -175,6 +186,7 @@ struct GuiPrompt {
 
 private:
     void open_unsaved(DialogTrigger t);
+    void open_revert_confirm();
     void proceed(DialogTrigger t);
 
     // The completion the standing CLOSE_WINDOW prompt will run — seated at

@@ -1353,8 +1353,9 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // was never in doubt, only which term won.
 //
 // FILE LEFT THE FLOOR ON 2026-08-27. It was one row of "Quit" beside "Ctrl+Q"
-// when the table above was written and asked 168; it carries THREE rows now —
-// "Open Project" | "Ctrl+O", "Synchronize to External Storage" | "\\" (its
+// when the table above was written and asked 168; it carries FOUR rows now —
+// "Open Project" | "Ctrl+O", "Revert" | "Ctrl+Alt+O" (2026-09-13),
+// "Synchronize to External Storage" | "\\" (its
 // accelerator since 2026-08-31; the row was chord-less before it) and
 // "Quit" | "Ctrl+Q" — and the Synchronize label's shaped
 // run puts its content past the 242, so that popup is DERIVED at every scale
@@ -1600,7 +1601,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // keyboard chord
     // opens or closes a popup. The menus lead only where the keyboard already
     // goes: the bare `;` key still opens the settings editor directly, and
-    // File's three items are Ctrl+O, bare `\` and Ctrl+Q. (The left float
+    // File's four items are Ctrl+O, Ctrl+Alt+O, bare `\` and Ctrl+Q. (The left float
     // held a CHORD button until that day — Quit, dispatched through the shared
     // chord table like every other redesigned button; the act is the File menu's
     // item now, and the chord is untouched. It held a THIRD ANCHOR, Navigation,

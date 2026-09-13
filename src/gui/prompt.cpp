@@ -7,15 +7,17 @@
 void GuiPrompt::proceed(DialogTrigger t) {
     switch (t) {
     case DialogTrigger::CLOSE_WINDOW:
+    case DialogTrigger::REVERT_CONFIRM:
         // THE TWO COMPLETIONS (GuiCloseTarget): an exit asks the platform to
         // end the process's run loop for good; a reopen asks it to RETURN
         // from run() with the window standing, so gui_main's loop can tear
         // this project's object set down and build the next around
-        // app.reopen_project (the loop contract, main.cpp). Both are
+        // app.reopen_project (the loop contract, main.cpp). A REVERT completes
+        // as a reopen — its seated name is the project already open. Both are
         // platform requests and nothing else happens here — the teardown
         // order is the loop's own.
-        if (close_target_ == GuiCloseTarget::Reopen) gui.request_run_stop();
-        else                                         gui.request_exit();
+        if (close_target_ == GuiCloseTarget::Exit) gui.request_exit();
+        else                                       gui.request_run_stop();
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
@@ -56,6 +58,25 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     viewport.invalidate_all();
 }
 
+// THE REVERT CONFIRMATION (architect 2026-09-13): a dirty session's File →
+// Revert asks one question, and it is a discard-only one because a revert
+// never saves — Save / Discard / Cancel would offer an answer the act does not
+// have. OK / Cancel, Cancel LAST as the escape sentinel on every prompt, and
+// CANCEL TAKES THE PASSIVE FOCUS (PromptInitialFocus::LastButton): OK throws
+// away every unsaved change and the whole undo history with no undo of its
+// own, the destructive shape the load confirmation's FirstButton is
+// explicitly not, so a bare Enter must not answer it. `o` is OK's letter, the
+// load confirmation's.
+void GuiPrompt::open_revert_confirm() {
+    playback_lifecycle.stop_playback_for_modal_open();
+    app.prompt.present("Discard unsaved changes and reload?",
+                       {'o', '\x1b'},
+                       {"OK", "Cancel"},
+                       DialogTrigger::REVERT_CONFIRM,
+                       PromptInitialFocus::LastButton);
+    viewport.invalidate_all();
+}
+
 // (THE DISMISS-ONLY ERROR NOTICE RETIRED WHOLE 2026-08-30, with its
 // ERROR_NOTICE trigger, its Esc-only response set and its lone "OK" button.
 // It was the pre-split surface for a sentence the user had to be shown, and
@@ -66,7 +87,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // did, one stderr line and nothing on screen, because its refusals are
 // unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
 // QUESTIONS ALONE now: the unsaved-work question with its save-failed rung,
-// the paste confirmation and the load confirmation.)
+// the paste confirmation, the load confirmation and the revert confirmation.)
 
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
@@ -111,6 +132,24 @@ void GuiPrompt::activate_response(char k) {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->cancel_load_in_place();
+            return;
+        }
+        return;
+    }
+
+    if (trigger == DialogTrigger::REVERT_CONFIRM) {
+        // OK completes the revert through proceed (close_target_ is Revert,
+        // seated by the request that raised this); Escape leaves the session
+        // exactly as it stood, the seated reopen name unread.
+        if (k == 'o') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            proceed(trigger);
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
             return;
         }
         return;
@@ -182,9 +221,10 @@ void GuiPrompt::cancel_paste_confirmation() {
 
 // Route a close gesture through the prompt when history is dirty;
 // otherwise proceed immediately. Centralizes the decision so Ctrl+Q, the
-// WM-close callback and the Open project picker's open act share identical
-// behaviour; what differs between them is the target, seated here for
-// proceed.
+// WM-close callback, the Open project picker's open act and File → Revert
+// share identical behaviour; what differs between them is the target, seated
+// here for proceed — and, for Revert alone, the question a dirty session is
+// asked.
 void GuiPrompt::request_close(GuiCloseTarget target) {
     if (app.prompt.active) return; // already gated; ignore re-entry
     // Not while a synchronization is running (architect 2026-09-04), and the
@@ -233,8 +273,10 @@ void GuiPrompt::request_close(GuiCloseTarget target) {
     // stand), stated once at close_modal_editors_no_commit and idempotent.
     if (input != nullptr) input->close_modal_editors_no_commit();
     close_target_ = target;
-    if (app.dirty)
-        open_unsaved(DialogTrigger::CLOSE_WINDOW);
-    else
+    if (!app.dirty)
         proceed(DialogTrigger::CLOSE_WINDOW);
+    else if (target == GuiCloseTarget::Revert)
+        open_revert_confirm();
+    else
+        open_unsaved(DialogTrigger::CLOSE_WINDOW);
 }

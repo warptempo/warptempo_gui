@@ -1189,8 +1189,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // SETTINGS is dead because its rows reach a modal by a DIRECT call the view
 // has no place for; EDIT because every one of its rows is a chord the view's
 // allowlist drops (ITERATIONS and HELP answered the same way while they
-// stood); FILE (2026-08-13) is LIVE — its three rows are Ctrl+Q, Ctrl+O and
-// bare `\`, all admitted, so its menu works in there.
+// stood); FILE (2026-08-13) is LIVE — its four rows are Ctrl+O, Ctrl+Alt+O,
+// bare `\` and Ctrl+Q, all admitted, so its menu works in there.
 // (NAVIGATION was a third entry, LIVE from 2026-08-08 — the architect ruled its
 // menu open in the view, the toggle stopped refusing it, and every one of its
 // seven rows was a chord that met the mode's own gates through on_key, so
@@ -1344,11 +1344,12 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   derived: an anchor has no chord to ask about, so the anchor arms
 //   answer ONE criterion by hand — an anchor is dead iff every row of its menu
 //   is dead — and File is the one that answers it the other way. ITS MENU IS
-//   THREE ROWS NOW AND ALL THREE ARE LIVE IN THE VIEW (architect 2026-08-29,
+//   FOUR ROWS NOW AND ALL FOUR ARE LIVE IN THE VIEW (architect 2026-08-29,
 //   "admit both"): Ctrl+Q always was, Ctrl+O joined the mode's allowlist that
-//   day, and Synchronize's act carries no history-mode refusal at all — its
+//   day, Revert's Ctrl+Alt+O beside it at its 2026-09-13 landing, and
+//   Synchronize's act carries no history-mode refusal at all — its
 //   own bare `\` joining that allowlist 2026-08-31, so the row and its chord
-//   answer the view alike. Two of the three were
+//   answer the view alike. Two of the then three were
 //   consumed nothings from their 2026-08-28 landing until that ruling, the state
 //   this arm's own criterion would have greyed the anchor for had an anchor
 //   been derivable at all. (THE NAVIGATION ANCHOR was the
@@ -1415,8 +1416,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
     // 2026-09-03..09, its one row's Shift+L being a chord the allowlist does
     // not name either, until the anchor was deleted with the top strip
     // relayout); FILE is LIVE (2026-08-13, its
-    // three rows Ctrl+Q, Ctrl+O and, since 2026-08-31, bare `\`, all on the
-    // allowlist), so the menu opens onto three working rows.
+    // four rows Ctrl+O, Ctrl+Alt+O (2026-09-13), bare `\` (2026-08-31) and
+    // Ctrl+Q, all on the allowlist), so the menu opens onto four working rows.
     //
     // THEY ARE ANSWERED HERE RATHER THAN LEFT TO THE WALK BELOW because an
     // anchor carries no chord for that walk to ask about, and the walk's
@@ -6217,7 +6218,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the waveform magnification step. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
-        // five Ctrl+Alt chords.)
+        // six Ctrl+Alt chords.)
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
@@ -6377,10 +6378,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the FIVE keyboard Ctrl+Alt
-        // render / propagate chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R,
-        // Ctrl+Alt+P, Ctrl+Alt+Shift+P and, since 2026-08-20, the measure
-        // propagate's paste Ctrl+Alt+/) — every other alt keybinding was retired
+        // proceeds. ALT survives ONLY in the SIX keyboard Ctrl+Alt
+        // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P,
+        // Ctrl+Alt+Shift+P, since 2026-08-20 the measure propagate's paste
+        // Ctrl+Alt+/, and since 2026-09-13 File → Revert's Ctrl+Alt+O) — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
         // the modifier on 2026-08-27, and it is a wheel and not a press, so no
@@ -8708,7 +8709,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // refusals) applies identically, so an item whose command cannot act
         // right now simply does nothing — the buttons-never-grey rule, one
         // surface further out. No stop, no modal, nothing restated here. TWO OF
-        // THE FILE MENU'S THREE ROWS RIDE THIS BODY WHOLE since 2026-08-28:
+        // THREE OF THE FILE MENU'S FOUR ROWS RIDE THIS BODY WHOLE (Revert, on
+        // Ctrl+Alt+O, since 2026-09-13, reaching its one act the way Open does):
         // Ctrl+Q reaches on_key's own close route — the drag-modal hatch, the
         // dirty prompt, the WM-close ordering — with no second body anywhere,
         // which is the whole reason the Quit BUTTON could be retired for a menu

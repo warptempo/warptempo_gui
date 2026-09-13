@@ -3683,13 +3683,19 @@ struct CommandPopupItem {
     GuiPopupAct act = GuiPopupAct::Chord;
 };
 
-// THE FILE DROPDOWN'S ITEMS — THREE ROWS since 2026-08-27, in two categories
-// over one separator: **Open Project** first (architect 2026-08-27, the
+// THE FILE DROPDOWN'S ITEMS — FOUR ROWS since 2026-09-13 (three from
+// 2026-08-27), in two categories over one separator: **Open Project** first
+// (architect 2026-08-27, the
 // project model's one pointer home on both platforms; the label is the
 // architect's own, R8: "we would call it open project instead of open file",
 // and the row raises the Open project picker — the folder overlay's list of
-// projects in the keyboard's band over a Cancel-alone row) and **Synchronize to External Storage** under
-// it (architect
+// projects in the keyboard's band over a Cancel-alone row), **Revert** right
+// after it (architect 2026-09-13, Ctrl+Alt+O: reopen the CURRENT project to its
+// last saved state, discarding unsaved changes and the undo history —
+// GuiInputHandler::revert_project; on the tablet this row is the act's only
+// road, dispatching the chord through on_key with no key pressed), and
+// **Synchronize to External Storage** under
+// those (architect
 // 2026-08-27, `render/`'s contents and the batch cells mirrored onto the
 // device config's `sync_path` — the act is external_sync.h's, and this row is one of
 // TWO ROADS TO THAT ONE BODY since bare `\` joined 2026-08-31 (the chord's arm
@@ -3698,10 +3704,10 @@ struct CommandPopupItem {
 // then **Quit** (architect 2026-08-13, the
 // standard home for it and where kdenlive keeps it). Save and Render stay the
 // icon row's, and the menu is deliberately minimal. The separator parts the
-// two categories, the two acts on the project from an exit, exactly as
+// two categories, the three acts on the project from an exit, exactly as
 // kdenlive's own File menu does.
 //
-// TWO OF THE THREE ARE THEIR CHORDS, dispatched through on_key so the keyboard
+// THREE OF THE FOUR ARE THEIR CHORDS, dispatched through on_key so the keyboard
 // route's own gates and body serve the row with nothing restated: QUIT IS
 // Ctrl+Q — the drag-modal hatch, the dirty prompt and the WM-close ordering are
 // all the key's — and OPEN IS Ctrl+O since 2026-08-28, when the architect gave
@@ -3709,7 +3715,9 @@ struct CommandPopupItem {
 // read-only toggle; the two are neighbours on one letter, not partners). Open's
 // row was the `OpenProject` GuiPopupAct until that date, calling the opener
 // directly because no key bound it, and the enumerator died with the binding.
-// ALL THREE HAVE A CHORD SINCE 2026-08-31, when the architect gave Synchronize
+// REVERT IS Ctrl+Alt+O from its landing (2026-09-13), an ordinary chord row
+// like Open's.
+// ALL HAVE A CHORD SINCE 2026-08-31, when the architect gave Synchronize
 // BARE BACKSLASH — a spelling the product bound nowhere, so the render family
 // keeps Ctrl+Alt+Shift+R exactly as his 2026-08-27 refusal intended. ITS ROW IS
 // STILL THE ONE THAT DOES NOT DISPATCH ITS KEY: the release calls
@@ -3717,8 +3725,9 @@ struct CommandPopupItem {
 // in its own body the gates a chord would have met, and the key reaches the
 // same body from on_key — two roads to one act (the shape's record is at
 // GuiPopupAct).
-// ALL THREE ROWS RUN IN THE `h` HISTORY VIEW (architect 2026-08-29, "admit
-// both"): Ctrl+Q always did, Ctrl+O joined the mode's allowlist that day, and
+// EVERY ROW RUNS IN THE `h` HISTORY VIEW (architect 2026-08-29, "admit
+// both"): Ctrl+Q always did, Ctrl+O joined the mode's allowlist that day
+// (Ctrl+Alt+O beside it at its landing, 2026-09-13), and
 // the Synchronize act has carried no history-mode refusal since the same
 // ruling — its bare `\` joining that allowlist beside the other two on
 // 2026-08-31, so the row and its chord answer the view alike. The menu has no
@@ -3732,8 +3741,8 @@ struct CommandPopupItem {
 // term survive on the command tables that remain — this one and Edit's five
 // rows (Help's one stood 2026-09-03..09) — so nothing about it is
 // producer-less. The crop's spelling
-// convention is "modifiers spelled out with `+`", which "Ctrl+Q" and "Ctrl+O"
-// both are; the convention's OTHER half — a bare letter written UPPERCASE — had
+// convention is "modifiers spelled out with `+`", which "Ctrl+Q", "Ctrl+O" and
+// "Ctrl+Alt+O" all are; the convention's OTHER half — a bare letter written UPPERCASE — had
 // its only rows in the deleted ITERATIONS table ("M", "I", whose spelling the
 // two icon-row tooltips carry now) and is the PRODUCT'S spelling since
 // 2026-09-01, stated once at spell_chord's head (gui_input.h) and followed by
@@ -3765,6 +3774,7 @@ struct CommandPopupItem {
 // predicate back, not a grey bolted onto a caller.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
     {"Open Project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
+    {"Revert",       "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
     // The `key` field stays 0 on this row and is never read: the release
     // forks on `act` above the chord composition and calls the act itself
     // (the record is at GuiPopupAct). Its chord, bare `\`, lives on the
@@ -3879,7 +3889,7 @@ inline constexpr int kEditPopupItemCount =
 // the chord (is_av_sync_stats_key, toggle_av_sync_stats) and the Play renders
 // button's shift-click or long press (redesign_button_shift_admits). NOT ONE
 // ACT WAS REMOVED; the menu row is File / Edit / Settings, Settings its last
-// anchor again, and the accelerator column's producers are File's three rows
+// anchor again, and the accelerator column's producers are File's four rows
 // and Edit's five.)
 
 // (THE NAVIGATION DROPDOWN'S ITEMS ARE DELETED — architect 2026-08-15. From
@@ -4231,6 +4241,14 @@ enum class DialogTrigger {
     // confirm_load_in_place / cancel_load_in_place, input_key_dispatch.cpp),
     // which the prompt reaches through its input-handler back-pointer.
     LOAD_IN_PLACE_CONFIRM,
+    // FILE → REVERT'S CONFIRMATION (architect 2026-09-13): "Discard unsaved
+    // changes and reload?", OK / Cancel, raised only over a DIRTY session by
+    // GuiPrompt::request_close on the Revert target (a clean session reverts
+    // with no question). OK completes the close as a reopen of the project
+    // already open; Cancel leaves the session standing. Raised with CANCEL
+    // focused, the destructive shape (PromptInitialFocus): OK discards the
+    // unsaved changes and the undo history with no undo of its own.
+    REVERT_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -4277,13 +4295,14 @@ enum class DialogTrigger {
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. All FIVE present() sites
-//        put '\x1b' last (re-grepped 2026-08-30, the error notice's own raise
-//        retired with the kind): the unsaved-work prompt (Save / Discard /
+//        by construction rather than by convention. All SIX present() sites
+//        put '\x1b' last (re-grepped 2026-09-13, the revert confirmation
+//        joining): the unsaved-work prompt (Save / Discard /
 //        CANCEL), its save-failed restatement (Retry / Discard / CANCEL), the
-//        paste confirmation (Yes / CANCEL) and THE LOAD CONFIRMATION'S TWO
+//        paste confirmation (Yes / CANCEL), THE LOAD CONFIRMATION'S TWO
 //        RAISERS (OK / CANCEL — one prompt body, two subjects: the render
-//        player's highlighted entry and the `h` view's viewed walk member). So
+//        player's highlighted entry and the `h` view's viewed walk member) and
+//        the revert confirmation (OK / CANCEL). So
 //        the key that answers without asking answers the way Esc already does,
 //        and no destructive response is ever one Enter away.
 //   (ii) THE PAINTED GATE below already consumes every key until the prompt
@@ -4340,7 +4359,9 @@ enum class DialogTrigger {
 // which one; the BUTTON ORDER is untouched by either value, so Cancel stays
 // LAST on every prompt and fact (i)'s derivation holds whichever is chosen.
 //   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
-//                 every raise whose Enter must not commit anything.
+//                 every raise whose Enter must not commit anything — the
+//                 revert confirmation among them, whose OK discards unsaved
+//                 work and the undo history with no undo of its own.
 //   FirstButton — THE LOAD CONFIRMATION alone, on both its subjects (the
 //                 player's render entry and the `h` view's walk member): its
 //                 OK is not a destructive answer — the load lands one undo
@@ -4368,13 +4389,13 @@ struct PromptState {
     // one assignment site.
     PromptInitialFocus       initial_focus = PromptInitialFocus::LastButton;
 
-    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — FIVE call sites
-    // (re-grepped 2026-08-30: the unsaved-work prompt, the
-    // paste confirmation, and the LOAD CONFIRMATION at BOTH its subjects'
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — SIX call sites
+    // (re-grepped 2026-09-13: the unsaved-work prompt, the
+    // paste confirmation, the LOAD CONFIRMATION at BOTH its subjects'
     // raisers since 2026-08-29 — the render player's entry and the `h`
     // view's viewed walk member, one prompt body forked at
-    // confirm_load_in_place; the error notice's raise retired with the kind
-    // on 2026-08-30) and the
+    // confirm_load_in_place — and the REVERT CONFIRMATION since 2026-09-13;
+    // the error notice's raise retired with the kind on 2026-08-30) and the
     // save-failed rung's in-place restatement, which is a raise as far as
     // this bit is concerned (a new question the user has not seen). Structural
     // rather than disciplinary: `painted` cannot be left true by a site that
@@ -5183,8 +5204,9 @@ struct AppState {
     // string for the picker's "already open" no-op and its opening highlight
     // to hold. ONE PRODUCER, GuiFileLoader::load_file, which is handed the
     // resolved project and assigns it here beside the window title; nothing
-    // else writes it. THREE READERS, re-derived by grep: the OPEN PROJECT
-    // PICKER (its "already open" no-op and the row its band opens on), the
+    // else writes it. FOUR READERS, re-derived by grep: the OPEN PROJECT
+    // PICKER (its "already open" no-op and the row its band opens on), FILE →
+    // REVERT (GuiInputHandler::revert_project, which reopens this name), the
     // EXTERNAL-SYNC job, which names the mirror's folder on the volume with
     // it, and the RENDER PLAYER's media push, where it is the head unit's
     // ALBUM — the console's dim top line, the folder riding ARTIST below it —
@@ -5192,9 +5214,11 @@ struct AppState {
     // (GuiRenderPlayer::publish_media_state).
     std::string project_name;
 
-    // THE REOPEN REQUEST: the project NAME the Open project picker chose, set
-    // by its open act once the folder has passed validity and the strict
-    // sidecar dry-run, and read by gui_main's loop after run() returns — a non-empty
+    // THE REOPEN REQUEST: the project NAME to reopen, set once the folder has
+    // passed validity and the strict sidecar dry-run by its TWO writers — the
+    // Open project picker's open act (the chosen project) and File → Revert
+    // (the project already open, GuiInputHandler::revert_project) — and read
+    // by gui_main's loop after run() returns — a non-empty
     // name with no exit requested is a reopen, and the loop builds the next
     // object set around that project (the loop contract, main.cpp). Empty
     // until then; it dies with this AppState, which is exactly when it has
@@ -13176,8 +13200,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // chord the allowlist does not name — and Settings' case for the hours that
 // row had no chord at all.) That is the criterion working rather than a
 // carve-out. FILE is LIVE
-// (2026-08-13): its three rows — Ctrl+Q, Ctrl+O and, since 2026-08-31, bare
-// `\` — are all on the allowlist, so its menu opens onto three working rows.
+// (2026-08-13): its four rows — Ctrl+O, Ctrl+Alt+O (Revert, 2026-09-13),
+// bare `\` (since 2026-08-31) and Ctrl+Q — are all on the allowlist, so its
+// menu opens onto four working rows.
 //
 // THE FOLDER OVERLAY TAKES THE SAME PARTITION AS THE `h` VIEW — FILE LIVE,
 // THE OTHER THREE DEAD (architect 2026-09-03 evening, at his first look at the
@@ -13195,14 +13220,14 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b);
 // row 1's foot, File was lit under it; and while the band ran to the window's
 // top the roster was unseen and this owner carried no overlay term at all.)
 //
-// THE CRITERION HOLDS UNDER THE BAND WITHOUT AN EXCEPTION: File's three rows
-// are Ctrl+O, bare `\` and Ctrl+Q, and under all three contents Quit falls
-// through every router to the ordinary close road and Synchronize's row calls
-// its own gated body directly, so the menu opens onto working rows. Open
-// Project is the one row the routers consume in silence there (the
-// unbound-keys ruling, each router's catch-all) — one row of three, which is
-// not "every row would open onto nothing" and so not a reason to kill the
-// anchor. The other two die under the band for their `h`-view reasons said
+// THE CRITERION HOLDS UNDER THE BAND WITHOUT AN EXCEPTION: File's four rows
+// are Ctrl+O, Ctrl+Alt+O, bare `\` and Ctrl+Q, and under all three contents
+// Quit falls through every router to the ordinary close road and
+// Synchronize's row calls its own gated body directly, so the menu opens onto
+// working rows. Open Project and Revert are the two rows the routers consume
+// in silence there (the unbound-keys ruling, each router's catch-all) — two
+// rows of four, which is not "every row would open onto nothing" and so not a
+// reason to kill the anchor. The other two die under the band for their `h`-view reasons said
 // once above: Settings is a direct call its act refuses under a modal, and
 // Edit's rows are chords every router drops.
 //

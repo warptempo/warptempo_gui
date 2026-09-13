@@ -305,6 +305,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // to protect. Ctrl-exact, through the shared predicate the dispatch arm
     // reads, so the key and this gate cannot drift.
     const bool is_open_project = is_open_project_key(key, mods);
+    // FILE → REVERT, Ctrl+Alt+O (architect 2026-09-13), admitted on Open's own
+    // standard: the act reopens this project from disk, discarding the
+    // session rather than writing into it, so there is no marker and no engine
+    // setting on disk for the lock to protect. Ctrl+alt-exact through the
+    // shared predicate the dispatch arm reads. THE ITERATION LOCK INHERITS
+    // THE ADMISSION (iteration_lock_key_blocked falls through to this list),
+    // exactly as it inherits Ctrl+O's: the reopen wipes the session's
+    // brackets with every other per-project posture, the same thing Ctrl+O's
+    // reopen does.
+    const bool is_revert_project = is_revert_project_key(key, mods);
     // SYNCHRONIZE TO EXTERNAL STORAGE, bare `\` since 2026-08-31. It is
     // admitted on the header's own standard and was already read-only-legal
     // through its menu row, which carries no gate of this kind: the act
@@ -610,7 +620,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
     // 2026-08-07 — see is_trim_region_toggle above.
-    return !(is_o || is_open_project || is_sync_external ||
+    return !(is_o || is_open_project || is_revert_project || is_sync_external ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
              is_home_end || is_page_updown ||
@@ -2600,8 +2610,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // the settings editor by a direct call and so have no gate of their own), and
 // this predicate is what admits File's Ctrl+Q — and, since 2026-08-29, its
 // Ctrl+O — in there. THE FILE MENU HAS NO DEAD ROW IN THE VIEW as of that day
-// (architect, "admit both"): Open project rides this admission, Quit always
-// did, and Synchronize's act carries no history-mode refusal at all — its own
+// (architect, "admit both"): Open project rides this admission, Revert beside
+// it since 2026-09-13, Quit always did, and Synchronize's act carries no history-mode refusal at all — its own
 // bare `\` riding this admission too since 2026-08-31, so the row and its
 // chord answer the view alike.
 // (It admitted the deleted Navigation menu's zoom, zoom-out and overview rows
@@ -2800,6 +2810,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // derived partition: with Quit, Open and — since 2026-08-31 — Synchronize
     // all admitted, every row of that menu is live in the view.
     const bool is_open_project = is_open_project_key(key, mods);
+    // FILE → REVERT IS ADMITTED BESIDE IT (Ctrl+Alt+O, architect 2026-09-13,
+    // the planner's default): the same act on the session as a whole aimed at
+    // the project already open, so Open's reasoning is its reasoning — a
+    // reopen tears this view down as Ctrl+Q's exit does — and the File menu
+    // keeps no dead row in the view.
+    const bool is_revert_project = is_revert_project_key(key, mods);
     // SYNCHRONIZE IS ADMITTED TOO, bare `\` since 2026-08-31, and it needs no
     // argument of its own: the ACT has run in the view since 2026-08-29
     // (architect, "admit both") through the File menu's row, whose road meets
@@ -2852,7 +2868,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
-             is_save || is_ctrl_q || is_open_project || is_sync_external);
+             is_save || is_ctrl_q || is_open_project || is_revert_project ||
+             is_sync_external);
 }
 
 // -- THE COMMIT ACT'S GUI HALF ----------------------------------------------
@@ -6524,7 +6541,7 @@ void GuiInputHandler::open_project_picker() {
         return;
     }
     // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
-    // "admit both": the File menu's three rows are all live in the view now,
+    // "admit both": the File menu's rows are all live in the view now,
     // and Ctrl+O joined the mode's allowlist beside Ctrl+Q with it. The
     // premise was that "a reopen would tear the view down from under itself",
     // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
@@ -6740,6 +6757,53 @@ void GuiInputHandler::open_project_commit(int index) {
     prompt.request_close(GuiCloseTarget::Reopen);
 }
 
+// FILE → REVERT (the contract is at the declaration, input_handler.h). THE
+// PICKER'S SAME-PROJECT NO-OP IS NOT ON THIS ROAD: that arm lives inside
+// open_project_commit, and this act never passes through the picker — it seats
+// the open project's own name for gui_main's loop and asks the close road with
+// the REVERT target, whose only difference from REOPEN is the question a dirty
+// session is asked (GuiPrompt::request_close).
+void GuiInputHandler::revert_project() {
+    auto refuse = [&](const GuiFailure& failure) {
+        std::fprintf(stderr, "warptempo_gui: Revert refused: %s\n",
+                     failure.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure.display);
+    };
+    // NOT WHILE A CHECKPOINT IS PUBLISHING, open_project_commit's own refusal
+    // for its own reason: the reopen's teardown joins the commit worker after
+    // forgetting its completion fd, so the verdict the user is owed would go
+    // to stderr alone.
+    if (app.history_checkpoint_in_flight) {
+        refuse(plain_failure(kCheckpointPublishing));
+        return;
+    }
+    // A LOAD THAT FAILS NEVER REACHES A REOPEN (the loop's contract, main.cpp):
+    // the folder is asked of the project model and the strict dry run before
+    // anything is torn down, exactly as the picker's commit asks them, so a
+    // sidecar changed on disk under the session refuses here with the session
+    // still standing rather than ending the process in the loop.
+    const std::filesystem::path folder =
+        std::filesystem::path(app.device_config->projects_path) /
+        app.project_name;
+    auto project = resolve_project(folder);
+    if (!project) {
+        refuse(plain_failure(project.error()));
+        return;
+    }
+    if (auto failure = source_load_dry_run(project->source)) {
+        refuse(*failure);
+        return;
+    }
+    // THE REOPEN, named on the project that is open. The prompt's Cancel
+    // leaves the seated name behind harmlessly, as the picker's does: the loop
+    // reads it only after run() returns, and run() returns for a reopen only
+    // through this request's own completion. A running synchronization refuses
+    // at the close road's head, with its card, before anything closes.
+    app.reopen_project = project->name;
+    prompt.request_close(GuiCloseTarget::Revert);
+}
+
 // THE `h` VIEW'S LOAD IN PLACE — bare `'` there, and its road alone (architect
 // 2026-08-28: "we can keep the single quote for load in place because that
 // still works in the history view"). IT ACTS ON THE VIEWED MEMBER WITH NO LIST
@@ -6884,7 +6948,8 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // evening. THE SET STAYS ONE: Synchronize's row calls its own gated body
     // and never this router, and Ctrl+O — the Open Project row's chord, which
     // is this very picker — is consumed by the catch-all below, the mode
-    // answering about itself in silence. (Bare `\` was a second fall-through
+    // answering about itself in silence; Ctrl+Alt+O, the Revert row's chord,
+    // dies there the same way, exactly as Open's does. (Bare `\` was a second fall-through
     // for the one day of 2026-09-02, when every row had to be its chord.)
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
@@ -7204,8 +7269,8 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     // here. It is the File menu's Quit row too since 2026-09-03 evening, that
     // anchor being live above the band on this content as on the other two;
     // nothing else needs a fall-through, Synchronize's row calling its own
-    // gated body and Ctrl+O dying in the catch-all's silence (the picker's own
-    // record of that reasoning is one router up).
+    // gated body and Ctrl+O and Ctrl+Alt+O dying in the catch-all's silence
+    // (the picker's own record of that reasoning is one router up).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
 
     // Shift+L closes, the opener's own chord answering in here exactly as bare
@@ -8175,9 +8240,9 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     // evening, and on the TABLET it is the player's first quit road of any
     // kind — there is no keyboard there and the row is now reachable.
     // THE SET STAYS TWO: bare `\` needs no fall-through, Synchronize's row
-    // calling its own gated body directly, and Ctrl+O is the one File row
-    // this router answers with the catch-all's silence — a chord bound
-    // outside the mode and meaning nothing inside it, the unbound-keys
+    // calling its own gated body directly, and Ctrl+O and Ctrl+Alt+O are the
+    // two File rows this router answers with the catch-all's silence — chords
+    // bound outside the mode and meaning nothing inside it, the unbound-keys
     // ruling. (Both were fall-throughs for the one day of 2026-09-02, when
     // every row had to be its chord here.)
     if (ctrl && !shift && !alt && key == GuiKeys::S) return false;

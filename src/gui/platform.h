@@ -11,7 +11,8 @@
 // and tears the set down when run() returns. run() RETURNS FOR TWO REASONS —
 // an EXIT (request_exit, or the backend's own connection-loss and
 // activity-destroyed ends; exit_requested() reads true afterwards and the
-// loop leaves) and a RUN STOP (request_run_stop — the Open project picker's reopen;
+// loop leaves) and a RUN STOP (request_run_stop — a reopen: the Open project
+// picker's, or File → Revert's on the project already open;
 // the window and the input core stand, and the next iteration's run() picks
 // them up as they are). Both backends implement the pair identically:
 // should_exit_ is process-scoped and never reset, run_stop_requested_ is

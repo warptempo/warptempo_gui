@@ -294,12 +294,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // at route_render_player_key), and only Ctrl+S and Ctrl+Q fall through to
     // the ordinary dispatch — Ctrl+S to the save, which touches no transport,
     // and Ctrl+Q with the player already closed, so the quit road runs on the
-    // ordinary state. THE FILE MENU'S THREE ROWS AGREE WITH THAT SET, which
+    // ordinary state. THE FILE MENU'S FOUR ROWS AGREE WITH THAT SET, which
     // is why it needs no more of them: Quit rides the Ctrl+Q fall-through,
     // Synchronize's row calls its own gated body directly (the recorded
-    // exception at GuiPopupAct) and Open Project dispatches Ctrl+O, which the
-    // catch-all consumes in silence — one row of three doing nothing, which
-    // is not the "opens onto nothing" the anchor's own gate kills a menu for.
+    // exception at GuiPopupAct), and Open Project and Revert dispatch Ctrl+O
+    // and Ctrl+Alt+O, which the catch-all consumes in silence — two rows of
+    // four doing nothing, which is not the "opens onto nothing" the anchor's
+    // own gate kills a menu for.
     // (Ctrl+O and bare `\` fell through for the one day of 2026-09-02, when
     // the rows had to agree with their chords; the direct-call row and the
     // silence rule make that unnecessary now.) No editor and no
@@ -1390,6 +1391,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // picker once.
     if (is_open_project_key(key, mods)) {
         open_project_picker();
+        return;
+    }
+
+    // CTRL+ALT+O — FILE → REVERT (architect 2026-09-13): reopen the CURRENT
+    // project from disk, discarding unsaved changes and the undo history. It
+    // sits beside Open and Quit for the same reason they sit together — the
+    // acts on the session as a whole — and the placement is otherwise free on
+    // the same terms as Open's: every state that must refuse it refuses it
+    // ABOVE this line (a standing prompt, the three list owners' routers, which
+    // consume it in silence as they consume Ctrl+O, an open dropdown, the
+    // loading gate, the editor text drag, any keyboard-modal editor) or inside
+    // the act's own body. The `h` view and both locks ADMIT it (their
+    // allowlists name the shared predicate). Ctrl+alt-exact through that
+    // predicate (is_revert_project_key, gui_input.h); not repeat-eligible.
+    if (is_revert_project_key(key, mods)) {
+        revert_project();
         return;
     }
 
@@ -3286,7 +3303,7 @@ void GuiInputHandler::run_span_framing_command() {
 // half and moved the pan onto the bare form — and it is back on alt now that
 // the bare form is the magnification, which restores the Reaper spelling the
 // architect named that day. Alt's ONE pointer binding, its keyboard half still
-// the five Ctrl+Alt chords (conventions.md).
+// the six Ctrl+Alt chords (conventions.md).
 //
 // CTRL+WHEEL IS THE ZOOM STEP (architect-ruled 2026-08-12, later the same day's
 // field session; untouched by the 2026-08-27 relocation, which is what makes
