@@ -53,7 +53,9 @@ struct GuiTargetRender;
 // `0` had been out and back, and while the state stands the level follows
 // whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
-// Tab family, which recenters on its stop, changes no zoom at all. Smaller
+// Tab family, which recenters on its stop, changes no zoom at the working
+// zoom or coarser and snaps a finer level up to working
+// (Viewport::snap_zoom_to_working_if_finer). Smaller
 // level = less file per window = more zoomed in. kMinZoom is
 // the deepest zoom-in the manual walk can reach (1.2 s); kWorkingZoomLevel is
 // the fine-tuning rest point the snap gestures land on (2.4 s, one
@@ -11940,7 +11942,8 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
 // includes the bound cells"). `marker` is -1 when the step would land nothing,
 // which is the whole refusal test; `same_marker` says the step never left the
 // seat it started on — an ADDRESSED-CELL write and nothing else, no select, no
-// playhead land, no framing.
+// playhead land, no framing (the working-zoom snap every acting step takes
+// from a finer level is the act's, cycle_marker_focus, and not this answer's).
 //
 // THE RANK IS THE PAINTED ORDER, purple only: payload < lower < upper. The
 // MEASURE box sits past upper and is NEVER A STOP — it is blue, it carries no

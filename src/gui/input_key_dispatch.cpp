@@ -1829,6 +1829,14 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
         there = here - 1;
     }
     playback_lifecycle.stop_playback_if_playing();
+    // A FINER ZOOM SNAPS UP TO WORKING first, the live walk's own snap
+    // (architect 2026-09-13; Viewport::snap_zoom_to_working_if_finer carries
+    // the ruling and the inventory): past every wall and the empty arm above,
+    // so a press that lands nothing moves no camera, and ahead of the focus
+    // write and the land. Each of the mode's march steps runs this body, so
+    // the march snaps once per step exactly as the live march does — the
+    // second step at the level the switch has restored for the other tab.
+    viewport.snap_zoom_to_working_if_finer();
     // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
     // shape: the set clears and the focus alone stands, which is the plain
     // click's rest too. Ordered so the clearer cannot undo the focus it
@@ -1843,14 +1851,11 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
         app, audio, viewport,
         app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
     // THE HISTORY WALK RECENTERS AT THE CURRENT ZOOM, follow mode not gating
-    // it, reading the flag it just landed on. The working-zoom snap both
-    // families carried for one commit is REVERTED for this walk (architect
-    // 2026-08-05, "no zoom on Tab", same day it landed) — a walk must not
-    // re-frame the view under the reader, in here least of all, where the
-    // whole delta is what is being read. THE ONE RECORDED ASYMMETRY: the LIVE
-    // walk keeps that revert only at the working zoom or coarser, and snaps a
-    // strictly finer level up to working first (architect 2026-09-13,
-    // Viewport::snap_zoom_to_working_if_finer); this walk takes no snap.
+    // it, reading the flag it just landed on — THE LIVE FAMILY'S LANDING,
+    // MIRRORED. The zoom is the live walk's too: untouched at the working zoom
+    // or coarser (architect 2026-08-05, "no zoom on Tab" — a walk must not
+    // re-frame the view under the reader), and a strictly finer level already
+    // taken up to working by the snap above (architect 2026-09-13).
     viewport.center_viewport_on_playhead();
     // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
     // above either returned or picked a different index), so the full-window
@@ -2174,7 +2179,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // ONE index over one diff-flag list (the two tabs share both marker
         // stores, so the list is the same on either side), and each step lands
         // THE THEN-ACTIVE TAB's playhead and recenters THAT tab's viewport at
-        // its own zoom. So the leaving tab is parked on one flag and the
+        // its own zoom (snapped up to working first where that zoom is finer,
+        // inside the cycle — one snap per step, the live march's shape). So
+        // the leaving tab is parked on one flag and the
         // arriving tab on the next, each in its own window — which is what
         // makes a march a march.
         //

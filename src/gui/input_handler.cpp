@@ -1712,7 +1712,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // DIVERGES from this (run_span_framing_command — it zooms to the
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
     // gesture — `0` reaches it only from full out, and by calling it — while
-    // the Tab family changes no zoom at all (2026-08-05), so `0` is
+    // the Tab family changes no zoom at the working zoom or coarser
+    // (2026-08-05; a finer level snaps up to working, 2026-09-13), so `0` is
     // the one command that reaches the whole song. DIGITS 1, 2
     // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
     // beside bare `t`, the axis handler they compose); 4..9 are unbound.
@@ -2566,7 +2567,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // reason. `frame` GOVERNS
     // MARKER-TO-MARKER STEPS ALONE for the same reason: there is no new marker
     // to frame, and a recentre here would move the camera under a user reading
-    // the cell he just stepped onto.
+    // the cell he just stepped onto (the working-zoom snap below is the one
+    // camera write a cell step can make, and only from a finer level).
     //
     // THE COLLAPSE IS WHAT KEEPS A BOUND AXIS SINGLETON, which every road onto
     // one now does (the plain cell press and the bound editor's open both
@@ -2579,19 +2581,25 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // axis write for the family's own reason: the seat resets the axis to the
     // payload (Selection::seat_focus), so the cell is written behind it, as
     // the marker press and the two cell editors' opens write theirs.
+    //
+    // EVERY STEP THAT ACTS SNAPS A FINER ZOOM UP TO WORKING first, THE CELL
+    // STEP INCLUDED (architect 2026-09-13; Viewport::snap_zoom_to_working_if_-
+    // finer carries the ruling and the inventory): past the wall above, so a
+    // press with nothing ahead moves no camera, and ahead of both the cell
+    // step's collapse and the marker step's select. The zoom centres on the
+    // resting cursor — on a cell step the cursor already sits on the seat, so
+    // the cell stays in view; that recentre is the snap's, not a framing of
+    // the cell, and at the working zoom or coarser nothing moves. The framing
+    // the bare arms handed in was asked at the finer level and is Center
+    // there, which is what marker_walk_frame answers at working too; the march
+    // states Center at both of its steps anyway.
+    viewport.snap_zoom_to_working_if_finer();
+
     if (step.same_marker) {
         selection.set_single_selection(step.marker);
         write_addressed_cell(step.cell);
         return;
     }
-
-    // A MARKER-TO-MARKER STEP SNAPS A FINER ZOOM UP TO WORKING first
-    // (Viewport::snap_zoom_to_working_if_finer, which carries the ruling and
-    // the inventory): past the wall and the cell step above, ahead of the
-    // select. The framing the bare arms handed in was asked at the finer level
-    // and is Center there, which is what marker_walk_frame answers at working
-    // too; the march states Center at both of its steps anyway.
-    viewport.snap_zoom_to_working_if_finer();
 
     // The marker step. Selection::cycle_selection asks marker_walk_landing
     // again on the way through, which is the same landing this step carries:
@@ -2616,6 +2624,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // what separates the two commands: `c` sets the working level whatever
     // the level was, a Tab walk keeps the level the user is reading at unless
     // it is FINER than working, which the snap above takes up to working.
+    // (The `h` view's diff-flag walk takes the same snap at the same place in
+    // its own body — GuiInputHandler::cycle_history_diff_flag_focus.)
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.

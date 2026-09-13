@@ -2654,8 +2654,9 @@ private:
     // working zoom or coarser the zoom is untouched (architect 2026-08-05, "no
     // zoom on Tab", reverting the same-day working-zoom landing this carried
     // for one commit); a level strictly finer than working snaps up to working
-    // ahead of a step that lands (architect 2026-09-13,
-    // Viewport::snap_zoom_to_working_if_finer). `c` remains the direct route to
+    // ahead of every step that acts, a grid-iterations cell step included
+    // (architect 2026-09-13, Viewport::snap_zoom_to_working_if_finer). `c`
+    // remains the direct route to
     // kWorkingZoomLevel from any level, and `0`'s second arm reaches it through
     // `c` when its tab has stamped no return level. A step that focuses
     // nothing does nothing at all.
@@ -2673,15 +2674,16 @@ private:
     // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
-    // this rule, over its own list (handle_history_mode_key).
+    // this rule, over its own list (handle_history_mode_key), the working-zoom
+    // snap included.
     //
     // THE STEP'S UNIT IS A CELL WHILE GRID ITERATIONS IS LIT (architect
     // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
     // seat's purple boxes in painted order, then the next marker — and this
     // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
-    // and damages the marker lane, and does NOTHING else: no select, no
-    // playhead land, no framing, so `frame` governs marker-to-marker steps
-    // alone. A marker step runs the
+    // and damages the marker lane, and does NOTHING else but the working-zoom
+    // snap above: no select, no playhead land, no framing, so `frame` governs
+    // marker-to-marker steps alone. A marker step runs the
     // gate, the select and the jump as it always has and then seats the step's
     // cell behind them. THE MARCH MEETS NO CELL AT ALL: it is refused while
     // grid iterations is lit (the lock's keyboard gate), so its two calls are

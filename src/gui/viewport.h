@@ -304,7 +304,8 @@ struct Viewport {
     // THE SNAP BACK UP TO THE WORKING ZOOM (architect 2026-09-13): levels finer
     // than kWorkingZoomLevel exist for the zoom gesture's feel, not for
     // authoring — the working zoom is where the horizontal nudge lattice is
-    // the reproducible one — so three acts, when the active tab's level is
+    // the reproducible one — so the walk and the two nudges, when the active
+    // tab's level is
     // STRICTLY finer than working, set the working zoom first and then run as
     // they always have. At the working zoom or coarser this is a no-op and
     // nothing about those acts changes. The write is the ORDINARY discrete
@@ -318,8 +319,13 @@ struct Viewport {
     // do (no repeat-bit gate). THE CALLERS, the one inventory:
     //   * GuiInputHandler::cycle_marker_focus — the bare Tab walk (Tab,
     //     Shift+Tab, IsoLeftTab) and each of the Ctrl+Shift+Tab paired march's
-    //     two steps, past the walk's wall and its same-marker cell step (a cell
-    //     step lands nothing and does not snap);
+    //     two steps, past the walk's wall and ahead of both of its arms — the
+    //     grid-iterations same-marker cell step snaps as a marker step does;
+    //   * GuiInputHandler::cycle_history_diff_flag_focus
+    //     (input_key_dispatch.cpp) — the `h` view's own Tab walk and each of
+    //     its Ctrl+Shift+Tab march's two steps, past the walk's walls and its
+    //     empty-list arm, behind the stop and ahead of the focus write and the
+    //     land;
     //   * position_nudge_prologue (position_nudge.cpp) — the marker nudge on
     //     both columns (GuiWarpMarkersOps::nudge_selected_markers,
     //     GuiPhaseResetMarkersOps::nudge_selected_phase_resets) at every
