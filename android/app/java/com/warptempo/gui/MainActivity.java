@@ -127,12 +127,13 @@ import java.nio.charset.StandardCharsets;
  * session in onCreate (on the UI thread, so its callbacks land there) and
  * releases it in onDestroy; it is ACTIVE ONLY WHILE THE RENDER PLAYER STANDS,
  * which the native side says through mediaState(...). EACH CALLBACK IS ONE
- * INTEGER DOWN through nativeMediaCommand -- the native side queues it and
- * wakes its own loop, then turns it into the player's OWN KEYS (Space,
- * Home / End, Left / Right), so every car button is a chord the player
- * already binds and there is no second dispatch road. (Previous / Next
- * synthesized Page Up / Page Down until 2026-08-31, when the row's two skips
- * were remapped onto Home and End.) onMediaButtonEvent IS
+ * INTEGER DOWN through nativeMediaCommand -- the native side queues it, wakes
+ * its own loop and ACTS ON IT DIRECTLY, THE CAR BEING AN INTERFACE OF ITS OWN
+ * (architect 2026-09-12): the wheel's three buttons are the player's own three
+ * acts -- a toggle between the item and silence, and a playlist walk with an
+ * up-a-folder exit -- and no key is synthesized. (Each command pressed one of
+ * the player's keys until that day: Space, Home / End, Left / Right, and
+ * Page Up / Page Down for the skips before 2026-08-31.) onMediaButtonEvent IS
  * OVERRIDDEN and the keycodes are mapped here, at once, rather than left to
  * the framework's default (the reasons are at the override). Audio focus is
  * REQUESTED when a push says playing and none is held and ABANDONED when a
@@ -367,13 +368,21 @@ public class MainActivity extends NativeActivity {
     // head unit's own clock from `positionMs` at speed 1.0, which is what the
     // (state, position, speed) triple means. Metadata: TITLE is the wav's
     // spelling with its folder, ARTIST and ALBUM are the project's name,
-    // DURATION the item's length. State: STOPPED EXACTLY AT THE INACTIVE
-    // PUSH; a standing player is PLAYING or PAUSED and NEVER STOPPED, its
-    // title never empty -- with nothing bound the native side sends a PAUSED
-    // PLACEHOLDER naming the highlighted row, because a head unit handed a
-    // stopped session falls back to what it can see, an A2DP stream still
-    // carrying silence, and shows that as playing (the rule is at
-    // GuiRenderPlayer::publish_media_state). setActive follows the player's
+    // DURATION the item's length WHEN THERE IS ONE.
+    //
+    // THE STATE IS A DUMMY AND SAYS PLAYING WHENEVER THE PLAYER STANDS
+    // (architect 2026-09-12, from the car): `active` is the whole fork --
+    // inactive is STOPPED, anything else is PLAYING at speed 1.0 -- because a
+    // console reads the still-streaming Bluetooth link as playing and
+    // OVERRIDES a session that says PAUSED, so its PAUSE stuck every time. The
+    // session tells it what it already believes and its one button becomes a
+    // plain toggle. `playing` is the TRUE transport bit and is read HERE FOR
+    // THE AUDIO FOCUS ALONE. A DURATION OF 0 OR LESS PUTS NO DURATION KEY AT
+    // ALL, which is Android's "unknown": with nothing sounding the native side
+    // sends a SILENCE TRACK naming the highlighted row at position 0 with the
+    // duration unknown, so the console counts up from zero with no length to
+    // run into (the rule is at GuiRenderPlayer::publish_media_state).
+    // setActive follows the player's
     // open and close. Every setter here is a binder call and is callable from
     // any attached thread; the lock is against onDestroy's release on the UI
     // thread. Focus: requested when a push says playing and none is held;
@@ -386,26 +395,20 @@ public class MainActivity extends NativeActivity {
         final MediaMetadata.Builder meta = new MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, title)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, artist)
-                .putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs);
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, artist);
+        if (durationMs > 0) {
+            meta.putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs);
+        }
         session.setMetadata(meta.build());
 
-        final int state;
-        if (!active) {
-            state = PlaybackState.STATE_STOPPED;
-        } else if (playing) {
-            state = PlaybackState.STATE_PLAYING;
-        } else {
-            state = PlaybackState.STATE_PAUSED;
-        }
+        final int state = active ? PlaybackState.STATE_PLAYING
+                                 : PlaybackState.STATE_STOPPED;
         // THE SPEED IS THE RATE OF PLAYBACK, not a constant: a controller
         // EXTRAPOLATES the position from `positionMs` at this speed and the
-        // moment of this push, so 1.0 while paused or stopped would make the
-        // head unit's clock run on over a still transport until the next
-        // push. 1.0 for PLAYING and 0.0 for everything else is what makes the
-        // published triple true between pushes, which is the whole reason
-        // there is no per-tick push.
-        final float speed = state == PlaybackState.STATE_PLAYING ? 1.0f : 0.0f;
+        // moment of this push. The clock is meant to run whenever the player
+        // stands -- that is the dummy display's other half -- so the speed is
+        // the state's own: 1.0 while active and 0.0 at the inactive push.
+        final float speed = active ? 1.0f : 0.0f;
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(SESSION_ACTIONS)
                 .setState(state, positionMs, speed)

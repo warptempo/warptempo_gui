@@ -9,28 +9,24 @@
 // are plain values: the backend that has a MediaSession (Android) fills the
 // first from its callbacks and consumes the second into the session's
 // metadata and playback state; the backend that has none (Wayland) stores the
-// hook and never fires it, and its publish is a no-op. On the laptop the car
-// keys are simply the keyboard.
+// hook and never fires it, and its publish is a no-op. The laptop has no head
+// unit at all, so nothing on it produces one of these.
 //
-// A COMMAND IS TRANSLATED INTO THE PLAYER'S OWN KEYS, never dispatched on a
-// second key road (GuiRenderPlayer::on_media_command, render_player.h): the
-// undivided toggle, PLAY, and the skip/relative-seek buttons are chords the
-// player already binds, so THE MEDIA ROAD'S OWN PRESS LAMBDA CLEARS THE MODAL
-// RING FIRST (modal_dialog_focus, its active bit and the input core's pending
-// modal press — a car button is not a keyboard walking the modal row's ring,
-// and a bare Space or Enter on a ring-focused button is that button's press,
-// so a synthesized Space must not become one) and ONLY THEN runs the ordinary
-// on_key dispatch, so the synthesized key inherits the mode's refusals and its
-// gesture-modal swallow exactly as a key would — PLAY PRESSES SPACE since
-// 2026-09-07 (the architect, from the car: the head unit's Play IS the
-// tablet's Play button, band and all, the Accord carrying no key that could
-// walk that band). THREE FAMILIES ACT DIRECT instead of pressing anything —
-// SeekTo, whose absolute position no keysym carries; the PAUSE-SIDE Pause,
-// FocusLost and FocusLostTransient, which must reach the transport past
-// Space's highlight fork so that a claim to STOP sounding cannot start a
-// walked-to row; and Stop, which composes that same toggle with a seek to the
-// top — and a direct act touches no ring at all: it clears none and inherits
-// none of the synthesized key's road. The table at on_media_command owns each
+// A COMMAND IS THE CAR'S OWN ACT ON THE PLAYER (architect 2026-09-12, from the
+// car: "the car is a separate interface"). Every kind runs one of
+// GuiRenderPlayer's own bodies direct (on_media_command, render_player.h);
+// nothing is synthesized and nothing is dispatched. THE CAR'S VOCABULARY IS
+// THE CAR'S AND NOT THE TABLET'S KEYS: the wheel and the console carry rewind,
+// play/pause and fast-forward, the outer two arriving as Previous and Next, so
+// the one button is a TOGGLE between the item and silence and the outer two
+// are the PLAYLIST WALK — a row of the listing at a rest, a file of the
+// playing folder while live — with the up-a-folder exit on Previous alone.
+// EVERY COMMAND PRESSED ONE OF THE PLAYER'S KEYS until that day (Space, Home /
+// End, Left / Right through GuiPlatform::synthesize_key, with a stable-code
+// base of its own), and the press road CLEARED THE MODAL RING first, because a
+// synthesized Space on a ring-focused button is that button's press — Close,
+// and the player would come down. A direct act presses no button, so the road,
+// the base and the clear are all gone. The table at on_media_command owns each
 // arm's reason.
 
 struct GuiMediaCommand {
@@ -47,8 +43,10 @@ struct GuiMediaCommand {
     // would split KEYCODE_MEDIA_PLAY_PAUSE against the session's published
     // state — after holding the press for a double-tap window it turns into a
     // skip — so the sliver bypasses it and hands the undivided key down as
-    // PlayPause, which the player answers with its own Space toggle rather
-    // than with a state gate. HEADSETHOOK arrives as the same kind.
+    // PlayPause. HEADSETHOOK arrives as the same kind. THE THREE PLAY/PAUSE
+    // KINDS NOW MEAN ONE THING: the published state says PLAYING whenever the
+    // player stands, so a console sends whichever verb its own display
+    // believes and all three reach the player's one toggle.
     enum class Kind : int {
         Play              = 0,   // MEDIA_PLAY
         Pause             = 1,   // MEDIA_PAUSE
@@ -83,28 +81,42 @@ static_assert(static_cast<int>(GuiMediaCommand::Kind::FocusGained) + 1 ==
 struct GuiMediaState {
     // The session is active exactly while the render player stands (the
     // design's R7); inactive is the close's push, after which the head unit's
-    // buttons reach nothing.
+    // buttons reach nothing. SINCE 2026-09-12 IT ALSO SAYS WHAT THE STATE IS:
+    // the consuming side publishes PLAYING at speed 1.0 whenever this is true
+    // and STOPPED when it is not, with no third answer, because a console
+    // reads the still-streaming Bluetooth link as playing and OVERRIDES a
+    // session that says PAUSED — so the session tells it what it already
+    // believes and its one button becomes a plain toggle (the ruling and its
+    // reasons are at GuiRenderPlayer::publish_media_state).
     bool        session_active = false;
+    // THE TRUE TRANSPORT BIT — the player's item is sounding — and it is read
+    // on the consuming side FOR THE AUDIO FOCUS ALONE since 2026-09-12: the
+    // published state is `session_active`'s above. It is the tablet's truth,
+    // not the console's picture.
     bool        playing        = false;
     // WHAT THE TITLE NAMES, relative to the project folder and in generic
     // form: the ITEM while it sounds (`tmp/3_bpm/01.wav`), and with NOTHING
     // SOUNDING THE HIGHLIGHTED ROW — the file, or the folder with a trailing
-    // slash (`tmp/3_bpm/`), that the head unit's own Play would start — as a
-    // PAUSED PLACEHOLDER. IT IS NEVER EMPTY WHILE `session_active` IS TRUE,
-    // and that is the point rather than a tidiness: a session that says
-    // STOPPED leaves a head unit reading the Bluetooth stream instead, which
-    // is still streaming silence and shows as "playing", after which its one
-    // toggle sends the wrong direction forever. The title is empty exactly at
-    // the close's inactive push. THE PLACEHOLDER IS METADATA AND NEVER A FILE
-    // — a silent wav on disk would be listed by the player, mirrored by
-    // Synchronize and played by the auto-advance. The one function of
-    // (transport, item, highlight) is stated at
+    // slash (`tmp/3_bpm/`), that the console's own button would start. That
+    // second arm is THE SILENCE TRACK, what plays while the listener is at the
+    // top level walking folders. IT IS NEVER EMPTY WHILE `session_active` IS
+    // TRUE, and that is the point rather than a tidiness: a console handed a
+    // session with nothing in it goes back to its own idle picture. The title
+    // is empty exactly at the close's inactive push. THE SILENCE IS METADATA
+    // AND NEVER A FILE — a silent wav on disk would be listed by the player,
+    // mirrored by Synchronize and played by the auto-advance. The one function
+    // of (transport, item, highlight) is stated at
     // GuiRenderPlayer::publish_media_state and read nowhere else. The player
     // has lived inside `tmp/` since 2026-09-01, so `render/` is not a
     // spelling this carries.
     std::string title;
     // The project's name; the album is the artist on the consuming side.
     std::string artist;
+    // THE ITEM'S LENGTH IN MILLISECONDS, OR -1 FOR UNKNOWN — which is what the
+    // SILENCE TRACK sends, the consuming side putting no duration key at all
+    // for a value of 0 or less (Android's "unknown"): the state says PLAYING
+    // at speed 1.0, so a real duration would run the console's clock into a
+    // track end that never comes. The item's own arm carries its real length.
     int64_t     duration_ms    = 0;
     int64_t     position_ms    = 0;
 };

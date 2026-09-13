@@ -434,17 +434,14 @@ inline bool set_highlight(AppState& a, int index) {
 
 // THE ROW A WALK STEPS FROM: the highlight, or row 0 where the band has no
 // seat (an empty listing, or one whose rows have not been seated yet). ONE
-// OWNER, THREE READER CLASSES — move_highlight below, the step itself; the
-// player's own two walk walls (render_player_previous_actionable /
-// render_player_next_actionable, app_state.h), which answer whether that step
-// would reach anything; and the LEFT SKIP'S OWN ROW-0 FORK, which asks whether
-// the walk is at the band's first row before leaving the folder instead
-// (GuiRenderPlayer::previous's rest arm and the plan builder's
-// `previous_goes_up` hint bit — the router's bare Up arm asked it too for the
-// hours that arrow carried the skip's row-0 rule, and it is the plain walk
-// again). They must not drift: a fork or a
-// wall that measured from the raw field and a step that measures from this
-// would disagree about where a seatless band begins.
+// OWNER, TWO READERS as re-greped 2026-09-12 — move_highlight below, the step
+// itself, and THE CAR'S PREVIOUS, whose rest arm asks whether the walk is at
+// the band's first row before leaving the folder instead
+// (GuiRenderPlayer::car_previous). They must not drift: a fork that measured
+// from the raw field and a step that measures from this would disagree about
+// where a seatless band begins. (Two walk walls and a hint bit read it, and
+// the router's bare Up arm with them, for the one day on which the tablet's
+// skips walked the band too.)
 inline int walk_origin_row(const AppState& a) {
     return a.folder_overlay.highlight_row < 0 ? 0
                                               : a.folder_overlay.highlight_row;

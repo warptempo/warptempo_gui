@@ -6357,16 +6357,15 @@ struct AppState {
     // the car: "Next should always skip to the next song"), and the member
     // follows the ACT as the rule above says while the KEY stays End — the
     // button advertises End, the router binds End, and what both run is
-    // GuiRenderPlayer::next(). The name is the neighbour walk's own from
+    // GuiRenderPlayer::next_track(). The name is the neighbour walk's own from
     // before 2026-08-31, the act having come back to the row it left.
     //
-    // THE PAIR IS THE PLAYLIST'S PREVIOUS AND NEXT SINCE 2026-09-12 (architect,
-    // from the car): the two acts fork on the transport — the files while live,
-    // THE BAND at rest — and the two bodies are named for what they are,
-    // GuiRenderPlayer::previous() and ::next(). The MEMBERS keep the spellings
-    // above, which name the keys their buttons advertise (Home and End) and
-    // the live acts those keys have always run; the rename would have cost the
-    // button-to-key link the table's own rule is built on.
+    // THE PAIR IS THE TABLET'S AND THE TABLET'S ALONE (architect 2026-09-12,
+    // from the car: "the car is a separate interface"). Both acts walked the
+    // BAND at rest for the one day before that ruling — the members kept these
+    // spellings through it, naming the keys their buttons advertise — and what
+    // they run now is home() and next_track() again, the car's own Previous
+    // and Next reaching neither button.
     //
     // UP IS THE `..` ROW'S ACT, LIFTED ONTO THE ROW (architect 2026-09-01,
     // with the player's move inside `tmp/`): the listings carry no `..` row
@@ -9261,25 +9260,7 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 // the ACTS and the FACES already read — the same shape the pause bit took
 // from R6 until 2026-09-01, widened to every state a hint names:
 //   play_face       render_player_play_face above (Play/Pause's word);
-//   transport_at_rest
-//                   THE SKIPS' OWN FORK since 2026-09-12 (architect, from the
-//                   car): the pair walks the BAND at rest and skips FILES
-//                   while live, so the two hints fork on it ahead of every
-//                   other bit. It is the acts' own test — the transport not
-//                   LIVE, paused and idle alike;
-//   previous_goes_up
-//                   WOULD THE PRESS LEAVE THE FOLDER — IN EITHER TRANSPORT
-//                   STATE since 2026-09-12 (architect, from the car: "Home
-//                   should do what Home does, whether it's playing or idle"),
-//                   because the exit is the left skip's act in both. It is the
-//                   act's own fork read in the act's own terms: at rest the
-//                   band's first row, while LIVE the previous-track window with
-//                   NO file before this one — each ANDed with
-//                   render_player_up_actionable, so the hint says "Up a Folder"
-//                   exactly where the press goes up and keeps its other words
-//                   over the root, where the press is a walled walk (at rest)
-//                   or the restart (live);
-//   home_previous   render_player_home_takes_previous — the LIVE arm's own
+//   home_previous   render_player_home_takes_previous — the left skip's own
 //                   FIRST fork, the previous-track window with a file before
 //                   this one (needs the position, which is the engine's and the
 //                   device's, so the painter resolves it where it already reads
@@ -9300,11 +9281,9 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 //                   names, so the line drops there exactly as Home's does on
 //                   the second item. END'S BIT WAS ITS WALL ALONE until then,
 //                   the plain act having been a seek inside the item that
-//                   could never reach another file. BOTH COMPARES ARE
-//                   LIVE-ONLY QUESTIONS since 2026-09-12: at rest the plain
-//                   press walks the BAND and reaches no file at all, so it can
-//                   never land where the twin lands and the line stands
-//                   wherever the twin's own wall admits it.
+//                   could never reach another file. Both compares are asked in
+//                   every transport state; they were live-only questions for
+//                   the one day on which the plain pair walked the band.
 // (`end_idle` retired with that act on 2026-09-04. It was seek_to's own idle
 // refusal asked past its first — an item bound AND the transport idle — and
 // it named the plain End's dead arm under a face its shifted twin lit; a
@@ -9312,8 +9291,6 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 // rather than renaming it, the roster's own shape.)
 struct RenderPlayerHintState {
     PlayerPlayFace play_face          = PlayerPlayFace::Play;
-    bool           transport_at_rest  = false;
-    bool           previous_goes_up   = false;
     bool           home_previous      = false;
     bool           home_shift_differs = false;
     bool           end_shift_differs  = false;
@@ -9349,25 +9326,19 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // 2026-09-01: inside the item's first kPlayerPreviousThresholdMs the
         // press PLAYS THE PREVIOUS ENTRY, and the hint says so — it lived
         // under "Go to start" for one day, the recorded lie the ruling
-        // retired (the fork is previous()'s live arm, through
+        // retired (the fork is home()'s own, through
         // render_player_home_takes_previous).
-        // THE RIGHT SKIP NAMED ONE ACT IN EVERY STATE from 2026-09-04: its
-        // press was the NEXT TRACK, whose one refusal is the folder's end, and
+        // THE RIGHT SKIP NAMES ONE ACT IN EVERY STATE since 2026-09-04: its
+        // press is the NEXT TRACK, whose one refusal is the folder's end, and
         // a wall greys the button rather than renaming it — the same shape a
         // greyed Play keeps ("the grey is the message"). The state bit that
         // forked it before that went with the seek it described (the record is
-        // at RenderPlayerHintState).
-        // AND BOTH FORK ON THE TRANSPORT SINCE 2026-09-12 (architect, from the
-        // car): at rest the pair walks the BAND rather than the folder's
-        // files, so each names the row it would move to. THE LEFT ONE NAMES THE
-        // FOLDER IN EITHER STATE, ahead of every other word of its own — the
-        // up-a-folder exit is that act's in both (the ruling at previous()), so
-        // one bit answers for both arms and the state fork below is only what
-        // is left once the exit has been named. Both bits are the acts' own
-        // (RenderPlayerHintState), so no word here restates a condition.
+        // at RenderPlayerHintState). NEITHER WORD FORKS ON THE TRANSPORT: the
+        // pair named a band walk at rest, the left one saying "Up a Folder"
+        // where the press would leave the folder, for the one day of
+        // 2026-09-12 — and the walk went back to the car with the ruling that
+        // made the car an interface of its own.
         case AppState::PlayerButtonAct::Home:
-            if (s.previous_goes_up)  return "Up a Folder (Home)";
-            if (s.transport_at_rest) return "Previous Row (Home)";
             return s.home_previous ? "Previous File (Home)"
                                    : "Go to Start (Home)";
         // PLAY/PAUSE NAMES ITS FACE, and the face is render_player_play_face's
@@ -9383,8 +9354,7 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
             }
             return "Play (Space)";
         case AppState::PlayerButtonAct::NextTrack:
-            return s.transport_at_rest ? "Next Row (End)"
-                                       : "Next Track (End)";
+            return "Next Track (End)";
         // A BARE LETTER IS UPPERCASE and a named key wears Qt's own name —
         // the product's one accelerator-spelling convention, stated once at
         // spell_chord's head (gui_input.h) and followed here (architect
@@ -9447,12 +9417,9 @@ inline constexpr bool player_button_shift_admits(AppState::PlayerButtonAct act) 
 // against: on the folder's SECOND item inside the previous-track window plain
 // Home already plays the first file, and since 2026-09-04 on its
 // SECOND-TO-LAST item the plain right skip already plays the last file, the
-// next track being where that press goes now. THE COMPARES ARE LIVE-ONLY
-// TERMS since 2026-09-12: at rest the plain press walks the BAND and reaches
-// no file at all, so it cannot land where the twin lands and each line stands
-// wherever the twin's own wall admits it — which is also why the LINE may
-// stand on a button whose plain act is walled (the twin rule's own shape: the
-// face is lit for the twin). The two bits are composed at
+// next track being where that press goes now. Each compare is asked in every
+// transport state; both were live-only terms for the one day on which the
+// plain pair walked the band. The two bits are composed at
 // the plan builder from those walls and those compares
 // (RenderPlayerHintState, above). It read "the folder's first file" from
 // 2026-08-28.
@@ -9533,28 +9500,23 @@ int render_player_highlight_act_row(const AppState& a);
 // arm per act MIRRORING that act's own leading refusals, never a
 // restatement (defined in render_player.cpp beside the acts):
 //   THE TWO SKIPS mirror their own acts under the twin rule — grey iff the
-//   plain act AND the shifted twin would both change nothing — and since
-//   2026-09-12 each plain act is its own owner, the two walls below, so
-//   neither arm restates a condition:
-//     THE LEFT SKIP is render_player_previous_actionable ORed with
-//     render_player_first_in_item_folder_actionable: live it always acts, at
-//     rest it acts wherever a row above or a folder above exists, and the twin
-//     — the jump to the item folder's first wav — is what keeps the button
-//     live at the root's first row while something is paused in a folder
-//     whose first wav it is not.
-//     THE RIGHT SKIP is render_player_next_actionable ORed with
-//     render_player_last_in_item_folder_actionable: live it acts wherever the
-//     item folder has a next wav, at rest wherever the band has a next row,
-//     and the twin is what keeps it live at the band's last row with a paused
-//     item that is not its folder's last.
-//     THE OR IS LOAD-BEARING ON BOTH NOW. It was one term on each until
-//     2026-09-12, the plain acts having been position acts inside the item:
-//     the left skip carried a no-item belt, a live arm, a paused-and-not-at-
-//     frame-0 arm and the previous-track window (which collapsed into the
-//     twin's own wall, every idle rest being at frame 0 by construction), and
-//     the right skip was the next track's wall alone, the twin acting under
-//     exactly the same condition. NEITHER GREYS WITH NO ITEM ANY MORE: at rest
-//     the press is a band walk, which needs nothing bound.
+//   plain act AND the shifted twin would both change nothing:
+//     THE LEFT SKIP (home) is the act's own leading refusals — no item at
+//     all, then a LIVE transport (which always acts, the reseek re-landing
+//     the item's start), then a PAUSED one away from frame 0 — ORed with
+//     render_player_first_in_item_folder_actionable, which is BOTH the twin's
+//     wall and the previous-track window's own answer off LIVE: the position
+//     off LIVE is `resume_frame`, 0 at every idle rest by construction, so
+//     "the window" collapses into "is there a previous entry" there and no
+//     arm reads a position.
+//     THE RIGHT SKIP (next_track) is render_player_next_track_actionable and
+//     nothing else: the plain press plays the item folder's NEXT wav and the
+//     shifted twin its LAST, and each acts exactly where a next entry exists,
+//     so the OR the twin rule asks for is one term and it is the act's own
+//     owner rather than a copy of its conditions.
+//     (Both arms were the car's playlist walls for the one day of 2026-09-12,
+//     when these two acts walked the band at rest and neither greyed with no
+//     item; the walk is the CAR'S alone again and these faces are the acts'.)
 //   PLAY/PAUSE mirrors play_button_act's forks in their own order: THE
 //   HIGHLIGHT'S OWN ARM FIRST (R6 — a folder or another wav under the
 //   band is always an act, whatever the transport is doing), then a live or
@@ -9606,9 +9568,10 @@ int render_player_highlight_act_row(const AppState& a);
 // read the PUBLISHED bit — selection only), and the release road's dispatch
 // (dispatch_modal_dialog_button), which re-asks THIS live predicate. THE
 // KEYS DO NOT READ IT: every act's own refusal cards (or keeps its ruled
-// silence), and the head unit's road — on_media_command replaying
-// GuiMediaCommand as the player's own keys through synthesize_key — arrives
-// as keys, so it bypasses the buttons and this face by construction. IT
+// silence), and NEITHER DOES THE CAR — on_media_command runs this cluster's
+// bodies DIRECT (the car is its own interface, architect 2026-09-12), so it
+// reaches neither the buttons nor this face, and each of its acts carries its
+// own silent refusals. IT
 // BINDS TO ACTS (PlayerButtonAct), never to chords, so a re-binding of the
 // player's keys cannot touch it.
 // EVERY FACE EDGE REACHES A REPAINT through the row's one damage owner
@@ -9629,17 +9592,15 @@ bool render_player_button_enabled(const AppState& a,
 
 // IS THERE A FOLDER TO GO UP TO — THE UP WALL'S ONE OWNER (architect
 // 2026-09-01, with the player's move inside `tmp/`): false at the root, which
-// IS `tmp/`, and true inside a batch. FIVE READERS as re-greped 2026-09-12, and
-// they must not drift: GuiRenderPlayer::up()'s own leading refusal (silent, a
-// one-dimensional refusal already at its state), the Up button's face arm in
-// render_player_button_enabled — the truthful-buttons rule's "a face arm reads
-// the predicate the act's own refusal reads" — and the left skip's three,
-// render_player_previous_actionable (whose rest arm goes up at the band's
-// first row, so this wall is half of its own), GuiRenderPlayer::previous()'s
-// LIVE arm, which forks on it between going up and restarting the file
-// (up() would be silent at the root, and a press inside the window there is
-// the restart), and the plan builder's `previous_goes_up` hint bit, which says
-// "Up a Folder" exactly where either of those arms would go up. Defined in
+// IS `tmp/`, and true inside a batch. THREE READERS as re-greped 2026-09-12,
+// and they must not drift: GuiRenderPlayer::up()'s own leading refusal
+// (silent, a one-dimensional refusal already at its state), the Up button's
+// face arm in render_player_button_enabled — the truthful-buttons rule's "a
+// face arm reads the predicate the act's own refusal reads" — and the CAR'S
+// Previous, whose LIVE arm forks on it between going up and restarting the
+// file (up() would be silent at the root, and a press inside the
+// previous-track window there is the restart). The car's REST arm reaches the
+// same wall through up() itself rather than asking. Defined in
 // render_player.cpp beside the act. Backspace is the button's key twin and
 // takes the same wall through the same act.
 bool render_player_up_actionable(const AppState& a);
@@ -9653,100 +9614,63 @@ bool render_player_up_actionable(const AppState& a);
 // (GuiRenderPlayer::first_in_item_folder / last_in_item_folder, whose two
 // silent returns these ARE), the two skips' face arms in
 // render_player_button_enabled, where each is THE TWIN'S HALF OF THE OR the
-// twin rule asks for — load-bearing on both since 2026-09-12, the plain acts
-// having become band walks at rest (it was Home's third term, and the right
-// skip's whole arm through render_player_next_track_actionable below, which is
-// this wall plus its bound-item terms) — the hint's shift line, where each is
+// twin rule asks for — the LEFT skip's third term, which also answers its
+// previous-track window off LIVE, and the RIGHT skip's whole arm through
+// render_player_next_track_actionable below, which is this wall plus its
+// bound-item terms — the hint's shift line, where each is
 // ONE TERM of that line's own question — the plan builder ANDs each with its
 // plain act's own destination compare (RenderPlayerHintState's
 // home_shift_differs / end_shift_differs; codex round A, 2026-09-01, where
 // the wall alone stood for one day, and the right skip's compare from
 // 2026-09-04, where its plain act became a track change) — and, for the last
-// wav's wall, the next track's own predicate. Defined in render_player.cpp
+// wav's wall, the next track's own predicate — and, for the FIRST wav's,
+// render_player_home_takes_previous, which composes it as "is there a previous
+// entry" beside the window. Defined in render_player.cpp
 // beside the acts.
 bool render_player_first_in_item_folder_actionable(const AppState& a);
 bool render_player_last_in_item_folder_actionable(const AppState& a);
 
-// WOULD THE NEXT TRACK PLAY — the LIVE arm of the right skip's act since
-// 2026-09-12, its own leading refusals in its own order: an item must be
-// bound, and it must not be the last wav of its folder. Nothing loops, so the
-// folder's end is a wall and not a wrap. THREE READERS: the act itself
+// WOULD THE NEXT TRACK PLAY — the right skip's own wall (2026-09-04), its own
+// leading refusals in its own order: an item must be bound, and it must not be
+// the last wav of its folder. Nothing loops, so the folder's end is a wall and
+// not a wrap. TWO READERS as re-greped 2026-09-12: the act itself
 // (GuiRenderPlayer::advance_to_next_in_item_folder, whose silent return this
-// IS, shared with the natural end's auto-advance), render_player_next_
-// actionable below (the whole act's wall, of which this is the live half) and,
-// through it, the button's face arm and the head unit's Next arm. It was the
-// WHOLE act's wall from 2026-09-04, when the right skip became a track change,
-// to 2026-09-12, when the pair learned to walk the band at rest.
+// IS, shared by next_track, the car's live Next and the natural end's
+// auto-advance) and the right skip's face arm, where it is the whole arm. It
+// was the LIVE half of a two-armed playlist wall for the one day on which the
+// skips walked the band at rest.
 // Defined in render_player.cpp beside the acts.
 bool render_player_next_track_actionable(const AppState& a);
-
-// THE PLAYLIST PAIR'S TWO WALLS (architect 2026-09-12, from the car) — the
-// walls of GuiRenderPlayer::previous() and ::next(), each forked exactly as
-// its act is, on the TRANSPORT: a LIVE transport skips within the playing
-// folder, a transport AT REST (paused and idle alike) WALKS THE BAND.
-//
-// PREVIOUS: live it always acts (a file back, a folder up, or the reseek that
-// re-lands this file's start — every arm is a landing, so the press never does
-// nothing); at rest it walks one row up, and AT THE BAND'S FIRST ROW it goes UP
-// A FOLDER — so the rest arm's wall is "there is a row above" OR "there is a
-// folder above" (render_player_up_actionable), and only the root's first row
-// refuses.
-// NEXT: live it is the next track above; at rest it walks one row down, and at
-// the band's LAST ROW it is a walled no-op — it NEVER leaves a folder.
-//
-// THE ASYMMETRY IS THE RULING'S, not an omission: the listener always knows
-// which file is a folder's FIRST and never how many it holds, so walking off
-// the top is a deliberate act and walking off the end must never be an
-// accidental exit.
-//
-// TWO READERS EACH plus the act's own silence, the shape
-// render_player_up_actionable set: the skip button's face arm in
-// render_player_button_enabled (ORed there with the shifted twin's own wall,
-// the twin rule) and the head unit's arm in on_media_command, which
-// RE-PUBLISHES the standing state at the wall instead of pressing the key —
-// a press that changes nothing still answers the unit. THE ACTS THEMSELVES
-// CALL NEITHER: each wall's arms ARE the silent refusals of the bodies those
-// acts compose (folder_overlay::move_highlight's clamp, up()'s root return,
-// advance_to_next_in_item_folder's folder end), so the wall PREDICTS the act
-// rather than gating it and the two cannot disagree. Defined in
-// render_player.cpp beside the acts.
-bool render_player_previous_actionable(const AppState& a);
-bool render_player_next_actionable(const AppState& a);
 
 // IS THE ITEM INSIDE ITS FIRST THREE SECONDS — THE PREVIOUS-TRACK WINDOW'S ONE
 // OWNER (kPlayerPreviousThresholdMs, render_player.h): the position the clock
 // and the scrub show, against the window in frames at the DEVICE's rate, which
 // is why it takes the playback and the audio — the position is the engine's
-// while live. IT IS THE LEFT SKIP'S ONLY POSITION TERM, and the live arm asks
-// it TWICE, which is what made it a predicate of its own on 2026-09-12: once
-// with a previous entry beside it (render_player_home_takes_previous below,
-// the file step) and once WITHOUT one, where the same window's press LEAVES THE
-// FOLDER. THREE READERS: those two arms of GuiRenderPlayer::previous(),
-// render_player_home_takes_previous itself, and the plan builder's
-// `previous_goes_up` hint bit (paint_modal_dialog), which says "Up a Folder"
-// exactly where the second arm would go up. ONLY A LIVE TRANSPORT ASKS IT: at
-// rest the press walks the band and reads no position at all.
-// Defined in render_player.cpp beside previous().
+// while live. IT IS THE ONLY POSITION TERM EITHER PREVIOUS ACT READS, and it
+// is asked from TWO PLACES, which is what makes it a predicate of its own:
+// render_player_home_takes_previous below, the file step's own fork (which
+// bare Home, its button and the Home hint share), and the CAR'S Previous,
+// whose LIVE arm asks the same window direct to decide whether to LEAVE THE
+// FOLDER instead. An idle transport asks it through the first of those and is
+// inside it by construction, every idle rest sitting at frame 0.
+// Defined in render_player.cpp beside home().
 bool render_player_inside_previous_window(const AppState& a,
                                           const GuiPlayback& playback,
                                           const GuiAudio& audio);
 
-// WOULD PREVIOUS PLAY THE PREVIOUS ENTRY — the left skip's own FIRST arm,
+// WOULD THE LEFT SKIP PLAY THE PREVIOUS ENTRY — home()'s own FIRST arm,
 // extracted 2026-09-01 so the act and its hint read one predicate: a
 // previous entry exists (the twin's wall above, plus a bound item with
-// frames) AND the window above. TWO READERS: GuiRenderPlayer::previous() (the
-// fork's owner) and the plan builder's hint state (paint_modal_dialog). It is
-// also what makes the Home hint's shift line a DESTINATION compare rather than
+// frames) AND the window above. THREE READERS as re-greped 2026-09-12:
+// GuiRenderPlayer::home() (the fork's owner), the plan builder's hint state
+// (paint_modal_dialog) and the CAR'S Previous, whose live arm asks it to rule
+// the file step OUT before testing its own up-a-folder exit. It is also what
+// makes the Home hint's shift line a DESTINATION compare rather than
 // the twin's wall alone: inside the window the plain press plays the previous
 // entry, which on the folder's second item IS the file the shifted press names.
-//
-// BOTH READERS ASK IT UNDER THE LIVE ARM ALONE since 2026-09-12: at rest the
-// press walks the band and reaches no file at all, so this is a LIVE question
-// now and the predicate is never consulted off it. It answered in every
-// transport state until then — an idle rest being at frame 0 by construction,
-// an idle press took the window like any other and stepped back a file — and
-// the rest arms' walk is what replaced that.
-// Defined in render_player.cpp beside previous().
+// IT IS ASKED IN EVERY TRANSPORT STATE, an idle rest being at frame 0 by
+// construction, so an idle press with a file before this one steps back to it.
+// Defined in render_player.cpp beside home().
 bool render_player_home_takes_previous(const AppState& a,
                                        const GuiPlayback& playback,
                                        const GuiAudio& audio);

@@ -4053,21 +4053,21 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         // act is consumed with no card — the grey is the message — whichever
         // road armed it (the pointer's lift, the ring's Enter/Space
         // release). The KEYS never come through here, so their own cards and
-        // their ruled silences are untouched, and the head
-        // unit's road (on_media_command -> synthesize_key) arrives as keys
-        // and bypasses this line by construction.
+        // their ruled silences are untouched, and THE CAR never comes through
+        // here either: on_media_command runs the player's bodies DIRECT, so a
+        // head unit's button reaches neither this line nor a button's face.
         if (!render_player_button_enabled(app, playback, b.player_act))
             return true;
         switch (b.player_act) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
             // keys are Home and End since 2026-08-31 — the main window's
-            // own transport pair, "just like the regular GUI" — with both
-            // plain acts THE PLAYLIST PAIR since 2026-09-12 (previous() /
-            // next(), one body each forked on the transport: the playing
-            // folder's files while live, THE BAND at rest; this is the SECOND
-            // of their three roads, the keys and the head unit being the
-            // others), the right one's live arm the NEXT TRACK since
-            // 2026-09-04, and
+            // own transport pair, "just like the regular GUI" — with the plain
+            // acts home() and next_track(), the right one a NEXT TRACK since
+            // 2026-09-04; THIS IS THE SECOND OF EACH ACT'S TWO ROADS, the key
+            // being the other (the car's own Previous and Next are the car's
+            // acts and reach neither of these buttons — architect 2026-09-12,
+            // "the car is a separate interface"; both plain acts walked the
+            // band at rest for the one day before that ruling), and
             // their shifted twin — a Shift+click on plastic, a long press on glass,
             // ONE term either way — is the item folder's END, the keys' own
             // Shift+Home / Shift+End. THE
@@ -4078,7 +4078,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             // as you like.
             case AppState::PlayerButtonAct::Home:
                 if (shifted) render_player.first_in_item_folder();
-                else         render_player.previous();
+                else         render_player.home();
                 return true;
             case AppState::PlayerButtonAct::PlayPause:
                 render_player.play_button_act();
@@ -4087,7 +4087,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             // when the player's Stop retired whole with its button.)
             case AppState::PlayerButtonAct::NextTrack:
                 if (shifted) render_player.last_in_item_folder();
-                else         render_player.next();
+                else         render_player.next_track();
                 return true;
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();

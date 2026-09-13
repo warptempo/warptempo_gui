@@ -7348,72 +7348,39 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // which this painter already reads for the clock). Every bit
         // reaches a repaint through the row's one damage owner: the three
         // highlight movers and the transport writers damage the row already,
-        // for the Load in place face and the pause glyph — which is also what
-        // carries the two skips' own bits, the rest fork reading the transport
-        // and the up-a-folder bit reading the band.
+        // for the Load in place face and the pause glyph.
         RenderPlayerHintState hint;
         hint.play_face     = render_player_play_face(app);
-        // THE SKIPS' OWN FORK FIRST (architect 2026-09-12, from the car): at
-        // rest the pair walks the BAND, so each hint names a row rather than a
-        // file. THE LEFT ONE NAMES THE FOLDER WHEREVER ITS PRESS WOULD LEAVE
-        // ONE, in either transport state — the exit is that act's in both since
-        // the same day's second ruling ("Home should do what Home does, whether
-        // it's playing or idle"), so this bit reads the act's OWN two exit
-        // tests: at rest the band's first row, while live the previous-track
-        // window with no file before this one, each ANDed with the up wall the
-        // act asks there. At the root neither arm goes up, so the greyed first
-        // row keeps "Previous Row" and a live press there keeps its restart
-        // word. Every term is a predicate the act reads, never restated:
-        // render_player_up_actionable, folder_overlay::walk_origin_row,
-        // render_player_home_takes_previous and the window's own owner
-        // render_player_inside_previous_window.
-        hint.transport_at_rest =
-            app.render_player.transport !=
-            AppState::RenderPlayer::Transport::Live;
         hint.home_previous = render_player_home_takes_previous(app, playback,
                                                                 audio);
-        hint.previous_goes_up =
-            render_player_up_actionable(app) &&
-            (hint.transport_at_rest
-                 ? folder_overlay::walk_origin_row(app) == 0
-                 : (!hint.home_previous &&
-                    render_player_inside_previous_window(app, playback,
-                                                         audio)));
         // (END'S IDLE BIT STOOD HERE and retired 2026-09-04 with the act it
         // described: it was seek_to's second refusal asked past its first, so
         // that the hint said "At the end" only with an item bound. The right
-        // skip's press became the NEXT TRACK, whose one refusal greys the
-        // button, and its word named that act in every state until the
-        // transport fork above gave the rest arm "Next Row".)
+        // skip's press is the NEXT TRACK now, whose one refusal greys the
+        // button, and its word names that act in every state. TWO MORE BITS
+        // STOOD HERE for the one day of 2026-09-12 — a transport-at-rest fork
+        // and an up-a-folder bit — while the skips walked the band; the walk
+        // is the car's own act again and the car has no tooltip.)
         // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
         // (codex round A, 2026-09-01): the line names the FILE the shifted
         // press plays, so it must drop wherever the plain press already
-        // plays that file. Home's LIVE destinations are previous()'s own — the
+        // plays that file. Home's two destinations are home()'s own — the
         // PREVIOUS entry inside the previous-track window
-        // (render_player_home_takes_previous, the first fork's one owner,
-        // resolved just above), the FOLDER ABOVE where that same window finds
-        // no file before this one, and otherwise a seek that leaves the item
-        // where it is — against the twin's `folder.front()`, index 0; the two
-        // that stay in the folder land at frame 0 of the file they name, so the
-        // index decides, and the up-a-folder arm reaches NO file at all, which
-        // the compare already answers: it runs at item_index 0 alone, where the
-        // twin's own wall is what refuses. On the folder's second
+        // (render_player_home_takes_previous, the fork's one owner, resolved
+        // just above) and otherwise a seek that leaves the item where it is —
+        // against the twin's `folder.front()`, index 0; both land at frame 0 of
+        // the file they name, so the index decides. On the folder's second
         // item inside that window the two are one file and the line goes,
         // which the wall alone (item_index > 0) could not see. THE WALL IS
         // STILL A TERM and is still asked from the twin's own owner, which
         // the face reads too — it is what answers on item_index == 0, where
         // the twin is dead outright.
-        // THE COMPARE IS A LIVE-ONLY QUESTION since 2026-09-12: at rest the
-        // plain press walks the band and reaches NO file, so it can never land
-        // where the twin lands and the line stands wherever the twin's own wall
-        // admits it — which is why both compares hang off `!at_rest` rather
-        // than being re-derived for a rest that has no destination to compare.
         const int home_plain_index =
             hint.home_previous ? app.render_player.item_index - 1
                                : app.render_player.item_index;
         hint.home_shift_differs =
             render_player_first_in_item_folder_actionable(app) &&
-            (hint.transport_at_rest || home_plain_index != 0);
+            home_plain_index != 0;
         // THE RIGHT SKIP COMPARES DESTINATIONS TOO SINCE 2026-09-04, and for
         // the first time: its plain act is the NEXT TRACK now, so on the
         // folder's SECOND-TO-LAST item both presses play the folder's last
@@ -7429,7 +7396,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             static_cast<int>(app.render_player.item_folder.size()) - 1;
         hint.end_shift_differs =
             render_player_last_in_item_folder_actionable(app) &&
-            (hint.transport_at_rest || end_plain_index != end_twin_index);
+            end_plain_index != end_twin_index;
         const bool pause_face = hint.play_face == PlayerPlayFace::Pause;
         auto glyph_button = [&](AppState::PlayerButtonAct act,
                                 icons::Icon icon, bool lit = false) {

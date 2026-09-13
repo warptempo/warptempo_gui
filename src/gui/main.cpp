@@ -1468,10 +1468,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The prompt's back-pointer, for the render player's load confirmation
     // (its one reader is recorded at the member, prompt.h).
     prompt.input = &input_handler;
-    // And the render player's, for the ring clear a car command owes before
-    // it synthesizes a key (its one reader is recorded at the member,
-    // render_player.h).
-    render_player.input = &input_handler;
     // And the A/B audition's, for the `c` command each half opens with (its
     // one reader is apply_working_zoom; the rule is at ab_audition.h).
     ab_audition.input = &input_handler;
@@ -1746,7 +1742,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     });
 
     // THE CAR'S BUTTONS (design §3): each command the platform drained is the
-    // render player's to translate into its own keys (the contract at
+    // render player's to ACT ON DIRECTLY — the car is its own interface and
+    // nothing here is a key (the contract at
     // GuiRenderPlayer::on_media_command). Installed per project like every
     // other handler, and — unlike them — CLEARED at the session tail, so a
     // button pressed between two projects is dropped by the platform's null

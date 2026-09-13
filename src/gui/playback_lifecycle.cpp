@@ -71,13 +71,14 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         // the fence and the transport write alone.
         app.render_player.transport = RenderPlayerTransport::Paused;
         viewport.invalidate_modal_dialog_area();
-        // THE HEAD UNIT'S "PAUSED" IS PUBLISHED HERE AND NOWHERE ELSE
-        // (2026-08-28): this fork is the one place every player stop passes
+        // THE HEAD UNIT'S PUSH AT EVERY PLAYER STOP LIVES HERE AND NOWHERE
+        // ELSE (2026-08-28): this fork is the one place every player stop passes
         // — the pause, the natural end, the dead device, the close, the Up
         // act's unload, the rebind ahead of the next item — so the push lives
-        // inside it and no caller can forget it. The callers that go on to a
-        // "playing", an "inactive" or a PLACEHOLDER push (play_wav's tail,
-        // the close, and the Up act through its root entry's rebuild_rows)
+        // inside it and no caller can forget it. The callers that go on to an
+        // item's own push, an "inactive" one or a SILENCE TRACK (play_wav's
+        // tail, the close, and the Up act through its root entry's
+        // rebuild_rows)
         // supersede this one a moment later, two binder calls
         // where one would do; accepted, the
         // alternative being one push per caller that the next caller

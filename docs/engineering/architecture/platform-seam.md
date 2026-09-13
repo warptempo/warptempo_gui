@@ -159,8 +159,10 @@ drag coordinates floor instead of truncating.
   beginning, the middle and the end of a 30-40 s stretch, never twice at the
   same spot, so it is the restart itself and not the settling of its first
   seconds. What the head unit makes of a stream running under a session that
-  says paused is therefore the PUBLISH side's business
-  (`GuiRenderPlayer::publish_media_state`), and no road touches the device
+  is not sounding is therefore the PUBLISH side's business
+  (`GuiRenderPlayer::publish_media_state`, which since 2026-09-12 answers it by
+  publishing PLAYING throughout — the console believes the link, so the session
+  says what the link says), and no road touches the device
   between plays: the main window's Space, the waveform scrub, the A/B
   audition's four plays and every one of the player's own rests and
   transitions leave the stream running. So the fence is the SAME
@@ -947,15 +949,19 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   and with no hook installed (between two projects — main.cpp installs it per
   project and CLEARS it at the session tail, the one handler it clears) the
   drained commands go nowhere. The consumer is
-  `GuiRenderPlayer::on_media_command` (render-player.md's territory): each
-  command becomes THE PLAYER'S OWN KEYS through `synthesize_key`, press and
-  release, under `kCarStableCodeBase` = 1000 (recorded beside the keyboard's
-  `kStableCodeBase`), so the ordinary `on_key` dispatch runs — no second road;
-  the DIRECT ACTS take no key at all, `SeekTo` among them because no keysym
-  carries an absolute position; they are the PAUSE SIDE — Pause, the two focus
-  losses, `Stop`'s leading pause — plus `SeekTo`, the head unit's PLAY having
-  joined the key road on 2026-09-07 so that it is the tablet's Play button
-  whole. (The head unit's STOP became a real stop on
+  `GuiRenderPlayer::on_media_command` (render-player.md's territory), and
+  **EVERY COMMAND IS A DIRECT ACT ON THE PLAYER THERE** (architect 2026-09-12,
+  from the car: *"the car is a separate interface"*) — NO KEY IS SYNTHESIZED
+  and no dispatch is run. Each command pressed one of the player's own keys
+  through `synthesize_key` until that day, press and release, under
+  `kCarStableCodeBase` = 1000 (recorded beside the keyboard's
+  `kStableCodeBase`), with a MODAL RING CLEAR riding the press road; the press
+  lambda, the base, the clear and the input-handler back-pointer it needed are
+  all deleted, and `synthesize_key` has ONE producer again, the painted
+  keyboard. The wheel's three buttons are the player's own three acts — a
+  toggle between the item and silence, and the playlist walk with its
+  up-a-folder exit — while `Stop`, the two focus losses and `SeekTo` keep the
+  bodies they had. (The head unit's STOP became a real stop on
   2026-08-28, R36 — the player's own Stop key rather than the pause it had
   been mapped to — and became PAUSE AND THEN HOME on 2026-09-01, a direct act,
   when that key and its button retired; the mapping table is
@@ -973,21 +979,23 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   `NewString` (not `NewStringUTF`, whose modified UTF-8 CheckJNI aborts on a
   four-byte sequence), inside a local frame. That method builds the
   `MediaMetadata` (TITLE = the wav's spelling with its folder, ARTIST and ALBUM
-  = the project's name, DURATION) and the `PlaybackState` (with the position,
-  every action declared, and THE SPEED THE RATE OF
-  PLAYBACK — 1.0 for PLAYING and 0.0 otherwise, since a controller
-  extrapolates the position off that speed from the moment of the push and a
-  resting transport must not have its clock run on). **THE STATE IS PLAYING OR
-  PAUSED WHILE THE PLAYER STANDS AND STOPPED EXACTLY AT THE INACTIVE PUSH**
-  (architect 2026-09-12, from the car): the sliver's fork is `!active` →
-  STOPPED, `playing` → PLAYING, else PAUSED, and it carried a second stopped
-  arm on an empty title until that day. A standing player with nothing bound
-  publishes a PAUSED PLACEHOLDER naming the highlighted row instead — the
-  title is never empty while the session is active — because a head unit
-  honours a session's PAUSED but falls back to what it can see for itself
-  when handed a stopped one, and what it can see is an A2DP stream still
-  carrying silence, which it shows as playing, after which its one toggle
-  sends the wrong direction forever (the title rule and its four arms are
+  = the project's name, and DURATION ONLY FOR A VALUE ABOVE 0 — a −1 puts no
+  duration key at all, which is Android's "unknown") and the `PlaybackState`
+  (with the position and every action declared). **THE DISPLAY IS A DUMMY: THE
+  STATE IS PLAYING WHENEVER THE PLAYER STANDS AND STOPPED EXACTLY AT THE
+  INACTIVE PUSH** (architect 2026-09-12, from the car): the sliver's fork is
+  `!active` → STOPPED, else PLAYING, and THE SPEED IS THE STATE'S OWN —
+  `active ? 1.0f : 0.0f` — so the console's clock runs on for as long as the
+  player stands, a controller extrapolating the position off that speed from
+  the moment of the push. A console reads the still-streaming Bluetooth link as
+  playing and OVERRIDES a session that says PAUSED, so its PAUSE stuck every
+  time; telling it what it already believes makes its one button a plain
+  toggle. The fork was `!active` → STOPPED, `playing` → PLAYING, else PAUSED
+  until that day, and carried a second stopped arm on an empty title until that
+  morning. `playing` is still passed and is READ HERE FOR THE AUDIO FOCUS
+  ALONE. With nothing sounding the native side sends a SILENCE TRACK naming the
+  highlighted row at position 0 with the duration unknown — the title is never
+  empty while the session is active (the title rule is
   `GuiRenderPlayer::publish_media_state`'s, render-player.md's car section the
   behaviour). It calls
   `setActive(active)` — THE SESSION IS ACTIVE ONLY WHILE THE RENDER PLAYER
@@ -998,10 +1006,9 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   none is held, abandoned when a push says inactive, a refused request logged
   and playback proceeding (the stream is already running). A LOSS is forwarded
   down as `FocusLost` / `FocusLostTransient` and pauses the player — through
-  its TRANSPORT DIRECTLY since 2026-08-31 rather than through the key road, a
-  PAUSE-SIDE command acting on the transport alone now that Space reads
-  the band first (the head unit's Play left that family on 2026-09-07 and
-  presses Space; render-player.md's car section owns the split); it is
+  its TRANSPORT DIRECTLY (`transport_toggle_act`, past the highlight fork, so
+  an imposed interrupt can never start a walked-to row; render-player.md's car
+  section owns the table); it is
   "Android's one imposed interrupt", and it always pauses. GAIN is forwarded and
   does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's
   default, so a navigation prompt ducks rather than pauses — and THE LISTENER
