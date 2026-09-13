@@ -401,9 +401,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     const int64_t end = std::min(start + span, view_end);
     // NO SEQUENCE CLEAR ON THIS ROAD (2026-09-01): this entry is the A/B
     // audition's alone (one caller, GuiAbAudition::launch_phase), which
-    // arrives with the phase it is launching ALREADY WRITTEN, and the launch
-    // body's seed fork reads the act off that standing phase through
-    // centered_pin_engaged. The clear that every user launch takes is the
+    // arrives with the phase it is launching ALREADY WRITTEN. The clear that
+    // every user launch takes is the
     // view-end entry's (launch_playback_from), the one road into the body
     // that is not the act's.
     return launch_playback_window(start, end);
@@ -444,11 +443,10 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // it is launching ALREADY STANDING (GuiAbAudition::launch_phase writes it
     // before calling launch_bounded_audition and clears it again on a false
     // return), so `phase != Idle` at this body means exactly "this is one of
-    // the act's four plays", which the seed fork below reads through
-    // centered_pin_engaged like every other engagement site. Nothing between
-    // that write and this body paints or dispatches, so the phase standing one
-    // call earlier changes no face and no fork (redesign_button_glyph_swapped
-    // and toggle_playback read it at their own times). The edge inventory is
+    // the act's four plays". Nothing between that write and this body paints
+    // or dispatches, so the phase standing one call earlier changes no face
+    // and no fork (redesign_button_glyph_swapped and toggle_playback read it
+    // at their own times). The edge inventory is
     // at GuiAuditionSequence (app_state.h).
     // Both `start` (playback.play()'s launch bound) and the scanner's
     // launch position below are in the active PAINT domain
@@ -547,35 +545,7 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // construction, so this no-ops there). Follow's own check has exactly the
     // right shape for it whether or not this play will chase, so always run it
     // on press.
-    // UNDER THE CENTERED LAMP THE SEED IS THE DERIVATION instead (2026-08-31,
-    // R11): the scanner issues forth CENTERED where follow's check would
-    // left-edge-align it, so the first frame already holds the invariant
-    // rather than taking a visible two-step (align, then the pre-paint's
-    // recenter one frame later). Unconditional on the lamp for the same
-    // reason the follow-shape check is unconditional here: the seed is about
-    // the scanner issuing forth VISIBLE, which is owed whatever the follow
-    // lamp says and whether or not this play will chase.
-    // THE A/B AUDITION'S OWN PLAYS TAKE FOLLOW'S ARM (architect 2026-09-01,
-    // the act disregarding the pin whole): each of its four launches must seed
-    // exactly as it would with centered=false, or a play launched after the
-    // user has panned or after `c` left the camera elsewhere would snap back
-    // to centre mid-act. The predicate sees the act on its own here, as at
-    // the pin's other engagement sites, because the act's phase STANDS at
-    // this line (the head comment) — the explicit per-launch flag that named
-    // the act by its entry for the first hours of 2026-09-01 retired that
-    // evening. THE FOUR CASES, each the verdict the flag gave: (1) a user
-    // launch with no act standing — the entry's clear is a no-op at Idle and
-    // the pin answers the preference; (2) a user launch during one of the
-    // act's rests — the entry's clear ended the rest before this body, and
-    // the pin answers the preference; (3) a user launch in the sub-tick window
-    // after a bounded play's natural end — the same clear ended the act, the
-    // same preference answers; (4) the act's own launch — the phase was
-    // written before launch_bounded_audition was called and no clear ran, so
-    // the predicate answers false and follow's arm seeds the play.
-    if (centered_pin_engaged(app))
-        viewport.derive_centered_viewport();
-    else
-        viewport.follow_scroll_if_needed();
+    viewport.follow_scroll_if_needed();
     // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
     // the scanner line appearing at the launch column and the timestamp readout
@@ -714,39 +684,6 @@ void GuiPlaybackLifecycle::toggle_follow() {
     // at app.follow_armed, app_state.h). The face repaints through the
     // per-tick comparator, so this mutator owes no damage.
     app.follow_armed = !app.follow_armed;
-}
-
-// Set the centered pin (contract at the header declaration) — the `y` lamp's
-// one gesture chokepoint, toggle_follow's sibling above.
-void GuiPlaybackLifecycle::set_centered_mode(bool desired) {
-    const bool was_off = !app.centered_mode;
-    // THE FIELD'S ONE WRITE (write_centered_posture, app_state.h), which this
-    // toggle composes with the recenter below: the collapse and the A/B
-    // audition's arm assign through that same body, so the three roads onto
-    // the posture cannot drift.
-    write_centered_posture(app, desired);
-    // THE EDGE READS THE ENGAGEMENT, NOT THE FIELD (architect 2026-09-01): the
-    // pin derives nothing while an A/B audition stands. SINCE 2026-09-11 THIS
-    // TOGGLE IS UNREACHABLE THERE — bare `y` cards on kCenteredAuditionCard
-    // and the button greys, the posture being the act's for its duration — so
-    // the term now guards a state no press can produce, and it stays as the
-    // engagement's own question rather than as a second spelling of the
-    // refusal. (Until that day the press recorded the preference mid-act and
-    // lit the lamp while deriving nothing.)
-    if (was_off && centered_pin_engaged(app)) {
-        // THE TOGGLE ITSELF RECENTERS — the invariant starts holding at the
-        // press, not at the next playhead change. During live playback the
-        // one-shot jump re-anchors the predictor like every discrete pan. It
-        // clears no chase bit: the pin and the follow chase stopped sharing a
-        // suppression when follow became a one-shot (2026-09-11), and while
-        // this lamp stands the camera is the playhead's whatever a pan did.
-        if (playback.is_playing()) playback.resync_predictor();
-        // (The derivation memory is stamped by the body itself — its one
-        // writer since codex round C, so the next pre-paint does not re-derive
-        // a camera this press just derived. No hand-kept stamp here.)
-        viewport.derive_centered_viewport();
-    }
-    // The off edge writes nothing: the camera stays where the pin left it.
 }
 
 // (set_playback_speed IS GONE — architect 2026-08-27, with the

@@ -61,9 +61,7 @@ struct GuiTargetRender;
 // sel." A HYBRID THIRD FORM IS EXPLICITLY REJECTED: a verb is EITHER
 // group-capable OR collapses to the focus with the playhead landed on it; there is
 // no third answer, and "collapse to last selected" means exactly
-// collapse_to_focused + the marker land, the shape below (this prologue takes
-// the land's CARRY form, the nudge being a time act — the centered posture's
-// rule is at AppState::centered_mode).
+// collapse_to_focused + the marker land, the shape below.
 // THE COLLAPSE+LAND SITES, one form and TWO of them (re-derived by grep over
 // Selection::collapse_to_focused's callers, 2026-07-30): this prologue serving
 // both position nudges, and Ctrl+N (warpmarkers_ops.cpp). The singleton tempo
@@ -321,17 +319,21 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     for the RESOLVED READOUT this tail's selection used to move; that
 //     readout retired whole with the one-day status bar that carried it, and
 //     the call went with it.);
-// (e) PLAYHEAD FOLLOW: carry_playhead_to the nudged marker's committed frame
+// (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
 //     identity in warp's source home, a real map in phase's target home;
-//     committed_focused_frame is reorder-independent). The CARRY is the
-//     movement owner minus the centered posture's collapse (2026-09-11 — a
-//     nudge is a time act), and it owns the clamp, invalidation, and
-//     keep-visible edge-align exactly as move_playhead_to does, writing the
+//     committed_focused_frame is reorder-independent). The movement owner owns
+//     the clamp, invalidation, and keep-visible edge-align, writing the
 //     cursor field only (playback was stopped by the twin, past its wall clamp
 //     and ahead of its first write — and by the prologue's collapse arm before
 //     that on a 2+ press; either way this tail always runs stopped).
-// (f) THE REGION: a position nudge HIDES the trim region overlay,
+// (f) KEEP CENTERED WHILE NUDGING: Viewport::recenter_after_nudge, which with
+//     the `y` lamp lit recenters the viewport on the playhead (e) just landed
+//     (the rule at AppState::centered_mode). Every press that reaches this
+//     tail moved its marker — the twins return on the post-clamp identity
+//     no-op first — so a walled press recenters nothing, and a held key's or
+//     button's repeats each run the tail and recenter at every step.
+// (g) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
 //     singleton — and it discards nothing, the trim standing behind it. It owes
 //     no call of its own: (e) above and the prologue's collapse land are both
@@ -339,7 +341,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     input_handler.h).
 //     There is no overlay-preserving arm any more: the extent re-derive died
 //     with the group nudge.
-// (g) target_render.trigger.
+// (h) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
 // warp's SOURCE home view, where the source waveform pixels do not depend on the
@@ -355,7 +357,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // invalidate, playhead, region). The COMMITTED BYTES are identical for every
 // input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
-// only — not the cursor), the carry does not read undo
+// only — not the cursor), the playhead follow does not read undo
 // state, and the region hide reads only the region. ONE
 // knowingly-accepted delta rides the unification, phase-only (the warp twin
 // already had this shape) and harmless, recorded here so the next reader need

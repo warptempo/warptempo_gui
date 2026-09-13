@@ -2621,9 +2621,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // happen behind the gate above: the select just focused the landing that
     // gate proved. Nothing here reads it; the return exists for the other
     // caller (run_center_command).
-    // A step is a movement like any other and puts the centred pin out through
-    // the land owner; it writes no Center on next marker lamp, because no land
-    // does (the zoom writes that lamp, set_center_on_next_marker).
+    // A step is a movement like any other through the land owner; it writes no
+    // Center on next marker lamp, because no land does (the zoom writes that
+    // lamp, set_center_on_next_marker).
     jump_playhead_to_focused_marker(frame);
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because

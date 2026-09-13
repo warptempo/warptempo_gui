@@ -83,9 +83,7 @@ struct Viewport {
     //    apply_zoom_change,
     //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom,
     //    scroll_viewport — every pan/scroll class, which joined this route
-    //    2026-07-26 when the incremental shift-and-strip path was retired —
-    //    and derive_centered_viewport, the `y` pin's one derivation body,
-    //    2026-08-31),
+    //    2026-07-26 when the incremental shift-and-strip path was retired),
     //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
     //    toggle and the Ctrl+Tab A/B tab switch (both domain flips) and the `p`
     //    W/P marker-column toggle — `p` moves neither viewport nor domain, so its
@@ -168,13 +166,7 @@ struct Viewport {
     // any more.
     // (The live-per-event kicks that remain are apply_strip_drag_zoom,
     // scroll_viewport — generic viewport rebuilds, not map edits, both
-    // sustained pointer gestures paying one full rebuild per pointer frame —
-    // and, since 2026-08-31, derive_centered_viewport, the `y` pin's
-    // per-frame recenter during playback: clock-driven at the scanner's
-    // cadence rather than pointer-driven, ruled onto THIS path by R11 because
-    // the waveform must scroll under a static centered playhead with the
-    // grab-pan's own no-stale-overlay guarantee, whose per-frame budget those
-    // two already proved.)
+    // sustained pointer gestures paying one full rebuild per pointer frame.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
@@ -189,12 +181,10 @@ struct Viewport {
     // viewport while the scanner's column sat outside it, so the playhead line
     // vanished for a frame or two at each crossing; its reasoning lives at
     // follow_scroll_if_needed. Panning left the list 2026-07-26 for the same
-    // rule: a mover the user sees renders synchronously like zoom. So both
-    // playback movers are on the synchronous route now — the CENTERED pin
-    // every scanner frame (the entry above) and follow once per page — and the
-    // old contrast between them (the pin's per-frame pan being the stale-basis
-    // smear the sync rule exists to prevent, follow's rare jump being absorbed
-    // by the async kick) is retired with the move.
+    // rule: a mover the user sees renders synchronously like zoom. So the
+    // playback mover is on the synchronous route now, once per page (the
+    // per-frame centered pin that shared the route from 2026-08-31 retired
+    // 2026-09-13).
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
@@ -238,32 +228,7 @@ struct Viewport {
     // (input_handler.h). The hide is UNCONDITIONAL — a Home that lands on the
     // frame the cursor already holds still hides, which is the 2026-08-15 ruling
     // the bottom row's ungreyed skip buttons rest on.
-    // SINCE 2026-09-11 IT IS THE CARRY BELOW PLUS THE CENTERED COLLAPSE, in
-    // that order: the playhead's position in the music changing is the centred
-    // pin's collapse rule as much as the hide's (collapse_centered_posture and
-    // AppState::centered_mode, app_state.h).
     void move_playhead_to(int64_t new_sample);
-    // THE CARRY — the movement, WITHOUT the centered collapse, for the
-    // acts that MOVE A MARKER IN TIME under a playhead that follows it
-    // (architect 2026-09-11). Everything else about it is
-    // move_playhead_to's, the overlay hide and the audition's end included —
-    // this is not a reseat.
-    // A CLASS STATEMENT WITH ITS COMPLETE LIST HERE, and it is TWO acts at
-    // three call sites (re-greped 2026-09-12), which decline the centred pin's
-    // collapse for two different reasons:
-    //   * the Left/Right POSITION NUDGE's follow of the nudged marker
-    //     (position_nudge.cpp) — the one act the `y` posture is FOR, so it
-    //     must not put that lamp out;
-    //   * the FLAG DRAG's per-motion carry and its commit re-land
-    //     (marker_drag.cpp), which has NOTHING LEFT TO COLLAPSE: the gesture
-    //     put the pin out at its own threshold crossing (architect
-    //     2026-09-12, MarkerDragOps::begin_drag), so a mover carrying the
-    //     collapse here would only repeat it per motion event.
-    // Named rather
-    // than spelled as a flag on the mover, for the reason the reseat carries:
-    // "skip the rule this time" is a hand-listed inventory in disguise. Do not
-    // add a caller without an argument for why its act declines the write.
-    void carry_playhead_to(int64_t new_sample);
     // THE RESEAT — the identical write with NO hide, for the callers whose write
     // is not a movement (contract at the definition, viewport.cpp). Named rather
     // than spelled as a flag on the mover: "skip the rule this time" would be the
@@ -332,11 +297,11 @@ struct Viewport {
     // with the incremental path retired every scroll renders synchronously.
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
+    // The `y` lamp's one act: while it is lit, recenter on the playhead a
+    // Left/Right nudge has just moved. The rule is at AppState::centered_mode;
+    // the two callers are named at the definition.
+    void recenter_after_nudge();
     void follow_scroll_if_needed();
-    // The `y` centered lamp's ONE derivation body (2026-08-31, R11) — the
-    // ownership statement and the caller inventory are at the definition.
-    // Returns whether the viewport actually moved.
-    bool derive_centered_viewport();
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo cent step, the settings

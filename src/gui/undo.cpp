@@ -1130,25 +1130,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // have already seated, each of them going through Selection::seat_focus.
     // The axis survives as session state; only its ride on an entry is gone.)
 
-    // AND THE CENTERED POSTURE COLLAPSES, UNCONDITIONALLY
-    // (architect 2026-09-12): every undo and every redo collapses the centred
-    // pin, a settings-only entry included. The Center on next marker lamp is
-    // the zoom's alone: the restore answers it only where its tab write lands
-    // another level (switch_active_tab_view_to) or its framing zooms
+    // The Center on next marker lamp is the zoom's alone: the restore answers
+    // it only where its tab write lands another level
+    // (switch_active_tab_view_to) or its framing zooms
     // (Viewport::apply_zoom_to_start), both of them commits of their own.
-    // A RESTORE IS AN ACT OF THE MOVEMENT CLASS LIKE THE ACTS IT UNDOES, NOT A
-    // SIMULATION OF THEM — the classification that read the entry's own diff
-    // and handed each arm the answer its act would have given existed only to
-    // make undo and redo imitate the act at the other end of the entry, and
-    // that imitation is dropped whole. The pin is one bare `y` or one
-    // Shift+Space away; the rule's home is AppState::centered_mode.
-    //
-    // IT IS LAST IN THIS BODY because the visual tail above lands the playhead
-    // through the movement owner and may frame through a zoom applier: this
-    // line is then the same answer written once more, and running past the
-    // land's clear of any standing A/B audition is what keeps the collapse's
-    // own guard from swallowing it.
-    collapse_centered_posture(app);
 
     recompute_dirty();
     viewport.invalidate_waveform_area();

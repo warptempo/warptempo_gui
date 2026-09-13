@@ -28,15 +28,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // NO CAMERA POSTURE LOADS HERE: follow, centered and center_on_next_marker
     // are session state the piece does not determine, so they left the schema
     // 2026-09-11 and rest at their AppState defaults for the life of the
-    // project. What survives the cut is the CENTERED DERIVATION MEMORY, which
-    // is the load's own "no derivation stands" seed and not a loaded value: a
-    // fresh view must never inherit the other file's derivation point, and the
-    // seed is correct with the lamp dark (the derivation point is main.cpp's
-    // pre-paint hook).
-    app.centered_derived_cursor     = -1;
-    app.centered_derived_tab        = 0;
-    app.centered_derived_audio_view = 0;
-    app.centered_derived_scanner    = false;
+    // project.
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER

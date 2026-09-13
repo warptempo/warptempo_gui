@@ -164,18 +164,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // net change. The press's click act satisfies that identically: it is
     // unconditional and runs ahead of the first apply. (Groups are never moved
     // either way, 2026-07-29.)
-
-    // THE CENTRED PIN COLLAPSES HERE, ONCE (architect 2026-09-12): a
-    // horizontal drag carries the marker out from under a playhead the `y`
-    // lamp holds at the window's centre, so the gesture takes the movement
-    // class like every other camera act — and this is the instant its
-    // identity is certain, the press having been a click until the threshold
-    // was crossed. Everything after this
-    // line — the motion ride's carry and the commit's land — runs under a
-    // dark lamp, which is what makes those carries the honest entry for a
-    // movement with nothing left to collapse. The rule is at
-    // AppState::centered_mode.
-    collapse_centered_posture(app);
     return true;
 }
 
@@ -324,18 +312,11 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
-    // THROUGH THE CARRY: the ride writes no camera lamp, per motion event or at
-    // the commit below, and by this point there is nothing for it to write —
-    // the gesture COLLAPSED the centred pin at its own crossing (begin_drag,
-    // the movement class). So the carry is simply the honest entry for a
-    // movement with nothing left to collapse; the rule is at
-    // AppState::centered_mode.
-    viewport.carry_playhead_to(sample);
+    viewport.move_playhead_to(sample);
     // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
     // marker and HID the trim region overlay, so a marker drag runs with the
-    // overlay already down, and the carry above hides as the movement owner it
-    // is built from does (the rule at clear_region_highlight, input_handler.h)
-    // — a guarded
+    // overlay already down, and the movement owner above hides again (the rule
+    // at clear_region_highlight, input_handler.h) — a guarded
     // no-op on every motion event. The group live-track that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).
@@ -355,11 +336,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
-// THE CENTRED PIN WENT OUT AT THE THRESHOLD CROSSING (architect 2026-09-12),
-// where the gesture's identity became certain (begin_drag), so the playhead
-// ride and this land go through the CARRY with nothing left to collapse. The
-// Center on next marker lamp is the zoom's and this commit writes none. The
-// rule is stated at AppState::centered_mode and is not restated here.
+// The Center on next marker lamp is the zoom's and this commit writes none, and
+// no drag recenters the viewport (the `y` lamp's one act is the Left/Right
+// nudge, AppState::centered_mode).
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read
@@ -514,10 +493,7 @@ void MarkerDragOps::commit_drag() {
     // the playhead lands on the committed frame directly; a phase reset drag in
     // its target home maps through the post-commit map.
     if (land_playhead) {
-        // The carry, the motion arm's own reason: the pin went out at this
-        // gesture's crossing (AppState::centered_mode), so there is nothing
-        // left here to collapse.
-        viewport.carry_playhead_to(
+        viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
     // The dragged marker's STEM moves at commit under the full-waveform

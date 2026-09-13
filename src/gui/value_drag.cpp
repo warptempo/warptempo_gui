@@ -190,15 +190,6 @@ void ValueDragOps::apply_motion(int mouse_y) {
         if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx))
             iter_bound_step_write(*m, cell, landing);
     }
-    // A BOUND WRITE IS A FLAG'S VALUE, so the centered posture collapses
-    // per motion (collapse_centered_posture, app_state.h),
-    // idempotently, every accepted motion. THE
-    // PAYLOAD ARM IS NOT HERE and takes nothing: a tempo answers at the COMMIT,
-    // through the tail the keyboard step shares (warp_tempo_write_tail), which
-    // is the same class said once for both hands. Reached on the changed path
-    // alone — each arm above returns on a landing that moved nothing.
-    if (app.value_drag.cell != MarkerCell::Payload)
-        collapse_centered_posture(app);
     // THE MARKER LANE AND NOTHING ELSE, per motion. The flag's number (or its
     // cell's) is what moved, the store's generation carries the flag cache's
     // rebuild under this damage, and NO MAP IS RE-LAID: in target view the

@@ -285,11 +285,6 @@ struct GuiPlaybackLifecycle {
     // and clears it again on false. A live session never launches (the caller
     // always arrives stopped — the tick's natural end or the act's own tab
     // switch precede every call).
-    // ITS SEED IS FOLLOW'S, ALWAYS (architect 2026-09-01): this entry runs no
-    // sequence clear, so the launch body's seed fork finds the act's phase
-    // standing and centered_pin_engaged answers false there — the centered
-    // pin, which the act disregards whole, never seeds one of the four plays.
-    // Nothing else about the launch differs.
     bool launch_bounded_audition(int64_t start, int64_t span);
 
     // Reseek the active playback session to a new starting sample, keeping
@@ -327,25 +322,6 @@ struct GuiPlaybackLifecycle {
     // and the face is what says so (redesign_button_selected, app_state.h).
     void toggle_follow();
 
-    // Set the centered pin to `desired` — the `y` lamp's one gesture
-    // chokepoint (2026-08-31, R11), toggle_follow's sibling: shared by the
-    // bare-`y` toggle (which passes !app.centered_mode) and its icon-row
-    // button (which synthesizes that chord), the whole membership since the
-    // `centered` key left the schema 2026-09-11. History-less and serialized
-    // nowhere — the pin is a session posture like follow. The
-    // off→on edge recenters IMMEDIATELY through the one derivation body — the
-    // invariant starts holding at the toggle — and during live playback also
-    // resyncs the predictor, the one-shot jump re-anchoring it like any
-    // discrete pan. THE EDGE IS THE PIN'S ENGAGEMENT, NOT THE FIELD'S
-    // (2026-09-01).
-    // IT IS NOT THE FIELD'S ONLY WRITER (2026-09-11): it composes
-    // write_centered_posture (app_state.h) with the recenter above, and the
-    // collapse and the A/B audition's arm assign through that same body — the
-    // posture's rule and its three roads are stated at AppState::centered_mode.
-    // The TOGGLE is refused while an audition stands (bare `y` cards, the
-    // button greys), so this entry is unreachable there.
-    void set_centered_mode(bool desired);
-
 private:
     // The active view's PLAY END — the song's end in source view, the bound
     // preview buffer's domain end in target (the split and its ruling are at
@@ -375,7 +351,7 @@ private:
     // follow check and the launch damage are written once. It clears no
     // sequence: the view-end entry has already cleared it for a user launch,
     // and the bounded audition arrives with the act's phase standing, which is
-    // how the body's seed fork knows the act (the contract at the definition).
+    // which is how the body knows the act (the contract at the definition).
     // THE PRODUCT HAS A SECOND LAUNCH BODY SINCE 2026-08-28, and it is
     // recorded here as well as at its own head: the RENDER PLAYER's
     // (GuiRenderPlayer::play_wav / toggle_pause / seek_to, render_player.h)
@@ -385,10 +361,5 @@ private:
     // does not move, the scanner never runs, and the item's domain is the
     // buffer's own. The two share the ONE STOP BODY above, which carries the
     // player's fork.
-    // THE SEED FORK reads centered_pin_engaged (app_state.h) with no term of
-    // its own: the act disregards the centered pin whole (architect
-    // 2026-09-01), and the predicate sees the act here because its phase is
-    // standing by the time the body asks — the four-case argument is at the
-    // fork itself.
     bool launch_playback_window(int64_t start, int64_t end);
 };

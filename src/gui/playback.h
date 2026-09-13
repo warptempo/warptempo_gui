@@ -87,12 +87,12 @@
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
 // (architect 2026-09-02, the truthfulness deep dive's item C; the periodic
-// cadence proposed there does NOT land). Every resync is an EVENT — SIXTEEN
+// cadence proposed there does NOT land). Every resync is an EVENT — FIFTEEN
 // call sites at this writing, in classes: the zooms (apply_zoom_change,
 // apply_strip_drag_zoom's final frame, apply_zoom_to_start), the DISCRETE
 // pan (scroll_viewport with continuous=false — a drag pans without one and
 // re-anchors once at its end), the centring jump, follow's page and the
-// on-edges of the follow and centred toggles, the map-change re-land
+// on-edge of the follow toggle, the map-change re-land
 // (reseat_playhead_to), the resize whose level moved, and the pointer ends
 // (the nav drag's and the overview drag's release and force-end, the touch
 // hard end). Grep `resync_predictor` and re-count; never inherit this number.
@@ -102,8 +102,7 @@
 // and re-rolled that whole phase into the line at every pan end, page turn or
 // `c`. So a resync's step is the accumulated DRIFT alone.
 // A session that is launched and left alone — the architect's own `c`,
-// Space, no pan, and the `y` pin, which derives its camera per frame and
-// resyncs nothing (the statement is at derive_centered_viewport) — runs the
+// Space, no pan — runs the
 // whole play on steady_clock against the DAC's crystal with no re-anchor at
 // all. THAT IS AFFORDABLE BECAUSE THE DRIFT BETWEEN EVENTS IS BELOW THE
 // FRAME GRID AT THIS TOOL'S PLAY LENGTHS: the clocks part at 10–100 ppm, so

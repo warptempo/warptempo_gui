@@ -204,9 +204,8 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
-// carry_playhead_to: THE CARRY — the movement owner's whole body except the
-// centered posture's collapse (the reseat below, with the trim region overlay's
-// HIDE and the A/B audition's END in front of it). Reaching this function means
+// move_playhead_to: THE MOVEMENT OWNER — the trim region overlay's HIDE and the
+// A/B audition's END in front of the reseat below. Reaching this function means
 // the playhead's POSITION IN THE MUSIC is changing, and that is the whole hide
 // rule; the rule, its second owner and its exemptions are stated once at
 // clear_region_highlight (input_handler.h). UNCONDITIONAL, never gated on
@@ -214,10 +213,7 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // already holds still hides, which is what the bottom row's ungreyed skip
 // buttons promise (architect 2026-08-15, the record at their case in
 // redesign_button_enabled).
-// ITS OWN CALLERS ARE THE TWO ACTS THAT MOVE A MARKER IN TIME and are
-// inventoried at the declaration (viewport.h); every other command takes
-// move_playhead_to below.
-void Viewport::carry_playhead_to(int64_t new_sample) {
+void Viewport::move_playhead_to(int64_t new_sample) {
     clear_region_highlight(app, *this);
     // A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION, and it is the hide rule's own
     // membership: what the act promises is that the pair of plays it makes on
@@ -227,27 +223,8 @@ void Viewport::carry_playhead_to(int64_t new_sample) {
     // which writes the cursor direct) ends neither. This is a class statement:
     // the complete clearing-owner inventory is at GuiAuditionSequence
     // (app_state.h) and is not to be restated here.
-    // IT IS HERE RATHER THAN IN THE MOVER BELOW so that a carrying act still
-    // ends the act it interrupts: the carry declines the posture write, never
-    // the end.
     clear_audition_sequence(app);
     reseat_playhead_to(new_sample);
-}
-
-// move_playhead_to: THE MOVEMENT OWNER — the carry above plus the centered
-// collapse, and nothing else. The playhead's position in the
-// music changing is the centered collapse's rule exactly as it is the hide's
-// (the rule is stated once at AppState::centered_mode): a click, a skip or a
-// land puts the `y` lamp out, while the two
-// acts that move a marker in time take the carry.
-// THE ORDER IS LOAD-BEARING: the carry's clear of the A/B audition runs FIRST,
-// so a movement that interrupts the act finds the sequence already Idle and the
-// collapse writes — where the act's own movements, made while its phase stands,
-// find the collapse's leading return (collapse_centered_posture,
-// app_state.h).
-void Viewport::move_playhead_to(int64_t new_sample) {
-    carry_playhead_to(new_sample);
-    collapse_centered_posture(app);
 }
 
 // reseat_playhead_to: update playhead, keep viewport so playhead stays
@@ -459,15 +436,6 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
-    // A ZOOM IS A CAMERA MOVE: the centered posture goes out (the rule at
-    // AppState::centered_mode). Past the
-    // return above the level really moves, which is the whole test — `c`, `0`,
-    // ctrl+wheel and the icon row's four zoom buttons all land here, and the
-    // WAVEFORM MAGNIFICATION does not (it is a picture gain, not a zoom, and
-    // writes no level). A zoom that lands on the level already standing writes
-    // no lamp, exactly as it repaints nothing.
-    collapse_centered_posture(app);
-
     // A ZOOM WRITE THAT MOVES THE LEVEL LEAVES THE CEILING, so bare `0`'s
     // whole-song state goes with it (ViewState::whole_song_visible, whose
     // declaration owns the ruling and names all four clears). It runs BEFORE
@@ -587,21 +555,11 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_engaged = false;
-    // AND THE CENTERED POSTURE TAKES EITHER AXIS TOO (the rule at
-    // AppState::centered_mode), on the same test and for the same reading of
-    // it: a frame that moved the level is a ZOOM and a frame that moved only
-    // the viewport is a PAN, and both are camera moves — so the nav drag's ctrl
-    // zoom phase, the two-finger pinch and the overview lane's edge drags each
-    // put the pin out as the pan funnel does.
-    // Gated on NOTHING ELSE — unlike the chase's clear above there is no
-    // playback term, the posture being a resting camera rule as much as a
-    // playing one.
     // THIS APPLIER COMMITS NO ZOOM, `final` included: every caller is a
     // continuous gesture, and the Center on next marker lamp is written at the
     // gesture's END (the three end sites are inventoried at
     // commit_center_on_next_marker_zoom, app_state.h), so a drag that swings
     // across the working zoom and back does not flicker the lamp.
-    if (level_changed || vp_changed) collapse_centered_posture(app);
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -657,15 +615,12 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
         return;
     }
 
-    // THE FRAMING IS A CAMERA MOVE, so the centered posture goes out (the rule
-    // at AppState::centered_mode): past the return above either the level or
-    // the start really moved, so this is a zoom, a pan, or both at once — the
-    // trim bar's span-framing double-click and the group undo/redo restore's
-    // zoom-out-to-fit arm being what reach here. BOTH ARE DISCRETE, so this is
-    // also a zoom COMMIT for the Center on next marker lamp, which a pan-only
-    // framing leaves where it stands (commit_center_on_next_marker_zoom,
-    // app_state.h).
-    collapse_centered_posture(app);
+    // Past the return above either the level or the start really moved, so
+    // this is a zoom, a pan, or both at once — the trim bar's span-framing
+    // double-click and the group undo/redo restore's zoom-out-to-fit arm being
+    // what reach here. BOTH ARE DISCRETE, so this is a zoom COMMIT for the
+    // Center on next marker lamp, which a pan-only framing leaves where it
+    // stands (commit_center_on_next_marker_zoom, app_state.h).
     commit_center_on_next_marker_zoom(app);
 
     invalidate_waveform_area();
@@ -762,17 +717,6 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // nothing else, and the next play chases only if the lamp was armed
         // for it.
         if (playback.is_playing()) app.follow_engaged = false;
-        // AND EVERY PAN PUTS THE CENTERED POSTURE OUT (architect 2026-09-11;
-        // the rule at AppState::centered_mode).
-        // Until the first of those days a pan under a lit pin was simply
-        // re-derived away on the next frame — a lamp that reported a camera the
-        // user had just taken somewhere else — and the ruling made the pan the
-        // posture's end instead. This funnel covers the whole class by
-        // construction, exactly as the chase's clear above does; the strip drag
-        // writes the viewport itself and answers at its own site. NO PLAYBACK
-        // TERM: the posture holds at rest too, so a pan at rest ends the pin as
-        // one during playback does.
-        collapse_centered_posture(app);
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too — the flags carry their own text now, so this one
@@ -815,87 +759,11 @@ void Viewport::center_viewport_on_playhead() {
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
         if (playback.is_playing()) playback.resync_predictor();
         // Viewport actually moved (inside the changed guard). Center-on-
-        // playhead is a one-shot discrete jump (the C key, and the Tab recenter
-        // family) — render the plate synchronously so the playhead overlay does
+        // playhead is a one-shot discrete jump (the C key, the Tab recenter
+        // family and the `y` lamp's nudge recenter) — render the plate synchronously so the playhead overlay does
         // not lead the waveform by a frame.
         kick_waveform_sync();
     }
-}
-
-// THE CENTERED PIN'S ONE DERIVATION BODY (architect 2026-08-31, R11): while
-// the `y` lamp is lit the viewport is a FUNCTION of the playhead — the
-// playhead's frame at the window's center column at the STANDING zoom (the
-// lamp never writes zoom), clamp_viewport_start clamping at the song's two
-// ends, where the playhead walks off-center because no waveform remains.
-//
-// OWNERSHIP: every road that moves the playhead's column — the movement
-// owners, the translations/reseats, the restores, the A/B tab switch AND the
-// playback scanner's per-frame advance — recenters through the pre-paint
-// hook (main.cpp), which reads the resting-or-scanning cursor once per frame
-// and calls THIS body; no mutator scatters a recenter call of its own. The
-// other two callers are the toggle's own chokepoint (set_centered_mode's
-// off->on edge, so the invariant starts holding at the toggle) and the launch
-// seed (launch_playback_window's visibility fork), which centers the scanner
-// where follow would left-edge-align it. ALL THREE ASK ONE PREDICATE SINCE
-// 2026-09-01 — centered_pin_engaged (app_state.h), the lamp's preference
-// narrowed by the A/B audition, which disregards the pin for its whole
-// duration — so no caller reads the lamp's field direct and nothing derives
-// while that act stands, the launch seed included (the act's phase is written
-// before its launch, so the predicate sees it there too).
-// THIS BODY ALSO OWNS THE DERIVATION
-// MEMORY the resting hook edge-triggers on (the four `centered_derived_*`
-// fields, app_state.h): it stamps the subject and the state it derived
-// against, so every caller is truthful without a stamp of its own.
-//
-// THE WRITE IS THE PAN'S: full waveform-area damage, the top strip, and the
-// synchronous plate rebuild, so a per-frame recenter during playback rides
-// exactly the budget a grab-pan frame already proved. NO PREDICTOR RESYNC —
-// the per-frame case is the continuous pan's (a per-frame re-anchor would
-// step the scanner), and at rest there is no predictor to resync. AND IT
-// PRODUCES NOTHING THE USER'S OWN PAN PRODUCES: this is the AUTONOMOUS MOVER,
-// not a user pan, so it writes neither the follow chase's bit (follow_engaged,
-// which it neither reads nor produces) nor the centered lamp — a body that
-// collapsed the pin it derives for would put itself out on its first frame —
-// and it writes no zoom, so the Center on next marker lamp has nothing to
-// answer. What a user pan does to the pin is the pan funnel's line
-// (scroll_viewport, above; the rule at AppState::centered_mode).
-bool Viewport::derive_centered_viewport() {
-    if (audio.total_frames() <= 0) return false;
-    // Split-playhead, center_viewport_on_playhead's own ternary: during
-    // playback the pin holds the SCANNER centered (the waveform scrolls under
-    // a static line); at rest it holds the cursor.
-    const int64_t target = app.playhead_scanner_active
-        ? app.playhead_scanner_sample
-        : app.playhead_cursor_sample;
-    const int64_t visible = samples_visible(app, audio);
-    if (visible <= 0) return false;
-    // THE MEMORY'S ONE WRITER (2026-08-31, codex round C): this body records
-    // what it derived against — the SUBJECT its ternary just chose and the
-    // (tab, audio view, cursor) triple it ran under — so no caller carries a
-    // hand-kept stamp of its own and the pre-paint hook's resting half can
-    // simply ask whether either has moved since. It sits AFTER the two guards
-    // (a derivation that could not take effect records nothing, so the next
-    // frame retries) and AHEAD of the no-move return (a derivation that
-    // landed on the camera already in place is still a derivation, or the
-    // hook would re-call it every frame). The field block's contract, the
-    // subject term's reasoning and the reader are at app_state.h.
-    app.centered_derived_scanner    = app.playhead_scanner_active;
-    app.centered_derived_cursor     = app.playhead_cursor_sample;
-    app.centered_derived_tab        = app.active_tab_view;
-    app.centered_derived_audio_view = app.active_audio_view;
-    const int64_t old_vp = app.viewport_start_sample;
-    app.viewport_start_sample = target - visible / 2;
-    clamp_viewport_start(app, audio);
-    if (app.viewport_start_sample == old_vp) return false;
-    invalidate_waveform_area();
-    // Flags ride the top strip and move with the viewport, the pan funnel's
-    // own pairing.
-    const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-    // Synchronous plate rebuild, the rule every user-driven pan/zoom frame
-    // takes: no frame paints overlays against a plate from an older basis.
-    kick_waveform_sync();
-    return true;
 }
 
 void Viewport::invalidate_top_strip() {
@@ -912,6 +780,23 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
+// THE `y` LAMP'S ONE ACT (architect 2026-09-13; the rule is stated at
+// AppState::centered_mode): a Left/Right nudge that MOVED SOMETHING calls this
+// on its changed path, and while the lamp is lit the viewport recenters on the
+// result through center_viewport_on_playhead — the standing zoom, the clamp at
+// the song's two ends, the pan's damage and the synchronous rebuild. Both
+// nudges have stopped playback before their write, so the body's ternary takes
+// the resting cursor, which is where each nudge has just put the playhead.
+// TWO CALLERS: the marker nudge's commit tail (finish_position_nudge,
+// position_nudge.cpp) and the waveform-lane playhead step
+// (GuiInputHandler::run_waveform_lane_playhead_step). A held key's repeats and
+// a held arrow button's fires reach both through the same act bodies, so the
+// recenter runs at every step.
+void Viewport::recenter_after_nudge() {
+    if (!app.centered_mode) return;
+    center_viewport_on_playhead();
+}
+
 // Auto-follow during playback: when the scanner leaves the viewport,
 // scroll so the scanner lands ~10% into the new view, leaving room
 // ahead. Only the first move beyond vp_end triggers a scroll. Called
@@ -921,10 +806,7 @@ void Viewport::invalidate_all() {
 // the scanner always issues forth visible (Space's cursor launch and the A/B
 // audition's play, which launches from the same resting cursor, can both be
 // offscreen; a scrub click is a visible column already, so the launch call
-// no-ops there). Since 2026-09-01 every launch takes this arm exactly where
-// the centered pin is not engaged (centered_pin_engaged), which for the
-// audition's four plays is always — the act disregards the pin whole, and its
-// phase stands at the launch body's fork.
+// no-ops there).
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;
@@ -947,9 +829,9 @@ void Viewport::follow_scroll_if_needed() {
             // viewport while the scanner's column sat outside it: the playhead
             // line VANISHED for a frame or two at every page (main.cpp's
             // pre-paint documents that offscreen scanner as its own fallback
-            // case). The centered pin (2026-08-31) proved the synchronous
-            // rebuild fits inside a frame EVERY frame; follow pays it once per
-            // page — and the 2026-08-07 flicker ruling (github-recheck.md) put
+            // case). The retired centered pin (2026-08-31 to 2026-09-13) proved
+            // the synchronous rebuild fits inside a frame EVERY frame; follow
+            // pays it once per page — and the 2026-08-07 flicker ruling (github-recheck.md) put
             // a reported flicker onto this path the same way.
             // kick_waveform_sync reclamps through clamp_viewport_start before
             // rendering, which is idempotent against the clamp just above.

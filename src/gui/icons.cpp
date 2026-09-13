@@ -265,7 +265,7 @@ constexpr IconPath kGoJumpPaths[] = {
 
 // THE CENTERED LAMP's icon (2026-08-31, R11, the brief's own pick):
 // align-horizontal-center, two boxes threaded on one vertical center line —
-// what a viewport pinned to its playhead's column IS. Command coverage:
+// a viewport holding its subject at the center column. Command coverage:
 // relative `m` / `h` / `v` with implicit repetition and the glued-negative
 // number runs parse_number already reads; no `z` — the fill closes each
 // subpath implicitly, six committed files' precedent.

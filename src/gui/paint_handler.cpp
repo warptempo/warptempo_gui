@@ -1053,7 +1053,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // gains one box and one 2px gap and no separator moves.
     {RedesignButton::IconCentered, icons::Icon::AlignHorizontalCenter},
     // THE CENTER-ON-NEXT-MARKER LAMP (2026-09-04) closes the same group behind
-    // the centered pin: Breeze's zoom-next, a magnifier ring with a chevron
+    // the centered lamp: Breeze's zoom-next, a magnifier ring with a chevron
     // stepping forward out of it — the walk bringing its next stop into view.
     // It joins the group rather than opening one, so the row gains one box and
     // one 2px gap and no separator moves.
@@ -9508,21 +9508,6 @@ void GuiPaintHandler::on_resize(int w, int h) {
     app.width  = w;
     app.height = h;
     if (app.loading || audio.total_frames() <= 0) return;
-
-    // A RELAYOUT VOIDS THE CENTERED DERIVATION'S CURSOR TERM (architect
-    // 2026-09-02, the four-tier review's R-17f). The memory records what the
-    // last derivation was made against — the cursor, the tab, the audio view
-    // and the subject — and NOT the geometry it centered in, so a resize under
-    // a lit lamp leaves all four terms matching while the waveform's width and
-    // the samples-per-pixel under it have both moved: the resting hook then
-    // finds nothing due and the playhead sits off-centre until the next
-    // playhead or view change. Voiding the CURSOR term alone — -1, the load's
-    // own "no derivation stands" sentinel and never a real cursor value — is
-    // the same one-line edge clear_audition_sequence makes at the act's end,
-    // and it makes the next engaged pre-paint due, which re-derives on the
-    // resting cursor in the new geometry. Unconditional: the hook reads the
-    // pin itself, so with the lamp off this writes a sentinel nothing consults.
-    app.centered_derived_cursor = -1;
 
     // A zoom level valid at the old width may exceed the per-file effective
     // ceiling at the new width. The level ceiling and the viewport clamp both

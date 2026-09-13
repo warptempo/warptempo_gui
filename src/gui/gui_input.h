@@ -573,7 +573,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
 // Backspace, and every letter the ladder never tests (A, B, E, W — Y left
-// the class 2026-08-31, the centered pin's toggle, V on 2026-09-01, the
+// the class 2026-08-31, the centered lamp's toggle, V on 2026-09-01, the
 // `h` view's revert act moving onto it off Ctrl+H, BARE N on 2026-09-04,
 // the Center on next marker lamp joining Ctrl+N on that letter, and X on
 // 2026-09-10, the Value Drag lamp taking the letter the trim family left free
@@ -596,7 +596,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // -- letters, bare only, bound in EVERY state: the view toggles and the
         // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
         // selection, `m` bpm mode, `t` the S/T flip, `x` the value drag —
-        // 2026-09-10 — and `y` the centered pin).
+        // 2026-09-10 — and `y` the centered lamp).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
         case GuiKeys::K: case GuiKeys::M: case GuiKeys::T:
         case GuiKeys::X: case GuiKeys::Y:

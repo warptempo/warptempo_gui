@@ -593,20 +593,6 @@ void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
-// THE MARKER CARRY — the land above WITHOUT the centered posture's collapse,
-// Viewport::carry_playhead_to's marker form and its exact twin (architect
-// 2026-09-11): the acts that move a marker in TIME under a following playhead
-// are what the `y` posture is for, so they must not put its lamp out. The hide
-// and the A/B audition's end are the land's and stay here; only the collapse
-// is declined.
-// ONE ACT CALLS IT DIRECT, the complete list (re-greped 2026-09-13): the
-// Left/Right POSITION NUDGE's group-collapse prologue, which lands the playhead
-// on the focus it collapsed to (position_nudge.cpp). The movement owner above
-// composes it and is the only other caller. The posture's whole rule and the frame-shaped carry's own call sites
-// are at AppState::centered_mode and viewport.h.
-void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
-                              Viewport& viewport, int hit);
-
 // THE SAME LAND WITHOUT THE HIDE — the non-hiding entry point for the two
 // callers whose write is a RESEAT rather than a movement: the S/T flip's
 // re-express of a surviving focus (a translation) and the coincidence
@@ -2725,7 +2711,7 @@ private:
     // 2026-09-04): it asks no lamp, no follow bit and no mode, so every route
     // that lands a focus states its own camera. `c` states Center; the walk
     // states what ITS caller handed it.
-    // Its land is the movement owner, which puts the centred pin out; its
+    // Its land is the movement owner; its
     // callers are `c` (and, through `c`, Shift+`j`, the `0` command's second
     // arm and the A/B audition) and cycle_marker_focus, which the three bare
     // Tab arms and the Ctrl+Shift+Tab paired march reach.
@@ -3527,12 +3513,6 @@ private:
     // structural, this function writing the cursor DIRECT and so reaching
     // neither of the rule's two movement owners (the rule at
     // clear_region_highlight; the argument at this function's definition).
-    // THE CENTERED POSTURE IS NOT EXEMPT, AND SINCE 2026-09-12 THIS FUNCTION
-    // ANSWERS FOR IT: the playhead's position in the music really does change
-    // here, whichever road wrote the cursor, so the family is an ordinary
-    // member of the movement class and this one line covers every trim route
-    // (collapse_centered_posture, app_state.h). The overlay's exemption is
-    // about the OVERLAY and buys the pin nothing.
     // Callers own the refusals above it: a route that
     // writes no bound must not call this. The full per-route inventory is at
     // the head of input_trim.cpp.

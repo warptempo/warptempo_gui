@@ -391,13 +391,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
-    // THE CENTERED PIN, bare `y` (2026-08-31, R11): follow's sibling and
+    // THE CENTERED LAMP, bare `y` (2026-08-31, R11): follow's sibling and
     // admitted on follow's exact reasoning — a viewport preference is
     // navigation, not authored content. Its button stays lit on a locked tab
     // by the same answer.
     const bool is_centered =
         (key == GuiKeys::Y && !ctrl && !shift && !alt);
-    // CENTER ON NEXT MARKER, bare `n` (2026-09-04): the centered pin's own
+    // CENTER ON NEXT MARKER, bare `n` (2026-09-04): the centered lamp's own
     // reasoning again — the bit decides where the CAMERA goes after a Tab
     // walk and authors nothing the lock protects. Its button stays lit on a
     // locked tab by the same answer.
@@ -2678,14 +2678,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_waveform_magnify =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
-    // THE CENTERED PIN, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
+    // THE CENTERED LAMP, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
     // admitted where FOLLOW is not: follow's chase is playback's and playback
     // is removed from the view whole, so admitting `f` would admit a lamp
-    // with nothing to do, while the centered derivation reads the SAME
-    // resting cursor the view's lanes read (the pre-paint hook's resting
-    // half) and pins the camera in here exactly as outside. Its icon-row
-    // button stays LIVE in the view through the derived partition on this
-    // line.
+    // with nothing to do, while this lamp is a plain toggle that authors
+    // nothing. Its icon-row button stays LIVE in the view through the derived
+    // partition on this line.
     const bool is_centered = (key == GuiKeys::Y && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
@@ -4086,16 +4084,6 @@ void GuiInputHandler::run_history_revert() {
         if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
         else       undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
-        // AND THE CENTERED POSTURE COLLAPSES ON THE WARP ARM
-        // (collapse_centered_posture, app_state.h; the centred rule at
-        // AppState::centered_mode): a warp revert rewrites the map, that rule's
-        // MAP clause, exactly as the load-in-place's whole-recipe write does.
-        // THE PHASE ARM IS
-        // CARVED OUT BY THE SAME MAP ARGUMENT THE RE-LAND BELOW TAKES — phase
-        // resets are no warp-map input, so a phase revert moves no image and
-        // the pin has nothing to answer for. Inside the `changed` block, so
-        // this is the changed path.
-        if (!phase) collapse_centered_posture(app);
         // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
         // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
         // cursor's NUMBER was expressed in, and keeping that number would move
@@ -5447,21 +5435,6 @@ void GuiInputHandler::apply_recipe_in_place(
     // (reset_displayed_target_basis, app_state.h, which carries the membership
     // and names its two callers).
     reset_displayed_target_basis(app);
-
-    // AND THE CENTERED POSTURE COLLAPSES (collapse_centered_posture,
-    // app_state.h; the centred rule at AppState::centered_mode): this body
-    // replaced the warp store and the engine block in the two lines above,
-    // which is that rule's MAP clause in its widest form — the whole recipe.
-    // UNCONDITIONAL, because this
-    // body has no unchanged path: every road here has already committed to
-    // installing the recipe, and a recipe byte-equal to the live one is not a
-    // case any caller distinguishes. IT IS THE CENTERED PIN ALONE: the load
-    // leaves the SESSION LAMPS (`k`, `x`, `z`, and the Center on next marker
-    // lamp, which only a zoom commit writes) untouched by being a store
-    // write and not a settings load, and the two sweep-mode bits are view state
-    // the act does not touch either — what moves here is the map, which is
-    // the pin's own business and no other lamp's.
-    collapse_centered_posture(app);
 
     // The LIVE camera stays exactly where the user left it, but the DOMAIN it
     // sits in may have moved: a target-view session's total is derived from the
@@ -8956,7 +8929,15 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // which is why the buttons' face can read the BARE step and still answer
     // for all three (the twin rule's own resolution, at
     // horizontal_arrow_step_actionable).
+    const int64_t cursor_before = app.playhead_cursor_sample;
     viewport.move_playhead_pixels(step_columns);
+    // KEEP CENTERED WHILE NUDGING (the rule at AppState::centered_mode): a
+    // step that moved the cursor recenters on it while the `y` lamp is lit; a
+    // walled step moved nothing and recenters nothing. Every magnitude and
+    // every held repeat — the key's and the Left / Right buttons' — runs
+    // through this body, so the recenter lands at each step.
+    if (app.playhead_cursor_sample != cursor_before)
+        viewport.recenter_after_nudge();
 }
 
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
@@ -9011,30 +8992,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::Y:
-        // THE A/B AUDITION OWNS THE LAMP WHILE IT RUNS (architect 2026-09-11):
-        // the act disregards the pin for its whole duration and ARMS it at its
-        // end, so the posture is not the user's to change mid-act. The key
-        // cards where the icon-row button greys — the product's rule, the face
-        // reading this same predicate — and the card is one clause naming the
-        // state, the way out being the act's own end. Ranked ahead of the
-        // toggle so the setter stays a pure write chokepoint.
-        if (audition_sequence_standing(app)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kCenteredAuditionCard);
-            break;
-        }
-        // Toggle the centered pin (2026-08-31, R11). The full body — the
-        // off→on edge's immediate recenter through the one derivation body —
-        // lives in GuiPlaybackLifecycle::set_centered_mode, shared with the
-        // icon-row button's synthesized chord and with nothing else.
-        // History-less, one-shot, follow's own shape.
-        playback_lifecycle.set_centered_mode(!app.centered_mode);
+        // Toggle the Keep Centered While Nudging lamp (2026-08-31, R11; its one
+        // act since 2026-09-13 is the nudge's recenter — the rule at
+        // AppState::centered_mode). The icon-row button synthesizes this
+        // chord. History-less, one-shot, legal during the A/B audition, and
+        // it moves nothing at the press: the next nudge centres.
+        write_centered_posture(app, !app.centered_mode);
         break;
     case GuiKeys::Z:
         // Toggle the Restrict undo to viewport lamp (2026-09-04). The setter
         // is GuiInputHandler::set_restrict_undo_to_viewport, shared with the
         // icon-row button's synthesized chord and with nothing else.
-        // History-less, one-shot, the centered pin's own shape — and nothing
+        // History-less, one-shot, the centered lamp's own shape — and nothing
         // moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
@@ -9046,7 +9015,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // with the icon-row button's synthesized chord, while a committed zoom
         // crossing the working level writes the same bit since 2026-09-13. It
         // leaves the zoom's edge record untouched, so the toggle stands until
-        // the zoom next crosses the line. History-less, one-shot, the centered pin's
+        // the zoom next crosses the line. History-less, one-shot, the centered lamp's
         // own shape — and nothing moves at the press: the bit is read at the
         // next BARE Tab walk, through marker_walk_frame, and by nothing else
         // (the Ctrl+Shift+Tab march states its own framing).

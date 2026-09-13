@@ -302,13 +302,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
     // which puts them past the viewport group rather than here.)
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
-    // THE CENTERED PIN (2026-08-31, R11) — Follow's neighbour and its shape
+    // THE CENTERED LAMP (2026-08-31, R11; its one act since 2026-09-13 is
+    // the Left/Right nudge's recenter) — Follow's neighbour and its shape
     // exactly: bare `y`, a TOGGLE with a lamp on the live bit its own chord
     // flips. Live in the `h` view (the mode's allowlist admits `y`, so the
     // derived partition keeps the face lit) and on a locked tab (navigation,
     // the lock's allowlist).
     {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
-    // CENTER ON NEXT MARKER (architect 2026-09-04) — the centered pin's shape
+    // CENTER ON NEXT MARKER (architect 2026-09-04) — the centered lamp's shape
     // exactly, one lamp further along the same group: bare `n`, a TOGGLE
     // reading the live bit — which since 2026-09-13 the ZOOM writes as
     // well as this chord (a committed zoom crossing the working level; the
@@ -760,7 +761,7 @@ constexpr ToolbarChord kToolbarChords[] = {
 // 2026-09-04'S CENTER-ON-NEXT-MARKER LAMP,
 // one pure addition inside an existing group (a chord, so the pair moved
 // together): `IconCenterOnNext` closed row 4's viewport-class group on bare
-// `n`, behind the centered pin, and no separator or group boundary moved. It
+// `n`, behind the centered lamp, and no separator or group boundary moved. It
 // was 47 against 52 earlier that day, at THE RADIO-PAIR COLLAPSE, which took
 // three rows out of this table with the three buttons the three lamps
 // replaced. It was 50 against 55 from 2026-09-03'S HELP ANCHOR, which moved the
@@ -1606,16 +1607,12 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // no store at all — lands through the identical expression instead of a second
 // copy of it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
-// THE MARKER FORM IS TWO ENTRY POINTS — carry_playhead_on_marker and the LAND
-// that composes it with the centered collapse — and the list above is the LAND
-// family's: every member of it is an act the centred pin goes out on. The
-// carry's one caller is named at its declaration (input_handler.h).
 // The shared write, defined below the two entry points that share it.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport, int64_t src_frame);
 
-void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
-                              Viewport& viewport, int hit) {
+void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
+                             Viewport& viewport, int hit) {
     // THE HIDE IS THE LAND'S, not the caller's, since 2026-08-19 — this is the
     // second of the rule's two movement owners (the rule and its exemptions are
     // at clear_region_highlight, input_handler.h). It sits ABOVE the store
@@ -1631,26 +1628,8 @@ void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
     // TRANSLATION or a provable no-op, neither of which is a movement. A class
     // statement: the complete clearing-owner inventory is at
     // GuiAuditionSequence (app_state.h).
-    // IT IS IN THE CARRY RATHER THAN THE LAND BELOW, exactly as
-    // Viewport::carry_playhead_to holds it: a TIME ACT declines the centered
-    // posture's collapse, never the act's end.
     clear_audition_sequence(app);
     reseat_playhead_on_marker(app, audio, viewport, hit);
-}
-
-// THE MARKER MOVEMENT OWNER — the carry above plus the centered collapse,
-// Viewport::move_playhead_to's marker form (2026-09-11). The centered rule is
-// stated once at AppState::centered_mode; the ORDER
-// is load-bearing the same way it is there — the carry's clear of the audition
-// runs first, so a land that interrupts the act ends it AND collapses the pin,
-// while the act's own `c` lands (made while its phase stands) find the
-// collapse's leading return. The bare Tab walk lands here like every other
-// focused landing: no land writes the Center on next marker lamp (the zoom
-// does, set_center_on_next_marker), so the walk has no lamp to decline.
-void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
-                             Viewport& viewport, int hit) {
-    carry_playhead_on_marker(app, audio, viewport, hit);
-    collapse_centered_posture(app);
 }
 
 // THE MARKER RESEAT — the same store lookup and the same write with NO hide, for
@@ -1695,12 +1674,6 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
     // The A/B audition's end, this entry point's half of it — the argument is
     // at the marker form above, the inventory at GuiAuditionSequence.
     clear_audition_sequence(app);
-    // AND THE CENTERED COLLAPSE, after that clear and for the
-    // same reason the marker form takes it (the rule at AppState::centered_mode).
-    // This form has NO CARRY TWIN: its
-    // callers are all `h`-view commands and no time act holds a bare source
-    // frame — one is owed an argument of its own before it is written.
-    collapse_centered_posture(app);
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 
@@ -2367,10 +2340,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // offers rather than merely whether it will succeed: with either lit
         // the horizontal move is off on every flag, so a box that still
         // promised it would promise a gesture that no longer exists.
-        // THE CENTRED PIN IS NOT A SECOND ONE: under a lit pin the horizontal
-        // drag exists exactly as it does at rest — it simply collapses the
-        // posture at its crossing — so the box keeps TrimResize and the cursor
-        // still promises the gesture. That fork is at the arm below. It reads
+        // Those forks are at the arms below. It reads
         // hit_test_flag — the painter's published boxes, the same predicate the
         // press claims and the nav surface carves itself out with — so it
         // answers the LIVE marker lane and the `h` view's DIFF flags through
@@ -4345,11 +4315,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         // change never creates, moves or recolors one.
         selection.set_single_selection(hit);
         // THE LAND IS THE MOVEMENT OWNER HERE, as it is on the two modified
-        // arms above (architect 2026-09-12): the centered posture answers AT
-        // THE PRESS, because a click and a drag now answer it the same way
-        // — the drag collapses the centred pin at its own crossing
-        // (MarkerDragOps::begin_drag) — so the press's identity decides
-        // nothing about the posture and there is nothing to defer.
+        // arms above.
         land_playhead_on_marker(app, audio, viewport, hit);
     }
     // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
@@ -10672,13 +10638,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // store between press and crossing — and sets app.drag.active. Fall
         // through (no return) so this same motion event applies the first delta
         // through the marker-drag branch below.
-        // IT ALSO COLLAPSES THE CENTRED PIN (architect 2026-09-12), on its
-        // success and once: this is the instant the press's identity becomes
-        // a drag, and a drag that carries a marker out from under a centred
-        // playhead is a camera act (MarkerDragOps::begin_drag states it, the
-        // rule at AppState::centered_mode). The arming press already collapsed
-        // the pin through its own land, so the collapse here is the
-        // gesture answering for itself and nothing is owed twice.
         // NO DOUBLE-CLICK CLEAR IS OWED HERE: the seed is the motionless
         // release's alone, so a press that becomes a drag never seeded one,
         // and on_button_press's own

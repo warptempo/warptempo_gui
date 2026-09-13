@@ -17,13 +17,6 @@ struct GuiTargetRender;
 // flag's plain drag is the VERTICAL one (ValueDragOps, value_drag.{h,cpp}) and
 // this one does not begin at all, on any flag — "we never allow multi-axis
 // dragging; flags move up and down or not at all" (architect 2026-09-10).
-// AND IT COLLAPSES THE CENTRED PIN (architect 2026-09-12): a horizontal drag
-// carries the marker out from under a playhead the `y` lamp holds at the
-// window's centre, so the gesture is a camera act and takes the movement
-// class — the collapse runs ONCE, in begin_drag, at the crossing where the
-// press's identity becomes certain, and the ride and the commit below then
-// run under a dark lamp. The pin is one bare `y` or one Shift+Space away
-// afterwards; the rule's home is AppState::centered_mode.
 // Shared by the warp and phase reset views and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —

@@ -269,16 +269,6 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     // carries. Caller inventory at Viewport::invalidate_clock_area
     // (viewport.h).
     viewport.invalidate_clock_area();
-    // AND THE CENTERED POSTURE COLLAPSES (architect 2026-09-12,
-    // ending the asymmetry the direct write above had bought): the playhead's
-    // position in the music has changed — it now sits at the new trim start —
-    // and that is the centred pin's rule, whatever
-    // road the cursor was written by. This helper is the family's ONE playhead
-    // writer, so one line covers every trim route; it is idempotent under the
-    // sweep's and the endcap drag's per-motion paths, where each accepted write
-    // re-parks. (collapse_centered_posture, app_state.h; the
-    // centred rule at AppState::centered_mode.)
-    collapse_centered_posture(app);
     // AND THE TRIM REGION OVERLAY STAYS SHOWN. This call hid it from 2026-08-05
     // until 2026-08-18, when the region BECAME the trim: hiding here would hide
     // the overlay the instant the user dragged its own bound. THE DIRECT CURSOR

@@ -2942,63 +2942,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner off a buffer the waveform does not show. The player's
         // position is read by its painter and damaged by its own tick.
         if (app.render_player.active) return;
-        if (!playback.is_playing()) {
-            // THE CENTERED DERIVATION'S RESTING HALF (architect 2026-08-31,
-            // R11) — the pre-paint hook is the pin's ONE derivation point
-            // (the ownership statement is at derive_centered_viewport,
-            // viewport.cpp): every road that lands the resting cursor — the
-            // movement owners, the reseats/translations, the restores, the
-            // A/B tab switch, the `h` view's own sweep — already damages, so
-            // a frame follows and THIS line reads the result once, instead of
-            // a recenter call scattered across those owners. EDGE-TRIGGERED
-            // on the memory's four terms (its contract at the declaration):
-            // the (tab, audio view, cursor) TRIPLE — the next playhead change,
-            // or an A/B or S/T switch (each tab being its own virtual
-            // playhead), re-pins. IT NO LONGER HAS TO ANSWER FOR A PAN
-            // (2026-09-11): a pan, a zoom and a span framing each COLLAPSE the
-            // posture now (the rule at AppState::centered_mode), so a camera
-            // the user moved cannot stand under a lit lamp waiting for one of
-            // the terms to trip — what still can is a RESTORE's own
-            // keep-visible scroll, which trips the cursor term anyway — PLUS
-            // THE SUBJECT, which is the STOP
-            // EDGE: a stop swaps the painted playhead from the scanner back
-            // to the cursor while all three of those are unchanged, so the
-            // last derivation's subject being the SCANNER is itself due here
-            // and every stop road (Space's stop, the natural end, the
-            // target-view freeze) re-centers on the resting cursor in the
-            // frame its own damage already produces — the A/B audition's last
-            // play having left that list on 2026-09-01, its plays deriving
-            // nothing to stamp and its end coming due through the memory's
-            // own void instead (clear_audition_sequence).
-            // A RELAYOUT IS DUE THROUGH THAT SAME VOID since 2026-09-02
-            // (R-17f): the four terms say what was centered and never the
-            // geometry it was centered in, so a resize matches every one of
-            // them while the width and the samples-per-pixel have moved —
-            // GuiPaintHandler::on_resize voids the cursor term, and the next
-            // frame re-derives here.
-            // The memory is written by the derivation body, not here.
-            // PAUSED while a pointer gesture or a finger is live, the follow
-            // chase's own aiming rule below: a former carrying the playhead
-            // mid-drag must not have the waveform recentered under it; the
-            // release's landing re-derives on the next frame. The scanner
-            // gate keeps the one-tick window between the flag's drop and the
-            // tick's stop body from reading a stale scanner.
-            // AND THE PIN'S OWN ENGAGEMENT LEADS THE TERMS since 2026-09-01
-            // (centered_pin_engaged, app_state.h — the lamp's bit was read
-            // direct here until the A/B audition began disregarding it): the
-            // act's three rests are resting frames like any other, and the pin
-            // must not derive in them.
-            if (centered_pin_engaged(app) && !app.playhead_scanner_active &&
-                !any_pointer_gesture_active(app) &&
-                !gui.touch_contact_active() &&
-                (app.centered_derived_scanner ||
-                 app.playhead_cursor_sample != app.centered_derived_cursor ||
-                 app.active_tab_view != app.centered_derived_tab ||
-                 app.active_audio_view != app.centered_derived_audio_view)) {
-                viewport.derive_centered_viewport();
-            }
-            return;
-        }
+        if (!playback.is_playing()) return;
 
         // (The loop-wrap predictor resync that stood here is GONE with all
         // audition looping, architect 2026-07-30: the read position only ever
@@ -3073,35 +3017,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         app.playhead_scanner_precise = playback.cursor_precise();
         const double new_px  = scanner_pixel_x(app, pb_vp, pb.spp);
 
-        // THE CENTERED DERIVATION'S PLAYING HALF (architect 2026-08-31, R11):
-        // while the `y` lamp is lit the waveform scrolls under a static
-        // centered playhead — a per-frame recenter at the scanner's own
-        // cadence through the one derivation body, which takes the grab-pan
-        // frame's exact write (full waveform damage + synchronous plate
-        // rebuild, the budget that path already proved). THE DAMAGE CLASS
-        // FORKS HERE, at the damage site: a recenter that MOVED the viewport
-        // subsumes the narrow-on-plate pair below — the pan-class damage
-        // erases the old line wholesale and the lane with it — so the narrow
-        // pair and the overview pair run only when the pin did not move the
-        // camera: lamp unlit, the aiming pause (a live gesture or finger), or
-        // the derivation CLAMPED at the song's ends, where the playhead walks
-        // off-center across a wall-parked viewport.
-        // THE FIFTH QUIET CASE IS THE A/B AUDITION (architect 2026-09-01):
-        // centered_pin_engaged (app_state.h) leads the terms here as it does
-        // at the resting half, so the act's four bounded plays scroll no
-        // camera and take the narrow pair below exactly as they do with the
-        // lamp unlit — which is what "the audition disregards the toggle"
-        // means for the plays themselves.
-        bool centered_recentered = false;
-        if (centered_pin_engaged(app) &&
-            !any_pointer_gesture_active(app) && !gui.touch_contact_active()) {
-            centered_recentered = viewport.derive_centered_viewport();
-        }
-
         // invalidate_region during pre-paint appends to damage_ without
         // scheduling a redundant frame callback (platform layer handles
         // that via its in_pre_paint_ flag).
-        if (!centered_recentered) invalidate_playhead_columns(old_px, new_px);
+        invalidate_playhead_columns(old_px, new_px);
         invalidate_clock_area();
         // THE OVERVIEW TICK'S NARROW PAIR (the damage rule's overview
         // extension, playhead_pixel_x, app_state.h): the lane's tick advances
@@ -3117,20 +3036,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // centered block: Viewport::invalidate_waveform_area's ONE rect (window
         // top through the waveform's bottom) contains the lane by construction,
         // which is what retired that owner's dedicated overview rider.
-        // (Under a centered recenter this pair is subsumed too:
-        // invalidate_waveform_area's one rect — window top through the
-        // waveform's bottom — contains the lane by construction, the same
-        // containment the discrete playhead writes rely on.)
-        if (!centered_recentered) {
-            const int ov_new =
-                overview_tick_column(app, audio, app.playhead_scanner_precise);
-            if (ov_old >= 0 && ov_new >= 0 && ov_new != ov_old) {
-                const GuiRect ov_lane = top_overview_row_area(app);
-                viewport.invalidate_rect(
-                    GuiRect{ov_lane.x + ov_old, ov_lane.y, 1, ov_lane.h});
-                viewport.invalidate_rect(
-                    GuiRect{ov_lane.x + ov_new, ov_lane.y, 1, ov_lane.h});
-            }
+        const int ov_new =
+            overview_tick_column(app, audio, app.playhead_scanner_precise);
+        if (ov_old >= 0 && ov_new >= 0 && ov_new != ov_old) {
+            const GuiRect ov_lane = top_overview_row_area(app);
+            viewport.invalidate_rect(
+                GuiRect{ov_lane.x + ov_old, ov_lane.y, 1, ov_lane.h});
+            viewport.invalidate_rect(
+                GuiRect{ov_lane.x + ov_new, ov_lane.y, 1, ov_lane.h});
         }
         // THE FOLLOW CHASE NEVER PAGES UNDER A LIVE AIM (the two refusal terms
         // below). The chase is the product's one AUTONOMOUS viewport mover: it
@@ -3163,18 +3076,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during the disambiguation
         // window; the contract is at the touch state block, input_core.h.
-        // UNDER A LIT CENTERED LAMP THE CHASE IS SUPERSEDED STRUCTURALLY, not
-        // gated (2026-08-31, R11 — no exclusivity machinery, two independent
-        // lamps): the pin's per-frame recenter above runs first and holds the
-        // scanner at the center column, so the chase's own leaves-the-window
-        // test simply never fires. The two movers share the AIMING terms and
-        // nothing else since 2026-09-11 — the pin reads no chase bit, and a
-        // CHANGED PAN ends the chase and collapses the pin through their
-        // respective owners, both in Viewport::scroll_viewport's changed
-        // branch — the chase's clear under that branch's playback term, the
-        // posture's collapse under none — so a pan during playback leaves
-        // neither mover running, and a pan at rest ends the posture that was
-        // the only one there.
         // THE BIT IS THE PLAY'S, NOT THE LAMP'S: follow is a one-shot, so
         // this asks whether the play IN FLIGHT is chasing (the launch that
         // spent the armed lamp is what turned it on; every pan turns it off,
