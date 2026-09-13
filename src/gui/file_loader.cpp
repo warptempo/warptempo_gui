@@ -843,6 +843,13 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // timestamp); nothing gates or modals in the GUI.
     target_render.ensure_ready();
 
+    // THE CENTER ON NEXT MARKER LAMP STARTS FROM THE OPENING ZOOM (architect
+    // 2026-09-13): lit iff the parsed tab's level, as the resize re-clamp above
+    // left it, is at the working zoom or finer, and the zoom commit's edge
+    // record seeded to the same side (seed_center_on_next_marker_zoom,
+    // app_state.h).
+    seed_center_on_next_marker_zoom(app);
+
     gui.invalidate_region(0, 0, app.width, app.height);
     return true;
 }

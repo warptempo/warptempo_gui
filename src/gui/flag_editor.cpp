@@ -404,13 +404,12 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // the old one, or to leave the mode, which clears the bracket whole.
     app.warpmarkers.markers_mut() = std::move(proposed);
 
-    // AND THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER (postures_after_value_change,
-    // app_state.h, where the class and the caller inventory live): a bound is a
-    // flag's own number, so the walk's framing lamp goes out and the centred
-    // pin with it — the same line the arrows' step and the value drag's bound
+    // AND THE CENTERED POSTURE COLLAPSES (collapse_centered_posture,
+    // app_state.h): a bound is a flag's own number — the same line the arrows'
+    // step and the value drag's bound
     // motion take, the bracket's three authoring roads answering as one. Past
     // the unchanged return above, so this is the changed path.
-    postures_after_value_change(app);
+    collapse_centered_posture(app);
 
     // NO RENDER AND NO MAP REBUILD: a bracket is not a map input (excluded
     // from build_warp_frame_map and the render recipe alike), so the cell is
@@ -521,11 +520,11 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     // the commit writes the store and nothing else.
     app.phaseresetmarkers.markers_mut() = std::move(proposed);
 
-    // AND THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER, the warp arm's own line
-    // in this column (postures_after_value_change, app_state.h): a hop bound is
-    // a flag's own number, so the walk's framing lamp goes out and the centred
-    // pin with it. Past the unchanged return above, so this is the changed path.
-    postures_after_value_change(app);
+    // AND THE CENTERED POSTURE COLLAPSES, the warp arm's own line
+    // in this column (collapse_centered_posture, app_state.h): a hop bound is
+    // a flag's own number. Past the unchanged return above, so this is the
+    // changed path.
+    collapse_centered_posture(app);
 
     // NO RENDER AND NO MAP REBUILD: a bracket is not a position and not a map
     // input, so the cell is the only thing that moved and the strip is the
@@ -706,16 +705,14 @@ void GuiFlagEditor::commit_measure_edit() {
     }
     undo.recompute_dirty();
 
-    // AND THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER, on both columns
-    // (postures_after_value_change, app_state.h, where the class and the caller
-    // inventory live): a measure is a flag's own number and position is not a
-    // value, so the walk's framing lamp goes out and the centred pin with it —
-    // one answer for the class. A RESTORE IS NOT IN THAT CLASS AT ALL: every
-    // undo and redo takes the MOVEMENT posture unconditionally, whatever the
+    // AND THE CENTERED POSTURE COLLAPSES, on both columns
+    // (collapse_centered_posture, app_state.h): a measure is a flag's own
+    // number, and the value class collapses as one. Every undo and redo
+    // collapses too, unconditionally, whatever the
     // entry's diff holds (Undo::restore_history_entry, undo.cpp — the
     // self-classifying restore of 2026-09-12 is deleted). Past the unchanged
     // return above, so this is the changed path.
-    postures_after_value_change(app);
+    collapse_centered_posture(app);
 
     // NO RE-RENDER AND NO MAP REBUILD: a measure reaches neither the engine nor
     // the render fingerprint (the field's own contract at WarpMarker::measure),
@@ -919,15 +916,14 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // Unconditional by ruling — rationale at GuiTargetRender::trigger. Any
     // store change repaints and triggers.
     undo.recompute_dirty();
-    // THE TWO CAMERA LAMPS TAKE THE VALUE ANSWER (postures_after_value_change,
-    // app_state.h, where the class and the caller inventory live): this editor
-    // is a VALUE surface and never a placement one — canonical_changed IS the
-    // map-input set on it, a tempo, a scale, a label definition or reference,
-    // the disabled bit — so the centred pin goes out on the rule's MAP clause
-    // and the walk's framing lamp goes out because position is not a value.
+    // THE CENTERED POSTURE COLLAPSES (collapse_centered_posture,
+    // app_state.h): canonical_changed IS the
+    // map-input set on this editor, a tempo, a scale, a label definition or
+    // reference, the disabled bit — so the centred pin goes out on the rule's
+    // MAP clause.
     // Past the canonical_changed return above, so this is the changed path, and
     // the re-land below is a TRANSLATION that writes nothing of its own.
-    postures_after_value_change(app);
+    collapse_centered_posture(app);
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL (architect 2026-08-24). The payload editor is a
     // VALUE surface — tempo, label_def / label_ref, per-marker scale, the

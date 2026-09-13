@@ -542,11 +542,10 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
         return std::nullopt;
     app.phaseresetmarkers.markers_mut() = std::move(proposed);
     // A BOUND IS A FLAG'S VALUE ON THIS COLUMN TOO — the warp twin's line, the
-    // co-equal axes rule (postures_after_value_change, app_state.h, where the
-    // class and the caller inventory live): the walk's framing lamp goes out
-    // and the centred pin with it. Past the unchanged belt above, so this is
+    // co-equal axes rule (collapse_centered_posture, app_state.h): the centred
+    // pin goes out. Past the unchanged belt above, so this is
     // the changed path.
-    postures_after_value_change(app);
+    collapse_centered_posture(app);
     // The marker lane repaints its cells — the store's generation moved, so
     // the flag cache rebuilds under the top strip's damage. No waveform
     // damage: a stem reads the class, and a bound changes no class; nothing

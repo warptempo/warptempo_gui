@@ -21,8 +21,7 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame);
 
 // EVERYTHING A WARP-COLUMN TEMPO WRITE OWES AFTER ITS OWN DAMAGE (2026-09-10):
-// the TWO CAMERA LAMPS a tempo act answers for — the centered posture's
-// collapse and the walk's framing lamp put out (2026-09-11) — then, in TARGET
+// the centered posture's collapse a tempo act answers for (2026-09-11) — then, in TARGET
 // view, the synchronous re-warp and the focused marker's re-land on its
 // post-write image, then — in every view — the preview trigger. THREE
 // CALLERS, and they are three because the SUBJECT is one: the singleton cent

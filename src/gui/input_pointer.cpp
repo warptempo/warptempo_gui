@@ -310,8 +310,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconCentered, GuiKeys::Y, false, false, false, false, true},   // bare y
     // CENTER ON NEXT MARKER (architect 2026-09-04) — the centered pin's shape
     // exactly, one lamp further along the same group: bare `n`, a TOGGLE
-    // reading the live bit — which since 2026-09-11 the ACT FAMILY writes as
-    // well as this chord (a tempo act puts it out, a time act lights it; the
+    // reading the live bit — which since 2026-09-13 the ZOOM writes as
+    // well as this chord (a committed zoom crossing the working level; the
     // inventory is at set_center_on_next_marker, app_state.h), the face being
     // truthful either way because it reads the bit and not the press. Live on a locked tab (bare `n`
     // is navigation, on the lock's allowlist) and DEAD in the `h` view, where
@@ -1606,12 +1606,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // no store at all — lands through the identical expression instead of a second
 // copy of it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
-// THE MARKER FORM IS THREE ENTRY POINTS SINCE 2026-09-12 — carry_playhead_on_marker,
-// the LAND that composes it with the two camera lamps' movement answer, and the
-// WALK's land, which takes the centered collapse alone — and the list above is
-// the LAND family's: every member of it is an act the centred pin goes out on.
-// The carry's one caller is named at its declaration (input_handler.h) and the
-// walk land's at its own body below.
+// THE MARKER FORM IS TWO ENTRY POINTS — carry_playhead_on_marker and the LAND
+// that composes it with the centered collapse — and the list above is the LAND
+// family's: every member of it is an act the centred pin goes out on. The
+// carry's one caller is named at its declaration (input_handler.h).
 // The shared write, defined below the two entry points that share it.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport, int64_t src_frame);
@@ -1640,39 +1638,17 @@ void carry_playhead_on_marker(AppState& app, const GuiAudio& audio,
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }
 
-// THE MARKER MOVEMENT OWNER — the carry above plus the two camera lamps'
-// movement answer, Viewport::move_playhead_to's marker form (2026-09-11, the
-// pair since 2026-09-12). The centered rule is stated once at
-// AppState::centered_mode and the classes at postures_after_movement; the ORDER
+// THE MARKER MOVEMENT OWNER — the carry above plus the centered collapse,
+// Viewport::move_playhead_to's marker form (2026-09-11). The centered rule is
+// stated once at AppState::centered_mode; the ORDER
 // is load-bearing the same way it is there — the carry's clear of the audition
-// runs first, so a land that interrupts the act ends it AND writes both lamps,
-// while the act's own `c` lands (made while its phase stands) find the composed
-// body's leading return.
+// runs first, so a land that interrupts the act ends it AND collapses the pin,
+// while the act's own `c` lands (made while its phase stands) find the
+// collapse's leading return. The bare Tab walk lands here like every other
+// focused landing: no land writes the Center on next marker lamp (the zoom
+// does, set_center_on_next_marker), so the walk has no lamp to decline.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
-    carry_playhead_on_marker(app, audio, viewport, hit);
-    postures_after_movement(app);
-}
-
-// THE WALK'S OWN LANDING — the same movement, with the CENTERED COLLAPSE ALONE
-// and no walk-lamp write (architect 2026-09-12). THE WALK MUST NOT WRITE THE
-// LAMP THAT GOVERNS IT: bare Tab / Shift+Tab / IsoLeftTab land through here and
-// the Center on next marker lamp decides whether they frame, so the ON write
-// the owner above carries would relight a dark lamp on the first step and the
-// dark state would last exactly one press. The step is still a movement — the
-// playhead's position in the music changes — so the centred pin goes out
-// exactly as it does for every other land, and this entry differs from the
-// owner in that one omission.
-//
-// NAMED RATHER THAN SPELLED AS A FLAG, the reseat's own argument: a parameter
-// meaning "skip the rule this time" is the hand-listed inventory in disguise.
-// ITS CALLER IS THE WALK'S OWN JUMP BODY and nothing else
-// (GuiInputHandler::jump_playhead_to_focused_marker_for_walk,
-// input_handler.cpp), which the three bare Tab arms and the Ctrl+Shift+Tab
-// paired march reach through cycle_marker_focus — the march being the walk
-// composed, so it takes the walk's road whatever framing it states.
-void land_playhead_on_marker_for_walk(AppState& app, const GuiAudio& audio,
-                                      Viewport& viewport, int hit) {
     carry_playhead_on_marker(app, audio, viewport, hit);
     collapse_centered_posture(app);
 }
@@ -1719,12 +1695,12 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
     // The A/B audition's end, this entry point's half of it — the argument is
     // at the marker form above, the inventory at GuiAuditionSequence.
     clear_audition_sequence(app);
-    // AND THE TWO CAMERA LAMPS' MOVEMENT ANSWER, after that clear and for the
-    // same reason the marker form takes it (the rule at AppState::centered_mode,
-    // the classes at postures_after_movement). This form has NO CARRY TWIN: its
+    // AND THE CENTERED COLLAPSE, after that clear and for the
+    // same reason the marker form takes it (the rule at AppState::centered_mode).
+    // This form has NO CARRY TWIN: its
     // callers are all `h`-view commands and no time act holds a bare source
     // frame — one is owed an argument of its own before it is written.
-    postures_after_movement(app);
+    collapse_centered_posture(app);
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 
@@ -3391,6 +3367,11 @@ void GuiInputHandler::end_touch_nav() {
     // leave the pivot mark painted over a settled view.
     clear_touch_zoom_seat(app, viewport);
     if (playback.is_playing()) playback.resync_predictor();
+    // AND THE PINCH COMMITS ITS ZOOM HERE, at the one body every touch end
+    // reaches, never per frame (commit_center_on_next_marker_zoom,
+    // app_state.h). A pan-only gesture finds the level where the last commit
+    // left it and writes nothing.
+    commit_center_on_next_marker_zoom(app);
 }
 
 // The pan-zone query's body (contract at the declaration): THE NAVIGATION
@@ -4364,8 +4345,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         // change never creates, moves or recolors one.
         selection.set_single_selection(hit);
         // THE LAND IS THE MOVEMENT OWNER HERE, as it is on the two modified
-        // arms above (architect 2026-09-12): the two camera lamps answer AT
-        // THE PRESS, because a click and a drag now answer them the same way
+        // arms above (architect 2026-09-12): the centered posture answers AT
+        // THE PRESS, because a click and a drag now answer it the same way
         // — the drag collapses the centred pin at its own crossing
         // (MarkerDragOps::begin_drag) — so the press's identity decides
         // nothing about the posture and there is nothing to defer.
@@ -7446,6 +7427,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             if (!zooming && playback.is_playing())
                 playback.resync_predictor();
             end_strip_pointer_capture();
+            // THE GESTURE'S END IS ITS ZOOM COMMIT, whichever phase it ended
+            // in: a ctrl phase released mid-drag committed nothing at its
+            // ctrl-up, and a pan-only drag finds the level on the side the
+            // last commit left it (commit_center_on_next_marker_zoom,
+            // app_state.h, where the end sites are inventoried).
+            commit_center_on_next_marker_zoom(app);
             return;
         }
         // The motionless zoom-phase press painted a stem from the press (or
@@ -7478,6 +7465,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         if (moved) {
             apply_overview_drag_at(x, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
+            // The edge drags' zoom commits at the drag's end
+            // (commit_center_on_next_marker_zoom, app_state.h).
+            commit_center_on_next_marker_zoom(app);
         }
         app.overview_drag = OverviewDragState{};
         return;
@@ -7674,6 +7664,9 @@ void GuiInputHandler::finalize_active_drags() {
             if (playback.is_playing()) playback.resync_predictor();
             if (zooming) viewport.kick_waveform_sync();
             end_strip_pointer_capture();
+            // A force-end is still the gesture's end, so it is the zoom's
+            // commit (commit_center_on_next_marker_zoom, app_state.h).
+            commit_center_on_next_marker_zoom(app);
         }
         app.scroll_drag = ScrollDragState{};
         if (zooming) viewport.invalidate_waveform_area();
@@ -7691,6 +7684,9 @@ void GuiInputHandler::finalize_active_drags() {
         // real drag or nothing, the two-day Pending teleport being deleted.)
         if (app.overview_drag.moved && playback.is_playing())
             playback.resync_predictor();
+        // The zoom's commit at the force-end, as at the release
+        // (commit_center_on_next_marker_zoom, app_state.h).
+        if (app.overview_drag.moved) commit_center_on_next_marker_zoom(app);
         app.overview_drag = OverviewDragState{};
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
@@ -10311,8 +10307,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Pan, and the Pending phase that deferred the teleport is deleted.)
     if (app.overview_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
-            if (app.overview_drag.moved)
+            if (app.overview_drag.moved) {
                 apply_overview_drag_at(mouse_x, /*final_event=*/true);
+                // The zoom's commit, the release's own
+                // (commit_center_on_next_marker_zoom, app_state.h).
+                commit_center_on_next_marker_zoom(app);
+            }
             app.overview_drag = OverviewDragState{};
             return;
         }
@@ -10361,6 +10361,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (!zooming && playback.is_playing())
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
+                // The zoom's commit, the release's own
+                // (commit_center_on_next_marker_zoom, app_state.h).
+                commit_center_on_next_marker_zoom(app);
             }
             return;
         }
@@ -10673,8 +10676,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // success and once: this is the instant the press's identity becomes
         // a drag, and a drag that carries a marker out from under a centred
         // playhead is a camera act (MarkerDragOps::begin_drag states it, the
-        // rule at AppState::centered_mode). The arming press already wrote
-        // both lamps through its own land, so the collapse here is the
+        // rule at AppState::centered_mode). The arming press already collapsed
+        // the pin through its own land, so the collapse here is the
         // gesture answering for itself and nothing is owed twice.
         // NO DOUBLE-CLICK CLEAR IS OWED HERE: the seed is the motionless
         // release's alone, so a press that becomes a drag never seeded one,

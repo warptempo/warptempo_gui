@@ -331,16 +331,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     cursor field only (playback was stopped by the twin, past its wall clamp
 //     and ahead of its first write — and by the prologue's collapse arm before
 //     that on a 2+ press; either way this tail always runs stopped).
-// (f) THE WALK'S FRAMING LAMP: a time act LIGHTS Center on next marker
-//     (architect 2026-09-11), through the one writer
-//     set_center_on_next_marker (app_state.h), which carries the caller
-//     inventory by class. It writes DIRECT rather than through a composed
-//     posture body because a time act declines the centred pin's collapse,
-//     which every composed body carries. The tail is the honest site for it because the twins' own
-//     post-clamp identity no-op returns ahead of every write, so reaching here
-//     IS the committed move; the write is silent, history-less and moves no
-//     camera.
-// (g) THE REGION: a position nudge HIDES the trim region overlay,
+// (f) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
 //     singleton — and it discards nothing, the trim standing behind it. It owes
 //     no call of its own: (e) above and the prologue's collapse land are both
@@ -348,7 +339,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     input_handler.h).
 //     There is no overlay-preserving arm any more: the extent re-derive died
 //     with the group nudge.
-// (h) target_render.trigger.
+// (g) target_render.trigger.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
 // warp's SOURCE home view, where the source waveform pixels do not depend on the

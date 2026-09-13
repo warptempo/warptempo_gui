@@ -4086,16 +4086,16 @@ void GuiInputHandler::run_history_revert() {
         if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
         else       undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
-        // AND THE TWO CAMERA LAMPS TAKE THE MOVEMENT ANSWER ON THE WARP ARM
-        // (postures_after_movement, app_state.h; the centred rule at
+        // AND THE CENTERED POSTURE COLLAPSES ON THE WARP ARM
+        // (collapse_centered_posture, app_state.h; the centred rule at
         // AppState::centered_mode): a warp revert rewrites the map, that rule's
-        // MAP clause, exactly as the load-in-place's whole-recipe write does,
-        // and a wholesale rewrite is not one flag's VALUE. THE PHASE ARM IS
+        // MAP clause, exactly as the load-in-place's whole-recipe write does.
+        // THE PHASE ARM IS
         // CARVED OUT BY THE SAME MAP ARGUMENT THE RE-LAND BELOW TAKES — phase
         // resets are no warp-map input, so a phase revert moves no image and
-        // the lamps have nothing to answer for. Inside the `changed` block, so
+        // the pin has nothing to answer for. Inside the `changed` block, so
         // this is the changed path.
-        if (!phase) postures_after_movement(app);
+        if (!phase) collapse_centered_posture(app);
         // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
         // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
         // cursor's NUMBER was expressed in, and keeping that number would move
@@ -5448,19 +5448,20 @@ void GuiInputHandler::apply_recipe_in_place(
     // and names its two callers).
     reset_displayed_target_basis(app);
 
-    // AND THE TWO CAMERA LAMPS TAKE THE MOVEMENT ANSWER (postures_after_movement,
+    // AND THE CENTERED POSTURE COLLAPSES (collapse_centered_posture,
     // app_state.h; the centred rule at AppState::centered_mode): this body
     // replaced the warp store and the engine block in the two lines above,
-    // which is that rule's MAP clause in its widest form — the whole recipe,
-    // and a whole recipe is not one flag's VALUE. UNCONDITIONAL, because this
+    // which is that rule's MAP clause in its widest form — the whole recipe.
+    // UNCONDITIONAL, because this
     // body has no unchanged path: every road here has already committed to
     // installing the recipe, and a recipe byte-equal to the live one is not a
-    // case any caller distinguishes. IT IS THE TWO CAMERA LAMPS ALONE: the load
-    // leaves the three SESSION LAMPS (`k`, `x`, `z`) untouched by being a store
+    // case any caller distinguishes. IT IS THE CENTERED PIN ALONE: the load
+    // leaves the SESSION LAMPS (`k`, `x`, `z`, and the Center on next marker
+    // lamp, which only a zoom commit writes) untouched by being a store
     // write and not a settings load, and the two sweep-mode bits are view state
     // the act does not touch either — what moves here is the map, which is
-    // these two lamps' own business and no other's.
-    postures_after_movement(app);
+    // the pin's own business and no other lamp's.
+    collapse_centered_posture(app);
 
     // The LIVE camera stays exactly where the user left it, but the DOMAIN it
     // sits in may have moved: a target-view session's total is derived from the
@@ -9042,9 +9043,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // Toggle the Center on next marker lamp (2026-09-04). The writer is
         // the free function set_center_on_next_marker (app_state.h), where the
         // whole caller inventory lives: this press is the MANUAL road, shared
-        // with the icon-row button's synthesized chord, and the tempo family's
-        // tail and the two time acts write the same bit from their own changed
-        // paths since 2026-09-11. History-less, one-shot, the centered pin's
+        // with the icon-row button's synthesized chord, while a committed zoom
+        // crossing the working level writes the same bit since 2026-09-13. It
+        // leaves the zoom's edge record untouched, so the toggle stands until
+        // the zoom next crosses the line. History-less, one-shot, the centered pin's
         // own shape — and nothing moves at the press: the bit is read at the
         // next BARE Tab walk, through marker_walk_frame, and by nothing else
         // (the Ctrl+Shift+Tab march states its own framing).

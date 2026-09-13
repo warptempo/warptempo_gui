@@ -238,17 +238,14 @@ struct Viewport {
     // (input_handler.h). The hide is UNCONDITIONAL — a Home that lands on the
     // frame the cursor already holds still hides, which is the 2026-08-15 ruling
     // the bottom row's ungreyed skip buttons rest on.
-    // SINCE 2026-09-11 IT IS THE CARRY BELOW PLUS THE TWO CAMERA LAMPS' MOVEMENT
-    // ANSWER, in that order: the playhead's position in the music changing is
-    // the centred pin's collapse rule as much as the hide's, and it lights the
-    // walk's framing lamp in the same line (postures_after_movement and
+    // SINCE 2026-09-11 IT IS THE CARRY BELOW PLUS THE CENTERED COLLAPSE, in
+    // that order: the playhead's position in the music changing is the centred
+    // pin's collapse rule as much as the hide's (collapse_centered_posture and
     // AppState::centered_mode, app_state.h).
     void move_playhead_to(int64_t new_sample);
-    // THE CARRY — the movement, WITHOUT either camera lamp's write, for the
+    // THE CARRY — the movement, WITHOUT the centered collapse, for the
     // acts that MOVE A MARKER IN TIME under a playhead that follows it
-    // (architect 2026-09-11): they light the WALK's lamp from their own
-    // commits instead, that write being on a changed path this per-motion
-    // entry knows nothing about. Everything else about it is
+    // (architect 2026-09-11). Everything else about it is
     // move_playhead_to's, the overlay hide and the audition's end included —
     // this is not a reseat.
     // A CLASS STATEMENT WITH ITS COMPLETE LIST HERE, and it is TWO acts at

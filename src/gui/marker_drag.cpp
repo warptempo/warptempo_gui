@@ -170,10 +170,7 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // lamp holds at the window's centre, so the gesture takes the movement
     // class like every other camera act — and this is the instant its
     // identity is certain, the press having been a click until the threshold
-    // was crossed. THE COLLAPSE ALONE, not the composed movement body: the
-    // walk's framing lamp answers a WRITE, and this gesture's write is its
-    // commit, which lights the lamp there on the net-changed path (a drag
-    // that wanders back to its column moved nothing). Everything after this
+    // was crossed. Everything after this
     // line — the motion ride's carry and the commit's land — runs under a
     // dark lamp, which is what makes those carries the honest entry for a
     // movement with nothing left to collapse. The rule is at
@@ -330,8 +327,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // THROUGH THE CARRY: the ride writes no camera lamp, per motion event or at
     // the commit below, and by this point there is nothing for it to write —
     // the gesture COLLAPSED the centred pin at its own crossing (begin_drag,
-    // the movement class) and the walk's framing lamp is the commit's answer
-    // on the net-changed path. So the carry is simply the honest entry for a
+    // the movement class). So the carry is simply the honest entry for a
     // movement with nothing left to collapse; the rule is at
     // AppState::centered_mode.
     viewport.carry_playhead_to(sample);
@@ -359,14 +355,11 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
-// THE TWO CAMERA LAMPS ARE ANSWERED AT DIFFERENT EDGES (architect 2026-09-12):
-// the CENTRED PIN went out at the threshold crossing, where the gesture's
-// identity became certain (begin_drag), so the playhead ride and this land go
-// through the CARRY with nothing left to collapse; and the commit LIGHTS the
-// walk's framing lamp — that one on the NET-CHANGED path alone, a wander-back
-// drag having moved no marker in time. Both rules are stated at their fields
-// (AppState::centered_mode, set_center_on_next_marker) and neither is restated
-// here.
+// THE CENTRED PIN WENT OUT AT THE THRESHOLD CROSSING (architect 2026-09-12),
+// where the gesture's identity became certain (begin_drag), so the playhead
+// ride and this land go through the CARRY with nothing left to collapse. The
+// Center on next marker lamp is the zoom's and this commit writes none. The
+// rule is stated at AppState::centered_mode and is not restated here.
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read
@@ -527,17 +520,6 @@ void MarkerDragOps::commit_drag() {
         viewport.carry_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));
     }
-    // AND THE WALK'S FRAMING LAMP LIGHTS, ON THE CHANGED PATH ALONE (architect
-    // 2026-09-11, in his words: if he is adjusting time he does want the walk
-    // centred). The flag drag is the other TIME act, the nudge's pointer twin,
-    // so it writes the same bit through the same one writer
-    // (set_center_on_next_marker, app_state.h, which carries the caller
-    // inventory by class — a time act writes DIRECT, the composed posture
-    // bodies all carrying the centred pin's collapse this act declines) — but the gate here is net_changed and NOT land_playhead: a
-    // wander-back drag still lands the playhead, to erase the motion arm's
-    // rounding drift, and it moved no marker in time, so it is not the act the
-    // lamp answers for. Silent, history-less, and no camera moves at the write.
-    if (net_changed) set_center_on_next_marker(app, true);
     // The dragged marker's STEM moves at commit under the full-waveform
     // invalidate_waveform_area above: the drag shifts its frame, so its
     // always-on stem repaints at the committed column (every enabled marker
