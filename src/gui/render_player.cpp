@@ -1534,7 +1534,11 @@ void GuiRenderPlayer::publish_media_state() {
     // ALONE. The rule and its reasons are at the declaration.
     st.session_active = rp.active;
     st.playing        = rp.active && rp.transport == Transport::Live;
-    st.artist         = app.project_name;
+    // THE ALBUM IS THE PROJECT'S NAME (architect 2026-09-12, from the car,
+    // on the console's own layout): the Accord lays the album line ABOVE the
+    // title, dim, and the artist line BELOW it, so the dim top line takes the
+    // project — the least important of the three names on the head unit.
+    st.album          = app.project_name;
     // THE CLOSE'S PUSH IS THE ONE EMPTY TITLE and the one STOPPED state; every
     // arm below it names something.
     if (!rp.active) {
@@ -1543,12 +1547,12 @@ void GuiRenderPlayer::publish_media_state() {
     }
     if (rp.transport == Transport::Live && !rp.item.empty() && rp.frames > 0) {
         // THE ITEM, with the clock at the engine's own cursor
-        // (render_player_position) and its own length. THE ALBUM IS THE ITEM'S
-        // OWN FOLDER, not the band's: the listener may have walked into
-        // another folder while this one sounds, and what is sounding is what
-        // the display is about.
-        st.album = rp.item.parent_path().filename().string();
-        st.title = rp.item.filename().string();
+        // (render_player_position) and its own length. THE ARTIST IS THE
+        // ITEM'S OWN FOLDER, not the band's: the listener may have walked
+        // into another folder while this one sounds, and what is sounding is
+        // what the display is about.
+        st.artist = rp.item.parent_path().filename().string();
+        st.title  = rp.item.filename().string();
         const int64_t rate = audio.sample_rate();
         if (rate > 0) {
             st.duration_ms = rp.frames * 1000 / rate;
@@ -1558,10 +1562,10 @@ void GuiRenderPlayer::publish_media_state() {
         return;
     }
     // THE SILENCE TRACK — what plays while the listener is at the top level
-    // walking folders (his own framing). THE ALBUM IS THE FOLDER THE BAND IS
+    // walking folders (his own framing). THE ARTIST IS THE FOLDER THE BAND IS
     // IN, `tmp` at the root and the batch folder's own name inside one, and
     // THE TITLE IS THE HIGHLIGHTED ROW'S OWN NAME, which is what the console's
-    // button would start — a wav's or a folder's, bare, the album under it
+    // button would start — a wav's or a folder's, bare, the artist under it
     // already saying where that name lives.
     //
     // POSITION 0 AND THE DURATION UNKNOWN (-1, which the consuming side turns
@@ -1571,7 +1575,7 @@ void GuiRenderPlayer::publish_media_state() {
     // state would have the console's clock run into the track's end and stop
     // there — and the tablet's own row is where that clock lives.
     st.duration_ms = -1;
-    st.album =
+    st.artist =
         (rp.folder == Folder::Root ? project_batch_root(app.source_audio_path)
                                    : rp.batch_dir)
             .filename()
@@ -1584,7 +1588,7 @@ void GuiRenderPlayer::publish_media_state() {
         // folder's cells deleted from outside while the player stood: THE
         // LISTED FOLDER NAMES ITSELF, the one road with nothing to highlight,
         // so the title is never empty while the session stands.
-        st.title = st.album;
+        st.title = st.artist;
     }
     gui.publish_media_state(st);
 }

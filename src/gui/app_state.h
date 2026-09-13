@@ -5408,7 +5408,8 @@ struct AppState {
     // PICKER (its "already open" no-op and the row its band opens on), the
     // EXTERNAL-SYNC job, which names the mirror's folder on the volume with
     // it, and the RENDER PLAYER's media push, where it is the head unit's
-    // ARTIST beside the item's project-relative path as the title
+    // ALBUM — the console's dim top line, the folder riding ARTIST below it —
+    // beside the bare name of the playing or highlighted item as the title
     // (GuiRenderPlayer::publish_media_state).
     std::string project_name;
 

@@ -95,21 +95,23 @@ struct GuiMediaState {
     // not the console's picture.
     bool        playing        = false;
     // THE THREE STRINGS ARE THE PROJECT, THE FOLDER AND THE NAME (architect
-    // 2026-09-12, from the car): a console lays the metadata out as ARTIST
-    // above, TITLE in the middle and ALBUM below, so each of the three lines
-    // says something different — the piece, where in it the listener is, and
-    // what would sound. The one function of (transport, item, highlight) that
-    // fills all three is stated at GuiRenderPlayer::publish_media_state and
-    // read nowhere else.
+    // 2026-09-12, from the car, on the console's own picture: it lays the
+    // metadata out as ALBUM above the title, dim, and ARTIST below it — the
+    // opposite of the pairing's first try, which could not be told apart
+    // while both lines read the project's name): the dim top line is the
+    // LEAST important of the three, so it carries the project, and the
+    // bottom line carries the folder. The one function of (transport, item,
+    // highlight) that fills all three is stated at
+    // GuiRenderPlayer::publish_media_state and read nowhere else.
     //
     // THE BARE NAME, no path at all: the ITEM's file name while it sounds
     // (`01.wav`), and with NOTHING SOUNDING THE HIGHLIGHTED ROW's own name —
     // a wav's or a folder's, and a folder's WITHOUT a trailing slash, the
-    // album beneath it already saying where the listener is — which is what
+    // artist beneath it already saying where the listener is — which is what
     // the console's own button would start. That second arm is THE SILENCE
     // TRACK, what plays while the listener is at the top level walking
     // folders; with nothing to highlight at all the LISTED FOLDER names
-    // itself, the same word the album carries. IT IS NEVER EMPTY WHILE
+    // itself, the same word the artist carries. IT IS NEVER EMPTY WHILE
     // `session_active` IS TRUE, and that is the point rather than a tidiness:
     // a console handed a session with nothing in it goes back to its own idle
     // picture. The title is empty exactly at the close's inactive push. THE
@@ -117,17 +119,18 @@ struct GuiMediaState {
     // listed by the player, mirrored by Synchronize and played by the
     // auto-advance.
     std::string title;
-    // The project's name, always — the console's top line, and the one string
-    // that does not move while the player is walked.
-    std::string artist;
     // THE FOLDER THE NAME LIVES IN, bare: the PLAYING ITEM'S OWN folder while
     // it sounds — the band may have walked somewhere else, and the sounding
     // item's home is the truth — and otherwise the folder the band is in,
     // `tmp` at the root and the batch folder's own name inside one. The
     // player has lived inside `tmp/` since 2026-09-01, so `render/` is not a
     // spelling this carries. Never empty while `session_active` is true; the
-    // close's inactive push is the one empty album, as it is the one empty
-    // title.
+    // close's inactive push is the one empty artist, as it is the one empty
+    // title. THE CONSOLE'S BOTTOM LINE.
+    std::string artist;
+    // The project's name, always — the console's DIM TOP LINE, above the
+    // title, and the one string that does not move while the player is
+    // walked.
     std::string album;
     // THE ITEM'S LENGTH IN MILLISECONDS, OR -1 FOR UNKNOWN — which is what the
     // SILENCE TRACK sends, the consuming side putting no duration key at all

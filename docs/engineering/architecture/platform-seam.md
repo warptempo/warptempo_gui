@@ -982,16 +982,18 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   `NewString` (not `NewStringUTF`, whose modified UTF-8 CheckJNI aborts on a
   four-byte sequence), inside one local frame. That method builds the
   `MediaMetadata` — **THE CONSOLE'S THREE LINES ARE THE PROJECT, THE FOLDER AND
-  THE NAME** (architect 2026-09-12, from the car: a head unit lays the metadata
-  out as ARTIST above, TITLE in the middle and ALBUM below and fills all three
-  whatever is in them, so ALBUM = the artist meant the piece's name stood twice
-  while the title spent its line on a `tmp/1_miscellaneous/` prefix): ARTIST =
-  the project's name, ALBUM = the FOLDER (the playing item's own while it
-  sounds, otherwise the one the listing is in — `tmp` at the root, the batch
-  folder's bare name inside one), TITLE = the BARE NAME of the playing file or,
-  with nothing sounding, of the highlighted row, and DURATION ONLY FOR A VALUE
-  ABOVE 0 — a −1 puts no duration key at all, which is Android's "unknown" —
-  and the `PlaybackState`
+  THE NAME** (architect 2026-09-12, from the car, on the console's own picture:
+  the Accord lays the metadata out as ALBUM above the title, dim, and ARTIST
+  below it — the opposite of the first try, which had both strings carrying
+  the project's name because it could not be told apart while both lines read
+  it — so the dim top line, the LEAST important of the three, takes the
+  project and the bottom line takes the folder): ALBUM = the project's name,
+  ARTIST = the FOLDER (the playing item's own while it sounds, otherwise the
+  one the listing is in — `tmp` at the root, the batch folder's bare name
+  inside one), TITLE = the BARE NAME of the playing file or, with nothing
+  sounding, of the highlighted row, and DURATION ONLY FOR A VALUE ABOVE 0 — a
+  −1 puts no duration key at all, which is Android's "unknown" — and the
+  `PlaybackState`
   (with the position and every action declared). **THE DISPLAY IS A DUMMY: THE
   STATE IS PLAYING WHENEVER THE PLAYER STANDS AND STOPPED EXACTLY AT THE
   INACTIVE PUSH** (architect 2026-09-12, from the car): the sliver's fork is

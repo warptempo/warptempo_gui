@@ -127,10 +127,11 @@ import java.nio.charset.StandardCharsets;
  * session in onCreate (on the UI thread, so its callbacks land there) and
  * releases it in onDestroy; it is ACTIVE ONLY WHILE THE RENDER PLAYER STANDS,
  * which the native side says through mediaState(...) -- the same push carrying
- * THE CONSOLE'S THREE LINES, the project as the artist, the folder as the
- * album and the bare name of the playing or highlighted file as the title
- * (architect 2026-09-12: a head unit fills all three, so each says something
- * different). EACH CALLBACK IS ONE
+ * THE CONSOLE'S THREE LINES, the project as the album, the folder as the
+ * artist and the bare name of the playing or highlighted file as the title
+ * (architect 2026-09-12: the Accord lays the album line above the title, dim,
+ * and the artist line below it, so the dim top line takes the project, the
+ * least important of the three). EACH CALLBACK IS ONE
  * INTEGER DOWN through nativeMediaCommand -- the native side queues it, wakes
  * its own loop and ACTS ON IT DIRECTLY, THE CAR BEING AN INTERFACE OF ITS OWN
  * (architect 2026-09-12): the wheel's three buttons are the player's own three
@@ -373,15 +374,17 @@ public class MainActivity extends NativeActivity {
     // (state, position, speed) triple means.
     //
     // METADATA IS THE CONSOLE'S THREE LINES (architect 2026-09-12, from the
-    // car): a head unit lays them out as ARTIST above, TITLE in the middle and
-    // ALBUM below and fills all three whatever is in them, so each says
-    // something different -- ARTIST the project's name, ALBUM the folder (the
+    // car): the Accord lays them out as ALBUM above the title, dim, and
+    // ARTIST below it, and fills all three whatever is in them, so each says
+    // something different -- ALBUM the project's name, the dim top line
+    // taking the LEAST important of the three; ARTIST the folder (the
     // playing item's own while it sounds, otherwise the one the listing is
-    // in), TITLE the bare name of the playing file or of the highlighted row.
-    // (There was no album argument until that day: ALBUM took the artist's own
-    // string, so the piece's name stood twice while the title carried the
-    // folder as a path prefix.) DURATION is the item's length WHEN THERE IS
-    // ONE.
+    // in), the console's bottom line; TITLE the bare name of the playing file
+    // or of the highlighted row. (The first try had it backwards: ARTIST
+    // carried the project's name and ALBUM the folder, on the assumption that
+    // ARTIST was the top line -- it is the bottom one, and the ruling above
+    // swapped the two strings once the layout was seen on the console
+    // itself.) DURATION is the item's length WHEN THERE IS ONE.
     //
     // THE STATE IS A DUMMY AND SAYS PLAYING WHENEVER THE PLAYER STANDS
     // (architect 2026-09-12, from the car): `active` is the whole fork --
