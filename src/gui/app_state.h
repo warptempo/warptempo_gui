@@ -4950,6 +4950,11 @@ struct AppState {
     // ends (Viewport::recenter_after_nudge, whose two callers are named
     // there); NOTHING ELSE RECENTERS, and WRITING THE LAMP MOVES NOTHING in
     // either direction — the next nudge centres.
+    // INERT IN TARGET VIEW ON THE WARP COLUMN (architect 2026-09-13), where no
+    // marker moves in time: no nudge recenters there, the face greys lit or
+    // dark, and bare `y` cards instead of toggling — one predicate,
+    // keep_centered_while_nudging_applies (beside the setter below); the phase
+    // column keeps the lamp live in both audio views.
     // THE ZOOM WRITES IT TOO (architect 2026-09-13), EXACTLY AS IT WRITES
     // center_on_next_marker below and ON THE SAME EDGE: at the working zoom or
     // finer (zoom_level <= kWorkingZoomLevel) it is LIT, coarser it is DARK,
@@ -4964,7 +4969,7 @@ struct AppState {
     // set_keep_centered_while_nudging (below), with THREE callers: bare `y`
     // (the icon-row button synthesizes that chord), the zoom commit
     // (commit_zoom_lamps) and the open's seed (seed_zoom_lamps). Its readers
-    // are the lamp's face and the recenter body.
+    // are the lamp's selected face and the recenter body.
     bool    keep_centered_while_nudging = true;
 
     // CENTER ON NEXT MARKER — the lamp on bare `n` (architect 2026-09-04),
@@ -10058,7 +10063,10 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // where every rung refuses alike. The Drop button's fork read this too from
 // 2026-09-01 to 2026-09-12, saying the card's own sentence over a lit button;
 // a tooltip states no reason now, and the plain lift still reaches the chord,
-// which cards. marker_selection_verb_-
+// which cards. PLUS ONE COMPOSED READER since 2026-09-13,
+// keep_centered_while_nudging_applies (the `y` lamp is inert in T+W — its
+// recenter body, its face and bare `y`'s card read that name, not this one).
+// marker_selection_verb_-
 // actionable LEFT the callers with the opening: its P-column home term
 // became structurally true and the predicate is the selection atom alone
 // (its site records the succession).
@@ -10713,6 +10721,32 @@ inline bool transport_session_live(const AppState& a) {
 inline void set_keep_centered_while_nudging(AppState& a, bool lit) {
     a.keep_centered_while_nudging = lit;
 }
+
+// WHERE THE KEEP CENTERED WHILE NUDGING LAMP APPLIES (architect 2026-09-13:
+// "it should be greyed out and toggled on, because it's effectively useless —
+// nudging is not allowed in target view"; and "T+P is also for horizontal
+// fine-tuning"): everywhere but TARGET view on the WARP column, where no
+// marker moves in time. That is the home-view binding's own answer, so this
+// READS active_column_authoring_allowed rather than restating its two terms
+// (markers_view == 'P' || audio_view == 'S' is exactly !(T && W) over the two
+// axes' two values each). THREE READERS: the recenter body
+// (Viewport::recenter_after_nudge — so the PLAYHEAD step, which T+W does not
+// refuse, moves the playhead there without recentering), the lamp's face
+// (redesign_button_enabled — greyed lit or dark, the lit face still reading
+// the field) and bare `y`'s refusal (input_key_dispatch.cpp, carding
+// kKeepCenteredInertCard). The zoom writes (commit_zoom_lamps,
+// seed_zoom_lamps) ask it nowhere: the lamp keeps its state for the moment
+// the view leaves T+W. It answers the `h` view as it answers anywhere — no
+// nudge runs there (Left/Right are off the mode's allowlist) and `y` is on
+// it, so the lamp greys and `y` cards in the view's T+W as outside it.
+inline bool keep_centered_while_nudging_applies(const AppState& a) {
+    return active_column_authoring_allowed(a);
+}
+
+// Bare `y`'s refusal where the lamp does not apply (above): one clause,
+// sentence case, the key's card while the greyed button's lift says nothing.
+inline constexpr const char* kKeepCenteredInertCard =
+    "Nudging does not recenter in target view";
 
 // WHERE A Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
 // `delta_px` painted columns away (±1 bare, ±3 shifted, ±10 with ctrl since
@@ -13955,10 +13989,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE KEEP-CENTERED LAMP MIRRORS NOTHING EITHER (2026-08-31, R11): bare
         // `y` toggles the lamp in either direction on any loaded piece, the
         // lock admits it, and since 2026-09-13 the A/B audition holds no claim
-        // on it. In the `h` view it stays LIVE through the derived partition —
-        // `y` is on the mode's allowlist — where Follow greys.
+        // on it. In the `h` view the derived partition admits it — `y` is on
+        // the mode's allowlist — where Follow greys. IT GREYS IN TARGET VIEW ON
+        // THE WARP COLUMN (architect 2026-09-13), lit or dark, reading the
+        // predicate bare `y`'s refusal reads
+        // (keep_centered_while_nudging_applies): no nudge recenters there, so
+        // a press would be a no-op. The selected face still reads the field,
+        // so a lit lamp in T+W paints lit AND dimmed; the phase column keeps
+        // it live in both audio views.
         case RedesignButton::IconKeepCenteredWhileNudging:
-            return true;
+            return keep_centered_while_nudging_applies(a);
         // THE CENTER-ON-NEXT-MARKER LAMP MIRRORS NOTHING EITHER (2026-09-04),
         // on the same answer as the two above it: bare `n` toggles the walk's
         // framing in either direction on any loaded piece and the lock admits

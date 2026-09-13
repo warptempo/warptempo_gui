@@ -8952,7 +8952,15 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // (commit_zoom_lamps, app_state.h); it leaves the zoom's edge record
         // untouched, so the toggle stands until the zoom next crosses the line.
         // History-less, one-shot, legal during the A/B audition, and it moves
-        // nothing at the press: the next nudge centres.
+        // nothing at the press: the next nudge centres. IN TARGET VIEW ON THE
+        // WARP COLUMN IT REFUSES (architect 2026-09-13): the lamp is inert
+        // there (keep_centered_while_nudging_applies), its button greys, and
+        // so the key cards and leaves the lamp as it stands.
+        if (!keep_centered_while_nudging_applies(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kKeepCenteredInertCard);
+            break;
+        }
         set_keep_centered_while_nudging(app, !app.keep_centered_while_nudging);
         break;
     case GuiKeys::Z:

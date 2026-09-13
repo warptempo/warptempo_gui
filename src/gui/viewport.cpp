@@ -791,9 +791,13 @@ void Viewport::invalidate_all() {
 // position_nudge.cpp) and the waveform-lane playhead step
 // (GuiInputHandler::run_waveform_lane_playhead_step). A held key's repeats and
 // a held arrow button's fires reach both through the same act bodies, so the
-// recenter runs at every step.
+// recenter runs at every step. THE LAMP IS INERT IN TARGET VIEW ON THE WARP
+// COLUMN (architect 2026-09-13, keep_centered_while_nudging_applies): the body
+// returns there lit or dark, so the marker nudge (refused upstream in T+W
+// anyway) and the playhead step (not refused) both move without recentering.
 void Viewport::recenter_after_nudge() {
     if (!app.keep_centered_while_nudging) return;
+    if (!keep_centered_while_nudging_applies(app)) return;
     center_viewport_on_playhead();
 }
 
