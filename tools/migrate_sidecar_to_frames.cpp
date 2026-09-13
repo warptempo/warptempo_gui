@@ -23,18 +23,18 @@
 // render window, not an authored musical instant, so it keeps plain whole-frame
 // rounding.
 //
-// Migrated WARP positions therefore land on the SAME frame-0 zoom-2 grid the
-// GUI's own source-view authoring gestures land on, and match GUI zoom-2
-// authoring EXACTLY (not merely from the file start) WHERE THE LATTICE'S
+// Migrated WARP positions therefore land on the SAME frame-0 level-1 grid (the
+// working zoom) the GUI's own source-view authoring gestures land on, and match
+// GUI working-zoom authoring EXACTLY (not merely from the file start) WHERE THE LATTICE'S
 // PRECONDITION HOLDS. The GUI viewport itself is snapped to this grid
 // (clamp_viewport_start / painter_samples_per_pixel), and the source-view
 // commit rounds once (displayed_grid_position_at_column), so under the
-// multiple-of-16 effective-width floor AND a sample rate divisible by 50 — the
+// multiple-of-8 effective-width floor AND a sample rate divisible by 100 — the
 // 44.1 kHz / 48 kHz family and every other standard rate, though not the
 // product's whole accepted rate vocabulary — the painter samples-per-pixel
 // equals the logical spp and the recovered-viewport-column basis makes GUI
-// zoom-2 authoring agree with this tool bit-for-bit at ANY configured width.
-// A rate outside that family REFUSES here (rate_has_canonical_lattice, which
+// working-zoom authoring agree with this tool bit-for-bit at ANY configured width.
+// A rate the gate rejects REFUSES here (rate_has_canonical_lattice, which
 // also records the short-source boundary no tool can detect). The tool cannot
 // know the runtime width, so it uses the logical spp: the canonical frame-0
 // grid the GUI agrees with under that precondition. The snap
@@ -189,7 +189,7 @@ bool is_valid_offset_token(const std::string& s) {
 struct SnapMode {
     enum class Lattice {
         PlainRound,   // .settings trim: a render window, never a lattice point
-        Source,       // .warpmarkers: the source view's zoom-2 column grid
+        Source,       // .warpmarkers: the source view's level-1 column grid
         Target,       // .phaseresetmarkers: the target lattice under the map
     };
     Lattice lattice = Lattice::PlainRound;
@@ -467,7 +467,7 @@ int main(int argc, char** argv) {
     // THE RATE VOCABULARY GATE, ON THE <sample_rate> ARGUMENT ITSELF — which is
     // the authoritative rate for every kind here, the phase reset kind's probe
     // being required to AGREE with it below. The lattices only exist for a rate
-    // divisible by 50 (rate_has_canonical_lattice carries the whole reasoning),
+    // divisible by 100 (rate_has_canonical_lattice carries the whole reasoning),
     // so a rate outside that family refuses before any conversion.
     //
     // ALL THREE KINDS TAKE THE GATE, the .settings kind included even though

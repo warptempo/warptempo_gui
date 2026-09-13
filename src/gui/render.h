@@ -2839,7 +2839,7 @@ void render_strip_anchor_stem(cairo_t* cr,
 //
 // The x_raw denominator is the PAINTERS' quantized-span form
 // (vp_end - vp_start)/wave_w, NOT current_samples_per_pixel. The two are
-// identical at integer zoom rungs on multiple-of-16 widths and differ by
+// identical at integer zoom rungs on multiple-of-8 widths and differ by
 // <~0.02 px at a fractional zoom rest; adopting it at the hit sites too (they
 // formerly divided by spp) is the one deliberate byte change of the collapse and
 // ALIGNS paint and hit exactly — the point of unifying them.
@@ -2910,7 +2910,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // interval. The two consumers clamp it to the visible range identically: the
 // PAINTER intersects it with the effective width [0, wave_w) before asking
 // whether the midpoint tile fits, and the ROUTER applies the same [0, wave_w)
-// click gate. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
+// click gate. So the inert non-multiple-of-8 gutter [wave_w, strip_w) neither
 // paints nor hits. The sentinels earn their strictness here: an offscreen edge
 // lands STRICTLY past the visible range (never at col 0 or col wave_w-1), so a
 // window running off the view yields a flush interior rather than a spurious
@@ -3043,7 +3043,7 @@ inline int trim_endcap_grab_px() {
 // re-derives the lane's y from the row heights above it. `trim_bar` gives the
 // lane's x/y/h; `waveform_area` is read for its `.w` ALONE — both the
 // column-mapping denominator and the lane's effective width, so the inert
-// non-multiple-of-16 gutter is outside the clip and never paints.
+// non-multiple-of-8 gutter is outside the clip and never paints.
 // `top_strip_area` is now a validity guard only: nothing in this lane measures
 // from the strip's own bottom any more.
 //

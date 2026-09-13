@@ -22,8 +22,8 @@
 // {round(k*q)} for the LOGICAL q only where the painter's own q equals it, and
 // the painter quantizes: painter_samples_per_pixel is nearbyint(q * W) / W
 // over the effective width W (warp_frame_map_view.cpp). The two agree exactly
-// when q * W is whole, which under the multiple-of-16 effective-width floor
-// (waveform_area) reduces to rate divisible by 50 at the working zoom — true
+// when q * W is whole, which under the multiple-of-8 effective-width floor
+// (waveform_area) reduces to rate divisible by 100 at the working zoom — true
 // of 44.1 kHz, 48 kHz and every other standard rate, but NOT of the product's
 // whole source vocabulary, which accepts any rate at or above 44100.
 //
@@ -94,11 +94,11 @@ inline double lattice_frames_per_px(double sample_rate) {
 // THE RATE VOCABULARY THE LATTICES ACTUALLY COVER — the precondition named in
 // the header comment, as a refusal both tools apply before any conversion or
 // snap. The GUI paints at nearbyint(q * W) / W rather than at q, and the
-// effective width always floors to a multiple of 16 px, so the smallest width
-// the painter ever sees carries q * 16 = rate * 1.25 / 1000 * 16 = rate / 50
-// frames. Whole for a rate divisible by 50, and then painter q == logical q at
-// every width the compositor can hand the GUI; fractional otherwise, and the
-// painted grid is width-quantized with no width-free lattice behind it. At
+// effective width always floors to a multiple of 8 px, so the smallest width
+// the painter ever sees carries q * 8 = rate * 1.25 / 1000 * 8 = rate / 100
+// frames. Whole for a rate divisible by 100, and then painter q == logical q
+// at every width the compositor can hand the GUI; fractional otherwise, and
+// the painted grid is width-quantized with no width-free lattice behind it. At
 // 44101 Hz on a 1024 px waveform the painter's q is 55.1259765625 against this
 // header's 55.12625, and by column 107 the tool's landing (frame 5899) is not
 // the frame the product's own painted-column round trip recommits (5898). A
@@ -110,7 +110,7 @@ inline double lattice_frames_per_px(double sample_rate) {
 // (samples_per_pixel_at, src/gui/main.cpp) and clamp_zoom_level never takes a
 // level below kMinZoom, so even a file whose fit-the-window ceiling would lie
 // under it rests at level 1 and authors at 1.25 ms/px.
-inline constexpr long kLatticeRateDivisor = 50;
+inline constexpr long kLatticeRateDivisor = 100;
 
 inline bool rate_has_canonical_lattice(long sample_rate) {
     return sample_rate > 0 && sample_rate % kLatticeRateDivisor == 0;
@@ -123,7 +123,7 @@ inline std::string lattice_rate_refusal(long sample_rate) {
            " is not divisible by " + std::to_string(kLatticeRateDivisor) +
            ", so the working-zoom grid is width-quantized in the GUI "
            "(nearbyint(q * width) / width equals the logical q at a "
-           "multiple-of-16 width only when rate/50 is whole) and no width-free "
+           "multiple-of-8 width only when rate/100 is whole) and no width-free "
            "canonical lattice exists to author against";
 }
 

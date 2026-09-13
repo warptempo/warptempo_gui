@@ -594,23 +594,26 @@ GuiRect waveform_area(const AppState& a) {
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
-    // exceeding the window width, leaving a <=15 px inert right gutter. At
-    // integer level n the logical spp is rate·2^(n−1)/800, so a 16 px width
-    // carries rate·2^(n−1)/50 frames: for any rate divisible by 50 (44100,
+    // exceeding the window width, leaving a <=7 px inert right gutter. At
+    // integer level n the logical spp is rate·2^(n−1)/800, so an 8 px width
+    // carries rate·2^(n−1)/100 frames: for any rate divisible by 100 (44100,
     // 48000 and their multiples) logical_spp·W is integral at every INTEGER
     // zoom rung and painter samples-per-pixel equals the logical spp exactly
-    // there. (16 was derived as 1600/gcd(44100,1600) under the ladder's
-    // retired 0.625 ms/px floor; since the working zoom became the floor
-    // (2026-09-13) 8 would suffice at 44.1 kHz, and 16, a multiple of it, is
-    // kept)
-    // — the grid the pixel-anchored commits and the migration tool both
-    // target. A fractional rung (the continuous strip-drag zoom) has no such
-    // integral guarantee; painter_samples_per_pixel rides its own
+    // there — n = 1, the working zoom and the ladder's floor, is the binding
+    // rung (441 frames per 8 px at 44.1 kHz, 480 at 48 kHz), every coarser
+    // rung asking half as much of the rate again. 8 is 800/gcd(44100,800),
+    // the smallest step with that property at 44.1 kHz. A legal rate NOT
+    // divisible by 100 (the loader accepts any rate at or above 44100) is
+    // exact at a rung only where rate·2^(n−1)/100 happens to be whole, and
+    // elsewhere rides the painter quantization below with no integral
+    // guarantee — the grid the pixel-anchored commits and the migration tool
+    // both target. A fractional rung (the continuous strip-drag zoom) has no
+    // such integral guarantee either; painter_samples_per_pixel rides its own
     // nearbyint(spp·W)/W quantization instead, so the authoring-grid
     // bit-exactness claim above is scoped to the integer rungs, notably the
-    // working zoom. A gutter appears only at a non-multiple-of-16 width
-    // (never at 1920/2560/3840).
-    constexpr int kGridStepPx = 16;
+    // working zoom. A gutter appears only at a non-multiple-of-8 width (never
+    // at 1920/2560/3840).
+    constexpr int kGridStepPx = 8;
     const int effective_w = w - (w % kGridStepPx);
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.

@@ -972,7 +972,7 @@ bool point_in_nav_lanes(const AppState& app, int x, int y) {
 // the live views' are the same rect, and this owner serves both.
 //
 // The waveform BAND spans the FULL WINDOW WIDTH (top.w), not the effective
-// width: the <=15 px inert right gutter counts as waveform by the user's
+// width: the <=7 px inert right gutter counts as waveform by the user's
 // lights, so a press there arms the pan and its click act deselects while
 // seating nothing (the gutter is 0 px at 1920/2560/3840, so it only matters
 // off-deployment). The FLAG BOXES carve out through the painter's published
@@ -2438,8 +2438,8 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // tail sees everything.
 // THE TWO CLAMPS COMPOSE, and the cost is bounded and correct: the platform
 // pins into the WINDOW and this pins into the WAVEFORM, whose rect starts at
-// x 0 and is the window width floored to a multiple of 16 — so the only span
-// where they disagree is the inert right gutter, at most 15 px, and a pointer
+// x 0 and is the window width floored to a multiple of 8 — so the only span
+// where they disagree is the inert right gutter, at most 7 px, and a pointer
 // parked out there honestly has no waveform column of its own. The column
 // therefore holds at the last one until the pointer comes back onto the
 // waveform, which is what a projection of a real position means.
@@ -2448,8 +2448,8 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // PROMISES THEY AGREE: the stem is simply where the cursor was, not a
 // prediction of where it will go, so this is a difference and not an
 // inconsistency. It is ZERO PIXELS at any window width that is a multiple of
-// 16, which is every width either host runs (1920 and 1024, and 2560/3840
-// besides), so it is reachable only under a hand resize to an odd width. It is
+// 8, which is every width either host runs (1920 and 1024, and 2560/3840
+// besides), so it is reachable only under a hand resize to a width that is not a multiple of 8. It is
 // NOT to be engineered around, and in particular the restore path takes no
 // waveform clamp: the gutter is a real place on the window even though it is
 // not a place on the waveform, and a pan-only release must be able to put the
@@ -2984,7 +2984,7 @@ RegionHit GuiInputHandler::region_manipulation_hit(int x, int y) const {
     if (area.w <= 0) return RegionHit::None;   // degenerate geometry: no zones
     if (y < area.y || y >= area.y + area.h) return RegionHit::None;
     // The x band is the waveform's own, the navigation surface's spelling
-    // included (the <=15 px inert right gutter counts as waveform).
+    // included (the <=7 px inert right gutter counts as waveform).
     if (x < area.x || x >= top.x + top.w) return RegionHit::None;
 
     const GuiPaintHandler::PlateViewportBasis basis =
@@ -5856,7 +5856,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     // The waveform BAND spans the full window width (top.w), not the effective
-    // width (area.w): the <=15 px inert right gutter counts as a waveform click
+    // width (area.w): the <=7 px inert right gutter counts as a waveform click
     // by the user's lights, so a plain press there still reaches the waveform
     // branch and arms the pending click like any other — a gutter PAN works
     // from any column, and the motionless release's act degenerates per half:
@@ -5864,7 +5864,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // column exists), and the lower half's scrub returns silently (no launch
     // position exists, and a scrub act touches no selection anyway). The
     // gutter is 0 px at the deployment widths
-    // (1920/2560/3840 are multiples of 16), so this only matters off-deployment.
+    // (1920/2560/3840 are multiples of 8), so this only matters off-deployment.
     const bool inside_waveform =
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;

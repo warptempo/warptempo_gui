@@ -3113,12 +3113,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // 5%-widened span frames to a DEEPER level, exercising no no-op — while the
 // (a)-failing wide case no-ops because its margined span is already at least
 // song-wide. When the conjunction holds the endpoint rests AT or PAST the
-// effective waveform's right edge: half-culled, or (at a non-multiple-of-16
-// window width) sitting in the 0-15px inert right gutter, where a flag at its
+// effective waveform's right edge: half-culled, or (at a non-multiple-of-8
+// window width) sitting in the 0-7px inert right gutter, where a flag at its
 // painted width can show WHOLE just outside the effective span — flag centers
-// use the effective W (floored to a multiple of 16) while the flag surface
+// use the effective W (floored to a multiple of 8) while the flag surface
 // spans the full strip. At the ruled deployment widths (1920 / 2560 / 3840, all
-// multiples of 16) the gutter is empty and it half-culls. Either way NO route
+// multiples of 8) the gutter is empty and it half-culls. Either way NO route
 // places the endpoint INSIDE the effective span at whole-song-visible — the
 // standing flags-may-hang-half-offscreen geometry (cull only when FULLY out),
 // the SAME cull the level-preserving navigation routes show there (Tab, which

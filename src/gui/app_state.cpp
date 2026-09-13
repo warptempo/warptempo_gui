@@ -153,7 +153,7 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
     // endcap painted at the OLD column would be grabbed at the NEW/live column.
     // The visibility
     // cull matches the painter's viewport extent (the painter maps against
-    // this same {span, width}), so a gutter column at a non-multiple-of-16 window
+    // this same {span, width}), so a gutter column at a non-multiple-of-8 window
     // is culled the same in paint and hit-test. Cold falls back to the live
     // basis, matching the painter's cold fallback.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);

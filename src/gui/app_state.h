@@ -16851,7 +16851,7 @@ TrimHit hit_test_overview_endcap(const AppState& a, const GuiAudio& audio,
 // displayed_trim_ms through displayed_or_live_target_map), which is the exact
 // owner chain the live trim pass paints the bar with, so the grabbable bridge is
 // the drawn one. The [0, area_w) click gate is the PAINTER's own effective-width
-// clip: the inert non-multiple-of-16 right gutter neither paints the bar nor
+// clip: the inert non-multiple-of-8 right gutter neither paints the bar nor
 // answers true here.
 //
 // THE ENDCAPS ARE NOT IN IT: trim_bridge_gap insets each end by a painted cap's
