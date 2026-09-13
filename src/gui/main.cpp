@@ -201,9 +201,11 @@ namespace {
 //
 // THE VERTICAL RULE — THE WAVEFORM IS CENTERED IN THE WINDOW AND HAS A MAXIMUM
 // HEIGHT (architect 2026-08-12: the seventh glass ruling gave the clamp,
-// kWaveformMaxHeightPx at render.h carrying the value and its bracket; the
-// relayout's COMMIT B, dictated at session close, gave the centering and took
-// the clamp 550 -> 500), AND THE MENU ROW AND THE ICON ROW STAND AT THE
+// then the render.h constant kWaveformMaxHeightPx carrying the value and its
+// bracket; the relayout's COMMIT B, dictated at session close, gave the
+// centering and took the clamp 550 -> 500; since 2026-09-13 the value is the
+// device config's `max_waveform_height`, default 500 on both templates, 0
+// meaning no maximum, read through waveform_max_h_px at render.h), AND THE MENU ROW AND THE ICON ROW STAND AT THE
 // WINDOW'S TOP WITH THE FLEXIBLE BAND UNDER THEM (architect 2026-09-09, the
 // top strip relayout, from his mockup tmp/previous/review_2026-09-09/his_screenshots/z.png — kdenlive-redesign.md's
 // closing section). The window stacks, top to bottom:
@@ -278,6 +280,8 @@ namespace {
 // (the top block being taller than the bottom strip) rests gap 1 at 0 and puts
 // the remainder in gap 2, top-heavy and harmless.
 //
+// THE STACKS BELOW ARE AT THE DEFAULT max_waveform_height OF 500 (both
+// templates'; a device carrying another value moves only W and the gaps).
 // THE TWO STACKS AT 100% (recomputed here, the one record; top lanes 196 =
 // menu 30 + icon 47 + tab 36 (30 content + a 6px margin-bottom) + overview 26
 // + trim 9 + ruler 28 + marker 20, of which 119 is the block above the
@@ -500,7 +504,9 @@ int centered_leftover_h(int win_h) {
                  - strip_total_h(/*top_strip=*/false);
 }
 // THE WAVEFORM'S HEIGHT: the leftover, CLAMPED at the maximum (the seventh
-// glass ruling's clamp, kWaveformMaxHeightPx at render.h). The floor at 0 is
+// glass ruling's clamp, the device config's `max_waveform_height` through
+// waveform_max_h_px at render.h — default 500, and 0 answering INT_MAX so the
+// leftover always wins). The floor at 0 is
 // what keeps a degenerate window's negative leftover out of the gap arithmetic
 // below; waveform_area's own guard answers the rect.
 int waveform_clamped_h(int win_h) {
@@ -582,7 +588,7 @@ GuiRect waveform_area(const AppState& a) {
     clamp_dims(w, h);
     // BOTH strip heights INCLUDE their flexible gap (commit B's two-gap
     // centering), so the h - top - bot arithmetic below yields the CLAMPED
-    // waveform height — min(leftover, kWaveformMaxHeightPx-scaled) wherever the
+    // waveform height — min(leftover, the scaled max_waveform_height) wherever the
     // leftover is non-negative — and the y lands the waveform flush under the
     // marker lane with no second expression of the vertical rule here.
     const int top_h = top_strip_h(a);
@@ -3202,7 +3208,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its five keys describe the MACHINE, not the piece, so they live in
+    // Its six keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
@@ -3241,6 +3247,13 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
+    // THE WAVEFORM CAP RIDES THE SAME ROAD (the device config's
+    // `max_waveform_height`, 2026-09-13): installed here before the first
+    // configure so the first layout is already the configured one, and live
+    // at the settings editor's commit (commit_device_setting then
+    // GuiInputHandler::apply_max_waveform_height). The one reader is
+    // waveform_max_h_px (render.h).
+    set_max_waveform_height_px(device_config.max_waveform_height);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

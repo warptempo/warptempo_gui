@@ -9,9 +9,11 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Five keys live here and nowhere else:
+// piece (architect 2026-08-27). Six keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
+//   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
+//                            an integer [0, 9999], 0 meaning no maximum
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
 //                            GitHub recheck's corpus; free text, may be blank
 //   projects_path=<path>     the ABSOLUTE folder whose subfolders are the
@@ -23,7 +25,8 @@
 //                            "not set up on this device" (external_sync.h)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
-// with the fifth key); the list above is this file's telling of it and
+// with the fifth key; the sixth, 2026-09-13, placed right after gui_scale);
+// the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
 // WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
@@ -54,6 +57,11 @@
 // per-device fact, which is what this file is for, and a configured path is
 // what every desktop mirror does; the discovery is deleted whole, so the act
 // has ONE road to its destination and no fallback chain (external_sync.h).
+// `max_waveform_height` JOINED 2026-09-13 (architect): the waveform's cap had
+// been the render.h constant kWaveformMaxHeightPx = 500 since commit B, and
+// how tall a waveform wants to be is a fact about the PANEL — a tall external
+// monitor and the tablet's content rect answer differently — so the cap became
+// this file's sixth key, both templates stamping the old constant's 500.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -67,7 +75,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the five keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -79,7 +87,7 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// projects_repo, projects_path, last_project, sync_path) and it is what
+// max_waveform_height, projects_repo, projects_path, last_project, sync_path) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -93,8 +101,9 @@
 // The chokepoints are the callers inventory at write_device_config below.
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect, the
-// four-tier review's R-22): the Settings dropdown carries `GUI scale`,
-// `Projects repository`, `Projects path` and `Sync path` as rows that open the
+// four-tier review's R-22): the Settings dropdown carries `GUI Scale`,
+// `Max Waveform Height` (since 2026-09-13), `Projects Repository`, `Projects
+// Path` and `Sync Path` as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. Until that day the two path keys
 // were hand-edited only, and HELP told the user to edit `sync_path` without
@@ -108,7 +117,7 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// five.
+// six.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -120,6 +129,7 @@
 // The members are in the writer's order.
 struct DeviceConfig {
     int         gui_scale = 100;
+    int         max_waveform_height = 500;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
@@ -182,6 +192,26 @@ inline constexpr const char* kDefaultProjectsRepo =
 inline constexpr bool is_gui_scale_percent(int64_t v) {
     return v >= 50 && v <= 350;
 }
+
+// THE max_waveform_height RANGE — the ONE owner (architect 2026-09-13), asked
+// by this file's reader and by the settings editor's commit
+// (commit_device_setting, settings_editor.cpp), exactly as the scale's two
+// askers ask is_gui_scale_percent. The value is AUTHORED px riding gui_scale
+// through scaled_px (waveform_max_h_px, render.h — the one reader of the
+// installed value). 0 MEANS NO MAXIMUM: the waveform takes the whole leftover
+// and both flex gaps floor at 0, exactly as on any window whose leftover is
+// under the cap. 9999 is the ceiling because it is the widest spelling the
+// four-digit field admits; no panel reaches it, and a scale is a vocabulary.
+inline constexpr bool is_max_waveform_height(int64_t v) {
+    return v >= 0 && v <= 9999;
+}
+
+// The scale's and the cap's reasons, spelled once for their two readers each
+// (the config reader's `bad_value` line and the settings editor's card).
+inline constexpr const char* kGuiScaleGrammarReason =
+    "must be an integer in [50, 350] in canonical spelling";
+inline constexpr const char* kMaxWaveformHeightGrammarReason =
+    "must be an integer in [0, 9999] in canonical spelling";
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -353,6 +383,11 @@ inline bool is_last_project_name(const std::string& v) {
 // so recall and file can never diverge.
 std::string format_gui_scale_percent(int percent);
 
+// The canonical on-disk spelling of the waveform cap — plain digits, the same
+// `%d` shape, THE ONE SERIALIZER for the value: this file's writer and the
+// settings editor's recall (recall_gui_setting_value) both call it.
+std::string format_max_waveform_height(int authored_px);
+
 // The resolved config path, or an EMPTY path when neither XDG_CONFIG_HOME nor
 // HOME is set (the loader turns that into its own fatal line; the writer
 // reports the failure and writes nothing).
@@ -397,14 +432,15 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE FIVE KEY COMMITS, and this is their inventory
-// (re-greped 2026-09-04, correcting a count this header had read as five):
+// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
+// (re-greped 2026-09-13 with the sixth key):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves three keys —
-// `projects_repo=`, `projects_path=` and `sync_path=`
-// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the two path
-// arms joined 2026-09-02 under R-22, and the `audio_player=` arm retired with
-// its key 2026-08-28); and gui_main's `last_project` write on the success path
+// the settings editor's ONE device-key body, which serves four keys —
+// `max_waveform_height=`, `projects_repo=`, `projects_path=` and `sync_path=`
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the cap's
+// arm joined 2026-09-13, the two path arms 2026-09-02 under R-22, and the
+// `audio_player=` arm retired with its key 2026-08-28); and gui_main's
+// `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
 // actually moved. `last_project` is the one key with no editor: it is the
@@ -416,8 +452,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
-// both stamp kDefaultProjectsRepo, a blank sync_path and a blank
-// last_project), so a first run on
+// both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
+// sync_path and a blank last_project), so a first run on
 // either device lands a file that is already right for it and the user edits
 // from there rather than from a wrong guess. A missing parent directory is
 // created.

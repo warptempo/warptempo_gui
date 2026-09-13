@@ -124,14 +124,15 @@ std::string format_settings_text(
 // keys; a trim bound recalls as its actual frame, exactly as the writer emits
 // it. Used by the settings prompt's Tab autocomplete.
 //
-// THE DEVICE CONFIG'S FOUR EDITABLE KEYS RECALL HERE TOO, off the live
+// THE DEVICE CONFIG'S FIVE EDITABLE KEYS RECALL HERE TOO, off the live
 // AppState and the live struct it points at, even though they are not in the
 // `.settings` schema: the settings editor is their authoring surface — the
-// Settings dropdown's four device rows prefill through this very call — so a
+// Settings dropdown's five device rows prefill through this very call — so a
 // recall that answered nothing for them would break the menu rows and the Tab
 // completion together. What they recall is byte-identical to what the device
-// config file carries, through that file's own serializer
-// (format_gui_scale_percent, device_config.h) or verbatim for the three
+// config file carries, through that file's own serializers
+// (format_gui_scale_percent and format_max_waveform_height, device_config.h)
+// or verbatim for the three
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path` and
 // `sync_path`): the same "recall and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file. (`last_project` is

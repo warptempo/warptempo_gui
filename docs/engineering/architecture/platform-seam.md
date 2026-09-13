@@ -331,11 +331,12 @@ drag coordinates floor instead of truncating.
   shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The FIVE keys it stamps are per-DEVICE preferences
+  both-sides member. The SIX keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the clone's own `projects/`, Android 225 %
-  and `<externalDataPath>/projects`; both stamp `kDefaultProjectsRepo` and a
+  and `<externalDataPath>/projects`; both stamp `max_waveform_height=500`
+  (the waveform cap, the retired `kWaveformMaxHeightPx`'s value), `kDefaultProjectsRepo` and a
   blank `last_project` AND a blank `sync_path` — neither template guesses a
   destination for the mirror, a wrong guess aiming its creates, copies and
   removals at a folder the user never named. (A key the template no longer stamps, `audio_player`, stood here until

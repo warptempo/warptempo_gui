@@ -23,23 +23,27 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FOUR editable ones the per-device config carries — gui_scale and
+// FIVE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect, the four-tier review's R-22) projects_path and
-// sync_path, which had been hand-edited only (the config's fifth key,
-// last_project, is the program's own and has no editor; `audio_player`, once
+// sync_path, which had been hand-edited only, and since 2026-09-13
+// max_waveform_height (the config's sixth key, last_project, is the
+// program's own and has no editor; `audio_player`, once
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
-// 1. The three gesture-less device keys — projects_repo, projects_path,
-//    sync_path — in ONE body, commit_device_setting: the key's own grammar
+// 1. The four device keys other than the scale — max_waveform_height,
+//    projects_repo, projects_path, sync_path — in ONE body,
+//    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (red flash and card on refusal), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
 //    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
 //    projects_repo and sync_path are in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card. gui_scale, the fourth device key, stays in the GUI-kind router
+//    card; max_waveform_height is in force at once, the body handing it to
+//    apply_max_waveform_height for the live relayout. gui_scale, the fifth
+//    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.
 // 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /

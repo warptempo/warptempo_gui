@@ -16,12 +16,15 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (FIVE keys since `sync_path`
-// arrived 2026-08-30 with the mirror's configured destination; four from
+// set the shared scanner enforces after the loop (SIX keys since
+// `max_waveform_height` arrived 2026-09-13 with the waveform cap leaving
+// render.h; five from `sync_path`'s arrival 2026-08-30 with the mirror's
+// configured destination; four from
 // `audio_player`'s retirement 2026-08-28; five from the project model
 // 2026-08-27; two before it). THE ORDER IS THE ARCHITECT'S OWN, given with the
 // fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
-// last_project, sync_path. The scanner takes it as a
+// last_project, sync_path — the sixth placed right after gui_scale
+// (architect 2026-09-13). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -30,6 +33,7 @@ namespace {
 // here both halves are in this file, so one list is the honest shape).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
+    "max_waveform_height",
     "projects_repo",
     "projects_path",
     "last_project",
@@ -41,6 +45,12 @@ constexpr const char* kDeviceConfigKeys[] = {
 std::string format_gui_scale_percent(int percent) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", percent);
+    return std::string(buf);
+}
+
+std::string format_max_waveform_height(int authored_px) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", authored_px);
     return std::string(buf);
 }
 
@@ -71,6 +81,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         // reads.
         if (k == "gui_scale") {
             s += format_gui_scale_percent(cfg.gui_scale);
+        } else if (k == "max_waveform_height") {
+            s += format_max_waveform_height(cfg.max_waveform_height);
         } else if (k == "projects_repo") {
             // Free text, verbatim; blank is legal and never matches a remote.
             s += cfg.projects_repo;
@@ -116,11 +128,23 @@ std::expected<DeviceConfig, std::string> read_device_config(
             // the one owner in the header.
             int64_t v = 0;
             if (!parse_authored_frame(value, v) || !is_gui_scale_percent(v)) {
-                return bad_value(ln, key, value,
-                    "must be an integer in [50, 350] in canonical spelling");
+                return bad_value(ln, key, value, kGuiScaleGrammarReason);
             }
             // Range-checked above, so the narrowing to int is exact.
             out.gui_scale = static_cast<int>(v);
+            return {};
+        }
+        if (key == "max_waveform_height") {
+            // The scale's road exactly: plain digits through
+            // parse_authored_frame (so `0` is the one spelling of "no
+            // maximum"), then the RANGE through the one owner in the header.
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) ||
+                !is_max_waveform_height(v)) {
+                return bad_value(ln, key, value,
+                                 kMaxWaveformHeightGrammarReason);
+            }
+            out.max_waveform_height = static_cast<int>(v);
             return {};
         }
         if (key == "projects_repo") {

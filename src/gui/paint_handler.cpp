@@ -1329,6 +1329,7 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 // 242, so that popup DERIVED at every scale — 296px wide with its chrome —
 // and the +42 did not land on it. THAT ROW LEFT 2026-09-02 (R-23) and three
 // device-key rows joined (R-22), the widest label now "Projects Repository"
+// (tied since 2026-09-13 by "Max Waveform Height", the same 19 characters)
 // — some 19 characters against the 28 that asked 209, so by the same
 // advance-width method the content sits under the 242 and the FLOOR is the
 // width again; unmeasured, and it does not have to be: the painter takes the

@@ -3957,6 +3957,16 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
+    // THE WAVEFORM CAP'S LIVE RELAYOUT (the device config's
+    // `max_waveform_height`, architect 2026-09-13): install the AUTHORED value
+    // into the renderer (set_max_waveform_height_px, render.h — 0 meaning no
+    // maximum), then apply_gui_scale's own tail — full-window invalidate and
+    // the resize-path rebuild, whose viewport re-clamp and plate rebuild follow
+    // the new waveform area. It ASSIGNS AND PERSISTS NOTHING: its sole caller,
+    // the settings editor's device-key body (commit_device_setting), has
+    // already written the live struct and the file and gated the no-op case.
+    void apply_max_waveform_height(int authored_px);
+
     // THE WAVEFORM MAGNIFICATION'S ONE WRITER — the gesture chokepoint every
     // route to app.waveform_magnification_level goes through, and the only site
     // in the product that assigns that field. TWO HOTKEYS reach it (bare `=`

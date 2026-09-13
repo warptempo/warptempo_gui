@@ -1848,8 +1848,12 @@ inline int marker_lane_h_px() {
     return scaled_px(kMarkerLaneHeightPx, 5);
 }
 
-// THE WAVEFORM'S MAXIMUM HEIGHT — a RULED RETUNABLE (architect 2026-08-12, the
-// seventh glass ruling): on tall monitors the natural (leftover) waveform is so
+// THE WAVEFORM'S MAXIMUM HEIGHT — THE DEVICE CONFIG'S `max_waveform_height`
+// since 2026-09-13 (architect: a per-device key in AUTHORED px, default 500 on
+// both templates, 0 meaning no maximum; the range owner is
+// is_max_waveform_height, device_config.h). Until that day it was this file's
+// constant kWaveformMaxHeightPx = 500, a RULED RETUNABLE (architect 2026-08-12,
+// the seventh glass ruling): on tall monitors the natural (leftover) waveform is so
 // tall that reaching the ruler and the flag lane "feels cumbersome", so the
 // waveform CLAMPS at this height and the leftover becomes BLANK WINDOW GROUND.
 // WHERE THAT GROUND SITS IS THE RELAYOUT'S COMMIT B (architect-dictated
@@ -1875,7 +1879,8 @@ inline int marker_lane_h_px() {
 // the menu lane went 35 -> 31 on 2026-08-21)
 // and the bottom row 47 (the icon row's height since 2026-08-14): the
 // 1920x1080 monitor's leftover is 840, so the
-// waveform CLAMPS at 500 and the two gaps take 97 (top) + 243 (bottom); a
+// waveform CLAMPS at the default 500 and the two gaps take 97 (top) + 243
+// (bottom); a
 // 1024x600 SHORT WINDOW's leftover is 360, UNCLAMPED, and the centering is
 // infeasible there so both gaps floor at 0 and the waveform keeps the whole
 // 360. The full stacks and their derivation are main.cpp's vertical block,
@@ -1885,10 +1890,17 @@ inline int marker_lane_h_px() {
 // lanes it is measured against. The ONE application point is the
 // strip/waveform geometry owner (the two flex gaps / strip_row_rect /
 // waveform_area, main.cpp); no consumer reads this accessor directly.
-inline constexpr int kWaveformMaxHeightPx = 500;
-inline int waveform_max_h_px() {
-    return scaled_px(kWaveformMaxHeightPx, 1);
-}
+//
+// THE PLUMBING IS gui_scale's: the configured AUTHORED value is file-scope
+// state in render.cpp installed by set_max_waveform_height_px at the scale's
+// own two application points — gui_main's startup read of the device config,
+// beside set_gui_scale_percent and before the window exists, and the settings
+// editor's `max_waveform_height=` commit (commit_device_setting, whose
+// relayout is GuiInputHandler::apply_max_waveform_height). waveform_max_h_px
+// is the ONE reader, and it answers INT_MAX — "unbounded", which the clamp's
+// min passes straight through — for the key's 0.
+void set_max_waveform_height_px(int authored_px);
+int  waveform_max_h_px();
 
 // THE OVERVIEW STRIP'S HEIGHT — ONE FIXED TINY LANE (architect-ratified
 // 2026-08-12, his pick from the offered fillers: "the whole song overview

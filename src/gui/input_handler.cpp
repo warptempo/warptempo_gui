@@ -4161,8 +4161,8 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // 2026-09-02: the writer composes the failure's two clauses at its one
     // failure point (GuiFailure, failure.h), this site prints the diagnostic
     // and cards the display. It goes through THE LIVE CONFIG
-    // (AppState::device_config, the loop's one struct): the file holds five
-    // keys and is rewritten whole, and that struct is the one place all five
+    // (AppState::device_config, the loop's one struct): the file holds six
+    // keys and is rewritten whole, and that struct is the one place all six
     // are live at once, across every reopen (the ownership rule is at
     // write_device_config, device_config.h).
     app.gui_scale = percent;
@@ -4182,6 +4182,15 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // set_gui_scale_percent:
     // drag_moved_threshold_px() reads the value that call just installed.
     gui.set_touch_slop_px(drag_moved_threshold_px());
+    viewport.invalidate_all();
+    paint_handler.on_resize(app.width, app.height);
+}
+
+void GuiInputHandler::apply_max_waveform_height(int authored_px) {
+    // The contract is at the declaration (input_handler.h). The waveform's
+    // height moves every strip boundary below gap 1 with it, so the tail is
+    // the scale's: the whole window, then the resize path.
+    set_max_waveform_height_px(authored_px);
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
 }

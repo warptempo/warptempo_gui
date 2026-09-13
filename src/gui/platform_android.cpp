@@ -532,6 +532,10 @@ GuiPlatform::~GuiPlatform() {
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale     = 225;
+    // The waveform cap's authored 500 px, the laptop template's value (at
+    // 225 % it scales to 1125, above the content rect's 722 px leftover, so
+    // the tablet's waveform stays unclamped exactly as before the key).
+    cfg.max_waveform_height = 500;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;

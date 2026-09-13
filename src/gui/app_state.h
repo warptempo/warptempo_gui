@@ -3518,7 +3518,7 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // paint_handler.cpp; "GUI Scale" and "URL" keep their acronym caps under it)
 // with the SETTINGS KEY the click prefills into the editor, and
 // `separator_before` marks the one place the two categories part: the four
-// SIDECAR keys a hand edits (the metadata), then the four DEVICE CONFIG keys
+// SIDECAR keys a hand edits (the metadata), then the five editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row).
 //
@@ -3556,11 +3556,14 @@ struct SettingsPopupItem {
 // `-`), the PLAIN WHEEL and its TWO icon-row buttons; only the ROW went, a
 // dropdown item being the typed route's convenience and not the act's home.
 //
-// THE DEVICE HALF IS FOUR SINCE 2026-09-02 (architect, R-22): the three
+// THE DEVICE HALF IS FIVE SINCE 2026-09-13, when `Max Waveform Height` joined
+// right after `GUI Scale` in kDeviceConfigKeys' order (architect; it commits
+// through commit_device_setting and relays out live). IT WAS FOUR FROM
+// 2026-09-02 (architect, R-22): the three
 // gesture-less device keys — `Projects Repository`, `Projects Path`, `Sync
 // Path` — joined `GUI Scale` as rows, each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
-// answers all four off the live struct) and committing through the device
+// answers all of them off the live struct) and committing through the device
 // config's writer under the key's own grammar (commit_device_setting,
 // settings_editor.cpp). The two path rows are the first whose Tab completion
 // is the FILESYSTEM's rather than a recall (complete_path_value). The two
@@ -3573,6 +3576,7 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"URL",                 "url",           false},
     {"Cover",               "cover",         false},
     {"GUI Scale",           "gui_scale",     true},
+    {"Max Waveform Height", "max_waveform_height", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
     {"Sync Path",           "sync_path",     false},

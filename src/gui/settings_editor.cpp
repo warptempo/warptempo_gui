@@ -141,14 +141,14 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // protects by the ruling's own vocabulary (read_only_key_blocked,
 // input_key_dispatch.cpp: read-only protects the authored musical content, the
 // two marker stores and the engine settings, and nothing else). What sitting at
-// the surface could not see is that the same editor authors the four per-device
-// keys, which belong to no piece (device_config.h: no undo, no dirty, no
+// the surface could not see is that the same editor authors the per-device
+// keys (four then, five since max_waveform_height joined 2026-09-13), which belong to no piece (device_config.h: no undo, no dirty, no
 // Ctrl+S), so a locked tab killed the one road to `sync_path`,
-// `projects_path`, `projects_repo` and the scale — and on the tablet the menu
+// `projects_path`, `projects_repo` and the scale (and now the waveform cap) — and on the tablet the menu
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the red flash every other refusal there wears, while commit_device_setting's
-// three keys and the `gui_scale` arm commit regardless. So every Settings
+// four keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -278,14 +278,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other three editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path and sync_path — have no chokepoint to reach
-    // and take their one direct-set body in commit(), commit_device_setting,
-    // ahead of this router.)
+    // move. (The other four editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path and sync_path, and since 2026-09-13
+    // max_waveform_height — take their one direct-set body in commit(),
+    // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
-            reject("must be an integer in [50, 350] in canonical spelling");
+            reject(kGuiScaleGrammarReason);
             return true;
         }
         // History-less, and APPLIED LIVE: the store write is no longer the
@@ -676,9 +676,9 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The three gesture-less device keys — one body, ahead of the routers
-    //    because none of them has a chokepoint to route into (the head's
-    //    item 1; the body's own comment carries the rest).
+    // 2. The four device keys other than the scale — one body, ahead of the
+    //    routers (the head's item 1; the body's own comment carries the
+    //    rest, max_waveform_height's live relayout included).
     if (commit_device_setting(key, value)) return;
 
     // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
@@ -901,7 +901,7 @@ void GuiSettingsEditor::commit() {
     target_render.trigger();
 }
 
-// THE THREE DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
+// THE FOUR DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
 // a direct-set arm here since it was a `.settings` key — free text, no undo
 // history, no dirty tracking, the settings editor its sole authoring surface
 // — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
@@ -924,7 +924,15 @@ void GuiSettingsEditor::commit() {
 // display, the strictness ruling's shape for a press whose result nothing
 // paints.
 //
-// WHEN EACH IS IN FORCE. `projects_repo`: at once — every reader reads
+// max_waveform_height JOINED 2026-09-13 (architect) as the body's one INTEGER
+// key: the same grammar-then-no-op-then-write shape over an int, its grammar
+// the scale's road (parse_authored_frame, then is_max_waveform_height) and its
+// refusal the same composer, and the one key here that CHANGES THE SCREEN AT
+// THE COMMIT — past the write it hands the value to
+// GuiInputHandler::apply_max_waveform_height, the live relayout (install,
+// whole-window damage, the resize path). Not a path key, so no Tab completion.
+//
+// WHEN EACH IS IN FORCE. `max_waveform_height`: at once, by that relayout. `projects_repo`: at once — every reader reads
 // `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
 // readers did not (an empty value simply never matches any remote, which
 // disables the GitHub recheck). `sync_path`: at once — the Synchronize act
@@ -945,6 +953,66 @@ void GuiSettingsEditor::commit() {
 // project is opened first — a rename-by-hand case, accepted.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
+    // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
+    // `gui_scale` arm's sentence exactly (the reason after the tag and no key
+    // name, the field on screen already showing which key): the refusal
+    // sentence is built once and read by the stderr line and by the card, a
+    // red field saying only THAT it refused.
+    auto reject = [&](const char* reason) {
+        app.settings_editor.red = true;
+        viewport.invalidate_modal_dialog_area();
+        const std::string refusal =
+            std::string("Settings edit rejected: ") + reason;
+        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+    };
+    auto unchanged = [&]() {
+        std::fprintf(stderr,
+            "warptempo_gui: Setting unchanged: %s=%s\n",
+            key.c_str(), value.c_str());
+        viewport.invalidate_modal_dialog_area();
+        text_editor::deactivate(app.settings_editor);
+    };
+    // The write is advisory in the ruling's sense: it may fail, the live value
+    // stands either way, and the failure is the press's answer on a card.
+    auto persist = [&]() -> bool {
+        const auto failure = write_device_config(*app.device_config);
+        if (failure) {
+            std::fprintf(stderr, "warptempo_gui: %s\n",
+                         failure->diagnostic.c_str());
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 failure->display);
+        }
+        return !failure;
+    };
+    auto applied = [&]() {
+        std::fprintf(stderr,
+            "warptempo_gui: Setting applied: %s=%s\n",
+            key.c_str(), value.c_str());
+        viewport.invalidate_modal_dialog_area();
+        text_editor::deactivate(app.settings_editor);
+    };
+
+    if (key == "max_waveform_height") {
+        int64_t v64 = 0;
+        if (!parse_authored_frame(value, v64) ||
+            !is_max_waveform_height(v64)) {
+            reject(kMaxWaveformHeightGrammarReason);
+            return true;
+        }
+        // Range-checked above, so the narrowing to int is exact.
+        const int v = static_cast<int>(v64);
+        if (v == app.device_config->max_waveform_height) {
+            unchanged();
+            return true;
+        }
+        app.device_config->max_waveform_height = v;
+        (void)persist();
+        applied();
+        input->apply_max_waveform_height(v);
+        return true;
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -964,53 +1032,22 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return false;
     }
 
-    // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
-    // `gui_scale` arm's sentence exactly (the reason after the tag and no key
-    // name, the field on screen already showing which key): the refusal
-    // sentence is built once and read by the stderr line and by the card, a
-    // red field saying only THAT it refused.
-    if (!grammar(value)) {
-        app.settings_editor.red = true;
-        viewport.invalidate_modal_dialog_area();
-        const std::string refusal =
-            std::string("Settings edit rejected: ") + reason;
-        std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
-        notifications.notify(AppState::NotificationClass::Normal, refusal);
-        return true;
-    }
-    if (value == *live) {
-        std::fprintf(stderr,
-            "warptempo_gui: Setting unchanged: %s=%s\n",
-            key.c_str(), value.c_str());
-        viewport.invalidate_modal_dialog_area();
-        text_editor::deactivate(app.settings_editor);
-        return true;
-    }
+    if (!grammar(value)) { reject(reason); return true; }
+    if (value == *live) { unchanged(); return true; }
     *live = value;
     // The live field every reader of the repository reads (the rationale at
     // AppState::projects_repo); the two path keys have no field beside the
     // struct's own.
     if (key == "projects_repo") app.projects_repo = value;
-    // The write is advisory in the ruling's sense: it may fail, the live value
-    // stands either way, and the failure is the press's answer on a card. The
-    // verdict is kept because the applies-card below is a claim about the next
-    // launch, which only a written file can make true — a failed write leaves
-    // the old path on disk, so the two cards together would have said the
-    // persist failed and then that it survives a relaunch, with the second one
-    // topmost. On failure the device-config card is the whole answer.
-    const auto failure = write_device_config(*app.device_config);
-    if (failure) {
-        std::fprintf(stderr, "warptempo_gui: %s\n",
-                     failure->diagnostic.c_str());
-        notifications.notify(AppState::NotificationClass::Normal,
-                             failure->display);
-    }
-    std::fprintf(stderr,
-        "warptempo_gui: Setting applied: %s=%s\n",
-        key.c_str(), value.c_str());
-    viewport.invalidate_modal_dialog_area();
-    text_editor::deactivate(app.settings_editor);
-    if (key == "projects_path" && !failure) {
+    // The persist's verdict is kept because the applies-card below is a claim
+    // about the next launch, which only a written file can make true — a
+    // failed write leaves the old path on disk, so the two cards together
+    // would have said the persist failed and then that it survives a
+    // relaunch, with the second one topmost. On failure the device-config card
+    // is the whole answer.
+    const bool written = persist();
+    applied();
+    if (key == "projects_path" && written) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kProjectsPathAppliesCard);
     }
@@ -1119,9 +1156,9 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, waveform_magnification_level,
-    // projects_repo, projects_path, sync_path — the last four the device
-    // config's — per-tab trim / read_only)
+    // gui_scale, waveform_magnification_level, max_waveform_height,
+    // projects_repo, projects_path, sync_path — gui_scale and the last four
+    // the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

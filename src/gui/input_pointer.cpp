@@ -8737,7 +8737,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // about the lock either way: the editor refused on a read-only ACTIVE tab
     // from 2026-08-07 to that date, and the lock now governs the KEYS at their
     // own commit arms instead — the four sidecar rows are engine keys and say
-    // the lock's sentence when they commit, while the four device rows commit
+    // the lock's sentence when they commit, while the five device rows commit
     // regardless (the account is at GuiSettingsEditor::open). The modal
     // playback stop stays at that opener, where it moved off this line in
     // 2026-08-07. THE ITEM IS NOT GREYED, deliberately — the never-grey rule
