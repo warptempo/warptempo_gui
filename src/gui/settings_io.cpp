@@ -92,17 +92,19 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // same-day retune that renamed it; the parser-side record is at
     // kCanonicalSettingsKeys.)
     { "waveform_magnification_level",SettingKind::WaveformMagnificationLevel, EngineField::Title,            "0"        },
+    // The two zoom defaults stamp the working zoom, kWorkingZoomLevel (1, the
+    // ladder's floor since 2026-09-13), in its canonical spelling.
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
     { "tab_a_viewport_start",        SettingKind::ViewportStart_A,      EngineField::Title,                   "0" },
-    { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "2" },
+    { "tab_a_zoom",                  SettingKind::ZoomLevel_A,          EngineField::Title,                   "1" },
     { "tab_a_playhead_cursor",       SettingKind::Playhead_A,           EngineField::Title,                   "0" },
     { "tab_b_trim_begin",            SettingKind::TrimBegin_B,          EngineField::Title,                   nullptr },
     { "tab_b_trim_end",              SettingKind::TrimEnd_B,            EngineField::Title,                   nullptr },
     { "tab_b_read_only",             SettingKind::ReadOnly_B,           EngineField::Title,                   "false" },
     { "tab_b_viewport_start",        SettingKind::ViewportStart_B,      EngineField::Title,                   "0" },
-    { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "2" },
+    { "tab_b_zoom",                  SettingKind::ZoomLevel_B,          EngineField::Title,                   "1" },
     { "tab_b_playhead_cursor",       SettingKind::Playhead_B,           EngineField::Title,                   "0" },
 };
 

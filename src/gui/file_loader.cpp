@@ -304,8 +304,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
-    // Open at the working zoom (2.4 s) for normal files; a file too short for
-    // it opens at its effective ceiling (whole-song-visible) instead.
+    // Open at the working zoom (2.4 s). The working zoom is the ladder's floor
+    // and effective_max_zoom_level never answers below it, so the min is the
+    // working zoom for every file; a file too short to fill the window at it
+    // rests there with the whole song visible.
     app.zoom_level = std::min(kWorkingZoomLevel, effective_max_zoom_level(
         waveform_area(app).w, audio.total_frames(), audio.sample_rate()));
     clamp_viewport_start(app, audio);

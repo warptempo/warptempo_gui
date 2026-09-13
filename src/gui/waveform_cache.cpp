@@ -1191,7 +1191,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // its ink must use the width that ink was rendered at. Both bases are now
     // the one expression, and the fingerprint still catches every width change
     // transitively: fp_vp_end = vp_start + nearbyint(spp·w) and the effective
-    // width moves in steps of 16 at spp >= 27.5 frames/px, so no width change
+    // width moves in steps of 16 at spp >= 55 frames/px, so no width change
     // can leave the displayed span untouched.
     //
     // The live-width fallback mirrors plate_viewport_basis's own cold arm: the

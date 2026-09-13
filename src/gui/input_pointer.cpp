@@ -2892,7 +2892,7 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     // pointer column, the OPPOSITE bound stays fixed — a zoom anchored at
     // the far edge. The span between the fixed bound and the pointer maps to
     // a LEVEL by the fit formula (effective_max_zoom_level's own equation
-    // solved for an arbitrary span: level = 1 + log2(span·1000/(0.625·sr·w))),
+    // solved for an arbitrary span: level = 1 + log2(span·1000/(kZoomBaseMsPerPx·sr·w))),
     // pre-clamped into [kMinZoom, effective ceiling] exactly as both other
     // apply_strip_drag_zoom callers pre-clamp. THE kMinZoom FLOOR IS THE
     // CANNOT-CROSS CLAMP: a pointer on or past the partner asks for a span
@@ -2929,7 +2929,7 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
     if (span < min_span) span = min_span;
     double level = 1.0 + std::log2(
         span * 1000.0 /
-        (0.625 * static_cast<double>(sr) * static_cast<double>(area.w)));
+        (kZoomBaseMsPerPx * static_cast<double>(sr) * static_cast<double>(area.w)));
     const double max_l = effective_max_zoom_level(area.w, total, sr);
     if (level < kMinZoom) level = kMinZoom;
     if (level > max_l)    level = max_l;

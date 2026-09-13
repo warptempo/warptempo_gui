@@ -297,7 +297,7 @@ The mouse is different: a click on the waveform's **upper half** (or the ruler, 
 
 ### Zoom and view
 
-Zoom is continuous. `Ctrl+=` and `Ctrl+-` step one whole level per press, `Ctrl`+wheel steps the same levels one per detent (wheel up zooms in), and the `Ctrl`+drag below reaches every fractional level in between. The deepest zoom is fixed (1.2 s across the waveform at the 1920 px deployment width — a zoom level fixes time per pixel, so the span scales with window width); the shallowest is the whole song exactly filling the width.
+Zoom is continuous. `Ctrl+=` and `Ctrl+-` step one whole level per press, `Ctrl`+wheel steps the same levels one per detent (wheel up zooms in), and the `Ctrl`+drag below reaches every fractional level in between. The deepest zoom is the working zoom (2.4 s across the waveform at the 1920 px deployment width — a zoom level fixes time per pixel, so the span scales with window width); the shallowest is the whole song exactly filling the width.
 
 `0` goes to that full zoom-out — and remembers where it came from: pressing it stamps the level you were at, and pressing it again with the zoom already fully out runs the `C` command at that stamped level. So `0` twice takes you out to the whole song and back in to the magnification you were working at, on the marker you are working on. The stamp is per tab, lasts the session, and only `0` writes it. With nothing stamped — or a stamp no longer reachable — the second press is plain `C` at the working zoom.
 

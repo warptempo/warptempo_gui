@@ -296,12 +296,12 @@ inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
 // authored data, so the playhead lattice is an authoring lattice too.
 //
 // The choice is invisible in paint: both forms sit within one frame of the
-// ideal grid point (m+col)*q, and one frame is at most ~1/27.5 px at the
+// ideal grid point (m+col)*q, and one frame is at most ~1/55 px at the
 // deepest numeric zoom — far under the half-pixel paint-rounding threshold — so
 // a landing paints at column `col` either way.
 //
 // m recovery is exact for product-reachable audio lengths: at the deepest
-// numeric zoom q >= ~27.5 frames/px and a source length fits well within the
+// numeric zoom q >= ~55 frames/px and a source length fits well within the
 // double mantissa, so |viewport_start/q - m| << 0.5. The target domain's total
 // is at most 16x the source's — build_warp_frame_map divides each source delta
 // by the product of tempo, marker scale and settings scale, and all three

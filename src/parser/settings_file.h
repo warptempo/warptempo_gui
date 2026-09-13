@@ -84,8 +84,11 @@
 // persisted zoom is validated against the theoretical vocabulary only, and the
 // runtime reclamp owns the per-file ceiling — the same display-scratch
 // convention the persisted viewport/playhead values follow. ms-per-pixel(level)
-// = 0.625 * 2^(level-1) (GUI-side, in main.cpp's samples_per_pixel_at), so an
-// integer level reproduces the historical 2x-per-step ladder exactly, and the
+// = 1.25 * 2^(level-1) (GUI-side, the base kZoomBaseMsPerPx in app_state.h,
+// read by main.cpp's samples_per_pixel_at), so an integer level walks a
+// 2x-per-step ladder whose floor, level 1, IS the working zoom — nothing finer
+// exists (architect approval 2026-09-13: the old 0.625 ms/px floor is retired
+// and every level renumbered down by one) — and the
 // exponent yields spp = total/width exactly at the fit-equivalent level. The
 // constants live here rather than in the GUI so an out-of-vocabulary persisted
 // zoom refuses identically in the GUI and the CLI.
@@ -96,11 +99,12 @@ constexpr double kMinZoom = 1.0;
 // 44100 Hz rate floor -> 4294967295 / 6 ~= 715.8 M frames ~= 16232 s. The
 // narrowest supported window is 640 px (kMinWindowWidthPx; waveform effective
 // width 640). kMaxZoom is the smallest whole level whose visible span covers
-// that worst case at that width: 0.625 * 2^(17-1) ms/px * 640 px = 26214.4 s
-// >= 16232 s, while level 16 gives 13107.2 s < 16232 s -- so 17 is minimal.
+// that worst case at that width: 1.25 * 2^(16-1) ms/px * 640 px = 26214.4 s
+// >= 16232 s, while level 15 gives 13107.2 s < 16232 s -- so 16 is minimal
+// (architect approval 2026-09-13: 17 -> 16 with the ladder's base doubling).
 // Consequence: for EVERY loadable file the fit level is below kMaxZoom by
 // construction, so full zoom-out always rests at whole-song-visible.
-constexpr double kMaxZoom = 17.0;
+constexpr double kMaxZoom = 16.0;  // (architect approval 2026-09-13)
 
 // One tab's trim in the .settings schema. Positions are whole source frames
 // (int64_t), decoded via parse_authored_frame (frame_format.h) — BOTH values

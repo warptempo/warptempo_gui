@@ -223,8 +223,9 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
             // one continuous vocabulary [kMinZoom, kMaxZoom]. One canonical
             // spelling: the shortest round-trip double text the writer emits
             // (format_value_double(v, 0), the min-0 gate the session-only
-            // bpm-bracket bounds also use). An integer rest ("1".."17") is
-            // exactly its own min-0 shortest form; a fractional rest writes e.g.
+            // bpm-bracket bounds also use). An integer rest ("1".."16",
+            // architect approval 2026-09-13) is exactly its own min-0 shortest
+            // form; a fractional rest writes e.g.
             // "3.7" (or the full shortest-round-trip digits) and reloads
             // bit-exactly. The per-file effective ceiling is a GUI-runtime
             // clamp, not checked here.

@@ -13,8 +13,8 @@
 // (displayed_grid_position_at_column, src/gui/warp_frame_map_view.h): a
 // column's time is (m + col) * q with m the viewport's own column index, so the
 // reachable set at a given zoom is exactly {round(k*q)} over integer k, whatever
-// the camera did on the way there. These tools mirror that set at zoom level 2
-// — the working zoom the `c` command parks on.
+// the camera did on the way there. These tools mirror that set at zoom level 1
+// — the working zoom the `c` command parks on, the ladder's floor.
 //
 // VIEWPORT-INDEPENDENT IS NOT WIDTH-INDEPENDENT FOR FREE; it holds under a
 // stated precondition, enforced by the refusal at rate_has_canonical_lattice
@@ -76,10 +76,11 @@ namespace sidecar_snap {
 
 // --- the lattices -----------------------------------------------------------
 
-// GUI zoom level 2, the working zoom. ms-per-pixel is the continuous function
-// 0.625 * 2^(level - 1) (samples_per_pixel_at, src/gui/main.cpp), so level 2 is
-// 1.25 ms/px — in EITHER display domain, since ms-per-pixel is a screen
-// quantity and knows nothing of source or target frames.
+// GUI zoom level 1, the working zoom and the ladder's floor. ms-per-pixel is
+// the continuous function kZoomBaseMsPerPx * 2^(level - 1) with the base 1.25
+// (samples_per_pixel_at, src/gui/main.cpp), so level 1 is 1.25 ms/px — in
+// EITHER display domain, since ms-per-pixel is a screen quantity and knows
+// nothing of source or target frames.
 inline constexpr double kLatticeMsPerPx = 1.25;
 
 // Frames per pixel column at the lattice zoom, for a domain clocked at
@@ -104,14 +105,11 @@ inline double lattice_frames_per_px(double sample_rate) {
 // tool that authored there would be writing positions the GUI relabels the
 // moment it loads them, so an indivisible rate refuses instead.
 //
-// THE OTHER BOUNDARY IS UNDETECTABLE HERE AND IS RECORDED RATHER THAN GUARDED:
-// a source too SHORT to reach zoom 2 never authors at 1.25 ms/px at all,
-// because clamp_zoom_level (src/gui/main.cpp) clamps the `c` command to that
-// file's own fit-the-window ceiling, leaving the live q at the fit span. The
-// canonical-lattice claim does not extend to such a file. No tool can detect
-// it — the ceiling is a function of the runtime waveform width, which is the
-// one thing a tool cannot know — and the material these tools serve (whole
-// movements, millions of frames) sits many thousands of columns clear of it.
+// NO SOURCE IS TOO SHORT for the lattice since the working zoom became the
+// ladder's floor (2026-09-13): the level's spp is level-determined
+// (samples_per_pixel_at, src/gui/main.cpp) and clamp_zoom_level never takes a
+// level below kMinZoom, so even a file whose fit-the-window ceiling would lie
+// under it rests at level 1 and authors at 1.25 ms/px.
 inline constexpr long kLatticeRateDivisor = 50;
 
 inline bool rate_has_canonical_lattice(long sample_rate) {

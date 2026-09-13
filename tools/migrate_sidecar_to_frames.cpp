@@ -15,9 +15,9 @@
 // format_authored_frame (plain integer text). BOTH MARKER COLUMNS SNAP, each to
 // its own canonical lattice (both stated once at the head of
 // sidecar_snap_common.h): WARP marker positions (.warpmarkers) land on the GUI
-// zoom-level-2 SOURCE grid — the nearest pixel column at sample_rate * 1.25 /
+// zoom-level-1 SOURCE grid — the nearest pixel column at sample_rate * 1.25 /
 // 1000 frames per pixel, anchored at frame 0 (55.125 frames at 44.1 kHz) —
-// while .phaseresetmarkers positions land on the zoom-level-2 TARGET lattice
+// while .phaseresetmarkers positions land on the zoom-level-1 TARGET lattice
 // the live warp map defines, which is why that kind takes the source WAV as a
 // third argument. .settings trim values are NOT snapped: a trim bound is a
 // render window, not an authored musical instant, so it keeps plain whole-frame

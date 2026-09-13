@@ -87,11 +87,11 @@ namespace {
 // file-local here.
 
 // ms-per-pixel is a continuous function of the zoom level (a real-valued
-// exponent): ms_per_px(level) = 0.625 * 2^(level - 1), computed directly in
-// samples_per_pixel_at. The level rests anywhere in the one continuous domain
-// [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest zoom-in (0.625
-// ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
-// rungs reproduce the historical ladder (0.625, 1.25, 2.5, ...) bit-for-bit,
+// exponent): ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1), computed
+// directly in samples_per_pixel_at. The level rests anywhere in the one
+// continuous domain [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest
+// zoom-in and the working zoom (1.25 ms/px, 2.4 s); each whole step is exactly
+// 2x the previous, so the integer rungs walk the ladder (1.25, 2.5, 5, ...),
 // and the fit-equivalent level (full zoom-out, whole song visible) is just the
 // point on the same curve where spp * width == total.
 
@@ -588,11 +588,15 @@ GuiRect waveform_area(const AppState& a) {
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
-    // exceeding the window width, leaving a <=15 px inert right gutter. The
-    // step is 16 = 1600/gcd(44100,1600), the strictest step among standard
-    // sample rates (every standard rate's step divides 16), so at a
-    // multiple-of-16 width logical_spp·W is integral at every INTEGER zoom
-    // rung and painter samples-per-pixel equals the logical spp exactly there
+    // exceeding the window width, leaving a <=15 px inert right gutter. At
+    // integer level n the logical spp is rate·2^(n−1)/800, so a 16 px width
+    // carries rate·2^(n−1)/50 frames: for any rate divisible by 50 (44100,
+    // 48000 and their multiples) logical_spp·W is integral at every INTEGER
+    // zoom rung and painter samples-per-pixel equals the logical spp exactly
+    // there. (16 was derived as 1600/gcd(44100,1600) under the ladder's
+    // retired 0.625 ms/px floor; since the working zoom became the floor
+    // (2026-09-13) 8 would suffice at 44.1 kHz, and 16, a multiple of it, is
+    // kept)
     // — the grid the pixel-anchored commits and the migration tool both
     // target. A fractional rung (the continuous strip-drag zoom) has no such
     // integral guarantee; painter_samples_per_pixel rides its own
@@ -909,19 +913,20 @@ std::pair<long long, long long> compute_trim_samples(
 }
 
 double samples_per_pixel_at(double zoom_level, int sample_rate) {
-    // One continuous domain, no sentinel: ms_per_px = 0.625 * 2^(level - 1).
+    // One continuous domain, no sentinel: ms_per_px = kZoomBaseMsPerPx * 2^(level - 1).
     // Fully level-determined and domain-independent — at the per-file effective
     // ceiling the exponent already yields spp = total/width (whole song
     // visible) by construction, so there is no fit-file special case.
     assert(zoom_level >= kMinZoom && zoom_level <= kMaxZoom);
-    return 0.625 * std::exp2(zoom_level - 1.0) *
+    return kZoomBaseMsPerPx * std::exp2(zoom_level - 1.0) *
            static_cast<double>(sample_rate) / 1000.0;
 }
 
 // The per-file effective zoom-out ceiling: the continuous level at which
 // samples_visible == total_frames, clamped into [kMinZoom, kMaxZoom].
-// samples_visible(L) = 0.625 * 2^(L-1) * sr/1000 * width == total solves to
-// fit_level = 1 + log2(total * 1000 / (0.625 * sr * width)); full zoom-out
+// samples_visible(L) = kZoomBaseMsPerPx * 2^(L-1) * sr/1000 * width == total
+// solves to fit_level = 1 + log2(total * 1000 / (kZoomBaseMsPerPx * sr *
+// width)); full zoom-out
 // rests here (whole-song-visible, Ableton behavior). A degenerate tiny file
 // (fit_level < kMinZoom) collapses the range to the floor — clamp_viewport_start's
 // visible >= total branch owns that start = 0 display. Because kMaxZoom is
@@ -935,7 +940,7 @@ double effective_max_zoom_level(int waveform_width_px,
         return kMinZoom;  // degenerate: collapse to the floor
     const double fit = 1.0 + std::log2(
         static_cast<double>(total_frames) * 1000.0 /
-        (0.625 * static_cast<double>(sample_rate) *
+        (kZoomBaseMsPerPx * static_cast<double>(sample_rate) *
          static_cast<double>(waveform_width_px)));
     return std::clamp(fit, kMinZoom, kMaxZoom);
 }

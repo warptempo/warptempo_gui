@@ -3037,7 +3037,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
     const double raw_level = 1.0 + std::log2(
         span * 1000.0 /
-        (0.625 * static_cast<double>(sr) * static_cast<double>(W)));
+        (kZoomBaseMsPerPx * static_cast<double>(sr) * static_cast<double>(W)));
     const double ceiling = effective_max_zoom_level(W, total, sr);
     const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
 
@@ -4017,7 +4017,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // has no one-frame bound, and a more compressed legal product widens it (at
     // the 1/4 slope, source 1002 maps to target 250.5, rounds to 250, and
     // inverses to source 1000) — but the gap stays well under one PAINTED COLUMN,
-    // which is what the anchoring cares about: a column is at least ~27 frames at
+    // which is what the anchoring cares about: a column is at least ~55 frames at
     // the deepest zoom the product allows. The frame count is not the premise;
     // the column is.
     // THROUGH THE RESEAT, NOT THE LAND (2026-08-19): a TRANSLATION IS NOT A
