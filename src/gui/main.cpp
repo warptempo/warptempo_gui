@@ -90,8 +90,8 @@ namespace {
 // exponent): ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1), computed
 // directly in samples_per_pixel_at. The level rests anywhere in the one
 // continuous domain [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest
-// zoom-in and the working zoom (1.25 ms/px, 2.4 s); each whole step is exactly
-// 2x the previous, so the integer rungs walk the ladder (1.25, 2.5, 5, ...),
+// zoom-in (0.625 ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
+// rungs reproduce the historical ladder (0.625, 1.25, 2.5, ...) bit-for-bit,
 // and the fit-equivalent level (full zoom-out, whole song visible) is just the
 // point on the same curve where spp * width == total.
 
@@ -594,26 +594,19 @@ GuiRect waveform_area(const AppState& a) {
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
-    // exceeding the window width, leaving a <=7 px inert right gutter. At
-    // integer level n the logical spp is rate·2^(n−1)/800, so an 8 px width
-    // carries rate·2^(n−1)/100 frames: for any rate divisible by 100 (44100,
-    // 48000 and their multiples) logical_spp·W is integral at every INTEGER
-    // zoom rung and painter samples-per-pixel equals the logical spp exactly
-    // there — n = 1, the working zoom and the ladder's floor, is the binding
-    // rung (441 frames per 8 px at 44.1 kHz, 480 at 48 kHz), every coarser
-    // rung asking half as much of the rate again. 8 is 800/gcd(44100,800),
-    // the smallest step with that property at 44.1 kHz. A legal rate NOT
-    // divisible by 100 (the loader accepts any rate at or above 44100) is
-    // exact at a rung only where rate·2^(n−1)/100 happens to be whole, and
-    // elsewhere rides the painter quantization below with no integral
-    // guarantee — the grid the pixel-anchored commits and the migration tool
-    // both target. A fractional rung (the continuous strip-drag zoom) has no
-    // such integral guarantee either; painter_samples_per_pixel rides its own
+    // exceeding the window width, leaving a <=15 px inert right gutter. The
+    // step is 16 = 1600/gcd(44100,1600), the strictest step among standard
+    // sample rates (every standard rate's step divides 16), so at a
+    // multiple-of-16 width logical_spp·W is integral at every INTEGER zoom
+    // rung and painter samples-per-pixel equals the logical spp exactly there
+    // — the grid the pixel-anchored commits and the migration tool both
+    // target. A fractional rung (the continuous strip-drag zoom) has no such
+    // integral guarantee; painter_samples_per_pixel rides its own
     // nearbyint(spp·W)/W quantization instead, so the authoring-grid
     // bit-exactness claim above is scoped to the integer rungs, notably the
-    // working zoom. A gutter appears only at a non-multiple-of-8 width (never
-    // at 1920/2560/3840).
-    constexpr int kGridStepPx = 8;
+    // working zoom. A gutter appears only at a non-multiple-of-16 width
+    // (never at 1920/2560/3840).
+    constexpr int kGridStepPx = 16;
     const int effective_w = w - (w % kGridStepPx);
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.

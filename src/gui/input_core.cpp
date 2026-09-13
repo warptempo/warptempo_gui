@@ -2461,8 +2461,8 @@ void GuiInputCore::relative_motion(double dx, double dy) {
     //     answers.
     //   * A POSITION THAT IS ALREADY OUTSIDE THE SPAN when the capture opens
     //     folds in on its very first event, in either direction. The one way
-    //     that happens is a pointer parked in the <=7px inert right gutter,
-    //     which exists only at a window width that is not a multiple of 8 —
+    //     that happens is a pointer parked in the <=15px inert right gutter,
+    //     which exists only at a window width that is not a multiple of 16 —
     //     neither host's. Recorded, not guarded: it is one event wide and it
     //     lands the pointer somewhere legitimate.
     // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: Wayland gives a client no

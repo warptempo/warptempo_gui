@@ -632,7 +632,7 @@ void GuiInputHandler::handle_toggle_trim_region() {
 // endcaps and bridge exactly as for the waveform overlay's, the bar standing
 // directly over the waveform's own span. So the basis is the WAVEFORM-width
 // painter q — the grid actually drawn, the same input the click placement takes
-// (under the multiple-of-8 effective-width contract it equals the logical spp,
+// (under the multiple-of-16 effective-width contract it equals the logical spp,
 // but the painted grid is the principled one). `rel` is already a whole column
 // out of an integer mouse_x, so there is no column rounding to do here; the
 // landing's single rounding is the owner's.

@@ -409,7 +409,7 @@ void Viewport::move_playhead_pixels(int delta_px) {
     // means the same sample whatever pan or zoom preceded it (finer adjustment
     // is a deeper zoom's job). The spp is the PAINTER-quantized q rather than
     // the logical one for the same reason the click placement takes it: it is
-    // the grid actually drawn (under the multiple-of-8 width contract the two
+    // the grid actually drawn (under the multiple-of-16 width contract the two
     // agree, but the painted grid is the principled input).
     // The recovery nearbyint is the column direction and is this walk's own; the
     // landing is the shared owner's. move_playhead_to still owns the walls, and

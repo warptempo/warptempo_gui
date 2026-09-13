@@ -3,11 +3,11 @@
 // pre-snap bytes as '<original-path>.bak'.
 //
 // Authored positions are deterministic against canonical, viewport-independent
-// lattices: the warp column against the source view's level-1 (working-zoom)
-// column grid, the phase reset column against the level-1 TARGET column lattice
-// the live warp map defines. Both lattices, why a tool can reproduce them at
-// all, and the PRECONDITION that reproduction rests on are stated once at the
-// head of sidecar_snap_common.h. A file whose positions came from somewhere else — an
+// lattices: the warp column against the source view's zoom-2 column grid, the
+// phase reset column against the zoom-2 TARGET column lattice the live warp map
+// defines. Both lattices, why a tool can reproduce them at all, and the
+// PRECONDITION that reproduction rests on are stated once at the head of
+// sidecar_snap_common.h. A file whose positions came from somewhere else — an
 // older migration that rounded rather than snapped, a hand edit — is snapped
 // onto the lattice here, so the GUI's own gestures can reach every position it
 // holds.
@@ -23,7 +23,7 @@
 // THE SOURCE WAV IS THE LATTICE'S CLOCK: sample rate and total frames both come
 // from audio_probe, and a probe failure is reported verbatim — the audio owner's
 // diagnostic is the one worth reading. THE PROBED RATE IS ALSO A GATE: a rate
-// not divisible by 100 has no width-free canonical lattice behind it (the GUI's
+// not divisible by 50 has no width-free canonical lattice behind it (the GUI's
 // painted grid is width-quantized there) and refuses on both kinds before
 // anything is read or snapped — rate_has_canonical_lattice carries the whole
 // reasoning, including the short-source boundary the tools cannot detect.

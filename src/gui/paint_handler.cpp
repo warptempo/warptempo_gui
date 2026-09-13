@@ -9091,8 +9091,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
     // bounds this to the exposed rect, so the full-rect fill costs nothing off
-    // the damage. The rect is the EFFECTIVE-width waveform_area, so the <=7px
-    // inert right gutter at a non-multiple-of-8 window stays chrome — it is
+    // the damage. The rect is the EFFECTIVE-width waveform_area, so the <=15px
+    // inert right gutter at a non-multiple-of-16 window stays chrome — it is
     // outside every grid-aligned surface and no waveform pixel ever paints there
     // (no gutter exists at 1920/2560/3840).
     {

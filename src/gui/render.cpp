@@ -852,7 +852,7 @@ void iterate_visible_flags_impl(
     // Map columns against the EFFECTIVE waveform width, not the strip's own
     // full width, so a flag shares the marker stem's samples-per-pixel and
     // stays column-aligned with it at every window width (they diverge only
-    // when the two widths differ — a non-multiple-of-8 window; at
+    // when the two widths differ — a non-multiple-of-16 window; at
     // 1920/2560/3840 they are equal and this is a no-op).
     const double samples_per_pixel =
         span / static_cast<double>(waveform_width);
@@ -867,7 +867,7 @@ void iterate_visible_flags_impl(
     //
     // THE RIGHT BOUND IS EXCLUSIVE, like every other viewport-end compare in
     // this tree. `ms == viewport_end_sample` maps to left_x == waveform_width —
-    // the first column of the INERT RIGHT GUTTER that a non-multiple-of-8
+    // the first column of the INERT RIGHT GUTTER that a non-multiple-of-16
     // window leaves beside the effective waveform width. At 1920 there is no
     // gutter and the box simply fell off the surface, but at a gutter width the
     // flag painted there AND published a clickable hit rect there, so a marker

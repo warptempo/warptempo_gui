@@ -227,13 +227,13 @@ PositionNudgePrologue position_nudge_prologue(
 // the authored domain (and re-anchoring to the column grid every press re-derives
 // the pixel phase, so whole-frame rounding residue never accumulates — rounding
 // each press independently would paint occasional 0 or 2 px jumps). In the PHASE
-// nudge's mapped target home the deepest zoom gives at least 55.125 / 16 = 3.45
+// nudge's mapped target home the deepest zoom gives at least 27.5625 / 16 = 1.72
 // source frames per target pixel under the value brackets (tempo times both scales
 // at least 0.25 * 0.5 * 0.5 = 1/16) at the 44100 sample-rate floor, so the
-// whole-frame rounding error is just under 0.146 px (0.5 / 3.4453125 =
-// 0.14512); in the WARP nudge's identity source home the bound is trivially
-// stronger (a column is at least 55.125 whole frames, error at most 0.5 frame,
-// about 0.009 px). Either way each press still advances at least one whole frame.
+// whole-frame rounding error is just under 0.291 px (0.5 / 1.72265625 =
+// 0.29025); in the WARP nudge's identity source home the bound is trivially
+// stronger (a column is at least 27.5625 whole frames, error at most 0.5 frame,
+// about 0.018 px). Either way each press still advances at least one whole frame.
 //
 // ONE PAINTED COLUMN PER PRESS IS A POSITION-NUDGE PROPERTY AND NOTHING ELSE, and
 // the trap it documents already bit once: the only other gesture that ever claimed

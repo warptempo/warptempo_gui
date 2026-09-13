@@ -54,22 +54,21 @@ struct GuiTargetRender;
 // whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
 // Tab family, which recenters on its stop, changes no zoom at all. Smaller
-// level = less file per window = more zoomed in. THE WORKING ZOOM IS THE
-// FLOOR (architect 2026-09-13): kWorkingZoomLevel, the fine-tuning rest point
-// the snap gestures land on and where the working-zoom authoring-grid
-// bit-exactness claims hold, EQUALS kMinZoom, the deepest zoom-in any gesture
-// can reach (2.4 s). Nothing finer exists: the old
-// 0.625 ms/px rung below it (1.2 s, kept for phase resets before they sat on
-// the hop lattice) is retired and every level renumbered down by one. Both
-// names stay — one says where `c` lands, the other where every clamp stops.
+// level = less file per window = more zoomed in. kMinZoom is
+// the deepest zoom-in the manual walk can reach (1.2 s); kWorkingZoomLevel is
+// the fine-tuning rest point the snap gestures land on (2.4 s, one
+// step shallower), where the working-zoom authoring-grid bit-exactness claims
+// hold.
 //
 // The level→scale map is ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1),
 // its base the ONE named constant every site that solves or evaluates the map
 // reads (samples_per_pixel_at and effective_max_zoom_level in main.cpp, the
 // span framer in input_handler.cpp, the overview edge drag in
 // input_pointer.cpp).
-constexpr double kZoomBaseMsPerPx  = 1.25;  // ms per pixel at level 1
-constexpr double kWorkingZoomLevel = 1.0;   // 2.4 s — working zoom, the floor
+constexpr double kZoomBaseMsPerPx  = 0.625; // ms per pixel at level 1 (1.2 s)
+constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; manual
+                                           // zoom-in can go one step deeper to
+                                           // kMinZoom (1.2 s)
 
 // Viewport lead/overlap fraction, expressed as a divisor of the visible
 // span. Follow mode keeps this much of the window as lead context when it
@@ -133,7 +132,7 @@ constexpr int64_t kViewportLeadDivisor = 10;
 // derivation with the overshoot taken off, not a new one.
 //
 // WHAT IT COSTS, AND WHY THAT IS AFFORDABLE: the whole [kMinZoom, effective
-// ceiling] span is roughly 3000 authored px of travel — over a screen and a
+// ceiling] span is roughly 3200 authored px of travel — over a screen and a
 // half at the deployment size — and that is fine BECAUSE OF THE CAPTURE. The
 // notional-x freeze (its record is at GuiPlatform::set_notional_x_frozen) is
 // what makes the zoom phase's sideways travel unlimited: the pointer's
@@ -9788,8 +9787,8 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 // (std::nearbyint under the default rounding mode — the project-wide
 // convention), no epsilon; the cast after nearbyint is exact. The ties are
 // real, not theoretical: at 44.1 kHz
-// the zoom table's frames-per-pixel values are 55.125, 110.25, 220.5, 441,
-// ... (1.25 ms/px deepest, doubling), so at the 5 ms level
+// the zoom table's frames-per-pixel values are 27.5625, 55.125, 110.25,
+// 220.5, 441, ... (0.625 ms/px deepest, doubling), so at the 5 ms level
 // every odd pixel offset is an exact half-frame tie — banker's rounding
 // debiases them. No other call site may round or cast an authored
 // position on its own.
@@ -12010,10 +12009,8 @@ enum class MarkerLandingFrame { Center, FollowPage };
 
 // WHICH SIDE OF THE WORKING ZOOM A LEVEL IS ON — true at the working zoom or
 // finer (a smaller level is finer), the line inclusive (architect 2026-09-13:
-// "level 1 or 2 or in between", spoken in the ladder's old numbering). Since
-// the working zoom became the floor (architect 2026-09-13) no level is finer,
-// so the answer is true AT the floor alone; the spelling stays the one the
-// keep-centered commit, its seed and the Tab walk's framing share.
+// "level 1 or 2 or in between"). The one spelling the keep-centered commit,
+// its seed and the Tab walk's framing share.
 inline bool zoom_level_at_or_finer_than_working(double level) {
     return level <= kWorkingZoomLevel;
 }
@@ -16865,7 +16862,7 @@ TrimHit hit_test_overview_endcap(const AppState& a, const GuiAudio& audio,
 // displayed_trim_ms through displayed_or_live_target_map), which is the exact
 // owner chain the live trim pass paints the bar with, so the grabbable bridge is
 // the drawn one. The [0, area_w) click gate is the PAINTER's own effective-width
-// clip: the inert non-multiple-of-8 right gutter neither paints the bar nor
+// clip: the inert non-multiple-of-16 right gutter neither paints the bar nor
 // answers true here.
 //
 // THE ENDCAPS ARE NOT IN IT: trim_bridge_gap insets each end by a painted cap's
