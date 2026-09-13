@@ -4233,10 +4233,9 @@ enum class DialogTrigger {
     // there on the VIEWED walk member (parked at
     // AppState::HistoryMode::pending_load_member, OK running that walk's own
     // load act). The two raises cannot coexist, so the answer forks on which
-    // subject is parked. THE ONE PROMPT RAISED WITH ITS FIRST BUTTON FOCUSED,
-    // so a bare Enter answers OK on both — the load is not a destructive
-    // answer, it lands one undo entry (PromptInitialFocus owns the choice and
-    // its reason). The raises and the answers live on
+    // subject is parked. RAISED WITH ITS FIRST BUTTON FOCUSED, as the revert
+    // confirmation is, so a bare Enter answers OK on both (PromptInitialFocus
+    // owns the choice and its reason). The raises and the answers live on
     // GuiInputHandler (render_player_load_in_place / history_load_in_place and
     // confirm_load_in_place / cancel_load_in_place, input_key_dispatch.cpp),
     // which the prompt reaches through its input-handler back-pointer.
@@ -4245,9 +4244,9 @@ enum class DialogTrigger {
     // changes and reload?", OK / Cancel, raised only over a DIRTY session by
     // GuiPrompt::request_close on the Revert target (a clean session reverts
     // with no question). OK completes the close as a reopen of the project
-    // already open; Cancel leaves the session standing. Raised with CANCEL
-    // focused, the destructive shape (PromptInitialFocus): OK discards the
-    // unsaved changes and the undo history with no undo of its own.
+    // already open; Cancel leaves the session standing. Raised with its FIRST
+    // button focused, the load confirmation's default, so a bare Enter
+    // answers OK (PromptInitialFocus owns the choice and its reason).
     REVERT_CONFIRM,
 };
 
@@ -4290,7 +4289,8 @@ enum class DialogTrigger {
 // button wears the default face; this prompt system HAS no Enter answer,
 // Return is not a response key and does nothing", the decision recorded here
 // when the buttons landed and again at the focus ring). Every prompt is now
-// RAISED with PASSIVE focus on its LAST button, and bare Enter or bare Space
+// RAISED with PASSIVE focus on a button — its LAST unless the raise asks for
+// its FIRST (PromptInitialFocus below) — and bare Enter or bare Space
 // presses the focused button down and commits it on the key's release. What
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
@@ -4302,9 +4302,11 @@ enum class DialogTrigger {
 //        paste confirmation (Yes / CANCEL), THE LOAD CONFIRMATION'S TWO
 //        RAISERS (OK / CANCEL — one prompt body, two subjects: the render
 //        player's highlighted entry and the `h` view's viewed walk member) and
-//        the revert confirmation (OK / CANCEL). So
-//        the key that answers without asking answers the way Esc already does,
-//        and no destructive response is ever one Enter away.
+//        the revert confirmation (OK / CANCEL). So on a
+//        LastButton raise the key that answers without asking answers the way
+//        Esc already does; the two confirmations that raise on their FIRST
+//        button (the load's and the revert's) put OK one Enter away by
+//        choice, each being the deliberate second step of an explicit act.
 //   (ii) THE PAINTED GATE below already consumes every key until the prompt
 //        has been on screen, so an Enter queued behind a raise answers
 //        nothing — the exact hazard the old rule was reaching for, closed
@@ -4359,14 +4361,18 @@ enum class DialogTrigger {
 // which one; the BUTTON ORDER is untouched by either value, so Cancel stays
 // LAST on every prompt and fact (i)'s derivation holds whichever is chosen.
 //   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
-//                 every raise whose Enter must not commit anything — the
-//                 revert confirmation among them, whose OK discards unsaved
-//                 work and the undo history with no undo of its own.
-//   FirstButton — THE LOAD CONFIRMATION alone, on both its subjects (the
-//                 player's render entry and the `h` view's walk member): its
-//                 OK is not a destructive answer — the load lands one undo
-//                 entry, which the ordinary Ctrl+Z takes back — so the `'`
-//                 roads answer Enter the same way rather than opposite ways.
+//                 the unsaved-work prompt (and its save-failed rung) and the
+//                 paste confirmation, whose Enter must not commit anything.
+//   FirstButton — THE TWO CONFIRMATIONS: the LOAD CONFIRMATION on both its
+//                 subjects (the player's render entry and the `h` view's walk
+//                 member) and, since 2026-09-13, File → Revert's (architect:
+//                 "revert should be just the same as load … both should use
+//                 the same default, OK"). Each prompt is already the
+//                 deliberate second step of an explicit act — the `'` press,
+//                 the Revert row or its chord — so the question itself is the
+//                 safeguard and its Enter confirms the act just asked for;
+//                 the `'` roads answer Enter the same way rather than
+//                 opposite ways, and the revert answers it as they do.
 enum class PromptInitialFocus { LastButton, FirstButton };
 
 struct PromptState {
@@ -6456,7 +6462,7 @@ struct AppState {
     //   PASSIVE is ASSIGNED, never walked onto. Two producers, and they are
     //   the whole list: a PROMPT'S RAISE (the painter, onto the button the
     //   raise named — the last, the Escape sentinel, on every prompt but the
-    //   render player's load confirmation; PromptState's PromptInitialFocus
+    //   load and revert confirmations; PromptState's PromptInitialFocus
     //   owns the choice and why each is safe) and a
     //   FEINT (a press that armed a button, then dragged off it —
     //   update_modal_dialog_hover's leave edge; the rule is at

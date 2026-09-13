@@ -6986,8 +6986,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   untouched, so a typed capital still does not answer. ONE BUTTON WEARS THE
 //   PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this block's
 //   "no default face: this prompt system has no Enter answer, so every button
-//   is plain") — the LAST, the Escape sentinel, on every prompt but the render
-//   player's load confirmation, which is raised on its FIRST (PromptState's
+//   is plain") — the LAST, the Escape sentinel, on every prompt but the load
+//   and revert confirmations, which are raised on their FIRST (PromptState's
 //   PromptInitialFocus owns the choice); Enter answers whichever it is, the
 //   assignment site is a few dozen lines into the body below and the whole
 //   supersession is at PromptState.
@@ -7564,11 +7564,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // owns the supersession and the two facts that make it safe, the first of
     // which is that the last button is always the ESCAPE SENTINEL). WHICH
     // button is the RAISE'S OWN CHOICE (PromptInitialFocus, carried on the
-    // question since 2026-08-28): the last on every prompt but THE LOAD
-    // CONFIRMATION, which asks for its FIRST — its OK is one
-    // undo entry away from being undone rather than destructive. That one
-    // prompt body carries both `'` subjects (the player's entry and the `h`
-    // view's walk member), so the two roads answer Enter alike. This is the
+    // question since 2026-08-28): the last on every prompt but THE LOAD AND
+    // REVERT CONFIRMATIONS, which ask for their FIRST — each is already the
+    // deliberate second step of an explicit act, so its Enter confirms it.
+    // The load's one prompt body carries both `'` subjects (the player's entry
+    // and the `h` view's walk member), so the two roads answer Enter alike,
+    // and the revert answers it as they do. This is the
     // ONE assignment site: it rides the same reset the
     // focus's other three edges ride, so a fresh prompt and a prompt replacing
     // a prompt are one case, and it runs HERE rather than at the reset because

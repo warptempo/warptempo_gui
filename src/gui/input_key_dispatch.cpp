@@ -6843,8 +6843,8 @@ void GuiInputHandler::history_load_in_place() {
     // short SHA on the Remote tab, the displayed number on the Local one), so
     // the question names the member exactly as the mode's own corner does.
     // Cancel LAST, the escape sentinel every prompt derives its Esc from; the
-    // FIRST button takes the passive focus, this prompt's own choice on both
-    // its subjects (PromptInitialFocus).
+    // FIRST button takes the passive focus on both its subjects, as on the
+    // revert confirmation (PromptInitialFocus).
     app.prompt.present(
         "Load '" + app.history_mode.member_label(member) + "' in place?",
         {'o', '\x1b'},
@@ -8676,12 +8676,14 @@ void GuiInputHandler::render_player_load_in_place() {
     // prompt's, so Esc's own answer is derived rather than declared; `o` is
     // OK's letter.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
-    // raised from its TWO subjects, and no other prompt in the product
-    // (architect 2026-08-28): a bare ENTER here answers OK, because the load
-    // is not a destructive answer — it lands ONE undo entry, which the
-    // ordinary Ctrl+Z takes back — and it is this same prompt body that the
-    // `h` view's `'` raises on its viewed member, so the two `'` load roads
-    // answer alike by construction. Through
+    // raised from its TWO subjects (architect 2026-08-28), and File → Revert's
+    // confirmation takes the same default (architect 2026-09-13): a bare ENTER
+    // here answers OK, because the prompt is already the deliberate second
+    // step of an explicit act — the `'` press — so the question itself is the
+    // safeguard and its Enter confirms the act just asked for (the load also
+    // lands ONE undo entry, which the ordinary Ctrl+Z takes back). It is this
+    // same prompt body that the `h` view's `'` raises on its viewed member, so
+    // the two `'` load roads answer alike by construction. Through
     // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
                        {'o', '\x1b'},

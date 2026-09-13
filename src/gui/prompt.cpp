@@ -62,11 +62,14 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // Revert asks one question, and it is a discard-only one because a revert
 // never saves — Save / Discard / Cancel would offer an answer the act does not
 // have. OK / Cancel, Cancel LAST as the escape sentinel on every prompt, and
-// CANCEL TAKES THE PASSIVE FOCUS (PromptInitialFocus::LastButton): OK throws
-// away every unsaved change and the whole undo history with no undo of its
-// own, the destructive shape the load confirmation's FirstButton is
-// explicitly not, so a bare Enter must not answer it. `o` is OK's letter, the
-// load confirmation's. The stop below is every prompt's own opening act, not
+// THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (PromptInitialFocus::
+// FirstButton), so a bare Enter answers OK — the load confirmation's default
+// exactly (architect 2026-09-13: "revert should be just the same as load …
+// both should use the same default, OK"): each of the two confirmations is
+// already the deliberate second step of an explicit act (the File row or its
+// chord here, the `'` press there), so the question itself is the safeguard
+// and its Enter confirms the act the user just asked for. `o` is OK's letter,
+// the load confirmation's. The stop below is every prompt's own opening act, not
 // something this one adds: playback stops, an A/B audition ends and an
 // engaged follow chase drops, exactly as raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
@@ -75,7 +78,7 @@ void GuiPrompt::open_revert_confirm() {
                        {'o', '\x1b'},
                        {"OK", "Cancel"},
                        DialogTrigger::REVERT_CONFIRM,
-                       PromptInitialFocus::LastButton);
+                       PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
 }
 

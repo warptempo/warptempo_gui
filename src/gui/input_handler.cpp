@@ -216,9 +216,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // day, SUPERSEDING this gate's own "a prompt opens with no button
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
         // what makes it safe is that the focused button is the ESCAPE SENTINEL
-        // — on every prompt but the render player's load confirmation, whose
-        // OK is one undo entry away from being undone and which asks for that
-        // button deliberately (PromptState's PromptInitialFocus) — plus the
+        // — on every prompt but the load and revert confirmations, which ask
+        // for their OK deliberately, each being the second step of an explicit
+        // act (PromptState's PromptInitialFocus) — plus the
         // painted gate directly above (PromptState carries the supersession in
         // full). The route is shared with the editor dialogs' —
         // one ring, one owner (route_modal_dialog_focus_key,

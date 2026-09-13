@@ -3026,7 +3026,8 @@ private:
     // synchronization refuses at the close road's head
     // (close_refused_by_external_sync). A clean session reopens with no
     // question; a dirty one is asked "Discard unsaved changes and reload?",
-    // OK / Cancel with Cancel focused (GuiPrompt::request_close). A running
+    // OK / Cancel with OK focused, as the load confirmation is
+    // (GuiPrompt::request_close). A running
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
     // `h` view (the three allowlists admit is_revert_project_key); unreachable
