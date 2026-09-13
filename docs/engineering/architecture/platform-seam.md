@@ -973,14 +973,25 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   VM ONCE in `init()` (`AttachCurrentThread`, the env cached; detached in
   `shutdown()`, a thread exiting attached being a VM abort), and calls
   `MainActivity.mediaState(boolean active, boolean playing, String title,
-  String artist, long durationMs, long positionMs)` through the activity
-  instance (`activity->clazz`, a global ref despite its name) with a
-  `GetMethodID` looked up once; the strings cross as UTF-16 through
+  String artist, String album, long durationMs, long positionMs)` — SEVEN
+  arguments since 2026-09-12, the album having joined the six — through the
+  activity instance (`activity->clazz`, a global ref despite its name) with a
+  `GetMethodID` looked up once, whose signature string
+  (`(ZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V`) and the
+  Java declaration are ONE EDIT; the three strings cross as UTF-16 through
   `NewString` (not `NewStringUTF`, whose modified UTF-8 CheckJNI aborts on a
-  four-byte sequence), inside a local frame. That method builds the
-  `MediaMetadata` (TITLE = the wav's spelling with its folder, ARTIST and ALBUM
-  = the project's name, and DURATION ONLY FOR A VALUE ABOVE 0 — a −1 puts no
-  duration key at all, which is Android's "unknown") and the `PlaybackState`
+  four-byte sequence), inside one local frame. That method builds the
+  `MediaMetadata` — **THE CONSOLE'S THREE LINES ARE THE PROJECT, THE FOLDER AND
+  THE NAME** (architect 2026-09-12, from the car: a head unit lays the metadata
+  out as ARTIST above, TITLE in the middle and ALBUM below and fills all three
+  whatever is in them, so ALBUM = the artist meant the piece's name stood twice
+  while the title spent its line on a `tmp/1_miscellaneous/` prefix): ARTIST =
+  the project's name, ALBUM = the FOLDER (the playing item's own while it
+  sounds, otherwise the one the listing is in — `tmp` at the root, the batch
+  folder's bare name inside one), TITLE = the BARE NAME of the playing file or,
+  with nothing sounding, of the highlighted row, and DURATION ONLY FOR A VALUE
+  ABOVE 0 — a −1 puts no duration key at all, which is Android's "unknown" —
+  and the `PlaybackState`
   (with the position and every action declared). **THE DISPLAY IS A DUMMY: THE
   STATE IS PLAYING WHENEVER THE PLAYER STANDS AND STOPPED EXACTLY AT THE
   INACTIVE PUSH** (architect 2026-09-12, from the car): the sliver's fork is
@@ -994,8 +1005,8 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   until that day, and carried a second stopped arm on an empty title until that
   morning. `playing` is still passed and is READ HERE FOR THE AUDIO FOCUS
   ALONE. With nothing sounding the native side sends a SILENCE TRACK naming the
-  highlighted row at position 0 with the duration unknown — the title is never
-  empty while the session is active (the title rule is
+  highlighted row at position 0 with the duration unknown — title and album are
+  never empty while the session is active (the three-line rule is
   `GuiRenderPlayer::publish_media_state`'s, render-player.md's car section the
   behaviour). It calls
   `setActive(active)` — THE SESSION IS ACTIVE ONLY WHILE THE RENDER PLAYER

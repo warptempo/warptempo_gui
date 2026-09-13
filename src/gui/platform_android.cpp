@@ -657,7 +657,7 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
             jclass cls = env->GetObjectClass(app_->activity->clazz);
             media_state_method_ = env->GetMethodID(
                 cls, "mediaState",
-                "(ZZLjava/lang/String;Ljava/lang/String;JJ)V");
+                "(ZZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V");
             if (!media_state_method_) {
                 if (env->ExceptionCheck()) {
                     env->ExceptionDescribe();
@@ -1832,7 +1832,7 @@ void GuiPlatform::set_on_media_command(std::function<void(GuiMediaCommand)> cb) 
     on_media_command_ = std::move(cb);
 }
 
-// THE PUSH UP, on the glue thread attached at init(): the six fields go into
+// THE PUSH UP, on the glue thread attached at init(): the seven fields go into
 // MainActivity.mediaState, which builds the session's metadata and playback
 // state, sets it active or inactive and owns the audio-focus machine
 // (MainActivity.java). MediaSession's setters are binder calls, callable from
@@ -1849,17 +1849,23 @@ void GuiPlatform::publish_media_state(const GuiMediaState& state) {
         env->ExceptionClear();
         return;
     }
+    // THE THREE STRINGS ARE THE CONSOLE'S THREE LINES — the project, the
+    // folder and the name (gui_media.h) — and all three take the same UTF-16
+    // road inside this one frame.
     std::vector<jchar> u16;
     append_utf16(u16, state.title);
     jstring title = env->NewString(u16.data(), static_cast<jsize>(u16.size()));
     u16.clear();
     append_utf16(u16, state.artist);
     jstring artist = env->NewString(u16.data(), static_cast<jsize>(u16.size()));
-    if (title && artist) {
+    u16.clear();
+    append_utf16(u16, state.album);
+    jstring album = env->NewString(u16.data(), static_cast<jsize>(u16.size()));
+    if (title && artist && album) {
         env->CallVoidMethod(app_->activity->clazz, media_state_method_,
                             static_cast<jboolean>(state.session_active),
                             static_cast<jboolean>(state.playing),
-                            title, artist,
+                            title, artist, album,
                             static_cast<jlong>(state.duration_ms),
                             static_cast<jlong>(state.position_ms));
     }

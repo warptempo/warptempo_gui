@@ -673,27 +673,41 @@ struct GuiRenderPlayer {
     // glyph, clock and scrub say exactly what the transport is doing, and this
     // fiction lives on the wire and nowhere else.
     //
-    // THE TITLE IS ONE FUNCTION OF (transport, item, highlight), stated once
-    // in the body and read nowhere else, IN TWO ARMS:
-    //   LIVE with an item — the ITEM: its spelling relative to the project
-    //     folder, its own duration, and render_player_position.
+    // THE THREE LINES ARE THE PROJECT, THE FOLDER AND THE NAME (architect
+    // 2026-09-12, from the car). The console lays the metadata out as ARTIST
+    // above, TITLE in the middle and ALBUM below — three lines it will fill
+    // whatever is in them — so each says something different, and a path in
+    // the title only spent the middle line saying what the bottom one already
+    // said. (Artist and album were both the project's name until that day, so
+    // the piece's name stood twice and the title carried a
+    // `tmp/1_miscellaneous/` prefix.) ONE FUNCTION OF (transport, item,
+    // highlight) fills all three, stated once in the body and read nowhere
+    // else, IN TWO ARMS:
+    //   ARTIST — the project's name, in both arms, the one line that does not
+    //     move while the player is walked.
+    //   LIVE with an item — the ITEM: its file name as the title, ITS OWN
+    //     FOLDER's name as the album (not the band's: the listener may have
+    //     walked elsewhere, and the sounding item's home is what the display
+    //     is about), its own duration, and render_player_position.
     //   EVERYTHING ELSE (Paused and Idle alike, an item bound or not) — THE
     //     SILENCE TRACK, which is what plays while the listener is at the top
-    //     level walking folders: the HIGHLIGHTED ROW's spelling — a wav's
-    //     relative path, a folder's WITH A TRAILING SLASH (`tmp/3_bpm/`, the
-    //     `tree` / `ls -p` convention), and with no rows at all the LISTED
-    //     FOLDER itself (`tmp/` at the root) — AT POSITION 0 WITH THE DURATION
-    //     UNKNOWN (duration_ms = -1; the sliver puts METADATA_KEY_DURATION only
-    //     for a value above 0), so the console counts up from zero with no
-    //     length to run into. A PAUSED ITEM'S OWN CLOCK IS NOT PUBLISHED any
-    //     more: a PLAYING state at speed 1.0 over a real duration would run the
-    //     console's clock into the track's end. The tablet's row is where a
-    //     paused item's clock lives.
-    // The title is never empty while `session_active` is true; the CLOSE's
-    // inactive push is the one empty title and the one STOPPED state. THE
-    // SILENCE IS METADATA AND NEVER A FILE: a silent wav on disk would be
-    // listed by the player, mirrored by Synchronize and played by the
-    // auto-advance.
+    //     level walking folders: the album is THE FOLDER THE BAND IS IN, `tmp`
+    //     at the root and the batch folder's own name inside one, and the
+    //     title is THE HIGHLIGHTED ROW'S OWN NAME — a wav's or a folder's,
+    //     bare and with no trailing slash, the album beneath it already saying
+    //     where that name lives — or, with nothing to highlight at all, the
+    //     LISTED FOLDER naming itself, the same word the album carries. AT
+    //     POSITION 0 WITH THE DURATION UNKNOWN (duration_ms = -1; the sliver
+    //     puts METADATA_KEY_DURATION only for a value above 0), so the console
+    //     counts up from zero with no length to run into. A PAUSED ITEM'S OWN
+    //     CLOCK IS NOT PUBLISHED any more: a PLAYING state at speed 1.0 over a
+    //     real duration would run the console's clock into the track's end.
+    //     The tablet's row is where a paused item's clock lives.
+    // Title and album are never empty while `session_active` is true — a row
+    // has a name and a listed folder has a name; the CLOSE's inactive push is
+    // the one empty pair and the one STOPPED state. THE SILENCE IS METADATA
+    // AND NEVER A FILE: a silent wav on disk would be listed by the player,
+    // mirrored by Synchronize and played by the auto-advance.
     //
     // THE EDGE INVENTORY, re-derived by grep at each retell (NINE call sites
     // across EIGHT functions — fourteen across nine while the head unit's four
@@ -720,9 +734,8 @@ struct GuiRenderPlayer {
     // pause and then this seek);
     // and close() — inactive. NO PER-TICK PUSH, the band's edges included: the
     // published position advances on the head unit's own clock from the last
-    // push at speed 1.0. Artist = the project's name; duration and position
-    // in milliseconds at the project source's rate (the item is at that rate
-    // by the decode's own equality).
+    // push at speed 1.0. Duration and position are milliseconds at the project
+    // source's rate (the item is at that rate by the decode's own equality).
     void publish_media_state();
 
 private:

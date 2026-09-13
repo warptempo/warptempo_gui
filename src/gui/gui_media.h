@@ -94,24 +94,41 @@ struct GuiMediaState {
     // published state is `session_active`'s above. It is the tablet's truth,
     // not the console's picture.
     bool        playing        = false;
-    // WHAT THE TITLE NAMES, relative to the project folder and in generic
-    // form: the ITEM while it sounds (`tmp/3_bpm/01.wav`), and with NOTHING
-    // SOUNDING THE HIGHLIGHTED ROW — the file, or the folder with a trailing
-    // slash (`tmp/3_bpm/`), that the console's own button would start. That
-    // second arm is THE SILENCE TRACK, what plays while the listener is at the
-    // top level walking folders. IT IS NEVER EMPTY WHILE `session_active` IS
-    // TRUE, and that is the point rather than a tidiness: a console handed a
-    // session with nothing in it goes back to its own idle picture. The title
-    // is empty exactly at the close's inactive push. THE SILENCE IS METADATA
-    // AND NEVER A FILE — a silent wav on disk would be listed by the player,
-    // mirrored by Synchronize and played by the auto-advance. The one function
-    // of (transport, item, highlight) is stated at
-    // GuiRenderPlayer::publish_media_state and read nowhere else. The player
-    // has lived inside `tmp/` since 2026-09-01, so `render/` is not a
-    // spelling this carries.
+    // THE THREE STRINGS ARE THE PROJECT, THE FOLDER AND THE NAME (architect
+    // 2026-09-12, from the car): a console lays the metadata out as ARTIST
+    // above, TITLE in the middle and ALBUM below, so each of the three lines
+    // says something different — the piece, where in it the listener is, and
+    // what would sound. The one function of (transport, item, highlight) that
+    // fills all three is stated at GuiRenderPlayer::publish_media_state and
+    // read nowhere else.
+    //
+    // THE BARE NAME, no path at all: the ITEM's file name while it sounds
+    // (`01.wav`), and with NOTHING SOUNDING THE HIGHLIGHTED ROW's own name —
+    // a wav's or a folder's, and a folder's WITHOUT a trailing slash, the
+    // album beneath it already saying where the listener is — which is what
+    // the console's own button would start. That second arm is THE SILENCE
+    // TRACK, what plays while the listener is at the top level walking
+    // folders; with nothing to highlight at all the LISTED FOLDER names
+    // itself, the same word the album carries. IT IS NEVER EMPTY WHILE
+    // `session_active` IS TRUE, and that is the point rather than a tidiness:
+    // a console handed a session with nothing in it goes back to its own idle
+    // picture. The title is empty exactly at the close's inactive push. THE
+    // SILENCE IS METADATA AND NEVER A FILE — a silent wav on disk would be
+    // listed by the player, mirrored by Synchronize and played by the
+    // auto-advance.
     std::string title;
-    // The project's name; the album is the artist on the consuming side.
+    // The project's name, always — the console's top line, and the one string
+    // that does not move while the player is walked.
     std::string artist;
+    // THE FOLDER THE NAME LIVES IN, bare: the PLAYING ITEM'S OWN folder while
+    // it sounds — the band may have walked somewhere else, and the sounding
+    // item's home is the truth — and otherwise the folder the band is in,
+    // `tmp` at the root and the batch folder's own name inside one. The
+    // player has lived inside `tmp/` since 2026-09-01, so `render/` is not a
+    // spelling this carries. Never empty while `session_active` is true; the
+    // close's inactive push is the one empty album, as it is the one empty
+    // title.
+    std::string album;
     // THE ITEM'S LENGTH IN MILLISECONDS, OR -1 FOR UNKNOWN — which is what the
     // SILENCE TRACK sends, the consuming side putting no duration key at all
     // for a value of 0 or less (Android's "unknown"): the state says PLAYING

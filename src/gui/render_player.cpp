@@ -1517,30 +1517,6 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     }
 }
 
-namespace {
-
-// THE ONE SPELLING EVERY TITLE ARM SHARES: `path` relative to the project
-// folder (the source's own parent) — `tmp/<batch>/NN.wav`, a batch cell being
-// the only item the player can bind since it moved inside `tmp/`
-// (`render/<title>.wav` was the deliverable's spelling until 2026-09-01) —
-// lexically, with no filesystem call, and in generic form so the separator is
-// `/` by construction. A FOLDER WEARS A TRAILING SLASH, `tmp/` and
-// `tmp/<batch>/`: the `tree` / `ls -p` convention, which is how the listing
-// reads to the eye and how a head unit's one line of text can say "this is
-// somewhere to go" without a word of prose.
-std::string media_title_spelling(const AppState&              app,
-                                 const std::filesystem::path& path,
-                                 bool                         folder) {
-    std::string s =
-        path.lexically_relative(
-                std::filesystem::path(app.source_audio_path).parent_path())
-            .generic_string();
-    if (folder && !s.empty() && s.back() != '/') s += '/';
-    return s;
-}
-
-}  // namespace
-
 void GuiRenderPlayer::publish_media_state() {
     const AppState::RenderPlayer&  rp = app.render_player;
     const AppState::FolderOverlay& ov = app.folder_overlay;
@@ -1567,8 +1543,12 @@ void GuiRenderPlayer::publish_media_state() {
     }
     if (rp.transport == Transport::Live && !rp.item.empty() && rp.frames > 0) {
         // THE ITEM, with the clock at the engine's own cursor
-        // (render_player_position) and its own length.
-        st.title = media_title_spelling(app, rp.item, false);
+        // (render_player_position) and its own length. THE ALBUM IS THE ITEM'S
+        // OWN FOLDER, not the band's: the listener may have walked into
+        // another folder while this one sounds, and what is sounding is what
+        // the display is about.
+        st.album = rp.item.parent_path().filename().string();
+        st.title = rp.item.filename().string();
         const int64_t rate = audio.sample_rate();
         if (rate > 0) {
             st.duration_ms = rp.frames * 1000 / rate;
@@ -1578,10 +1558,11 @@ void GuiRenderPlayer::publish_media_state() {
         return;
     }
     // THE SILENCE TRACK — what plays while the listener is at the top level
-    // walking folders (his own framing). It names THE HIGHLIGHTED ROW, which
-    // is what the console's button would start: a wav's own spelling, a
-    // folder's with the trailing slash, and with no rows at all the LISTED
-    // FOLDER itself, so the title is never empty while the session stands.
+    // walking folders (his own framing). THE ALBUM IS THE FOLDER THE BAND IS
+    // IN, `tmp` at the root and the batch folder's own name inside one, and
+    // THE TITLE IS THE HIGHLIGHTED ROW'S OWN NAME, which is what the console's
+    // button would start — a wav's or a folder's, bare, the album under it
+    // already saying where that name lives.
     //
     // POSITION 0 AND THE DURATION UNKNOWN (-1, which the consuming side turns
     // into "no duration key at all"): the state says PLAYING at speed 1.0, so
@@ -1590,21 +1571,20 @@ void GuiRenderPlayer::publish_media_state() {
     // state would have the console's clock run into the track's end and stop
     // there — and the tablet's own row is where that clock lives.
     st.duration_ms = -1;
+    st.album =
+        (rp.folder == Folder::Root ? project_batch_root(app.source_audio_path)
+                                   : rp.batch_dir)
+            .filename()
+            .string();
     const int row = ov.highlight_row;
     if (row >= 0 && row < static_cast<int>(ov.rows.size())) {
-        const Row& r = ov.rows[static_cast<size_t>(row)];
-        st.title     = media_title_spelling(app, r.path,
-                                            r.kind == Row::Kind::Folder);
+        st.title = ov.rows[static_cast<size_t>(row)].name;
     } else {
         // A listing with no rows, or one whose band has no seat — a batch
-        // folder's cells deleted from outside while the player stood: the
-        // LISTED FOLDER names itself, `tmp/` at the root and `tmp/<batch>/`
-        // inside a batch.
-        st.title = media_title_spelling(
-            app,
-            rp.folder == Folder::Root ? project_batch_root(app.source_audio_path)
-                                      : rp.batch_dir,
-            true);
+        // folder's cells deleted from outside while the player stood: THE
+        // LISTED FOLDER NAMES ITSELF, the one road with nothing to highlight,
+        // so the title is never empty while the session stands.
+        st.title = st.album;
     }
     gui.publish_media_state(st);
 }

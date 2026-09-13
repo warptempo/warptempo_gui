@@ -126,7 +126,11 @@ import java.nio.charset.StandardCharsets;
  * reads that session's metadata and playback state. This class creates ONE
  * session in onCreate (on the UI thread, so its callbacks land there) and
  * releases it in onDestroy; it is ACTIVE ONLY WHILE THE RENDER PLAYER STANDS,
- * which the native side says through mediaState(...). EACH CALLBACK IS ONE
+ * which the native side says through mediaState(...) -- the same push carrying
+ * THE CONSOLE'S THREE LINES, the project as the artist, the folder as the
+ * album and the bare name of the playing or highlighted file as the title
+ * (architect 2026-09-12: a head unit fills all three, so each says something
+ * different). EACH CALLBACK IS ONE
  * INTEGER DOWN through nativeMediaCommand -- the native side queues it, wakes
  * its own loop and ACTS ON IT DIRECTLY, THE CAR BEING AN INTERFACE OF ITS OWN
  * (architect 2026-09-12): the wheel's three buttons are the player's own three
@@ -366,9 +370,18 @@ public class MainActivity extends NativeActivity {
     // called on the native loop's thread at every edge where what the head
     // unit shows changes -- never per tick: a PLAYING state advances on the
     // head unit's own clock from `positionMs` at speed 1.0, which is what the
-    // (state, position, speed) triple means. Metadata: TITLE is the wav's
-    // spelling with its folder, ARTIST and ALBUM are the project's name,
-    // DURATION the item's length WHEN THERE IS ONE.
+    // (state, position, speed) triple means.
+    //
+    // METADATA IS THE CONSOLE'S THREE LINES (architect 2026-09-12, from the
+    // car): a head unit lays them out as ARTIST above, TITLE in the middle and
+    // ALBUM below and fills all three whatever is in them, so each says
+    // something different -- ARTIST the project's name, ALBUM the folder (the
+    // playing item's own while it sounds, otherwise the one the listing is
+    // in), TITLE the bare name of the playing file or of the highlighted row.
+    // (There was no album argument until that day: ALBUM took the artist's own
+    // string, so the piece's name stood twice while the title carried the
+    // folder as a path prefix.) DURATION is the item's length WHEN THERE IS
+    // ONE.
     //
     // THE STATE IS A DUMMY AND SAYS PLAYING WHENEVER THE PLAYER STANDS
     // (architect 2026-09-12, from the car): `active` is the whole fork --
@@ -389,13 +402,14 @@ public class MainActivity extends NativeActivity {
     // abandoned when a push says inactive.
     public synchronized void mediaState(boolean active, boolean playing,
                                         String title, String artist,
+                                        String album,
                                         long durationMs, long positionMs) {
         if (released || session == null) return;
 
         final MediaMetadata.Builder meta = new MediaMetadata.Builder()
                 .putString(MediaMetadata.METADATA_KEY_TITLE, title)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, artist);
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, album);
         if (durationMs > 0) {
             meta.putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs);
         }
