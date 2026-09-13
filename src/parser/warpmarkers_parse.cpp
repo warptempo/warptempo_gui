@@ -397,14 +397,15 @@ parse_warpmarkers_file(const std::string& path,
 
         // Cross-marker validation. A pass following a label ref loads
         // intact — the GUI may author it and the save/reload round trip must
-        // never lock the user out. The render resolver normalizes it: a pass
-        // whose inheritance walk terminates on a surviving enabled label ref
-        // resolves to tempo 1.00, with one stderr line per timestamp at every
-        // resolve. A label reference without a matching definition is
-        // likewise authorable now (the GUI permits deleting a definition its
-        // refs outlive), loads intact, and the resolver normalizes the
-        // dangling ref to a plain 1.00 owner at its own frame, with its own
-        // line.
+        // never lock the user out. The render resolver's inheritance walk
+        // skips every label ref to the nearest prior tempo owner and copies
+        // that owner's literal fields, silently — a ref owns a duration
+        // equation, not a rate, so there is no literal for the pass to copy
+        // from it (architect approval 2026-09-13). A label reference without
+        // a matching definition is likewise authorable now (the GUI permits
+        // deleting a definition its refs outlive), loads intact, and the
+        // resolver normalizes the dangling ref to a plain 1.00 owner at its
+        // own frame, with its own line.
         if (!m.label_def.empty()) {
             if (seen_def.count(m.label_def))
                 return fail(line_number,
