@@ -14,9 +14,7 @@ struct GuiTargetRender;
 struct GuiActiveViews;
 struct GuiInputHandler;
 
-// THE PROPAGATE FAMILY'S STOP-MESSAGE TIMESTAMP, shared by BOTH propagates
-// since 2026-08-20 (it was file-local to phase_reset_propagate.cpp until the
-// measure propagate became a second caller). Formats a stop message's timestamp
+// THE PROPAGATE FAMILY'S STOP-MESSAGE TIMESTAMP. Formats a stop message's timestamp
 // in whichever audio domain the user is currently in. The input is a
 // SOURCE-frame value (warp markers, clipboard blocks and dest blocks all live
 // in whole source frames, widened into this double parameter); the timestamp is
@@ -57,7 +55,7 @@ struct PhaseResetPropagate {
     // The paste-confirm prompt is a modal surface; its open stops playback
     // through this lifecycle handle.
     GuiPlaybackLifecycle& playback_lifecycle;
-    // The three pastes' "Stopped at …" reports are notification cards
+    // The two pastes' "Stopped at …" reports are notification cards
     // (2026-08-29); this is the one push chokepoint they reach.
     GuiNotifications&     notifications;
     // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the target-view

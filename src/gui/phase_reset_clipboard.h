@@ -71,24 +71,21 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// THE PROPAGATE FAMILY'S TWO SHARED WARP-MARKER ACCESSORS. They live in this
-// header because it is the one both propagates already include: the PHASE
-// RESET propagate (Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P, which owns the
-// clipboard above) and, since 2026-08-20, the MEASURE propagate (Ctrl+/ and
-// Ctrl+Alt+/, whose own clipboard is measure_clipboard.h). Neither re-spells
-// either accessor.
+// THE PROPAGATE'S TWO WARP-MARKER ACCESSORS. They live in this header beside
+// the clipboard the PHASE RESET propagate (Ctrl+P / Ctrl+Alt+P /
+// Ctrl+Alt+Shift+P) owns; nothing re-spells either accessor.
 
 // Single accessor that returns a marker's label string regardless of
 // whether it's a definition or a reference. Empty when the marker is
 // unnamed; block matching at copy/paste time is exact string equality
-// on this accessor's return value, on BOTH propagates.
+// on this accessor's return value.
 inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
     return m.label_def.empty() ? m.label_ref : m.label_def;
 }
 
-// THE PROPAGATE WALK'S MEMBERSHIP, one predicate for all four walks that ask
-// it (the phase copy's selected-run loop and its destination walk_named_blocks,
-// and the measure propagate's two): a marker takes part iff it CARRIES A LABEL
+// THE PROPAGATE WALK'S MEMBERSHIP, one predicate for both walks that ask it
+// (the phase copy's selected-run loop and its destination walk_named_blocks):
+// a marker takes part iff it CARRIES A LABEL
 // NAME and is EFFECTIVELY ENABLED.
 //
 // Both terms are load-bearing and neither is an efficiency filter. The LABEL is

@@ -232,9 +232,7 @@ std::vector<DestBlock> walk_named_blocks(
 }  // namespace
 
 // The propagate family's stop-message timestamp; the contract is at the
-// declaration in phase_reset_propagate.h. It left this file's anonymous
-// namespace on 2026-08-20, when the MEASURE propagate became a second caller —
-// one spelling of the message register rather than two.
+// declaration in phase_reset_propagate.h.
 std::string format_domain_timestamp(double source_frame,
                                     const AppState& app,
                                     const GuiAudio& audio) {
@@ -917,13 +915,6 @@ void PhaseResetPropagate::paste_state_apply() {
 // GuiInputHandler::drop_phase_reset_in_target_view), does the same trip for
 // the same reason and takes this tail's own order verbatim, the reasoning
 // below reading straight across.
-//
-// THE CLAIM IS SCOPED TO THIS PROPAGATE (2026-08-20): the MEASURE propagate
-// that joined the family that day switches NO view and has no analogue of this
-// tail. It has none because it has nowhere to land — a measure is edited
-// wherever the flag paints (the home-view binding's fourth ruled exception), so
-// there is no home column to carry the reader to and nothing new to select; its
-// paste writes a field on markers that are already on screen.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
 // wholesale region hide, then the selection set (the playhead land rides with

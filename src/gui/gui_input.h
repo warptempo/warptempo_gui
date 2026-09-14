@@ -648,8 +648,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Digit2: case GuiKeys::Digit3:
             return bare;
 
-        // The measure editor, the measure copy and the measure paste.
-        case GuiKeys::Slash: return bare || cl || ca;
+        // The measure editor.
+        case GuiKeys::Slash: return bare;
         // The settings editor, and the load in place / render player.
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.

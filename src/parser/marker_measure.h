@@ -47,11 +47,9 @@
 //   * THE MEASURE EDITOR — flag_editor.cpp validates at the commit, and
 //     text_editor.h takes its character cap from kMaxMarkerMeasureBytes rather
 //     than re-spelling a number.
-//   * THE MEASURE PROPAGATE — input_key_dispatch.cpp: it PARSES each clipboard
-//     measure, shifts the measure number against kMeasureMaxWhole, and
-//     re-spells through format_marker_measure, which is what keeps one
-//     spelling on disk.
-// None of them mirrors the split, the grammar or the spelling.
+// None of them mirrors the split, the grammar or the spelling. (The measure
+// propagate, which parsed, shifted and re-spelled clipboard measures, was
+// deleted whole — architect approval 2026-09-14, comment-only touch.)
 //
 // ------------------------------------------------------------------------
 // THE GRAMMAR — ASCII only, two forms, one canonical spelling per value.
@@ -118,11 +116,11 @@
 // 2026-09-02, comment-only). This axis was built for the SCORE-VIDEO
 // experiment, sunset whole on 2026-08-21 (marker-ui.md carries the record),
 // and no code walks a '+' chain to a rational now: the box paints the
-// AUTHORED token, the propagate copies tokens, the sidecar round-trips bytes,
-// and the one place a measure is TAKEN APART — the measure paste's offset
-// shift — reads the GRAMMAR (parse_marker_measure) and refuses to touch a '+'
-// form at all. The semantics stay stated here because they ARE what `+1/4`
-// means to whoever reads a file, and because a consumer is one walk away.
+// AUTHORED token and the sidecar round-trips bytes (architect approval
+// 2026-09-14, comment-only: the measure paste, the one place a measure was
+// taken apart, is deleted). The semantics stay stated here because they ARE
+// what `+1/4` means to whoever reads a file, and because a consumer is one
+// walk away.
 //
 // This is a DIFFERENT AXIS from the label cascade: it runs predecessor to
 // successor down the store, never definition to ref (warpmarkers.h states
@@ -276,8 +274,8 @@ inline bool parse_fraction(std::string_view s, int64_t& num, int64_t& den,
 // Parse one measure token into its fields. Returns true on success; on
 // failure returns false and sets `error_out` to a one-line diagnostic in the
 // readers' voice. This is the grammar's one implementation — the validator,
-// the editor's commit and the measure propagate's offset arithmetic all
-// enter here, so there is no second reading of the token anywhere.
+// and the editor's commit both enter here, so there is no second reading of
+// the token anywhere (architect approval 2026-09-14, comment-only).
 // (The section-qualifier block that took `<S>:` off the front of a direct
 // form retired with the 2026-08-21 sunset — architect approval 2026-08-21; a
 // `:` anywhere in the token now falls through the number readers and is
@@ -353,8 +351,9 @@ inline bool parse_marker_measure(std::string_view text,
 
 // The canonical spelling of a parsed value — the writer side of the grammar,
 // so a value that round-trips through parse_marker_measure comes back byte
-// for byte. The measure propagate re-spells through here after shifting a
-// direct measure's whole part, which is what keeps ONE spelling on disk.
+// for byte. It has no caller today (architect approval 2026-09-14,
+// comment-only: its one caller, the measure paste, is deleted); it stays as
+// the grammar's writer half, the definition of the ONE spelling on disk.
 // (The section emission retired with the qualifier at the 2026-08-21
 // sunset — architect approval 2026-08-21.)
 inline std::string format_marker_measure(const MarkerMeasureValue& v) {

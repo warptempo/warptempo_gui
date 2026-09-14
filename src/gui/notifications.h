@@ -18,7 +18,7 @@
 //              (the inventory is messaging.md's, re-greped there): the load
 //              act's own refusals and the player's two before them, the
 //              player's opener and decode refusals, the propagate pastes'
-//              "Stopped at …" reports, the measure paste's, the picker's
+//              "Stopped at …" reports, the picker's
 //              three refusals, Synchronize's refusals, "Target render
 //              failed", "History is unavailable", and — since 2026-08-30 —
 //              THE GATES' OWN CARDS, the swallowed press answered by the
@@ -44,11 +44,11 @@
 //              RED FLASH'S REASON (2026-08-30): the seven commit refusals of
 //              the flag-editor cluster, the settings editor's (the three
 //              device-key grammars among them since 2026-09-02), the
-//              commit title's blank, the offset editor's grammar, the measure
-//              paste's two and the text editor's two capacity refusals. Each
+//              commit title's blank and the text editor's two capacity
+//              refusals. Each
 //              is ONE SENTENCE WITH TWO READERS, the stderr line the site
-//              already printed and the card; the two that never had an stderr
-//              line have the card alone. Leaves on its own
+//              already printed and the card; the one that never had an stderr
+//              line has the card alone. Leaves on its own
 //              kNotificationMs after it
 //              became visible (gui_input.h; the pointer resting on it pauses
 //              the clock), at its X, or at a bare Esc that reaches the stack
@@ -74,11 +74,11 @@
 // THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
 // invariant that an accepted press shows something): NOTHING PAINTS A
 // CLIPBOARD, and since the resolved readout retired no standing surface
-// paints a resolved value either, so the THREE COPIES — bare `j`'s resolved
-// value, Ctrl+P's phase resets and Ctrl+/'s measures, each with its button or
-// menu row inheriting the chord — say so on a normal card, which is the whole
+// paints a resolved value either, so the TWO COPIES — bare `j`'s resolved
+// value and Ctrl+P's phase resets, each with its button or menu row inheriting
+// the chord — say so on a normal card, which is the whole
 // of what those presses show (bare `j`'s card naming the copied value in
-// single quotes, architect 2026-09-13). THE EDITORS' OWN Ctrl+C IS NOT ONE OF THE THREE: an
+// single quotes, architect 2026-09-13). THE EDITORS' OWN Ctrl+C IS NOT ONE OF THE TWO: an
 // editor is its own world with that world's conventions, and its copy stays
 // silent (its Ctrl+V over an empty clipboard with it).
 // And THE SILENCES THE STRICTNESS RULING LEFT

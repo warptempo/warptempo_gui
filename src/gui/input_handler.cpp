@@ -504,9 +504,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // flight.
     }
 
-    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the three
-    // single-State dialog ones (settings, the commit title since 2026-08-07
-    // and the measure paste-offset since 2026-08-20), the bpm bracket (a
+    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the two
+    // single-State dialog ones (settings and the commit title since
+    // 2026-08-07), the bpm bracket (a
     // dialog too), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
@@ -600,14 +600,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // open, and the view's own allowlist admits no other opener.
     if (text_editor::is_active(app.commit_title_editor)) {
         if (handle_commit_title_editor_key(key, mods)) return;
-    }
-
-    // Measure paste-offset editor (Ctrl+Alt+/ over one selected warp marker).
-    // The same modal shape as the blocks above, and mutually exclusive
-    // with them by construction: its opener is a chord the keyboard-modal gate
-    // drops while any editor is open.
-    if (text_editor::is_active(app.measure_offset_editor)) {
-        if (handle_measure_offset_editor_key(key, mods)) return;
     }
 
     // (CTRL+C IS UNBOUND GLOBALLY AGAIN — architect 2026-08-29. It copied the
@@ -745,7 +737,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and the position carries two facts rather than being a convenience.
     //
     // (1) EVERY ENTRY REFUSAL THE MODE NEEDS HAS ALREADY RUN. A prompt, an open
-    // dropdown, loading-or-absent audio, the editor text drag, any of the four
+    // dropdown, loading-or-absent audio, the editor text drag, any of the three
     // keyboard-modal editors and any live pointer gesture all swallow the press
     // above this line, so `h` cannot open the mode in any of those states and no
     // predicate is re-tested here to say so. The full statement is at
@@ -871,9 +863,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
-    // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+/ (they read a run into a session
-    // clipboard and push nothing, so the undo domain this lock protects has no
-    // interest in them; their three ALT-bearing pastes stay refused). That
+    // CLIPBOARD COPY Ctrl+P (it reads a run into a session clipboard and
+    // pushes nothing, so the undo domain this lock protects has no interest in
+    // it; its two ALT-bearing pastes stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
@@ -999,7 +991,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // IT WAS ORDERED UNTIL THAT MORNING, read-only first, because `i` then `o`
     // reached the composed state: there the wider list applied, the iteration
-    // side's admissions (bare `i`, bare `m`, the two clipboard copies, the
+    // side's admissions (bare `i`, bare `m`, the clipboard copy, the
     // bound axis) stayed refused, and the lamp could not be put out until the
     // tab was unlocked. That fork asked delta (a) BESIDE the wider list — a
     // wider list cannot answer for a refusal it does not carry, and read-only
@@ -1262,7 +1254,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       since it can only fire while one of the editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all seven kinds, through route_modal_editor_key: Esc
+    //   (b) THE EDITORS — all six kinds, through route_modal_editor_key: Esc
     //       closes / cancels the edit (the editor blocks above, bit-for-bit
     //       unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no
@@ -1830,12 +1822,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // P / I / M / K / L letter keys plus the MEASURE PROPAGATE'S TWO SLASH
-    // CHORDS (phase-reset clipboard, view toggle, iteration, bpm mode,
-    // add-to-selection, the render player on bare `l` and the AV sync stats
-    // panel on its shifted twin since 2026-09-03, and Ctrl+/ / Ctrl+Alt+/).
-    // Bare `/` never reaches here — its own arm above claims it — so the two
-    // chords fall through to this dispatch exactly as Ctrl+P does.
+    // P / I / M / K / L letter keys (phase-reset clipboard, view toggle,
+    // iteration, bpm mode, add-to-selection, the render player on bare `l`
+    // and the AV sync stats panel on its shifted twin since 2026-09-03).
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the
@@ -3304,7 +3293,7 @@ void GuiInputHandler::run_span_framing_command() {
 // half and moved the pan onto the bare form — and it is back on alt now that
 // the bare form is the magnification, which restores the Reaper spelling the
 // architect named that day. Alt's ONE pointer binding, its keyboard half still
-// the six Ctrl+Alt chords (conventions.md).
+// the five Ctrl+Alt chords (conventions.md).
 //
 // CTRL+WHEEL IS THE ZOOM STEP (architect-ruled 2026-08-12, later the same day's
 // field session; untouched by the 2026-08-27 relocation, which is what makes
@@ -3370,8 +3359,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // Only the DIALOG modal surfaces swallow the wheel HERE — the roster is
     // AppState::dialog_editor_session's and this line restates none of it
     // (it named the retired LOAD editor until 2026-08-29; the settings,
-    // commit-title, measure paste-offset and BpmBracket editors are the four
-    // today) —
+    // commit-title and BpmBracket editors are the three today) —
     // modal_dialog_editor_active, deliberately NOT the keyboard gate's
     // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
     // (architect 2026-07-28) and the wheel still punches through it anyway,

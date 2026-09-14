@@ -4786,7 +4786,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // (2026-08-15) File's "Ctrl+Q" carried it alone for a time — the reach
         // has widened since with every popup item table that sets a hotkey
         // string (File's "Ctrl+O", 2026-08-28, and its chord-less "\\" for
-        // Synchronize, 2026-08-31; Edit's five propagate chords, 2026-08-20), so
+        // Synchronize, 2026-08-31; Edit's three propagate chords, 2026-08-20), so
         // the optional term above is exercised by whichever live menu's rows
         // carry one — which is the whole reason the term was driven off the
         // item TABLE rather than off the menu enumerator or a single row.
@@ -6758,10 +6758,6 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
         prefix = kCommitTitleEditorPrefix;
         return &app.commit_title_editor;
     }
-    if (text_editor::is_active(app.measure_offset_editor)) {
-        prefix = kMeasureOffsetEditorPrefix;
-        return &app.measure_offset_editor;
-    }
     if (text_editor::is_active(app.settings_editor)) {
         prefix = kSettingsEditorPrefix;
         return &app.settings_editor;
@@ -6958,8 +6954,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // THE MODAL SURFACE — THE BOTTOM ROW (architect 2026-08-13, scrapping the
 // centered box he ratified the day before: "it looks sloppy — no compositor
 // drop shadow, and faking one wouldn't work"). It hosts the PROMPTS and the
-// FIVE modal editors (settings / load / commit-title / measure paste-offset /
-// BPM); the top-strip
+// THREE modal editors (settings / commit-title / BPM); the top-strip
 // FLAG editor is deliberately NOT a dialog — it is positional, editing the
 // marker where it stands, and stays the pointer-transparent unrolled flag
 // (render_flag_editor_box).
@@ -8129,7 +8124,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // a caret resting mid-string) and must die with the edit. enter() and
         // deactivate() already zero it, so it RESETS when a dialog opens and
         // when it closes, with no reset site of its own to keep in step — and
-        // since each of the four dialog editors owns its own State, a change
+        // since each of the three dialog editors owns its own State, a change
         // of the stash's owner is structurally a change of offset too. A
         // prompt has no field and writes none.
         //

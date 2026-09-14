@@ -193,7 +193,7 @@ enum class Icon {
     ViewHidden,          // Toggle disabled (`Ctrl+D`)
     InsertLink,          // Inherit tempo (`Ctrl+N`)
     // (EDITCOPY AND EDITPASTE ARE DELETED — 2026-08-20, with their buttons:
-    // the architect's propagate relocation gave all five propagate commands the
+    // the architect's propagate relocation gave the propagate commands the
     // EDIT MENU as their one pointer home, and neither glyph had a second
     // consumer. Breeze's edit-copy and edit-paste, the two-sheets and the
     // clipboard, transcribed from the shipped SVGs; the provenance files went

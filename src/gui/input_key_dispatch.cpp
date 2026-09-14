@@ -236,11 +236,11 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // (bare `/` among them — its SHIFTED twin, the score-video jump, is admitted
 // below, the one key on this gate whose two spellings answer differently),
 // `;` (the settings editor, whose engine-key commits ARE authored content), `i`,
-// undo/redo (Ctrl+Z / Ctrl+Shift+Z), every propagate command in BOTH families
-// (the two COPIES, Ctrl+P and Ctrl+/, explicitly — a copy is non-mutating, but
-// it arms a paste that is not, and the pair travels together; the three PASTES,
-// Ctrl+Alt+P, Ctrl+Alt+Shift+P and Ctrl+Alt+/, structurally, their modifier
-// combinations matching no allowlist predicate) — and `'` IN THE `h` VIEW,
+// undo/redo (Ctrl+Z / Ctrl+Shift+Z), every propagate command (the COPY,
+// Ctrl+P, explicitly — a copy is non-mutating, but it arms a paste that is
+// not, and the pair travels together; the two PASTES, Ctrl+Alt+P and
+// Ctrl+Alt+Shift+P, structurally, their modifier combinations matching no
+// allowlist predicate) — and `'` IN THE `h` VIEW,
 // where it is the load-in-place and replaces the whole authored state. THAT
 // ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
 // the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
@@ -763,8 +763,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     every other chord and the wrong one for the two the user pressed to ask
 //     about history. The arm refuses first, ahead of its own two terms, and
 //     history_step_actionable greys both buttons on the same fact.
-//   * THE TWO CLIPBOARD COPIES — Ctrl+P (the phase-reset placements) and
-//     Ctrl+/ (the measures) — which are CLIPBOARD-ONLY: each reads a
+//   * THE CLIPBOARD COPY — Ctrl+P (the phase-reset placements) — which is
+//     CLIPBOARD-ONLY: it reads a
 //     contiguous labeled run into a session clipboard and writes no store, no
 //     undo entry and no dirty bit, so the whole reason this lock exists says
 //     nothing about them (the lock protects the undo domain; nothing here can
@@ -772,13 +772,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     different question — it protects one tab's authored content and eats
 //     the propagate family whole — and this is the one place the two locks
 //     part company in the admitting direction rather than the refusing one.
-//     THE THREE PASTES STAY REFUSED by the base: Ctrl+Alt+P, Ctrl+Alt+Shift+P
-//     and Ctrl+Alt+/ each rewrite a store and push, which is exactly what the
-//     lock holds back. Ctrl-exact on both, no shift and no alt, the dispatch
-//     arms' own spelling — so the alt-bearing pastes cannot reach this
-//     admission by widening it. THE EDIT MENU'S TWO COPY ROWS come back with
-//     them and needed no edit of their own: each synthesizes its chord
-//     through on_key, so the row is the key.
+//     THE TWO PASTES STAY REFUSED by the base: Ctrl+Alt+P and
+//     Ctrl+Alt+Shift+P each rewrite a store and push, which is exactly what
+//     the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
+//     arm's own spelling — so the alt-bearing pastes cannot reach this
+//     admission by widening it. THE EDIT MENU'S COPY ROW comes back with it
+//     and needed no edit of its own: it synthesizes its chord through on_key,
+//     so the row is the key.
 //
 // THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
 // ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
@@ -841,10 +841,9 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // The undo pair, admitted for its own card (the whole family, alt binding
     // nothing on it — the dispatch arm's own spelling).
     if (key == GuiKeys::Z && ctrl && !alt) return false;
-    // The two clipboard copies, ctrl-exact as their dispatch arms are — which
-    // is what keeps the three ALT-bearing pastes out of this admission.
-    if ((key == GuiKeys::P || key == GuiKeys::Slash) && ctrl && !shift && !alt)
-        return false;
+    // The clipboard copy, ctrl-exact as its dispatch arm is — which is what
+    // keeps the two ALT-bearing pastes out of this admission.
+    if (key == GuiKeys::P && ctrl && !shift && !alt) return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
     // one (the arrows' lane term): the same chords mean two different acts and
     // the gate has to ask the same question the dispatch asks.
@@ -3029,335 +3028,6 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
         [this] { viewport.invalidate_modal_dialog_area(); });
 }
 
-// ---------------------------------------------------------------------------
-// THE MEASURE PROPAGATE (architect 2026-08-20). The phase reset propagate's
-// shape for the marker MEASURE field: Ctrl+/ captures the selected run's
-// measures, Ctrl+Alt+/ replays them onto a destination run matched BY LABEL,
-// under a signed measure offset typed into a modal dialog. The contracts are at
-// the declarations in input_handler.h; the clipboard's own header states why
-// the feature is warp-column only.
-
-// Ctrl+/. The gates are the caller's (handle_mode_keys' arm above): W-mode, a
-// non-empty CONTIGUOUS selection.
-//
-// UNLABELED MARKERS NEVER PROPAGATE A MEASURE, and that is the RULING rather
-// than an oversight (architect 2026-08-20): membership is
-// `warp_marker_propagates` — labeled AND effectively enabled — the one
-// predicate the phase propagate's own walks take, so a selected marker with no
-// label contributes no entry here and its opposite number is skipped at the
-// destination. The label is what the paste matches on; a marker with none has
-// nothing to align, and admitting it on one side alone would open a lockstep
-// gap. To propagate a measure, name the marker.
-//
-// A MARKER WITHOUT A MEASURE IS CAPTURED, NOT SKIPPED: the entry records
-// has_measure = false, and the paste writes that "none" onto its match as a
-// CLEAR. The clipboard is a picture of the run, so a hole in the source is a
-// hole in the destination.
-void GuiInputHandler::copy_measures_from_selection() {
-    const auto& mv = app.warpmarkers.markers();
-    if (app.selected_markers.empty()) return;
-    const int n = static_cast<int>(mv.size());
-
-    // std::set is ascending, so the entries come out in store order — which is
-    // the order the destination walk produces and the order the lockstep pairs
-    // them in.
-    std::vector<MeasureClipboardEntry> entries;
-    for (int i : app.selected_markers) {
-        if (i < 0 || i >= n) continue;
-        if (!warp_marker_propagates(mv, i)) continue;
-        MeasureClipboardEntry e;
-        e.label_name   = warp_marker_label_name(mv[static_cast<size_t>(i)]);
-        e.measure_text = mv[static_cast<size_t>(i)].measure;
-        e.has_measure  = !e.measure_text.empty();
-        entries.push_back(std::move(e));
-    }
-    app.measure_clipboard.set(std::move(entries));
-}
-
-// Ctrl+Alt+/'s opener. The gates are the caller's (W-mode, a non-empty measure
-// clipboard, exactly one selected warp marker); the bounds check here is the
-// opener's own, the phase paste's arrangement.
-//
-// PLAYBACK STOPS AS THE MODAL OPENS, through the shared owner, exactly as the
-// four dialog editors before it do.
-void GuiInputHandler::open_measure_paste_editor() {
-    if (app.measure_clipboard.empty()) return;
-    if (text_editor::is_active(app.measure_offset_editor)) return;
-    if (app.selected_markers.size() != 1) return;
-    const int anchor = *app.selected_markers.begin();
-    const int n = static_cast<int>(app.warpmarkers.markers().size());
-    if (anchor < 0 || anchor >= n) return;
-
-    playback_lifecycle.stop_playback_for_modal_open();
-    // THE ANCHOR RIDES IN THE EDITOR'S OWN SUBJECT SLOT (the commit-title
-    // editor parks a 0 there; the flag editor parks a marker index): the paste
-    // has exactly one subject and exactly one modal, so the index lives for the
-    // session and dies with it, and there is no AppState field beside the
-    // clipboard to leave stale after a cancel.
-    text_editor::enter(app.measure_offset_editor,
-                       /*target=*/anchor,
-                       "0",
-                       text_editor::Kind::MeasureOffset);
-    // OPEN-SELECTED ON THE SEED, the prefilling openers' convention: typing a
-    // digit replaces the `0` wholesale, while a bare Enter over it pastes
-    // unshifted — the repeat case, and the one this dialog is fastest at.
-    app.measure_offset_editor.selection_anchor = 0;
-    app.measure_offset_editor.cursor_pos =
-        static_cast<int>(app.measure_offset_editor.pending.size());
-    // A modal-dialog OPEN damages the whole window (the box's rect does not
-    // exist before its first paint — the settings opener carries the rule).
-    viewport.invalidate_all();
-}
-
-void GuiInputHandler::measure_offset_editor_exit_no_commit() {
-    if (!text_editor::is_active(app.measure_offset_editor)) return;
-    viewport.invalidate_modal_dialog_area();
-    // The anchor dies with the session: deactivate clears the State, so the
-    // subject slot cannot outlive the modal that seated it.
-    text_editor::deactivate(app.measure_offset_editor);
-}
-
-// Enter: parse the offset, run the paste, close on success.
-//
-// THE FIELD GRAMMAR IS ONE CANONICAL SIGNED DECIMAL INTEGER and it is judged
-// HERE rather than on the keyboard, the Kind carrying no grammar: `0`, `12`,
-// `-3`. No `+` sign (the absence of a minus IS the positive spelling), no
-// leading zeros, and `-0` refused — one spelling per value, the frame_format.h
-// discipline every other serialized-adjacent number in this product takes. It
-// is not a serialized value, but it is the number the pasted measures are
-// computed from, and a field that accepts `007` accepts two spellings of one
-// paste.
-//
-// A REFUSAL LEAVES THE EDITOR STANDING with the text in place to be corrected —
-// the dialog editors' one refusal shape — AND SAYS WHY ON A CARD (architect
-// 2026-08-30). There are TWO producers of it: this grammar, whose card is the
-// only thing it says (there was never an stderr line here and none is added),
-// and the paste's own refusals below, which return their sentence having
-// written nothing. The second is the more interesting one and it is
-// deliberately not a clamp: an offset that would carry a measure past the
-// bracket is a mis-typed offset, and silently pinning a run of bar numbers to
-// kMeasureMaxWhole would be a confident wrong answer.
-void GuiInputHandler::measure_offset_editor_commit() {
-    if (!text_editor::is_active(app.measure_offset_editor)) return;
-    const std::string& text = app.measure_offset_editor.pending;
-
-    bool        ok      = !text.empty();
-    bool        negative = false;
-    std::string digits  = text;
-    if (ok && text.front() == '-') {
-        negative = true;
-        digits   = text.substr(1);
-    }
-    // The field's own cap (kMaxPendingCharsMeasureOffset, four bytes — the
-    // widest spelling that could carry an in-bracket measure to an in-bracket
-    // result) is what can arrive here, so this is the belt under it: at most
-    // four digits, the accumulation below cannot overflow, and the bracket
-    // check in the paste is the only bound that decides anything.
-    if (digits.empty() || digits.size() > 4) ok = false;
-    if (ok && digits.size() > 1 && digits.front() == '0') ok = false;
-    int64_t magnitude = 0;
-    if (ok) {
-        for (const char c : digits) {
-            if (c < '0' || c > '9') { ok = false; break; }
-            magnitude = magnitude * 10 + (c - '0');
-        }
-    }
-    // `-0` is the second spelling of zero and is refused with the leading-zero
-    // family it belongs to.
-    if (ok && negative && magnitude == 0) ok = false;
-    if (!ok) {
-        app.measure_offset_editor.red = true;
-        viewport.invalidate_modal_dialog_area();
-        // The grammar's own card (architect 2026-08-30). Like the commit
-        // title's, this refusal never had a stderr line and gains none.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Enter a whole number with no leading zeros");
-        return;
-    }
-
-    // THE PASTE'S REASON TRAVELS OUT WITH ITS REFUSAL (GuiOpRefusal,
-    // warpmarkers_ops.h): the facts it refuses on are the clipboard's and the
-    // bracket's, so the sentence is composed where the fact lives and the card
-    // is raised here, at the layer that knows a press happened.
-    if (GuiOpRefusal refusal =
-            apply_measure_paste(negative ? -magnitude : magnitude)) {
-        app.measure_offset_editor.red = true;
-        viewport.invalidate_modal_dialog_area();
-        notifications.notify(AppState::NotificationClass::Normal,
-                             std::move(*refusal));
-        return;
-    }
-    text_editor::deactivate(app.measure_offset_editor);
-    viewport.invalidate_modal_dialog_area();
-}
-
-// Routes a key to the active measure paste-offset editor through the shared
-// modal route. NO autocomplete hook: an integer has no vocabulary to complete
-// against, so bare Tab walks the modal's focus ring from the first press (the
-// one autocomplete model is at route_modal_editor_key).
-bool GuiInputHandler::handle_measure_offset_editor_key(GuiKey        key,
-                                                       GuiInputState mods) {
-    return route_modal_editor_key(
-        app.measure_offset_editor, key, mods,
-        /*autocomplete=*/nullptr,
-        [this] { measure_offset_editor_commit(); },
-        [this] { measure_offset_editor_exit_no_commit(); },
-        [this] { viewport.invalidate_modal_dialog_area(); });
-}
-
-// THE PASTE ITSELF — the offset editor's Enter, and the only caller.
-//
-// Returns A REFUSAL SENTENCE having written absolutely nothing when the paste
-// cannot be honored whole; std::nullopt on every path that completed, including
-// the ones that wrote nothing because there was nothing to write (GuiOpRefusal,
-// warpmarkers_ops.h). The sentence is composed HERE, where the fact is — the
-// clipboard entry that will not parse, or the measure number the offset would
-// carry out of the bracket — and the caller raises the card.
-//
-// TWO PASSES, AND THE SPLIT IS THE CONTRACT: pass one resolves every
-// destination's new measure text and can REFUSE; pass two writes them. A
-// half-applied paste would leave a run of bar numbers the user has to
-// reconstruct by hand — trim's own "no undo, so no half-measures" reasoning
-// applied to an act that DOES have undo, because the refusal is free here and
-// the undo entry would otherwise cover a state nobody asked for.
-//
-// THE LOCKSTEP IS THE PHASE PASTE'S, term for term: destination members from
-// the anchor forward, paired positionally with the clipboard, stopping WHOLE at
-// the first label divergence and reporting it in the family's one register
-// (format_domain_timestamp, phase_reset_propagate.h). One side running out is a
-// clean partial walk and stays silent, likewise the phase rule.
-//
-// THREE KINDS OF CLIPBOARD ENTRY, and only the first sees the offset:
-//   * a DIRECT measure — the offset is added to its WHOLE part and the value is
-//     re-spelled canonically through marker_measure.h's own writer, so the
-//     fraction rides unchanged and there is exactly one spelling on disk.
-//   * an OFFSET (`+`) measure — copied VERBATIM. It is already relative to its
-//     own predecessor, so it means the same thing wherever the run lands, and
-//     adding an absolute measure count to it would say something else entirely.
-//   * NO measure — CLEARS the destination's. It is what the copy captured, and
-//     a clipboard that could not express a hole could not reproduce the run.
-//     A CLEAR CAN ORPHAN A `+` CHAIN whose link sits on a marker OUTSIDE the
-//     pasted run: that successor's offset now has no resolved predecessor and
-//     becomes UNRESOLVED. That is accepted and not guarded — it is exactly the
-//     load-lenient, act-strict answer the grammar is built on (marker_measure.h:
-//     an unresolved `+` still commits, saves, loads and paints, and only the
-//     CONSUMER declines to act on it), and the alternative would be a paste
-//     that reads its own successors' text to decide what it is allowed to
-//     erase.
-//
-// NO VIEW SWITCH, NO RENDER, NO MAP REBUILD, and the playhead and selection are
-// untouched — this is commit_measure_edit's damage profile scaled to many
-// markers, not the phase paste's. A measure reaches neither the engine nor the
-// render fingerprint, so the flags are the only thing that moved; and there is
-// nowhere to LAND the reader, a measure being editable wherever the flag paints
-// (the scoping note is at land_paste_in_target_view). No overlay-hide owner is
-// reached, because none is called.
-GuiOpRefusal GuiInputHandler::apply_measure_paste(int64_t offset_measures) {
-    const auto& mv = app.warpmarkers.markers();
-    const int   n  = static_cast<int>(mv.size());
-    const int   anchor = app.measure_offset_editor.target;
-    // The subject may have gone out from under the modal (an undo while it
-    // stood). Nothing to paste onto: report nothing and let the editor close,
-    // exactly as the flag editor's commit drops an edit whose target vanished.
-    if (anchor < 0 || anchor >= n) return std::nullopt;
-
-    std::vector<int> dest;
-    for (int i = anchor; i < n; ++i) {
-        if (warp_marker_propagates(mv, i)) dest.push_back(i);
-    }
-
-    const auto&  clip       = app.measure_clipboard.entries();
-    const size_t pair_count = std::min(clip.size(), dest.size());
-    size_t       matched    = 0;
-    for (; matched < pair_count; ++matched) {
-        if (clip[matched].label_name !=
-            warp_marker_label_name(mv[static_cast<size_t>(dest[matched])])) {
-            break;
-        }
-    }
-
-    // Divergence (the loop broke) versus one side running out (a clean partial
-    // walk): only the first says anything, the phase paste's own distinction.
-    std::string stop_message;
-    if (matched < pair_count) {
-        stop_message =
-            "Stopped at " +
-            format_domain_timestamp(
-                static_cast<double>(
-                    mv[static_cast<size_t>(dest[matched])].time_frame),
-                app, audio) +
-            " (label name diverged)";
-    }
-
-    // PASS ONE — resolve, and refuse whole if anything cannot be honored.
-    std::vector<std::string> resolved(matched);
-    for (size_t k = 0; k < matched; ++k) {
-        const MeasureClipboardEntry& e = clip[k];
-        if (!e.has_measure) continue;          // stays empty: a clear
-        MarkerMeasureValue v;
-        std::string        err;
-        // A clipboard measure that does not parse is BREACH-ONLY — every route
-        // into the store runs the same validator (the two file parsers, both
-        // history extractors, the measure editor's commit, and this paste's own
-        // canonical writer) — but it refuses here rather than copying the bytes
-        // through, because a verbatim copy of an unparseable measure would
-        // write a load-fatal file and say nothing.
-        if (!parse_marker_measure(e.measure_text, v, err))
-            return "Measure rejected: " + err;
-        if (v.is_offset) {
-            // Relative already: verbatim, and the offset must not reach it.
-            resolved[k] = e.measure_text;
-            continue;
-        }
-        // THE OFFSET SHIFTS THE MEASURE NUMBER AND NOTHING ELSE: `12` pasted
-        // at +5 is `17`, the fraction riding through in the parsed value and
-        // re-spelled by the one writer. The bracket below is a check on the
-        // NUMBER — an out-of-bracket result refuses the paste whole. (The
-        // retired section qualifier rode through this same shape until the
-        // 2026-08-21 sunset removed it from the grammar.)
-        const int64_t shifted = v.whole + offset_measures;
-        if (shifted < 1 || shifted > kMeasureMaxWhole)
-            return "That offset would put a measure outside the allowed range";
-        v.whole     = shifted;
-        resolved[k] = format_marker_measure(v);
-    }
-
-    // PASS TWO — write. The snapshot is taken here, after the last refusal
-    // point, so a refused paste pushes no undo entry and copies no store.
-    // AND THE SELECTION IS SPENT HERE for the same reason it is snapshotted
-    // here (architect 2026-09-12, the lamps resolved by use case): a paste is
-    // one of the acts he named, and this is the first line past the last thing
-    // that can refuse it — a refused paste consumed nothing. It stands ahead of
-    // the `changed` test below, an offset-zero self-paste having acted all the
-    // same (selection_consumed, app_state.h, where the class lives).
-    selection_consumed(app);
-    std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
-    bool                       changed   = false;
-    for (size_t k = 0; k < matched; ++k) {
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(dest[k]);
-        if (!m) continue;
-        if (m->measure == resolved[k]) continue;
-        m->measure = resolved[k];
-        changed    = true;
-    }
-
-    // AN UNDO ENTRY IS A STATE CHANGE, NOT A GESTURE: pasting a run onto itself
-    // at offset 0 reproduces every measure byte-equal and pushes nothing, the
-    // shape every no-op commit in the product takes. A measure is serialized
-    // content, so a real write dirties the tab like any other authored change.
-    if (changed) {
-        undo.push_undo_warp(std::move(pre_state));
-        undo.recompute_dirty();
-    }
-    viewport.invalidate_top_strip();
-    // The divergence report is a notification card (2026-08-29); a clean or
-    // empty walk says nothing.
-    if (!stop_message.empty()) {
-        notifications.notify(AppState::NotificationClass::Normal, std::move(stop_message));
-    }
-    return std::nullopt;
-}
-
 // THEN DO IT — the commit-title editor's Enter, and the only caller.
 //
 // THE BYTES ARE REBUILT FRESH, NEVER THE SESSION'S FROZEN NOW SIDE, and this is
@@ -4173,8 +3843,8 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 
 // The DIALOG-HOSTED modal editors: the settings editor, the bpm editor
 // (top_flag_editor reused with Kind::BpmBracket), the history view's
-// commit-title editor (2026-08-07) and the measure paste-offset editor
-// (2026-08-20) — the four surfaces painting in THE BOTTOM ROW'S MODAL since
+// commit-title editor (2026-08-07) — the three surfaces painting in THE
+// BOTTOM ROW'S MODAL since
 // 2026-08-13 (a centered modal dialog for the one day from 2026-08-12, and
 // the bottom strip before that, whence the predicate's old
 // modal_bottom_strip_editor_active name). The LOAD editor stood among them
@@ -4194,14 +3864,14 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
 // NOT here: it has its own owner (stop_playback_for_modal_open) that the open
 // sites call. Authoritative statement at the declaration in input_handler.h.
 bool GuiInputHandler::modal_dialog_editor_active() const {
-    // The four are NAMED at AppState::dialog_editor_session, which hands back
+    // The three are NAMED at AppState::dialog_editor_session, which hands back
     // the live one's session id — one membership serving both questions.
     return app.dialog_editor_session() != 0;
 }
 
-// Any text editor consuming printable keys — the THREE single-State dialog
-// editors (the settings prompt, the commit-title editor and the measure
-// paste-offset editor) plus the top-strip flag editor in ANY of its three
+// Any text editor consuming printable keys — the TWO single-State dialog
+// editors (the settings prompt and the commit-title editor) plus the top-strip
+// flag editor in ANY of its
 // kinds (the FlagPayload editor takes typed letters too); the six Kinds are
 // listed at text_editor::Kind. The platform layer's kLeftClickKey probe: while
 // this is true that key types a normal letter rather than emulating the left
@@ -4209,7 +3879,6 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 bool GuiInputHandler::any_text_editor_active() const {
     return text_editor::is_active(app.settings_editor) ||
            text_editor::is_active(app.commit_title_editor) ||
-           text_editor::is_active(app.measure_offset_editor) ||
            text_editor::is_active(app.top_flag_editor);
 }
 
@@ -4504,7 +4173,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // allowlist shape. True when key+mods is not on the allowlist and should be
 // dropped. It serves ALL SIX editor kinds — the settings prompt,
 // the commit-title editor (2026-08-07), the bpm bracket, the MARKER MEASURE
-// editor (2026-08-19), the MEASURE PASTE-OFFSET editor (2026-08-20) and
+// editor (2026-08-19), the ITERATION BOUND editor (2026-09-05) and
 // (architect 2026-07-28) the top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
@@ -4558,11 +4227,11 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // THE RING'S WHOLE TAB FAMILY, admitted while any DIALOG editor stands
     // (2026-08-13) — a superset of what this gate admitted before: the one
     // editor that HAS a completion, SETTINGS (its value recall), keeps the
-    // FORWARD key as its first meaning, while the commit-title, BPM and
-    // measure-offset editors let it walk the ring from the first press
+    // FORWARD key as its first meaning, while the commit-title and BPM
+    // editors let it walk the ring from the first press
     // (route_modal_editor_key owns which of the two a given forward Tab is,
     // under the one autocomplete model), and the REVERSE shapes walk
-    // backwards for all four, completing nothing anywhere. The top-strip FLAG
+    // backwards for all three, completing nothing anywhere. The top-strip FLAG
     // editor is deliberately outside it: it is not a dialog, publishes no
     // buttons, and so has no ring for Tab to walk — its whole Tab family still
     // drops here while it stands.
@@ -6299,9 +5968,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 }
 
 // Shared key route for EVERY keyboard-modal editor — the settings prompt, the
-// commit-title editor, the measure paste-offset editor, the bpm bracket
-// editor, and the top-strip flag editor.
-// All five spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
+// commit-title editor, the bpm bracket editor, and the top-strip flag editor.
+// All four spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys plus bare Esc, Ctrl+S, and Ctrl+Q, so a
 // NotConsumed key here is one of the latter two chords. Ctrl+S saves with
 // the editor left open (save is not an exit); Ctrl+Q returns false so on_key
@@ -6315,8 +5983,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // retired it once every dialog grew real OK and Cancel buttons, so nothing
 // outside this file restates this set and the veil swallows every roster
 // press. Ctrl+S here is unchanged. `autocomplete` is the optional
-// bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the commit-title, measure
-// offset, bpm and flag editors have no vocabulary to complete and pass an
+// bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the commit-title, bpm and
+// flag editors have no vocabulary to complete and pass an
 // empty hook).
 //
 // THE ONE AUTOCOMPLETE MODEL — the authoritative statement, architect
@@ -6341,7 +6009,7 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 //     modal_dialog_focus < 0, and -1 IS the field on an editor dialog;
 //     AppState::modal_dialog_focus owns that meaning).
 //   * Tab with the focus IN THE FIELD offers the completion, then walks.
-//   * Tab in a dialog editor with NO hook (commit-title, measure offset, BPM)
+//   * Tab in a dialog editor with NO hook (commit-title, BPM)
 //     walks at once.
 //   * SHIFT+TAB NEVER COMPLETES — it is the ring's REVERSE WALK and nothing
 //     else (architect 2026-08-13: "also, shift+tab should cycle backward"),
@@ -6507,7 +6175,6 @@ void GuiInputHandler::close_modal_editors_no_commit() {
     if (bpm_bracket) flag_editor.exit_bpm_mode();
     settings_editor.exit_no_commit();
     commit_title_editor_exit_no_commit();
-    measure_offset_editor_exit_no_commit();
 }
 
 // -- THE PICKER (the contract is at the declaration) --------------------------
@@ -6528,7 +6195,7 @@ void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
     // prompt VEILS everything and is itself the answer on screen — its
     // question is what the press has to deal with — while an editor is
-    // pointer-transparent in three of its seven kinds the top-strip flag
+    // pointer-transparent in three of its six kinds the top-strip flag
     // editor takes (FlagPayload, MeasureText and IterBound, text_editor.h), so
     // the File menu's Open project row is reachable under it and owes a
     // sentence. The KEY road never reaches either arm: Ctrl+O under any
@@ -7484,16 +7151,14 @@ void GuiInputHandler::on_external_sync_complete(
                          std::move(outcome.failure.display));
 }
 
-// P / I / M letter-key handlers, plus the measure propagate's two Ctrl+Slash
-// chords. See the declaration for the chord list.
+// P / I / M letter-key handlers. See the declaration for the chord list.
 // THE CLIPBOARD FAMILY'S SHARED SENTENCES (architect 2026-08-30, the
-// strictness ruling). Four chords — the phase-reset propagate's copy and its
-// two pastes, and the measure propagate's copy and paste — take the SAME
-// gates term for term, so where two of them refuse on the same fact they say
-// the same words and the literal lives once. What is NOT shared is each
-// chord's own first gate (what it copies from, what it pastes onto), which
-// names its own payload and is spelled at its arm.
-// kSelectOneRun HAS A FIFTH READER, the `m` sweep's contiguity arm below: the
+// strictness ruling). Three chords — the phase-reset propagate's copy and its
+// two pastes — take the SAME gates term for term, so where two of them refuse
+// on the same fact they say the same words and the literal lives once. What
+// is NOT shared is each chord's own first gate (what it copies from, what it
+// pastes onto), which names its own payload and is spelled at its arm.
+// kSelectOneRun HAS A SECOND READER, the `m` sweep's contiguity arm below: the
 // two gates are the same test on the same set for the same reason (the run
 // must have one span meaning), so they answer in one sentence.
 constexpr const char* kSelectOneRun =
@@ -7503,14 +7168,13 @@ constexpr const char* kSelectOneAnchor =
     "Select exactly one marker to paste onto";
 constexpr const char* kPastePhaseOntoWarp =
     "Phase resets are pasted onto warp markers";
-// THE TWO COPIES' SHARED "NOTHING WAS CAPTURED" SENTENCE (2026-08-30), the
-// kNothingMatched twin on the copy side (phase_reset_propagate.cpp): both
-// copies take the SAME membership, warp_marker_propagates — labeled AND
-// effectively enabled — so a run of unlabeled or disabled markers passes every
-// gate and captures nothing, leaving an EMPTY clipboard that the matching
-// paste then refuses with "Nothing has been copied yet". One fact, one
-// wording, and it names the membership rather than the label alone because a
-// labeled but disabled marker propagates nothing either.
+// THE COPY'S "NOTHING WAS CAPTURED" SENTENCE (2026-08-30), the kNothingMatched
+// twin on the copy side (phase_reset_propagate.cpp): the copy's membership is
+// warp_marker_propagates — labeled AND effectively enabled — so a run of
+// unlabeled or disabled markers passes every gate and captures nothing,
+// leaving an EMPTY clipboard that the paste then refuses with "Nothing has
+// been copied yet". It names the membership rather than the label alone
+// because a labeled but disabled marker propagates nothing either.
 constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
 
@@ -7535,7 +7199,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (extent == count). Unlabeled markers inside the run still contribute no
     // block, and the paste's destination walk skips unlabeled markers
     // identically, so the two label sequences stay aligned regardless.
-    // W-mode only. EVERY REFUSAL IN THE FOUR CLIPBOARD CHORDS SAYS SO ON A
+    // W-mode only. EVERY REFUSAL IN THE THREE CLIPBOARD CHORDS SAYS SO ON A
     // CARD since 2026-08-30 (architect, the strictness ruling), each naming
     // the gate it failed: the 2026-07-23 "gesture refusals are silent by
     // convention" ruling was withdrawn for this family with the rest.
@@ -7574,9 +7238,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // card, copy_focused_marker_value), and the write here can come out
         // EMPTY behind passed gates, which is a different fact and takes the
         // family's own sentence for it. The card is the ARM'S, beside the
-        // gates it follows: both propagates' COPY bodies carry no sentence of
-        // their own (unlike the pastes beside them), and the arm is where the
-        // rest of this chord's answers already live.
+        // gates it follows: the propagate's COPY body carries no sentence of
+        // its own (unlike the pastes beside it), and the arm is where the rest
+        // of this chord's answers already live.
         // THE MENU ROW INHERITS IT: Edit -> Copy phase resets dispatches this
         // chord.
         if (app.phase_reset_clipboard.empty()) {
@@ -7594,7 +7258,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // gates — the P view, an empty clipboard, and a selection that is not
     // exactly one marker — EACH SAY SO ON A CARD since 2026-08-30 (the
     // strictness ruling; the sentences are the family's shared literals, so
-    // the four clipboard chords answer one state in one wording). They were
+    // the three clipboard chords answer one state in one wording). They were
     // silent no-ops under the 2026-07-30 "every refusal in this family is
     // silent" ruling, withdrawn with the rest of that convention. STILL NO
     // GESTURE-CLASS STDERR: a wrong selection count is an ordinary "not ready
@@ -7631,10 +7295,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // rather than a modal dialog.
     if (key == GuiKeys::P && ctrl && shift && alt) {
         // THE THREE GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
-        // its sentences (2026-08-30). The strictness inventory listed the
-        // four other clipboard chords and not this one; it is the same family
-        // and a silent arm beside three that speak is the drift the arc is
-        // removing.
+        // its sentences (2026-08-30): it is the same family, and a silent arm
+        // beside two that speak would be drift.
         if (app.active_markers_view != 'W') {
             notifications.notify(AppState::NotificationClass::Normal,
                                  kPastePhaseOntoWarp);
@@ -7657,89 +7319,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // `p` (no modifiers) toggles phase reset view globally.
     if (key == GuiKeys::P && !ctrl && !shift && !alt) {
         active_views.toggle_active_markers_view();
-        return true;
-    }
-
-    // Ctrl+/: copy the selected warp markers' MEASURES into the session
-    // clipboard — the measure propagate's copy half (architect 2026-08-20), the
-    // Ctrl+P arm above written for the other propagate. THE GATES ARE
-    // IDENTICAL, deliberately and not by coincidence: W-mode, a non-empty
-    // selection, and a CONTIGUOUS run, spelled here at the caller exactly as
-    // Ctrl+P spells it (std::set is ascending, so a run is contiguous iff its
-    // extent equals its count). Contiguity is load-bearing for the same reason:
-    // the paste matches the two label sequences in strict lockstep, so a
-    // disjoint clipboard would diverge at the first gap and never reach what
-    // followed it.
-    //
-    // W-MODE ONLY, and the measure propagate has no phase-reset counterpart at
-    // all — the ruling and its reasoning are at measure_clipboard.h.
-    // Non-mutating: no undo entry, no dirty bit. Every refusal SAYS SO on a
-    // card since 2026-08-30, its Ctrl+P twin's three sentences in this
-    // clipboard's own words.
-    if (key == GuiKeys::Slash && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Measures are copied from warp markers");
-            return true;
-        }
-        if (app.selected_markers.empty()) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Select the markers whose measures to copy");
-            return true;
-        }
-        if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
-                != static_cast<int>(app.selected_markers.size())) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneRun);
-            return true;
-        }
-        // THE SELECTION IS SPENT, its Ctrl+P twin's line for its twin's reason
-        // (architect 2026-09-12): past the three gates, ahead of the empty
-        // capture's own answer (selection_consumed, app_state.h).
-        selection_consumed(app);
-        copy_measures_from_selection();
-        // Its Ctrl+P twin's two answers in this clipboard's words, for the
-        // twin's reasons (the card is the arm's; the empty capture is the
-        // shared sentence). Edit -> Copy measures dispatches this chord and
-        // inherits both.
-        if (app.measure_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingToCopy);
-            return true;
-        }
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Copied the selected markers' measures");
-        return true;
-    }
-
-    // Ctrl+Alt+/: paste the clipboard's measures onto the destination run
-    // anchored at the single selected warp marker. W-mode only; the gates are
-    // its Ctrl+Alt+P sibling's, term for term — the P view, an empty clipboard
-    // and a selection that is not exactly one marker — and each CARDS in the
-    // family's own sentences since 2026-08-30, the sibling owning the
-    // reasoning.
-    //
-    // IT OPENS A MODAL EDITOR BEFORE ANY MUTATION, where the phase paste opens
-    // a confirmation prompt: the offset dialog IS this act's confirmation, and
-    // a bare Enter over its `0` seed is that prompt's `y`.
-    if (key == GuiKeys::Slash && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Measures are pasted onto warp markers");
-            return true;
-        }
-        if (app.measure_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingCopiedYet);
-            return true;
-        }
-        if (app.selected_markers.size() != 1) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneAnchor);
-            return true;
-        }
-        open_measure_paste_editor();
         return true;
     }
 

@@ -771,7 +771,7 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // THE SELECTION GROUND IS THE ACCENT AND THE SELECTED LETTERS ARE THE LABEL
 // WHITE, ON EVERY TEXT SURFACE (architect 2026-08-28: "what Breeze Light does
 // with dark text... let's just do that everywhere for consistency"). One
-// pairing for every run the product lets a user select in — the four dialog
+// pairing for every run the product lets a user select in — the three dialog
 // editors' shared field and the marker lane's flag editor alike:
 // kRedesignAccent #3daee9 behind the selected substring, kRedesignLabel
 // #fcfcfc for its glyphs. It is Breeze Light's own selection, which is where
@@ -3448,7 +3448,7 @@ struct FlagEditorBox {
 // resting label was capped, the field opening at the committed run's own width
 // and growing only with what is typed past it. An
 // invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed. The four DIALOG editors flash that same pair too
+// kMarkerFlagEdgeRed. The three DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
 // 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
 // paint_modal_dialog), so there is one

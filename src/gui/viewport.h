@@ -428,23 +428,23 @@ struct Viewport {
     void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole). ITS CALLERS,
-    // re-greped 2026-08-28, are the FOUR DIALOG EDITORS' repaint sites plus the
+    // re-greped 2026-08-28, are the THREE DIALOG EDITORS' repaint sites plus the
     // RENDER PLAYER's three, the player being the row's third owner:
     //
     //   * TYPING and the autocompletes — route_modal_editor_key's `repaint`
-    //     argument, passed by all four dialog editor key handlers
+    //     argument, passed by all three dialog editor key handlers
     //     (input_key_dispatch), plus the settings editor's own prefill and
     //     value-recall writes (settings_editor).
     //   * THE CARET BLINK — main.cpp's per-tick blink transitions, one per
     //     dialog editor (the flag editor's BPM arm among them, its other two
     //     kinds damaging the top strip instead).
     //   * THE RED FLASH — every red-flash refusal in settings_editor,
-    //     flag_editor's BPM commit, the commit-title editor's blank refusal
-    //     and the measure offset editor's.
+    //     flag_editor's BPM commit and the commit-title editor's blank
+    //     refusal.
     //   * THE CLOSERS — every commit / abandon that deactivates a dialog
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
-    //     flag_editor's BPM commit and exit_bpm_mode, the commit-title
-    //     editor's two and the measure offset editor's).
+    //     flag_editor's BPM commit and exit_bpm_mode, and the commit-title
+    //     editor's two).
     //   * THE POINTER'S TEXT DRAG — input_pointer's four `g.dialog` sites
     //     (click-to-caret, the double-click word select, the drag's motion
     //     and its release).

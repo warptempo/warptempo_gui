@@ -41,7 +41,7 @@
 // ONE CLICK-TO-BYTE MAPPING (row 7, 2026-08-01). Every editor in the product is
 // PROPORTIONAL now, so there is no advance to divide by anywhere: each takes an
 // origin plus the shaped run's per-byte boundaries from ITS OWN painter's
-// publication — the flag editor's FlagEditorBox, the four dialog
+// publication — the flag editor's FlagEditorBox, the three dialog
 // editors' DialogEditorText — and click-to-byte is the same nearest-boundary
 // search over both. The monospace arm (a char-0 origin times one cell advance)
 // died with the face; ActiveEditorText carries the one pair.
@@ -302,7 +302,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // survivor of the mass-marker category. Bare `f`, a TOGGLE with a lamp,
     // consumed by the `h` view and greyed in there.
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
-    // the architect's propagate relocation gave all FIVE propagate commands the
+    // the architect's propagate relocation gave the propagate commands the
     // new EDIT MENU as their one pointer home, so Ctrl+P and Ctrl+Alt+P reach
     // the pointer as MENU ITEMS now. Their chords did not die with the rows —
     // a menu item dispatches through on_key exactly as a button's chord does,
@@ -1051,8 +1051,8 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = one of the four DIALOG editors (settings / commit-title /
-    // measure paste-offset / BPM, painting in the BOTTOM ROW'S modal since
+    // true = one of the three DIALOG editors (settings / commit-title /
+    // BPM, painting in the BOTTOM ROW'S modal since
     // 2026-08-13 — centered for the one day from 2026-08-12, and the field
     // was `bottom_strip` while they lived on the status lane); false = the
     // top-strip flag editor. Selects the claim
@@ -1073,7 +1073,7 @@ struct ActiveEditorText {
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
-    // THE FOUR DIALOG EDITORS share ONE publication — only one of them is
+    // THE THREE DIALOG EDITORS share ONE publication — only one of them is
     // ever open, and paint_modal_dialog fills it from whichever editor it
     // actually painted. An invalid publication (nothing painted yet, or an
     // editor the dialog's precedence hides — a prompt is up) leaves this
@@ -1083,7 +1083,6 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     const bool dialog_open =
         text_editor::is_active(app.settings_editor) ||
         text_editor::is_active(app.commit_title_editor) ||
-        text_editor::is_active(app.measure_offset_editor) ||
         (text_editor::is_active(app.top_flag_editor) &&
          app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
     if (dialog_open) {
@@ -1092,8 +1091,6 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
                    ? &app.settings_editor
              : text_editor::is_active(app.commit_title_editor)
                    ? &app.commit_title_editor
-             : text_editor::is_active(app.measure_offset_editor)
-                   ? &app.measure_offset_editor
                    : &app.top_flag_editor;
         g.text_left    = be.text_origin_x;
         g.byte_x       = &be.byte_x;
@@ -1870,10 +1867,10 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      under the card;
 //   1. the prompt's veil (the top of the handler — its dialog buttons are the
 //      one thing a press can reach, and a button carries no cursor cue);
-//   2. the FOUR DIALOG modal editors' veil, which consumes every press
+//   2. the THREE DIALOG modal editors' veil, which consumes every press
 //      outside the dialog's own field and buttons — the
 //      shared predicate is modal_dialog_editor_active, whose membership is
-//      AppState::dialog_editor_session's four;
+//      AppState::dialog_editor_session's three;
 //   3. the open dropdown, which owns the pointer and consumes every press over
 //      the pixels it floats above;
 //   4. the loading / empty-audio return, above the whole waveform band. The four
@@ -4142,8 +4139,6 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
         handle_settings_editor_key(key, mods);
     } else if (text_editor::is_active(app.commit_title_editor)) {
         handle_commit_title_editor_key(key, mods);
-    } else if (text_editor::is_active(app.measure_offset_editor)) {
-        handle_measure_offset_editor_key(key, mods);
     }
 }
 
@@ -5515,7 +5510,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // F2.1: mouse drag-to-select inside the active text editor. A press on
     // the active editor's field places the caret and arms a selection
     // drag (anchor == caret until the pointer moves). Resolved before the
-    // per-editor modal swallows below so the gesture reaches the four dialog
+    // per-editor modal swallows below so the gesture reaches the three dialog
     // editors too. ON GLASS ONLY A TAP AND THE DOUBLE PRESS ARRIVE HERE: a
     // finger's drag or hold in the field is the touch translation's caret
     // drag and delivers no press (the trio's bodies beside
@@ -5627,10 +5622,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE VEIL'S LAST WORD: any DIALOG editor still standing here swallows the
     // press. It asks the membership's own predicate rather than spelling the
-    // four surfaces again — the set is NAMED once (modal_dialog_editor_active
+    // three surfaces again — the set is NAMED once (modal_dialog_editor_active
     // over AppState::dialog_editor_session, whose declaration says so) so it
-    // cannot drift, and a fifth dialog editor would be veiled here by existing
-    // rather than by an edit. What the swallow buys is the same for all four,
+    // cannot drift, and a fourth dialog editor would be veiled here by existing
+    // rather than by an edit. What the swallow buys is the same for all three,
     // and the BPM editor is the case that names it: mouse input does not
     // interact with a dialog beyond its own field and buttons, claimed above,
     // and the session ends only through Esc / the Enter dispatch path / the
@@ -6218,7 +6213,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the waveform magnification step. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
-        // six Ctrl+Alt chords.)
+        // five Ctrl+Alt chords.)
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
@@ -6378,10 +6373,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the SIX keyboard Ctrl+Alt
+        // proceeds. ALT survives ONLY in the FIVE keyboard Ctrl+Alt
         // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P,
-        // Ctrl+Alt+Shift+P, since 2026-08-20 the measure propagate's paste
-        // Ctrl+Alt+/, and since 2026-09-13 File → Revert's Ctrl+Alt+O) — every other alt keybinding was retired
+        // Ctrl+Alt+Shift+P, and since 2026-09-13 File → Revert's Ctrl+Alt+O)
+        // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
         // the modifier on 2026-08-27, and it is a wheel and not a press, so no
@@ -7311,7 +7306,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     if (text_editor::is_active(app.settings_editor)) return;
     if (text_editor::is_active(app.commit_title_editor)) return;
-    if (text_editor::is_active(app.measure_offset_editor)) return;
     // NON-LEFT RELEASES END HERE, and nothing is owed: every release body below
     // finishes something a LEFT press armed, and no other button arms anything —
     // the RIGHT button is fully unbound (2026-08-12, the eighth glass ruling;
@@ -10207,7 +10201,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // F2.1: editor-text drag motion. Handled before the dialog-editor branch
-    // (which returns) so the gesture reaches the four dialog editors' fields,
+    // (which returns) so the gesture reaches the three dialog editors' fields,
     // and before the trim / playhead branches. A lost button finalizes like
     // release, mirroring those handlers.
     if (app.editor_text_drag.active) {
@@ -10256,7 +10250,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (modal_dialog_editor_active()) {
-        // THE EDITOR DIALOG'S MOTION — the four dialog editors in one branch
+        // THE EDITOR DIALOG'S MOTION — the three dialog editors in one branch
         // (the BPM bracket included since the dialog arc; it used to fall
         // through to the gesture branches, harmlessly, its presses all
         // swallowed): the dialog buttons' hover face, then the roster

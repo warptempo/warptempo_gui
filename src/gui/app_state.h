@@ -10,7 +10,6 @@
 #include "render.h"
 #include "settings_file.h"
 #include "text_editor.h"
-#include "measure_clipboard.h"
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map_view.h"
@@ -2056,10 +2055,10 @@ enum class RedesignButton {
     //
     // THE EDIT MENU IS THE THIRD ANCHOR SINCE 2026-08-20 (architect), painted
     // between File and Settings — the standard order, kdenlive's own. It is a
-    // COMMAND MENU carrying all FIVE propagate commands (Ctrl+P, Ctrl+Alt+P,
-    // Ctrl+Alt+Shift+P, Ctrl+/, Ctrl+Alt+/), and it is a RELOCATION rather than
+    // COMMAND MENU carrying the THREE propagate commands (Ctrl+P, Ctrl+Alt+P,
+    // Ctrl+Alt+Shift+P), and it is a RELOCATION rather than
     // an addition: IconCopy and IconPaste were deleted from the icon row in the
-    // same ruling, so the five commands have exactly ONE pointer home and the
+    // same ruling, so the commands have exactly ONE pointer home and the
     // no-second-road doctrine is SATISFIED rather than amended. The anchor
     // count is three again for the first time since 2026-08-15, and nothing in
     // the dropdown machinery counts menus — kDropdownMenus grew one row.
@@ -2331,9 +2330,9 @@ enum class RedesignButton {
     // to its left rather than standing alone behind a divider of its own.
     //
     // THE GROUP WAS FIVE UNTIL 2026-08-20 AND THREE UNTIL 2026-08-27, and both
-    // subtractions are the SAME ACT twice (architect): the five propagate
-    // commands — Ctrl+P, Ctrl+Alt+P, Ctrl+Alt+Shift+P, Ctrl+/ and Ctrl+Alt+/ —
-    // took the new EDIT MENU as their ONE pointer home and IconCopy and
+    // subtractions are the SAME ACT twice (architect): the propagate
+    // commands — Ctrl+P, Ctrl+Alt+P and Ctrl+Alt+Shift+P — took the new EDIT
+    // MENU as their ONE pointer home and IconCopy and
     // IconPaste were deleted with the move; then bare `m` and bare `i` took
     // the new SERIES MENU as theirs and IconBpm and IconIter were deleted with
     // that one. Both are the NO-SECOND-ROAD DOCTRINE SATISFIED rather than
@@ -3077,10 +3076,10 @@ enum class RedesignButton {
 // non-chord entry, the roster's first anchor GAIN since File's) while ICONCOPY
 // and ICONPASTE were deleted whole from row 4 with their chord-table rows —
 // 51 + 1 − 2, split 49 + 2 to 47 + 3. Ctrl+P and Ctrl+Alt+P are untouched on
-// the keyboard; what moved is where a POINTER reaches them, and the two chords
-// that had no button at all (the measure pair, Ctrl+/ and Ctrl+Alt+/) gained
-// one for the first time. Not one command was removed, which is what makes this
-// a path relocation rather than a feature deletion.
+// the keyboard; what moved is where a POINTER reaches them. Not one command was
+// removed, which is what makes this a path relocation rather than a feature
+// deletion (the menu's two measure rows of that day left with their commands
+// on 2026-09-14, the Edit anchor staying).
 // 51 SINCE 2026-08-19: the MARKER MEASURE button joined the bottom row's
 // marker-verb group on bare `/`, a pure chord addition — 50 + 1, split
 // 48 + 2 to 49 + 2.
@@ -3786,44 +3785,38 @@ inline constexpr CommandPopupItem kFilePopupItems[] = {
 inline constexpr int kFilePopupItemCount =
     static_cast<int>(std::size(kFilePopupItems));
 
-// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE FIVE PROPAGATE
-// COMMANDS, in two categories over one separator: the PHASE RESET family's
-// three, then the MEASURE family's two. The order inside each is the family's
-// own — copy, then paste, then (where there is one) the variant paste — and the
-// separator is the honest place the two categories part, exactly as the
-// settings menu's is.
+// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE THREE PROPAGATE
+// COMMANDS, the PHASE RESET family's, in the family's own order: copy, then
+// paste, then the variant paste. One category, no separator.
 //
-// THIS MENU IS THE FIVE COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
+// THIS MENU IS THE THREE COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
 // deleted from the icon row in the same ruling, so nothing here duplicates a
 // button: the no-second-road doctrine is SATISFIED rather than amended, which
 // is the zoom group's history run in reverse (there, four BUTTONS took the
 // Navigation menu's rows and the menu went; here the menu takes the buttons'
 // commands and the buttons go). The architect's reason for the direction is
-// FREQUENCY — all five are used a handful of times per session at most, which
+// FREQUENCY — all three are used a handful of times per session at most, which
 // is what a menu is for and what a permanent icon slot is not — and the BPM
 // opener's survival at similar frequency is his stated aesthetic choice,
 // recorded at the roster enum rather than argued from here.
 //
-// THREE OF THE FIVE HAD NO POINTER HOME AT ALL BEFORE THIS. IconCopy and
-// IconPaste carried Ctrl+P and Ctrl+Alt+P (the shifted paste-state chord riding
-// IconPaste's shift admission, which left with it); Ctrl+/ and Ctrl+Alt+/, the
-// measure pair, landed 2026-08-20 with no button by design, waiting for this
-// menu. So the relocation NET-ADDS a pointer road to the measure propagate and
-// removes none from the phase one.
+// IconCopy and IconPaste carried Ctrl+P and Ctrl+Alt+P before this (the
+// shifted paste-state chord riding IconPaste's shift admission, which left
+// with it), so the relocation removed no pointer road from the family.
 //
 // EVERY ROW DISPLAYS ITS HOTKEY, the accelerator column File's one row has
 // carried alone since 2026-08-15 — the column had six producers instead of one
 // from this ruling, eight while the Iterations menu's two rows stood
 // (2026-08-27 to 2026-09-04), nine while File's third row and the Help
-// menu's one both stood (2026-09-03..09) and eight since the Help menu's
-// deletion, and its metrics and layout term are unchanged throughout. The
+// menu's one both stood (2026-09-03..09), eight from the Help menu's
+// deletion and six since the measure rows' (2026-09-14), and its metrics and layout term are unchanged throughout. The
 // spelling convention is the crop's: modifiers spelled out with `+`, and a
 // non-letter key written as itself (`/`).
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — wrong mode, wrong selection, an empty
 // clipboard, a locked tab — still dispatches, and its own arm answers exactly
-// as the key does, which for all five of these is a notification card naming
+// as the key does, which for all three of these is a notification card naming
 // the rule it failed (2026-08-30, the strictness ruling; they were silent
 // no-ops before it). So there is nothing here that could lie the way the
 // deleted Navigation menu's one ruled exception could — the row acts, and the
@@ -3835,10 +3828,6 @@ inline constexpr CommandPopupItem kEditPopupItems[] = {
      true,  false, true,  false},
     {"Paste Phase Reset State", "Ctrl+Alt+Shift+P", GuiKeys::P,
      true,  true,  true,  false},
-    {"Copy Measures",          "Ctrl+/",           GuiKeys::Slash,
-     true,  false, false, true},
-    {"Paste Measures",         "Ctrl+Alt+/",       GuiKeys::Slash,
-     true,  false, true,  false},
 };
 inline constexpr int kEditPopupItemCount =
     static_cast<int>(std::size(kEditPopupItems));
@@ -5927,7 +5916,7 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the four dialog
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the three dialog
     // editors, the render player, the picker and the AV Sync Stats panel paint
     // ON THE BOTTOM ROW since
     // 2026-08-13 (architect, scrapping
@@ -6176,9 +6165,9 @@ struct AppState {
     ModalDialogGeometry modal_dialog;
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the FOUR DIALOG-HOSTED editors (the
-    // settings editor, the commit-title editor, the measure paste-offset
-    // editor since 2026-08-20, and the bpm bracket editor; the top-strip flag
+    // THE AUTHORITATIVE MEMBERSHIP of the THREE DIALOG-HOSTED editors (the
+    // settings editor, the commit-title editor and the bpm bracket editor;
+    // the top-strip flag
     // editor is deliberately not one of them in EITHER of its non-bracket
     // kinds — FlagPayload or MeasureText, both of which paint in the top
     // strip; the `h` view's load editor and the Open project editor were the
@@ -6186,7 +6175,7 @@ struct AppState {
     // PICKER, which is a modal owner and not an editor — AppState::Picker).
     // The predicate GuiInputHandler::modal_dialog_editor_active is this id
     // being non-zero, and ITS declaration is the authoritative statement of
-    // what that predicate is FOR and who calls it; this is where the four are
+    // what that predicate is FOR and who calls it; this is where the three are
     // NAMED, so the set cannot drift between the two. At most one can be
     // active at a time (every opener refuses while another owns the
     // keyboard), so the order below is free.
@@ -6195,8 +6184,6 @@ struct AppState {
             return settings_editor.session;
         if (text_editor::is_active(commit_title_editor))
             return commit_title_editor.session;
-        if (text_editor::is_active(measure_offset_editor))
-            return measure_offset_editor.session;
         if (text_editor::is_active(top_flag_editor) &&
             top_flag_editor.kind == text_editor::Kind::BpmBracket)
             return top_flag_editor.session;
@@ -8002,7 +7989,7 @@ struct AppState {
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
     // marker's own box, which the flag pass therefore skips), the BPM editor
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other four dialog editors (2026-08-13), the marker MEASURE editor
+    // other two dialog editors (2026-08-13), the marker MEASURE editor
     // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
     // like the flag editor and carries no red-flash edge of its own, and the
     // ITERATION BOUND editor (Kind::IterBound, since 2026-09-05), which
@@ -8036,29 +8023,6 @@ struct AppState {
     // stands, which is what keeps it out of every other surface's way.
     text_editor::State commit_title_editor;
     bool commit_title_editor_blink_last = false;
-
-    // THE MEASURE PASTE-OFFSET EDITOR (architect 2026-08-20), the FIFTH dialog
-    // modal and the measure propagate's own: Ctrl+Alt+/ over exactly one
-    // selected warp marker opens it seeded with `0`, and Enter applies the
-    // clipboard onto the destination run with that many measures added to every
-    // DIRECT measure it writes. It stands where the phase paste's CONFIRMATION
-    // PROMPT stands in its own family, and for the commit-title editor's
-    // reason: the pause is the same pause, and asking for the offset carries
-    // information a bare yes/no does not — a bare Enter over the `0` seed IS
-    // that prompt's `y`, pasting the repeat unshifted.
-    //
-    // ITS SUBJECT SLOT CARRIES THE PASTE ANCHOR (`State::target`, the
-    // commit-title precedent, which parks a 0 there): the destination warp
-    // marker index, seated at the open and read once at the commit.
-    // Esc abandons with nothing written, and a buffer that is not one canonical
-    // signed integer red-flashes rather than pasting — as does an offset that
-    // would carry any pasted measure out of the [1, kMeasureMaxWhole] bracket,
-    // which
-    // refuses the paste WHOLE rather than clamping or partially applying.
-    // A dialog modal like the three above, with its own State so the paint
-    // regions stay independent.
-    text_editor::State measure_offset_editor;
-    bool measure_offset_editor_blink_last = false;
 
     // -- THE PICKER'S WHOLE STATE (architect 2026-08-28, R22/R23) ----------
     //
@@ -8362,16 +8326,6 @@ struct AppState {
     // confirmation prompt opens; consumed by the prompt response.
     PhaseResetClipboard phase_reset_clipboard;
     int                pending_paste_anchor = -1;
-
-    // Measure propagate (W-mode Ctrl+/ copy, Ctrl+Alt+/ paste; architect
-    // 2026-08-20). Single-slot session-only clipboard cleared on app exit, the
-    // sibling above's shape and lifetime; the header carries what an entry
-    // holds and why the feature is warp-column only. IT NEEDS NO ANCHOR FIELD
-    // BESIDE IT, unlike the phase pair: the paste's destination anchor rides in
-    // its own editor's subject slot (`text_editor::State::target`, the
-    // commit-title precedent) for the one modal's lifetime, so there is no
-    // second place for it to go stale.
-    MeasureClipboard   measure_clipboard;
 
     // (THERE IS NO TEXT CLIPBOARD FIELD HERE — 2026-08-02. The session-only
     // `text_clipboard` string is DELETED with the system clipboard's arrival:
@@ -10000,14 +9954,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // editable wherever the flag paints. Its three entry routes (bare `/`,
 // the bottom-row button, the double-click on the blue box) consult this
 // predicate nowhere; their one gate is READ-ONLY, which still refuses, a
-// measure being serialized content. THE MEASURE PROPAGATE RIDES UNDER THIS
-// SAME EXCEPTION (Ctrl+/ and Ctrl+Alt+/, 2026-08-20): it writes the same field
-// through the same store path, so it is legal in both audio views and consults
-// this predicate nowhere either — the phase reset propagate's own precedent,
-// which likewise asks the mode and the selection and never this. It is
-// WARP-COLUMN ONLY for a reason of its own, unrelated to the home-view binding
-// (propagate matches destinations by LABEL, and only the warp column has
-// labels — the ruling is at measure_clipboard.h). The phase column's measure
+// measure being serialized content. The phase column's measure
 // double-click was
 // that column's FIRST pointer authoring gesture (recorded at the router arm,
 // run_marker_click_act) — measure-scoped alone until 2026-08-30, when the
@@ -11489,11 +11436,11 @@ inline const ViewState& active_view_state(const AppState& a) {
 // bound axis addressed, bare `i` itself (the off edge must always be
 // reachable), bare `m` (BPM iterations, the one road that leaves this mode
 // by entering another and which lands nothing in history at the press) and
-// THE TWO CLIPBOARD COPIES, Ctrl+P and Ctrl+/, which are the two exceptions:
-// each reads a run into a session clipboard and pushes nothing, so the undo
-// domain this lock protects has no interest in them, while the read-only lock
-// eats the propagate family whole for its own reason — one tab's authored
-// content. The three PASTES stay refused by both. WHAT
+// THE CLIPBOARD COPY, Ctrl+P, which is the exception: it reads a run into a
+// session clipboard and pushes nothing, so the undo domain this lock protects
+// has no interest in it, while the read-only lock eats the propagate family
+// whole for its own reason — one tab's authored content. The two PASTES stay
+// refused by both. WHAT
 // IT TAKES AWAY IS THE W/P COLUMN SWITCH AND THE PAIRED MARCH (architect
 // 2026-09-10): the mode is lit for the column you are in, so bare `p` and the
 // absolute view selectors 1/2/3 — which compose that switch — refuse while the
@@ -12168,11 +12115,10 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete is
 //     a delete in either column;
-//   * THE TWO CLIPBOARD COPIES, Ctrl+P and Ctrl+/, past their three gates;
-//   * THE THREE PROPAGATE PASTES — the phase paste's confirmed act
-//     (PhaseResetPropagate::paste_apply), the state paste
-//     (paste_state_apply) and the measure paste's write pass
-//     (GuiInputHandler::apply_measure_paste), each past its own last refusal;
+//   * THE CLIPBOARD COPY, Ctrl+P, past its three gates;
+//   * THE TWO PROPAGATE PASTES — the phase paste's confirmed act
+//     (PhaseResetPropagate::paste_apply) and the state paste
+//     (paste_state_apply), each past its own last refusal;
 //   * BARE `m` (GuiFlagEditor::enter_bpm_mode, at the flag flip past its five
 //     bails);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -13171,7 +13117,7 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // beside the chord table it walks) asks history_mode_key_blocked about each
 // button's own chord and hand-answers the THREE ANCHORS, which have none —
 // Settings dead on the toggle_dropdown lockout, EDIT dead beside it since
-// 2026-08-20 (every one of its five propagate rows is a chord the mode drops,
+// 2026-08-20 (every one of its three propagate rows is a chord the mode drops,
 // so its menu would open onto nothing), File live since 2026-08-13, its
 // menu opening in the view — and IT CARRIES THE AUTHORITATIVE PARTITION
 // INVENTORY. (It hand-answered a fourth, Navigation, live from 2026-08-08 until
