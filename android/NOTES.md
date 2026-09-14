@@ -874,11 +874,13 @@ and nothing else notices).
   fullscreen under `Theme.NoTitleBar.Fullscreen`, which hides the status bar
   only; hiding the navigation/taskbar is Java-only (immersive mode), which is
   out of M3's scope and on the same list as SAF and the clipboard.
-- **The `.settings` of a pre-2026-08-26 project is load-fatal** — it carries no
-  `waveform_magnification_level=` line and every key is required. The pushed
-  copy for this pass had the line hand-added at its `kSettingsOrder` position
-  alongside `gui_scale=175`; `projects/` was not touched. This is the standing
-  no-migration convention, not an Android problem.
+- **The `.settings` of a pre-2026-08-26 project was load-fatal** at this pass —
+  it carried no `waveform_magnification_level=` line and every key was
+  required. The pushed copy had the line hand-added at its `kSettingsOrder`
+  position alongside `gui_scale=175`; `projects/` was not touched. This is the
+  standing no-migration convention, not an Android problem. (The key LEFT THE
+  SCHEMA on 2026-09-14 with the per-marker magnification — a `.settings` still
+  carrying it is load-fatal now, the same convention the other way round.)
 - **`libaaudio.so` is in `DT_NEEDED` and nothing calls it yet.** It is linked
   ahead of M4 deliberately; `--as-needed` is not passed, so the reference
   stands rather than silently disappearing and reappearing between milestones.

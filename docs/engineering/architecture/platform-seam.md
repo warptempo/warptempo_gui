@@ -1122,9 +1122,11 @@ differs by host.
 
 Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
-wide, and the icon row fits WHOLE up to gui_scale 240 since the CENTER ON NEXT
-MARKER LAMP WAS DELETED on 2026-09-13 — one box and one gap, leaving the walk
-959 authored px (232 from 2026-09-04, when the ITERATIONS MENU WAS DELETED and
+wide, and the icon row fits WHOLE up to gui_scale 258 since the MAGNIFY /
+REDUCE WAVEFORM PAIR WAS DELETED on 2026-09-14 with the per-marker
+magnification — two boxes and two gaps, leaving the walk 891 authored px (240
+from 2026-09-13, when the CENTER ON NEXT MARKER LAMP WAS DELETED — one box and
+one gap, leaving the walk 959; 232 from 2026-09-04, when the ITERATIONS MENU WAS DELETED and
 its two commands came back to the row as a group of their own — two boxes, one
 gap and one separator, leaving the walk 993; 250 for the hours the day's earlier REGROUPING had it at 918, the
 two view lamps merging into one group and the RESTRICT UNDO TO VIEWPORT lamp
@@ -1137,8 +1139,8 @@ lamp's 959 from 2026-08-31; 249 at the 2026-08-27
 Series relocation's 925, the same walk and the same ceiling reached from the
 other direction; 228 at the 1007-px row before that, and 221 for the one
 day the row was 1041). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
-the whole icon row lands (959*2.25 = 2158 of the panel's 2304, 146 px of slack
-where the 993-px row had 70) and the layout is the one the redesign was drawn
+the whole icon row lands (891*2.25 = 2005 of the panel's 2304, 299 px of slack
+where the 959-px row had 146 and the 993-px row 70) and the layout is the one the redesign was drawn
 against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is
 TAPPABLE, whether the second tap of a double-tap lands on the flag rather than
