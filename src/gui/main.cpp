@@ -1533,6 +1533,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // GuiPaintHandler::force_synchronous_waveform_rebuild.
     viewport.request_waveform_sync_ =
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
+    // The marker drag's per-motion gain kick asks this first (the guard's
+    // contract at Viewport::displayed_plate_geometry_is_live).
+    viewport.displayed_plate_geometry_is_live_ =
+        [&]() { return paint_handler.displayed_plate_geometry_is_live(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the

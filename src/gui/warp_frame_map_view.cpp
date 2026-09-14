@@ -185,7 +185,38 @@ const WaveformGainProfileCache& effective_waveform_gain_profile(
         }();
         return kIgnored;
     }
+    if (app.drag.active && app.drag.drag_mode == 'W')
+        return waveform_gain_profile_drag_cached(app);
     return waveform_gain_profile_cached(app);
+}
+
+const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
+    const AppState& app) {
+    const std::vector<GuiWarpMarker>& live = app.warpmarkers.markers();
+    const int idx = app.drag.dragging_markers.empty()
+                        ? -1 : app.drag.dragging_markers[0];
+    // A degenerate slot, or a proposal still at the stored frame, is the
+    // resting store's own profile.
+    if (idx < 0 || idx >= static_cast<int>(live.size()) ||
+        live[static_cast<std::size_t>(idx)].time_frame ==
+            app.drag.proposed_authored_frame)
+        return waveform_gain_profile_cached(app);
+    WaveformGainProfileCache& c = app.waveform_gain_profile_drag_cache;
+    const long long gen   = app.warpmarkers.generation();
+    const int64_t   frame = app.drag.proposed_authored_frame;
+    if (c.valid && c.markers_gen == gen && c.dragged_marker == idx &&
+        c.dragged_frame == frame)
+        return c;
+    std::vector<GuiWarpMarker> proposed = live;
+    proposed[static_cast<std::size_t>(idx)].time_frame = frame;
+    (void)reorder_markers_by_time(proposed);
+    c.profile        = build_waveform_gain_profile(proposed);
+    c.hash           = waveform_gain_profile_hash(c.profile);
+    c.markers_gen    = gen;
+    c.dragged_marker = idx;
+    c.dragged_frame  = frame;
+    c.valid          = true;
+    return c;
 }
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(

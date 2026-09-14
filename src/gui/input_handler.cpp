@@ -2129,9 +2129,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Tab family: Ctrl+Tab / Ctrl+Shift+Tab switch tabs; Tab / Shift+Tab /
-    // IsoLeftTab cycle marker focus (always recentering the viewport on the
-    // focused marker).
+    // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs,
+    // framing each step through plain `c`; Tab / Shift+Tab / IsoLeftTab cycle
+    // marker focus, framing per the zoom at the landing (marker_walk_frame —
+    // centred at the working zoom or finer, paged in only when offscreen
+    // coarser).
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
@@ -2610,7 +2612,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // the cell, and at the working zoom or coarser nothing moves. The framing
     // the bare arms handed in was asked at the finer level and is Center
     // there, which is what marker_walk_frame answers at working too; the march
-    // states FollowPage at both of its steps and runs `c` behind each.
+    // states NoFrame at both of its steps and runs `c` behind each.
     viewport.snap_zoom_to_working_if_finer();
 
     if (step.same_marker) {
@@ -2635,8 +2637,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // the BARE Tab walk's framing alone (architect 2026-09-13), so the three
     // bare arms hand this marker_walk_frame(app) while the Ctrl+Shift+Tab
     // paired march — a different act, which runs plain `c` behind each step
-    // (architect 2026-09-14) — hands it MarkerLandingFrame::FollowPage, the
-    // `c` doing the centring. Putting the policy read in here is what made
+    // (architect 2026-09-14) — hands it MarkerLandingFrame::NoFrame, the
+    // `c` behind it being the step's one framing. Putting the policy read in here is what made
     // the march inherit it, which is the shape the required parameter exists
     // to prevent: framing cannot be acquired by saying nothing.
     // Otherwise byte-identical to the `c` gesture's marker jump — the zoom is
@@ -2748,7 +2750,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // synchronous rebuild here — no second call in this function's tail. The
     // unmoved path (EOF-clamped no-op) needs none.
     //
-    // `frame` IS THE CALLER'S TOO (architect 2026-09-04), and it selects between these two lines and nothing else:
+    // `frame` IS THE CALLER'S TOO (architect 2026-09-04), and it selects among the switch's arms and nothing else:
     // the land above already happened, so a FollowPage landing still moves the
     // focus and the playhead — the camera simply stays where the user left it.
     // THE FollowPage ARM IS FOLLOW'S PAGE, not a second scroll spelling:
@@ -2756,18 +2758,22 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // offscreen playhead into view at follow's own margin, it asks no follow
     // bit of its own (its callers do), and playback is stopped above so it
     // reads the resting cursor. A landing already on screen leaves it a no-op,
-    // which is the whole of what "does not frame" means here.
+    // which is the whole of what "does not frame" means here. THE NoFrame ARM
+    // WRITES NO CAMERA AT ALL (2026-09-14), an offscreen landing included: its
+    // caller frames behind it.
     //
     // WHO PASSES WHAT, re-grepped 2026-09-14: `c` (run_center_command) states
     // Center; the three bare Tab arms state marker_walk_frame(app), the zoom's
-    // answer; the Ctrl+Shift+Tab paired march states FollowPage at each walk
-    // step and then runs run_center_command, so a landing already on screen
-    // is centred once, by `c`. Shift+`j`, the A/B audition and the march reach
-    // the camera through run_center_command by name and so take its Center
-    // with it.
+    // answer (Center or FollowPage); the Ctrl+Shift+Tab paired march states
+    // NoFrame at each walk step and then runs run_center_command, so every
+    // landing, on screen or off, is framed once, by `c`, and no FollowPage
+    // page-render lands for `c` to supersede at once.
+    // Shift+`j`, the A/B audition and the march reach the camera through
+    // run_center_command by name and so take its Center with it.
     switch (frame) {
         case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
         case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
+        case MarkerLandingFrame::NoFrame:                                            break;
     }
     return true;
 }
@@ -2775,7 +2781,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 void GuiInputHandler::run_center_command(double target_zoom_level) {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
-    // FORK LIVES. SIX CALLERS, re-grepped 2026-09-14: the live `c` key arm
+    // FORK LIVES. SEVEN CALLERS, re-grepped 2026-09-14: the live `c` key arm
     // (handle_plain_bare_keys), the history mode's own `c` arm
     // (handle_history_mode_key, which must claim the key to keep it off the
     // mode's allowlist), since 2026-08-05 run_overview_command's SECOND ARM —
@@ -2793,7 +2799,10 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // exactly the marker the jump named — and, since 2026-09-14, the
     // Ctrl+Shift+Tab PAIRED MARCH (input_key_dispatch.cpp), ONE caller that
     // also calls this TWICE, behind each tab's walk step, so both tabs end at
-    // the working zoom centred on their new focus (architect 2026-09-14).
+    // the working zoom centred on their new focus (architect 2026-09-14), and
+    // the same day the `h` VIEW'S PAIRED MARCH (handle_history_mode_key), the
+    // same composition over the diff-flag cycle — TWICE, one caller — which
+    // reaches this body's mode arm below.
     //
     // THE LEVEL IS THE CALLER'S, defaulting to kWorkingZoomLevel (the header
     // carries the default; every caller but one passes nothing and so means
@@ -2807,9 +2816,10 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // decision for all of them: every caller but `0` is reachable in one mode
     // only — the two key arms because the mode claims `c` above the live
     // dispatch, so the live arm below never runs in the mode, the audition
-    // and Shift+`j` because both are refused inside the mode, and the live
-    // march because the mode claims Ctrl+Shift+Tab for its own — while `0` is
-    // reachable in both. Putting the question at `0` alone would leave the
+    // and Shift+`j` because both are refused inside the mode, the live
+    // march because the mode claims Ctrl+Shift+Tab for its own, and the
+    // mode's march because it is that claim — while `0` is reachable in
+    // both. Putting the question at `0` alone would leave the
     // mode's own `c` answering it a second time in another spelling. One owner,
     // one answer.
     if (app.history_mode.active) {

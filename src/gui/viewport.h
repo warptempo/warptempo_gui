@@ -117,13 +117,19 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: THREE MEMBERS since 2026-09-14 — the two roads
+    //  - THE PLATE'S OWN GAIN: FIVE MEMBERS since 2026-09-14 (re-grepped over
+    //    kick_waveform_sync_if_gain_changed's callers) — the two roads
     //    that write a warp marker's magnification, the MAGNIFICATION EDITOR'S
     //    COMMIT (GuiFlagEditor::commit_magnification_edit) and the VALUE STEP
     //    (GuiWarpMarkersOps::adjust_magnification_step — bare Up/Down and the
-    //    plain wheel over the box), plus the IGNORE WAVEFORM MAGNIFICATION
+    //    plain wheel over the box), the IGNORE WAVEFORM MAGNIFICATION
     //    lamp's setter (GuiInputHandler::set_ignore_waveform_magnification,
-    //    bare `]`) — and ALL THREE kick through
+    //    bare `]`), and the WARP MARKER DRAG's two halves in source view —
+    //    its MOTION (MarkerDragOps::apply_drag_motion, a section boundary
+    //    riding the hand through the effective profile's drag slot, guarded
+    //    by displayed_plate_geometry_is_live under the drag's freeze) and its
+    //    COMMIT (MarkerDragOps::commit_drag, the release's column snap landing
+    //    in its own frame) — and ALL FIVE kick through
     //    kick_waveform_sync_if_gain_changed below, never this function direct,
     //    so a write the EFFECTIVE profile cannot see renders nothing. (The value
     //    drag's magnification motion was a fourth for its first hours; the drag
@@ -248,6 +254,20 @@ struct Viewport {
     // work are the authored field's and stay unconditional.
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
+
+    // THE MARKER DRAG'S GUARD ON ITS PER-MOTION GAIN KICK (architect
+    // 2026-09-14; the argument is at the call, MarkerDragOps::apply_drag_motion):
+    // true when a plate is on screen and its fingerprint's GEOMETRY — viewport
+    // span, area, inset, the S/T bit and the warp map hash — equals the live
+    // inputs', so a synchronous rebuild would change the plate's gain and
+    // nothing else. Wired in main.cpp to
+    // GuiPaintHandler::displayed_plate_geometry_is_live; false unwired. Its
+    // one caller is that motion.
+    std::function<bool()> displayed_plate_geometry_is_live_;
+    bool displayed_plate_geometry_is_live() const {
+        return displayed_plate_geometry_is_live_ &&
+               displayed_plate_geometry_is_live_();
+    }
 
     // Viewport mutators.
     // THE MOVEMENT OWNER — the cursor's live chokepoint, and since 2026-08-19

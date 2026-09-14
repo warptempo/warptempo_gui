@@ -195,8 +195,30 @@ struct WaveformGainProfileCache {
     long long           markers_gen = -1;
     WaveformGainProfile profile;
     uint64_t            hash        = 0;
+    // THE DRAG SLOT'S TWO EXTRA KEY FIELDS (waveform_gain_profile_drag_cached,
+    // below) — the dragged marker's store index and its commit-rounded
+    // proposal. The resting slot neither writes nor reads them.
+    int                 dragged_marker = -1;
+    int64_t             dragged_frame  = 0;
 };
 const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app);
+
+// THE GAIN PROFILE WHILE A WARP MARKER IS DRAGGED (architect 2026-09-14: the
+// magnified sections follow the drag, not the release). A marker drag leaves
+// the live store untouched until its commit (DragState), so the resting slot
+// above cannot see the hand. This SECOND SLOT builds the profile from a COPY of
+// the warp store with the dragged marker (DragState::dragging_markers[0]) at
+// DragState::proposed_authored_frame — the proposal converted by the commit's
+// own conversion — re-sorted by reorder_markers_by_time exactly as commit_drag
+// re-sorts, so every motion shows the picture the release would leave. Keyed
+// (warp store generation, dragged index, proposed frame), so the plate inputs,
+// the overview bar cache and the gain kick's hash share ONE build per
+// distinct proposal. A proposal still at the marker's stored frame answers
+// the resting slot itself (same store, same profile). Its one reader is
+// effective_waveform_gain_profile, and only while a WARP-column drag stands
+// (DragState::drag_mode 'W').
+const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
 // THE PROFILE EVERY WAVEFORM PICTURE TAKES (architect 2026-09-14): the live
@@ -206,7 +228,10 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 // ONE place, so the picture caches' existing hash keys re-render on every
 // lamp write and view switch that changes the answer with no per-caller code
 // (a live profile with no breakpoints is hash 0 as well, and there the two
-// answers are rightly the same picture). READERS: the plate's render inputs
+// answers are rightly the same picture). While a WARP-column marker drag stands
+// and the ignore does not, the live answer is the DRAG SLOT's
+// (waveform_gain_profile_drag_cached), so the picture shows the store as the
+// release would leave it. READERS: the plate's render inputs
 // (compute_waveform_render_inputs), the overview lane's bar cache
 // (maybe_rebuild_overview_bar_cache) and the gain kick's hash
 // (Viewport::waveform_gain_hash). waveform_gain_profile_cached keeps its one

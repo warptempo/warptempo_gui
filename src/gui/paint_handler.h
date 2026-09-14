@@ -667,6 +667,14 @@ struct GuiPaintHandler {
     // line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();
 
+    // True when a plate is displayed (wf_cache.fp_rendered) and every GEOMETRY
+    // field of its fingerprint — vp_start, vp_end, area_w, area_h, inset, the
+    // target bit and the warp map hash — equals the live render inputs'
+    // (compute_waveform_render_inputs), so the only field a synchronous
+    // rebuild could change is the gain profile hash. The contract and its one
+    // reader are at Viewport::displayed_plate_geometry_is_live.
+    bool displayed_plate_geometry_is_live() const;
+
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay stays

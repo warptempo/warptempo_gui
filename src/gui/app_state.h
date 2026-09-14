@@ -453,6 +453,20 @@ struct DragState {
     // MOTION/PAINT value: at commit it converts back to an authored frame through
     // the pixel-anchoring column snap (commit_drag).
     std::vector<double> moveable_times;
+    // THE PROPOSAL AS THE COMMIT WOULD STORE IT (architect 2026-09-14, the
+    // gain following the drag): moveable_times[0] converted to a whole source
+    // frame by the commit's OWN conversion (committed_frame_for_proposal,
+    // marker_drag.cpp — the bit-exact untouched branch, the painted column
+    // snap through authored_frame_at_column, the integer walls), written
+    // beside moveable_times[0] at begin_drag and at every apply_drag_motion.
+    // Its ONE reader is the gain profile's drag slot
+    // (waveform_gain_profile_drag_cached, warp_frame_map_view.h), which builds
+    // the warp store as it would stand if the drag were released now — so the
+    // magnified sections move with the hand and land where the release puts
+    // them. The viewport and the displayed map are frozen for the gesture, so
+    // the motion-time answer is the commit's answer; commit_drag still
+    // converts for itself.
+    int64_t             proposed_authored_frame = 0;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
     // apply_drag_motion carries it into the source domain through the
@@ -5493,6 +5507,10 @@ struct AppState {
     // warp_frame_map_view.h), keyed on the warp store generation. Mutable for
     // the same reason as the red-flag sets: refreshed from const readers.
     mutable WaveformGainProfileCache waveform_gain_profile_cache;
+    // Its DRAG SLOT (waveform_gain_profile_drag_cached): the profile of the
+    // store as a standing warp marker drag would commit it, keyed (store
+    // generation, dragged index, proposed frame). Same mutability argument.
+    mutable WaveformGainProfileCache waveform_gain_profile_drag_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
     // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
@@ -12236,18 +12254,26 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 // landing at the standing zoom, which is what the Tab walk and `c` have always
 // done; `FollowPage` leaves the camera where it stands and merely pages an
 // offscreen landing into view through follow's own body
-// (Viewport::follow_scroll_if_needed).
+// (Viewport::follow_scroll_if_needed); `NoFrame` (2026-09-14) moves no camera
+// at all — the focus and the playhead land and nothing scrolls, even for an
+// offscreen landing. NoFrame exists for exactly ONE composition, the
+// Ctrl+Shift+Tab PAIRED MARCH in both of its forms (the live march over
+// cycle_marker_focus and the `h` view's over cycle_history_diff_flag_focus),
+// each of whose steps runs run_center_command behind it: `c` is then the SOLE
+// framing owner, so a FollowPage page-render of an offscreen landing that `c`
+// would immediately supersede never happens.
 //
 // The type exists so that framing cannot be inherited. It is a REQUIRED
-// argument of both GuiInputHandler::cycle_marker_focus and
-// GuiInputHandler::jump_playhead_to_focused_marker — neither carries a default
-// — so a new caller of either cannot compile without saying which of the two
+// argument of GuiInputHandler::cycle_marker_focus,
+// GuiInputHandler::jump_playhead_to_focused_marker and
+// GuiInputHandler::cycle_history_diff_flag_focus — none carries a default
+// — so a new caller of any cannot compile without saying which of the three
 // it means, which is exactly what a defaulted bool would have let it skip.
 // No `Gui` prefix: that convention rides the marker-side data types
 // (GuiWarpMarker, GuiPhaseResetMarker), while the small policy and verdict
 // enums beside this one — MarkerCell, TrimHit, PayloadEligibility — carry
 // none.
-enum class MarkerLandingFrame { Center, FollowPage };
+enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 
 // WHICH SIDE OF THE WORKING ZOOM A LEVEL IS ON — true at the working zoom or
 // finer (a smaller level is finer), the line inclusive (architect 2026-09-13:
@@ -12273,7 +12299,8 @@ inline bool zoom_level_at_or_finer_than_working(double level) {
 //   DISCRETE, at the write itself —
 //     * Viewport::apply_zoom_change past its no-op return: `c` (and through it
 //       Shift+`j`, `0`'s second arm, the A/B audition's own `c` and, since
-//       2026-09-14, the Ctrl+Shift+Tab paired march's two, none of which takes
+//       2026-09-14, the Ctrl+Shift+Tab paired march's two in both its live
+//       and its `h` view form, none of which takes
 //       a special case), `0`'s zoom-out arm, the bare `=` / `-` keys, the
 //       icon row's zoom buttons, and the settings editor's typed ACTIVE-tab
 //       `tab_<a|b>_zoom=`;
@@ -12328,7 +12355,7 @@ inline void seed_keep_centered_zoom(AppState& a) {
 // It is the bare Tab / Shift+Tab / IsoLeftTab arms' own answer and nobody
 // else's. It lives out here rather than inside the walk so the walk carries
 // no framing policy at all: the three bare arms call this by name, the
-// Ctrl+Shift+Tab paired march states MarkerLandingFrame::FollowPage at both of
+// Ctrl+Shift+Tab paired march states MarkerLandingFrame::NoFrame at both of
 // its walk steps and runs `c` behind each (architect 2026-09-14), and `c`
 // states Center. `c`, Shift+`j`, the A/B audition and the march frame through
 // run_center_command, and marker clicks land through
@@ -16983,14 +17010,15 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // exemption named no case the close rule does not already own, and one
 // mechanism per behaviour is the shape to keep.
 //
-// THE TAB CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter, which is what
-// carries it into the history view for free: in there the row selects the WALK
-// SOURCE and the lit one is still the one with no hover face. Both slots take
-// it, in both meanings of the row, with no mode term anywhere in the
-// expression. It sits in the ZONE rather than in hoverability alone because the
-// tabs carry no tooltip either way while the view stands (their null rows are
-// membership), so no behaviour rests on the distinction and one statement is
-// better than two.
+// THE TAB CARVE-OUT FOLLOWS THE SELECTED BIT, not the tab letter: the row is
+// the A/B tabs in every state, the `h` view included, and the lit tab is the
+// one with no hover face. Both slots take it, with no mode term anywhere in the
+// expression. It sits in the ZONE rather than in hoverability alone because
+// the distinction is load-bearing for the hint: the tabs carry a tooltip
+// (their act's name and, since 2026-09-14, the shift line naming the paired
+// march), and the zone is what keeps it — and the press — off the SELECTED
+// tab, so only the other tab, the one a press or a march lands on, ever shows
+// it.
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
     if (a.dropdown.open()) return false;
     if (redesign_button_is_tab(b)) return !redesign_button_selected(a, b);

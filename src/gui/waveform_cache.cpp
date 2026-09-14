@@ -744,6 +744,19 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     maybe_rebuild_flag_cache();
 }
 
+bool GuiPaintHandler::displayed_plate_geometry_is_live() const {
+    if (!wf_cache.fp_rendered) return false;
+    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) return false;
+    return wf_cache.fp_vp_start            == in.vp_start &&
+           wf_cache.fp_vp_end              == in.vp_end &&
+           wf_cache.fp_area_w              == in.area_w &&
+           wf_cache.fp_area_h              == in.area_h &&
+           wf_cache.fp_inset_px            == in.inset_px &&
+           wf_cache.fp_target              == in.is_target &&
+           wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
+}
+
 // -- Flag-cache fingerprint hashes ---------------------------------------
 
 namespace {

@@ -2686,9 +2686,10 @@ private:
     // gated it. The zoom governs the BARE Tab walk's framing alone (architect
     // 2026-09-13), so the three bare arms pass
     // marker_walk_frame(app) (app_state.h, its one owner) while the
-    // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::FollowPage
+    // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::NoFrame
     // outright and frames each step through run_center_command behind it
-    // (architect 2026-09-14, the march runs plain `c`).
+    // (architect 2026-09-14, the march runs plain `c`, the one framing owner
+    // of its steps).
     // The parameter carries no default precisely so a future third caller
     // cannot inherit either answer by saying nothing.
     // The WHOLE Tab family comes through here: the three bare chords and the
@@ -2720,7 +2721,9 @@ private:
     // camera as `frame` says — MarkerLandingFrame::Center recentering the
     // viewport on the landing AT THE LEVEL IT IS CALLED AT,
     // MarkerLandingFrame::FollowPage leaving the camera where it stands and
-    // merely paging an OFFSCREEN landing into view through follow's own body.
+    // merely paging an OFFSCREEN landing into view through follow's own body,
+    // MarkerLandingFrame::NoFrame writing no camera at all (the paired march,
+    // whose `c` behind each step frames).
     // The zoom belongs to the caller too, and the callers differ in it: `c`
     // sets the working zoom right after this returns, the Tab family sets
     // nothing (2026-08-05).
@@ -4630,10 +4633,13 @@ private:
     //     per-class inverse, the always-force rule and the one undo entry.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     // The mode's Tab act, one step over the viewed checkpoint's diff flags in
-    // the given direction. Two callers, both in handle_history_mode_key: its
-    // Tab arm and its Ctrl+Shift+Tab march, which composes this with the A/B
-    // switch. Every walk rule it obeys is stated at those arms.
-    void cycle_history_diff_flag_focus(bool forward);
+    // the given direction, treating the camera as the REQUIRED `frame` says
+    // (MarkerLandingFrame, app_state.h — the live walk's own type). Two
+    // callers, both in handle_history_mode_key: its Tab arm, which states
+    // Center, and its Ctrl+Shift+Tab march, which states NoFrame and runs
+    // run_center_command behind each step exactly as the live march does
+    // (architect 2026-09-14). Every walk rule it obeys is stated at those arms.
+    void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);
     void open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
     void republish_history_lane_now();

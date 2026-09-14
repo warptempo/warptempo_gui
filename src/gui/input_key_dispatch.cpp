@@ -1768,7 +1768,8 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // walls and the empty arm are the consumed no-ops they were; only the
 // sentences left. (Which is also why the march's two compositions no longer
 // need the stack's duplicate-text rule to answer once.)
-void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
+void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
+                                                    MarkerLandingFrame frame) {
     const int n = static_cast<int>(app.history_mode.flags.size());
     if (n == 0) return;
     const int here = app.history_mode.focus;
@@ -1854,13 +1855,21 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward) {
     land_playhead_on_source_frame(
         app, audio, viewport,
         app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
-    // THE HISTORY WALK RECENTERS AT THE CURRENT ZOOM, follow mode not gating
-    // it, reading the flag it just landed on — THE LIVE FAMILY'S LANDING,
-    // MIRRORED. The zoom is the live walk's too: untouched at the working zoom
-    // or coarser (architect 2026-08-05, "no zoom on Tab" — a walk must not
-    // re-frame the view under the reader), and a strictly finer level already
-    // taken up to working by the snap above (architect 2026-09-13).
-    viewport.center_viewport_on_playhead();
+    // THE CAMERA IS THE CALLER'S STATEMENT, the live walk's own
+    // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker):
+    // the mode's Tab arm states Center — THE HISTORY WALK RECENTERS AT THE
+    // CURRENT ZOOM, follow mode not gating it, reading the flag it just landed
+    // on, the live family's landing mirrored — and the march states NoFrame,
+    // its `c` behind each step being the one framing. The zoom is the live
+    // walk's too: untouched at the working zoom or coarser (architect
+    // 2026-08-05, "no zoom on Tab" — a walk must not re-frame the view under
+    // the reader), and a strictly finer level already taken up to working by
+    // the snap above (architect 2026-09-13).
+    switch (frame) {
+        case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
+        case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
+        case MarkerLandingFrame::NoFrame:                                            break;
+    }
     // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
     // above either returned or picked a different index), so the full-window
     // damage the mode's focus click emits on a move is unconditional.
@@ -2176,35 +2185,39 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // THE PAIRED MARCH, MODE-LOCAL (architect 2026-08-18): "ctrl+shift+tab
         // is just short for 'tab, ctrl+tab, tab'", so it is built as exactly
         // that composition over the view's own vocabulary — the mode's Tab act,
-        // the A/B switch, the mode's Tab act again. (THE LIVE MARCH RUNS `c`
-        // BEHIND EACH STEP since 2026-09-14, the architect's ruling for that
-        // arm; this one is untouched by it and still frames each step through
-        // the cycle's own recentre at the standing zoom — a RECORDED
-        // ASYMMETRY, the view's `c` being run_center_command's mode arm should
-        // a ruling carry it here.)
+        // the A/B switch, the mode's Tab act again — AND EACH STEP RUNS PLAIN
+        // `c` BEHIND IT, exactly as the live march does (architect 2026-09-14):
+        // the cycle states NoFrame, so it moves the focus and lands the playhead
+        // and writes no camera, and run_center_command — whose mode arm is the
+        // view's own `c`, re-landing on the focused diff flag (idempotent here)
+        // and then setting the working zoom and centring — is the step's one
+        // framing. `c` runs whether or not its step landed anything, as the key
+        // would.
         //
         // WHAT IT LEAVES BEHIND is the march's own shape: the mode's focus is
         // ONE index over one diff-flag list (the two tabs share both marker
         // stores, so the list is the same on either side), and each step lands
-        // THE THEN-ACTIVE TAB's playhead and recenters THAT tab's viewport at
-        // its own zoom (snapped up to working first where that zoom is finer,
-        // inside the cycle — one snap per step). So
-        // the leaving tab is parked on one flag and the
-        // arriving tab on the next, each in its own window — which is what
-        // makes a march a march.
+        // THE THEN-ACTIVE TAB's playhead and frames THAT tab's viewport at the
+        // working zoom through `c`, the switch saving the first tab's framing
+        // into its band before the second step runs. So the leaving tab is
+        // parked on one flag and the arriving tab on the next, each in its own
+        // window — which is what makes a march a march.
         //
         // THE SWITCH IS THE ALLOWLIST'S OWN Ctrl+Tab, spelled here rather than
         // dispatched: the same active_views call and the same target-render
         // trigger the live march ends on, so the two compositions differ in the
-        // cycle they name and in the live march's `c`.
-        cycle_history_diff_flag_focus(true);
+        // cycle they name and nothing else.
+        cycle_history_diff_flag_focus(true, MarkerLandingFrame::NoFrame);
+        run_center_command();
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_history_diff_flag_focus(true);
+        cycle_history_diff_flag_focus(true, MarkerLandingFrame::NoFrame);
+        run_center_command();
         target_render.trigger();
         return true;
     }
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
-        cycle_history_diff_flag_focus(key == GuiKeys::Tab && !mods.shift);
+        cycle_history_diff_flag_focus(key == GuiKeys::Tab && !mods.shift,
+                                      MarkerLandingFrame::Center);
         return true;
     }
 
@@ -8360,15 +8373,15 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // same body. `c` runs whether or not its step landed anything, as the key
     // would: with no focus it is the zoom and the centre on the playhead.
     //
-    // THE WALK STEP STATES FollowPage, NOT Center, and that is what keeps the
-    // camera to one recentre per step: `c` opens with its own
-    // jump_playhead_to_focused_marker(Center) and ends with the post-zoom
-    // centre, so a Center here would be a third centring thrown away twice.
-    // FollowPage leaves an on-screen landing's camera untouched and only
-    // pages an offscreen one in (Viewport::follow_scroll_if_needed), which
-    // `c` then recentres. The zoom still does not govern the march's framing:
-    // marker_walk_frame is the bare Tab walk's answer alone, and this arm
-    // states its own.
+    // THE WALK STEP STATES NoFrame, and that is what makes `c` the step's ONE
+    // framing: `c` opens with its own jump_playhead_to_focused_marker(Center)
+    // and ends with the post-zoom centre, so a Center here would be a third
+    // centring thrown away twice, and a FollowPage would still page-render an
+    // OFFSCREEN landing only for `c` to supersede it at once. NoFrame moves
+    // the focus and lands the playhead and writes no camera. The zoom still
+    // does not govern the march's framing: marker_walk_frame is the bare Tab
+    // walk's answer alone, and this arm states its own. The `h` view's march
+    // (handle_history_mode_key) is this composition over its own cycle.
     //
     // BOTH STEPS FRAME BECAUSE THE VIEWPORT IS SAVED BETWEEN THEM, and that is
     // the whole point of a paired march: switch_active_tab_view_to pushes the
@@ -8398,10 +8411,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // after the switch has restored the other tab's level; the `c` behind it
     // then finds the level already at working whenever that snap fired.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
-        cycle_marker_focus(true, MarkerLandingFrame::FollowPage);
+        cycle_marker_focus(true, MarkerLandingFrame::NoFrame);
         run_center_command();
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus(true, MarkerLandingFrame::FollowPage);
+        cycle_marker_focus(true, MarkerLandingFrame::NoFrame);
         run_center_command();
         target_render.trigger();
         return true;
