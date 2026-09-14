@@ -8486,14 +8486,19 @@ void GuiInputHandler::copy_focused_marker_value() {
     // invariant that an accepted press shows something): A CLIPBOARD WRITE IS
     // THE ONE SUCCESS IN THE PRODUCT THAT PAINTS NOTHING — no surface displays
     // a clipboard, and since the resolved readout retired with the status bar
-    // nothing displays a resolved value either — so this card is the whole of
-    // what the press shows. The save, a render and a Synchronize stay silent
-    // by ruling: each has its own visible answer (row 8's clock suffix — the
-    // `*` a save clears — and the file on disk). THE BUTTON INHERITS IT: the bottom row's Copy resolved
-    // value dispatches this same bare `j` through on_key at its lift, so the
-    // sentence lives once and both roads say it.
+    // no standing surface displays a resolved value either — so this card is
+    // the whole of what the press shows, AND IT NAMES THE VALUE (architect
+    // 2026-09-13): reading what was copied otherwise needs a terminal or a
+    // text editor, and a card is an event, so no state surface returns. The
+    // value is the very `payload` handed to the clipboard, single-quoted as
+    // every named thing on a card is. The save, a render and a Synchronize
+    // stay silent by ruling: each has its own visible answer (row 8's clock
+    // suffix — the `*` a save clears — and the file on disk). THE BUTTON
+    // INHERITS IT: the bottom row's Copy resolved value dispatches this same
+    // bare `j` through on_key at its lift, so the sentence lives once and both
+    // roads say it.
     notifications.notify(AppState::NotificationClass::Normal,
-                         "Copied the resolved value");
+                         "Copied the resolved value '" + payload + "'");
 }
 
 // THE JUMP — Shift+`j`: stand the OTHER A/B tab on the marker this one's

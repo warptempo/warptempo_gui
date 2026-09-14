@@ -984,7 +984,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // invalidate_waveform_area are coalesced duplicates. (A THIRD CALL STOOD HERE
 // and is deleted with the RESOLVED READOUT it served, 2026-08-29: this route's
 // landing selection used to move that readout, which sat one lane below the
-// rebuild's rect. No surface displays a resolved value any more, and the
+// rebuild's rect. No state surface displays a resolved value any more, and the
 // paste's "Stopped at …" report is a notification card with its own owner.)
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input) input->switch_active_audio_view_to('T');

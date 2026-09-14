@@ -132,8 +132,9 @@ static double show_row_text(cairo_t* cr, cairo_scaled_font_t* font,
 // ONE CELL, TWO STRINGS THAT RANK: the `h` walk line wins while the view
 // stands, and the render's progress line is what it carries otherwise. THE
 // RESOLVED READOUT — the third state string, and the bar's right cell for its
-// one day — RETIRED WHOLE with the bar: nothing displays a resolved value any
-// more, bare `j` copies it and Shift+`j` goes to the marker it came from.
+// one day — RETIRED WHOLE with the bar: no state surface displays a resolved
+// value any more, bare `j` copies it (its card, an event, naming the copied
+// value — architect 2026-09-13) and Shift+`j` goes to the marker it came from.
 //
 // THE STRINGS' EARLIER HOMES, as history: they were the bottom-LEFT
 // lead-in until the 2026-08-12 unification, the bottom row's right end after
