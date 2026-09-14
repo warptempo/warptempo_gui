@@ -3,6 +3,7 @@
 #include "audio.h"
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
+#include "notifications.h"      // kTabReadOnlyCard (the value steps' lock)
 #include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse,
                                 // which owns the overlay hide with it)
 #include "warp_frame_map_build.h"
@@ -1508,6 +1509,118 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     // damage: a stem reads the class, and a bound changes no class; no map
     // moved, so no image moved.
     viewport.invalidate_top_strip();
+    return std::nullopt;
+}
+
+// -- THE VALUE STEP'S MEASURE AND MAGNIFICATION BODIES (architect 2026-09-14) --
+//
+// Bare Up/Down step the ADDRESSED CELL — the value step — and these are its two
+// newer axes. Each mirrors the tempo step's singleton arm clause for clause:
+// the leading refusal block the face reads, the lock (asked HERE, because the
+// plain wheel over a flag cell reaches these bodies past no keyboard gate of
+// its own — it asks the key gate's predicates itself, and this is the belt),
+// the kind refusal on a card (the measure's offset form), the wall asked
+// through the directional face AHEAD OF THE COALESCE STAMP and silent, the
+// collapse to the focus, the write through the one landing owner, one undo
+// entry per burst, the byte-equal pop through record_gesture and the dirty
+// re-derive. WHAT IS ABSENT IS THE TEMPO TAIL: neither field is a map input,
+// so there is no warp_tempo_write_tail — no re-warp, no render trigger, no
+// re-land — and the playhead does not move. The owners are at app_state.h's
+// value-step block.
+//
+// THE LOCK'S SENTENCE is the lock's own — the tab's on a read-only tab, grid
+// iterations' under the lit lamp — the two sentences the keyboard gate's
+// cards carry for the same two states.
+static const char* warp_value_step_lock_refusal(const AppState& app) {
+    if (active_view_state(app).read_only) return kTabReadOnlyCard;
+    if (app.iteration_mode_enabled)      return kIterationLockCard;
+    return nullptr;
+}
+
+GuiOpRefusal GuiWarpMarkersOps::adjust_measure_step(int64_t delta,
+                                                    bool synthesized_repeat) {
+    if (!warp_value_step_actionable(app))
+        return "Select a warp marker to change its measure";
+    if (const char* refusal = warp_value_step_lock_refusal(app))
+        return refusal;
+    // THE KIND REFUSAL — an offset measure — CARDS, and the face greys on it
+    // (measure_step_direction_actionable reads it first). Asked ahead of the
+    // wall so the wall's silent exit can never swallow its sentence.
+    if (const char* refusal = measure_step_kind_refusal(app)) return refusal;
+    // THE WALL, silent and ahead of the stamp: Down at 1, Up at 999. An
+    // accepted step that lands where it stands, so it spends the selection as
+    // the tempo step's wall does (selection_consumed, app_state.h).
+    if (!measure_step_direction_actionable(app, delta)) {
+        selection_consumed(app);
+        return std::nullopt;
+    }
+    const bool merge =
+        undo.coalesce_gesture(GestureKind::MeasureStep, synthesized_repeat);
+    selection.collapse_to_focused();
+    const std::vector<GuiWarpMarker>& mv_const = app.warpmarkers.markers();
+    const int f = app.last_selected_marker;
+    // A stale focus is a belt (the leading block range-checked it).
+    if (f < 0 || f >= static_cast<int>(mv_const.size())) return std::nullopt;
+    const GuiWarpMarker& before = mv_const[static_cast<size_t>(f)];
+    MarkerMeasureValue landed;
+    landed.whole = measure_step_landing(measure_step_start(before.measure), delta);
+    std::string spelled = format_marker_measure(landed);
+    // Unreachable past the wall (a blank always changes, an integer changes
+    // unless walled); kept as the tempo step's no-change belt is.
+    if (spelled == before.measure) return std::nullopt;
+    selection_consumed(app);
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    if (GuiWarpMarker* m = app.warpmarkers.marker_mut(f))
+        m->measure = std::move(spelled);
+    if (!merge) undo.push_undo_warp(std::move(pre_state));
+    undo.record_gesture(GestureKind::MeasureStep, merge);
+    undo.recompute_dirty();
+    // The marker lane alone: the measure box's text moved and nothing else.
+    viewport.invalidate_top_strip();
+    return std::nullopt;
+}
+
+GuiOpRefusal GuiWarpMarkersOps::adjust_magnification_step(
+        int64_t delta, bool synthesized_repeat) {
+    if (!warp_value_step_actionable(app))
+        return "Select a warp marker to change its magnification";
+    if (const char* refusal = warp_value_step_lock_refusal(app))
+        return refusal;
+    // NO KIND REFUSAL: every warp marker carries the field. THE WALL — an
+    // OWNED digit at 0 (Down) or at the max (Up); a blank never walls, its
+    // freeze to own being a change — silent, ahead of the stamp, spending the
+    // selection as an accepted step.
+    if (!magnification_step_direction_actionable(app, delta)) {
+        selection_consumed(app);
+        return std::nullopt;
+    }
+    const bool merge = undo.coalesce_gesture(GestureKind::MagnificationStep,
+                                             synthesized_repeat);
+    selection.collapse_to_focused();
+    const std::vector<GuiWarpMarker>& mv_const = app.warpmarkers.markers();
+    const int f = app.last_selected_marker;
+    if (f < 0 || f >= static_cast<int>(mv_const.size())) return std::nullopt;
+    // THE START IS THE RESOLVED DIGIT ON A BLANK and the landing FREEZES IT TO
+    // OWN (magnification_step_start, app_state.h — the tempo pass's shape).
+    const std::optional<uint8_t> landed = static_cast<uint8_t>(
+        magnification_step_landing(magnification_step_start(mv_const, f),
+                                   delta));
+    if (landed == mv_const[static_cast<size_t>(f)].magnification)
+        return std::nullopt;  // belt: unreachable past the wall
+    selection_consumed(app);
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    if (GuiWarpMarker* m = app.warpmarkers.marker_mut(f))
+        m->magnification = landed;
+    if (!merge) undo.push_undo_warp(std::move(pre_state));
+    undo.record_gesture(GestureKind::MagnificationStep, merge);
+    undo.recompute_dirty();
+    viewport.invalidate_top_strip();
+    // THE PICTURE MOVED: the store's new generation changes the waveform gain
+    // profile's hash, which dirties the plate fingerprint and the overview bar
+    // cache. The synchronous kick lands the new gain in the frame the box
+    // does — the magnification editor's commit, the same road
+    // (GuiFlagEditor::commit_magnification_edit).
+    viewport.kick_waveform_sync();
     return std::nullopt;
 }
 

@@ -164,6 +164,20 @@ struct GuiWarpMarkersOps {
     // target-view refusal — a bracket is target-legal. Never stops playback,
     // for the tempo step's own reason.
     GuiOpRefusal adjust_iter_bound_cents(MarkerCell side, int64_t delta_cents);
+    // THE VALUE STEP'S MEASURE AND MAGNIFICATION BODIES (architect
+    // 2026-09-14): step the FOCUSED warp marker's measure (a blank lands on 1,
+    // an integer clamps into [1, 999], an offset refuses on a card) or its
+    // magnification (a blank starts from the digit it resolves to and freezes
+    // to own at the landing; clamps into [0, 4]) by `delta` through the same
+    // ladder. SINGLETON on the focus (a group collapses to it); both locks
+    // refuse; the wall is silent and runs ahead of the coalesce stamp; ONE
+    // UNDO ENTRY per burst under its own GestureKind, the tap window merging
+    // physical presses and `synthesized_repeat` the held run. No re-warp, no
+    // render, no re-land, no playback stop. Owners and the full rule at
+    // app_state.h's value-step block.
+    GuiOpRefusal adjust_measure_step(int64_t delta, bool synthesized_repeat);
+    GuiOpRefusal adjust_magnification_step(int64_t delta,
+                                           bool synthesized_repeat);
     // `step_columns` is the press's signed PAINTED-COLUMN count (±1 bare, ±3
     // shifted, ±10 with ctrl — the ladder above), which the shared road reads
     // as a plain column delta the whole way down.

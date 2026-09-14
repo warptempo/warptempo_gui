@@ -99,8 +99,14 @@ struct GuiInputHandler;
 // pushes nothing now, so it has nothing to coalesce INTO, and the two subject
 // terms that kind alone read — the addressed cell and the W/P column — went
 // with it.
+// MEASURESTEP AND MAGNIFICATIONSTEP (architect 2026-09-14) are the value
+// step's two newer axes — the same arrows (and the plain wheel over a flag
+// cell) stepping the measure or the magnification field, singleton on the
+// focus. They are SEPARATE KINDS rather than one keyed by the cell so that a
+// burst never merges across cells: a tempo tap then a measure tap on the same
+// marker open two entries, as a nudge tap then a tempo tap always did.
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep
+    None, WarpNudge, PhaseResetNudge, TempoStep, MeasureStep, MagnificationStep
 };
 
 // THE TAP-COALESCE WINDOW (architect 2026-08-01): two consecutive PHYSICAL

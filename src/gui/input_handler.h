@@ -2293,6 +2293,26 @@ struct GuiInputHandler {
     void run_marker_click_act(int hit, int x, int y, bool shift, bool ctrl,
                               const DoubleClickCandidate& dc_at_press);
 
+    // THE PLAIN MARKER SELECT (2026-09-14) — the plain click's act whole (the
+    // stop, the single-select, the land, the addressed cell `cell`, the trim
+    // region overlay's hide) and NOTHING the press arms: no PendingMarkerPress,
+    // no double-click seed or consume. TWO callers: run_marker_click_act's
+    // plain arm and run_flag_cell_wheel. Definition in input_pointer.cpp.
+    void run_marker_plain_select(int hit, MarkerCell cell);
+
+    // THE PLAIN WHEEL OVER A FLAG CELL (architect 2026-09-14): on_wheel's
+    // context 5. A standing marker-lane editor closes as an outside press
+    // closes it; then the flag under (x, y) is SELECTED exactly as a plain
+    // click selects it (run_marker_plain_select — no prior selection needed,
+    // every audio view and column) and THAT CELL takes THE VALUE STEP as
+    // Up / Down would — the tempo, a bound, the measure or the magnification,
+    // a phase reset's payload stepping nothing — one step per detent, up =
+    // increase, through the same bodies. The step asks the key's two lock
+    // gates first; EVERY REFUSAL IS SILENT; synthesized_repeat is false, so a
+    // burst merges through the tap window. Plastic only by nature — the touch
+    // road reaches no wheel. Definition in input_pointer.cpp.
+    void run_flag_cell_wheel(GuiMouseButton dir, int count, int x, int y);
+
     // THE ONE SURVIVING DEFERRED CLICK — the trim bar's ctrl (begin) /
     // ctrl+shift (end) bound set (2026-08-17: its press IS the endcap drag's
     // arm, the one genuinely ambiguous click; the record's other four kinds

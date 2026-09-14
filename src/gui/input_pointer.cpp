@@ -4160,6 +4160,108 @@ static bool trim_bar_double_click_at(const DoubleClickCandidate& dc,
            std::abs(y - dc.press_y) <= double_click_slack_px();
 }
 
+// THE PLAIN MARKER SELECT — the plain click's act, factored out of
+// run_marker_click_act (architect 2026-09-14) for its SECOND caller, the plain
+// WHEEL over a flag cell (run_flag_cell_wheel, below), which must select
+// exactly as a plain click does and must NOT arm PendingMarkerPress or seed or
+// consume a double-click. Its clauses are the plain click's, in the click's
+// order, and their arguments stay at run_marker_click_act, which runs the same
+// clauses on its two modified arms: the playback stop, the single-select, the
+// land, the addressed cell and the trim region overlay's hide. Read-only does
+// not refuse it — a select is navigation, the click's own rule.
+void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
+    if (hit < 0) return;
+    playback_lifecycle.stop_playback_if_playing();
+    // ONE PLAIN MARKER CLICK, NO SPECIAL CASE FOR A SELECTED MEMBER
+    // (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS ACT — the
+    // doctrine is at the head of position_nudge.h): a click on a member of a
+    // 2+ selection single-selects and lands like a click on any other marker,
+    // and the drag it may become is an ordinary singleton drag. The clicked
+    // marker's flag BRIGHTENS here — set_single_selection damages the top
+    // strip, where the flags live; stems are class-colored and always on, so
+    // no stem work is owed.
+    selection.set_single_selection(hit);
+    // THE LAND IS THE MOVEMENT OWNER HERE, as it is on the modified arms.
+    land_playhead_on_marker(app, audio, viewport, hit);
+    // THE ADDRESSED CELL, written AFTER the select because the select resets
+    // the axis to the payload as it seats the focus (Selection::seat_focus);
+    // a changed axis damages the marker lane even where the selection stood
+    // still.
+    if (app.addressed_cell != cell) {
+        app.addressed_cell = cell;
+        viewport.invalidate_top_strip();
+    }
+    // THE CLICK OWNS ITS HIDE — touching a flag hides the trim region overlay
+    // unconditionally (the rule is at clear_region_highlight, input_handler.h).
+    clear_region_highlight(app, viewport);
+}
+
+// THE PLAIN WHEEL OVER A FLAG CELL (architect 2026-09-14) — contract at the
+// declaration (input_handler.h). Reached from on_wheel's context 5, which
+// wheel_context answers over a flag cell of the live marker lane (never in the
+// `h` view, never over an open marker-lane editor's own field).
+void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
+                                          int x, int y) {
+    // A MARKER-LANE EDITOR STANDING CLOSES FIRST, exactly as an outside press
+    // closes it (no commit), and the wheel then acts on the cell under the
+    // pointer — a riding box included, the one flag walk resolving it to its
+    // marker and cell (topmost_flag_rect, app_state.cpp) off the last painted
+    // frame's publication, which the close leaves standing until the next
+    // paint. The FIELD is not a flag cell (wheel_context answers the stepped
+    // pan there), and this owner refuses on it too.
+    close_top_flag_editor_for_outside_press(x, y);
+    const int hit = hit_test_flag(app, audio, x, y);
+    if (hit < 0) return;  // belt: the context answered a flag cell
+    const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
+    // (a) THE SELECT — the plain click's own body: no prior selection needed,
+    // every audio view and column, read-only-legal as the click is, arming no
+    // drag and seeding no double-click.
+    run_marker_plain_select(hit, cell);
+    // (b) THE STEP — THE VALUE STEP, as Up / Down would run it on the cell
+    // just addressed: one step per detent in the detent's direction (up =
+    // increase), the burst's detents one signed delta. THE KEY'S LOCK GATES
+    // ARE ASKED HERE because the wheel passes no keyboard gate of its own:
+    // read-only blocks every value step, and the iteration lock admits the
+    // bound axis alone — the same two predicates on_key asks of Up / Down,
+    // reading the cell the select just addressed. EVERY REFUSAL IS SILENT (the
+    // bodies' GuiOpRefusal is dropped): a pointer gesture's non-event is its
+    // own answer, and the select above already happened as a click's would.
+    // synthesized_repeat is false, so a wheel burst MERGES through the tap
+    // window (kTapCoalesceMs) into one undo entry on the steps that record.
+    const bool up = dir == GuiMouseButton::WheelUp;
+    const GuiKey key = up ? GuiKeys::Up : GuiKeys::Down;
+    const GuiInputState no_mods{};
+    if (active_view_state(app).read_only && read_only_key_blocked(key, no_mods))
+        return;
+    if (app.iteration_mode_enabled && iteration_lock_key_blocked(key, no_mods))
+        return;
+    const int64_t delta = (up ? +1 : -1) * static_cast<int64_t>(std::max(count, 1));
+    switch (cell) {
+    case MarkerCell::Payload:
+        // A phase reset's payload is a POSITION with no value to step: the
+        // select was the whole act.
+        if (app.active_markers_view == 'P') return;
+        (void)warpops.adjust_tempo_cents(delta, /*synthesized_repeat=*/false);
+        return;
+    case MarkerCell::Lower:
+    case MarkerCell::Upper:
+        if (app.active_markers_view == 'P') {
+            (void)phase_resets.adjust_iter_bound_hops(cell,
+                                                      static_cast<int>(delta));
+            return;
+        }
+        (void)warpops.adjust_iter_bound_cents(cell, delta);
+        return;
+    case MarkerCell::Measure:
+        (void)warpops.adjust_measure_step(delta, /*synthesized_repeat=*/false);
+        return;
+    case MarkerCell::Magnification:
+        (void)warpops.adjust_magnification_step(delta,
+                                                /*synthesized_repeat=*/false);
+        return;
+    }
+}
+
 // THE MARKER CLICK ACT — the whole flag click, AT THE PRESS (architect
 // 2026-08-17: CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN — a flag press
 // can only mean one thing, so nothing here waits for the lift; the one-day
@@ -4252,99 +4354,89 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // plain press falls straight through, so a cell keeps its select, its
     // address and its land.
     if ((toggle || shift) && cell != MarkerCell::Payload) return;
-    // The stop leads on every shape THAT ACTS: selecting or editing under a
-    // live audition is the case the top-strip stop exists for, and no arm
-    // below refuses (read-only still selects and lands, and the index came
-    // from a live hit test).
-    playback_lifecycle.stop_playback_if_playing();
-    if (toggle) {
-        // The individual membership TOGGLE. Whether it ADDED or REMOVED, the
-        // playhead lands on the FOCUS the toggle leaves behind (architect
-        // 2026-07-28, replacing the earliest-selected land): an ADD focuses the
-        // clicked marker, a REMOVE of the focused member repairs the focus to
-        // the largest remaining index, and a REMOVE of any other member leaves
-        // the focus alone — so app.last_selected_marker is the one expression
-        // for all three, and it is always a live member on a non-empty
-        // selection.
-        selection.toggle_selection_membership(hit);
-        if (!app.selected_markers.empty())
-            land_playhead_on_marker(app, audio, viewport,
-                                    app.last_selected_marker);
-    } else if (shift) {
-        // Shift is a file-manager INCLUSIVE RANGE select (architect
-        // 2026-07-23): the click ranges from the interaction's anchor — a LIVE
-        // anchor, else the ADOPTED FOCUS (plain-click A then shift-click B
-        // selects A..B; with nothing focused the click anchors on its own
-        // marker, selection {hit}). THE ANCHOR IS NOT KEYED TO THE PHYSICAL
-        // SHIFT HOLD (architect 2026-07-29): it SURVIVES a shift release and
-        // dies at the next membership replace, so a shift interaction
-        // re-started after a release ranges from the SURVIVING anchor rather
-        // than from the focus — A..B, release, re-press, shift-click C gives
-        // A..C, the accepted delta of the falling-edge hook's deletion. The
-        // full contract and clear list are at app.shift_range_anchor
-        // (app_state.h). The clicked marker becomes the range end = FOCUS
-        // (last_selected) and the playhead LANDS THERE (architect 2026-07-28,
-        // replacing the earliest-member land), so focus and land never diverge
-        // and nothing is towed by a later nudge. On an anchoring focus-less
-        // first click the selection is {hit} and hit is the focus, so the land
-        // is unchanged. A range leaving exactly one selected shows its always-on
-        // stem; select_range_from_anchor owns the subject-change damage.
-        selection.select_range_from_anchor(hit);
-        if (!app.selected_markers.empty())
-            land_playhead_on_marker(app, audio, viewport,
-                                    app.last_selected_marker);
+    // THE PLAIN ARM IS ITS OWN BODY since 2026-09-14 (run_marker_plain_select,
+    // above — the stop, the single-select, the land, the addressed cell and
+    // the region hide), because the plain WHEEL over a flag cell selects
+    // exactly as this press does without arming the drag or seeding the
+    // double-click; the two modified arms keep the same five clauses here.
+    if (!toggle && !shift) {
+        run_marker_plain_select(hit, cell);
     } else {
-        // ONE PLAIN MARKER CLICK, NO SPECIAL CASE FOR A SELECTED MEMBER
-        // (architect 2026-07-29, HORIZONTAL MOVEMENT IS A FOCUS ACT — the
-        // doctrine is at the head of position_nudge.h): a click on a member of
-        // a 2+ selection single-selects and lands like a click on any other
-        // marker, and the drag it may become is an ordinary singleton drag. The
-        // two file-manager DEFERRALS that used to sit on this path — one per
-        // drag surface, each holding the click's act back so the drag could
-        // seed the intact group — died with the group drag itself; groups are
-        // never moved by any route. (The second of those surfaces, the tempo
-        // drag, is gone outright — see marker_drag.h.)
-        // The clicked marker's flag BRIGHTENS here — set_single_selection
-        // damages the top strip, where the flags live. No stem work is owed on
-        // any arm: stems are class-colored and always on, so a membership
-        // change never creates, moves or recolors one.
-        selection.set_single_selection(hit);
-        // THE LAND IS THE MOVEMENT OWNER HERE, as it is on the two modified
-        // arms above.
-        land_playhead_on_marker(app, audio, viewport, hit);
+        // The stop leads on every shape THAT ACTS: selecting or editing under a
+        // live audition is the case the top-strip stop exists for, and no arm
+        // below refuses (read-only still selects and lands, and the index came
+        // from a live hit test).
+        playback_lifecycle.stop_playback_if_playing();
+        if (toggle) {
+            // The individual membership TOGGLE. Whether it ADDED or REMOVED, the
+            // playhead lands on the FOCUS the toggle leaves behind (architect
+            // 2026-07-28, replacing the earliest-selected land): an ADD focuses the
+            // clicked marker, a REMOVE of the focused member repairs the focus to
+            // the largest remaining index, and a REMOVE of any other member leaves
+            // the focus alone — so app.last_selected_marker is the one expression
+            // for all three, and it is always a live member on a non-empty
+            // selection.
+            selection.toggle_selection_membership(hit);
+            if (!app.selected_markers.empty())
+                land_playhead_on_marker(app, audio, viewport,
+                                        app.last_selected_marker);
+        } else if (shift) {
+            // Shift is a file-manager INCLUSIVE RANGE select (architect
+            // 2026-07-23): the click ranges from the interaction's anchor — a LIVE
+            // anchor, else the ADOPTED FOCUS (plain-click A then shift-click B
+            // selects A..B; with nothing focused the click anchors on its own
+            // marker, selection {hit}). THE ANCHOR IS NOT KEYED TO THE PHYSICAL
+            // SHIFT HOLD (architect 2026-07-29): it SURVIVES a shift release and
+            // dies at the next membership replace, so a shift interaction
+            // re-started after a release ranges from the SURVIVING anchor rather
+            // than from the focus — A..B, release, re-press, shift-click C gives
+            // A..C, the accepted delta of the falling-edge hook's deletion. The
+            // full contract and clear list are at app.shift_range_anchor
+            // (app_state.h). The clicked marker becomes the range end = FOCUS
+            // (last_selected) and the playhead LANDS THERE (architect 2026-07-28,
+            // replacing the earliest-member land), so focus and land never diverge
+            // and nothing is towed by a later nudge. On an anchoring focus-less
+            // first click the selection is {hit} and hit is the focus, so the land
+            // is unchanged. A range leaving exactly one selected shows its always-on
+            // stem; select_range_from_anchor owns the subject-change damage.
+            selection.select_range_from_anchor(hit);
+            if (!app.selected_markers.empty())
+                land_playhead_on_marker(app, audio, viewport,
+                                        app.last_selected_marker);
+        }
+        // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
+        // bound cells; every cell since 2026-09-05 — "light the colour of only
+        // the flag that's clicked"): the cell the press landed on becomes the
+        // focus's addressed cell — the bright one, the one the arrows step, the
+        // one Enter opens — on ALL THREE click shapes, because the press already
+        // selects and lands on every shape and the axis is one more thing the
+        // press says. Written AFTER the fork, because every mutator above resets
+        // the axis to the payload as it seats the focus (Selection::seat_focus),
+        // and a press is one of the FOUR routes that name a cell — the measure
+        // editor's open, the bound editor's open and the TAB WALK's cell step are
+        // the others, each writing behind its own selection write; a focus reached
+        // by none of them is addressed at its payload. Read-only does not refuse
+        // it: the axis is navigation, as the selection is, and the act it
+        // addresses meets the lock at its own gate. The bright cell moves with
+        // it, so a changed axis damages the marker lane even where the selection
+        // stood still (a re-press of the focused flag's other cell).
+        if (app.addressed_cell != cell) {
+            app.addressed_cell = cell;
+            viewport.invalidate_top_strip();
+        }
+        // THE CLICK OWNS ITS HIDE, and this is the RULE'S SECOND CLAUSE rather than
+        // a leftover call site (architect 2026-08-19: the overlay hides when the
+        // playhead's position in the music changes AND WHEN A MARKER IS TOUCHED —
+        // the rule is at clear_region_highlight, input_handler.h). The land the arms
+        // above run hides already, but it cannot cover this on its own: a
+        // ctrl-toggle that empties the selection lands NOTHING and must still hide,
+        // because touching a flag is an act on the timeline whether or not the
+        // cursor was already sitting on it. Unconditional, on all three arms. A
+        // re-click of the already-selected marker therefore hides a shown overlay
+        // too; that is the ruling and not an accident, and it discards nothing —
+        // the trim stands and a later `[` re-shows the same overlay.
+        clear_region_highlight(app, viewport);
     }
-    // THE ADDRESSED CELL RIDES THE PRESS (architect 2026-09-04, the iteration
-    // bound cells; every cell since 2026-09-05 — "light the colour of only
-    // the flag that's clicked"): the cell the press landed on becomes the
-    // focus's addressed cell — the bright one, the one the arrows step, the
-    // one Enter opens — on ALL THREE click shapes, because the press already
-    // selects and lands on every shape and the axis is one more thing the
-    // press says. Written AFTER the fork, because every mutator above resets
-    // the axis to the payload as it seats the focus (Selection::seat_focus),
-    // and a press is one of the FOUR routes that name a cell — the measure
-    // editor's open, the bound editor's open and the TAB WALK's cell step are
-    // the others, each writing behind its own selection write; a focus reached
-    // by none of them is addressed at its payload. Read-only does not refuse
-    // it: the axis is navigation, as the selection is, and the act it
-    // addresses meets the lock at its own gate. The bright cell moves with
-    // it, so a changed axis damages the marker lane even where the selection
-    // stood still (a re-press of the focused flag's other cell).
-    if (app.addressed_cell != cell) {
-        app.addressed_cell = cell;
-        viewport.invalidate_top_strip();
-    }
-    // THE CLICK OWNS ITS HIDE, and this is the RULE'S SECOND CLAUSE rather than
-    // a leftover call site (architect 2026-08-19: the overlay hides when the
-    // playhead's position in the music changes AND WHEN A MARKER IS TOUCHED —
-    // the rule is at clear_region_highlight, input_handler.h). The land the arms
-    // above run hides already, but it cannot cover this on its own: a
-    // ctrl-toggle that empties the selection lands NOTHING and must still hide,
-    // because touching a flag is an act on the timeline whether or not the
-    // cursor was already sitting on it. Unconditional, on all three arms. A
-    // re-click of the already-selected marker therefore hides a shown overlay
-    // too; that is the ruling and not an accident, and it discards nothing —
-    // the trim stands and a later `[` re-shows the same overlay.
-    clear_region_highlight(app, viewport);
     // THE TWO MODIFIED CLICKS END HERE: neither has a double-click meaning,
     // neither has a drag to become, and their click has just committed whole —
     // so they arm NOTHING, exactly as they did before the one-day lift model

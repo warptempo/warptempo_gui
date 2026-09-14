@@ -2168,27 +2168,30 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the mode goes off) the same chord at the same magnitude runs the SECOND
     // step body — adjust_iter_bound_cents on the warp column and
     // adjust_iter_bound_hops on the phase-reset one — whose refusal this arm
-    // cards exactly as it cards the tempo step's; with the MEASURE addressed there is
-    // nothing to step and the press cards its one sentence
-    // (addressed_cell_step_refusal, the buttons' own grey). SAME LADDER AND
-    // NOTHING ELSE SHARED: the bound step takes no repeat bit and no
+    // cards exactly as it cards the tempo step's; with the MEASURE or the
+    // MAGNIFICATION addressed (2026-09-14) the same chord runs that field's
+    // own step body (adjust_measure_step / adjust_magnification_step, the
+    // owners at app_state.h's value-step block), whose refusals it cards the
+    // same way. THIS ARM IS THE VALUE STEP — the chord's name — and the cell
+    // is its subject. SAME LADDER: the bound step takes no repeat bit and no
     // coalescing at all (2026-09-10 — it records nothing, so a held run has no
-    // burst to open or merge into and simply steps), while the tempo step
-    // keeps both. The Up/Down buttons' face forks on the same axis.
+    // burst to open or merge into and simply steps), while the tempo, measure
+    // and magnification steps keep both, each under its own GestureKind. The
+    // Up/Down buttons' face forks on the same axis.
     //
     // AND UNDER A LIT LAMP ONLY THE BOUND ARM IS REACHED: the composed gate
     // above admits Up/Down exactly on a bound axis (iteration_lock_key_blocked),
-    // so the payload arm's tempo step and the measure arm's sentence both
-    // belong to a dark lamp, and the buttons grey on the same fork.
+    // so the payload, measure and magnification steps all belong to a dark
+    // lamp, and the buttons grey on the same fork.
     if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down)) {
-        const int64_t delta_cents = (key == GuiKeys::Up ? +1 : -1) *
-                                    arrow_step_magnitude(mods);
+        const int64_t delta = (key == GuiKeys::Up ? +1 : -1) *
+                              arrow_step_magnitude(mods);
         switch (app.addressed_cell) {
         case MarkerCell::Payload:
             card_op_refusal(notifications,
                             warpops.adjust_tempo_cents(
-                                delta_cents, mods.synthesized_repeat));
+                                delta, mods.synthesized_repeat));
             return;
         case MarkerCell::Lower:
         case MarkerCell::Upper:
@@ -2206,17 +2209,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                 card_op_refusal(notifications,
                                 phase_resets.adjust_iter_bound_hops(
                                     app.addressed_cell,
-                                    static_cast<int>(delta_cents)));
+                                    static_cast<int>(delta)));
                 return;
             }
             card_op_refusal(notifications,
                             warpops.adjust_iter_bound_cents(
-                                app.addressed_cell, delta_cents));
+                                app.addressed_cell, delta));
             return;
         case MarkerCell::Measure:
+            card_op_refusal(notifications,
+                            warpops.adjust_measure_step(
+                                delta, mods.synthesized_repeat));
+            return;
         case MarkerCell::Magnification:
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 addressed_cell_step_refusal(app));
+            card_op_refusal(notifications,
+                            warpops.adjust_magnification_step(
+                                delta, mods.synthesized_repeat));
             return;
         }
         return;
@@ -3445,6 +3453,24 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     const bool inside_waveform = rect_contains(area, x, y);
     const bool inside_top      = rect_contains(top, x, y);
     if (inside_waveform) return 1;
+    // A FLAG CELL (context 5, architect 2026-09-14): the plain wheel over a
+    // flag of the LIVE marker lane selects that flag and steps that cell
+    // (run_flag_cell_wheel), so it gets its OWN id — the platform's sub-detent
+    // remainder is keyed by this answer, and a remainder grown over the lane's
+    // ground must not complete a detent over a flag or the other way round.
+    // THE `h` VIEW IS EXCLUDED — its flags are the mode's diff flags and a
+    // wheel there stays the plain stepped pan — and so is AN OPEN MARKER-LANE
+    // EDITOR'S OWN FIELD, which is caret work for the pointer, not a cell
+    // (close_top_flag_editor_for_outside_press refuses on the same rect); its
+    // riding boxes ARE cells (the one flag walk resolves them). THE TOUCH
+    // ROAD IS UNCHANGED: apply_touch_nav_update admits every positive context,
+    // so a nav frame over a flag navigates exactly as it did while this
+    // answered 2 — the tablet gets nothing new.
+    if (inside_top && !app.history_mode.active &&
+        !(text_editor::is_active(app.top_flag_editor) &&
+          rect_contains(app.flag_editor_box.box, x, y)) &&
+        hit_test_flag(app, audio, x, y) >= 0)
+        return 5;
     if (inside_top) return 2;
     return 0;
 }
@@ -3503,6 +3529,14 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
             update_folder_overlay_hover(x, y);
         }
+        return;
+    }
+    // ctx 5 — A FLAG CELL (architect 2026-09-14): the PLAIN wheel selects the
+    // flag under the pointer and steps that cell (run_flag_cell_wheel); every
+    // MODIFIED wheel is a swallowed no-op here as on the other surfaces.
+    if (ctx == 5) {
+        if (mods.ctrl || mods.shift || mods.alt) return;
+        run_flag_cell_wheel(dir, count, x, y);
         return;
     }
     // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take

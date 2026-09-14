@@ -395,9 +395,12 @@ inline bool parse_marker_measure(std::string_view text,
 
 // The canonical spelling of a parsed value — the writer side of the grammar,
 // so a value that round-trips through parse_marker_measure comes back byte
-// for byte. It has no caller today (architect approval 2026-09-14,
-// comment-only: its one caller, the measure paste, is deleted); it stays as
-// the grammar's writer half, the definition of the ONE spelling on disk.
+// for byte. It has TWO CALLERS (architect approval 2026-09-14, comment-only),
+// both spelling the integer that measure_step_landing (the GUI's app_state.h)
+// lands on: the measure VALUE STEP (bare Up/Down and the plain wheel over a
+// measure box, GuiWarpMarkersOps::adjust_measure_step) and the VALUE DRAG's
+// measure arm (ValueDragOps::apply_motion). It is the grammar's writer half,
+// the definition of the ONE spelling on disk.
 // (The section emission retired with the qualifier at the 2026-08-21
 // sunset — architect approval 2026-08-21.)
 // (The whole-plus-fraction arm that emitted `W n/d` is deleted with the
