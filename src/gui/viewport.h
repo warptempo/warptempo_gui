@@ -131,9 +131,9 @@ struct Viewport {
     //    that write a warp marker's magnification, the MAGNIFICATION EDITOR'S
     //    COMMIT (GuiFlagEditor::commit_magnification_edit) and the VALUE STEP
     //    (GuiWarpMarkersOps::adjust_magnification_step — bare Up/Down and the
-    //    plain wheel over the box), the IGNORE WAVEFORM MAGNIFICATION
-    //    lamp's setter (GuiInputHandler::set_ignore_waveform_magnification,
-    //    bare `]`), and the WARP MARKER DRAG's two halves in source view —
+    //    plain wheel over the box), the VALUE DRAG'S magnification motion
+    //    (ValueDragOps::apply_motion, live per step), and the WARP MARKER
+    //    DRAG's two halves in source view —
     //    its MOTION (MarkerDragOps::apply_drag_motion, a section boundary
     //    riding the hand through the effective profile's drag slot, guarded
     //    by displayed_plate_geometry_is_live under the drag's freeze) and its
@@ -147,11 +147,10 @@ struct Viewport {
     //    fingerprint is stale (displayed_plate_gain_is_stale below) — because
     //    a before/after hash across the release compares the drag's proposal
     //    with the committed store, which are normally equal whatever the
-    //    pixels show (Sol round 11 of 2026-09-14; the rule is at the release). (The value
-    //    drag's magnification motion was a fourth for its first hours; the drag
-    //    lost that arm when the box went hidden in target view. The forced
-    //    ignore's other two terms — target view on the warp column and the `h`
-    //    view — change with a view switch, whose own kick below carries them.)
+    //    pixels show (Sol round 11 of 2026-09-14; the rule is at the release).
+    //    (The gain gate's other input, the zoom — magnification applies only
+    //    at the working zoom, effective_waveform_gain_profile — changes with a
+    //    zoom write, whose applier's own synchronous kick carries it.)
     //    Its one site from 2026-08-26 was the retired magnification level
     //    applier (architect approval 2026-09-14). The gain is a PER-SECTION
     //    PROFILE resolved from the warp markers now
@@ -258,13 +257,13 @@ struct Viewport {
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
     // inventory above): a magnification write kicks the synchronous rebuild
     // ONLY WHEN THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile —
-    // the resolved one, or the empty one while the picture ignores it)
+    // the resolved one at the working zoom, the empty one coarser)
     // ACTUALLY CHANGED across it. The
     // caller captures `waveform_gain_hash()` BEFORE its store write and hands
     // it to `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives
     // here and nowhere else. A write the picture cannot see — a disabled
     // marker's field, a coincident loser's, a blank frozen to the digit it
-    // already inherited, any write while magnification is ignored — changes
+    // already inherited, any write at a zoom coarser than working — changes
     // the field and not the profile, and must not drain the worker and
     // re-render the whole plate. The caller's top-strip repaint, undo and dirty
     // work are the authored field's and stay unconditional.
@@ -375,8 +374,7 @@ struct Viewport {
     // working rests at working, not at the ceiling the live window would
     // allow), and with nothing between that clear and this call that reaches
     // clamp_viewport_start, which would floor the level about the old start
-    // and leave this nothing to do. THE SEVEN CALLERS are the gestures' ends,
-    // each immediately ahead of its commit_keep_centered_zoom:
+    // and leave this nothing to do. THE SEVEN CALLERS are the gestures' ends:
     // GuiInputHandler::end_touch_nav (the pinch's one end), and in
     // input_pointer.cpp the nav drag's and the overview drag's release,
     // lost-button and force-end (finalize_active_drags) arms.
@@ -398,9 +396,11 @@ struct Viewport {
     // with the incremental path retired every scroll renders synchronously.
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
-    // The `y` lamp's one act: while it is lit, recenter on the playhead a
-    // Left/Right nudge has just moved. The rule is at AppState::keep_centered_while_nudging;
-    // the two callers are named at the definition.
+    // THE NUDGE'S RECENTER (architect 2026-09-14): a Left/Right nudge that
+    // moved something recenters on the playhead it just moved IFF the zoom is
+    // at working (zoom_level_at_or_finer_than_working); coarser the camera
+    // holds. No lamp and no view term. Nothing else recenters. The two callers
+    // are named at the definition.
     void recenter_after_nudge();
     void follow_scroll_if_needed();
 

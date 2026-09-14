@@ -209,15 +209,14 @@ void finish_position_nudge(
     // movement owner.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) KEEP CENTERED WHILE NUDGING: with the `y` lamp lit the viewport
-    // recenters on the playhead (e) just landed on the nudged marker — at every
-    // step, a held key's repeats and a held arrow button's fires included,
-    // because each of them runs this tail. This tail is the nudge's CHANGED
-    // path (each twin returns on its post-clamp identity no-op before reaching
-    // it), so a walled press recenters nothing — a 2+ press walled after its
-    // collapse keeps the collapse, the land and the prologue's zoom snap, and
-    // nothing more. The rule is at
-    // AppState::keep_centered_while_nudging, the body at Viewport::recenter_after_nudge.
+    // (f) THE RECENTER: at the working zoom the viewport recenters on the
+    // playhead (e) just landed on the nudged marker — at every step, a held
+    // key's repeats and a held arrow button's fires included, because each of
+    // them runs this tail; coarser the camera holds. This tail is the nudge's
+    // CHANGED path (each twin returns on its post-clamp identity no-op before
+    // reaching it), so a walled press recenters nothing — a 2+ press walled
+    // after its collapse keeps the collapse and the land, and nothing more.
+    // The rule and body are at Viewport::recenter_after_nudge.
     viewport.recenter_after_nudge();
     // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,

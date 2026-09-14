@@ -273,14 +273,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // lattice, and the zoom gestures are the ctrl-drag and the pinch.)
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14) — bare `]`, a
-    // TOGGLE with a lamp, right after `c` and ahead of Follow. Live on a
-    // locked tab and under the grid-iterations lock (a view posture on both
-    // allowlists); in the `h` view the chord is admitted and the face greys
-    // lit on the lamp's own applicability, as in target view on the warp
-    // column (ignore_waveform_magnification_applies).
-    {RedesignButton::IconIgnoreWaveformMagnification,
-     GuiKeys::BracketRight, false, false, false, false, true},                     // bare ]
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain is a per-section profile resolved from the
@@ -306,14 +298,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
     // which puts them past the viewport group rather than here.)
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
-    // THE KEEP-CENTERED LAMP (2026-08-31, R11; its one act since 2026-09-13 is
-    // the Left/Right nudge's recenter) — Follow's neighbour and its shape
-    // exactly: bare `y`, a TOGGLE with a lamp on the live bit its own chord
-    // flips. Live in the `h` view (the mode's allowlist admits `y`, so the
-    // derived partition keeps the face lit) and on a locked tab (navigation,
-    // the lock's allowlist).
-    {RedesignButton::IconKeepCenteredWhileNudging, GuiKeys::Y, false, false, false, false, true},   // bare y
-    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the same shape again,
+    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — Follow's shape,
     // closing the same group: bare `z`, a TOGGLE reading the live bit its own
     // chord flips. It shares its letter with the pair it governs, which is the
     // whole argument for the key, and it stood beside that pair in the toolbar
@@ -717,8 +702,9 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 47
-// rows against the roster's 50 since 2026-09-14's Zoom In / Zoom Out deletion
+// every RedesignButton but the THREE menu anchors carries a chord here — 45
+// rows against the roster's 48 since 2026-09-14's Keep Centered While Nudging
+// and Ignore Waveform Magnification deletion
 // (the count's succession is in git history). It is keyed by id and every
 // reader matches by id or by published rect, so the row order it is kept in
 // is for the reader alone; a button moving BETWEEN ROWS moves no count, and
@@ -3315,11 +3301,6 @@ void GuiInputHandler::end_touch_nav() {
     app.touch_nav_live = false;
     viewport.snap_continuous_zoom_to_working(pivot);
     if (playback.is_playing()) playback.resync_predictor();
-    // AND THE PINCH COMMITS ITS ZOOM HERE, at the one body every touch end
-    // reaches, never per frame (commit_keep_centered_zoom,
-    // app_state.h). A pan-only gesture finds the level where the last commit
-    // left it and writes nothing.
-    commit_keep_centered_zoom(app);
 }
 
 // The pan-zone query's body (contract at the declaration): THE NAVIGATION
@@ -7475,12 +7456,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             // The snap back to the working zoom, the record cleared first
             // (Viewport::snap_continuous_zoom_to_working).
             viewport.snap_continuous_zoom_to_working(pivot);
-            // THE GESTURE'S END IS ITS ZOOM COMMIT, whichever phase it ended
-            // in: a ctrl phase released mid-drag committed nothing at its
-            // ctrl-up, and a pan-only drag finds the level on the side the
-            // last commit left it (commit_keep_centered_zoom,
-            // app_state.h, where the end sites are inventoried).
-            commit_keep_centered_zoom(app);
             return;
         }
         // The motionless zoom-phase press painted a stem from the press (or
@@ -7518,11 +7493,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.overview_drag = OverviewDragState{};
         if (moved) {
             // The snap back to the working zoom, the record cleared first
-            // (Viewport::snap_continuous_zoom_to_working), then the edge
-            // drags' zoom commits at the drag's end
-            // (commit_keep_centered_zoom, app_state.h).
+            // (Viewport::snap_continuous_zoom_to_working).
             viewport.snap_continuous_zoom_to_working(pivot);
-            commit_keep_centered_zoom(app);
         }
         return;
     }
@@ -7725,10 +7697,8 @@ void GuiInputHandler::finalize_active_drags() {
         if (moved) {
             // A force-end is still the gesture's end: the snap back to the
             // working zoom, the record cleared first
-            // (Viewport::snap_continuous_zoom_to_working), then the zoom's
-            // commit (commit_keep_centered_zoom, app_state.h).
+            // (Viewport::snap_continuous_zoom_to_working).
             viewport.snap_continuous_zoom_to_working(pivot);
-            commit_keep_centered_zoom(app);
         }
         if (zooming) viewport.invalidate_waveform_area();
     }
@@ -7748,13 +7718,9 @@ void GuiInputHandler::finalize_active_drags() {
             playback.resync_predictor();
         const std::optional<ZoomPivot> pivot = overview_drag_zoom_pivot(app);
         app.overview_drag = OverviewDragState{};
-        // The snap back to the working zoom and the zoom's commit at the
-        // force-end, as at the release (Viewport::
-        // snap_continuous_zoom_to_working, commit_keep_centered_zoom).
-        if (moved) {
-            viewport.snap_continuous_zoom_to_working(pivot);
-            commit_keep_centered_zoom(app);
-        }
+        // The snap back to the working zoom at the force-end, as at the
+        // release (Viewport::snap_continuous_zoom_to_working).
+        if (moved) viewport.snap_continuous_zoom_to_working(pivot);
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
     // no release here (the button is still held), and a force-end is not a
@@ -7805,9 +7771,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-four — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-two — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 50, the enum's
+// eighteen since 2026-08-29: 48, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -10383,11 +10349,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 overview_drag_zoom_pivot(app);
             app.overview_drag = OverviewDragState{};
             if (moved) {
-                // The snap back and the zoom's commit, the release's own
-                // (Viewport::snap_continuous_zoom_to_working,
-                // commit_keep_centered_zoom).
+                // The snap back, the release's own
+                // (Viewport::snap_continuous_zoom_to_working).
                 viewport.snap_continuous_zoom_to_working(pivot);
-                commit_keep_centered_zoom(app);
             }
             return;
         }
@@ -10438,11 +10402,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (!zooming && playback.is_playing())
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
-                // The snap back and the zoom's commit, the release's own
-                // (Viewport::snap_continuous_zoom_to_working,
-                // commit_keep_centered_zoom).
+                // The snap back, the release's own
+                // (Viewport::snap_continuous_zoom_to_working).
                 viewport.snap_continuous_zoom_to_working(pivot);
-                commit_keep_centered_zoom(app);
             }
             return;
         }

@@ -3337,12 +3337,6 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // (waveform_area.w), the column-mapping denominator; flags share the marker
 // stems' samples-per-pixel so a flag's left edge lands on the column its stem
 // rises at, at every window width.
-//
-// `magnification_hidden`: marker_magnification_field_hidden (app_state.h) —
-// target view on this column (architect 2026-09-14). The green box is then
-// ABSENT: not painted, and its boundary collapses exactly as a marker with no
-// own value's does, so nothing can hit it. The flag cache needs no field for
-// it: the view it derives from is already fingerprinted (fp_target).
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   FlagLaneRects lanes,
@@ -3356,7 +3350,6 @@ void render_flags(cairo_t* cr,
                   bool iteration_on,
                   int focus_marker,
                   MarkerCell focus_cell,
-                  bool magnification_hidden,
                   std::vector<FlagHitRect>* out_hit_rects = nullptr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,

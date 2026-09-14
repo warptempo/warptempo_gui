@@ -259,18 +259,6 @@ constexpr IconPath kGoJumpPaths[] = {
      "10 16 10 z "},
 };
 
-// THE KEEP-CENTERED LAMP's icon (2026-08-31, R11, the brief's own pick):
-// align-horizontal-center, two boxes threaded on one vertical center line —
-// a viewport holding its subject at the center column. Command coverage:
-// relative `m` / `h` / `v` with implicit repetition and the glued-negative
-// number runs parse_number already reads; no `z` — the fill closes each
-// subpath implicitly, six committed files' precedent.
-constexpr IconPath kAlignHorizontalCenterPaths[] = {
-    {kIconText,
-     "m10.5 3v1h-2.5v1 3 1h2.5v4h-5.5v1 4h1 4.5v1h1v-1h5.5v-1-3-1h-5.5v-4h1.5 "
-     "1v-1-3-1h-1-1.5v-1h-1m-1.5 2h4v3h-4v-3m-3 9h10v3h-10v-3"},
-};
-
 // THE RESTRICT-UNDO-TO-VIEWPORT LAMP's icon (2026-09-04, the architect's
 // pick): timeline-lift, a clip's two end brackets with a red cross standing
 // between them — a stretch of timeline the editor declines to travel, which is
@@ -947,10 +935,10 @@ constexpr IconPath kZoomFitBestPaths[] = {
 // path in the family's own idiom, transcribed byte-verbatim from breeze-dark's
 // actions/22/ like every entry here; zoom-in-y.svg is a symlink to
 // y-zoom-in.svg in the installed theme, so the committed asset holds the
-// resolved bytes. Its twin zoom-out-y is the same ruler beside a minus; it
-// left with the retired Reduce button on 2026-09-14 and came back the same day,
-// transcribed from the pre-deletion commit with its asset, to face the icon
-// row's Ignore Waveform Magnification lamp (architect 2026-09-14).
+// resolved bytes. (Its twin zoom-out-y sat beside it until 2026-09-14, facing
+// the retired Reduce button and then, for the rest of that day, the Ignore
+// Waveform Magnification lamp; its paths and asset left with the lamp, having
+// had no other consumer.)
 // (zoom-fit-height sat third here from 2026-08-26 until the MAGNIFICATION
 // RESET button was retired on 2026-08-27; its paths and asset went with the
 // button, having had no other consumer.)
@@ -963,17 +951,6 @@ constexpr IconPath kZoomInYPaths[] = {
      "h-1-1v1h1v1h-1v1h1v1h-0.5644531a7 7 0 0 1-3.4355469-6 7 7 0 0 1 "
      "3.4355469-6h0.5644531v1h-1v1h1v1h-1v1h1 1v-4.6972656a7 7 0 0 1 "
      "2-0.3027344zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
-};
-
-constexpr IconPath kZoomOutYPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
-     "4.892578-1.693359l2.400391 2.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-2.40039-2.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-2-0.302734v-4.697266"
-     "h-1-1v1h1v1h-1v1h1v1h-0.5644531a7 7 0 0 1-3.4355469-6 7 7 0 0 1 "
-     "3.4355469-6h0.5644531v1h-1v1h1v1h-1v1h1 1v-4.6972656a7 7 0 0 1 "
-     "2-0.3027344zm-4 6v2h8v-2h-8z"},
 };
 
 constexpr IconPath kZoomOriginalPaths[] = {
@@ -1170,7 +1147,6 @@ constexpr IconDef kDocumentImport     {22.0, kDocumentImportPaths,      1};
 constexpr IconDef kChronometerStart   {22.0, kChronometerStartPaths,    1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
 constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
-constexpr IconDef kAlignHorizontalCenter {22.0, kAlignHorizontalCenterPaths, 1};
 constexpr IconDef kTimelineLift       {22.0, kTimelineLiftPaths,        3};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
@@ -1205,7 +1181,6 @@ constexpr IconDef kToolRectSelection  {22.0, kToolRectSelectionPaths,   1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
 constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
 constexpr IconDef kZoomInY            {22.0, kZoomInYPaths,             1};
-constexpr IconDef kZoomOutY           {22.0, kZoomOutYPaths,            1};
 constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
 constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
@@ -1227,7 +1202,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ChronometerStart:    return kChronometerStart;
         case Icon::BlackSum:            return kBlackSum;
         case Icon::GoJump:              return kGoJump;
-        case Icon::AlignHorizontalCenter: return kAlignHorizontalCenter;
         case Icon::TimelineLift:        return kTimelineLift;
         case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::Mathmode:            return kMathmode;
@@ -1261,7 +1235,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ZoomFitBest:         return kZoomFitBest;
         case Icon::ZoomOriginal:        return kZoomOriginal;
         case Icon::ZoomInY:             return kZoomInY;
-        case Icon::ZoomOutY:            return kZoomOutY;
         case Icon::ListAdd:             return kListAdd;
         case Icon::ListRemove:          return kListRemove;
         case Icon::ViewHidden:          return kViewHidden;

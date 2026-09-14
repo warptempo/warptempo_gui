@@ -169,7 +169,8 @@ struct WaveformCache {
     int       fp_inset_px = -1;
     // THE GAIN PROFILE'S HASH the live pixels were rendered under
     // (effective_waveform_gain_profile — the per-section magnification resolved
-    // from the warp markers, or the empty profile while it is ignored). A FINGERPRINT FIELD in its own right, keyed
+    // from the warp markers at the working zoom, or the empty profile coarser).
+    // A FINGERPRINT FIELD in its own right, keyed
     // directly like the inset: the profile is an input to the tip mapping
     // alone, so nothing else about the plate would move if it changed by
     // itself (a magnification edit moves no marker and no map), and without it
@@ -846,7 +847,7 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-four
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-two
     // view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout,
     // the ITERATION PAIR came back from the menu row on 2026-09-04

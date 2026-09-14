@@ -574,8 +574,9 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
-// Backspace, and every letter the ladder never tests (A, B, E, W, X — Y left
-// the class 2026-08-31, the keep-centered lamp's toggle, V on 2026-09-01, the
+// Backspace, and every letter the ladder never tests (A, B, E, W, X, Y — Y
+// left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
+// on 2026-09-14 with that lamp's deletion; V left it on 2026-09-01, the
 // `h` view's revert act moving onto it off Ctrl+H; X left it on 2026-09-10
 // for the Value Drag lamp, the letter the trim family left free on
 // 2026-08-24, and came BACK on 2026-09-13 with that lamp's deletion; BARE N
@@ -598,11 +599,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the view toggles and the
         // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
-        // selection, `m` bpm mode, `t` the S/T flip and `y` the keep-centered
-        // lamp; `x` the value drag's lamp stood here 2026-09-10 to 2026-09-13).
+        // selection, `m` bpm mode and `t` the S/T flip; `x` the value drag's
+        // lamp stood here 2026-09-10 to 2026-09-13, `y` the keep-centered lamp
+        // 2026-08-31 to 2026-09-14).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
         case GuiKeys::K: case GuiKeys::M: case GuiKeys::T:
-        case GuiKeys::Y:
             return bare;
         // The folder overlay's two openers on one letter (2026-09-03): bare
         // `l` toggles the render player and Shift+L toggles the AV sync stats
@@ -657,9 +658,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
         case GuiKeys::BracketLeft: return bare || sh;
-        // Toggle Ignore Waveform Magnification (architect 2026-09-14), bound
-        // in both modes: in the `h` view it cards the forced ignore.
-        case GuiKeys::BracketRight: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it

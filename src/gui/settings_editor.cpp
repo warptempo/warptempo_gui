@@ -435,10 +435,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         const double v = std::max(kWorkingZoomLevel, gv.d);
         if (active) {
             if (v == app.zoom_level) { unchanged(); return true; }
-            // A discrete zoom through the applier, which is also the
-            // keep-centered lamp's zoom COMMIT; the parked arm below commits
-            // nothing until its tab-in (commit_keep_centered_zoom,
-            // app_state.h).
+            // A discrete zoom through the applier.
             viewport.apply_zoom_change(v);
         } else {
             if (v == band.zoom_level) { unchanged(); return true; }

@@ -325,9 +325,9 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     cursor field only (playback was stopped by the prologue, past its
 //     refusal verdict and ahead of the first write, so this tail always runs
 //     stopped).
-// (f) KEEP CENTERED WHILE NUDGING: Viewport::recenter_after_nudge, which with
-//     the `y` lamp lit recenters the viewport on the playhead (e) just landed
-//     (the rule at AppState::keep_centered_while_nudging). Every press that reaches this
+// (f) THE RECENTER: Viewport::recenter_after_nudge, which at the working zoom
+//     recenters the viewport on the playhead (e) just landed (the rule at its
+//     declaration, viewport.h). Every press that reaches this
 //     tail moved its marker — the twins return on the post-clamp identity
 //     no-op first — so a walled press recenters nothing, and a held key's or
 //     button's repeats each run the tail and recenter at every step.

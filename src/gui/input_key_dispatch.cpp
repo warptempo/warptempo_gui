@@ -382,13 +382,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
-    // THE KEEP-CENTERED LAMP, bare `y` (2026-08-31, R11): follow's sibling and
-    // admitted on follow's exact reasoning — a viewport preference is
-    // navigation, not authored content. Its button stays lit on a locked tab
-    // by the same answer.
-    const bool is_keep_centered_while_nudging =
-        (key == GuiKeys::Y && !ctrl && !shift && !alt);
-    // RESTRICT UNDO TO VIEWPORT, bare `z` (2026-09-04): the same reasoning
+    // RESTRICT UNDO TO VIEWPORT, bare `z` (2026-09-04): follow's reasoning
     // once more — the bit decides whether an undo RUNS and authors nothing the
     // lock protects, so the switch is admitted on a locked tab and its button
     // stays lit there. Ctrl+Z and Ctrl+Shift+Z are NOT on this allowlist and
@@ -396,12 +390,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
-    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-14): a view
-    // posture about the picture, authoring nothing the lock protects, so it
-    // is admitted on a locked tab — and under the grid-iterations lock, whose
-    // gate falls through to this list.
-    const bool is_ignore_magnification =
-        (key == GuiKeys::BracketRight && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
@@ -612,8 +600,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zero ||
-             is_follow || is_keep_centered_while_nudging ||
-             is_restrict_undo || is_ignore_magnification ||
+             is_follow ||
+             is_restrict_undo ||
              is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -2660,18 +2648,6 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
-    // THE KEEP-CENTERED LAMP, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
-    // admitted where FOLLOW is not: follow's chase is playback's and playback
-    // is removed from the view whole, so admitting `f` would admit a lamp
-    // with nothing to do, while this lamp is a plain toggle that authors
-    // nothing. Its icon-row button stays LIVE in the view through the derived
-    // partition on this line.
-    const bool is_keep_centered_while_nudging = (key == GuiKeys::Y && bare);
-    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-14): admitted
-    // so that it reaches its own arm, which CARDS in here — the view forces the
-    // ignore (ignore_waveform_magnification_applies) — rather than being
-    // blocked with the view's generic sentence. Its button greys lit.
-    const bool is_ignore_magnification = (key == GuiKeys::BracketRight && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
@@ -2842,8 +2818,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zero || is_keep_centered_while_nudging ||
-             is_ignore_magnification || is_page_updown ||
+    return !(is_zero || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
@@ -8325,10 +8300,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // at the standing zoom): the walk step moves the focus and lands the
     // playhead, and then run_center_command — the `c` body itself, never a
     // second spelling — sets the working zoom and centres on that focus, so
-    // both tabs end at the working zoom and centred, and the `y` lamp's
-    // zoom-crossing commit (commit_keep_centered_zoom, inside
-    // Viewport::apply_zoom_change) fires on each tab exactly as a `c` press
-    // fires it. Shift+`j` and the A/B audition reach the camera through the
+    // both tabs end at the working zoom and centred. Shift+`j` and the A/B
+    // audition reach the camera through the
     // same body. `c` runs whether or not its step landed anything, as the key
     // would: with no focus it is the zoom and the centre on the playhead.
     //
@@ -8508,9 +8481,10 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // horizontal_arrow_step_actionable).
     const int64_t cursor_before = app.playhead_cursor_sample;
     viewport.move_playhead_pixels(step_columns);
-    // KEEP CENTERED WHILE NUDGING (the rule at AppState::keep_centered_while_nudging): a
-    // step that moved the cursor recenters on it while the `y` lamp is lit; a
-    // walled step moved nothing and recenters nothing. Every magnitude and
+    // THE RECENTER (the rule at Viewport::recenter_after_nudge): a step that
+    // moved the cursor recenters on it at the working zoom, in every view
+    // target view on the warp column included; a walled step moved nothing
+    // and recenters nothing. Every magnitude and
     // every held repeat — the key's and the Left / Right buttons' — runs
     // through this body, so the recenter lands at each step.
     if (app.playhead_cursor_sample != cursor_before)
@@ -8568,50 +8542,13 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // answer, not the dispatch's.
         playback_lifecycle.toggle_follow();
         break;
-    case GuiKeys::Y:
-        // Toggle the Keep centered while nudging lamp (2026-08-31, R11; its one
-        // act since 2026-09-13 is the nudge's recenter — the rule at
-        // AppState::keep_centered_while_nudging). The icon-row button
-        // synthesizes this chord. This press is the MANUAL road, while a
-        // committed zoom crossing the working level writes the same bit
-        // (commit_keep_centered_zoom, app_state.h); it leaves the zoom's edge record
-        // untouched, so the toggle stands until the zoom next crosses the line.
-        // History-less, one-shot, legal during the A/B audition, and it moves
-        // nothing at the press: the next nudge centres. IN TARGET VIEW ON THE
-        // WARP COLUMN IT REFUSES (architect 2026-09-13): the lamp is inert
-        // there (keep_centered_while_nudging_applies), its button greys, and
-        // so the key cards and leaves the lamp as it stands.
-        if (!keep_centered_while_nudging_applies(app)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kKeepCenteredInertCard);
-            break;
-        }
-        set_keep_centered_while_nudging(app, !app.keep_centered_while_nudging);
-        break;
     case GuiKeys::Z:
         // Toggle the Restrict undo to viewport lamp (2026-09-04). The setter
         // is GuiInputHandler::set_restrict_undo_to_viewport, shared with the
         // icon-row button's synthesized chord and with nothing else.
-        // History-less, one-shot, the keep-centered lamp's own shape — and nothing
-        // moves at the press: the bit is read at the NEXT Ctrl+Z, through
+        // History-less, one-shot — and nothing moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
-        break;
-    case GuiKeys::BracketRight:
-        // Toggle the Ignore Waveform Magnification lamp (architect
-        // 2026-09-14). The setter is GuiInputHandler::
-        // set_ignore_waveform_magnification, shared with the icon-row button's
-        // synthesized chord and with nothing else. History-less, one-shot,
-        // read-only- and iteration-lock-legal (a view posture). IN TARGET VIEW
-        // ON THE WARP COLUMN AND IN THE `h` VIEW IT REFUSES: the ignore is
-        // forced there (ignore_waveform_magnification_applies), the button is
-        // lit and greyed, and the key cards and leaves the bit as it stands.
-        if (!ignore_waveform_magnification_applies(app)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kIgnoreMagnificationForcedCard);
-            break;
-        }
-        set_ignore_waveform_magnification(!app.ignore_waveform_magnification);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

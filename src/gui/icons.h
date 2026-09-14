@@ -170,10 +170,6 @@ enum class Icon {
     // and its asset are deleted with the button, no button being left that
     // wears them — edit-comment's own precedent.)
     ZoomInY,             // IconMarkerMagnification's glyph (2026-09-14)
-    // ZOOM-OUT-Y, zoom-in-y's twin (the ruler beside a minus): deleted with the
-    // retired Reduce button on 2026-09-14 and restored the same day for the
-    // Ignore Waveform Magnification lamp (architect 2026-09-14).
-    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `]`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -211,11 +207,6 @@ enum class Icon {
     // bought.
     BlackSum,            // The cumulative reading (`u`)
     GoJump,              // Follow mode
-    // Breeze's align-horizontal-center (2026-08-31, R11): two boxes riding
-    // one vertical center line — exactly a viewport holding its subject at
-    // the center column. A fresh verbatim transcription for the `y` centered
-    // lamp beside Follow.
-    AlignHorizontalCenter,  // Toggle keep centered while nudging (`y`)
     // Breeze's timeline-lift (2026-09-04, the architect's pick): a clip's two
     // end brackets with a red cross between them — a stretch of timeline the
     // editor declines to travel. The lamp it wears refuses an undo whose
@@ -480,12 +471,12 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 54 SINCE 2026-09-14, THE ZOOM IN / ZOOM OUT DELETION (architect
-// 2026-09-14): a re-COUNT of the enumerators, zoom-in and zoom-out leaving
-// with the two buttons that wore them — enumerators, defs and assets
-// together. The count's succession is in git history; a glyph joining or
+// 52 SINCE 2026-09-14, THE KEEP CENTERED WHILE NUDGING AND IGNORE WAVEFORM
+// MAGNIFICATION DELETION (architect 2026-09-14): a re-COUNT of the
+// enumerators, align-horizontal-center and zoom-out-y leaving with the two
+// lamps that wore them — enumerators, defs and assets together. The count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 54;
+inline constexpr int kIconCount = 52;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

@@ -169,8 +169,9 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     // The waveform PICTURE's gain profile, resolved from the LIVE warp store
-    // or empty while magnification is ignored (effective_waveform_gain_profile
-    // — the `h` view forces the ignore) and captured here
+    // at the working zoom and empty coarser (effective_waveform_gain_profile
+    // — the `h` view's plate included, it being the live plate) and captured
+    // here
     // with the geometry as an owned snapshot, so the worker reads no live
     // store. Its HASH is the fingerprint field, which is what keeps a plate
     // from being shown at a gain that is no longer live.
@@ -1312,9 +1313,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      // (render_flags' declaration).
                      app.last_selected_marker,
                      app.addressed_cell,
-                     // The green box is absent in target view (architect
-                     // 2026-09-14) — fp_target already keys it.
-                     marker_magnification_field_hidden(app),
                      &app.flag_hit_rects,
                      &app.marker_stems,
                      tmap_arg,

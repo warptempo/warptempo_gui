@@ -1918,7 +1918,6 @@ void render_flags(cairo_t* cr,
                   bool iteration_on,
                   int focus_marker,
                   MarkerCell focus_cell,
-                  bool magnification_hidden,
                   std::vector<FlagHitRect>* out_hit_rects,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
@@ -1947,11 +1946,8 @@ void render_flags(cairo_t* cr,
         },
         // The magnification box shows the marker's OWN value alone (architect
         // 2026-09-14): a blank marker inherits for the picture
-        // (resolved_magnification_level) but paints no box. HIDDEN IN TARGET
-        // VIEW (magnification_hidden, the declaration): every answer empty, so
-        // no box paints and no boundary publishes.
+        // (resolved_magnification_level) but paints no box.
         [&](int i) -> std::string {
-            if (magnification_hidden) return std::string{};
             const auto& g = markers[static_cast<std::size_t>(i)].magnification;
             return g ? format_marker_magnification(*g) : std::string{};
         },
@@ -3116,11 +3112,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         const bool ride_measure =
             !ctext.empty() && field_rank < flag_box_rank(MarkerCell::Measure);
         // The magnification rides on the warp column alone too, and only
-        // where the marker carries its own value and the field is not hidden
-        // (the flag pass's rules — marker_magnification_field_hidden).
+        // where the marker carries its own value (the flag pass's rule).
         const std::string gtext =
-            (phase || marker_magnification_field_hidden(app) ||
-             !mv[static_cast<std::size_t>(idx)].magnification)
+            (phase || !mv[static_cast<std::size_t>(idx)].magnification)
                 ? std::string{}
                 : format_marker_magnification(
                       *mv[static_cast<std::size_t>(idx)].magnification);

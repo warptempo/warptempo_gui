@@ -186,8 +186,9 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // effective_waveform_gain_profile (below), which the two waveform pictures
 // take — the plate's render inputs (compute_waveform_render_inputs, which
 // copies the profile into the job as it copies the warp map) and the overview
-// lane's bar cache (maybe_rebuild_overview_bar_cache). The `h` view never
-// reads a viewed checkpoint's profile: it forces the ignore.
+// lane's bar cache (maybe_rebuild_overview_bar_cache). THE `h` VIEW'S PLATE IS
+// THE LIVE PLATE, so it reads this live store's profile, never the viewed
+// checkpoint's.
 // The HASH alone keys both picture caches, so a gain-only change re-renders
 // through the fingerprint without touching the displayed basis.
 struct WaveformGainProfileCache {
@@ -221,15 +222,19 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
-// THE PROFILE EVERY WAVEFORM PICTURE TAKES (architect 2026-09-14): the live
-// resolved profile above, or — while waveform_magnification_ignored
-// (app_state.h: the Ignore Waveform Magnification lamp, target view on the
-// warp column, the `h` view) — the EMPTY profile, level 0 everywhere, hash 0.
-// ONE place, so the picture caches' existing hash keys re-render on every
-// lamp write and view switch that changes the answer with no per-caller code
-// (a live profile with no breakpoints is hash 0 as well, and there the two
-// answers are rightly the same picture). While a WARP-column marker drag stands
-// and the ignore does not, the live answer is the DRAG SLOT's
+// THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE (architect
+// 2026-09-14: magnification applies iff the zoom is at working): the live
+// resolved profile above AT THE WORKING ZOOM
+// (zoom_level_at_or_finer_than_working — a finer level exists only inside a
+// continuous zoom gesture and counts as working, so the snap-back flickers
+// nothing), else — coarser — the EMPTY profile, level 0 everywhere, hash 0.
+// No view term: target view, source view and the `h` view answer alike, the
+// `h` view's plate showing the LIVE store's gain (the struct above). ONE
+// place, so the picture caches' existing hash keys re-render on every zoom
+// write that crosses the working level with no per-caller code (a live
+// profile with no breakpoints is hash 0 as well, and there the two answers
+// are rightly the same picture). While a WARP-column marker drag stands at
+// the working zoom, the live answer is the DRAG SLOT's
 // (waveform_gain_profile_drag_cached), so the picture shows the store as the
 // release would leave it. READERS: the plate's render inputs
 // (compute_waveform_render_inputs), the overview lane's bar cache

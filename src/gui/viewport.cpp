@@ -460,11 +460,6 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     const int64_t visible = samples_visible(app, audio);
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
-    // AND EVERY CALLER HERE IS A DISCRETE ZOOM, SO THIS IS A COMMIT: the
-    // keep-centered lamp answers the level just landed if it crossed the
-    // working zoom (the rule and the road inventory at
-    // commit_keep_centered_zoom, app_state.h).
-    commit_keep_centered_zoom(app);
 
     invalidate_waveform_area();
     // Harmless over-damage: a zoom moves the viewport, never the playhead or
@@ -558,11 +553,6 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
         app.follow_engaged = false;
-    // THIS APPLIER COMMITS NO ZOOM, `final` included: every caller is a
-    // continuous gesture, and the keep-centered lamp is written at the
-    // gesture's END (the three end sites are inventoried at
-    // commit_keep_centered_zoom, app_state.h), so a drag that swings
-    // across the working zoom and back does not flicker the lamp.
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -640,10 +630,7 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // Past the return above either the level or the start really moved, so
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
     // double-click and the group undo/redo restore's zoom-out-to-fit arm being
-    // what reach here. BOTH ARE DISCRETE, so this is a zoom COMMIT for the
-    // keep-centered lamp, which a pan-only framing leaves where it
-    // stands (commit_keep_centered_zoom, app_state.h).
-    commit_keep_centered_zoom(app);
+    // what reach here.
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -723,7 +710,7 @@ void Viewport::center_viewport_on_playhead() {
         if (playback.is_playing()) playback.resync_predictor();
         // Viewport actually moved (inside the changed guard). Center-on-
         // playhead is a one-shot discrete jump (the C key, the Tab recenter
-        // family and the `y` lamp's nudge recenter) — render the plate synchronously so the playhead overlay does
+        // family and the nudge's recenter at the working zoom) — render the plate synchronously so the playhead overlay does
         // not lead the waveform by a frame.
         kick_waveform_sync();
     }
@@ -752,24 +739,26 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
-// THE `y` LAMP'S ONE ACT (architect 2026-09-13; the rule is stated at
-// AppState::keep_centered_while_nudging): a Left/Right nudge that MOVED SOMETHING calls this
-// on its changed path, and while the lamp is lit the viewport recenters on the
-// result through center_viewport_on_playhead — the standing zoom, the clamp at
-// the song's two ends, the pan's damage and the synchronous rebuild. Both
+// THE NUDGE'S RECENTER (architect 2026-09-14, deriving it from the zoom; the
+// declaration in viewport.h states the rule): a Left/Right nudge that MOVED
+// SOMETHING calls this on its changed path, and AT THE WORKING ZOOM
+// (zoom_level_at_or_finer_than_working) the viewport recenters on the result
+// through center_viewport_on_playhead — the standing zoom, the clamp at the
+// song's two ends, the pan's damage and the synchronous rebuild; coarser the
+// camera holds. Both
 // nudges have stopped playback before their write, so the body's ternary takes
 // the resting cursor, which is where each nudge has just put the playhead.
 // TWO CALLERS: the marker nudge's commit tail (finish_position_nudge,
 // position_nudge.cpp) and the waveform-lane playhead step
 // (GuiInputHandler::run_waveform_lane_playhead_step). A held key's repeats and
 // a held arrow button's fires reach both through the same act bodies, so the
-// recenter runs at every step. THE LAMP IS INERT IN TARGET VIEW ON THE WARP
-// COLUMN (architect 2026-09-13, keep_centered_while_nudging_applies): the body
-// returns there lit or dark, so the marker nudge (refused upstream in T+W
-// anyway) and the playhead step (not refused) both move without recentering.
+// recenter runs at every step. NO VIEW TERM: in target view on the warp column
+// the marker nudge is refused upstream (active_column_authoring_allowed) and
+// never arrives, while the playhead step recenters there as anywhere. A nudge
+// runs under no pointer gesture, so the level here is never finer than
+// working; the inclusive predicate answers the working zoom.
 void Viewport::recenter_after_nudge() {
-    if (!app.keep_centered_while_nudging) return;
-    if (!keep_centered_while_nudging_applies(app)) return;
+    if (!zoom_level_at_or_finer_than_working(app.zoom_level)) return;
     center_viewport_on_playhead();
 }
 

@@ -1139,11 +1139,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // have already seated, each of them going through Selection::seat_focus.
     // The axis survives as session state; only its ride on an entry is gone.)
 
-    // The keep-centered lamp's zoom write is the zoom's alone: the restore
-    // answers it only where its tab write lands another level
-    // (switch_active_tab_view_to) or its framing zooms
-    // (Viewport::apply_zoom_to_start), both of them commits of their own.
-
     recompute_dirty();
     viewport.invalidate_waveform_area();
     // One-shot discrete jump: undo/redo restored markers / phase resets /

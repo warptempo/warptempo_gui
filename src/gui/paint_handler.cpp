@@ -1010,12 +1010,6 @@ constexpr IconRowDef kIconRowButtons[] = {
     // approval 2026-09-14), two boxes and two 2px gaps off the walk and no
     // separator moving. zoom-in-y stays for the per-marker magnification's
     // opener.)
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14), bare `]`, behind
-    // `c` and ahead of Follow: zoom-out-y, the vertical magnifier's minus,
-    // restored the same day it left with the Reduce button — the picture
-    // taken back to level 0. It joins the group rather than opening one: one
-    // box and one 2px gap on the walk, no separator moving.
-    {RedesignButton::IconIgnoreWaveformMagnification, icons::Icon::ZoomOutY},
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
@@ -1041,14 +1035,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // settling on the chevron-and-dot, which reads as GOING to a place rather
     // than as a transport control.
     {RedesignButton::IconFollow, icons::Icon::GoJump},
-    // THE KEEP-CENTERED LAMP (2026-08-31, R11), Follow's neighbour at the zoom
-    // group's tail: Breeze's align-horizontal-center, two boxes threaded on
-    // one vertical center line — a viewport holding its subject at the
-    // center column. It joins the group rather than opening one, so the row
-    // gains one box and one 2px gap and no separator moves.
-    {RedesignButton::IconKeepCenteredWhileNudging, icons::Icon::AlignHorizontalCenter},
     // THE RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04) closes the same group
-    // behind the keep-centered lamp, "it is also a viewport gesture"
+    // behind Follow, "it is also a viewport gesture"
     // being the architect's own reason for moving it here from the toolbar
     // group, where it had stood between Redo and Render for the hours of its
     // first day. What it decides is whether an undo or redo may take the CAMERA
@@ -2692,7 +2680,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-four paint on every
+    // hiding/showing icons in top icon row"): all twenty-two paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2708,25 +2696,25 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 24·32 + (24−6)·2 + (6−1)·9 = 8 + 768 + 36 + 45 = 857px,
+    //   8 + 22·32 + (22−6)·2 + (6−1)·9 = 8 + 704 + 32 + 45 = 789px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 865.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 797.
     //
-    // THE TABLET FIT CEILING IS 268 (re-derived 2026-09-14 at the Zoom In /
-    // Zoom Out deletion, two boxes and two gaps off the walk): the walk fits
-    // while 857·factor ≤ 2304, 857·2.68 = 2296.8, and 269 overruns by one
-    // device px. (Counting the trailing pad the ceiling is 266 — 865·2.66 =
-    // 2300.9 fits and 267 overruns — but the pad is ground, not ink, so the
-    // icons themselves are the thing measured.) The tablet's first-run 225
-    // clears it by 375 device px (857·2.25 = 1928.25 against 2304) — 167 of
-    // the panel's 1024 logical px at that scale. The laptop clears it outright
-    // at 865 of 1920. The row's width succession is in git history; a roster
-    // move restates these numbers.
+    // THE TABLET FIT CEILING IS 292 (re-derived 2026-09-14 at the Keep
+    // Centered While Nudging and Ignore Waveform Magnification deletion): the
+    // walk fits while 789·factor ≤ 2304, 789·2.92 = 2303.88, and 293 overruns
+    // (789·2.93 = 2311.77). (Counting the trailing pad the ceiling is 289 —
+    // 797·2.89 = 2303.33 fits and 290 overruns — but the pad is ground, not
+    // ink, so the icons themselves are the thing measured.) The tablet's
+    // first-run 225 clears it by 528.75 device px (789·2.25 = 1775.25 against
+    // 2304) — 235 of the panel's 1024 logical px at that scale. The laptop
+    // clears it outright at 797 of 1920. The row's width succession is in git
+    // history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 225% is ~77 and ~92
-    // device px against its panel — room for four more members at 225%, a
-    // fifth one cropping.
+    // device px against its panel — room for six more members at 225%, a
+    // seventh one cropping.
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground

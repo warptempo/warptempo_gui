@@ -165,15 +165,16 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
 // tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (268 since 2026-09-14 — the walk's own paragraph below) are
+// ceiling (292 since 2026-09-14 — the walk's own paragraph below) are
 // untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 857 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-four-button left-to-right walk runs past the window's right edge —
-// the tablet's own 225 clears it by 167 (2304/2.25 = 1024 logical px) and 268
-// is the fit ceiling on that panel since the ZOOM IN / ZOOM OUT DELETION of
-// 2026-09-14 (architect 2026-09-14), two boxes and two gaps off the row (the
+// 789 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-two-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it by 235 (2304/2.25 = 1024 logical px) and 292
+// is the fit ceiling on that panel since the KEEP CENTERED WHILE NUDGING AND
+// IGNORE WAVEFORM MAGNIFICATION DELETION of 2026-09-14 (architect
+// 2026-09-14), inside the [50, 350] vocabulary, so a scale above it crops (the
 // arithmetic is at paint_icon_row, paint_handler.cpp; the ceiling's succession
 // is in git history; 250 was tried as the TEMPLATE for an afternoon on
 // 2026-08-27 and stepped back the same evening for the ~3 authored px it

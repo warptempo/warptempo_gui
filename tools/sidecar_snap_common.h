@@ -18,7 +18,7 @@
 //
 // VIEWPORT-INDEPENDENT IS NOT WIDTH-INDEPENDENT FOR FREE; it holds under a
 // stated precondition, enforced by the refusal at rate_has_canonical_lattice
-// below and bounded by the short-source note there. The reachable set is
+// below. The reachable set is
 // {round(k*q)} for the LOGICAL q only where the painter's own q equals it, and
 // the painter quantizes: painter_samples_per_pixel is nearbyint(q * W) / W
 // over the effective width W (warp_frame_map_view.cpp). The two agree exactly
@@ -105,14 +105,11 @@ inline double lattice_frames_per_px(double sample_rate) {
 // tool that authored there would be writing positions the GUI relabels the
 // moment it loads them, so an indivisible rate refuses instead.
 //
-// THE OTHER BOUNDARY IS UNDETECTABLE HERE AND IS RECORDED RATHER THAN GUARDED:
-// a source too SHORT to reach zoom 2 never authors at 1.25 ms/px at all,
-// because clamp_zoom_level (src/gui/main.cpp) clamps the `c` command to that
-// file's own fit-the-window ceiling, leaving the live q at the fit span. The
-// canonical-lattice claim does not extend to such a file. No tool can detect
-// it — the ceiling is a function of the runtime waveform width, which is the
-// one thing a tool cannot know — and the material these tools serve (whole
-// movements, millions of frames) sits many thousands of columns clear of it.
+// A SOURCE TOO SHORT TO FILL THE WINDOW AT ZOOM 2 IS NO BOUNDARY: nothing in
+// the GUI rests finer than the working zoom, and where a file's fit-the-window
+// ceiling is finer than it the floor wins (clamp_zoom_level, src/gui/main.cpp),
+// so such a file rests at zoom 2 with its viewport parked at frame 0 and
+// authors on this same lattice.
 inline constexpr long kLatticeRateDivisor = 50;
 
 inline bool rate_has_canonical_lattice(long sample_rate) {
