@@ -305,7 +305,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // names for the named keys (Esc, Del, Return, Backspace, PgUp, PgDown, Space,
 // Tab, Home, End, the four arrows — QKeySequence's keyname[] table, researched
 // against the source), bare letters UPPERCASE, punctuation naming the CAP
-// rather than the stamped symbol ("Shift+[", "Ctrl+=", "Ctrl+-"), modifiers
+// rather than the stamped symbol ("Shift+[", "Shift+/"), modifiers
 // Ctrl, Alt, Shift joined by '+'.
 //
 // THE UPPER-CASING OF A BARE LETTER took a one-day round trip that the
@@ -654,8 +654,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
         case GuiKeys::BracketLeft: return bare || sh;
-        // Bare is the waveform magnification, ctrl the horizontal zoom.
-        case GuiKeys::Equal: case GuiKeys::Minus: return bare || cl;
+        // The zoom step, bare alone (architect approval 2026-09-14).
+        case GuiKeys::Equal: case GuiKeys::Minus: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it

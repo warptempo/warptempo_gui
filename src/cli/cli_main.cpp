@@ -122,9 +122,11 @@ int main(int argc, char** argv) {
     {
         // The whole-file strict schema (settings_file.h), the same reader
         // the GUI runs at source load: a sidecar set is loadable in both
-        // products or neither, GUI-kind keys included (an out-of-range
-        // waveform_magnification_level refuses here exactly as it refuses the
-        // GUI load, though nothing in this binary paints).
+        // products or neither, GUI-kind keys included (a malformed tab trim
+        // or view letter refuses here exactly as it refuses the GUI load,
+        // though nothing in this binary paints; the retired
+        // waveform magnification level key refuses as every unknown key does —
+        // architect approval 2026-09-14).
         auto parsed = read_settings_file(set_path);
         if (!parsed) {
             std::fprintf(stderr,

@@ -70,12 +70,9 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // (device_config.h) — a per-source routine is the wrong place to apply a
     // fact about the panel, and this load must not overwrite what the config
     // said.)
-    // The waveform PICTURE's magnification LEVEL, applied verbatim. It is
-    // consumed by the painter alone — the plate fingerprint
-    // and the overview bar cache both key on it — so this routine's VALUES-ONLY
-    // contract holds with no side effect at the caller's tail: the load's own
-    // full rebuild repaints both surfaces.
-    app.waveform_magnification_level = sf.waveform_magnification_level;
+    // (THE WAVEFORM MAGNIFICATION LEVEL LEFT THIS ROUTINE 2026-09-14 with its
+    // key: the picture's gain is a per-section profile resolved from the warp
+    // markers, which the load replaces through their own store.)
     // (`projects_repo` LEFT THIS ROUTINE 2026-08-27 with its key: the projects
     // home is the DEVICE config's now, read once by gui_main and never by a
     // source load — device_config.h.)
@@ -315,12 +312,6 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // already read it out of the device config and applied it before this load
     // begins, so re-seeding it to 100 here would throw away the live value the
     // whole file exists to carry.)
-    // Mirror for the waveform magnification level: construction-state
-    // default before the .settings parse below, which the required key always
-    // overwrites. It needs no push at all — the painter reads
-    // app.waveform_magnification_level directly.
-    app.waveform_magnification_level = 0;
-
     // Companion files: discover paths, create <basename>.warpmarkers,
     // <basename>.phaseresetmarkers, and <basename>.settings if missing.
     // Companion file convention is <source_dir>/<source_basename>.<ext>
@@ -565,8 +556,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
         apply(sf.tab_a, app.tab_a);
         apply(sf.tab_b, app.tab_b);
         // Engine block plus the scalar view state (active_audio_view,
-        // active_markers_view, active_tab_view,
-        // waveform_magnification_level), VALUES ONLY. The
+        // active_markers_view, active_tab_view), VALUES ONLY. The
         // one side effect that consumes these (on_resize) stays below where it
         // always ran.
         apply_settings_engine_and_prefs(app, viewport, sf);

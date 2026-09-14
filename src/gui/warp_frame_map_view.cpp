@@ -162,6 +162,18 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     return c;
 }
 
+const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app) {
+    WaveformGainProfileCache& c = app.waveform_gain_profile_cache;
+    const long long gen = app.warpmarkers.generation();
+    if (c.valid && c.markers_gen == gen) return c;
+    c.profile     = build_waveform_gain_profile(app.warpmarkers.markers());
+    c.hash        = waveform_gain_profile_hash(c.profile);
+    c.markers_gen = gen;
+    c.valid       = true;
+    return c;
+}
+
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app) {
     PhaseResetRedFlagCache& c = app.phase_reset_red_flag_cache;

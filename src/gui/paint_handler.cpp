@@ -960,7 +960,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // roster for the new menu, and FOLLOW and the SHOW TRIM REGION button
     // joined the zoom group, dissolving two separator-led groups into it; the
     // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
-    // tail, TWENTY-SEVEN in SIX.)
+    // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
+    // carries every count since — TWENTY-FIVE in SIX since 2026-09-14, the
+    // magnification pair's deletion.)
     // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
     // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
     // it then, the Show trim region button filled it on 2026-08-16 and led it
@@ -970,8 +972,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // 2026-08-11 placement ("place it after the warp/phase radio buttons,
     // create a new separator") is where the merged group still sits, and the
     // group he opened it as — a home for VIEWPORT-RELATED ACTS — is what the
-    // merge finishes: the trim overlay, the four horizontal magnifiers, the
-    // vertical pair and FOLLOW, all in one separator-led run. THIS TABLE IS THE
+    // merge finishes: the trim overlay, the four horizontal magnifiers and
+    // FOLLOW, all in one separator-led run (the vertical magnification pair
+    // that stood among them retired 2026-09-14). THIS TABLE IS THE
     // ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
     // plus the group's leader in redesign_button_opens_icon_group
@@ -993,12 +996,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconShowRegion, icons::Icon::ToolRectSelection},
     // THE ZOOM FOUR (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): zoom in
-    // (Ctrl+`=`), zoom out (Ctrl+`-`), full zoom out (bare `0`) and
+    // (bare `=`), zoom out (bare `-`), full zoom out (bare `0`) and
     // working-zoom center (bare `c`), four navigation acts which OPENED the
     // group until the 2026-08-27 merge above put them behind the trim
-    // overlay's own separator — the stepping pair's chords bare until
-    // 2026-08-27, when they traded
-    // spellings with the magnification pair below them. The
+    // overlay's own separator — the stepping pair's chords ctrl from
+    // 2026-08-27 to 2026-09-14, while the retired magnification pair held the
+    // bare keys. The
     // 2026-08-02 no-duplicate-commands deletion of the old zoom pair is
     // SUPERSEDED by this order: these buttons are the same commands' pointer
     // home for the glass rig, and they kept their rows in the Navigation
@@ -1009,19 +1012,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), closing the same group:
-    // the picture's VERTICAL gain, magnify (bare `=`) then reduce (bare `-`),
-    // wearing Breeze's zoom-in-y / zoom-out-y — the magnifier construction
-    // beside them with an AXIS RULER down the left of the lens, which is what
-    // tells the pair apart from the four horizontal magnifiers at row size.
-    // They join the zoom group rather than opening one, so the row gains two
-    // boxes and two 2px gaps and no separator moves.
-    // (A THIRD BUTTON SAT HERE FOR ONE DAY — the MAGNIFICATION RESET on
-    // Ctrl+0, wearing zoom-fit-height — and the architect deleted it on
-    // 2026-08-27 when the pair moved onto the bare keys; the glyph went with
-    // it, having had no other consumer.)
-    {RedesignButton::IconWaveformMagnify, icons::Icon::ZoomInY},
-    {RedesignButton::IconWaveformReduce,  icons::Icon::ZoomOutY},
+    // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
+    // to 2026-09-14 — magnify on bare `=` wearing zoom-in-y and reduce on bare
+    // `-` wearing zoom-out-y — and left with the setting it stepped (architect
+    // approval 2026-09-14), two boxes and two 2px gaps off the walk and no
+    // separator moving. zoom-out-y went with it; zoom-in-y stays for the
+    // per-marker magnification's opener.)
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
@@ -2672,8 +2668,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-SEVEN members
-    // in SIX groups since 2026-09-13, RE-COUNTED off the roster enum and the
+    // separator-divided groups of 32x32 buttons — TWENTY-FIVE members
+    // in SIX groups since 2026-09-14, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE TWO VIEW LAMPS
     // sharing one group since the second of that day's rulings deleted the
@@ -2681,8 +2677,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
-    // until that ruling), then the zoom four (2026-08-12), the waveform
-    // magnification pair (2026-08-26), FOLLOW, which came in from the
+    // until that ruling), then the zoom four (2026-08-12), FOLLOW, which came
+    // in from the
     // dissolved mass-marker group the same day, THE KEEP-CENTERED LAMP beside
     // it (2026-08-31, R11), and THE RESTRICT UNDO TO VIEWPORT LAMP closing
     // the group (2026-09-04, arriving from the toolbar group later that day
@@ -2697,7 +2693,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-seven paint on every
+    // hiding/showing icons in top icon row"): all twenty-five paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2713,9 +2709,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 27·32 + (27−6)·2 + (6−1)·9 = 8 + 864 + 42 + 45 = 959px,
+    //   8 + 25·32 + (25−6)·2 + (6−1)·9 = 8 + 800 + 38 + 45 = 891px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 967.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 899.
+    //
+    // THE MAGNIFICATION PAIR DELETION'S ARITHMETIC (architect approval
+    // 2026-09-14): the row lost TWO BOXES and TWO GAPS — −64 and −4 off the 959
+    // the Center on Next Marker deletion had left it, no separator moving (the
+    // viewport-class group keeps seven members) — so it stands at 891 authored
+    // px. THE TABLET FIT CEILING GOES 240 → 258: the walk fits while
+    // 891·factor ≤ 2304, 891·2.58 = 2298.8, and 259 overruns by four device
+    // px. The tablet's first-run 225 clears it by 299 device px (891·2.25 =
+    // 2004.75 against 2304) — 133 of the panel's 1024 logical px at that scale.
     //
     // THE CENTER ON NEXT MARKER DELETION'S ARITHMETIC (architect 2026-09-13):
     // the row lost ONE BOX and ONE GAP — −32 and −2 off the 993 the Iterations
@@ -2778,13 +2783,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 238 rather than 240 — 967 is
-    // the ink plus the pad, 967·2.38 = 2301.5 fits and 239 overruns — but the
+    // (Counting the trailing pad the ceiling is 256 rather than 258 — 899 is
+    // the ink plus the pad, 899·2.56 = 2301.4 fits and 257 overruns — but the
     // pad is ground, not ink, so the icons themselves are the thing measured.)
-    // The laptop clears it outright at 967 of 1920; the retired Pi panel's
-    // 1024 at 100% would have cleared it by 57.
+    // The laptop clears it outright at 899 of 1920; the retired Pi panel's
+    // 1024 at 100% would have cleared it by 125.
     //
-    // (It was 993px at twenty-eight in six groups from 2026-09-04 until the
+    // (It was 959px at twenty-seven in six groups from the Center on Next
+    // Marker deletion of 2026-09-13 until the magnification pair's deletion of
+    // 2026-09-14; 993px at twenty-eight in six groups from 2026-09-04 until the
     // Center on Next Marker deletion of 2026-09-13; 918px at twenty-six in
     // five groups for the hours of 2026-09-04
     // between the regrouping and the Iterations deletion; 925px at twenty-six
@@ -2806,9 +2813,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
     // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
-    // against its panel — and after the Center on Next Marker deletion there
-    // are 146 of those device px left at 225%, room for one more member, a
-    // second one cropping.)
+    // against its panel — and after the magnification pair's deletion there
+    // are 299 of those device px left at 225%, room for three more members, a
+    // fourth one cropping.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -6379,7 +6386,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // ITSELF (2026-08-17) — and grabs it inside, where the drag is
 // the box-follows-pointer PAN; an outside press arms that same pan behind its
 // teleport (2026-08-18), and the wheel is unchanged (wheel_context's
-// overview arm: plain pan / ctrl zoom step). THE LANE'S VOCABULARY IS THOSE
+// overview arm: the plain stepped pan, every modified wheel a no-op). THE LANE'S VOCABULARY IS THOSE
 // THREE GESTURES AND NOTHING ELSE since the redesign of 2026-08-15: the
 // DUAL-AXIS strip drag that sat behind CTRL here — the last of that gesture's
 // entries — is DELETED whole, so ctrl binds nothing on the lane and no lane
@@ -6394,17 +6401,17 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         overview_bar_cache.destroy_surface();
         return;
     }
-    // THE KEY IS (width, height, magnification level) — the contract is at
-    // OverviewBarCache. The level is an input to these bars' own tip mapping,
-    // so a change to it dirties them BY FIELD.
+    // THE KEY IS (width, height, gain profile hash) — the contract is at
+    // OverviewBarCache. The profile is an input to these bars' own tip
+    // mapping, so a change to it dirties them BY FIELD.
+    const WaveformGainProfileCache& gain = waveform_gain_profile_cached(app);
     if (overview_bar_cache.rendered &&
         overview_bar_cache.width  == lane.w &&
         overview_bar_cache.height == lane.h &&
-        overview_bar_cache.magnification_level ==
-            app.waveform_magnification_level) {
+        overview_bar_cache.gain_profile_hash == gain.hash) {
         return;
     }
-    overview_bar_cache.magnification_level = app.waveform_magnification_level;
+    overview_bar_cache.gain_profile_hash = gain.hash;
     if (!overview_bar_cache.surface ||
         overview_bar_cache.width  != lane.w ||
         overview_bar_cache.height != lane.h) {
@@ -6453,15 +6460,14 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
         // rungs at the unconditional <=5-pairs-per-column bound, so the
         // rebuild is O(lane width) like any plate render).
         const WaveformBasis basis{0, spp, lane.w};
-        // ONE GAIN ON EVERY WAVEFORM PICTURE (2026-08-26): the whole-song map
-        // magnifies exactly as the plate does, this band being where a quiet
-        // passage disappears first. The PICTURE only — no sample is scaled.
+        // THE PLATE'S OWN GAIN PROFILE: the gain is a function of source time
+        // on every waveform picture, and this lane is source-domain, so each
+        // column takes the section containing its first source frame exactly
+        // as the plate's does. The PICTURE only — no sample is scaled.
         render_waveform(overview_bar_cache.surface, ch0, /*col0=*/0, audio, 0,
-                        basis, kWaveformInk,
-                        app.waveform_magnification_level, nullptr);
+                        basis, kWaveformInk, gain.profile, nullptr);
         render_waveform(overview_bar_cache.surface, ch1, /*col0=*/0, audio, 1,
-                        basis, kWaveformInk,
-                        app.waveform_magnification_level, nullptr);
+                        basis, kWaveformInk, gain.profile, nullptr);
     }
     overview_bar_cache.rendered = true;
 }

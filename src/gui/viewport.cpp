@@ -485,7 +485,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // live at GuiAudio::level_for_span) — so a full render is O(area_width) at
     // any zoom; coalesced
     // pointer detents resolve to one apply_zoom_change per frame, so this is one
-    // sync render per frame, not per detent. zoom_in / zoom_out / zoom_steps
+    // sync render per frame, not per detent. zoom_in / zoom_out
     // delegate here, so they are covered without a separate kick.
     kick_waveform_sync();
 }
@@ -665,37 +665,6 @@ void Viewport::zoom_out() {
     apply_zoom_change(clamp_zoom_level(app, audio, app.zoom_level + 1.0));
 }
 
-void Viewport::zoom_steps(int in_steps) {
-    if (in_steps == 0) return;
-    if (audio.total_frames() <= 0) return;
-    const double max_l = effective_max_zoom_level(
-        waveform_area(app).w, live_total_frames(app, audio), audio.sample_rate());
-
-    if (in_steps > 0) {
-        // Zoom in by whole steps: subtract one whole level per step, clamped
-        // constructively at the zoom-in floor.
-        double target = app.zoom_level - static_cast<double>(in_steps);
-        if (target < kMinZoom) target = kMinZoom;
-        if (target == app.zoom_level) {
-            // Net movement saturated with no change. Match zoom_in()'s recenter
-            // on the playhead when a deeper zoom is asked at the deepest level.
-            if (app.zoom_level == kMinZoom) center_viewport_on_playhead();
-            return;
-        }
-        apply_zoom_change(target);
-        return;
-    }
-
-    // Zoom out by whole steps: add |in_steps| whole levels, saturating at the
-    // effective per-file ceiling. The at-the-ceiling refusal reads its one
-    // owner (zoom_out_step_actionable, app_state.h — the same compare
-    // zoom_out() and the ZOOM OUT button's face make since 2026-08-30).
-    if (!zoom_out_step_actionable(app, audio)) return;
-    double target = app.zoom_level - static_cast<double>(in_steps);
-    if (target > max_l) target = max_l;
-    apply_zoom_change(target);
-}
-
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     if (audio.total_frames() <= 0) return;
     const int64_t old_vp = app.viewport_start_sample;
@@ -704,10 +673,10 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     if (app.viewport_start_sample != old_vp) {
         // EVERY PAN ENDS THE CHASE (architect 2026-07-30, "every pan
         // suppresses"). This is the pan funnel — PageUp/PageDown, the
-        // alt+wheel stepped pan, touchpad scroll
+        // plain-wheel stepped pan, touchpad scroll
         // and the plain-drag grab-pan all land here (the DRAG plain since
-        // 2026-08-12, pan-primary; the WHEEL back on alt since 2026-08-27, the
-        // plain form being the waveform magnification) — so one line covers the whole
+        // 2026-08-12, pan-primary; the WHEEL plain again since 2026-09-14, on
+        // alt for the days the plain form was the waveform magnification) — so one line covers the whole
         // class by construction. Inside the CHANGED guard, because a pan that
         // moved nothing (wall-saturated) ends nothing, and gated on
         // playback being live, matching the placement body's own `was_playing`
@@ -723,7 +692,7 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // invalidation covers every marker pixel the move affects.
         const GuiRect ts = top_strip_area(app);
         gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        // A discrete pan (the alt+wheel, PageUp/PageDown) re-anchors here -
+        // A discrete pan (the plain wheel, PageUp/PageDown) re-anchors here -
         // a single snap is invisible. A continuous drag pan passes
         // continuous=true and does NOT resync per motion event: the
         // predictor keeps extrapolating smoothly for the gesture's
@@ -734,7 +703,7 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         // viewport change takes: the incremental shift-and-strip fast-path this
         // used to drive was retired 2026-07-26 so a scrolling plate and a
         // resting one come off one code path. Every scroll class lands here —
-        // touchpad, the alt+wheel, PageUp/PageDown, the plain-drag grab-pan — and the
+        // touchpad, the plain wheel, PageUp/PageDown, the plain-drag grab-pan — and the
         // synchronous render also gives them all the grab-pan's old guarantee:
         // no frame paints overlays against a plate from an older basis.
         kick_waveform_sync();

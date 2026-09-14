@@ -147,8 +147,8 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, inset_px, MAGNIFICATION, target, and
-    // the warp_frame_map hash. Every one is an input the plate's PIXELS depend
+    // vp_start, vp_end, area_w, area_h, inset_px, the GAIN PROFILE hash, target,
+    // and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
     // to move with it.
     int64_t   fp_vp_start    = 0;
@@ -167,15 +167,17 @@ struct WaveformCache {
     // was font-derived then. The proxy died with the grid; the thing itself is
     // what the job takes.)
     int       fp_inset_px = -1;
-    // THE VISUAL MAGNIFICATION LEVEL the live pixels were rendered at
-    // (app.waveform_magnification_level — the ladder settings_file.h brackets).
-    // A FINGERPRINT FIELD in its own right, keyed directly like the inset: it
-    // is an input to the tip mapping alone, so nothing else about the plate
-    // would move if it changed by itself, and without it a plate rendered at
-    // one gain could go on being blitted after the setting moved. THE LEVEL AND
-    // NOT ITS GAIN, so the compare is integer. PIXELS ONLY — this cache holds a
-    // picture, and the level reaches no sample anywhere.
-    int       fp_magnification_level = 0;
+    // THE GAIN PROFILE'S HASH the live pixels were rendered under
+    // (waveform_gain_profile_cached — the per-section magnification resolved
+    // from the warp markers). A FINGERPRINT FIELD in its own right, keyed
+    // directly like the inset: the profile is an input to the tip mapping
+    // alone, so nothing else about the plate would move if it changed by
+    // itself (a magnification edit moves no marker and no map), and without it
+    // a plate rendered at one gain could go on being blitted after the markers
+    // changed it. The hash alone is enough to re-render — no basis freeze and
+    // no map term rides with it. PIXELS ONLY — this cache holds a picture, and
+    // the profile reaches no sample anywhere.
+    uint64_t  fp_gain_profile_hash = 0;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -207,7 +209,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
-    int       pending_fp_magnification_level = 0;
+    uint64_t  pending_fp_gain_profile_hash = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -229,7 +231,8 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
-    int       supersede_magnification_level = 0; // GUI-captured picture level
+    WaveformGainProfile supersede_gain_profile;      // GUI-captured profile
+    uint64_t  supersede_gain_profile_hash = 0;
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -256,11 +259,12 @@ struct WaveformCache {
         // guaranteed mismatch and re-dispatches — area_w = -1 is impossible for
         // any valid render (compute_waveform_render_inputs rejects area.w <= 0).
         pending_fp_area_w = -1;
-        // (The magnification level needs no poison of its own: area_w = -1 already
+        // (The gain profile hash needs no poison of its own: area_w = -1 already
         // guarantees the mismatch, and this cache carries the one poison
         // rather than one per field.)
         supersede = false;
         supersede_warp_frame_map.clear();
+        supersede_gain_profile.breakpoints.clear();
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
     }
@@ -312,7 +316,7 @@ struct FlagCache {
     // scale — the box, the pole, the label's font size, the measure box's
     // padding — so it is an input to this surface exactly as the viewport and
     // the marker generations are, and it is keyed BY FIELD like the plate's own
-    // inset and magnification rather than through whatever else happens to move
+    // inset and gain profile rather than through whatever else happens to move
     // with it. (fp_area_h does move at every 1 % step on a 1080-px window,
     // because the waveform's 500-px cap and the strip's lanes are all scaled —
     // but that is arithmetic on one window size, not construction; a window
@@ -455,7 +459,7 @@ struct FlagCache {
 // transparent outside the ink exactly like the plate, so the lane's ground
 // shows through.
 //
-// THE INVALIDATION KEY IS (width, height, MAGNIFICATION) — the LANE's own
+// THE INVALIDATION KEY IS (width, height, GAIN PROFILE HASH) — the LANE's own
 // dimensions (the cache surface is lane-sized and blits at the lane's origin;
 // the bars are drawn into the content band inside it, borders excluded), which
 // move only on a window resize or a gui_scale
@@ -478,13 +482,15 @@ struct FlagCache {
 // pyramid's unconditional <=5-pairs-per-column bound — the whole-song span is
 // exactly what the coarse rungs exist for).
 //
-// THE MAGNIFICATION JOINED THE KEY 2026-08-26, with the setting itself: ONE
-// GAIN ON EVERY WAVEFORM PICTURE, no exception — this 24px band is where a
-// quiet passage disappears first, and clipping in a whole-song map costs
-// nothing. It is an input to these bars' tip mapping exactly as it is to the
-// plate's, so it is keyed BY FIELD beside the two dimensions rather than left
-// to ride one of them. PIXELS ONLY: the factor scales this picture and reaches
-// no sample anywhere.
+// THE GAIN PROFILE'S HASH IS THE KEY'S THIRD FIELD (architect approval
+// 2026-09-14, replacing the retired setting's level): the gain is a function of
+// source time resolved from the warp markers, on every waveform picture — this
+// 24px band is where a quiet passage disappears first, and the lane is source-
+// domain, so it takes the plate's own profile (waveform_gain_profile_cached)
+// with no view term. It is an input to these bars' tip mapping exactly as it is
+// to the plate's, so it is keyed BY FIELD beside the two dimensions rather than
+// left to ride one of them. PIXELS ONLY: the gain scales this picture and
+// reaches no sample anywhere.
 //
 // OWNED BY GuiPaintHandler AS A VALUE, unlike WaveformCache and FlagCache
 // (main.cpp-constructed references): those two are touched from outside the
@@ -495,9 +501,9 @@ struct OverviewBarCache {
     cairo_surface_t* surface  = nullptr;
     int              width    = 0;
     int              height   = 0;
-    // The magnification LEVEL the cached bars were drawn at (the key's third
-    // field) — the level and not its gain, so the compare is integer.
-    int              magnification_level = 0;
+    // The gain profile's hash the cached bars were drawn under (the key's
+    // third field).
+    uint64_t         gain_profile_hash = 0;
     bool             rendered = false;
 
     void destroy_surface() {
@@ -507,7 +513,7 @@ struct OverviewBarCache {
         }
         width    = 0;
         height   = 0;
-        magnification_level = 0;
+        gain_profile_hash = 0;
         rendered = false;
     }
 
@@ -749,12 +755,13 @@ private:
         // field — the plate's only non-area geometry, so nothing else would
         // move if it changed alone.
         int      inset_px      = 0;
-        // The waveform PICTURE's magnification LEVEL
-        // (app.waveform_magnification_level). BOTH a render input and a
-        // fingerprint field, exactly like inset_px above: it feeds the tip
-        // mapping and nothing else, so nothing else would move if it changed
-        // alone.
-        int      magnification_level = 0;
+        // The waveform PICTURE's gain profile (waveform_gain_profile_cached,
+        // an owned snapshot for the job) and its hash. The profile is the
+        // render input and the HASH the fingerprint field, exactly like
+        // inset_px above: it feeds the tip mapping and nothing else, so nothing
+        // else would move if it changed alone.
+        WaveformGainProfile gain_profile;
+        uint64_t gain_profile_hash = 0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in
@@ -825,7 +832,7 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-seven
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-five
     // view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout,
     // the ITERATION PAIR came back from the menu row on 2026-09-04

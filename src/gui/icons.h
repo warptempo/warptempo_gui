@@ -151,35 +151,28 @@ enum class Icon {
     // 2026-08-02; the architect's 2026-08-12 relayout ruling supersedes that
     // for these four (the roster's record at kIconRowButtons), so the two
     // magnifiers return as fresh transcriptions beside two new siblings.
-    ZoomIn,              // Zoom in (Ctrl+`=`)
-    ZoomOut,             // Zoom out (Ctrl+`-`)
+    ZoomIn,              // Zoom in (bare `=`)
+    ZoomOut,             // Zoom out (bare `-`)
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
-    // THE WAVEFORM MAGNIFICATION'S TWO FACES (2026-08-26), the zoom group's
-    // last buttons: Breeze's zoom-in-y / zoom-out-y — the
-    // SAME magnifier construction as the four above, each carrying a Y-AXIS
-    // MARK: a ruler of tick marks down the left of the lens with the plus or
-    // the minus in the dial. The
-    // axis marks are the whole reason these are the right pick: the act IS a
-    // zoom, of the amplitude axis rather than the time axis, and the mark is
-    // what tells the pair apart from their four horizontal neighbours at row
-    // size. Both are single `.ColorScheme-Text` paths in the family's own
-    // idiom, so the interpreter was asked for nothing new.
-    //
-    // ONE OF THE TWO IS A SYMLINK IN THE INSTALLED THEME — zoom-in-y.svg
-    // points at y-zoom-in.svg, byte-identical — and the committed asset is the
-    // resolved bytes, exactly as edit-comment's was before it; the other is a
-    // real file. The names here are the PROVENANCE names (the
-    // theme-provenance rule), while the product act they face is the waveform
-    // magnification.
+    // ZOOM-IN-Y, breeze's zoom-in-y (2026-08-26): the SAME magnifier
+    // construction as the four above, carrying a Y-AXIS MARK — a ruler of tick
+    // marks down the left of the lens with the plus in the dial — so the act it
+    // faces is a zoom of the amplitude axis rather than the time axis. It faced
+    // the icon row's Magnify waveform button until 2026-09-14, when that button,
+    // its Reduce twin (zoom-out-y, whose enumerator, def and asset left with
+    // it) and the setting they stepped retired (architect approval 2026-09-14);
+    // THIS ONE IS KEPT for the per-marker magnification's own bottom-row opener
+    // to wear. One `.ColorScheme-Text` path in the family's own idiom; in the
+    // installed theme zoom-in-y.svg is a symlink to y-zoom-in.svg,
+    // byte-identical, and the committed asset is the resolved bytes. The name
+    // is the PROVENANCE name (the theme-provenance rule).
     //
     // (ZOOMFITHEIGHT WAS A THIRD FACE FOR ONE DAY — breeze's zoom-fit-height,
-    // the full-length handle with a bracketed pair of rules across the lens,
     // worn by the MAGNIFICATION RESET from 2026-08-26 to 2026-08-27. Its def
     // and its asset are deleted with the button, no button being left that
     // wears them — edit-comment's own precedent.)
-    ZoomInY,             // Magnify waveform (bare `=`)
-    ZoomOutY,            // Reduce waveform (bare `-`)
+    ZoomInY,             // the per-marker magnification's opener (kept 2026-09-14)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's

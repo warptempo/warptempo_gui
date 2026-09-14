@@ -162,7 +162,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // `tab_X_read_only=false` with them as a self-unlock beside bare `o` and the
 // icon row's toggle. That is the ruling working rather than a hole, and it is
 // why the READ-ONLY arm in commit() stays engine-only: the GUI-kind keys are
-// band rather than authored content — view state, the magnification level,
+// band rather than authored content — view state,
 // the per-tab viewport, zoom, playhead, trim and the
 // read_only bit itself — and have been read-only-legal since 2026-08-07, so
 // none of them owes a read-only gate here.
@@ -193,8 +193,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 //     (AppState::iteration_mode_enabled's invariant), so a typed `S` is the
 //     one spelling that could move it and a typed `T` is the ordinary no-op.
 // AND THE REST DO NOT, each because its own chord is live under a lit lamp:
-// `active_tab_view=` is Ctrl+Tab,
-// `waveform_magnification_level=` is the `=`/`-` pair, and the per-tab
+// `active_tab_view=` is Ctrl+Tab, and the per-tab
 // `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
 // viewport and trim band, which neither lock protects. The delta's other two
 // chords — bare `k` and the paired march — have no key in this schema at all,
@@ -322,23 +321,6 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // chords and their own icon-row buttons and by nothing else; the third,
     // center_on_next_marker, was deleted 2026-09-13, the Tab walk's framing
     // being the zoom's at the landing.)
-    if (key == "waveform_magnification_level") {
-        // History-less and APPLIED LIVE, through the SAME chokepoint the TWO
-        // hotkeys (bare `=` and bare `-`), the TWO icon-row buttons that
-        // synthesize them and the PLAIN WHEEL use — the third of each retired
-        // 2026-08-27 with Ctrl+0 and the reset button, this editor line being
-        // the reset road that replaced them. A typed
-        // `waveform_magnification_level=4` is one more caller of
-        // apply_waveform_magnification_level, never a parallel writer. The
-        // RANGE was already enforced by validate_gui_setting above, so an
-        // out-of-range value never reaches here: it red-flashes at the grammar
-        // owner, which is why the applier clamps nothing. The value persists on
-        // the next ordinary Ctrl+S and marks nothing dirty.
-        const int v = static_cast<int>(gv.i64);
-        if (v == app.waveform_magnification_level) { unchanged(); return true; }
-        input->apply_waveform_magnification_level(v);
-        applied(); return true;
-    }
     if (key == "active_audio_view") {
         // THE ITERATION LOCK REFUSES THE SWITCH BACK TO SOURCE (architect
         // 2026-09-13: grid iterations lives in target view alone), the typed
@@ -1156,7 +1138,7 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, waveform_magnification_level, max_waveform_height,
+    // gui_scale, max_waveform_height,
     // projects_repo, projects_path, sync_path — gui_scale and the last four
     // the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical

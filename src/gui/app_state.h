@@ -2126,7 +2126,7 @@ enum class RedesignButton {
     // living on as the tooltips), the TWO VIEW LAMPS sharing one group since
     // 2026-09-04, THE VIEWPORT-CLASS GROUP — the Show trim region button
     // leading the zoom four (2026-08-12, the architect's live placement "after
-    // the trim"), the magnification pair, Follow and the three lamps behind
+    // the trim"), Follow and the three lamps behind
     // them, the last of which arrived from the toolbar group later on
     // 2026-09-04 — THE ITERATION PAIR, back from the menu row later that same
     // day, the
@@ -2200,9 +2200,10 @@ enum class RedesignButton {
     // boundary in front of IconZoomIn DELETED, so the two groups merged into
     // one at this button's own leader position and nothing here moved a pixel
     // to the left. What the merged group collects is the VIEWPORT CLASS whole
-    // — the overlay that frames the trim, the four horizontal magnifiers, the
-    // vertical pair and FOLLOW, which came into it from the dissolved
-    // mass-marker group the same day.
+    // — the overlay that frames the trim, the four horizontal magnifiers and
+    // FOLLOW, which came into it from the dissolved mass-marker group the same
+    // day (the vertical magnification pair that sat between them retired
+    // 2026-09-14).
     //
     // IT INHERITED THE SCISSORS' CHORD AND THEIR SHIFT ADMISSION, hours after
     // their button was deleted, because the region became the trim the same
@@ -2243,12 +2244,14 @@ enum class RedesignButton {
     // navigation chords which OPENED the group until 2026-08-27, when the
     // trim boundary in front of them was deleted and the Show trim region
     // button above became the merged group's leader —
-    // zoom in (Ctrl+`=`), zoom out (Ctrl+`-`), full zoom out (bare `0`,
+    // zoom in (bare `=`), zoom out (bare `-`), full zoom out (bare `0`,
     // whose ceiling arm runs the `c` command), and working-zoom center (bare
-    // `c`). THE STEPPING PAIR TOOK THE CTRL SPELLINGS ON 2026-08-27, trading
-    // with the magnification pair below it: bare is vertical, ctrl is
-    // horizontal, on the keys and on the wheel alike. The spelling is all that
-    // moved — none of these four hold-repeats, then or now.
+    // `c`). THE STEPPING PAIR IS BARE AGAIN SINCE 2026-09-14 (architect
+    // approval 2026-09-14): it wore the ctrl spellings from 2026-08-27, when it
+    // traded them with the waveform magnification pair, and took the bare keys
+    // back when that pair retired with its setting, the ctrl forms deleted. The
+    // spelling is all that moved — none of these four BUTTONS hold-repeats,
+    // then or now (the keys repeat).
     // Every one is a momentary navigation act and LIVE in the `h` view (all
     // four chords are on the mode's allowlist or its own vocabulary, so the
     // derived partition answers live with nothing hand-listed). THREE NEVER
@@ -2264,58 +2267,14 @@ enum class RedesignButton {
     // of its rows a second path to a command that already had one — so these
     // four are the zoom commands' pointer home outright now.
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
-    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), closing the zoom group:
-    // the picture's VERTICAL gain where the four above it are the horizontal
-    // one. Magnify (bare `=`) steps the level up and Reduce (bare `-`) steps it
-    // down along the doubling ladder whose range settings_file.h owns and
-    // whose gain render.h derives — the same two keys the zoom pair uses, one
-    // modifier LESS since 2026-08-27, which is the mnemonic: BARE IS VERTICAL,
-    // CTRL IS HORIZONTAL, and the wheel says the same thing (plain wheel
-    // magnifies, Ctrl+wheel zooms, Alt+wheel pans).
-    //
-    // (THE MAGNIFICATION RESET WAS A THIRD MEMBER FOR ONE DAY — Ctrl+0,
-    // wearing Breeze's zoom-fit-height, 2026-08-26 to 2026-08-27 — and the
-    // architect deleted the BUTTON with the spelling swap, its chord going with
-    // it. The settings editor's `waveform_magnification_level=0` is the reset
-    // road now, which is the road every other GUI-kind key already has.)
-    //
-    // THEY EXIST FOR GLASS. The setting is hotkey-operated on the laptop, and a
-    // touch panel has no hotkeys — "I wouldn't want to go click on the settings
-    // dropdown and type a number, especially on the touch screen" — so the act
-    // needs a pointer home, which is what these three are. They sit in the ZOOM
-    // GROUP rather than opening one, both because the group is where the
-    // viewport-class acts collect and because the row's separator count is a
-    // thing the architect places by hand.
-    //
-    // BOTH HOLD-REPEAT, the roster's second hold gesture after
-    // the four cardinal arrows and taking its shape whole: first fire at
-    // kHoldBeatMs, later fires at the COMPOSITOR'S advertised repeat rate, a
-    // fired burst suppressing the lift's own act, the burst's state and edge
-    // inventory at AppState::ChromePress. There is NO UNDO OPENER to worry
-    // about, unlike the arrows: the setting is history-less, so a burst pushes
-    // no entries at all and the coalescing question does not arise. (The
-    // membership is the chord table's `repeats` column and lives nowhere
-    // else.)
-    //
-    // GREYED AT THE LADDER'S ENDS since 2026-08-30 (planner decision 53 under
-    // the truthful-buttons ruling; the arm at redesign_button_enabled reads
-    // the applier's own bracket of the step's own target): a press at either
-    // end is a consumed no-op, and from 2026-08-26 until then the face stayed
-    // lit there as the zoom group's own answer — a face tracking the rung
-    // would blink at interaction cadence, the 2026-08-15 no-blink ruling,
-    // which the architect withdrew. NO LAMP: each is an act that completes,
-    // momentary like the four magnifiers.
-    //
-    // NO MODIFIER IS ADMITTED — neither redesign_button_shift_admits nor
-    // redesign_button_ctrl_admits names them, so a shift or ctrl click is
-    // refused at the band gate and the SHIFT LONG PRESS cannot reach them
-    // either. Their chords are BARE since 2026-08-27; the ctrl the chord table
-    // carries for them now sits on the zoom pair instead, which is that
-    // table's own column and a different thing from admitting a ctrl press.
-    //
-    // THE PICTURE ONLY: the level scales what the painter draws and reaches no
-    // sample, no playback path and no render.
-    IconWaveformMagnify, IconWaveformReduce,
+    // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
+    // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
+    // architect retired the setting it stepped (architect approval 2026-09-14):
+    // the picture's gain is a per-section profile resolved from the warp
+    // markers now, each marker carrying its own magnification, so there is no
+    // piece-wide level for a button to step. Both buttons, the step owner and
+    // the applier were deleted whole; the bare keys went back to the zoom pair
+    // above.)
     // FOLLOW (bare `f`) — THE ZOOM GROUP'S LAST MEMBER SINCE 2026-08-27, and a
     // VIEWPORT-CLASS act like everything else in it: the mode that keeps the
     // playing cursor in view is about where the camera is, which is what that
@@ -2985,13 +2944,18 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SIX in row 1, two
-// in row 3, TWENTY-SEVEN in row 4 and EIGHTEEN in the bottom row — 53. Of
+// in row 3, TWENTY-FIVE in row 4 and EIGHTEEN in the bottom row — 51. Of
 // those,
-// FIFTY carry a chord in kToolbarChords and THREE are the dropdown
+// FORTY-EIGHT carry a chord in kToolbarChords and THREE are the dropdown
 // anchors (File, Edit and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 51 SINCE 2026-09-14'S MAGNIFICATION PAIR DELETION (architect approval
+// 2026-09-14): Magnify and Reduce left the icon row's viewport-class group with
+// their chord rows and their setting — 53 − 2, split 50 + 3 to 48 + 3, two
+// boxes and two 2px gaps off the icon row's walk and no separator or group
+// boundary moved.
 // 55 SINCE 2026-09-10'S VALUE DRAG LAMP: one pure chord addition inside an
 // existing group, the bottom row's verb group gaining a NINTH box on bare `x`
 // — 54 + 1, split 51 + 3 to 52 + 3, no separator and no group boundary moved.
@@ -3164,7 +3128,7 @@ enum class RedesignButton {
 // 53 = 54 − THE CENTER ON NEXT MARKER LAMP (architect 2026-09-13): the walk's
 // framing became a function of the zoom at the landing (marker_walk_frame),
 // so the box and bare `n` leave together — the split going 51 + 3 to 50 + 3.
-inline constexpr int kRedesignButtonCount = 53;
+inline constexpr int kRedesignButtonCount = 51;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3239,8 +3203,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
-        case RedesignButton::IconWaveformMagnify:
-        case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconFollow:
         case RedesignButton::IconKeepCenteredWhileNudging:
         case RedesignButton::IconBpm:
@@ -3378,7 +3340,7 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 //
 // THE SIX GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
 // THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom four,
-// the waveform magnification pair, FOLLOW, the keep-centered lamp, the walk's
+// FOLLOW, the keep-centered lamp, the walk's
 // framing lamp and the restrict-undo lamp), THE ITERATION PAIR, the
 // render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
@@ -3569,12 +3531,11 @@ struct SettingsPopupItem {
 // beside the device-config key it sits next to"). It joined as a third GUI
 // key beside `gui_scale` and `playback_speed`, the GUI half fell to two the
 // next day when playback_speed retired whole, and it was the WIDEST LABEL for
-// its whole stay (the paint site's width table carries the figure). The KEY
-// is untouched: it stays in the `.settings` schema and the settings editor
-// still takes it typed — `;` then `waveform_magnification_level=0` is still
-// the one reset road — and its real gestures are its TWO bare chords (`=` /
-// `-`), the PLAIN WHEEL and its TWO icon-row buttons; only the ROW went, a
-// dropdown item being the typed route's convenience and not the act's home.
+// its whole stay (the paint site's width table carries the figure). Only the
+// ROW went then, a dropdown item being the typed route's convenience and not
+// the act's home; THE KEY ITSELF LEFT THE SCHEMA 2026-09-14 (architect approval
+// 2026-09-14), the picture's gain being a per-section profile resolved from
+// the warp markers since.
 //
 // THE DEVICE HALF IS FIVE SINCE 2026-09-13, when `Max Waveform Height` joined
 // right after `GUI Scale` in kDeviceConfigKeys' order (architect; it commits
@@ -4571,7 +4532,7 @@ struct ViewState {
     // spends as an empty slot too, and is left standing rather than cleared —
     // the reasoning is at the spending arm, which is where the ceiling is known.
     // run_overview_command (input_handler.cpp) is the ONE writer: a manual
-    // Ctrl+`=`/Ctrl+`-` step does not stamp, `c` does not, the wheel does not, no drag or
+    // `=`/`-` step does not stamp, `c` does not, the wheel does not, no drag or
     // touch gesture does, and nothing clears it — that is what makes the round
     // trip predictable.
     // SESSION SCRATCH, DELIBERATELY ABSENT FROM kSettingsOrder (settings_io.cpp):
@@ -4933,10 +4894,11 @@ struct AppState {
     // tick. TWO PRODUCER CLASSES, both gated on playback being live:
     //   * ANY VIEWPORT PAN (joined 2026-07-30, architect — "every pan
     //     suppresses"): Viewport::scroll_viewport's changed branch, which is the
-    //     funnel for PageUp/PageDown, the ALT+WHEEL stepped pan, touchpad
+    //     funnel for PageUp/PageDown, the PLAIN WHEEL's stepped pan, touchpad
     //     scroll, the PLAIN-DRAG grab-pan (the drag plain since 2026-08-12, the
-    //     eighth glass ruling — pan-primary; the wheel back on alt since
-    //     2026-08-27, the plain form being the waveform magnification), and —
+    //     eighth glass ruling — pan-primary; the wheel on alt from 2026-08-27,
+    //     the plain form being the waveform magnification then, and PLAIN
+    //     again since 2026-09-14, the magnification setting retired), and —
     //     since the overview lane's rework later that day — the lane's
     //     CLICK-TELEPORT (run_overview_teleport, the centering an outside-the-
     //     box press runs at the press since 2026-08-17: a
@@ -5125,37 +5087,11 @@ struct AppState {
     // having died with the monospace face.
     int     gui_scale               = 100;
 
-    // THE WAVEFORM'S VISUAL MAGNIFICATION (the waveform_magnification_level
-    // setting; a COUNT OF DOUBLINGS in the range settings_file.h owns,
-    // default 0), whose gain — 2^level, spelled once at
-    // waveform_magnification_gain in render.h — is multiplied into the peaks at
-    // the tip mapping of every waveform picture the product paints, plate and
-    // OVERVIEW STRIP alike, and clamped to the lane so a loud passage clips
-    // flat at the edges while its troughs still dip. It exists because the
-    // dynamic range of classical material is wide enough that a quiet passage
-    // draws as a hairline at the level a forte fills the lane, and the picture
-    // is an AUTHORING AID: clipped fortes cost nothing, since a marker goes on
-    // a transient rather than in a sustain.
-    //
-    // THE LEVEL IS WHAT RESTS HERE, never the gain: it is what persists, what
-    // the two picture caches compare, and what the applier brackets — so the
-    // ladder can be retuned in one place without a stored value changing
-    // meaning at any other.
-    //
-    // IT IS THE PICTURE AND NOTHING ELSE. No sample, no JACK path, no render
-    // and no RenderRequest reads this field — playback and every render are
-    // byte-identical at every setting, and the key is not an engine key.
-    //
-    // A display preference like gui_scale above: not engine input, not
-    // authoring state, persisted on Ctrl+S, applied at file load, and written
-    // through ONE chokepoint —
-    // GuiInputHandler::apply_waveform_magnification_level — which the two
-    // hotkeys (bare `=` / bare `-`, since 2026-08-27), the two icon-row
-    // buttons, the PLAIN WHEEL and the settings editor's
-    // `waveform_magnification_level=` commit all call and nothing else does. History-less like every GUI-kind key: no undo, no
-    // dirty. The `'` load-in-place leaves it live — a recipe is markers plus
-    // the engine block, and this is neither.
-    int     waveform_magnification_level = 0;
+    // (THE WAVEFORM'S VISUAL MAGNIFICATION LEVEL LEFT THIS STRUCT 2026-09-14
+    // with its settings key, architect approval 2026-09-14: the picture's gain
+    // is a per-section profile resolved from the warp markers —
+    // waveform_gain_profile_cached, warp_frame_map_view.h — each warp marker
+    // carrying its own optional magnification.)
 
     // The repository that is the PROJECTS HOME — where the architect's
     // committed working checkpoints live, and the corpus the GitHub recheck
@@ -5471,6 +5407,10 @@ struct AppState {
     // marker drag (the store mutates only at commit).
     mutable WarpRedFlagCache warp_red_flag_cache;
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
+    // The memoized waveform gain profile (waveform_gain_profile_cached,
+    // warp_frame_map_view.h), keyed on the warp store generation. Mutable for
+    // the same reason as the red-flag sets: refreshed from const readers.
+    mutable WaveformGainProfileCache waveform_gain_profile_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
     // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
@@ -6650,8 +6590,8 @@ struct AppState {
     // 2026-08-13 deletion of the arrows' repeat: the touch panel has no
     // keyboard, so a held arrow BUTTON is the panel's only nudge run). A press
     // on a button whose chord row sets `repeats` — the bottom row's four
-    // cardinal arrows, since 2026-08-26 the icon row's WAVEFORM
-    // MAGNIFICATION PAIR and since 2026-09-13 its UNDO / REDO; the membership
+    // cardinal arrows and since 2026-09-13 the icon row's UNDO / REDO (the
+    // WAVEFORM MAGNIFICATION PAIR a member 2026-08-26..09-14); the membership
     // is the `repeats` column itself,
     // kToolbarChords, input_pointer.cpp, and is not re-listed anywhere —
     // arms a synthesized-repeat burst alongside the act:
@@ -7320,7 +7260,7 @@ struct AppState {
     // routes that move it (membership re-derived 2026-08-12 — the ruler drag
     // is the mode's whole navigation surface under pan-primary): zoom, the
     // paged
-    // scroll, the alt+wheel stepped pan and the overview command move
+    // scroll, the plain-wheel stepped pan and the overview command move
     // viewport_start_sample or zoom_level,
     // the
     // pointer's ONE nav drag moves both through its pan and ctrl zoom phases,
@@ -7907,7 +7847,7 @@ struct AppState {
     // bpm, notes, url, cover; editor commits carry undo history) — participate
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
     // (viewport/zoom/playhead per tab, follow, active_audio_view,
-    // active_markers_view, active_tab_view, waveform_magnification_level, trim,
+    // active_markers_view, active_tab_view, trim,
     // read_only, projects_repo) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
     // dirty, so quitting without saving simply drops them. The DEVICE key
@@ -11323,8 +11263,7 @@ double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level)
 // progress), and a step on a blank piece is the consumed no-op on_key's
 // loading guard already makes it. TWO READERS: Viewport::zoom_out (the act,
 // whose leading return this IS) and the icon row's ZOOM OUT button's face
-// (redesign_button_enabled); Viewport::zoom_steps' zoom-out branch reads it
-// too, its refusal being the same compare. ZOOM IN HAS NO TWIN OF THIS,
+// (redesign_button_enabled). ZOOM IN HAS NO TWIN OF THIS,
 // deliberately: at the deepest level its press RECENTRES on the playhead
 // (Viewport::zoom_in's floor arm), so the button always acts and stays lit —
 // the shape bare `0` has, whose ceiling arm runs the `c` command.
@@ -11356,17 +11295,6 @@ struct OverviewCommandTarget {
 OverviewCommandTarget overview_command_target(const AppState& a,
                                               const GuiAudio& audio);
 
-// THE MAGNIFICATION STEP'S TARGET, one owner (planner decision 53): a step
-// asks for the current level plus or minus one, and the applier's bracket
-// (is_waveform_magnification_level, settings_file.h — the range shared with
-// the CLI) turns the step off either end into a consumed no-op. TWO READER
-// CLASSES of this target: the two key arms (bare `=` / `-`, input_handler.cpp,
-// which hand it to the applier) and the two icon-row buttons' faces
-// (redesign_button_enabled), which ask the SAME bracket of the SAME target so
-// the grey lands exactly where the applier would refuse.
-inline int waveform_magnification_step_target(const AppState& a, int direction) {
-    return a.waveform_magnification_level + direction;
-}
 // The rightmost on-grid viewport start (the flush-right rest). The single
 // right-wall owner, hoisted out of the clamp_viewport_start chokepoint when the
 // deleted strip drag's per-event pan clamp needed the same wall; that caller
@@ -11580,7 +11508,7 @@ inline bool any_tab_read_only(const AppState& a) {
 //   * GRID ITERATIONS, the mode's ONE exit road since 2026-09-10 (BPM
 //     ITERATIONS was the other and is a MEMBER now, its swap ruled out), and
 //     SAVE,
-//     RENDER, the trim family, playback, the zoom and magnification family,
+//     RENDER, the trim family, playback, the zoom family,
 //     THE A/B TAB SWITCH, the two single-tab walk
 //     buttons (bare Tab and Shift+Tab step the cells, the mode's own surface),
 //     and Copy resolved value, every one of
@@ -12030,7 +11958,7 @@ inline bool zoom_level_at_or_finer_than_working(double level) {
 //   DISCRETE, at the write itself —
 //     * Viewport::apply_zoom_change past its no-op return: `c` (and through it
 //       Shift+`j`, `0`'s second arm and the A/B audition's own `c`, which takes
-//       no special case), `0`'s zoom-out arm, the ctrl+wheel detents, the
+//       no special case), `0`'s zoom-out arm, the bare `=` / `-` keys, the
 //       icon row's zoom buttons, and the settings editor's typed ACTIVE-tab
 //       `tab_<a|b>_zoom=`;
 //     * Viewport::apply_zoom_to_start past its no-op return: the trim bar's
@@ -13323,7 +13251,7 @@ inline bool playback_launch_playable(const AppState& a,
 // Undo::coalesce_gesture). The ladder ends of the
 // six magnifiers were the last to land (planner decision 53, the same day):
 // Zoom out at the per-file ceiling and the magnification pair at its two
-// rungs' ends grey; Zoom in, `0` and `c` stay lit because each always acts
+// rungs' ends grey (the pair retired 2026-09-14 with its setting); Zoom in, `0` and `c` stay lit because each always acts
 // (the first recentres at the floor, the second runs `c` at the ceiling).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
@@ -13489,7 +13417,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the two VIEW LAMPS
-//     (bare `t` / `p`), the zoom four, the magnification pair, follow, the
+//     (bare `t` / `p`), the zoom four, follow, the
 //     KEEP-CENTERED LAMP, the CENTER-ON-NEXT-MARKER lamp and the
 //     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
@@ -13926,32 +13854,6 @@ inline bool redesign_button_enabled(const AppState& a,
             return true;
         case RedesignButton::IconZoomOut:
             return zoom_out_step_actionable(a, audio);
-        // THE MAGNIFICATION PAIR GREYS AT ITS LADDER'S ENDS (planner decision
-        // 53, 2026-08-30): Magnify at the top rung, Reduce at the bottom, each
-        // asking the applier's own bracket (is_waveform_magnification_level,
-        // the range shared with the CLI) of the step's own target
-        // (waveform_magnification_step_target, the key arms' owner) — so the
-        // grey lands exactly where apply_waveform_magnification_level turns
-        // the step into a consumed no-op. From 2026-08-26 until then the pair
-        // took the zoom group's answer verbatim: a press at the end was a
-        // harmless nothing and a face tracking the rung would blink every few
-        // presses, the 2026-08-15 no-blink ruling's own case, which the
-        // 2026-08-30 ruling withdrew ("Any time a button would be a no-op,
-        // grey it"). BOTH HOLD-REPEAT, and the burst meets this face per fire
-        // (tick_chrome_press_repeat re-asks it ahead of every fire and PAUSES
-        // on a dead bit): a hold that walks the ladder to its end stops there
-        // with the face greyed under the held pointer, and the lift that ends
-        // a fired burst is consumed, so nothing steps past the end. Both stay
-        // LIVE on a READ-ONLY tab (the picture's gain authors nothing the lock
-        // protects) and LIVE in the `h` VIEW, where the derived partition
-        // finds their chords on the mode's allowlist — nothing hand-listed
-        // either way.
-        case RedesignButton::IconWaveformMagnify:
-            return is_waveform_magnification_level(
-                waveform_magnification_step_target(a, +1));
-        case RedesignButton::IconWaveformReduce:
-            return is_waveform_magnification_level(
-                waveform_magnification_step_target(a, -1));
         // FOLLOW MIRRORS NOTHING: bare `f` always does something on a loaded
         // piece — it arms or disarms the lamp at rest, and turns the chase on
         // or off for a play in flight — and the lock admits it (follow is
@@ -15203,12 +15105,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
-        // The magnification pair is momentary for the same reason
-        // (2026-08-26): each press is a step that completes. WHERE the ladder
-        // stands is the picture itself, which says it in the only terms that
-        // matter.
-        case RedesignButton::IconWaveformMagnify:
-        case RedesignButton::IconWaveformReduce:
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
@@ -15452,8 +15348,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // but before the next tick found repeat_fired still false and dispatched the
 // SHIFT step where the user was owed a plain one, so the hold's term carries
 // `!tc.repeats` — the exclusion read off the `repeats` column itself, never a
-// second list — and the whole repeat-eligible set (these four, and the
-// magnification pair and Undo / Redo, which admit no shift anyway) is outside the hold-as-
+// second list — and the whole repeat-eligible set (these four, and
+// Undo / Redo, which admit no shift anyway) is outside the hold-as-
 // shift reading by construction. A held arrow gives the stream of its PLAIN
 // step, which is the faster road anyway; a NON-repeating shift-admitting
 // button keeps the hold as its road to its twin, unchanged. THE CONSEQUENCE IS
@@ -15750,25 +15646,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the recall, and Center with nothing focused centers on the playhead
         // — each press does something, and the overload names which.
         case RedesignButton::IconZoomIn:
-            return {"Zoom In (Ctrl+=)", nullptr};
+            return {"Zoom In (=)", nullptr};
         case RedesignButton::IconZoomOut:
-            return {"Zoom Out (Ctrl+-)", nullptr};
+            return {"Zoom Out (-)", nullptr};
         case RedesignButton::IconZoomFitBest:
             return {"Full Zoom Out (0)", nullptr};
         case RedesignButton::IconZoomOriginal:
             return {"Center on Focus (C)", nullptr};
-        // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), one line each: neither
-        // admits a modifier, so neither carries the second line, and the
-        // static_assert below is satisfied by their absence from both
-        // admission predicates. The words name the PICTURE — "waveform", not
-        // "volume" or "gain" — because that is the whole of what moves. Their
-        // accelerators are BARE non-letter keys since 2026-08-27 and so are
-        // themselves, this table's rule, while the zoom pair above now spells
-        // its ctrl out.
-        case RedesignButton::IconWaveformMagnify:
-            return {"Magnify Waveform (=)", nullptr};
-        case RedesignButton::IconWaveformReduce:
-            return {"Reduce Waveform (-)", nullptr};
         // THE TWO VIEWPORT LAMPS, one line each: bare `f` / bare `y` toggle
         // and neither has a shifted twin. Their texts NAME THE TOGGLE (the
         // lamp rule at this table's head, architect 2026-09-01): Follow read
@@ -16207,7 +16091,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
 //   Play reads "Stop (Space)" while the transport is live, Zoom in reads
-//   "Center on Playhead (Ctrl+=)" at the floor, Full zoom out reads "Back to
+//   "Center on Playhead (=)" at the floor, Full zoom out reads "Back to
 //   Working Zoom (0)" or "Back to Previous Zoom (0)" at the ceiling, Center
 //   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
 //   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
@@ -16394,7 +16278,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // second arm, whose compare this is; the button never greys for it.
         case RedesignButton::IconZoomIn:
             if (!(a.zoom_level > kMinZoom))
-                return {"Center on Playhead (Ctrl+=)", nullptr};
+                return {"Center on Playhead (=)", nullptr};
             break;
         // FULL ZOOM OUT AT THE CEILING is the recall — `c` at the stamped
         // level, or plain `c` when nothing usable is stamped — through the

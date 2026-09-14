@@ -1112,8 +1112,8 @@ struct GuiInputHandler {
     // The SINGLE wheel routing predicate. Returns -1 when the wheel is
     // swallowed at (x, y), else a region code: 1 inside the waveform area,
     // 2 inside the top strip, 3 the overview lane, 0 outside them all. It reads
-    // POSITION AND STATE ONLY — never a modifier — so the plain pan and the
-    // ctrl zoom step are live over exactly the same surfaces. on_wheel's
+    // POSITION AND STATE ONLY — never a modifier — so where the plain pan is
+    // live and where a modified wheel is swallowed are the same surfaces. on_wheel's
     // completed-detent gate and the platform's per-frame sub-detent accumulator
     // probe both consult it so the two surfaces can never drift.
     int wheel_context(int x, int y) const;
@@ -1534,7 +1534,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-seven (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-five (the
     // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
     // back from the menu row since 2026-09-04, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
@@ -1785,7 +1785,7 @@ struct GuiInputHandler {
     // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
     // 2026-08-16), driven from the run loop beside the hover recompute. While a
     // press stands on a `repeats` button — the bottom row's four cardinal
-    // arrows, the magnification pair and Undo / Redo, the column in
+    // arrows and Undo / Redo, the column in
     // kToolbarChords being the membership — this synthesizes that button's
     // chord on the keyboard's own
     // cadence, the first fire a hold beat after the press and the rest at the
@@ -2637,15 +2637,10 @@ private:
                                 text_editor::State& s);
 
     // Shared wheel handler for source and target view; on_wheel is its only
-    // caller. Exact-match modifiers, THREE arms (2026-08-27): PLAIN = the
-    // waveform magnification step (one ladder rung per detent, up = taller,
-    // through apply_waveform_magnification_level, the frame's whole count
-    // clamped and applied in one call), ALT = the stepped pan (a tenth of the
-    // visible span per detent, through the scroll_viewport funnel) and CTRL =
-    // the zoom step (one whole level per detent, up = in, through
-    // Viewport::zoom_steps — the Ctrl+`=`/Ctrl+`-` commands' own coalesced
-    // body). Every other combination — Shift+wheel and every mixed pair —
-    // no-ops. `inside_waveform` is true over the waveform area or the overview
+    // caller. Exact-match modifiers, ONE arm (architect approval 2026-09-14):
+    // PLAIN = the stepped pan (a tenth of the visible span per detent, through
+    // the scroll_viewport funnel). Every modified combination — ctrl, alt,
+    // shift and every mixed chord — no-ops. `inside_waveform` is true over the waveform area or the overview
     // lane, `inside_top` anywhere over the top strip; both mean "a wheel-live
     // navigation surface" and neither forks the vocabulary.
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool shift,
@@ -3237,8 +3232,9 @@ private:
     // reset store and the engine settings — what push_undo_both captures — and
     // NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
-    // tab, the camera, follow, the waveform magnification level and
-    // projects_repo — and gui_scale is outside the question
+    // tab, the camera, follow and projects_repo (the waveform's per-section
+    // magnification is NOT on this list since 2026-09-14: it lives on the
+    // warp markers, so the recipe's store carries it in) — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
     // view are how he then inspects what the load changed. (It SUPERSEDES the
@@ -3943,38 +3939,6 @@ private:
     // the settings editor's device-key body (commit_device_setting), has
     // already written the live struct and the file and gated the no-op case.
     void apply_max_waveform_height(int authored_px);
-
-    // THE WAVEFORM MAGNIFICATION'S ONE WRITER — the gesture chokepoint every
-    // route to app.waveform_magnification_level goes through, and the only site
-    // in the product that assigns that field. TWO HOTKEYS reach it (bare `=`
-    // steps up, bare `-` steps down, since 2026-08-27), the two icon-row
-    // buttons reach it through those same chords, THE PLAIN WHEEL reaches it
-    // per frame (handle_wheel's own arm), and the settings editor's
-    // `waveform_magnification_level=` commit calls it directly — which is also
-    // the reset road, level 0 having no chord of its own since Ctrl+0 was
-    // retired with its button. `level` must
-    // be in the schema's range (is_waveform_magnification_level,
-    // settings_file.h); an out-of-range level is REFUSED WHOLE and never
-    // clamped, which is also what makes a step at either end a consumed no-op —
-    // the caller asks for cur ± 1 and the bracket answers. THE WHEEL'S BURST IS
-    // THE ONE CALLER THAT CLAMPS BEFORE ASKING, a frame's several detents
-    // having to land on the ladder's end rather than refuse whole. A typed
-    // out-of-range
-    // value never gets this far: the editor's own red flash comes from the
-    // shared grammar owner validate_gui_setting one step earlier.
-    //
-    // WHAT IT DOES: assign, then kick_waveform_sync — the synchronous full
-    // rebuild every user-driven pan/zoom frame takes, whose tail damages the
-    // window top through the waveform's bottom and so carries the OVERVIEW
-    // LANE with it (the lane's bar cache keys on the level, so it rebuilds in
-    // that same frame). A magnification change is a DISCRETE COMMAND, so the
-    // damage is the whole waveform area rather than a narrowed scanner rect.
-    //
-    // HISTORY-LESS, like every GUI-kind key's gesture: no undo entry, no dirty
-    // bit; the value persists on the next ordinary Ctrl+S. And NO AUDIO MOVES —
-    // the level scales the picture the painter draws and reaches no sample, no
-    // playback path and no render input.
-    void apply_waveform_magnification_level(int level);
 
     // The read-only bit's one setter (2026-09-04, converting a codex finding
     // that the two roads had drifted apart on damage). Two roads write the

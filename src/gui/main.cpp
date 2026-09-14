@@ -752,7 +752,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-seven view/mode/action buttons — the deleted toolbar
+// ICON row (the twenty-five view/mode/action buttons — the deleted toolbar
 // row's four lead them since the 2026-08-12 relayout, whose roster commit
 // removed that lane and renumbered these, the ITERATION PAIR came back from
 // the menu row on 2026-09-04, and the history group's seven close them since
@@ -2617,7 +2617,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE CHROME BUTTON HOLD-REPEAT (architect 2026-08-16): while a press
         // stands on a button whose chord row carries `repeats` (the bottom
-        // row's four cardinal arrows, the magnification pair, Undo / Redo), this
+        // row's four cardinal arrows, Undo / Redo), this
         // synthesizes its chord on the keyboard's own cadence — a hold beat,
         // then the compositor's advertised repeat rate — stamped as a repeat so
         // the undo coalescing is the held key's own rule. One kind compare when

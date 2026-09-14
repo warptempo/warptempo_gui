@@ -253,6 +253,63 @@ inline int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
                                              : song_end_frame;
 }
 
+// THE WAVEFORM GAIN PROFILE — the per-section picture magnification, resolved
+// from the warp markers (architect approval 2026-09-14). A STEP FUNCTION OVER
+// SOURCE FRAMES: `breakpoints` is sorted strictly ascending by frame, each
+// entry's level holding from its frame up to the next entry's, and LEVEL 0
+// HOLDS BEFORE THE FIRST ENTRY (so a store with no magnification anywhere is
+// the empty profile). Consecutive entries never repeat a level — a breakpoint
+// exists only where the level changes. The level is a count of doublings in
+// [0, kMarkerMagnificationMax] (marker_magnification.h, the ONE range owner);
+// waveform_magnification_gain (render.h) is what a level means.
+//
+// Source frames because marker time_frames are source frames: every waveform
+// picture already holds each column's source span (the plate maps target-view
+// columns through the warp map; the overview lane is source-domain), so the
+// profile needs no view fork anywhere.
+struct WaveformGainBreakpoint {
+    int64_t source_frame = 0;
+    uint8_t level        = 0;
+};
+struct WaveformGainProfile {
+    std::vector<WaveformGainBreakpoint> breakpoints;
+};
+
+// THE RESOLUTION RULES, stated once here (architect 2026-09-14):
+//   1. A marker's OWN value sets the level from its frame on.
+//   2. A BLANK marker inherits the most recent EARLIER ENABLED marker's
+//      resolved value (store order is time order), 0 when none precedes it.
+//   3. DISABLED markers (effective_disabled, the ref cascade included) are
+//      INVISIBLE — they neither set nor carry a value.
+//   4. A LABEL REF with no own value takes its DEF's resolved value; markers
+//      after the ref inherit the ref's resolved value; a ref may precede its
+//      def.
+//   5. CYCLES CANNOT FORM, by tempo's own rule (resolve_inherited_tempo walks
+//      past refs): a DEF's inheritance walks PAST EVERY BLANK LABEL REF, so a
+//      blank def never reads "through" a blank ref sitting before it, while
+//      every other blank does. Two passes, O(n): pass A resolves the def values
+//      with blank refs transparent; pass B the displayed values, a blank ref
+//      taking pass A's value of its def.
+//   6. A DANGLING REF (no def in the store) is transparent: it carries the
+//      previous value.
+//   7. COINCIDENT FRAMES follow store order: the LAST enabled marker at a frame
+//      wins the section from that frame (the earlier ones own zero-width
+//      sections).
+//
+// resolved_magnification_level answers rules 1–6 for one marker: its own
+// value if set, else what it displays. A DISABLED marker (rule 3) answers its
+// own value if set, else the value carried past it — what it would inherit if
+// it were enabled — while contributing nothing to anyone else.
+int resolved_magnification_level(const std::vector<GuiWarpMarker>& markers,
+                                 int idx);
+WaveformGainProfile build_waveform_gain_profile(
+    const std::vector<GuiWarpMarker>& markers);
+
+// The profile's identity for the picture caches (the plate fingerprint and
+// the overview bar cache's key): FNV-1a over every breakpoint. 0 for the
+// empty profile.
+uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile);
+
 // (THERE IS NO LABEL-CASCADE RESOLVER FOR THE MEASURE FIELD, and the absence
 // is a RULING rather than a gap — architect 2026-08-20, reversing his own
 // ruling of the day before. The field INHERITED down the label cascade for one

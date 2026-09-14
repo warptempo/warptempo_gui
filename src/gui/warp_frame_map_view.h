@@ -176,6 +176,28 @@ struct PhaseResetRedFlagCache {
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app);
 
+// THE WAVEFORM GAIN PROFILE, memoized (architect approval 2026-09-14): the
+// per-section magnification build_waveform_gain_profile resolves from the
+// LIVE warp store (warpmarkers.h carries the resolution rules), with its hash.
+// Keyed on the warp store generation alone — the profile is a pure function of
+// the store's frames, magnifications, labels and disabled bits, and every
+// mutation of any of them bumps the generation (undo, redo, `'`, the load and
+// every authoring act included). Its readers are the two waveform pictures:
+// the plate's render inputs (compute_waveform_render_inputs, which copies the
+// profile into the job as it copies the warp map) and the overview lane's bar
+// cache (maybe_rebuild_overview_bar_cache). THE `h` VIEW'S PLATE IS THE LIVE
+// PLATE, so it reads this live store's profile, never the viewed checkpoint's.
+// The HASH alone keys both picture caches, so a gain-only change re-renders
+// through the fingerprint without touching the displayed basis.
+struct WaveformGainProfileCache {
+    bool                valid       = false;
+    long long           markers_gen = -1;
+    WaveformGainProfile profile;
+    uint64_t            hash        = 0;
+};
+const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app);
+
 // Memoized target-view maps for states that are NOT live — the maps
 // proposed_display_context builds below. TWO SLOTS, because the two readers
 // ask about two different states in the same frame: the Undo and the Redo

@@ -26,7 +26,6 @@ enum class SettingKind {
     ActiveAudioViewChar,
     ActiveMarkersViewChar,
     ActiveTabViewChar,
-    WaveformMagnificationLevel,
     TrimBegin_A,
     TrimEnd_A,
     TrimBegin_B,
@@ -75,23 +74,12 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // `audio_player` then retired whole 2026-08-28. THREE MORE LEFT IT
     // 2026-09-11 — `follow`, `centered` and `center_on_next_marker`, the
     // camera postures, which were session state in AppState from then (the
-    // third deleted whole 2026-09-13) and are serialized nowhere. The parser-side record of all seven, and the
+    // third deleted whole 2026-09-13) and are serialized nowhere. ONE MORE LEFT
+    // IT 2026-09-14 — the waveform magnification level, the picture's gain being
+    // a per-section profile resolved from the warp markers since (architect
+    // approval 2026-09-14). The parser-side record of all eight, and the
     // consequence for a sidecar still carrying one, is at
     // kCanonicalSettingsKeys, settings_file.cpp.)
-    // GUI-kind key, NOT an engine key: the WAVEFORM PICTURE's magnification
-    // LEVEL, a count of doublings in the range settings_file.h owns for both
-    // products. 0 is the untouched picture and the template's stamp. The
-    // gain it stands for multiplies the peaks the painter maps to rows and
-    // NOTHING ELSE — no sample, no playback path, no render input — so it never
-    // enters kEngineKeys and never reaches the render fingerprint. It sat
-    // immediately after gui_scale while that key was here, the two being the
-    // same kind of thing to look at; they parted 2026-08-27 on the question
-    // this one answers differently — how loud to draw THIS material is the
-    // piece's business, how big to draw the whole GUI is the panel's.
-    // (architect approval 2026-08-26 for the schema addition and for the
-    // same-day retune that renamed it; the parser-side record is at
-    // kCanonicalSettingsKeys.)
-    { "waveform_magnification_level",SettingKind::WaveformMagnificationLevel, EngineField::Title,            "0"        },
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
     { "tab_a_read_only",             SettingKind::ReadOnly_A,           EngineField::Title,                   "false" },
@@ -129,12 +117,6 @@ std::optional<std::string> format_nonengine_value(
             return std::string(1, gui.active_markers_view);
         case SettingKind::ActiveTabViewChar:
             return std::string(1, gui.active_tab_view);
-        case SettingKind::WaveformMagnificationLevel:
-            // Plain digits, the one canonical spelling validate_gui_setting's
-            // range arm accepts (parse_authored_frame): the default
-            // round-trips as `0`.
-            std::snprintf(buf, sizeof(buf), "%d", gui.waveform_magnification_level);
-            return std::string(buf);
         case SettingKind::TrimBegin_A:
             return format_authored_frame(gui.tab_a.trim.begin_frame);
         case SettingKind::TrimEnd_A:
@@ -401,7 +383,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // actual frame (`tab_a_trim_begin=0`), matching what Ctrl+S writes.
     const NonEngineSettingsSnapshot gui{
         eff_a, eff_b,
-        app.active_audio_view, app.active_markers_view, app.active_tab_view,
-        app.waveform_magnification_level};
+        app.active_audio_view, app.active_markers_view, app.active_tab_view};
     return format_nonengine_value(desc->kind, gui);
 }

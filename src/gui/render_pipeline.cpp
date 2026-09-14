@@ -464,8 +464,7 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 // The view zoom / typed live prefs all sit inside the strict
                 // schema's vocabularies by construction (the live zoom rests in
-                // the persisted zoom vocabulary [kMinZoom, kMaxZoom], the
-                // magnification level in its own bracket), so the file
+                // the persisted zoom vocabulary [kMinZoom, kMaxZoom]), so the file
                 // strict-parses under
                 // read_settings_file — same writer, same canonical key order
                 // as a source save — with no validation added here.
@@ -476,8 +475,7 @@ RenderOutcome do_render(const RenderRequest& req,
                     tab_a, tab_b,
                     /*active_audio_view=*/'T',
                     req.authoring.active_markers_view,
-                    req.authoring.active_tab,
-                    req.authoring.waveform_magnification_level};
+                    req.authoring.active_tab};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {
                     note_failure(st_path);

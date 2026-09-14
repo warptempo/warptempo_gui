@@ -27,9 +27,10 @@
 // more than it carries a measure, so a magnification cannot move a render
 // key.
 //
-// While the settings key `waveform_magnification_level` still stands, its
-// range owner (kWaveformMagnificationLevelMax, settings_file.h) and this one
-// must be the same number — a static_assert in warpmarkers_parse.cpp pins it.
+// THIS IS THE ONE RANGE OWNER: the waveform magnification level settings key
+// and its range left the schema 2026-09-14 (architect approval 2026-09-14),
+// and the GUI resolves these per-marker values into the waveform's per-section
+// gain profile (build_waveform_gain_profile, src/gui/warpmarkers.h).
 inline constexpr int kMarkerMagnificationMax = 4;
 
 // The one byte bound: a single digit.

@@ -378,23 +378,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
          !ctrl && !shift && !alt);
-    // THE ZOOM STEP PAIR IS CTRL+`=` / CTRL+`-` SINCE 2026-08-27 (bare is
-    // vertical, ctrl is horizontal — the magnification pair below holds the
-    // bare forms now). Pure navigation either way, which is why the lock
-    // admits it.
+    // THE ZOOM STEP PAIR IS BARE `=` / BARE `-` (again since 2026-09-14,
+    // architect approval 2026-09-14 — ctrl from 2026-08-27 while the retired
+    // waveform magnification pair held the bare forms; the ctrl forms are
+    // unbound now and need no admission). Pure navigation, which is why the
+    // lock admits it.
     const bool is_zoom_symbol =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
-         ctrl && !shift && !alt);
-    // THE WAVEFORM MAGNIFICATION PAIR, bare `=` and bare `-` since 2026-08-27,
-    // exactly as their dispatch arms spell them. It is a DISPLAY PREFERENCE —
-    // the picture's own gain, keyed and persisted like gui_scale — so it
-    // authors nothing the lock protects: no marker, no engine setting, no
-    // sample. It is admitted on the header's own persistent-mutation standard,
-    // exactly as the zoom pair above it is, and the two icon-row buttons
-    // stay lit on a locked tab by the same answer. CTRL+0 LEFT THIS ALLOWLIST
-    // 2026-08-27 with the reset chord itself: the chord is unbound, and an
-    // unbound combination needs no admission.
-    const bool is_waveform_magnify =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
          !ctrl && !shift && !alt);
     const bool is_zero =
@@ -624,7 +613,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
              is_home_end || is_page_updown ||
-             is_zoom_symbol || is_waveform_magnify || is_zero ||
+             is_zoom_symbol || is_zero ||
              is_follow || is_keep_centered_while_nudging ||
              is_restrict_undo ||
              is_center || is_sub_t || is_sub_p ||
@@ -2286,11 +2275,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // own navigation press rather than a scrub, and the one entry owner stops a session that was already running
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
 // stop one.
-//   - Ctrl+= / Ctrl+-      → zoom in / out (the horizontal pair since
-//                             2026-08-27)
-//   - = / - (bare)          → the WAVEFORM MAGNIFICATION step (the vertical
-//                             pair since the same day; bare is vertical,
-//                             ctrl is horizontal)
+//   - = / - (bare)          → zoom in / out (bare again since 2026-09-14,
+//                             the waveform magnification step that held
+//                             these keys having retired)
 //   - 0 (bare)              → the overview: full zoom out, or, once already
 //                             there, THE MODE'S OWN `c` (run_center_command
 //                             forks on the mode bit, so the second arm reads the
@@ -2670,19 +2657,10 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
-    // THE ZOOM STEP PAIR IS CTRL+`=` / CTRL+`-` SINCE 2026-08-27 (bare is
-    // vertical, ctrl is horizontal — the magnification pair below holds the
-    // bare forms now).
+    // THE ZOOM STEP PAIR IS BARE `=` / BARE `-` (again since 2026-09-14,
+    // architect approval 2026-09-14; the ctrl forms it wore from 2026-08-27
+    // are unbound).
     const bool is_zoom_symbol =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
-         ctrl && !shift && !alt);
-    // THE WAVEFORM MAGNIFICATION PAIR, bare `=` and bare `-` since 2026-08-27.
-    // The view paints the SAME PLATE, so the gain is as live in here as the
-    // zoom is — it changes the picture and nothing the mode is reading. Its
-    // two buttons stay lit in the view for that reason, the derived partition
-    // walking the chord table through this gate. CTRL+0 LEFT THIS ALLOWLIST
-    // 2026-08-27 with the reset chord itself.
-    const bool is_waveform_magnify =
         ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     // THE KEEP-CENTERED LAMP, bare `y` (2026-08-31, R11) — a VIEWPORT preference,
@@ -2862,7 +2840,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zoom_symbol || is_waveform_magnify || is_zero || is_keep_centered_while_nudging ||
+    return !(is_zoom_symbol || is_zero || is_keep_centered_while_nudging ||
              is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
@@ -3036,7 +3014,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
 // it (membership re-derived 2026-08-12 under pan-primary): zoom, the paged
-// scroll, the alt+wheel stepped pan, the overview command,
+// scroll, the plain-wheel stepped pan, the overview command,
 // the one nav drag on the mode's whole navigation surface (its pan and its
 // ctrl zoom phase alike), and the mode's own cursor-moving acts
 // — the diff-flag click, the deferred click act and the keyboard's Tab cycle,
@@ -4046,9 +4024,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // tempo cent step; the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family — and since 2026-08-31 they repeat on their
     // shifted and ctrl spellings too, which the arm below this one owns),
-    // bare PageUp/PageDown, bare Equal/Minus (the
-    // WAVEFORM MAGNIFICATION step since 2026-08-27, the horizontal zoom's own
-    // eligibility inherited whole when the two acts swapped modifiers),
+    // bare PageUp/PageDown, bare Equal/Minus (the horizontal ZOOM step, bare
+    // again since 2026-09-14 — the waveform magnification step held these
+    // spellings from 2026-08-27 until its setting retired),
     // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
     // older/newer step, a continuous step gesture like the arrows and held for
     // the same reason, to walk quickly; in GLOBAL dispatch it is bound only
@@ -4060,10 +4038,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // walk's absolute wall jumps — are excluded
     // by the no-shift term below and stay one-shot: a held jump could only
     // flap against the wall it just reached),
-    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), and the FIVE
-    // repeating Ctrl chords — the Ctrl+Shift+Tab march, Ctrl+Z / Ctrl+Shift+Z
-    // (undo / redo), and Ctrl+= / Ctrl+- (the horizontal ZOOM step, which is
-    // what that chord spells since 2026-08-27),
+    // the marker-focus cycle (bare Tab / Shift+Tab / IsoLeftTab), the bare
+    // zoom step `=` / `-` (below), and the THREE repeating Ctrl chords — the
+    // Ctrl+Shift+Tab march and Ctrl+Z / Ctrl+Shift+Z (undo / redo),
     // each a continuous step gesture like the cycle, not a
     // one-shot command. THE MARCH REPEATS IN EVERY STATE since 2026-08-18, its
     // mode scope having gone with the reason for it: the chord is the march
@@ -4133,28 +4110,21 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // silent at the dispatch arm (input_handler.cpp).
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
-    // Ctrl+= / Ctrl+- (the horizontal ZOOM step since 2026-08-27) repeat
-    // while held, for the reason the BARE pair on those same two keys does:
-    // stepping a ladder is a continuous step gesture, and a held key walking
-    // it is how a passage is brought to the span the eye wants in one
-    // press-and-hold. Ctrl-exact, matching the dispatch arms; the shifted
-    // shapes bind nothing and stay one-shot by this term. THE TWO ZOOM
+    // THE ZOOM STEP'S KEYS REPEAT THROUGH THE BARE TERM ABOVE: stepping the
+    // zoom is a continuous step gesture, and a held key walking it is how a
+    // passage is brought to the span the eye wants in one press-and-hold.
+    // THE TWO ZOOM
     // ICON-ROW BUTTONS DO NOT REPEAT AT ALL and never asked this: they carry
     // no `repeats` in kToolbarChords (input_pointer.cpp), which is the chrome
     // hold's whole membership, so a held zoom button is one step at its lift
     // like every other non-repeating button (the Undo / Redo buttons, which
-    // do carry it, ask about Ctrl+Z above). The MAGNIFICATION pair's buttons
-    // DO carry it, and what they ask this predicate about is the BARE
-    // spelling of these same two keys, answered by the arrows' term above —
-    // so on that pair the key and the button walk at one speed by
-    // construction.
+    // do carry it, ask about Ctrl+Z above), while the bare KEYS repeat through
+    // the bare term above.
     //
-    // CTRL+0 IS DELIBERATELY ABSENT because it binds nothing at all since
-    // 2026-08-27: the magnification reset that wore it for one day retired with
-    // its button, and an unbound chord has no repeat to ask about.
-    if (mods.ctrl && !mods.shift && !mods.alt &&
-        (key == GuiKeys::Equal || key == GuiKeys::Minus))
-        return true;
+    // CTRL+= / CTRL+- AND CTRL+0 ARE DELIBERATELY ABSENT because they bind
+    // nothing at all — the first two since 2026-09-14, when the zoom step went
+    // back to the bare keys (architect approval 2026-09-14), the third since
+    // 2026-08-27 — and an unbound chord has no repeat to ask about.
     return false;
 }
 

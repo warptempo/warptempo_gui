@@ -117,23 +117,22 @@ struct ToolbarChord {
     bool           click_face;
     // REPEATS: a held press on this button synthesizes its own chord over and
     // over — the pointer twin of holding the key (the bottom row's four
-    // cardinal arrows from 2026-08-16, joined by the waveform magnification
-    // pair on 2026-08-26 and by UNDO AND REDO on 2026-09-13 — see below). The
+    // cardinal arrows from 2026-08-16, joined by UNDO AND REDO on 2026-09-13 —
+    // see below; the waveform magnification pair carried it from 2026-08-26
+    // until its deletion on 2026-09-14). The
     // press arms the burst
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
     // suppresses the lift's own act. Defaulted, so the rows that do not repeat
-    // need no eighth column. EIGHT ROWS CARRY IT since 2026-09-13: the four
-    // arrows; the WAVEFORM MAGNIFICATION PAIR (2026-08-26) — a ladder
-    // step is a continuous step gesture like an arrow, and the pair is the
-    // touch panel's only road to the setting; and UNDO / REDO (architect
+    // need no eighth column. SIX ROWS CARRY IT since 2026-09-14 (eight from
+    // 2026-09-13, the waveform magnification pair leaving with its setting):
+    // the four arrows; and UNDO / REDO (architect
     // 2026-09-13, "like the Left/Right nudge") — stepping through history is
     // the continuous step gesture their held chords already were at
     // repeat_eligible, and the buttons are glass's only road to it. Neither
-    // pair pushes an undo entry of its own (the setting is history-less, and
-    // a restore records nothing and clears the coalesce stamp), so the opener
-    // flip below is vacuous for both.
+    // pushes an undo entry of its own (a restore records nothing and clears
+    // the coalesce stamp), so the opener flip below is vacuous for them.
     bool           repeats = false;
 };
 
@@ -183,7 +182,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // A burst that runs out of history meets the GREYED face on its next fire
     // (history_step_actionable's empty-stack term, through
     // redesign_button_enabled) and rests there under the held pointer, the
-    // magnification pair's ladder end in the same shape; the same pause holds
+    // retired magnification pair's ladder end in the same shape; the same pause holds
     // for the Restrict-undo lamp's verdict and the other tab's lock. The
     // held KEY's own wall is silent at the dispatch arm (input_handler.cpp).
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false, true},   // Ctrl+S
@@ -262,42 +261,26 @@ constexpr ToolbarChord kToolbarChords[] = {
     // as of 2026-08-15 and these four are the commands' pointer home outright):
     // four momentary navigation chords, no
     // radio, no shift admission, click face like the rest of the row. All
-    // four stay LIVE in the `h` view — Ctrl+`=`, Ctrl+`-` and `0` are on the
+    // four stay LIVE in the `h` view — `=`, `-` and `0` are on the
     // mode's allowlist and `c` is its own vocabulary — which the derived
     // partition answers with nothing hand-listed.
     //
-    // THE STEPPING PAIR'S CHORDS CARRY CTRL SINCE 2026-08-27 — this table's own
-    // column, a different thing from ADMITTING a ctrl press, which neither does
-    // (redesign_button_ctrl_admits names only the two skips), so a ctrl or
-    // shift click is still refused at the band gate. NEITHER REPEATS, which the
-    // spelling swap did not change: the `repeats` column is untouched on all
-    // four rows, and the pair that carries it is the magnification one below.
+    // THE STEPPING PAIR'S CHORDS ARE BARE AGAIN SINCE 2026-09-14 (architect
+    // approval 2026-09-14; they carried ctrl from 2026-08-27 while the retired
+    // waveform magnification pair held the bare keys). No button here ADMITS a
+    // modifier (redesign_button_ctrl_admits names only the two skips), so a
+    // ctrl or shift click is refused at the band gate. NEITHER REPEATS: the
+    // `repeats` column is unset on all four rows.
     {RedesignButton::IconZoomIn,
-     GuiKeys::Equal,  true,  false, false, false, true},                            // Ctrl+=
+     GuiKeys::Equal,  false, false, false, false, true},                            // bare =
     {RedesignButton::IconZoomOut,
-     GuiKeys::Minus,  true,  false, false, false, true},                            // Ctrl+-
+     GuiKeys::Minus,  false, false, false, false, true},                            // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // THE WAVEFORM MAGNIFICATION PAIR (2026-08-26), the zoom group's last: the
-    // picture's VERTICAL gain, on the same two keys as the horizontal zoom
-    // beside it, one modifier LESS since 2026-08-27 — bare is vertical, ctrl is
-    // horizontal, and the two pairs swapped their spellings whole that day. No
-    // radio, no shift or ctrl admission, click face like the rest of the row,
-    // and BOTH REPEAT: a held button walks the ladder at the compositor's own
-    // rate, exactly as a held key does; the `repeats` column is where that
-    // membership lives and there is no second list. Both are live in the `h`
-    // view — the chords are on that mode's allowlist, the plate in there being
-    // the same plate.
-    //
-    // (THE MAGNIFICATION RESET'S ROW IS DELETED — 2026-08-27, with its button:
-    // the architect retired the third member when the pair moved onto the bare
-    // keys, its Ctrl+0 chord going with it rather than standing beside two
-    // spellings it no longer matched. The settings editor's
-    // `waveform_magnification_level=0` is the reset road now.)
-    {RedesignButton::IconWaveformMagnify,
-     GuiKeys::Equal,  false, false, false, false, true,  true},                     // bare =
-    {RedesignButton::IconWaveformReduce,
-     GuiKeys::Minus,  false, false, false, false, true,  true},                     // bare -
+    // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
+    // their buttons and the setting they stepped, architect approval
+    // 2026-09-14: the picture's gain is a per-section profile resolved from the
+    // warp markers now. Their bare `=` / `-` went back to the zoom pair above.)
     // FOLLOW — the ZOOM GROUP'S LAST MEMBER since 2026-08-27, and the last
     // survivor of the mass-marker category. Bare `f`, a TOGGLE with a lamp,
     // consumed by the `h` view and greyed in there.
@@ -502,8 +485,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // THE FOUR ARROWS TAKE THE TABLE'S `repeats` COLUMN (architect
     // 2026-08-16, reversing his own 2026-08-13 deletion of the same gesture,
     // which he finds did not hold up in practice; the column is the whole
-    // membership and no list restates it — the magnification pair joined on
-    // 2026-08-26, Undo and Redo on 2026-09-13): the touch panel has no
+    // membership and no list restates it — Undo and Redo joined on 2026-09-13,
+    // the magnification pair's 2026-08-26 membership leaving with it on
+    // 2026-09-14): the touch panel has no
     // keyboard beside the synthetic one, so a HELD ARROW BUTTON is the panel's
     // only nudge run, and the substitutes the deletion counted on — dragging
     // the marker, typing the tempo in the editor — do not cover it.
@@ -694,15 +678,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone. The eighth
-    // column is `repeats`, which these four set — as do the waveform
-    // magnification pair above since 2026-08-26 and Undo / Redo since
+    // column is `repeats`, which these four set — as do Undo / Redo since
     // 2026-09-13; the column IS the membership (the contract is at
     // ToolbarChord::repeats).
     //
     // THEIR MODIFIER COLUMNS STAY FALSE and that is the split these four make
     // visible (2026-08-31, R12 — THE STEP LADDER): the table's `shift` and
     // `ctrl` columns spell a row's OWN base chord (Redo's Ctrl+Shift+Z, the
-    // zoom pair's Ctrl+=), while an ADMISSION is a press-time modifier the
+    // Undo's Ctrl+Z), while an ADMISSION is a press-time modifier the
     // lift moves into the dispatched chord — and the ladder is the second
     // kind. The bare row here is the one-unit step; a Shift-click dispatches
     // Shift+arrow (three units) and a Ctrl-click Ctrl+arrow (ten), both
@@ -721,8 +704,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 50
-// rows against the roster's 53 since 2026-09-13'S CENTER ON NEXT MARKER
+// every RedesignButton but the THREE menu anchors carries a chord here — 48
+// rows against the roster's 51 since 2026-09-14'S MAGNIFICATION PAIR DELETION
+// (architect approval 2026-09-14), which took bare `=`'s and bare `-`'s
+// Magnify / Reduce rows out with their buttons (chords, so the pairs moved
+// together; the bare keys went back to the zoom pair's own rows). It was 50
+// rows against 53 from 2026-09-13'S CENTER ON NEXT MARKER
 // DELETION, which took bare `n`'s row out with its button (a chord, so the
 // pair moved together; the Tab walk's framing is the zoom's at the landing
 // now, marker_walk_frame). It was 51 against 54 earlier that day, from the
@@ -1281,8 +1268,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
 //   the icon row's two VIEW LAMPS (bare `t` / `p`, admitted with the view
-//   switches), THE ZOOM GROUP's four since the 2026-08-12 relayout (Ctrl+`=`,
-//   Ctrl+`-` and bare `0` are the allowlist's own zoom admissions and bare `c`
+//   switches), THE ZOOM GROUP's four since the 2026-08-12 relayout (bare `=`,
+//   bare `-` and bare `0` are the allowlist's own zoom admissions and bare `c`
 //   is the mode's vocabulary — pure navigation, live with nothing hand-listed),
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
@@ -6211,9 +6198,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
         // (NO ALT ARM: alt binds no PRESS anywhere — the grab-pan it carried
         // until 2026-08-12 is the PLAIN drag on the navigation surface now, and
-        // its one surviving pointer form is the ALT+WHEEL stepped pan, which
-        // came back to the modifier on 2026-08-27 when the plain wheel became
-        // the waveform magnification step. An alt-exact press falls to the
+        // its last pointer form, the ALT+WHEEL stepped pan (2026-08-27, while
+        // the plain wheel was the waveform magnification step), moved back to
+        // the PLAIN wheel on 2026-09-14 with the alt form deleted, so alt binds
+        // nothing on the pointer at all. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
         // five Ctrl+Alt chords.)
@@ -6382,8 +6370,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
-        // the modifier on 2026-08-27, and it is a wheel and not a press, so no
-        // press path anywhere defers to alt.
+        // the modifier on 2026-08-27 and left it again on 2026-09-14 for the
+        // plain wheel, so no pointer path anywhere defers to alt.
         // Discarding a press here is TOTAL: it claimed
         // nothing, so it stopped no playback on the way down either — the stops
         // live at the claims above and below, never on the route to this gate.
@@ -7701,9 +7689,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-seven — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-five — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 53, the enum's
+// eighteen since 2026-08-29: 51, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -8096,8 +8084,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // and 4 have no disabled face of their own, so the predicate is simply
         // true there — EXCEPT in two states. The `h` history view greys every
         // button whose act it consumes across all the rows
-        // (history_mode_disables_button, above) — row 4's history group, Zoom
-        // out and the magnification pair aside, which carry resting greys of
+        // (history_mode_disables_button, above) — row 4's history group and Zoom
+        // out aside, which carry resting greys of
         // their own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
         // the VIEW BAR'S THREE answer false while grid iterations stands
         // (iteration_lock_greys, app_state.h), so the press dies here — and
@@ -8193,8 +8181,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // above this arm; the band's modifier gate refuses an unadmitted ctrl
         // press before the arm ever runs), so no second admission is asked
         // here and the predicate is asked about exactly the chord the burst
-        // will fire. The magnification pair carries neither and is unmoved;
-        // Undo's and Redo's ctrl (and Redo's shift) come from tc.ctrl /
+        // will fire. Undo's and Redo's ctrl (and Redo's shift) come from tc.ctrl /
         // tc.shift, this table's columns, and are ORed in like any other
         // row's, so the arm asks about exactly Ctrl+Z / Ctrl+Shift+Z.
         //
@@ -8422,8 +8409,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // plain one. So the exclusion is stated where it is read, off
         // kToolbarChords' own `repeats` column — the arm's membership, never a
         // second list — which makes the promised casualty guaranteed instead
-        // of timing-dependent, for every `repeats` row alike (the
-        // magnification pair and Undo / Redo admit no shift anyway, so the
+        // of timing-dependent, for every `repeats` row alike (Undo / Redo
+        // admit no shift anyway, so the
         // term is load-bearing for the arrows). A NON-REPEATING
         // shift-admitting button is untouched: the hold is still its road to
         // its twin, on glass and on the desk.
@@ -8452,8 +8439,8 @@ void GuiInputHandler::finish_chrome_press_release(
 
 // THE CHROME BUTTON HOLD-REPEAT, fired from the run loop's tick (architect
 // 2026-08-16): while a press stands on a button whose chord row sets `repeats`
-// — the bottom row's four cardinal arrows and the icon row's waveform
-// magnification pair and Undo / Redo (the column is the membership) —
+// — the bottom row's four cardinal arrows and the icon row's Undo / Redo (the
+// column is the membership) —
 // synthesize that button's chord on the keyboard's own
 // cadence, so a held BUTTON walks at the speed the held KEY does. It exists for the glass rig, which has no keyboard, and it
 // works there with NO TOUCH-SPECIFIC CODE: the one-finger translation delivers
@@ -8475,9 +8462,7 @@ void GuiInputHandler::finish_chrome_press_release(
 // KEY's burst opens with its physical press — the press acts, then the
 // repeats merge behind it — but a held BUTTON's press dispatches nothing (its
 // act is at the lift), so the first fire stands in for that press act. (The
-// flip is VACUOUS for the magnification pair, whose setting is
-// history-less: its bursts push no undo entry at all, so there is nothing to
-// open or merge. It is vacuous for UNDO / REDO too: a restore pushes no entry
+// flip is VACUOUS for UNDO / REDO: a restore pushes no entry
 // through the coalescing — it pops one stack onto the other and clears the
 // coalesce stamp (Undo::restore_history_entry) — so a first fire with the bit
 // clear and the fires behind it with the bit set reach the same act.
@@ -8497,12 +8482,10 @@ void GuiInputHandler::finish_chrome_press_release(
 // the hold standing throughout; a leave that exits the WINDOW ends the hold
 // outright through the pointer-leave hook, and this body's first line sees the
 // arm gone), a dead enabled bit PAUSES (the disabled-press consume's mirror —
-// and since 2026-08-30 THE LADDER'S END for the magnification pair, whose
-// face greys at its top and bottom rung (planner decision 53): a burst that
-// walks the ladder to its end meets the dead bit on its next fire and rests
-// there under the held pointer, greyed, nothing un-pausing it while the hold
-// stands, and the lift that ends a fired burst is consumed — and since
-// 2026-09-13 THE HISTORY'S END for Undo / Redo in the same shape, their faces
+// and since 2026-09-13 THE HISTORY'S END for Undo / Redo: a burst that walks
+// the history to its end meets the dead bit on its next fire and rests there
+// under the held pointer, greyed, nothing un-pausing it while the hold
+// stands, and the lift that ends a fired burst is consumed, their faces
 // greying on an empty stack, a locked target tab and the Restrict-undo lamp's
 // verdict through history_step_actionable and its companions), a
 // rate of 0 PAUSES (stated at its own line), and lost eligibility DISARMS — a

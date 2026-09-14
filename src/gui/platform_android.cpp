@@ -493,16 +493,19 @@ GuiPlatform::~GuiPlatform() {
 // glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
 // logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
 // the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 240 % (the icon row's walk has been 959 authored px since the
-// architect deleted the Center on next marker lamp on 2026-09-13, one box and
-// one gap off the row; the ceiling was 232 at the 993-px walk the Iterations
+// fit ceiling is 258 % (the icon row's walk has been 891 authored px since the
+// architect deleted the waveform magnification pair on 2026-09-14, two boxes
+// and two gaps off the row; the ceiling was 240 at the 959-px walk the Center
+// on next marker lamp's deletion left on 2026-09-13, one box and one gap off
+// the row, 232 at the 993-px walk the Iterations
 // menu's deletion left on 2026-09-04, which cost the walk two boxes, one
 // gap and one separator, 250 at the 918-px walk the same day's
 // regrouping left, 249 at the 925-px
 // walk before that, 258 at the 891-px one, 268 at the
 // 857-px walk the radio collapse left, 240 at the 959-px walk before that day
 // and 249 at the 2026-08-27 relocation's own 925-px one) and anything past it
-// crops the rightmost history icons. 225 CLEARS IT BY 65 LOGICAL PX (it cleared
+// crops the rightmost history icons. 225 CLEARS IT BY 133 LOGICAL PX (65 at
+// the 959-px walk; it cleared
 // by 31 at the 993-px walk, the narrowest margin this row has run at on the
 // panel).
 // 250 was tried as the TEMPLATE for one afternoon on 2026-08-27 for the

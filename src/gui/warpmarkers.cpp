@@ -7,6 +7,7 @@
 #include "warp_frame_map_build.h"
 
 #include <sstream>
+#include <unordered_map>
 
 std::expected<void, std::string> GuiWarpMarkers::load(
         const std::string& path,
@@ -117,4 +118,105 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
     // GuiWarpMarker so paint-loop callers pay no slice copy.
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;
     return marker_effectively_disabled(markers, static_cast<size_t>(idx));
+}
+
+namespace {
+
+// The two passes behind resolved_magnification_level and
+// build_waveform_gain_profile — the rules are stated once at their
+// declarations (warpmarkers.h). `resolved[i]` is marker i's answer: its own
+// value, else what an enabled marker displays / a disabled one would inherit.
+struct MagnificationResolution {
+    std::vector<char>    enabled;
+    std::vector<uint8_t> resolved;
+};
+
+MagnificationResolution resolve_magnification(
+        const std::vector<GuiWarpMarker>& markers) {
+    const size_t n = markers.size();
+    MagnificationResolution r;
+    r.enabled.assign(n, 0);
+    r.resolved.assign(n, 0);
+
+    std::unordered_map<std::string, size_t> def_index;
+    for (size_t i = 0; i < n; ++i) {
+        r.enabled[i] = effective_disabled(markers, static_cast<int>(i)) ? 0 : 1;
+        if (!markers[i].label_def.empty()) def_index[markers[i].label_def] = i;
+    }
+
+    // Pass A — the DEF values: a blank ref is transparent (rule 5).
+    std::vector<uint8_t> value_a(n, 0);
+    uint8_t cur = 0;
+    for (size_t i = 0; i < n; ++i) {
+        const GuiWarpMarker& m = markers[i];
+        if (r.enabled[i]) {
+            if (m.magnification.has_value()) cur = *m.magnification;
+            // a blank ref and a blank non-ref both leave `cur` untouched here
+        }
+        value_a[i] = cur;
+    }
+
+    // Pass B — the displayed values: a blank ref takes its def's pass-A value
+    // (rule 4), a dangling one carries (rule 6).
+    cur = 0;
+    for (size_t i = 0; i < n; ++i) {
+        const GuiWarpMarker& m = markers[i];
+        if (!r.enabled[i]) {
+            r.resolved[i] = m.magnification.value_or(cur);
+            continue;
+        }
+        if (m.magnification.has_value()) {
+            cur = *m.magnification;
+        } else if (!m.label_ref.empty()) {
+            const auto it = def_index.find(m.label_ref);
+            if (it != def_index.end()) cur = value_a[it->second];
+        }
+        r.resolved[i] = cur;
+    }
+    return r;
+}
+
+}  // namespace
+
+int resolved_magnification_level(const std::vector<GuiWarpMarker>& markers,
+                                 int idx) {
+    if (idx < 0 || idx >= static_cast<int>(markers.size())) return 0;
+    return resolve_magnification(markers).resolved[static_cast<size_t>(idx)];
+}
+
+WaveformGainProfile build_waveform_gain_profile(
+        const std::vector<GuiWarpMarker>& markers) {
+    const MagnificationResolution r = resolve_magnification(markers);
+    WaveformGainProfile p;
+    auto& bp = p.breakpoints;
+    for (size_t i = 0; i < markers.size(); ++i) {
+        if (!r.enabled[i]) continue;
+        const int64_t f     = markers[i].time_frame;
+        const uint8_t level = r.resolved[i];
+        // Rule 7: a later enabled marker at the same frame replaces the
+        // earlier one's breakpoint; then drop the entry if it no longer
+        // changes the level it follows.
+        if (!bp.empty() && bp.back().source_frame == f) {
+            bp.back().level = level;
+            const uint8_t before =
+                bp.size() >= 2 ? bp[bp.size() - 2].level : uint8_t{0};
+            if (before == level) bp.pop_back();
+            continue;
+        }
+        const uint8_t current = bp.empty() ? uint8_t{0} : bp.back().level;
+        if (level != current) bp.push_back({f, level});
+    }
+    return p;
+}
+
+uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile) {
+    if (profile.breakpoints.empty()) return 0;
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (const auto& b : profile.breakpoints) {
+        h ^= static_cast<uint64_t>(b.source_frame);
+        h *= 0x100000001b3ULL;
+        h ^= static_cast<uint64_t>(b.level);
+        h *= 0x100000001b3ULL;
+    }
+    return h;
 }

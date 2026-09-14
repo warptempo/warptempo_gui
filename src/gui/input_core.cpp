@@ -351,13 +351,12 @@ void GuiInputCore::set_modifiers(bool ctrl, bool shift, bool alt, bool super) {
     if (modeled_edge) {
         // It ends any continuous wheel chord session, so the sub-detent
         // remainder — bound to the old chord — is dropped outright, before a
-        // scroll frame that would re-probe. THREE live wheel chords since
-        // 2026-08-27 (the plain magnification step, the Alt stepped pan and the
-        // Ctrl zoom step), which is
-        // exactly the case the shape-general rule exists for — remainder
-        // accumulated while panning must never assemble a detent as a zoom, or
-        // the reverse — and every other modified wheel is a swallowed non-chord
-        // the remainder must not bridge into either.
+        // scroll frame that would re-probe. ONE live wheel chord since
+        // 2026-09-14 (the plain stepped pan — three from 2026-08-27, the plain
+        // magnification step and the Ctrl zoom step deleted beside it), and
+        // the shape-general rule still holds for it: every modified wheel is a
+        // swallowed non-chord that remainder accumulated while panning must
+        // never bridge into, nor the reverse.
         scroll_accum_ = 0.0;
         // THE POINTER CURSOR USED TO BE THE SECOND CONSUMER HERE, through a
         // hook fired on this same test — modifiers SELECT between cursor kinds
@@ -512,8 +511,7 @@ void GuiInputCore::maybe_fire_repeat() {
     // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
     // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
     // held BUTTON — the chord table's `repeats` rows (the four cardinal arrow
-    // buttons, whose hold-repeat returned 2026-08-16, the waveform
-    // magnification pair and Undo / Redo). The button producer never passes through this class (it calls
+    // buttons, whose hold-repeat returned 2026-08-16, and Undo / Redo). The button producer never passes through this class (it calls
     // on_key application-side) and buys the adjacency property below from
     // its own edge, so nothing here has to account for it; this site is the KEY
     // surface's whole producer.
@@ -926,8 +924,7 @@ void GuiInputCore::pointer_frame() {
     // modifier-state change clears scroll_accum_ outright at the modifiers
     // event (and at keyboard leave / capability loss), so remainder can never
     // bridge a chord release — the routing differs by chord (plain = the
-    // waveform magnification step, Alt = the stepped pan, Ctrl = the zoom
-    // step; every other combination no-ops), so
+    // stepped pan; every modified combination no-ops), so
     // remainder grown under one must not complete a detent under another.
     //
     // Accepted: a remainder contributed in an accepted context, interrupted

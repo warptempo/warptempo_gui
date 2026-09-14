@@ -76,19 +76,16 @@ struct NonEngineSettingsSnapshot {
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;
-    // The waveform PICTURE's magnification LEVEL — a count of doublings in
-    // the range settings_file.h owns, whose gain render.h derives. A display
-    // preference, but a per-PIECE one: how loud the picture wants to be drawn
-    // is a fact about the material, which is why it stayed in the sidecar when
-    // gui_scale left it 2026-08-27. It scales no audio anywhere.
-    int                waveform_magnification_level;
     // (`projects_repo` LEFT THIS SNAPSHOT 2026-08-27 with its key — the
     // repository is the device config's, device_config.h; the sidecar carries
     // exactly what is about the piece. `follow`, `centered` and
     // `center_on_next_marker` left it 2026-09-11 with theirs — the three
     // camera postures are what the user is DOING, not what the piece
     // determines, so they became session state in AppState (the third
-    // deleted whole 2026-09-13) and nothing serializes them.)
+    // deleted whole 2026-09-13) and nothing serializes them.
+    // The waveform magnification level left it 2026-09-14 with its key — the
+    // picture's gain is a per-section profile resolved from the warp markers,
+    // whose sidecar carries each marker's magnification.)
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared

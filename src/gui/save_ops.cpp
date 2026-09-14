@@ -154,8 +154,7 @@ bool GuiSaveOps::save() {
             app.tab_a, app.tab_b,
             app.active_audio_view,
             app.active_markers_view,
-            app.active_tab_view,
-            app.waveform_magnification_level};
+            app.active_tab_view};
         if (!write_settings_file(app.settings_path, gui,
                                  app.engine_settings)) {
             report(notifications,

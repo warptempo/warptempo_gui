@@ -889,8 +889,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
     //     (no mods)                step. Pure navigation, same family as
     //                              the playhead-step and Home/End entries.
-    //   - =/- (no mods)          → waveform magnification step
-    //   - Ctrl+=/Ctrl+- → zoom in/out
+    //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → full zoom-out, else the `c` command
     //                              (run_overview_command)
     //   - f (no mods)            → follow mode toggle
@@ -2121,8 +2120,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the act's, the card is the dispatch's. THE SINGLETON'S BRACKET END IS
     // SILENT since 2026-08-31 and the Up / Down buttons GREY on it instead
     // (tempo_cent_step_direction_actionable, app_state.h), the kind refusal
-    // (since 2026-09-13) and the group's wall greying AND carding beside it. `=` / `-` are the waveform magnification keys and
-    // Ctrl+`=` / Ctrl+`-` the zoom keys (see below).
+    // (since 2026-09-13) and the group's wall greying AND carding beside it. Bare `=` / `-` are the zoom keys (see
+    // below).
     //
     // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
     // steps ONE cent, Shift THREE and Ctrl TEN, through the ladder's one owner
@@ -2199,64 +2198,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         return;
     }
-    // THE FOUR STEP CHORDS ON `=` AND `-`, TWO AXES ONE MODIFIER APART: BARE
-    // IS VERTICAL, CTRL IS HORIZONTAL (architect 2026-08-27). Bare `=` and
-    // bare `-` step the WAVEFORM PICTURE'S magnification level up and down the
-    // doubling ladder settings_file.h brackets; Ctrl+= and Ctrl+- step the
-    // horizontal ZOOM in and out. The pairing is the mnemonic, and THE WHEEL
-    // TAKES THE SAME SPLIT — the plain wheel is the magnification step and
-    // Ctrl+wheel the zoom step — so the key and the wheel say the same thing
-    // about the same modifier. THE ZOOM PAIR'S OWN BODIES ARE WHAT CTRL+WHEEL
-    // DISPATCHES (handle_wheel, via Viewport::zoom_steps — the coalesced form,
-    // one whole level per completed detent; the zoom has been ctrl's wheel
-    // chord since 2026-08-12), so that key and that wheel chord cannot drift
-    // apart in feel.
+    // THE ZOOM STEP ON BARE `=` AND BARE `-` (architect approval 2026-09-14):
+    // `=` steps the horizontal ZOOM in and `-` out, one level per press.
+    // HISTORY OF THE SPELLING: the pair was bare from 2026-08-12, moved onto
+    // Ctrl+= / Ctrl+- on 2026-08-27 when the architect gave the bare keys to
+    // the waveform magnification pair (bare vertical, ctrl horizontal), and
+    // came back to the bare keys on 2026-09-14 when that setting retired — the
+    // picture's gain is a per-section profile resolved from the warp markers
+    // now — with the CTRL FORMS DELETED: Ctrl+= and Ctrl+- are unbound, a
+    // consumed no-op under the strict-modifier rule. BARE `0` (the full zoom
+    // out, whose ceiling arm runs the `c` command) and bare `c` are untouched,
+    // and CTRL+0 stays unbound.
     //
-    // THE TWO SPELLINGS SWAPPED ON 2026-08-27: the magnification pair held the
-    // CTRL forms and the zoom pair the BARE ones from 2026-08-26, and the
-    // architect moved the picture's height onto the bare keys. BARE `0` (the
-    // full zoom out, whose ceiling arm runs the `c` command) and bare `c` are
-    // untouched, and CTRL+0 — the magnification reset that stood beside them
-    // for one day — IS UNBOUND AGAIN, retired with its button: the settings
-    // editor's `waveform_magnification_level=0` is the reset road, and an
-    // unbound combination is a consumed no-op under the strict-modifier rule.
+    // BOTH SPELLINGS ARE EXACT, no shift, ctrl or alt: Shift+= and the keypad
+    // KP_Add / KP_Subtract bind nothing here or anywhere, one spelling per
+    // act. The pair is a consumed no-op where the viewport clamp leaves it
+    // nothing to do, AND ITS BUTTONS GREY THERE since 2026-08-30 (planner
+    // decision 53 under the truthful-buttons ruling): Zoom out reads
+    // zoom_out_step_actionable, and Zoom in stays lit because its floor arm
+    // recentres. The keys keep their consumed no-ops.
     //
-    // ALL FOUR SPELLINGS ARE EXACT, no shift and no alt on either pair:
-    // Ctrl+Shift+= and the keypad KP_Add / KP_Subtract bind nothing here or
-    // anywhere, one spelling per act. Both pairs are consumed no-ops where they
-    // have nothing to do — the applier's own bracket answers for the ladder's
-    // ends, and the viewport clamp for the zoom's — AND THEIR BUTTONS GREY
-    // THERE since 2026-08-30 (planner decision 53 under the truthful-buttons
-    // ruling): Magnify / Reduce read that same bracket of that same target
-    // (waveform_magnification_step_target, the owner these two arms hand to
-    // the applier), Zoom out reads zoom_out_step_actionable, and Zoom in
-    // stays lit because its floor arm recentres. The keys keep their consumed
-    // no-ops. They rest beside each other deliberately, so the four cannot
-    // drift apart.
-    //
-    // THE MAGNIFICATION MOVES THE PICTURE AND NOT THE SOUND: the level's gain
-    // is multiplied into the peaks at the painter's tip mapping and reaches no
-    // sample, no playback path and no render — an audition sounds identical at
-    // every rung.
-    //
-    // A HELD STEPPING KEY WALKS ITS LADDER at the platform's repeat rate (all
-    // four spellings are repeat_eligible) and there is nothing to coalesce on
-    // the magnification side: the setting is history-less, so a burst pushes no
-    // undo entries to merge.
+    // A HELD STEPPING KEY WALKS THE ZOOM at the platform's repeat rate (both
+    // spellings are repeat_eligible); the zoom is a camera act with no history,
+    // so a burst pushes no undo entries to merge. The plain WHEEL is the
+    // stepped pan, not a zoom (handle_wheel).
     if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
-        apply_waveform_magnification_level(
-            waveform_magnification_step_target(app, +1));
-        return;
-    }
-    if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
-        apply_waveform_magnification_level(
-            waveform_magnification_step_target(app, -1));
-        return;
-    }
-    if (key == GuiKeys::Equal && ctrl && !shift && !alt) {
         viewport.zoom_in(); return;
     }
-    if (key == GuiKeys::Minus && ctrl && !shift && !alt) {
+    if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
         viewport.zoom_out(); return;
     }
 
@@ -2933,7 +2902,7 @@ void GuiInputHandler::run_overview_command() {
     // and answered directly). Nothing is cleared on the way back: the stamp
     // stays the level `0` was most recently pressed at, and the next press below
     // the ceiling overwrites it. THIS FUNCTION IS THE STAMP'S ONE WRITER — no
-    // manual Ctrl+`=`/Ctrl+`-`, no wheel, no drag, no `c`, no touch gesture and no load
+    // manual `=`/`-`, no wheel, no drag, no `c`, no touch gesture and no load
     // path writes it (the field's own note, app_state.h, carries the rest).
     // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
     // run_span_framing_command): it zooms to the trim / whole-song
@@ -2947,7 +2916,7 @@ void GuiInputHandler::run_overview_command() {
     // scratch about the zoom itself, and paints nothing.
     // A selection span's endpoints are
     // ACTIVE-DOMAIN frames and a zoom changes no domain, so a group and its extent
-    // survive the overview exactly as they survive Ctrl+`=` / Ctrl+`-` and the
+    // survive the overview exactly as they survive `=` / `-` and the
     // wheel.
     // The family is the group-verb doctrine (position_nudge.h): `0` sits with the
     // zoom framing on the span-READ side, not with the collapse+land verbs. It does
@@ -3268,79 +3237,43 @@ void GuiInputHandler::run_span_framing_command() {
     frame_span_into_view(app, audio, viewport, lo, hi, margin);
 }
 
-// Shared wheel handler. THREE ARMS, ALL EXACT-MATCHED, and their split is the
-// `=` / `-` keys' own since 2026-08-27: BARE IS VERTICAL, CTRL IS HORIZONTAL.
+// Shared wheel handler. ONE ARM, EXACT-MATCHED (architect approval
+// 2026-09-14): THE PLAIN WHEEL IS THE STEPPED PAN, and every modified wheel is
+// a swallowed no-op.
 //
-// THE PLAIN WHEEL IS THE WAVEFORM MAGNIFICATION STEP (architect 2026-08-27):
-// up is taller, down is shorter, one rung of the doubling ladder per completed
-// detent through apply_waveform_magnification_level, the setting's one writer.
-// A burst is ONE call — the frame's whole detent count added to the live level
-// and CLAMPED TO THE LADDER here, because the applier REFUSES an out-of-range
-// level rather than clamping it (its contract at input_handler.h), so three
-// detents from level 2 must be asked for as 4 and not as 5. The clamp is this
-// arm's alone: a key press asks for cur ± 1 and lets the bracket answer.
+// THE STEPPED PAN: the samples_visible / kViewportLeadDivisor stride through
+// the scroll_viewport funnel, which is what carries the follow suppression,
+// over the waveform, the overview lane and the top strip alike (every context
+// id, one route; the two bools below say only "a wheel-live surface"). up =
+// earlier, down = later. HISTORY OF THE SPELLING: plain from 2026-08-12 (the
+// eighth glass ruling moved the pan onto the bare form), on ALT from
+// 2026-08-27 while the plain wheel stepped the waveform magnification, and
+// plain again since 2026-09-14, when that setting retired — the picture's gain
+// is a per-section profile resolved from the warp markers now — with the ALT
+// FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
+// SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
+// caller): the zoom's
+// pointer homes are the ctrl-DRAG's zoom phase and the two icon-row buttons,
+// its keys bare `=` / `-`.
 //
-// ALT+WHEEL IS THE STEPPED PAN (architect 2026-08-27, the pan's second home on
-// this modifier): the samples_visible / kViewportLeadDivisor stride through the
-// scroll_viewport funnel, which is what carries the follow suppression, over
-// the waveform, the overview lane and the top strip alike (every context id,
-// one route; the two bools below say only "a wheel-live surface"). It held the
-// PLAIN wheel from 2026-08-12 — the eighth glass ruling emptied alt's pointer
-// half and moved the pan onto the bare form — and it is back on alt now that
-// the bare form is the magnification, which restores the Reaper spelling the
-// architect named that day. Alt's ONE pointer binding, its keyboard half still
-// the five Ctrl+Alt chords (conventions.md).
-//
-// CTRL+WHEEL IS THE ZOOM STEP (architect-ruled 2026-08-12, later the same day's
-// field session; untouched by the 2026-08-27 relocation, which is what makes
-// the wheel and the keys agree): one whole zoom level per completed detent,
-// up = in, down = out, dispatching the Ctrl+= / Ctrl+- commands' own bodies
-// through Viewport::zoom_steps — the coalesced form whose final state equals
-// calling zoom_in()/zoom_out() once per detent, including the floor's
-// recenter-on-playhead and the effective ceiling's saturation.
-//
-// IT IS THE KEYBOARD ZOOM'S SEMANTICS, NOT THE DRAG'S, deliberately: dispatching
-// those bodies means it CENTERS on the playhead (the scanner while one
-// runs, the resting cursor otherwise — apply_zoom_change's split) rather than
-// pivoting on the column under the pointer, and it suppresses follow no more
-// than the keys do, being a zoom that centers ON the scanner. The
-// pointer-anchored pivot is what the ctrl-DRAG is for. Pure viewport move like
-// the keys otherwise: no playhead write, no selection change, no region hide,
-// no playback stop, read-only-legal.
-//
-// Every OTHER combination stays a swallowed no-op (strict modifier validation):
-// shift+wheel and every mixed pair alike.
+// Every OTHER combination is a swallowed no-op (strict modifier validation):
+// ctrl, alt, shift and every mixed chord alike. Pure viewport move otherwise:
+// no playhead write, no selection change, no region hide, no playback stop,
+// read-only-legal.
 void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
                                    bool ctrl, bool shift, bool alt,
                                    bool inside_waveform, bool inside_top) {
     if (!inside_waveform && !inside_top) return;
     // `count` is the net detent count coalesced for this pointer frame
-    // (always >= 1 from the platform). Each arm scales its per-step quantity
+    // (always >= 1 from the platform). The arm scales its per-step quantity
     // by that count and applies it in ONE call, so the damage /
     // hover / worker-kick path fires once per frame regardless of burst size.
     // count == 1 reproduces the single-detent behavior.
     if (count < 1) count = 1;
-    if (!ctrl && !shift && !alt) {
-        const int delta = (button == GuiMouseButton::WheelUp ? +count : -count);
-        apply_waveform_magnification_level(
-            std::clamp(app.waveform_magnification_level + delta,
-                       0, kWaveformMagnificationLevelMax));
-        return;
-    }
-    if (alt && !ctrl && !shift) {
-        const int64_t step = std::max<int64_t>(
-            1, samples_visible(app, audio) / kViewportLeadDivisor);
-        viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
-        return;
-    }
-    if (ctrl && !shift && !alt) {
-        // Positive steps zoom in. The platform's sub-detent accumulator keys
-        // its remainder on the modifier chord as well as the hit region, and
-        // clears it outright on any modifier change, so remainder grown under
-        // one of the three arms can never complete a detent under another
-        // (input_core.cpp's context key).
-        viewport.zoom_steps(button == GuiMouseButton::WheelUp ? +count : -count);
-    }
+    if (ctrl || shift || alt) return;
+    const int64_t step = std::max<int64_t>(
+        1, samples_visible(app, audio) / kViewportLeadDivisor);
+    viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
 }
 
 int GuiInputHandler::wheel_context(int x, int y) const {
@@ -3367,10 +3300,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // OVERVIEW STRIP (2026-08-12: the lane is a navigation surface, so its
     // wheel is live like the areas above it) — plus the ONE
     // row-wise carve-out below, the redesigned rows' inert band. ALL THREE
-    // take the same one route since 2026-08-12, and all THREE of the wheel's
-    // arms ride it (the plain magnification step, the alt stepped pan and the
-    // ctrl zoom step, the modifier forking inside handle_wheel and never
-    // here), so the context ids
+    // take the same one route since 2026-08-12, and the wheel's one arm rides
+    // it (the plain stepped pan, every modifier refused inside handle_wheel and
+    // never here), so the context ids
     // differ only for the platform's
     // sub-detent remainder attribution, harmlessly. Fewer regions is
     // strictly safer for the accumulator, and the inert band is the safest kind:
@@ -3551,15 +3483,13 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
         return;
     }
     // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take
-    // the same three-arm vocabulary — plain = the waveform magnification step,
-    // alt = the stepped pan, ctrl = the zoom step (2026-08-27, on the 2026-08-12
-    // ctrl+wheel binding's own route). The
+    // the same one-arm vocabulary — plain = the stepped pan, every modified
+    // wheel a swallowed no-op (architect approval 2026-09-14). The
     // overview rides the waveform's slot: handle_wheel only asks "am I on a
-    // wheel-live navigation surface", and the lane is one — so the modifier
-    // alone picks the arm there too. THE CONTEXT ANSWER IS
-    // MODIFIER-INDEPENDENT by construction (wheel_context takes only x/y and
-    // reads no modifier state), so ctrl cannot change WHERE the wheel is live,
-    // only what it does there.
+    // wheel-live navigation surface", and the lane is one. THE CONTEXT ANSWER
+    // IS MODIFIER-INDEPENDENT by construction (wheel_context takes only x/y and
+    // reads no modifier state), so a modifier cannot change WHERE the wheel is
+    // live, only whether it acts there.
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
                  ctx == 1 || ctx == 3, ctx == 2);
 }
@@ -4229,27 +4159,6 @@ void GuiInputHandler::apply_max_waveform_height(int authored_px) {
     set_max_waveform_height_px(authored_px);
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
-}
-
-void GuiInputHandler::apply_waveform_magnification_level(int level) {
-    // The contract — sole writer, in-range-only, history-less, picture-only —
-    // is at the declaration (input_handler.h). Two lines of body: the refusal,
-    // and the rebuild every user-driven plate change takes. THE REFUSAL IS THE
-    // WHOLE END-OF-LADDER STORY: a step asks for cur ± 1
-    // (waveform_magnification_step_target) and this bracket check turns the
-    // step off the end into a consumed no-op, with no wrap and no
-    // clamp-to-self write — and since 2026-08-30 the two icon-row buttons'
-    // face asks this same bracket of that same target, so they grey exactly
-    // where this returns (planner decision 53).
-    if (!is_waveform_magnification_level(level)) return;
-    if (level == app.waveform_magnification_level) return;
-    app.waveform_magnification_level = level;
-    // The plate's fingerprint carries the level, so this rebuild renders and
-    // publishes at the new one; its damage rect (window top through the
-    // waveform's bottom) covers the OVERVIEW LANE, whose bar cache keys on the
-    // level and rebuilds inside the same frame. Nothing about the audio is
-    // touched — no playback session is disturbed and no render is dispatched.
-    viewport.kick_waveform_sync();
 }
 
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {

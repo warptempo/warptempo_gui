@@ -117,17 +117,16 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN, one site (2026-08-26): the waveform
-    //    MAGNIFICATION, whose chokepoint apply_waveform_magnification_level
-    //    (input_handler.cpp) kicks here. It is the class's only member and it
-    //    is neither of the two above — the viewport, the domain and the map all
-    //    stand still, and what moves is an INPUT TO THE PIXELS: the gain the
-    //    painter multiplies into every column's tips. That makes it a plate
-    //    CONTENT change with no geometry behind it, so the reclamp below is a
-    //    pure no-op and what is wanted is the synchronous rebuild alone, in one
-    //    frame with the overlays. The rebuild's tail damage (window top through
-    //    the waveform's bottom) carries the OVERVIEW LANE, whose bar cache keys
-    //    on the same factor and rebuilds inside that frame. It touches no
+    //  - THE PLATE'S OWN GAIN: NO MEMBER since 2026-09-14 (architect approval
+    //    2026-09-14). Its one site from 2026-08-26 was the retired
+    //    magnification level applier. The gain is a PER-SECTION PROFILE
+    //    resolved from the warp markers now (waveform_gain_profile_cached), so a
+    //    gain change is a warp-store mutation, whose profile hash dirties the
+    //    plate fingerprint and the overview bar cache BY FIELD — the tick's
+    //    async backstop repaints it with no kick of its own, and an act that
+    //    wants it in one frame with its overlays takes this kick for that
+    //    reason. A gain-only change is a plate CONTENT change with no geometry
+    //    behind it, so the reclamp below is a pure no-op for it. It touches no
     //    audio: the gain is the picture's.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
@@ -280,17 +279,9 @@ struct Viewport {
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
     void zoom_in();
     void zoom_out();
-    // Coalesced zoom: apply |in_steps| zoom levels in a single shot.
-    // Positive in_steps zooms in, negative zooms out. Equivalent in final
-    // state to calling zoom_in()/zoom_out() |in_steps| times, but resolves
-    // to one apply_zoom_change so invalidate + worker-kick fire once per
-    // pointer frame instead of once per detent. in_steps == +/-1 reproduces
-    // zoom_in()/zoom_out() exactly. THE SOLE CALLER is the CTRL+WHEEL ZOOM STEP
-    // (handle_wheel, input_handler.cpp — architect 2026-08-12): the wheel's
-    // coalesced net detent count for one pointer frame is exactly this
-    // parameter. It was briefly producer-less between that morning's plain
-    // wheel-zoom deletion and the ctrl binding the same day.
-    void zoom_steps(int in_steps);
+    // (THE COALESCED ZOOM-STEPS BODY IS DELETED, 2026-09-14: its sole caller was
+    // the Ctrl+wheel zoom step, deleted with the magnification setting's
+    // retirement — architect approval 2026-09-14.)
     // `continuous` marks a drag-driven scroll, which suppresses the per-event
     // playback predictor resync (re-anchored once at gesture end). There is no
     // longer a `synchronous` flag: it selected between the two pan drivers, and

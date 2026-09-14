@@ -5,7 +5,6 @@
 #include "marker_magnification.h"
 #include "marker_measure.h"
 #include "parse_text_util.h"
-#include "settings_file.h"
 #include "value_format.h"
 
 #include <expected>
@@ -212,13 +211,6 @@ bool parse_new_payload(const std::string& payload,
 }
 
 } // namespace
-
-// THE TWO MAGNIFICATION RANGES ARE ONE NUMBER while the settings key
-// `waveform_magnification_level` still stands: a marker's magnification and
-// the key both count waveform-picture doublings, so their ceilings must not
-// drift apart (architect approval 2026-09-14; the key and this assert leave
-// together).
-static_assert(kMarkerMagnificationMax == kWaveformMagnificationLevelMax);
 
 namespace warpmarkers_internal {
 

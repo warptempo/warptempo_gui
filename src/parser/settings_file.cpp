@@ -50,11 +50,11 @@ using warptempo_parse::prefix_line_error;
 // ordinary UNKNOWN-key refusal below, hand-edit is the whole recovery, and
 // there is no migration tool and no reader leniency.
 //
-// `waveform_magnification_level` JOINED 2026-08-26 (architect approval
+// THE WAVEFORM MAGNIFICATION LEVEL KEY JOINED 2026-08-26 (architect approval
 // 2026-08-26), REQUIRED from its first day like every key since
 // `projects_repo`'s one-day exception was retired — and it carries the standing
 // consequence in the other direction: a `.settings` carrying no
-// `waveform_magnification_level=` line is load-fatal in both products by the
+// waveform magnification level line is load-fatal in both products by the
 // missing-required-key refusal below. Legacy on-disk formats are never
 // supported here; the architect re-saves his projects (and the checkpoints
 // committed before the key drop out of the `h` walk by the same gate, the
@@ -66,6 +66,8 @@ using warptempo_parse::prefix_line_error;
 // from half-doublings to WHOLE DOUBLINGS over the shorter bracket [0, 4]: the
 // name is unchanged, so a file carrying a level above 4 keeps a canonical key
 // and takes the value refusal below instead — the same re-save once more.
+// THE KEY LEFT THE SCHEMA 2026-09-14 — the record is below with the other
+// departures.
 //
 // FOUR KEYS LEFT THE SCHEMA 2026-08-27 (architect approval 2026-08-27, twice
 // that day — the device-config cut, then the fifth grant on these two files for
@@ -107,10 +109,20 @@ using warptempo_parse::prefix_line_error;
 // the unknown-key refusal below — no migration, no reader leniency, the
 // recipe refusing `'` and the checkpoint dropping out of the `h` walk, exactly
 // as for every key retired before them.
+//
+// THE WAVEFORM MAGNIFICATION LEVEL KEY LEFT THE SCHEMA 2026-09-14 (architect approval
+// 2026-09-14): the waveform picture's magnification is no longer one number for
+// the piece but a PER-SECTION PROFILE resolved from the warp markers, each warp
+// marker carrying an optional magnification in its sidecar comment
+// (marker_magnification.h, which owns the range now as
+// kMarkerMagnificationMax). The consequence is the standing one: a `.settings`,
+// a `renders/` recipe or a checkpoint still carrying the key is load-fatal in
+// both products by the unknown-key refusal below — no migration, no reader
+// leniency, the recipe refusing `'` and the checkpoint dropping out of the `h`
+// walk, exactly as for every key retired before it.
 constexpr const char* kCanonicalSettingsKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover",
     "active_audio_view", "active_markers_view", "active_tab_view",
-    "waveform_magnification_level",
     "tab_a_trim_begin", "tab_a_trim_end", "tab_a_read_only",
     "tab_a_viewport_start", "tab_a_zoom", "tab_a_playhead_cursor",
     "tab_b_trim_begin", "tab_b_trim_end", "tab_b_read_only",
@@ -341,30 +353,6 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // The four render-environment `*_hash` attestation keys (architect approval
     // 2026-08-09) left under the same rule; their record is at
     // kCanonicalSettingsKeys above.
-    if (key == "waveform_magnification_level") {
-        // THE WAVEFORM'S VISUAL MAGNIFICATION — the count of doublings on
-        // the ladder in settings_file.h, and the PICTURE'S alone: the gain it
-        // stands for scales the peaks the GUI draws (plate and overview strip
-        // both) and reaches no sample, no playback path and no render. The CLI
-        // parses it here and never reads it, exactly as it never reads
-        // gui_scale.
-        //
-        // One canonical spelling per value: plain digits through
-        // parse_authored_frame (no sign, point, or leading zeros — exactly the
-        // writer's %d output), then the RANGE through the shared predicate. A
-        // range rather than a membership list, because the value is now a
-        // count: every whole number the bracket admits is a state the GUI can
-        // produce, and nothing outside it is.
-        // (architect approval 2026-08-26 — the settings/parser grant this key
-        // landed under, extended the same day to the first retune of it, and
-        // again 2026-08-27 to the second.)
-        int64_t v = 0;
-        if (!parse_authored_frame(value, v) || !is_waveform_magnification_level(v))
-            return err("must be an integer in [0, 4] in canonical spelling");
-        out.i64 = v;
-        return R(out);
-    }
-
     return std::nullopt;  // not a GUI-kind key
 }
 
@@ -453,11 +441,6 @@ std::expected<SettingsFile, std::string> read_settings_file(
             out.active_markers_view = gv.c;
         } else if (key == "active_tab_view") {
             out.active_tab_view = gv.c;
-        } else if (key == "waveform_magnification_level") {
-            // Range-checked into [0, kWaveformMagnificationLevelMax] by
-            // validate_gui_setting above, so the narrowing to int is exact
-            // (architect approval 2026-08-26).
-            out.waveform_magnification_level = static_cast<int>(gv.i64);
         }
         return {};
     });

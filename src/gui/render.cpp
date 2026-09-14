@@ -146,7 +146,7 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
-                     int magnification_level,
+                     const WaveformGainProfile& gain_profile,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -221,17 +221,40 @@ void render_waveform(cairo_surface_t* dest,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // THE VISUAL MAGNIFICATION, resolved from the level to a gain once per
-    // call through the one owner. The contract is at this function's
-    // declaration; the arithmetic is one multiply and a clamp at the tip
-    // mapping below. IT SCALES PIXELS ONLY — nothing this function touches is
-    // audio.
-    const double mag = waveform_magnification_gain(magnification_level);
-    const auto magnified_tip = [mag](double raw) {
-        const double v = raw * mag;
+    // THE VISUAL MAGNIFICATION, a function of source time: each column's gain
+    // is its section's level through the one level->gain owner. The contract
+    // (and the column-to-section cell rule) is at this function's declaration;
+    // the arithmetic is one multiply and a clamp at the tip mapping below. IT
+    // SCALES PIXELS ONLY — nothing this function touches is audio.
+    const auto magnified_tip = [](double raw, double gain) {
+        const double v = raw * gain;
         if (v < -1.0) return -1.0;
         if (v >  1.0) return  1.0;
         return v;
+    };
+    // THE SECTION CURSOR: the index of the first breakpoint AFTER the current
+    // column's s0, so breakpoints[cursor - 1] (or the implicit level 0 before
+    // the first) is the section containing it. Columns are source-ascending in
+    // both views (the warp map is monotone), so the cursor only advances; it
+    // seeds by binary search at the first drawn column, which keeps the lookup
+    // a pure function of s0 whatever col0 this call starts at.
+    const std::vector<WaveformGainBreakpoint>& gain_bp = gain_profile.breakpoints;
+    size_t gain_cursor = 0;
+    bool   gain_seeded = false;
+    const auto gain_at = [&](long long s0) {
+        if (!gain_seeded) {
+            gain_cursor = static_cast<size_t>(
+                std::upper_bound(gain_bp.begin(), gain_bp.end(), s0,
+                    [](long long f, const WaveformGainBreakpoint& b) {
+                        return f < b.source_frame;
+                    }) - gain_bp.begin());
+            gain_seeded = true;
+        }
+        while (gain_cursor < gain_bp.size() &&
+               gain_bp[gain_cursor].source_frame <= s0)
+            ++gain_cursor;
+        const int level = gain_cursor == 0 ? 0 : gain_bp[gain_cursor - 1].level;
+        return waveform_magnification_gain(level);
     };
 
     // Each column is written straight into the plate's pixel words, and a
@@ -355,14 +378,15 @@ void render_waveform(cairo_surface_t* dest,
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
         // THE GAIN AT THE TIP MAPPING: the column's raw extremes times the
-        // level's gain, clamped to the sample domain [-1, 1] BEFORE they
-        // become rows. The clamp is what makes a magnified forte clip flat
-        // against the lane's edges instead of running off into row arithmetic,
-        // and it is a no-op at level 0, whose gain is 1 (raw peaks already rest
-        // in range). A PICTURE gain: the samples themselves are untouched, here
-        // and everywhere.
-        const double raw_min = magnified_tip(mm.first);
-        const double raw_max = magnified_tip(mm.second);
+        // gain of the section containing s0, clamped to the sample domain
+        // [-1, 1] BEFORE they become rows. The clamp is what makes a magnified
+        // forte clip flat against the lane's edges instead of running off into
+        // row arithmetic, and it is a no-op at level 0, whose gain is 1 (raw
+        // peaks already rest in range). A PICTURE gain: the samples themselves
+        // are untouched, here and everywhere.
+        const double gain    = gain_at(s0);
+        const double raw_min = magnified_tip(mm.first, gain);
+        const double raw_max = magnified_tip(mm.second, gain);
 
         const int x = area.x + i;
 

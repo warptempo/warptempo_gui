@@ -113,7 +113,6 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     // Session prefs the per-entry .settings writer needs, captured live at
     // dispatch so the file carries the session's real values.
     s.active_markers_view = app.active_markers_view;
-    s.waveform_magnification_level = app.waveform_magnification_level;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is
     // an active_audio_view=T state). Zoom rides through unchanged; the

@@ -165,15 +165,17 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
 // tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (240 since 2026-09-13 — the walk's own paragraph below) are
+// ceiling (258 since 2026-09-14 — the walk's own paragraph below) are
 // untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 959 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-seven-button left-to-right walk runs past the window's right edge —
-// the tablet's own 225 clears it by 65 (2304/2.25 = 1024 logical px) and 240
-// is the fit ceiling on that panel since the CENTER ON NEXT MARKER LAMP WAS
-// DELETED on 2026-09-13, one box and one gap off the row (232 at the 993-px
+// 891 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-five-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it by 133 (2304/2.25 = 1024 logical px) and 258
+// is the fit ceiling on that panel since the WAVEFORM MAGNIFICATION PAIR WAS
+// DELETED on 2026-09-14 (architect approval 2026-09-14), two boxes and two
+// gaps off the row (240 at the 959-px walk the CENTER ON NEXT MARKER LAMP'S
+// DELETION left on 2026-09-13, one box and one gap off the row, 232 at the 993-px
 // walk the ITERATIONS MENU'S DELETION left on 2026-09-04, when its two
 // commands came back to the row as a group of their own, 250 at
 // the 918-px walk the same day's regrouping left, 249 at the

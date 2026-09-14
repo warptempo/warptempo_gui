@@ -1932,7 +1932,6 @@ struct GuiHistoryGuiSide {
     char        active_audio_view   = 'S';
     char        active_markers_view = 'W';
     char        active_tab_view     = 'A';
-    int         waveform_magnification_level = 0;
 };
 
 std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
@@ -1957,7 +1956,6 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
     gui->active_audio_view   = app.active_audio_view;
     gui->active_markers_view = app.active_markers_view;
     gui->active_tab_view     = app.active_tab_view;
-    gui->waveform_magnification_level = app.waveform_magnification_level;
     return gui;
 }
 
@@ -1965,8 +1963,7 @@ std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
                                          const EngineSettings&    engine) {
     const NonEngineSettingsSnapshot snap{
         gui.tab_a, gui.tab_b,
-        gui.active_audio_view, gui.active_markers_view, gui.active_tab_view,
-        gui.waveform_magnification_level};
+        gui.active_audio_view, gui.active_markers_view, gui.active_tab_view};
     return format_settings_text(snap, engine);
 }
 

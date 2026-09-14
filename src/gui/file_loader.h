@@ -134,8 +134,7 @@ std::optional<GuiFailure> source_load_dry_run(
     const std::filesystem::path& source);
 
 // Apply a parsed settings file's engine block and the scalar session prefs
-// (follow, active_audio_view, active_markers_view, active_tab_view,
-// waveform_magnification_level) into `app`. VALUES ONLY — no side effects: the
+// (active_audio_view, active_markers_view, active_tab_view) into `app`. VALUES ONLY — no side effects: the
 // caller runs on_resize itself, owning its own side-effect timing. (The list
 // lost four prefs 2026-08-27: playback_speed retired, and gui_scale,
 // audio_player and projects_repo became per-DEVICE values gui_main reads before

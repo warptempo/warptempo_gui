@@ -135,7 +135,7 @@ void GuiWaveformWorker::worker_loop() {
                 *job.audio,
                 job.vp_start,
                 job.painter_spp,
-                job.magnification_level,
+                job.gain_profile,
                 job.warp_frame_map.empty() ? nullptr : &job.warp_frame_map);
             ok = !cancel_flag_.load();
         }

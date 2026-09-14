@@ -1377,7 +1377,7 @@ void   set_gui_scale_percent(int percent);
 
 // THE LIVE PERCENT ITSELF, for the one thing a factor cannot serve: a CACHE
 // FINGERPRINT FIELD. The scale is an input to pixels the way an inset or a
-// magnification level is, and a fingerprint keys its inputs BY FIELD rather
+// gain profile is, and a fingerprint keys its inputs BY FIELD rather
 // than through whatever else happens to move with them — an integer percent is
 // what makes that compare exact, where the factor is a double and a derived
 // dimension is a coincidence. Nothing paints through this: every painted
@@ -2718,7 +2718,7 @@ struct WaveformBasis {
 // through, and the SET pixels are what the one remaining after-the-fact
 // recolor reads: paint_region_ink masks kWaveformRegionInk through this same
 // alpha inside the region's column span, leaving the plate itself untouched.
-// THE VISUAL MAGNIFICATION is `magnification_level`: the level's gain (below)
+// THE VISUAL MAGNIFICATION is `gain_profile`: a column's level's gain (below)
 // multiplies the column's raw min/max, and the product is CLAMPED to [-1, 1]
 // before they become rows, which is the whole of it — one multiply at the tip
 // mapping, and nothing else in this painter moves (the column grid, the >=1px
@@ -2728,19 +2728,29 @@ struct WaveformBasis {
 // quiet passage readable, and a marker goes on a transient rather than in a
 // sustain.
 //
+// THE GAIN IS A FUNCTION OF SOURCE TIME, resolved from the warp markers
+// (architect approval 2026-09-14), on EVERY waveform picture — this plate and
+// the overview lane's bars, both of which take the same profile
+// (waveform_gain_profile_cached, warp_frame_map_view.h; the resolution rules at
+// build_waveform_gain_profile, warpmarkers.h). A COLUMN TAKES THE LEVEL OF THE
+// SECTION CONTAINING ITS FIRST SOURCE FRAME s0 — the cell rule (CLAUDE.md
+// Rounding): the column's span [s0, s1) is a cell, and the section that contains
+// its origin owns it, so a section boundary inside a column never widens the
+// louder or the quieter side by more than that column. s0 is the same integer
+// the peak read takes, a pure function of the GLOBAL column index (the
+// authoring lattice below) in both views — target view maps the column through
+// the warp map before the lookup — so the lookup is pan-invariant by
+// construction.
+//
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate and the overview strip are pixels, playback
 // reads the sample buffer at its own level, and no render input is derived from
 // this parameter anywhere.
 //
-// THE LEVEL IS WHAT TRAVELS, never the gain: every caller passes the persisted
-// integer, so the two picture caches (the plate fingerprint and the overview
-// bar cache's reuse key) compare levels by construction and the gain is spelled
-// exactly once, just below. It is a PARAMETER rather than a read of app state
-// so this primitive stays free of both (the worker thread renders from a job
-// snapshot). The range is the schema's (is_waveform_magnification_level,
-// settings_file.h), which the schema and the one applier both guarantee; level
-// 0 is the untouched picture.
+// It is a PARAMETER rather than a read of app state so this primitive stays
+// free of it (the worker thread renders from a job snapshot, which copies the
+// profile as it copies the warp map). An empty profile is the untouched
+// picture.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -2748,16 +2758,17 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
-                     int magnification_level,
+                     const WaveformGainProfile& gain_profile,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
-// THE ONE OWNER OF THE GAIN — the only place the waveform magnification LEVEL
-// becomes a multiplier, and a GUI fact rather than a schema one: the picture is
-// the only thing that ever wants it, so the shared schema owns the level's
-// range and this owns what the level means.
+// THE ONE OWNER OF THE GAIN — the only place a waveform magnification LEVEL
+// becomes a multiplier, and a GUI fact rather than a grammar one: the picture
+// is the only thing that ever wants it, so the marker grammar owns the level's
+// range (kMarkerMagnificationMax, marker_magnification.h) and this owns what
+// the level means.
 //
-// The ladder is ×2 PER STEP: gain = 2^level, so every press doubles. Over the
-// schema's bracket that is 1, 2, 4, 8, 16 — four presses from the untouched
+// The ladder is ×2 PER STEP: gain = 2^level, so every step doubles. Over the
+// grammar's bracket that is 1, 2, 4, 8, 16 — four steps from the untouched
 // picture to the cap, and capped where the architect stops wanting more (×8
 // already clips the quietest classical passages, and one step past it covers
 // the quietest masters).
