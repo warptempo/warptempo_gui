@@ -142,22 +142,18 @@ enum class Icon {
     // entry, which also records the two stroke attributes it brought (a
     // non-default width and the dash).
     ToolRectSelection,   // Toggle trim region (bare `[`)
-    // THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
-    // roster commit — the icon row's zoom group after the trim group).
-    // Breeze's own magnifier family, one construction four ways: the bare
-    // magnifier with a plus (zoom in), a minus (zoom out), the fit frame
-    // (full zoom out — bare `0`'s whole-song arm), and the 1:1 original
-    // (working-zoom center, bare `c`). The 2026-08-01 ZoomOut/ZoomIn pair was
-    // deleted with its buttons under the no-duplicate-commands ruling of
-    // 2026-08-02; the architect's 2026-08-12 relayout ruling supersedes that
-    // for these four (the roster's record at kIconRowButtons), so the two
-    // magnifiers return as fresh transcriptions beside two new siblings.
-    ZoomIn,              // Zoom in (bare `=`)
-    ZoomOut,             // Zoom out (bare `-`)
+    // THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's
+    // roster commit — the icon row's viewport-class group, behind the trim
+    // region toggle). Breeze's own magnifier family: the fit frame (full zoom
+    // out — bare `0`'s whole-song arm) and the 1:1 original (working-zoom
+    // center, bare `c`). The plain zoom-in / zoom-out magnifiers that stood
+    // beside them left with the Zoom In / Zoom Out buttons on 2026-09-14
+    // (architect 2026-09-14) — enumerators, defs and assets together, no
+    // other button wearing them.
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
     // ZOOM-IN-Y, breeze's zoom-in-y (2026-08-26): the SAME magnifier
-    // construction as the four above, carrying a Y-AXIS MARK — a ruler of tick
+    // construction as the two above, carrying a Y-AXIS MARK — a ruler of tick
     // marks down the left of the lens with the plus in the dial — so the act it
     // faces is a zoom of the amplitude axis rather than the time axis. It faced
     // the icon row's Magnify waveform button until 2026-09-14, when that button,
@@ -484,151 +480,12 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 56 SINCE 2026-09-04, THE RESTRICT-UNDO-TO-VIEWPORT LAMP: 55 + timeline-lift,
-// one fresh verbatim transcription with no departure beside it — two
-// `.ColorScheme-Text` paths and one carrying its own literal #d24d57, which is
-// media-record's and preview-render-on's shape a third time. (55 was the
-// CENTER ON NEXT MARKER lamp's zoom-next earlier the same day, which added its
-// enumerator without a line here; the 55 above is a re-COUNT of the
-// enumerators, per the inventory-retell rule, and not an increment of a stale
-// value.)
-// 51 SINCE 2026-08-28, THE PLAYER ROW'S PAUSE FACE: 50 + media-playback-pause,
-// one fresh transcription for R36's Play/Pause + Stop pair — two `m` subpaths
-// of m/v/h/z in one `d`, the arms media-playback-stop and the two skips
-// already cover.
-// 50 SINCE 2026-08-28, THE PLAYER ROW'S REPEAT TOGGLE: 49 + media-repeat-
-// single, one fresh transcription — three `<path>` elements with verbatim
-// relative `d` strings, nothing new for the interpreter, and the file's one
-// `fill-rule="evenodd"` needs no field (the entry says why).
-// 49 SINCE 2026-08-28, THE FOLDER OVERLAY: 47 + folder and audio-x-wav, the
-// render player's two row glyphs — two fresh transcriptions; audio-x-wav is
-// the table's first path whose file wraps it in a group transform and its
-// own inverse (a net identity, recorded at the entry), and its arcs take the
-// interpreter's existing `A` arm.
-// 47 SINCE 2026-08-27, THE EDIT FLAG BUTTON: 46 + text-field, one fresh
-// transcription with no departure beside it — the bottom row's new verb needed
-// a glyph and no existing one said "open the editor over this text".
-// 46 SINCE 2026-08-27, THE KEYBOARD'S CAPS BECOMING WORDS: 51 − the on-screen
-// keyboard's five (keyboard-caps-disabled / keyboard-caps-enabled /
-// keyboard-enter / keyboard-spacebar / edit-clear-locationbar-rtl). The
-// architect drove the painted keyboard on glass and the Breeze glyphs read
-// OVERSIZED beside the letter caps, so every function key says its word on the
-// one sans face instead — Shift, Backspace, Space, Cancel, Enter — and all
-// five glyphs lost their only consumer in one act. Their defs and their
-// committed assets went with them; DialogCancel is untouched, Render's
-// mid-render face being its own reader. They lived one day.
-// 51 since 2026-08-27, THE SERIES RELOCATION (the day's third move here):
-// 53 − music-note-16th and mathmode, deleted with the two icon-row buttons the
-// SERIES MENU replaced. Both commands survive whole on their bare keys and as
-// menu rows; the glyphs had no other consumer, exactly as edit-copy and
-// edit-paste had none when the EDIT MENU took their buttons.
-// 53 since 2026-08-27: 48 + the ON-SCREEN KEYBOARD's five (keyboard-caps-
-// disabled / keyboard-caps-enabled / keyboard-enter / keyboard-spacebar /
-// edit-clear-locationbar-rtl). Five fresh transcriptions, no departures beside
-// them — every one a `<path>` with a verbatim `d`, and four of the five are
-// single M/L/H/V/Z outlines the interpreter's oldest arms already cover.
-// 48 since 2026-08-27: zoom-fit-height is deleted with the MAGNIFICATION
-// RESET button, the third zoom-group member the architect retired when the
-// magnification pair moved onto the bare keys — 49 − 1, the glyph having had
-// no second consumer.
-// 49 since 2026-08-26 (later the same day): zoom-fit-height joined for the
-// MAGNIFICATION RESET, the third zoom-group member the ladder's 2026-08-26
-// retune brought with it — 48 + 1, one more fresh transcription in the same
-// family.
-// 48 since 2026-08-26: zoom-in-y and zoom-out-y joined for the waveform
-// magnification stepping pair, the icon row's two new zoom-group members —
-// 46 + 2, two fresh transcriptions with no departures beside them.
-// 46 STILL, LATER ON 2026-08-20: the Marker Measure button's glyph changed from
-// edit-comment to minuet-scales (the architect's pick, once the field became a
-// measure grammar) — one out, one in, so the count is unmoved. edit-comment's
-// def and asset are deleted with it, no button being left that wears them.
-// 46 since 2026-08-20, the propagate relocation: 48 − edit-copy and edit-paste,
-// deleted with the two icon-row buttons the EDIT MENU replaced. The five
-// commands survive whole on their chords and as menu rows; the glyphs had no
-// other consumer, exactly as edit-cut had none when the scissors went.
-// 48 since 2026-08-19: 47 + edit-comment, the Marker Measure button's speech
-// balloon (the bottom row's verb group).
-// 47 since 2026-08-18, the roster relayout: 45 − edit-cut (the trim scissors,
-// deleted with its button — the chord survives, the glyph had no other
-// consumer) + shallow-history, mathmode and edit-select. TWO OF THE THREE
-// ARRIVE AHEAD OF THEIR BUTTONS (shallow-history's walk radio and
-// edit-select's add-to-selection button land in the following commits) and
-// deep-history is left painted by nothing for the same span — an unreferenced
-// enumerator costs a latch slot and nothing else, and one asset commit beats
-// three.
-// 45 since 2026-08-16: 44 + tool-rect-selection, the Show trim region
-// button's marching-ants rectangle (the icon row's trim group, beside the
-// scissors).
-// 44 since 2026-08-15 (the bottom row's marker-walk group): 41 + bboxprev,
-// bboxnext and boost. THE PLAY/STOP COLLAPSE OF THE SAME DAY COST NOTHING
-// HERE — one button wearing two glyphs needs both of them, and an Icon has
-// never been a button (VcsCommit is the precedent). 41 was 2026-08-12 (the
-// grand relayout's roster commit): 33 + the zoom group's four (zoom-in /
-// zoom-out / zoom-fit-best / zoom-original) + the single-marker verbs' four
-// (list-add / list-remove / view-hidden / insert-link). 33 was 32 + edit-cut
-// (2026-08-11, the trim surface arc).
-// 55 SINCE 2026-08-29, THE COPY VALUE BUTTON: 54 + edit-copy, one fresh
-// verbatim transcription with no departure beside it — absolute M/L/Z over
-// three subpaths whose windings alternate, so cairo's default nonzero fill
-// (SVG's own default, the file naming no fill-rule) cuts the two sheets'
-// interiors out exactly as the file draws them. It is the same Breeze file
-// the deleted IconCopy button wore from 2026-08-12 to 2026-08-20, back for a
-// different act.
-// 54 since 2026-08-29, THE NOTIFICATION CARDS: 51 + dialog-information,
-// dialog-error and window-close — the card's two class glyphs and its X,
-// three fresh verbatim transcriptions with no departures beside them (the
-// two dialog files are two-colour, media-record's shape).
-// 58 SINCE 2026-09-04, THE ITERATIONS MENU'S DELETION: 56 + music-note-16th
-// and mathmode, back with the two buttons the architect returned to the icon
-// row when the row had room for them again. Both files are the ones the
-// 2026-08-27 Series relocation deleted, re-transcribed verbatim from the
-// installed breeze-dark 22px set and re-committed under assets/icons/breeze/,
-// so the enumerators, the defs and the provenance assets came back together
-// exactly as they left. The number above is a re-COUNT of the enumerators (56
-// before this ruling), not an increment of a stale value.
-// 54 SINCE 2026-09-04, THE RADIO-PAIR COLLAPSE: 57 − document-export,
-// speedometer and deep-history, deleted with the six buttons the architect
-// collapsed into three lamps. Each lamp wears the LIT state's glyph, so
-// document-import, chronometer-start and shallow-history stay and the three
-// home-state faces go — enumerators, defs and assets together, which is
-// edit-cut's precedent and the largest single departure this roster has taken.
-// The picks, the metaphors and every runner-up stay recorded at the surviving
-// entries so none is re-proposed without a new ruling.
-// 57 SINCE 2026-09-01, THE PLAYER ROW'S UP BUTTON: 56 + go-parent-folder, one
-// fresh verbatim transcription with no departure beside it — absolute M/L over
-// two `z`-closed subpaths with an explicit command letter before every pair,
-// the interpreter's oldest arm. The button had worn the roster's `go-up` since
-// it landed hours earlier the same day; GoUp stays for the roster's own bare-Up
-// transport button, so this is an addition rather than a swap.
-// 56 was ALREADY TRUE ON 2026-08-31 and this constant said 55: the CENTERED
-// LAMP's align-horizontal-center added its enumerator without bumping the
-// number, so the roster's last entry (edit-copy) ran latch-less for a day. The
-// count above is a re-COUNT of the enumerators rather than an increment of the
-// stale value, per the inventory-retell rule; the drift cost exactly what this
-// header says it costs — one icon's once-per-icon diagnostic latch, the latch
-// being bounds-checked — and nothing else.
-// 58 SINCE 2026-09-13, THE VALUE DRAG LAMP'S DELETION: 59 − transform-move-
-// vertical, the enumerator, the def and the asset leaving with the button that
-// wore it. The 2026-09-10 lamp had added that enumerator WITHOUT bumping this
-// number, so it said 58 over 59 enumerators for three days (the centered
-// lamp's own drift, recorded below, one icon's latch the whole cost); the
-// value here is a re-COUNT of the enumerators, which happens to land back on
-// the stale spelling.
-// 57 SINCE 2026-09-13, THE CENTER ON NEXT MARKER LAMP'S DELETION, later the
-// same day: 58 − zoom-next, the enumerator, the def and the asset leaving with
-// the button that wore it (a re-COUNT of the enumerators).
-// 56 SINCE 2026-09-14, THE WAVEFORM MAGNIFICATION BUTTONS' DELETION: 57 −
-// zoom-out-y, the enumerator, the def and the asset leaving with the Reduce
-// button that wore it (architect approval 2026-09-14); zoom-in-y stays, worn
-// by the Marker Magnification button. A re-COUNT of the enumerators, the
-// deletion having left this number at 57 until the constant was retold.
-// 57 SINCE 2026-09-14, LATER THE SAME DAY: 56 + zoom-out-y, restored with its
-// def and asset for the Ignore Waveform Magnification lamp (architect
-// 2026-09-14). A re-COUNT of the enumerators.
-// 56 SINCE 2026-09-14, LATER STILL: 57 − boost, the enumerator, the def and
-// the asset leaving with the Walk Both Tabs button that wore it (architect
-// 2026-09-14). A re-COUNT of the enumerators.
-inline constexpr int kIconCount = 56;
+// 54 SINCE 2026-09-14, THE ZOOM IN / ZOOM OUT DELETION (architect
+// 2026-09-14): a re-COUNT of the enumerators, zoom-in and zoom-out leaving
+// with the two buttons that wore them — enumerators, defs and assets
+// together. The count's succession is in git history; a glyph joining or
+// leaving restates this number.
+inline constexpr int kIconCount = 54;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

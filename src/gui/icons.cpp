@@ -915,39 +915,21 @@ constexpr IconPath kToolRectSelectionPaths[] = {
      /*dash_offset=*/4.9125299},
 };
 
-// -- THE ZOOM GROUP'S FOUR (architect-picked 2026-08-12, the grand relayout's
-// roster commit) -------------------------------------------------------------
+// -- THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's roster
+// commit) ---------------------------------------------------------------------
 //
 // Breeze's magnifier family, transcribed byte-verbatim from breeze-dark's
-// actions/22/: zoom-in, zoom-out, zoom-fit-best and zoom-original share one
-// magnifier construction (the 8/7 double circle ring — media-record's nonzero
-// hole idiom — plus the handle's rounded 1x1 arc stub) and differ in the
-// dial's content: a plus, a minus, the fit frame, and the 1:1 corner-arrow
-// dial. All four are single `.ColorScheme-Text` paths resolving to #fcfcfc,
-// relative m/l/h/v with `a` arcs, glued negative-after-flag arc arguments
-// ("0 0-8 8" — a flag is one digit, media-record's own producer form) and
-// implicit repetition; every family has a committed producer already, so
-// nothing here asked the interpreter for anything new. (ZoomOut and ZoomIn
-// existed 2026-08-01..02 as different transcriptions and were deleted WHOLE
-// with their buttons; these are fresh copies of today's files, not revivals.)
-
-constexpr IconPath kZoomInPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
-     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
-     "7-7zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
-};
-
-constexpr IconPath kZoomOutPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
-     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
-     "7-7zm-4 6v2h8v-2h-8z"},
-};
+// actions/22/: zoom-fit-best and zoom-original share one magnifier
+// construction (the 8/7 double circle ring — media-record's nonzero hole
+// idiom — plus the handle's rounded 1x1 arc stub) and differ in the dial's
+// content: the fit frame, and the 1:1 corner-arrow dial. Both are single
+// `.ColorScheme-Text` paths resolving to #fcfcfc, relative m/l/h/v with `a`
+// arcs, glued negative-after-flag arc arguments ("0 0-8 8" — a flag is one
+// digit, media-record's own producer form) and implicit repetition; every
+// family has a committed producer already, so nothing here asked the
+// interpreter for anything new. (The plus and minus magnifiers of the same
+// file family left with the Zoom In / Zoom Out buttons on 2026-09-14,
+// enumerators, defs and assets together.)
 
 constexpr IconPath kZoomFitBestPaths[] = {
     {kIconText,
@@ -960,7 +942,7 @@ constexpr IconPath kZoomFitBestPaths[] = {
 
 // ZOOM-IN-Y (2026-08-26), the same family further along: the identical
 // magnifier except that the HANDLE STUB IS ONE UNIT SHORTER (2.400391 where
-// the four above carry 3.400391) and the lens holds a Y-AXIS RULER — the run of
+// the two above carry 3.400391) and the lens holds a Y-AXIS RULER — the run of
 // tick pairs inside the ring — beside the plus. A single `.ColorScheme-Text`
 // path in the family's own idiom, transcribed byte-verbatim from breeze-dark's
 // actions/22/ like every entry here; zoom-in-y.svg is a symlink to
@@ -1220,8 +1202,6 @@ constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
 constexpr IconDef kToolRectSelection  {22.0, kToolRectSelectionPaths,   1};
-constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
-constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
 constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
 constexpr IconDef kZoomInY            {22.0, kZoomInYPaths,             1};
@@ -1278,8 +1258,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
         case Icon::ToolRectSelection:   return kToolRectSelection;
-        case Icon::ZoomIn:              return kZoomIn;
-        case Icon::ZoomOut:             return kZoomOut;
         case Icon::ZoomFitBest:         return kZoomFitBest;
         case Icon::ZoomOriginal:        return kZoomOriginal;
         case Icon::ZoomInY:             return kZoomInY;

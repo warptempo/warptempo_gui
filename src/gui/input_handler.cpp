@@ -890,7 +890,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     (no mods)                stepped-pan step. Pure navigation, same
     //                              family as the playhead-step and Home/End
     //                              entries.
-    //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → full zoom-out, else the `c` command
     //                              (run_overview_command)
     //   - f (no mods)            → follow mode toggle
@@ -2144,8 +2143,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the act's, the card is the dispatch's. THE SINGLETON'S BRACKET END IS
     // SILENT since 2026-08-31 and the Up / Down buttons GREY on it instead
     // (tempo_cent_step_direction_actionable, app_state.h), the kind refusal
-    // (since 2026-09-13) and the group's wall greying AND carding beside it. Bare `=` / `-` are the zoom keys (see
-    // below).
+    // (since 2026-09-13) and the group's wall greying AND carding beside it.
     //
     // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
     // steps ONE cent, Shift THREE and Ctrl TEN, through the ladder's one owner
@@ -2231,37 +2229,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         return;
     }
-    // THE ZOOM STEP ON BARE `=` AND BARE `-` (architect approval 2026-09-14):
-    // `=` steps the horizontal ZOOM in and `-` out, one level per press.
-    // HISTORY OF THE SPELLING: the pair was bare from 2026-08-12, moved onto
-    // Ctrl+= / Ctrl+- on 2026-08-27 when the architect gave the bare keys to
-    // the waveform magnification pair (bare vertical, ctrl horizontal), and
-    // came back to the bare keys on 2026-09-14 when that setting retired — the
-    // picture's gain is a per-section profile resolved from the warp markers
-    // now — with the CTRL FORMS DELETED: Ctrl+= and Ctrl+- are unbound, a
-    // consumed no-op under the strict-modifier rule. BARE `0` (the full zoom
-    // out, whose ceiling arm runs the `c` command) and bare `c` are untouched,
-    // and CTRL+0 stays unbound.
-    //
-    // BOTH SPELLINGS ARE EXACT, no shift, ctrl or alt: Shift+= and the keypad
-    // KP_Add / KP_Subtract bind nothing here or anywhere, one spelling per
-    // act. The pair is a consumed no-op where the viewport clamp leaves it
-    // nothing to do, AND ITS BUTTONS GREY THERE since 2026-08-30 (planner
-    // decision 53 under the truthful-buttons ruling): Zoom out reads
-    // zoom_out_step_actionable, and Zoom in stays lit because its floor arm
-    // recentres. The keys keep their consumed no-ops.
-    //
-    // A HELD STEPPING KEY WALKS THE ZOOM at the platform's repeat rate (both
-    // spellings are repeat_eligible); the zoom is a camera act with no history,
-    // so a burst pushes no undo entries to merge. The plain WHEEL is the
-    // stepped pan, not a zoom (handle_wheel).
-    if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
-        viewport.zoom_in(); return;
-    }
-    if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
-        viewport.zoom_out(); return;
-    }
-
     // BARE `[` SHOWS AND HIDES THE TRIM REGION OVERLAY and Shift+[ MAXIMIZES
     // the trim to the full window — the two halves of one trim surface: show
     // the window, or throw it away.
@@ -2870,7 +2837,7 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
 // WHAT BARE `0` WOULD DO — the contract and the two readers are at the
 // declaration (app_state.h); the reasoning for each arm is at
 // run_overview_command below, which is the fork's act and decides nothing of
-// its own past this. The ceiling compare is `>=`, Viewport::zoom_out's own.
+// its own past this. The ceiling compare is `>=`.
 OverviewCommandTarget overview_command_target(const AppState& app,
                                               const GuiAudio& audio) {
     OverviewCommandTarget t;
@@ -2931,7 +2898,7 @@ void GuiInputHandler::run_overview_command() {
     // and answered directly). Nothing is cleared on the way back: the stamp
     // stays the level `0` was most recently pressed at, and the next press below
     // the ceiling overwrites it. THIS FUNCTION IS THE STAMP'S ONE WRITER — no
-    // manual `=`/`-`, no wheel, no drag, no `c`, no touch gesture and no load
+    // wheel, no drag, no `c`, no touch gesture and no load
     // path writes it (the field's own note, app_state.h, carries the rest).
     // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
     // run_span_framing_command): it zooms to the trim / whole-song
@@ -2945,7 +2912,7 @@ void GuiInputHandler::run_overview_command() {
     // scratch about the zoom itself, and paints nothing.
     // A selection span's endpoints are
     // ACTIVE-DOMAIN frames and a zoom changes no domain, so a group and its extent
-    // survive the overview exactly as they survive `=` / `-` and the
+    // survive the overview exactly as they survive the zoom gestures and the
     // wheel.
     // The family is the group-verb doctrine (position_nudge.h): `0` sits with the
     // zoom framing on the span-READ side, not with the collapse+land verbs. It does
@@ -2969,7 +2936,7 @@ void GuiInputHandler::run_overview_command() {
     // cursor otherwise). With a selection the cursor already rests on the focus —
     // every focus-changing route lands it.
     //
-    // `>=` rather than `==`, matching Viewport::zoom_out's own ceiling test: the
+    // `>=` rather than `==`: the
     // clamp chokepoint keeps the live level at or under the ceiling, and a level
     // resting exactly on it is what "already full out" means either way.
     // AND THAT IT IS OUT (architect 2026-09-02, R-17g): the same arm raises the
@@ -3285,9 +3252,8 @@ void GuiInputHandler::run_span_framing_command() {
 // is a per-section profile resolved from the warp markers now — with the ALT
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
-// caller): the zoom's
-// pointer homes are the ctrl-DRAG's zoom phase and the two icon-row buttons,
-// its keys bare `=` / `-`.
+// caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
+// and its keys bare `0` and `c`.
 //
 // Every OTHER combination is a swallowed no-op (strict modifier validation):
 // ctrl, alt, shift and every mixed chord alike. Pure viewport move otherwise:

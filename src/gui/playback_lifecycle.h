@@ -106,7 +106,7 @@ struct GuiPlaybackLifecycle {
     //     magnitude (bare one cent, three shifted, ten with ctrl) changes the
     //     number and not the class.
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
-    //     PageUp/PageDown, the zoom steps — they move the window onto the audio,
+    //     PageUp/PageDown — they move the window onto the audio,
     //     not the audio. `0`'s OTHER arm, taken with the zoom already at full
     //     out, IS the `c` command (run_center_command) and stops exactly where
     //     `c` does — inside the land onto the focused stop, so only when one

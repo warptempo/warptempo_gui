@@ -2008,7 +2008,7 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's three, row 3's two
-// TABS, row 4's TWENTY-SIX
+// TABS, row 4's TWENTY-FOUR
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -2036,7 +2036,7 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-09 against kDropdownMenus and the chord table (49 chord
+// re-greped 2026-09-09 against kDropdownMenus and the chord table (47 chord
 // rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-14);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2173,7 +2173,7 @@ enum class RedesignButton {
     // machinery, the FACE now a glyph in the 32px box and the old labels
     // living on as the tooltips), the TWO VIEW LAMPS sharing one group since
     // 2026-09-04, THE VIEWPORT-CLASS GROUP — the Show trim region button
-    // leading the zoom four (2026-08-12, the architect's live placement "after
+    // leading the zoom pair (2026-08-12, the architect's live placement "after
     // the trim"), Follow and the three lamps behind
     // them, the last of which arrived from the toolbar group later on
     // 2026-09-04 — THE ITERATION PAIR, back from the menu row later that same
@@ -2245,10 +2245,10 @@ enum class RedesignButton {
     //
     // IT JOINED THE ZOOM GROUP ON 2026-08-27 (architect), and it kept its
     // slot and its separator doing it: the TRIM GROUP dissolved by having the
-    // boundary in front of IconZoomIn DELETED, so the two groups merged into
+    // boundary in front of the zoom buttons DELETED, so the two groups merged into
     // one at this button's own leader position and nothing here moved a pixel
     // to the left. What the merged group collects is the VIEWPORT CLASS whole
-    // — the overlay that frames the trim, the four horizontal magnifiers and
+    // — the overlay that frames the trim, the two zoom commands and
     // FOLLOW, which came into it from the dissolved mass-marker group the same
     // day (the vertical magnification pair that sat between them retired
     // 2026-09-14).
@@ -2288,33 +2288,19 @@ enum class RedesignButton {
     // mirror; the `h` view's grey is the derived partition's and its derivation
     // is stated once at this button's case in redesign_button_enabled below.
     IconShowRegion,
-    // THE ZOOM FOUR (2026-08-12, the grand relayout's roster commit): four
-    // navigation chords which OPENED the group until 2026-08-27, when the
-    // trim boundary in front of them was deleted and the Show trim region
-    // button above became the merged group's leader —
-    // zoom in (bare `=`), zoom out (bare `-`), full zoom out (bare `0`,
-    // whose ceiling arm runs the `c` command), and working-zoom center (bare
-    // `c`). THE STEPPING PAIR IS BARE AGAIN SINCE 2026-09-14 (architect
-    // approval 2026-09-14): it wore the ctrl spellings from 2026-08-27, when it
-    // traded them with the waveform magnification pair, and took the bare keys
-    // back when that pair retired with its setting, the ctrl forms deleted. The
-    // spelling is all that moved — none of these four BUTTONS hold-repeats,
-    // then or now (the keys repeat).
-    // Every one is a momentary navigation act and LIVE in the `h` view (all
-    // four chords are on the mode's allowlist or its own vocabulary, so the
-    // derived partition answers live with nothing hand-listed). THREE NEVER
-    // GREY because each always acts — zoom in recentres at the deepest level,
-    // `0` runs `c` at the ceiling, `c` always frames — and ZOOM OUT GREYS AT
-    // THE PER-FILE CEILING since 2026-08-30 (planner decision 53 under the
-    // truthful-buttons ruling; the arm at redesign_button_enabled). THE 2026-08-02 NO-DUPLICATE-COMMANDS RULING
-    // IS SUPERSEDED FOR THESE FOUR by the architect's relayout order — the
-    // Navigation dropdown kept its zoom rows beside them, and the buttons are
-    // the touch rig's pointer home for the same commands. THE DUPLICATION IS
-    // OVER SINCE 2026-08-15: that menu is deleted whole, precisely BECAUSE
-    // these four buttons (and the bottom row's marker walk) had made every one
-    // of its rows a second path to a command that already had one — so these
-    // four are the zoom commands' pointer home outright now.
-    IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
+    // THE ZOOM PAIR (2026-08-12, the grand relayout's roster commit): full
+    // zoom out (bare `0`, whose ceiling arm runs the `c` command) and
+    // working-zoom center (bare `c`). The discrete zoom STEP they once stood
+    // beside — Zoom In and Zoom Out on bare `=` / `-` — is deleted whole
+    // (architect 2026-09-14): the working zoom is the rest lattice, and the
+    // zoom gestures are the ctrl-drag and the pinch.
+    // Both are momentary navigation acts, LIVE in the `h` view (both chords
+    // are on the mode's allowlist, so the derived partition answers live with
+    // nothing hand-listed), and NEITHER GREYS because each always acts — `0`
+    // runs `c` at the ceiling, `c` always frames. They are the zoom commands'
+    // pointer home (the Navigation dropdown that once duplicated them was
+    // deleted 2026-08-15).
+    IconZoomFitBest, IconZoomOriginal,
     // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14) — the `]` lamp,
     // right after the working-zoom center and ahead of Follow, wearing
     // zoom-out-y (the vertical magnifier's minus). A viewport-class session
@@ -2333,8 +2319,7 @@ enum class RedesignButton {
     // the picture's gain is a per-section profile resolved from the warp
     // markers now, each marker carrying its own magnification, so there is no
     // piece-wide level for a button to step. Both buttons, the step owner and
-    // the applier were deleted whole; the bare keys went back to the zoom pair
-    // above.)
+    // the applier were deleted whole.)
     // FOLLOW (bare `f`) — THE ZOOM GROUP'S LAST MEMBER SINCE 2026-08-27, and a
     // VIEWPORT-CLASS act like everything else in it: the mode that keeps the
     // playing cursor in view is about where the camera is, which is what that
@@ -2413,7 +2398,7 @@ enum class RedesignButton {
     // REVERSE and it satisfies the same doctrine from the other side: the two
     // commands have exactly ONE pointer home, and it is these buttons rather
     // than a menu — which is what the Navigation menu's own 2026-08-15
-    // deletion did for the zoom four. The chords never moved: bare `m` and
+    // deletion did for the zoom commands. The chords never moved: bare `m` and
     // bare `i` are what the keyboard has had throughout, and each button is
     // its chord through the ordinary table.
     //
@@ -3017,214 +3002,16 @@ enum class RedesignButton {
     TransportWalkPrev, TransportWalkNext,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above: SIX in row 1, two
-// in row 3, TWENTY-SIX in row 4 and EIGHTEEN in the bottom row — 52. Of
-// those,
-// FORTY-NINE carry a chord in kToolbarChords and THREE are the dropdown
-// anchors (File, Edit and Settings), which is the split the chord
-// table's own
-// static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
-// chord table and File joined the anchors in its slot (the count did not move).
-// 52 SINCE 2026-09-14'S WALK BOTH TABS DELETION (architect 2026-09-14, later
-// still): one pure chord deletion inside an existing group, the bottom row's
-// marker-walk group losing TransportWalkBoth on Ctrl+Shift+Tab — 53 − 1, split
-// 50 + 3 to 49 + 3, no separator and no group boundary moved. The chord moved
-// onto the tab row's own buttons as their shifted press (the record is at
-// RedesignButton::TabA), and the box's 34 authored px go back to the STATE
-// CELL (the arithmetic is at paint_bottom_row_buttons_and_clock).
-// 53 SINCE 2026-09-14'S IGNORE WAVEFORM MAGNIFICATION LAMP (architect
-// 2026-09-14, later still): one pure chord addition inside an existing group,
-// the icon row's viewport-class group gaining IconIgnoreWaveformMagnification
-// on bare `]` behind `c` — 52 + 1, split 49 + 3 to 50 + 3, one box and one 2px
-// gap on the icon row's walk and no separator or group boundary moved.
-// 52 SINCE 2026-09-14'S MAGNIFICATION BUTTON (architect 2026-09-14, later
-// the same day): one pure chord addition inside an existing group, the bottom
-// row's verb group gaining IconMarkerMagnification on Ctrl+/ behind the
-// Measure — 51 + 1, split 48 + 3 to 49 + 3, no separator and no group
-// boundary moved. What the box spends is the STATE CELL's ground, 34 authored
-// px of it (the arithmetic is at paint_bottom_row_buttons_and_clock).
-// 51 SINCE 2026-09-14'S MAGNIFICATION PAIR DELETION (architect approval
-// 2026-09-14): Magnify and Reduce left the icon row's viewport-class group with
-// their chord rows and their setting — 53 − 2, split 50 + 3 to 48 + 3, two
-// boxes and two 2px gaps off the icon row's walk and no separator or group
-// boundary moved.
-// 55 SINCE 2026-09-10'S VALUE DRAG LAMP: one pure chord addition inside an
-// existing group, the bottom row's verb group gaining a NINTH box on bare `x`
-// — 54 + 1, split 51 + 3 to 52 + 3, no separator and no group boundary moved.
-// It is the COPY VALUE BUTTON'S SHAPE twelve days on (a verb-group addition
-// carrying a chord that was free rather than one the keyboard already had),
-// and what it spends is the STATE CELL's ground, which the architect ruled
-// accepted at the landing.
-// 53 SINCE 2026-09-13'S CENTER ON NEXT MARKER DELETION, later the same day:
-// that box and bare `n` left together (the Tab walk's framing is the zoom's
-// at the landing now, marker_walk_frame) — 54 − 1, split 51 + 3 to 50 + 3,
-// one box and one 2px gap off the icon row's walk and no separator or group
-// boundary moved.
-// 54 SINCE 2026-09-13'S VALUE DRAG LAMP DELETION: that box and bare `x` left
-// together (the gesture's posture is the view's now, value_drag_posture) —
-// 55 − 1, split 52 + 3 back to 51 + 3.
-// 54 SINCE 2026-09-09'S HELP DELETION (the anchor alone, no chord row moving:
-// 51 + 4 to 51 + 3), and 55 since 2026-09-04'S ITERATIONS DELETION, whose arithmetic is a NET GAIN
-// OF ONE over one deletion and two additions — the 2026-08-27 Series
-// relocation's shape run backwards: the ITERATIONS ANCHOR left row 1 (a
-// non-chord entry) while ICONBPM and ICONITER joined row 4 with their
-// chord-table rows — 54 − 1 + 2, split 49 + 5 to 51 + 4. Bare `m` and bare `i`
-// are untouched on the keyboard; what moved is where a POINTER reaches them.
-// THE SAME RULING OPENED ONE GROUP: the pair stands behind a separator of its
-// own ahead of the render-entry group, which the group arithmetic's owner
-// carries (redesign_button_opens_icon_group).
-// 54 SINCE 2026-09-04, which is a net gain of one over that day's three row
-// rulings. THE RADIO-PAIR COLLAPSE took three boxes and three chords out of
-// row 4 when IconS/IconT, IconW/IconP and the two walk radios became three
-// lamps — 55 − 3 = 52, split 50 + 5 to 47 + 5. THE CENTER ON NEXT MARKER LAMP
-// put one back at the viewport-class group's tail on bare `n` — 53, split
-// 48 + 5, one pure chord addition inside an existing group. THE RESTRICT UNDO
-// TO VIEWPORT LAMP put the second back on bare `z` — 54, split 49 + 5, the
-// same shape; it landed in the toolbar group and moved to the viewport group's
-// tail later the same day, a member changing groups, which moves neither
-// number.
-// 55 SINCE 2026-09-03'S HELP ANCHOR: a non-chord entry joining row 1, so the
-// ROSTER moved and the chord table did not — 54 + 1, split 50 + 4 to 50 + 5.
-// It is the SERIES ANCHOR'S own 2026-08-27 shape less that day's two
-// deletions.
-// 54 SINCE 2026-08-31'S KEEP-CENTERED LAMP: one pure chord addition inside an
-// existing group, the viewport-class group gaining a lamp on bare `y` — 53 + 1,
-// split 49 + 4 to 50 + 4, no separator and no group boundary moved.
-// 53 SINCE 2026-08-29'S COPY VALUE BUTTON: one pure chord addition inside an
-// existing group, the bottom row's verb group gaining a fifth box on bare `j`
-// (the group is EIGHT now) — 52 + 1, split 48 + 4 to 49 + 4, no separator and
-// no group boundary moved. It is the EDIT FLAG BUTTON'S SHAPE two days on (a
-// verb-group addition carrying a chord that was free rather than one the
-// keyboard already had), and it is what the retired resolved readout's Ctrl+C
-// became.
-// 52 SINCE 2026-08-27'S EDIT FLAG BUTTON: one pure chord addition inside an
-// existing group, the bottom row's verb group gaining a fifth box on bare
-// Enter — 51 + 1, split 47 + 4 to 48 + 4, no separator and no group boundary
-// moved. It is the MEASURE'S OWN SHAPE eight days on (a verb-group addition
-// carrying a chord the keyboard already had), and the roster's answer to the
-// retired touch halo: the double tap stops being the only pointer road into
-// the flag editor.
-// 51 SINCE 2026-08-27'S SERIES RELOCATION, and the arithmetic is a NET LOSS OF
-// ONE over one addition and two deletions — the EDIT relocation's shape
-// exactly, seven days on: the SERIES ANCHOR joined row 1 (a non-chord entry)
-// while ICONBPM and ICONITER were deleted whole from row 4 with their
-// chord-table rows — 52 + 1 − 2, split 49 + 3 to 47 + 4. Bare `m` and bare `i`
-// are untouched on the keyboard; what moved is where a POINTER reaches them.
-// THE SAME RULING DISSOLVED TWO GROUPS WITHOUT MOVING THIS COUNT: Follow and
-// the Show trim region button joined the ZOOM GROUP, so row 4 lost two
-// separators as well as two boxes (the group arithmetic is at
-// redesign_button_opens_icon_group, which owns it).
-// 52 SINCE 2026-08-27: the MAGNIFICATION RESET was DELETED with its Ctrl+0
-// chord when the architect swapped the zoom and magnification spellings — one
-// pure chord deletion inside an existing group. 53 − 1 = 52, the split going
-// from 50 chords + 3 anchors to 49 + 3; no separator and no group boundary
-// moved, and the SPELLING SWAP itself moved neither number.
-// 53 SINCE 2026-08-26 (later the same day): the MAGNIFICATION RESET joined the
-// pair it was added beside, closing the zoom group at three, when the ladder
-// was retuned that day and gained a chord that returns to level 0 — one pure
-// chord addition inside an existing group on Ctrl+0, 52 + 1, split 49 + 3 to
-// 50 + 3, no separator and no group boundary moved.
-// 52 SINCE 2026-08-26: the WAVEFORM MAGNIFICATION PAIR joined the icon row's
-// zoom group on Ctrl+= / Ctrl+-, two pure chord additions inside an existing
-// group — 50 + 2, split 47 + 3 to 49 + 3, no separator and no group boundary
-// moved.
-// 50 AT 2026-08-20'S PROPAGATE RELOCATION, and the arithmetic is a NET LOSS OF
-// ONE over one addition and two deletions: the EDIT ANCHOR joined row 1 (a
-// non-chord entry, the roster's first anchor GAIN since File's) while ICONCOPY
-// and ICONPASTE were deleted whole from row 4 with their chord-table rows —
-// 51 + 1 − 2, split 49 + 2 to 47 + 3. Ctrl+P and Ctrl+Alt+P are untouched on
-// the keyboard; what moved is where a POINTER reaches them. Not one command was
-// removed, which is what makes this a path relocation rather than a feature
-// deletion (the menu's two measure rows of that day left with their commands
-// on 2026-09-14, the Edit anchor staying).
-// 51 SINCE 2026-08-19: the MARKER MEASURE button joined the bottom row's
-// marker-verb group on bare `/`, a pure chord addition — 50 + 1, split
-// 48 + 2 to 49 + 2.
-// 50 AT 2026-08-18'S THIRD ROSTER RULING: the two WALK RADIOS joined the
-// icon row's history group between the opener and the cumulative toggle, both
-// on bare `g` — two chord additions, 48 + 2, split 46 + 2 to 48 + 2. The same
-// ruling took the WALK SELECTOR off row 3 and gave the tabs back to A/B, which
-// cost the roster nothing: row 3 has always been two slots, and what moved was
-// what they mean.
-// 48 EARLIER THAT DAY, AT THE SECOND ROSTER RULING: ADD TO SELECTION joined the
-// bottom row's marker-verb group on bare `k`, a pure chord addition — 47 + 1,
-// split 45 + 2 to 46 + 2.
-// 47 EARLIER THAT DAY, AT THE ROSTER RELAYOUT, and the arithmetic is one loss over
-// three moves: the TRIM SCISSORS were deleted whole (48 − 1, split 46 + 2 to
-// 45 + 2 — the chord table lost its row with the button and the trim region
-// toggle's own chord is untouched), while the four SINGLE-MARKER VERBS moved to the bottom row and
-// the four HISTORY COMPANIONS moved back up to row 4, both CHANGING ROWS rather
-// than leaving the roster, so neither the total nor the split felt them.
-// 48 SINCE 2026-08-16: the SHOW TRIM REGION button joined the trim group in
-// row 4 (Ctrl+Shift+X then, bare `x`, and bare `[` since 2026-08-24 — a
-// repointing changes no count), a pure chord addition — 47 + 1, split 46 + 2.
-// 47 SINCE 2026-08-15's SECOND ROW-1 RULING: the NAVIGATION ANCHOR left with its
-// menu, which is the roster's first LOSS of a non-chord entry (48 - 1) and takes
-// the split from 45 + 3 back to 45 + 2.
-// 48 EARLIER THAT DAY, and it was TWO NET over three days' worth of arithmetic
-// in one commit: the MARKER-WALK GROUP added three to the bottom row and the
-// PLAY/STOP COLLAPSE took one away (46 - 1 + 3), the pair having been two
-// buttons over the one bare-Space chord since the row's first day.
-// 46 = 45 + THE READ-ONLY TOGGLE (2026-08-14, the padlock leaving the tabs);
-// the same day's other two moves cost nothing, the four history companions
-// having CHANGED ROWS rather than left the roster. 45 was the 2026-08-12 grand
-// relayout's roster commit:
-// 37 with the toolbar row's four MOVED into row 4 (no count change) plus the
-// ZOOM GROUP's four and the SINGLE-MARKER VERBS' four. It was 37 from late
-// 2026-08-11 (the trim button joining the transport row's eight, which had
-// landed 36 = 28 + 9 − the same-day-deleted Esc button earlier that day); 28
-// before that, and 29 before 2026-08-08, when row 3's compare-only pair was
-// deleted and row 4 gained the Cumulative toggle.
-// 52 = 55 − 3, THE RADIO-PAIR COLLAPSE (architect 2026-09-04): the icon row's
-// three radio PAIRS became three lamp TOGGLES — IconS/IconT, IconW/IconP and
-// HistoryWalkGit/HistoryWalkSession out, IconAudioView, IconMarkerColumn and
-// HistoryWalk in — so the roster loses three and kToolbarChords loses three
-// with it, the split staying 47 + 5. It is the play/stop collapse's arithmetic
-// three times over, and for the same reason: two buttons over one chord.
-// 55 = 54 + THE HELP ANCHOR (2026-09-03): a fifth menu anchor after Settings,
-// carrying no chord — so the roster grew by one and kToolbarChords did not,
-// which is the SERIES anchor's own 2026-08-27 shape without the two rows that
-// left with it.
-// 54 = 53 + THE KEEP-CENTERED LAMP (2026-08-31, R11): IconKeepCenteredWhileNudging joined the zoom
-// group beside Follow with bare `y`, one box and one 2px gap on the icon row's
-// walk and no new separator.
-// 53 = 52 + THE CENTER-ON-NEXT-MARKER LAMP (architect 2026-09-04): one pure
-// chord addition inside an existing group — IconCenterOnNext on bare `n`,
-// closing row 4's viewport-class group behind the keep-centered lamp — so the split
-// goes 47 + 5 to 48 + 5, one box and one 2px gap join the icon row's walk and
-// no separator or group boundary moves. It is the keep-centered lamp's own shape
-// four days on.
-// 54 = 53 + THE RESTRICT-UNDO-TO-VIEWPORT LAMP (architect 2026-09-04, later
-// the same day): one more pure chord addition inside an existing group —
-// IconRestrictUndo on bare `z`, closing row 4's viewport-class group behind
-// the Center on next marker lamp — so the split goes 48 + 5 to 49 + 5, one box
-// and one 2px gap join the icon row's walk and no separator or group boundary
-// moves. (It stood in the TOOLBAR group between Redo and Render for the hours
-// of that day, and the ruling that moved it here also merged the two view
-// lamps into one group — a member changing groups and a leader deleted, which
-// moves the COUNT not at all and the width by the one separator it drops.)
-// 55 = 54 + THE VALUE DRAG LAMP (architect 2026-09-10): one more pure chord
-// addition inside an existing group — the Toggle Value Drag button on bare
-// `x`, closing the
-// bottom row's marker-verb group behind Add to selection — so the split goes
-// 51 + 3 to 52 + 3, one box and one 2px gap join the row's right block and no
-// separator or group boundary moves. What that box spends is the STATE CELL's
-// ground, 34 authored px of it, which the architect ruled accepted at the
-// landing (the arithmetic is at the painter,
-// paint_bottom_row_buttons_and_clock).
-// 54 = 55 − THE VALUE DRAG LAMP (architect 2026-09-13): the gesture stayed and
-// its lamp went, the posture becoming a pure function of the view
-// (value_drag_posture) — so that button and bare `x` leave together, the
-// split going 52 + 3 back to 51 + 3, and the state cell gets its 34 authored
-// px back.
-// 53 = 54 − THE CENTER ON NEXT MARKER LAMP (architect 2026-09-13): the walk's
-// framing became a function of the zoom at the landing (marker_walk_frame),
-// so the box and bare `n` leave together — the split going 51 + 3 to 50 + 3.
-// 53 = 52 + THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-14),
-// the record at the roster's head above.
-// 52 = 53 − WALK BOTH TABS (architect 2026-09-14), the record at the roster's
-// head above.
-inline constexpr int kRedesignButtonCount = 52;
+// THE ROSTER, re-derived by counting the enumerators above (2026-09-14, at
+// the Zoom In / Zoom Out deletion): SIX in row 1 (the three menu anchors and
+// the view bar's three), two in row 3, TWENTY-FOUR in row 4 and EIGHTEEN in
+// the bottom row — 50. Of those, FORTY-SEVEN carry a chord in kToolbarChords
+// and THREE are the dropdown anchors (File, Edit and Settings), which is the
+// split the chord table's own static_assert checks. The count's succession
+// (every addition and deletion since the 2026-08-12 grand relayout) is in git
+// history; adding or deleting a button restates these numbers and nothing
+// else here.
+inline constexpr int kRedesignButtonCount = 50;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3295,8 +3082,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconAudioView:
         case RedesignButton::IconMarkerColumn:
         case RedesignButton::IconShowRegion:
-        case RedesignButton::IconZoomIn:
-        case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconIgnoreWaveformMagnification:
@@ -3437,7 +3222,7 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE SIX GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
-// THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom four,
+// THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom pair,
 // FOLLOW, the keep-centered lamp, the walk's
 // framing lamp and the restrict-undo lamp), THE ITERATION PAIR, the
 // render-entry group (listen and
@@ -3474,8 +3259,9 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // SIX SINCE 2026-08-27, DOWN FROM EIGHT, and the two boundaries that went are
 // the architect's own ruling that Follow and the Show trim region button JOIN
 // THE ZOOM GROUP — the viewport-class acts collected in one place. Each
-// dissolution is spelled as a DELETED LEADER and nothing else: IconZoomIn
-// stopped opening a group (so the one-member trim group and the zoom four
+// dissolution is spelled as a DELETED LEADER and nothing else: the zoom
+// buttons stopped opening a group (so the one-member trim group and the zoom
+// buttons
 // merged behind the Show trim region button, which was already a leader and
 // stays one), and IconBpm stopped opening one — its own button and IconIter's
 // leaving the roster entirely with the SERIES relocation, so Follow, the
@@ -3514,7 +3300,7 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // that ruling, and IconW led the marker pair before the collapse.
         case RedesignButton::IconAudioView:
         // THE ZOOM GROUP'S LEADER, and the merged group's since 2026-08-27:
-        // the boundary that used to stand in front of IconZoomIn is deleted,
+        // the boundary that used to stand in front of the zoom buttons is deleted,
         // so this one separator now opens the whole viewport class. (The
         // MASS-MARKER GROUP'S LEADER was IconCopy from the row's first day and
         // IconBpm from 2026-08-20, when the propagate relocation deleted copy
@@ -4629,8 +4415,8 @@ struct ViewState {
     // stamps on the way. A stamp STRANDED above a ceiling that has since fallen
     // spends as an empty slot too, and is left standing rather than cleared —
     // the reasoning is at the spending arm, which is where the ceiling is known.
-    // run_overview_command (input_handler.cpp) is the ONE writer: a manual
-    // `=`/`-` step does not stamp, `c` does not, the wheel does not, no drag or
+    // run_overview_command (input_handler.cpp) is the ONE writer: `c` does
+    // not stamp, the wheel does not, no drag or
     // touch gesture does, and nothing clears it — that is what makes the round
     // trip predictable.
     // SESSION SCRATCH, DELIBERATELY ABSENT FROM kSettingsOrder (settings_io.cpp):
@@ -11468,30 +11254,11 @@ inline bool continuous_zoom_gesture_live(const AppState& a) {
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
 
-// WOULD ONE ZOOM-OUT STEP MOVE THE LEVEL? (planner decision 53 under the
-// 2026-08-30 truthful-buttons ruling.) The step asks for one whole level
-// shallower and SATURATES at the per-file ceiling, so it moves nothing exactly
-// when the clamp hands the current level back — read off clamp_zoom_level,
-// the one owner of the level-bounds pair, never a restated number. The
-// live-frames term is that owner's own no-op branch made explicit: with no
-// live frames it returns the level untouched (so as not to stomp a load in
-// progress), and a step on a blank piece is the consumed no-op on_key's
-// loading guard already makes it. TWO READERS: Viewport::zoom_out (the act,
-// whose leading return this IS) and the icon row's ZOOM OUT button's face
-// (redesign_button_enabled). ZOOM IN HAS NO TWIN OF THIS,
-// deliberately: at the deepest level its press RECENTRES on the playhead
-// (Viewport::zoom_in's floor arm), so the button always acts and stays lit —
-// the shape bare `0` has, whose ceiling arm runs the `c` command.
-inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
-    return live_total_frames(a, audio) > 0 &&
-           clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
-}
-
 // WHAT BARE `0` WOULD DO — the overview command's one fork and its one
 // resolve, named 2026-09-01 (architect, the truthful-tooltips ruling: at the
 // ceiling the press is the RECALL, "Full zoom out" being a lie there). BELOW
 // the per-file ceiling `at_ceiling` is false and `level` is the ceiling the
-// zoom-out arm applies; AT it (`>=`, Viewport::zoom_out's own compare)
+// zoom-out arm applies; AT it (`>=`)
 // `at_ceiling` is true and `level` is what the `c` command is handed — the
 // tab's stamped recall clamped into the live window, spending as
 // kWorkingZoomLevel when nothing is stamped or the stamp cannot move the zoom
@@ -12345,8 +12112,8 @@ inline bool zoom_level_at_or_finer_than_working(double level) {
 //       Shift+`j`, `0`'s second arm, the A/B audition's own `c` and, since
 //       2026-09-14, the Ctrl+Shift+Tab paired march's two in both its live
 //       and its `h` view form, none of which takes
-//       a special case), `0`'s zoom-out arm, the bare `=` / `-` keys, the
-//       icon row's zoom buttons, and the settings editor's typed ACTIVE-tab
+//       a special case), `0`'s zoom-out arm, the icon row's zoom buttons,
+//       and the settings editor's typed ACTIVE-tab
 //       `tab_<a|b>_zoom=`;
 //     * Viewport::apply_zoom_to_start past its no-op return: the trim bar's
 //       span-framing double-click and the group undo/redo restore's framing;
@@ -13641,11 +13408,8 @@ inline bool playback_launch_playable(const AppState& a,
 // on that effect. The effect this rule was written for is the undo-coalescing
 // stamp, and the three wall-refusing acts now run their wall test ahead of it
 // (the rule and its discriminator — the face, not the card — are at
-// Undo::coalesce_gesture). The ladder ends of the
-// six magnifiers were the last to land (planner decision 53, the same day):
-// Zoom out at the per-file ceiling and the magnification pair at its two
-// rungs' ends grey (the pair retired 2026-09-14 with its setting); Zoom in, `0` and `c` stay lit because each always acts
-// (the first recentres at the floor, the second runs `c` at the ceiling).
+// Undo::coalesce_gesture). The zoom pair `0` and `c` stays lit because
+// each always acts (`0` runs `c` at the ceiling).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -13810,7 +13574,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the two VIEW LAMPS
-//     (bare `t` / `p`), the zoom four, follow, the
+//     (bare `t` / `p`), the zoom pair, follow, the
 //     KEEP-CENTERED LAMP, the CENTER-ON-NEXT-MARKER lamp and the
 //     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
@@ -14223,30 +13987,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // which is also where trim's freeze in that view is expressed for this
         // button.
         case RedesignButton::IconShowRegion:
-        // THE ZOOM GROUP: three of the four MIRROR NOTHING (2026-08-12) because
-        // each always acts on a loaded file — ZOOM IN steps a level or, at the
-        // deepest level, RECENTRES on the playhead (Viewport::zoom_in's floor
-        // arm; the 2026-08-15 comment here called a zoom-in at the end a
-        // "harmless nothing", which it never was), FULL ZOOM OUT (bare `0`)
-        // runs the `c` command once it is there, and `c` always frames. ZOOM
-        // OUT is the one whose press CAN be a consumed no-op — at the per-file
-        // ceiling Viewport::zoom_out returns having moved nothing — and it
-        // GREYS THERE since 2026-08-30 (planner decision 53 under the
-        // truthful-buttons ruling; the 2026-08-15 no-blink ruling had kept the
-        // ladder's ends lit as the zoom group's own answer), reading
-        // zoom_out_step_actionable, the act's own leading return over
-        // clamp_zoom_level's bounds. It answers here, ABOVE the loading guard,
-        // like its three siblings — and greys during a load on its own
-        // live-frames term, where the other three stay lit; the chord drops at
-        // on_key's guard in that state, so the grey is the truthful one. All
-        // four are LIVE in the `h` view — the derived partition finds them on
-        // the mode's allowlist or its own vocabulary.
-        case RedesignButton::IconZoomIn:
+        // THE ZOOM PAIR MIRRORS NOTHING (2026-08-12) because each always acts
+        // on a loaded file — FULL ZOOM OUT (bare `0`) runs the `c` command
+        // once it is there, and `c` always frames. Both are LIVE in the `h`
+        // view — the derived partition finds them on the mode's allowlist.
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
             return true;
-        case RedesignButton::IconZoomOut:
-            return zoom_out_step_actionable(a, audio);
         // FOLLOW MIRRORS NOTHING: bare `f` always does something on a loaded
         // piece — it arms or disarms the lamp at rest, and turns the chase on
         // or off for a play in flight — and the lock admits it (follow is
@@ -15518,15 +15265,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::Redo:
         case RedesignButton::Render:
         // THE ZOOM GROUP AND THE MARKER VERBS ARE MOMENTARY like copy and
-        // paste (2026-08-12): each is an act that completes — a zoom step, a
+        // paste (2026-08-12): each is an act that completes — a zoom, a
         // centering, a drop, a delete — with no state to stay lit for. The
         // verbs took that answer to the BOTTOM ROW with them on 2026-08-18 and
         // it did not change: a lamp is the BUTTON's fact, not the lane's. The
         // disable toggle deliberately carries no lamp either: it acts on the
         // SELECTION, whose members' own flags show the state per marker,
         // and a single lamp could not say which.
-        case RedesignButton::IconZoomIn:
-        case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconMarkerDrop:
@@ -16085,20 +15830,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // refuses (trim_is_full_window, handle_trim_clear_both's head).
         case RedesignButton::IconShowRegion:
             return {"Toggle Trim Region ([)", "Press Shift for the whole song."};
-        // THE ZOOM GROUP (2026-08-12), all one-line: the names were aligned
-        // with the Navigation dropdown's rows for the two they shared ("Zoom
-        // in" / "Zoom out") and are kept verbatim now that the menu is deleted
-        // (2026-08-15), the alignment having outlived its second surface; the
-        // accelerators are the table's own convention — punctuation names its
-        // own cap, and a chord spells its modifiers out. THREE OF THE FOUR
-        // ARE STATE-FREE HERE ONLY (2026-09-01, the overload): Zoom in at the
-        // floor recentres on the playhead, Full zoom out at the ceiling is
-        // the recall, and Center with nothing focused centers on the playhead
-        // — each press does something, and the overload names which.
-        case RedesignButton::IconZoomIn:
-            return {"Zoom In (=)", nullptr};
-        case RedesignButton::IconZoomOut:
-            return {"Zoom Out (-)", nullptr};
+        // THE ZOOM PAIR (2026-08-12), both one-line; the accelerators are the
+        // table's own convention — a key names its own cap. BOTH ARE
+        // STATE-FREE HERE ONLY (2026-09-01, the overload): Full zoom out at
+        // the ceiling is the recall, and Center with nothing focused centers
+        // on the playhead — each press does something, and the overload names
+        // which.
         case RedesignButton::IconZoomFitBest:
             return {"Full Zoom Out (0)", nullptr};
         case RedesignButton::IconZoomOriginal:
@@ -16545,8 +16282,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
 //   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
-//   Play reads "Stop (Space)" while the transport is live, Zoom in reads
-//   "Center on Playhead (=)" at the floor, Full zoom out reads "Back to
+//   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
 //   Working Zoom (0)" or "Back to Previous Zoom (0)" at the ceiling, Center
 //   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
 //   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
@@ -16729,12 +16465,6 @@ inline RedesignTooltipText redesign_button_tooltip(
         case RedesignButton::IconShowRegion:
             if (trim_is_full_window(a.trim, total_frames))
                 return {"Toggle Trim Region ([)", nullptr};
-            break;
-        // ZOOM IN AT THE FLOOR recentres on the playhead — Viewport::zoom_in's
-        // second arm, whose compare this is; the button never greys for it.
-        case RedesignButton::IconZoomIn:
-            if (!(a.zoom_level > kMinZoom))
-                return {"Center on Playhead (=)", nullptr};
             break;
         // FULL ZOOM OUT AT THE CEILING is the recall — `c` at the stamped
         // level, or plain `c` when nothing usable is stamped — through the

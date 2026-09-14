@@ -660,8 +660,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Toggle Ignore Waveform Magnification (architect 2026-09-14), bound
         // in both modes: in the `h` view it cards the forced ignore.
         case GuiKeys::BracketRight: return bare;
-        // The zoom step, bare alone (architect approval 2026-09-14).
-        case GuiKeys::Equal: case GuiKeys::Minus: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it

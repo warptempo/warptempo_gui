@@ -165,31 +165,20 @@ inline constexpr const char* kDefaultProjectsRepo =
 // 193 authored px plus the bottom row's 47 is 240, which at 350 % is 840, so
 // the laptop's own screen keeps 240 px of waveform and gaps under the
 // tallest scale the vocabulary admits. The tablet's 225 and its icon-row fit
-// ceiling (249 since 2026-09-14 — the walk's own paragraph below) are
+// ceiling (268 since 2026-09-14 — the walk's own paragraph below) are
 // untouched by the move.
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below roughly
-// 925 px of LOGICAL width (device width divided by the factor) the icon row's
-// twenty-six-button left-to-right walk runs past the window's right edge —
-// the tablet's own 225 clears it by 99 (2304/2.25 = 1024 logical px) and 249
-// is the fit ceiling on that panel since the IGNORE WAVEFORM MAGNIFICATION
-// LAMP joined the row on 2026-09-14 (architect 2026-09-14), one box and one
-// gap onto it (258 at the 891-px walk the WAVEFORM MAGNIFICATION PAIR'S
-// DELETION left earlier that day, two boxes and two gaps off the row, 240 at
-// the 959-px walk the CENTER ON NEXT MARKER LAMP'S
-// DELETION left on 2026-09-13, one box and one gap off the row, 232 at the 993-px
-// walk the ITERATIONS MENU'S DELETION left on 2026-09-04, when its two
-// commands came back to the row as a group of their own, 250 at
-// the 918-px walk the same day's regrouping left, 249 at the
-// 925-px walk the restrict-undo lamp had left before it, 258 at the 891-px walk
-// the since-deleted Center on next marker lamp left before that, 268 at the 857-px walk the
-// radio collapse left, 240 at the 959-px walk the
-// keep-centered lamp left on 2026-08-31, and 249 at the 2026-08-27 relocation's own
-// 925-px walk, which is the 925 reached from the other direction; 250 was
-// tried as the TEMPLATE for
-// an afternoon on 2026-08-27 and stepped back the same evening for the ~3
-// authored px it shaved off the rightmost history icon) — and the redesign
-// carries no collision rule anywhere — the crop-at-the-floor allowance recorded
+// 857 px of LOGICAL width (device width divided by the factor) the icon row's
+// twenty-four-button left-to-right walk runs past the window's right edge —
+// the tablet's own 225 clears it by 167 (2304/2.25 = 1024 logical px) and 268
+// is the fit ceiling on that panel since the ZOOM IN / ZOOM OUT DELETION of
+// 2026-09-14 (architect 2026-09-14), two boxes and two gaps off the row (the
+// arithmetic is at paint_icon_row, paint_handler.cpp; the ceiling's succession
+// is in git history; 250 was tried as the TEMPLATE for an afternoon on
+// 2026-08-27 and stepped back the same evening for the ~3 authored px it
+// shaved off the rightmost history icon at the walk of that day) — and the
+// redesign carries no collision rule anywhere — the crop-at-the-floor allowance recorded
 // at kMinWindowWidthPx (render.h) is the standing answer. A scale is a
 // VOCABULARY; which of its values lays out well is the architect's call on his
 // own panel, not a validator's.

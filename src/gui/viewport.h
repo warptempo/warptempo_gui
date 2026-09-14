@@ -392,11 +392,6 @@ struct Viewport {
     // makes the target differ and this re-frames. The sole caller is the
     // trim-bar double-click (run_span_framing_command).
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
-    void zoom_in();
-    void zoom_out();
-    // (THE COALESCED ZOOM-STEPS BODY IS DELETED, 2026-09-14: its sole caller was
-    // the Ctrl+wheel zoom step, deleted with the magnification setting's
-    // retirement — architect approval 2026-09-14.)
     // `continuous` marks a drag-driven scroll, which suppresses the per-event
     // playback predictor resync (re-anchored once at gesture end). There is no
     // longer a `synchronous` flag: it selected between the two pan drivers, and

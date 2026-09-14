@@ -423,8 +423,8 @@ void Viewport::move_playhead_pixels(int delta_px) {
 }
 
 // Apply a zoom change. The numeric target is derived inside; this helper
-// handles the playhead-centered viewport recompute so zoom_in/zoom_out
-// share exactly the same logic.
+// handles the playhead-centered viewport recompute every discrete zoom
+// shares.
 void Viewport::apply_zoom_change(double new_zoom_level) {
     if (audio.total_frames() <= 0) return;
     // Pre-clamp the requested level to the per-file window so (a) a c/0 request
@@ -485,10 +485,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // jump a frame ahead of the waveform. The pyramid bounds per-column cost at
     // every level — unconditionally, in both views (the bound and its proof
     // live at GuiAudio::level_for_span) — so a full render is O(area_width) at
-    // any zoom; coalesced
-    // pointer detents resolve to one apply_zoom_change per frame, so this is one
-    // sync render per frame, not per detent. zoom_in / zoom_out
-    // delegate here, so they are covered without a separate kick.
+    // any zoom, so this is one sync render per discrete zoom.
     kick_waveform_sync();
 }
 
@@ -660,34 +657,6 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // publish the displayed fingerprint now so the top-strip flags and the
     // playhead column do not jump a frame ahead of the waveform.
     kick_waveform_sync();
-}
-
-// ZOOM IN ALWAYS ACTS, which is why its button has no ladder-end face
-// (2026-08-30, planner decision 53): at the deepest level the press recentres
-// on the playhead instead of stepping, the second arm below.
-void Viewport::zoom_in() {
-    if (app.zoom_level > kMinZoom) {
-        // One whole level deeper from the current (possibly fractional) rung,
-        // clamped constructively at the zoom-in floor.
-        double target = app.zoom_level - 1.0;
-        if (target < kMinZoom) target = kMinZoom;
-        apply_zoom_change(target);
-    } else {
-        // Already at the deepest zoom-in: recenter on the playhead.
-        center_viewport_on_playhead();
-    }
-}
-
-void Viewport::zoom_out() {
-    // THE LEADING RETURN IS ONE OWNER (zoom_out_step_actionable, app_state.h —
-    // 2026-08-30, when the ZOOM OUT button's face began reading the same
-    // answer): already at the effective ceiling, the step is a consumed no-op.
-    if (!zoom_out_step_actionable(app, audio)) return;
-    // One whole level shallower, saturating at the effective per-file ceiling
-    // (there is nothing beyond it — full zoom-out is whole-song-visible);
-    // clamp_zoom_level is the bounds' one owner, and past the return above it
-    // hands back a level strictly above the current one.
-    apply_zoom_change(clamp_zoom_level(app, audio, app.zoom_level + 1.0));
 }
 
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {

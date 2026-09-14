@@ -54,7 +54,7 @@
 // The cursor predictor is a free-running linear extrapolator anchored at
 // (anchor_sample, anchor_ns) and re-anchored only at events of acceptable
 // visible discontinuity, never inside the audio callback. The set of
-// resync events: playhead jumps via move_playhead, zoom in/out via the shared
+// resync events: playhead jumps via move_playhead, discrete zooms via the shared
 // apply_zoom_change helper, the resize zoom-out reclamp,
 // follow-mode off-to-on,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport

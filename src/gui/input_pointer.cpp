@@ -260,27 +260,17 @@ constexpr ToolbarChord kToolbarChords[] = {
     // button above — and neither did its shift admission, which moved to that
     // button for the reason it was written: without it a keyboardless panel
     // could set a trim window and never get back out of it.)
-    // THE ZOOM GROUP (2026-08-12, the grand relayout — SUPERSEDING the
-    // 2026-08-02 no-duplicate-commands deletion of the old zoom pair for
-    // these four: the Navigation dropdown kept its rows beside them, the
-    // buttons being the glass rig's pointer home; that menu is deleted whole
-    // as of 2026-08-15 and these four are the commands' pointer home outright):
-    // four momentary navigation chords, no
-    // radio, no shift admission, click face like the rest of the row. All
-    // four stay LIVE in the `h` view — `=`, `-` and `0` are on the
-    // mode's allowlist and `c` is its own vocabulary — which the derived
-    // partition answers with nothing hand-listed.
-    //
-    // THE STEPPING PAIR'S CHORDS ARE BARE AGAIN SINCE 2026-09-14 (architect
-    // approval 2026-09-14; they carried ctrl from 2026-08-27 while the retired
-    // waveform magnification pair held the bare keys). No button here ADMITS a
-    // modifier (redesign_button_ctrl_admits names only the two skips), so a
-    // ctrl or shift click is refused at the band gate. NEITHER REPEATS: the
-    // `repeats` column is unset on all four rows.
-    {RedesignButton::IconZoomIn,
-     GuiKeys::Equal,  false, false, false, false, true},                            // bare =
-    {RedesignButton::IconZoomOut,
-     GuiKeys::Minus,  false, false, false, false, true},                            // bare -
+    // THE ZOOM PAIR (2026-08-12, the grand relayout): two momentary
+    // navigation chords, the commands' pointer home, no radio, no shift
+    // admission, click face like the rest of the row. Both stay LIVE in the
+    // `h` view — `0` is on the mode's allowlist and `c` is its own vocabulary
+    // — which the derived partition answers with nothing hand-listed. No
+    // button here ADMITS a modifier (redesign_button_ctrl_admits names only
+    // the two skips), so a ctrl or shift click is refused at the band gate.
+    // NEITHER REPEATS: the `repeats` column is unset on both rows. (The zoom
+    // STEP that stood beside them — Zoom In / Zoom Out on bare `=` / `-` — is
+    // deleted whole, architect 2026-09-14: the working zoom is the rest
+    // lattice, and the zoom gestures are the ctrl-drag and the pinch.)
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
     // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14) — bare `]`, a
@@ -294,7 +284,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain is a per-section profile resolved from the
-    // warp markers now. Their bare `=` / `-` went back to the zoom pair above.)
+    // warp markers now.)
     // FOLLOW — the ZOOM GROUP'S LAST MEMBER since 2026-08-27, and the last
     // survivor of the mass-marker category. Bare `f`, a TOGGLE with a lamp,
     // consumed by the `h` view and greyed in there.
@@ -727,109 +717,14 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 49
-// rows against the roster's 52 since 2026-09-14'S WALK BOTH TABS DELETION
-// (architect 2026-09-14, later still), which took Ctrl+Shift+Tab's row out
-// with its button (a chord, so the pair moved together; the chord is the tab
-// row's shifted press now, redesign_button_shift_admits, and the key is
-// untouched). It was 50 rows against 53 from 2026-09-14'S IGNORE WAVEFORM
-// MAGNIFICATION LAMP (architect 2026-09-14), bare `]`'s row joining the zoom
-// group behind `c` (a chord, so the pair moved together; a re-COUNT of the
-// rows, the magnification button's bottom-row row on Ctrl+/ earlier that day
-// having moved both numbers to 49 against 52 without a line here). It was 48
-// rows against 51 from 2026-09-14'S MAGNIFICATION PAIR DELETION
-// (architect approval 2026-09-14), which took bare `=`'s and bare `-`'s
-// Magnify / Reduce rows out with their buttons (chords, so the pairs moved
-// together; the bare keys went back to the zoom pair's own rows). It was 50
-// rows against 53 from 2026-09-13'S CENTER ON NEXT MARKER
-// DELETION, which took bare `n`'s row out with its button (a chord, so the
-// pair moved together; the Tab walk's framing is the zoom's at the landing
-// now, marker_walk_frame). It was 51 against 54 earlier that day, from the
-// VALUE DRAG LAMP DELETION, which took bare `x`'s row out with its button (a
-// chord, so the pair moved together; the gesture's posture is the view's now,
-// value_drag_posture). It was 52 against 55 from 2026-09-10'S VALUE DRAG LAMP, the same pair's
-// arrival closing the bottom row's verb group, and 51 against 54 from
-// 2026-09-09'S HELP DELETION, which moved the ROSTER ALONE: the anchor carried no chord, so this table did not feel
-// it (the addend's own succession is at the static_assert below).
-// It was 51 against 55 from 2026-09-04'S ITERATIONS DELETION, which
-// moved BOTH numbers in one act and is the SERIES RELOCATION'S OWN SHAPE RUN
-// BACKWARDS: the architect deleted the menu-row dropdown once the icon row had
-// room again, so `IconBpm` and `IconIter` joined this table on bare `m` and
-// bare `i` while the ITERATIONS ANCHOR left the roster carrying no chord — the
-// table gained two and the roster gained one. Its two commands were untouched
-// on the keyboard throughout; what moved is where a POINTER reaches them, and
-// the pair OPENED a group (the group arithmetic is
-// redesign_button_opens_icon_group's, never this table's).
-// It was 49 against 54 earlier that day, at 2026-09-04'S
-// RESTRICT-UNDO-TO-VIEWPORT
-// LAMP, one more pure addition inside an existing group (a chord, so the pair
-// moved together): `IconRestrictUndo` arrived on bare `z` and no separator or
-// group boundary moved with it. THE ROW WAS REGROUPED LATER THAT SAME DAY and
-// this table felt none of it: the lamp left the toolbar group for the
-// viewport-class group's tail and the two view lamps merged into one group, so
-// a member changed groups and a leader was deleted — neither of which is a
-// chord. The rows below are kept in the row's new order all the same, for the
-// reason stated at the row-4 block. It was 48 against 53 earlier that day, at
-// 2026-09-04'S CENTER-ON-NEXT-MARKER LAMP,
-// one pure addition inside an existing group (a chord, so the pair moved
-// together): `IconCenterOnNext` closed row 4's viewport-class group on bare
-// `n`, behind the keep-centered lamp, and no separator or group boundary moved. It
-// was 47 against 52 earlier that day, at THE RADIO-PAIR COLLAPSE, which took
-// three rows out of this table with the three buttons the three lamps
-// replaced. It was 50 against 55 from 2026-09-03'S HELP ANCHOR, which moved the
-// ROSTER and not this table (an anchor carries no chord — the Series anchor's
-// own 2026-08-27 shape). It was 50 against 54
-// from 2026-08-31'S KEEP-CENTERED LAMP, one pure
-// addition inside an existing group (a chord, so the pair moved together):
-// `IconKeepCenteredWhileNudging` joined row 4's viewport-class group beside Follow on bare
-// `y`, and no separator or group boundary moved. It was 49 against 53 from
-// 2026-08-29'S COPY VALUE BUTTON, one pure
-// addition inside an existing group (a chord, so the pair moved together): the
-// bottom row's verb group gained a FIFTH box on bare `j`, the value pair's
-// pointer home, and no separator or group boundary moved. It was 48 against 52
-// from 2026-08-27'S EDIT FLAG BUTTON, one pure
-// addition inside an existing group (a chord, so the pair moved together): the
-// bottom row's verb group gained a fifth box on bare Enter, the flag editor's
-// third road, and no separator or group boundary moved. It was 47
-// against 51 earlier that day, at the SERIES RELOCATION, which
-// moved BOTH numbers in one act: the two mass-marker rows (bare `m`, bare `i`)
-// were deleted with their buttons and the SERIES ANCHOR joined row 1 carrying
-// no chord, so the table lost two and the roster lost one. Its two commands
-// are untouched on the keyboard — they are MENU ITEMS for the pointer now, and
-// an item dispatches through on_key exactly as a row here does. It was 49
-// against 52 earlier that day, when the MAGNIFICATION RESET
-// was deleted with its Ctrl+0 chord (one row, so the pair moved together);
-// the same ruling swapped the zoom and magnification SPELLINGS, which moved
-// neither number. It was 50 against 53 from 2026-08-26, when the WAVEFORM
-// MAGNIFICATION arrived in the zoom group: the stepping pair first, then the
-// RESET later the same day with the ladder's
-// retune (three chords, so the pairs moved together). It was 47 against 50
-// from 2026-08-20, when the EDIT anchor joined
-// row 1 and IconCopy and IconPaste were deleted from row 4 in one act (one
-// non-chord entry gained, two chord rows lost). It was 49 against 51 from
-// 2026-08-19, when the MARKER MEASURE
-// arrived on bare `/` (a chord, so the pair moved together). It was 48 against
-// 50 from 2026-08-18's THIRD ruling, when the two
-// WALK RADIOS arrived on bare `g` (two chords, so the pairs moved together;
-// the same ruling took the walk selector off row 3, which moved neither number
-// — the tabs were always two rows here and still are, on Ctrl+Tab). It was 46
-// against 48 earlier that day, when ADD TO
-// SELECTION arrived on bare `k` (a chord, so the pair moved together), and
-// 45 against 47 before that, when the TRIM SCISSORS left
-// both (they carried a chord, so the pair moved together; the trim region
-// toggle's own chord is untouched by that). The same relayout moved eight buttons BETWEEN ROWS and this
-// table did not feel it: it is keyed by id and every reader matches by id or
-// by published rect, so the row order it is kept in is for the reader alone.
-// It was 46 against 48 from 2026-08-16's SHOW TRIM REGION addition (its chord
-// has been Ctrl+Shift+X, then bare `x`, and is bare `[` since 2026-08-24; a
-// repointing moves no count), and 45 against 47 from
-// 2026-08-15's Navigation deletion; earlier
-// that day it was 45 against 48: the marker walk's three in, the collapsed
-// play/stop pair's second row out, and the Navigation ANCHOR carried no chord,
-// so its removal moved the roster and not this table — so the
-// table's length plus THE THREE ANCHORS IS the roster. The check is not
-// bookkeeping —
-// history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
+// every RedesignButton but the THREE menu anchors carries a chord here — 47
+// rows against the roster's 50 since 2026-09-14's Zoom In / Zoom Out deletion
+// (the count's succession is in git history). It is keyed by id and every
+// reader matches by id or by published rect, so the row order it is kept in
+// is for the reader alone; a button moving BETWEEN ROWS moves no count, and
+// an anchor carries no chord, so it moves the roster and not this table —
+// the table's length plus THE THREE ANCHORS IS the roster. The check is not
+// bookkeeping — history_mode_disables_button walks this table and DEFAULTS AN UNLISTED BUTTON
 // TO LIVE, so a roster entry added without its row here would silently wear a
 // live face in the `h` view while its press claimed nothing. This makes that
 // drift a build error instead. (The addend has walked the anchor count: + 2
@@ -1300,8 +1195,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
 //   the icon row's two VIEW LAMPS (bare `t` / `p`, admitted with the view
-//   switches), THE ZOOM GROUP's four since the 2026-08-12 relayout (bare `=`,
-//   bare `-` and bare `0` are the allowlist's own zoom admissions and bare `c`
+//   switches), THE ZOOM PAIR since the 2026-08-12 relayout (bare `0` is the
+//   allowlist's own zoom admission and bare `c`
 //   is the mode's vocabulary — pure navigation, live with nothing hand-listed),
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
@@ -7910,9 +7805,9 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-four — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 51, the enum's
+// eighteen since 2026-08-29: 50, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -8305,9 +8200,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // and 4 have no disabled face of their own, so the predicate is simply
         // true there — EXCEPT in two states. The `h` history view greys every
         // button whose act it consumes across all the rows
-        // (history_mode_disables_button, above) — row 4's history group and Zoom
-        // out aside, which carry resting greys of
-        // their own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
+        // (history_mode_disables_button, above) — row 4's history group
+        // aside, which carries resting greys of its own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
         // the VIEW BAR'S THREE answer false while grid iterations stands
         // (iteration_lock_greys, app_state.h), so the press dies here — and
         // that row DOES have a disabled paint since the architect's mockup the
