@@ -234,11 +234,13 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 // DragState). The live store is updated in commit_drag.
 //
 // Symmetric across warp and phase reset: both columns write the same
-// statement into the same vector. The waveform cache stays valid
+// statement into the same vector. The plate's GEOMETRY stays valid
 // throughout the drag — viewport / trim / dimensions / view-domain / the
-// display warp_frame_map hash don't change — so the invalidation triggers a
-// cheap blit of cached pixels with stems, flags, and playhead repainted
-// on top. A narrow per-marker rect would be wrong in target view, where
+// display warp_frame_map hash don't change — so the invalidation normally
+// triggers a cheap blit of cached pixels with stems, flags, and playhead
+// repainted on top; the one exception is the GAIN in source view, where a
+// motion that moves the effective gain profile's hash re-renders the plate
+// synchronously (the tail of this function carries the rule). A narrow per-marker rect would be wrong in target view, where
 // the dragged marker's proposed position lands at the cursor's pixel
 // regardless of which markers surround it.
 void MarkerDragOps::apply_drag_motion(double raw_delta) {
@@ -390,10 +392,16 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // at the older one, so the kick runs only while the displayed plate's
     // geometry IS the live geometry (Viewport::displayed_plate_geometry_is_live),
     // gain then being the only difference it renders. Where it is not, the
-    // sections wait for the release, whose unfrozen tick re-renders the stale
-    // geometry anyway.
-    if (source_domain && viewport.displayed_plate_geometry_is_live())
-        viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+    // sections wait for the release: a motion whose gain hash moved while the
+    // kick was withheld records the debt (DragState::gain_preview_deferred),
+    // and commit_drag repays it with a synchronous rebuild in the release's
+    // own frame.
+    if (source_domain) {
+        if (viewport.displayed_plate_geometry_is_live())
+            viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+        else if (viewport.waveform_gain_hash() != prior_gain_hash)
+            app.drag.gain_preview_deferred = true;
+    }
 }
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
@@ -441,12 +449,10 @@ void MarkerDragOps::commit_drag() {
     // displayed != live. The commit-time land below stays on the LIVE
     // map deliberately — post-commit placement truth, the Tab basis.
     //
-    // THE GAIN HASH IS TAKEN HERE, WHILE THE DRAG STILL STANDS (architect
-    // 2026-09-14): the effective profile reads the drag's proposal until the
-    // wholesale DragState reset below, so this is the picture the last motion
-    // rendered, and the kick at the tail compares the committed store against
-    // it (apply_drag_motion carries the reasoning).
-    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
+    // THE DEFERRED GAIN PREVIEW'S DEBT is read here, before the wholesale
+    // DragState reset below discards it; the rule that repays it is at the
+    // tail.
+    const bool gain_preview_owed = app.drag.gain_preview_deferred;
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     // Slot 0 is the dragged marker (begin_drag seeds exactly one). The guard
@@ -587,14 +593,30 @@ void MarkerDragOps::commit_drag() {
     // reset drag never touches the warp map. So the only surviving MAP effect is
     // the view-independent target preview trigger below.
     //
-    // THE ONE PLATE WRITE A DRAG'S RELEASE CAN OWE IS THE GAIN'S (architect
-    // 2026-09-14): with the drag state cleared above, the freeze is lifted and
-    // the effective profile reads the committed store, so a release whose
-    // column snap or reorder moved a section boundary against what the last
-    // motion rendered re-renders synchronously and lands in the release's own
-    // frame; the tick's async dirty-detect would otherwise paint it a frame
-    // late. Nothing moved (the common case: the last motion already rendered
-    // this exact frame) renders nothing.
-    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+    // THE RELEASE'S PLATE AND FLAG RULE (architect 2026-09-14; Sol round 11
+    // of 2026-09-14). With the drag state cleared above, the freeze is lifted
+    // and the effective gain profile reads the committed store.
+    //   THE PLATE: ONE WRITE CAN BE OWED, THE GAIN'S, and it is judged against
+    //   WHAT WAS PUBLISHED, never against the drag's own proposal profile
+    //   (which normally equals the committed one and so proves nothing about
+    //   the pixels): the release renders synchronously iff a motion DEFERRED
+    //   its gain preview (gain_preview_owed — the kick withheld while the
+    //   displayed geometry was off the live geometry) OR the committed gain
+    //   hash differs from the DISPLAYED plate's gain fingerprint
+    //   (Viewport::displayed_plate_gain_is_stale). Either way the render lands
+    //   in the release's own frame rather than a tick late. Otherwise (the
+    //   common case: the last motion already rendered this exact profile, or
+    //   no motion moved a boundary) no plate renders.
+    //   THE FLAGS ARE REFRESHED ON EVERY RELEASE: a motion-time rebuild keyed
+    //   the flag bitmap to the drag overlay, and the reorder/remap and the
+    //   DragState reset above change what it must show, so a Wayland frame
+    //   callback served before the tick would blit drag-era flags against the
+    //   committed store. The synchronous rebuild's tail already rebuilds the
+    //   flag cache; the no-render arm reaches the flag cache ALONE
+    //   (Viewport::refresh_flag_cache — fingerprint-guarded, no plate render).
+    if (gain_preview_owed || viewport.displayed_plate_gain_is_stale())
+        viewport.kick_waveform_sync();
+    else
+        viewport.refresh_flag_cache();
     if (net_changed) target_render.trigger();
 }

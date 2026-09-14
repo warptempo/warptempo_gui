@@ -467,6 +467,14 @@ struct DragState {
     // the motion-time answer is the commit's answer; commit_drag still
     // converts for itself.
     int64_t             proposed_authored_frame = 0;
+    // THE DEFERRED GAIN PREVIEW'S DEBT (2026-09-14): set by apply_drag_motion
+    // when a source-view motion moved the effective gain profile's hash but
+    // the synchronous plate render was SKIPPED because the displayed plate's
+    // geometry was not the live geometry (Viewport::
+    // displayed_plate_geometry_is_live). Its ONE reader is commit_drag, which
+    // repays it with a synchronous rebuild in the release's own frame; never
+    // cleared but by the release's wholesale DragState reset.
+    bool                gain_preview_deferred = false;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
     // apply_drag_motion carries it into the source domain through the

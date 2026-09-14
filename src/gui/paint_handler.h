@@ -675,6 +675,12 @@ struct GuiPaintHandler {
     // reader are at Viewport::displayed_plate_geometry_is_live.
     bool displayed_plate_geometry_is_live() const;
 
+    // True when a plate is displayed (wf_cache.fp_rendered) and its published
+    // gain fingerprint (fp_gain_profile_hash) differs from the live effective
+    // gain profile's hash (effective_waveform_gain_profile). The contract and
+    // its one reader are at Viewport::displayed_plate_gain_is_stale.
+    bool displayed_plate_gain_is_stale() const;
+
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay stays

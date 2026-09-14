@@ -1537,6 +1537,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // contract at Viewport::displayed_plate_geometry_is_live).
     viewport.displayed_plate_geometry_is_live_ =
         [&]() { return paint_handler.displayed_plate_geometry_is_live(); };
+    // The marker drag release's two seams (the rule at
+    // MarkerDragOps::commit_drag's tail, the contracts at their Viewport
+    // declarations): the displayed plate's gain staleness and the flag-only
+    // refresh.
+    viewport.displayed_plate_gain_is_stale_ =
+        [&]() { return paint_handler.displayed_plate_gain_is_stale(); };
+    viewport.refresh_flag_cache_ =
+        [&]() { paint_handler.maybe_rebuild_flag_cache(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the

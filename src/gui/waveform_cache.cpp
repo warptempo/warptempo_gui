@@ -757,6 +757,12 @@ bool GuiPaintHandler::displayed_plate_geometry_is_live() const {
            wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
 }
 
+bool GuiPaintHandler::displayed_plate_gain_is_stale() const {
+    if (!wf_cache.fp_rendered) return false;
+    return wf_cache.fp_gain_profile_hash !=
+           effective_waveform_gain_profile(app).hash;
+}
+
 // -- Flag-cache fingerprint hashes ---------------------------------------
 
 namespace {

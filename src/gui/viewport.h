@@ -129,9 +129,16 @@ struct Viewport {
     //    riding the hand through the effective profile's drag slot, guarded
     //    by displayed_plate_geometry_is_live under the drag's freeze) and its
     //    COMMIT (MarkerDragOps::commit_drag, the release's column snap landing
-    //    in its own frame) — and ALL FIVE kick through
+    //    in its own frame). The first four kick through
     //    kick_waveform_sync_if_gain_changed below, never this function direct,
-    //    so a write the EFFECTIVE profile cannot see renders nothing. (The value
+    //    so a write the EFFECTIVE profile cannot see renders nothing; the
+    //    COMMIT is the one member that calls this function direct, and only
+    //    when its gain is actually owed — a motion's deferred preview
+    //    (DragState::gain_preview_deferred) or a displayed plate whose gain
+    //    fingerprint is stale (displayed_plate_gain_is_stale below) — because
+    //    a before/after hash across the release compares the drag's proposal
+    //    with the committed store, which are normally equal whatever the
+    //    pixels show (Sol round 11 of 2026-09-14; the rule is at the release). (The value
     //    drag's magnification motion was a fourth for its first hours; the drag
     //    lost that arm when the box went hidden in target view. The forced
     //    ignore's other two terms — target view on the warp column and the `h`
@@ -267,6 +274,27 @@ struct Viewport {
     bool displayed_plate_geometry_is_live() const {
         return displayed_plate_geometry_is_live_ &&
                displayed_plate_geometry_is_live_();
+    }
+
+    // THE MARKER DRAG RELEASE'S TWO SEAMS (Sol round 11 of 2026-09-14; the
+    // rule and its one reader are at MarkerDragOps::commit_drag's tail).
+    // displayed_plate_gain_is_stale: true when a plate is displayed and its
+    // published gain fingerprint (wf_cache.fp_gain_profile_hash) differs from
+    // the live effective gain profile's hash. Wired in main.cpp to
+    // GuiPaintHandler::displayed_plate_gain_is_stale; false unwired (the tick's
+    // dirty-detect then catches the plate).
+    std::function<bool()> displayed_plate_gain_is_stale_;
+    bool displayed_plate_gain_is_stale() const {
+        return displayed_plate_gain_is_stale_ &&
+               displayed_plate_gain_is_stale_();
+    }
+    // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
+    // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
+    // synchronous plate rebuild's tail and the tick run, with no plate render.
+    // Wired in main.cpp; a no-op unwired (the tick then catches the flags).
+    std::function<void()> refresh_flag_cache_;
+    void refresh_flag_cache() {
+        if (refresh_flag_cache_) refresh_flag_cache_();
     }
 
     // Viewport mutators.
