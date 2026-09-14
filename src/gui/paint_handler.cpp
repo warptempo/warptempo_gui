@@ -2733,7 +2733,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE MAGNIFICATION PAIR DELETION'S ARITHMETIC (architect approval
     // 2026-09-14): the row lost TWO BOXES and TWO GAPS — −64 and −4 off the 959
     // the Center on Next Marker deletion had left it, no separator moving (the
-    // viewport-class group keeps seven members) — so it stands at 891 authored
+    // viewport-class group going from ten members to eight, re-counted
+    // 2026-09-14) — so it stands at 891 authored
     // px. THE TABLET FIT CEILING GOES 240 → 258: the walk fits while
     // 891·factor ≤ 2304, 891·2.58 = 2298.8, and 259 overruns by four device
     // px. The tablet's first-run 225 clears it by 299 device px (891·2.25 =
@@ -3187,9 +3188,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   gates are its own and are NOT the verbs': the `h` view greys it with them,
 //   the READ-ONLY LOCK does not, a selection being navigation;
 //   THE SECOND SEPARATOR, then
-//   THE MARKER-WALK GROUP (2026-08-15) — previous marker (Shift+Tab), next
-//   marker (Tab), walk both tabs (Ctrl+Shift+Tab). Three buttons, three
-//   chords, no gesture of their own;
+//   THE MARKER-WALK GROUP (2026-08-15) — previous marker (Shift+Tab) and next
+//   marker (Tab). Two buttons, two chords, no gesture of their own (walk both
+//   tabs, Ctrl+Shift+Tab, was the third until 2026-09-14 and is the tab row's
+//   shifted press now);
 //   THE THIRD SEPARATOR — the row paints three of the ruled row-8 dividers
 //   (1px, 32 tall, 5px each side) since 2026-08-18, where it painted one:
 //   adjacent groups at one anchor need a line where anchoring alone used to be
@@ -3259,7 +3261,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
 // blend. WHO WEARS THE DEAD FACE HERE, re-derived after the 2026-08-18
-// rulings — FOURTEEN of the nineteen, where it used to be one: in the `h` view
+// rulings — FOURTEEN of the eighteen, where it used to be one: in the `h` view
 // the derived partition greys the PLAY/STOP button (Space is consumed there),
 // the FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
@@ -3269,14 +3271,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // MEASURE, THE MARKER MAGNIFICATION and ADD TO SELECTION (bare `j`, bare
 // Return, bare `/`, Ctrl+/ and bare `k`, consumed in there like
 // the verbs' chords); the two
-// SKIPS and the MARKER-WALK GROUP'S THREE stay lit, Home/End being the mode's
-// own absolute jumps, Tab/Shift+Tab its diff-flag cycle (architect-confirmed
-// for the skips) and Ctrl+Shift+Tab the march composing that cycle with the A/B
-// switch. Outside the view the four VERBS, the EDIT FLAG BUTTON, the
+// SKIPS and the MARKER-WALK GROUP'S TWO stay lit, Home/End being the mode's
+// own absolute jumps and Tab/Shift+Tab its diff-flag cycle (architect-confirmed
+// for the skips). Outside the view the four VERBS, the EDIT FLAG BUTTON, the
 // MARKER MEASURE and the MARKER MAGNIFICATION grey on a locked tab, their own
 // gate — COPY VALUE, seated among them, does NOT, both its chords being
 // navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT THE
-// TRANSPORT THREE, WALK BOTH TABS AND ADD TO SELECTION greys on the
+// TRANSPORT THREE AND ADD TO SELECTION greys on the
 // selection's state where its press would be a consumed no-op (the
 // truthful-buttons ruling, reversing the architect's 2026-08-15 always-on
 // ruling, which was made about the RESTING face of the ten members the row
@@ -3429,18 +3430,17 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconCopyValue,        icons::Icon::EditCopy},
     {RedesignButton::IconAddToSelection,   icons::Icon::EditSelect},
 };
-// THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle three
-// between the verbs and the arrows: previous marker (Shift+Tab), next marker
-// (Tab), walk both tabs (Ctrl+Shift+Tab). THE GLYPHS ARE HIS OWN PICKS from a
-// rendered candidate sheet and the reasons are at their icons.h entries — bbox
-// is an arrow meeting a bar (the Tab key's own shape, sharing no silhouette
-// with the chevrons two slots away, the media triangles at the row's left, or
-// the keyframe dials the history walk wears up in the icon row), boost is a
-// two-arrow cycle, which is what walking both tabs is.
+// THE MARKER-WALK GROUP (architect 2026-08-15), the right block's middle two
+// between the verbs and the arrows: previous marker (Shift+Tab) and next marker
+// (Tab). THE GLYPHS ARE HIS OWN PICKS from a rendered candidate sheet and the
+// reasons are at their icons.h entries — bbox is an arrow meeting a bar (the
+// Tab key's own shape, sharing no silhouette with the chevrons two slots away,
+// the media triangles at the row's left, or the keyframe dials the history
+// walk wears up in the icon row). (Walk both tabs stood third on boost, a
+// two-arrow cycle, until the button and its glyph were deleted on 2026-09-14.)
 constexpr TransportRowDef kTransportWalkGroup[] = {
     {RedesignButton::TransportWalkPrev,    icons::Icon::BboxPrev},
     {RedesignButton::TransportWalkNext,    icons::Icon::BboxNext},
-    {RedesignButton::TransportWalkBoth,    icons::Icon::Boost},
 };
 // DOWN, UP, LEFT, RIGHT — the architect's order, 2026-08-14, superseding the
 // row's original vim order (h j k l = left / down / up / right) with no
@@ -3734,8 +3734,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // CLOCK CELL starts at the pen it leaves — the architect's own ask, "move
     // bottom row timestamp to left alignment, place a separator between
     // transport buttons and timestamp". The RIGHT BLOCK anchors at the RIGHT
-    // margin as NINE + SEPARATOR + THREE + SEPARATOR + FOUR (the nine counted
-    // off kMarkerVerbGroup) — the MARKER VERBS with the EDIT FLAG button, the
+    // margin as NINE + SEPARATOR + TWO + SEPARATOR + FOUR (the nine counted
+    // off kMarkerVerbGroup, the two off kTransportWalkGroup) — the MARKER VERBS with the EDIT FLAG button, the
     // MARKER MEASURE, the MARKER MAGNIFICATION, COPY VALUE and ADD TO
     // SELECTION behind them, the
     // MARKER-WALK GROUP, and the CARDINAL ARROWS (↓ ↑ ← →, the
@@ -3756,14 +3756,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // fixed pen on every window, and only the RIGHT block moves. At 100% the
     // left block ends at the clock's pen — 8px pad + three 32px boxes + two 2px
     // gaps = 108, then 5 + 1 + 5 = 119, and the cell's own authored 4px offset
-    // seats it at 123 — and the right block is 560 wide since 2026-09-14
-    // (304 verbs + 11 separator span + 100 walk + 11 + 134 arrows; it was 526
-    // with the eight-box group of 2026-09-13 and 560 with the nine of
-    // 2026-09-10), so it
-    // starts at 72 on the 640px defensive floor, 456 on the retired rig's
-    // 1024 and 1352 at 1920. The 9-glyph cell measures 79.2px at 100% (it
+    // seats it at 123 — and the right block is 526 wide since 2026-09-14's
+    // Walk Both Tabs deletion (304 verbs + 11 separator span + 66 walk + 11 +
+    // 134 arrows; it was 560 earlier that day with the three-box walk group
+    // behind the Marker Magnification, 526 with the eight-box verb group of
+    // 2026-09-13 and 560 with the nine of 2026-09-10), so it
+    // starts at 106 on the 640px defensive floor, 490 on the retired rig's
+    // 1024 and 1386 at 1920. The 9-glyph cell measures 79.2px at 100% (it
     // narrowed when the clock went to 11pt on 2026-08-14), which leaves the
-    // rig's own 1024 (the tablet's logical width too) some 254px of ground
+    // rig's own 1024 (the tablet's logical width too) some 288px of ground
     // between the cell and the verbs — the room THE STATUS CELL now takes, clipped
     // one pad short of the block. THE 640px DEFENSIVE FLOOR NOW CROPS INTO
     // THE CLOCK — the
@@ -3775,27 +3776,29 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // EDIT FLAG BUTTON took 34 more on 2026-08-27, the COPY VALUE button
     // another 34 on 2026-08-29 and the VALUE DRAG LAMP another 34 on
     // 2026-09-10, which the lamp's deletion GAVE BACK on 2026-09-13 and the
-    // MARKER MAGNIFICATION spent again on 2026-09-14 — the
-    // block's ONE dimension that moves when this group gains or loses a box,
+    // MARKER MAGNIFICATION spent again on 2026-09-14, and the WALK BOTH TABS
+    // deletion gave 34 back from the WALK group the same day — the
+    // block's ONE dimension that moves when a group gains or loses a box,
     // which is why the numbers in this paragraph are re-derived at every such
     // change rather than inherited. (The architect had ruled that lamp's cost
     // accepted at its landing, the message paying it; reclaiming the tablet's
-    // room was half his reason for deleting it.) The STATE CELL is 1142
-    // authored px wide at 100% on 1920 since 2026-09-14 (1176 for the day
-    // between the lamp's deletion and the Magnification's landing) and 246
-    // logical px on the tablet's 2304 device px at 225% (280 for that day) —
-    // 2304 / 2.25 = 1024 logical, the block's left edge at 1024 − 8 − 560 =
-    // 456, the clip bound one pad short at 448, less the clock's ~202 right
+    // room was half his reason for deleting it.) The STATE CELL is 1176
+    // authored px wide at 100% on 1920 since 2026-09-14's Walk Both Tabs
+    // deletion (1142 for the hours between the Magnification's landing and
+    // that deletion, 1176 for the day before) and 280 logical px on the
+    // tablet's 2304 device px at 225% (246 for those hours) —
+    // 2304 / 2.25 = 1024 logical, the block's left edge at 1024 − 8 − 526 =
+    // 490, the clip bound one pad short at 482, less the clock's ~202 right
     // edge — each measured from the clock's own right edge to the clip bound. THE
     // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx is what covers a scale driven
-    // toward the 350 ceiling (2026-08-29). THE RIGHT BLOCK IS 560 AUTHORED PX
+    // toward the 350 ceiling (2026-08-29). THE RIGHT BLOCK IS 526 AUTHORED PX
     // WIDE and anchored one pad in from the right edge, so it reaches the
     // clock's own ~202px right edge once the LOGICAL width (device width over
-    // the factor) falls below about 770 — at 350% on a 2304px panel that is
+    // the factor) falls below about 736 — at 350% on a 2304px panel that is
     // 658, where the verb group lands on the cell outright; the tablet's own
-    // 225% leaves 1024 logical px and 246 of clear ground. Still no collision
+    // 225% leaves 1024 logical px and 280 of clear ground. Still no collision
     // rule, for the reason above: the row crops at its floor. THE STATUS CELL
     // TAKES THAT GROUND AND CANNOT PUSH ANYTHING: it CLIPS at the block's own
     // left edge less one pad, so a long line is cut rather than colliding.
@@ -3811,7 +3814,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-08-27, the MARKER MEASURE since 2026-08-19, the MARKER
     // MAGNIFICATION since 2026-09-14, the COPY VALUE button
     // since 2026-08-29 and ADD TO SELECTION since 2026-08-18 behind them),
-    // a separator, the WALK GROUP's three, a separator, and the four
+    // a separator, the WALK GROUP's two, a separator, and the four
     // ARROWS whose LAST button's right edge is one pad in from the lane's
     // right edge. The whole block is measured first and laid left to right
     // from there, so one expression owns the anchor and no group re-derives it.
@@ -3830,7 +3833,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // leaving moves this width with no second edit.
         const int verbs_n  = static_cast<int>(std::size(kMarkerVerbGroup));
         const int verbs_w  = verbs_n * btn + (verbs_n - 1) * btn_gap;
-        const int walk_w   = 3 * btn + 2 * btn_gap;
+        const int walk_n   = static_cast<int>(std::size(kTransportWalkGroup));
+        const int walk_w   = walk_n * btn + (walk_n - 1) * btn_gap;
         const int arrows_w = 4 * btn + 3 * btn_gap;
         const int sep_span = sep_gap + sep_w + sep_gap;
         const int block_w  =
@@ -4216,7 +4220,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // below them at all, so a hint dropped there would fall off the window and
     // it hangs upward instead, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's nineteen roster buttons and, since 2026-08-13, the modal's own,
+    // the row's eighteen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
     // above). Then CLAMPED
     // FULLY ON-WINDOW so a
@@ -6768,10 +6772,10 @@ void GuiPaintHandler::paint_overview_strip(cairo_t* cr) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all NINETEEN buttons — the transport three, the four
+// YIELDS WHOLE: all EIGHTEEN buttons — the transport three, the four
 // single-marker verbs with the Edit flag button, the Marker Measure, the
 // Marker Magnification, Copy Resolved Value and Add to Selection behind
-// them, the marker-walk three and the four arrows — plus the clock and the row's three separators stand
+// them, the marker-walk two and the four arrows — plus the clock and the row's three separators stand
 // down, nothing negotiates
 // for space,
 // and paint_modal_dialog paints the modal into the lane they left.

@@ -18,16 +18,17 @@
 //   - the STROKED PATH (boost's four open polylines, 2026-08-15 — RESTORED
 //     rather than invented: the arm lived for part of 2026-08-11 for
 //     distortionfx, went producer-less when the architect reglyphed that
-//     button hours later, and comes back with a real producer plus the one
-//     thing distortionfx never needed, a per-path LINE CAP);
+//     button hours later, and came back with a real producer; the per-path
+//     LINE CAP boost brought with it was deleted with boost on 2026-09-14,
+//     and tool-rect-selection is the arm's one producer since);
 //   - the STROKE'S OWN WIDTH AND DASH (tool-rect-selection, 2026-08-16), which
 //     is a widening of the third rather than a fourth kind of thing: the pen
 //     had been hard-coded to boost's implicit defaults, and the marching-ants
 //     rectangle is the first file to state either attribute.
 // Each is described where it is implemented (icons.cpp's table header and its
 // `d`-interpreter header). A general per-path MATRIX was grown alongside the
-// stroke for distortionfx and did NOT come back with it — neither stroked file
-// carries a transform — so that one is still git history alone.
+// stroke for distortionfx and did NOT come back with it — no stroked file
+// carried a transform — so that one is still git history alone.
 //
 // THREE FILES DEPART FROM THE VERBATIM RULE and they are stated here as well
 // as at their table entries, because the rule is what this header promises:
@@ -353,26 +354,22 @@ enum class Icon {
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
     // THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15 from a
     // rendered candidate sheet, the row's right cluster ahead of the four
-    // arrows): previous marker (Shift+Tab), next marker (Tab) and walk both
-    // tabs (Ctrl+Shift+Tab). HIS OWN REASONS, kept because they are about this
-    // row's crowding rather than about the glyphs in isolation:
+    // arrows): previous marker (Shift+Tab) and next marker (Tab). HIS OWN
+    // REASONS, kept because they are about this row's crowding rather than
+    // about the glyphs in isolation:
     //   bbox-prev / bbox-next are AN ARROW MEETING A BAR, which is the Tab
     //   key's own shape — and they share no silhouette with the chevrons two
     //   slots away (the cardinal arrows), the media-skip triangles at the
     //   row's left, or the keyframe dials the history walk wears in the same
     //   cluster inside the `h` view.
-    //   boost is A TWO-ARROW CYCLE, which is literally what walking both tabs
-    //   is: step one, step the other, come back round.
-    // boost IS SINGLE-COLOUR (checked at the transcription, because its
-    // sibling boost-boosted is not): all four of its paths are
-    // `.ColorScheme-Text` = #fcfcfc, and the green `.ColorScheme-PositiveText`
-    // tick belongs to boost-boosted ALONE — so deep-history is still the
-    // set's one two-colour glyph. It is, however, the set's ONE STROKED file
-    // (fill="none" stroke="currentColor" on its group), which is what brought
-    // the interpreter's stroked arm back; the record is at the table entry.
+    // (BOOST, the two-arrow cycle the group's third button wore for walk both
+    // tabs, is DELETED with that button on 2026-09-14 — its enumerator, its
+    // def and its committed asset — no other button wearing it; the march is
+    // the tab row's shifted press now. It was the file that brought the
+    // interpreter's stroked arm back and the one producer of the per-path line
+    // cap, which went with it.)
     BboxPrev,            // Previous marker (Shift+Tab)
     BboxNext,            // Next marker (Tab)
-    Boost,               // Walk both tabs (Ctrl+Shift+Tab)
     // THE MARKER MEASURE BUTTON'S GLYPH, the bottom row's verb group between
     // the Edit flag button and Add to selection (between Toggle inherit and Add
     // to Selection until 2026-08-27): minuet-scales, KDE Minuet's own
@@ -628,7 +625,10 @@ enum class Icon {
 // 57 SINCE 2026-09-14, LATER THE SAME DAY: 56 + zoom-out-y, restored with its
 // def and asset for the Ignore Waveform Magnification lamp (architect
 // 2026-09-14). A re-COUNT of the enumerators.
-inline constexpr int kIconCount = 57;
+// 56 SINCE 2026-09-14, LATER STILL: 57 − boost, the enumerator, the def and
+// the asset leaving with the Walk Both Tabs button that wore it (architect
+// 2026-09-14). A re-COUNT of the enumerators.
+inline constexpr int kIconCount = 56;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

@@ -358,8 +358,11 @@ struct Viewport {
     //     singleton refused ahead of it and leaves the camera alone;
     //   * GuiInputHandler::run_waveform_lane_playhead_step — the playhead step
     //     at every magnitude, past its wall.
-    // Key and the Left / Right / Walk buttons alike, the buttons synthesizing
-    // those chords. NOT snapping: the drops, Shift+J and the A/B audition (both
+    // Key and the Left / Right / Walk buttons alike (the march's pointer road
+    // being the other tab's shifted press), the buttons synthesizing those
+    // chords. The march runs `c` behind each step besides (architect
+    // 2026-09-14), which finds the level already at working wherever this
+    // fired. NOT snapping: the drops, Shift+J and the A/B audition (both
     // already run `c`), `c` itself, pointer gestures, undo / redo.
     // THE SHORT-SOURCE EXCEPTION: for a source shorter than one working-zoom
     // viewport the file's effective fit ceiling is itself finer than working,

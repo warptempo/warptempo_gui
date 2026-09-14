@@ -182,7 +182,7 @@ namespace {
 // pad and, flush right, the four single-marker verbs with the Edit flag
 // button, the Marker Measure, the Copy resolved value
 // button and Add to selection behind them, the
-// marker-walk three and the four
+// marker-walk two and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
 // rearrangement, re-weighted 2026-08-15 and again at the 2026-08-18 relayout,
@@ -820,7 +820,7 @@ GuiRect top_marker_row_area(const AppState& a) {
 // row's boxes with the monospace clock behind their separator (left-aligned
 // since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the four marker verbs with
 // ADD TO SELECTION behind them, the
-// marker-walk three and the four cardinal arrows, divided by two more of the
+// marker-walk two and the four cardinal arrows, divided by two more of the
 // ruled separators, and THE STATE CELL right of the clock. (The arrows' four
 // slots were a mode SWAP with the history
 // companions from 2026-08-14 until the 2026-08-18 relayout took those four

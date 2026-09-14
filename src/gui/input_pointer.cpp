@@ -66,9 +66,10 @@ namespace {
 // table, which is what makes "the table's length plus those three IS the
 // roster" a build-time fact rather than a remembered list of names.
 //
-// The `shift` column is each button's OWN chord — THREE rows set it: Redo's
+// The `shift` column is each button's OWN chord — TWO rows set it: Redo's
 // Ctrl+Shift+Z and, since 2026-08-15, the marker walk's Shift+Tab (previous
-// marker) and Ctrl+Shift+Tab (walk both tabs). It is not
+// marker); Ctrl+Shift+Tab (walk both tabs) was a third until its button was
+// deleted on 2026-09-14, the chord being the TABS' admitted shift now. It is not
 // the whole shift story: the SHIFT-ADMITTING buttons OR a shift-exact press
 // into this field to reach their twins, and which buttons those are lives at
 // redesign_button_shift_admits (app_state.h), which the tooltip's own table is
@@ -197,6 +198,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // walk selector, so a press on a tab arms and lifts as an ordinary roster
     // press and Ctrl+Tab switches the A/B tab in there exactly as it does
     // outside (the architect's ruling; the record is at RedesignButton::TabA).
+    // THEY ADMIT SHIFT since 2026-09-14 (redesign_button_shift_admits): a
+    // shift-click or long press on the OTHER tab ORs shift into this row's
+    // ctrl and dispatches Ctrl+Shift+Tab, the paired march — the selected
+    // tab's press being the radio's consumed nothing either way.
     // (The row carried two MORE slots for one day, 2026-08-07..08, when it was
     // the (walk source, reading) product; they never dispatched — the mode's
     // band claim owned the row then — and they went with the reading, which is
@@ -667,12 +672,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
-    // behind a separator and ahead of the arrows. THREE BUTTONS, THREE CHORDS
+    // behind a separator and ahead of the arrows. TWO BUTTONS, TWO CHORDS
     // — no hold, no double-click, no modifier gesture on the surface — and the
     // declined double-click rule's mechanical reason is recorded at the roster
     // entry (every double-click surface in this product acts on its FIRST
     // click too, so a double-click on "next" would step a marker AND THEN walk
-    // both tabs).
+    // both tabs). WALK BOTH TABS was the third, on Ctrl+Shift+Tab, until the
+    // architect deleted it on 2026-09-14: the march is the TABS' shifted press
+    // now (the rows above, and redesign_button_shift_admits).
     //
     // PREV'S SHIFT IS ITS OWN CHORD, not an admission: Shift+Tab is the
     // reverse marker cycle's own spelling, so the `shift` column carries it
@@ -683,18 +690,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // IsoLeftTab, is deliberately NOT a second row: the dispatch is
     // synthesized, so it goes out in the Tab spelling every reader accepts.
     //
-    // ALL THREE ARE LIVE INSIDE THE `h` VIEW and the derived partition says so
+    // BOTH ARE LIVE INSIDE THE `h` VIEW and the derived partition says so
     // with nothing hand-listed — history_mode_owns_key claims bare Tab and
-    // Shift+Tab as the diff-flag cycle forward and back, and Ctrl+Shift+Tab
-    // (2026-08-18) as the march that composes that cycle with the A/B switch.
-    // WALK BOTH TABS greyed there for the hours between the walk selector
-    // leaving row 3 and that ruling.
+    // Shift+Tab as the diff-flag cycle forward and back.
     {RedesignButton::TransportWalkPrev,
      GuiKeys::Tab,    false, true,  false, false, true},                             // Shift+Tab
     {RedesignButton::TransportWalkNext,
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
-    {RedesignButton::TransportWalkBoth,
-     GuiKeys::Tab,    true,  true,  false, false, true},                             // Ctrl+Shift+Tab
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone. The eighth
@@ -724,8 +726,12 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 50
-// rows against the roster's 53 since 2026-09-14'S IGNORE WAVEFORM
+// every RedesignButton but the THREE menu anchors carries a chord here — 49
+// rows against the roster's 52 since 2026-09-14'S WALK BOTH TABS DELETION
+// (architect 2026-09-14, later still), which took Ctrl+Shift+Tab's row out
+// with its button (a chord, so the pair moved together; the chord is the tab
+// row's shifted press now, redesign_button_shift_admits, and the key is
+// untouched). It was 50 rows against 53 from 2026-09-14'S IGNORE WAVEFORM
 // MAGNIFICATION LAMP (architect 2026-09-14), bare `]`'s row joining the zoom
 // group behind `c` (a chord, so the pair moved together; a re-COUNT of the
 // rows, the magnification button's bottom-row row on Ctrl+/ earlier that day
@@ -8222,8 +8228,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // still carries no tooltip, so the KEY's card carries the sentence
         // (the account is at their arm in redesign_button_enabled).
         // THE BOTTOM ROW HAS A RESTING CONSUMER
-        // HERE FOR EVERY MEMBER — the last two, WALK BOTH TABS and ADD TO
-        // SELECTION, having joined on 2026-09-10 (below) — since
+        // HERE FOR EVERY MEMBER — the last, ADD TO SELECTION, having joined
+        // on 2026-09-10 (below) — since
         // 2026-08-30 (the truthful-buttons ruling, reversing the 2026-08-15
         // scoped-truth ruling under which the row's members were lit outside
         // the `h` view whatever their chord would do): each arm at
@@ -8236,19 +8242,18 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // partition adds its own: the PLAY/STOP button, the FOUR ARROWS, the
         // verbs and ADD TO SELECTION (Space, the bare arrows and bare `k` are
         // consumed there), while the two skips — the mode's absolute jumps —
-        // and the marker-walk THREE — its diff-flag cycle plus the march over
-        // it — take no partition grey. The arrows joined the in-view list on
+        // and the marker-walk TWO — its diff-flag cycle — take no partition
+        // grey. The arrows joined the in-view list on
         // 2026-08-18 by being PAINTED in the view at all — the cluster swap
-        // that hid them went with the history companions. WALK BOTH TABS AND
-        // ADD TO SELECTION EACH GAINED A RESTING REFUSAL ON 2026-09-10, both
-        // out of the iteration lock: the march is delta (a)'s own member and
-        // greys through iteration_lock_greys, while ADD TO SELECTION mirrors
-        // THE ONE LAMP IT CANNOT STAND BESIDE — grid iterations, bare `k`
-        // being delta (a)'s fourth member (the VALUE DRAG was a second until
-        // 2026-09-12, when the two lamps were allowed to stand lit together). The READ-ONLY lock still
-        // does not carry either of them, a selection and a walk being
-        // navigation; it is the second lock that reaches them (the arms are at
-        // redesign_button_enabled).
+        // that hid them went with the history companions. ADD TO SELECTION
+        // GAINED A RESTING REFUSAL ON 2026-09-10 out of the iteration lock,
+        // mirroring THE ONE LAMP IT CANNOT STAND BESIDE — grid iterations,
+        // bare `k` being delta (a)'s fourth member (the VALUE DRAG was a
+        // second until 2026-09-12, when the two lamps were allowed to stand
+        // lit together; WALK BOTH TABS took the same refusal for the march
+        // until its deletion on 2026-09-14). The READ-ONLY lock still does not
+        // carry it, a selection being navigation; it is the second lock that
+        // reaches it (the arm is at redesign_button_enabled).
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
                                     playback, target_render, tc.id))
             return true;

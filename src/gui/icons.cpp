@@ -16,27 +16,26 @@ namespace {
 // the color the file resolves to — the FILL source for an ordinary path and the
 // STROKE source for a stroked one (`stroked`, below).
 //
-// NEARLY EVERY PATH HERE IS FILLED, and there are TWO STROKED FILES: boost's
-// (2026-08-15, the bottom row's walk-both-tabs button), whose group carries
-// `fill="none" stroke="currentColor"`, so its four open polylines would come
-// out as four filled slivers under the fill arm — not a case the fill arm
-// could have covered by looking the other way — and tool-rect-selection's
-// (2026-08-16, the icon row's Show trim region button), the marching-ants
-// selection rectangle. THE ARM IS RESTORED, NOT NEW: it lived in draw() for
+// NEARLY EVERY PATH HERE IS FILLED, and there is ONE STROKED FILE since
+// 2026-09-14: tool-rect-selection's (2026-08-16, the icon row's Show trim
+// region button), the marching-ants selection rectangle. (boost's, the bottom
+// row's walk-both-tabs glyph from 2026-08-15, was the first — its group
+// carried `fill="none" stroke="currentColor"`, so its open polylines would
+// have come out as filled slivers under the fill arm — and it left with its
+// button on 2026-09-14, taking the per-path LINE CAP its arrowheads were the
+// only producers of.) THE ARM IS RESTORED, NOT NEW: it lived in draw() for
 // part of 2026-08-11 for the set's first stroked file (distortionfx, row 4's
 // Warp radio for those hours), went producer-less when the architect
-// reglyphed that button to speedometer the same day, and comes back verbatim
-// plus one thing distortionfx never needed — a per-path LINE CAP, because two
-// of boost's four paths carry `stroke-linecap="square"` and two take SVG's
-// default butt. The general per-path MATRIX that was grown beside it did NOT
-// come back: neither stroked file carries a transform, so that feature is
+// reglyphed that button to speedometer the same day, and came back verbatim
+// with boost. The general per-path MATRIX that was grown beside it did NOT
+// come back: no stroked file carried a transform, so that feature is
 // still git history alone and this table's `xform` is still translates only.
 //
 // TOOL-RECT-SELECTION BROUGHT TWO MORE STROKE ATTRIBUTES AND ONE DEPARTURE,
 // and the departure is the part worth reading twice (2026-08-16):
 //   * A STROKE WIDTH THAT IS NOT 1. Its `stroke-width="1.043"` is the table's
 //     first non-default, so the width is a per-path field now rather than the
-//     literal boost takes. It is still in PATH UNITS and still set inside the
+//     literal boost took. It is still in PATH UNITS and still set inside the
 //     viewBox transform, so the pen scales with the geometry exactly as
 //     before.
 //   * A DASH. `stroke-dasharray="2.08599997,2.08599997"` with
@@ -101,15 +100,12 @@ struct IconPath {
     const char*   d;
     IconTransform xform{};  // identity unless the file carries a transform
     bool          stroked = false;
-    // THE LINE CAP, read only on a stroked path. SVG's default is BUTT and so
-    // is cairo's, so `false` transcribes a file that says nothing; boost's two
-    // arrowhead paths say `stroke-linecap="square"` and are the flag's only
-    // producers. It is a per-PATH attribute in the file and a per-path field
-    // here for that reason — boost's other two paths take the default in the
-    // same group.
-    bool          square_cap = false;
+    // (THE LINE CAP was a per-path field here from 2026-08-15 to 2026-09-14,
+    // boost's two square-capped arrowheads its only producers; it left with
+    // boost. The stroked arm sets SVG's and cairo's default BUTT, which is what
+    // tool-rect-selection says by saying nothing.)
     // THE STROKE WIDTH, read only on a stroked path, in PATH UNITS (2026-08-16).
-    // SVG's default is 1 and boost's group says nothing, so 1.0 transcribes
+    // SVG's default is 1 and boost's group said nothing, so 1.0 transcribes
     // "no stroke-width attribute"; tool-rect-selection's `stroke-width="1.043"`
     // is the field's one producer. Per-PATH like the cap, because the attribute
     // is per-element in SVG.
@@ -913,7 +909,7 @@ constexpr IconPath kGoUpPaths[] = {
 constexpr IconPath kToolRectSelectionPaths[] = {
     {kIconText,
      "m2.5215156,3.5311673 h16.952848 v14.931264 h-16.952848 z",
-     {}, /*stroked=*/true, /*square_cap=*/false,
+     {}, /*stroked=*/true,
      /*stroke_width=*/1.043,
      /*dash_on=*/2.08599997, /*dash_off=*/2.08599997,
      /*dash_offset=*/4.9125299},
@@ -1078,8 +1074,8 @@ constexpr IconPath kInsertLinkPaths[] = {
 
 // -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
 //
-// bboxprev (Shift+Tab, previous marker), bboxnext (Tab, next marker) and boost
-// (Ctrl+Shift+Tab, walk both tabs). The architect's reasons for the picks are
+// bboxprev (Shift+Tab, previous marker) and bboxnext (Tab, next marker). The
+// architect's reasons for the picks are
 // at the enum entries in icons.h — they are about this row's crowding, which
 // is a roster fact rather than a transcription one.
 //
@@ -1092,28 +1088,10 @@ constexpr IconPath kInsertLinkPaths[] = {
 // a hand-rounded 8 and 10 would read better and would break the property that
 // a diff against the committed file is a transcription bug and nothing else.
 //
-// BOOST IS THE SET'S ONE STROKED FILE and the reason the interpreter's stroked
-// arm came back (the record is at the table header above and at draw()). Its
-// group carries `fill="none" stroke="currentColor"` with no stroke-width, so
-// each of its four paths takes SVG's default width of 1 IN PATH UNITS — a
-// 22-unit viewBox, so one glyph pixel at the row's 22px box, riding gui_scale
-// with the geometry exactly as every filled limb does. TWO of the four carry
-// `stroke-linecap="square"` (the arrowheads, whose ends must meet flush) and
-// two take the default butt; that is the whole reason `square_cap` is a
-// per-path field.
-//
-// IT IS SINGLE-COLOUR, CHECKED RATHER THAN ASSUMED: its sibling boost-boosted
-// carries a `.ColorScheme-PositiveText` #27ae60 tick, and boost does not — all
-// four paths are `.ColorScheme-Text`, so no second resolved literal is
-// recorded here. (deep-history was the set's one two-CLASS glyph until it left
-// with the Git walk radio on 2026-09-04; dialog-information and dialog-error
-// carry the accent and negative classes now.)
-//
-// Command coverage: relative `m` with `v` and `h` (the first two paths, which
-// is this table's first producer for either — both have been in the
-// interpreter's subset since it was written) plus implicit relative-lineto
-// repetition on the two arrowheads, and no `z` on any of them, which is what
-// an open stroked polyline wants.
+// (BOOST, the group's third file — the set's first STROKED one, whose two
+// arrowhead paths were the only producers of a per-path LINE CAP — is DELETED
+// with the Walk Both Tabs button that wore it, 2026-09-14: its row, its def,
+// its committed asset and the cap field went together.)
 constexpr IconPath kBboxPrevPaths[] = {
     {kIconText,
      "m 7.9999995,3 0,1 -2,0 0,14 2,0 0,1 -5,0 0,-1 2,0 0,-14 -2,0 0,-1 5,0 "
@@ -1125,13 +1103,6 @@ constexpr IconPath kBboxNextPaths[] = {
     {kIconText,
      "m 14,3 0,1 2,0 0,14 -2,0 0,1 5,0 0,-1 -2,0 0,-14 2,0 0,-1 -5,0 m -11,4 "
      "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
-};
-
-constexpr IconPath kBoostPaths[] = {
-    {kIconText, "m17.5 13v-7.5h-12",                          {}, true},
-    {kIconText, "m4.5227 9-0.02274 7.5h12",                   {}, true},
-    {kIconText, "m9.3732 3.613-4.9718 1.883 4.9718 1.883",    {}, true, true},
-    {kIconText, "m12.632 14.621 4.9583 1.8758-4.9583 1.8758", {}, true, true},
 };
 
 // -- THE NOTIFICATION CARDS' THREE (2026-08-29) -------------------------------
@@ -1261,7 +1232,6 @@ constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
-constexpr IconDef kBoost              {22.0, kBoostPaths,               4};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
@@ -1320,7 +1290,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::InsertLink:          return kInsertLink;
         case Icon::BboxPrev:            return kBboxPrev;
         case Icon::BboxNext:            return kBboxNext;
-        case Icon::Boost:               return kBoost;
         case Icon::DialogOkApply:       break;
         case Icon::DialogInformation:   return kDialogInformation;
         case Icon::DialogError:         return kDialogError;
@@ -1736,35 +1705,35 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
         if (p.stroked) {
-            // THE STROKED ARM (boost since 2026-08-15 — RESTORED with that
-            // producer, having lived producer-less hours for distortionfx on
-            // 2026-08-11 — and tool-rect-selection since 2026-08-16): the line
+            // THE STROKED ARM (tool-rect-selection since 2026-08-16; boost
+            // from 2026-08-15 to 2026-09-14 — RESTORED with that producer,
+            // having lived producer-less hours for distortionfx on
+            // 2026-08-11): the line
             // width is in PATH units and is set INSIDE the transform above, so
             // cairo's CTM scales the PEN exactly as it scales the geometry.
             // That is what SVG itself does with stroke-width, and it is what
             // keeps a stroked glyph's weight on the gui_scale axis like every
             // filled limb in the table. THE WIDTH IS THE PATH'S OWN since the
-            // second file arrived: boost says nothing and takes SVG's default
-            // of 1 through the field's default, tool-rect-selection says 1.043.
+            // second file arrived: tool-rect-selection says 1.043, and a file
+            // saying nothing would take SVG's default of 1 through the field's
+            // default (boost did, until it left).
             //
             // The pen is SET rather than inherited, every parameter of it:
             // this cairo_t is the caller's and its stroke state is not ours to
             // assume — which is why the DASH is set on both arms of its own
             // fork rather than only where a dash exists. Miter join is SVG's
             // default and cairo's both; the miter limit differs (SVG 4, cairo
-            // 10) and is stated for fidelity. THE CAP IS THE PATH'S OWN and is
-            // the one thing this arm gained on its return: boost's two
-            // arrowheads say stroke-linecap="square" and its two long limbs
-            // say nothing, which is SVG's butt — and so does the rectangle,
-            // whose butt ends are what square off each dash at a corner.
+            // 10) and is stated for fidelity. THE CAP IS BUTT, SVG's default:
+            // the rectangle says nothing, and its butt ends are what square
+            // off each dash at a corner (boost's square-capped arrowheads, the
+            // per-path cap's only producers, left on 2026-09-14).
             //
             // THE DASH IS IN PATH UNITS TOO, so it rides the same CTM: a dash
             // that scaled independently of the geometry would break up
             // differently at every gui_scale, which is the whole reason it is
             // set here and not in device units.
             cairo_set_line_width(cr, p.stroke_width);
-            cairo_set_line_cap(cr, p.square_cap ? CAIRO_LINE_CAP_SQUARE
-                                                : CAIRO_LINE_CAP_BUTT);
+            cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
             cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
             cairo_set_miter_limit(cr, 4.0);
             if (p.dash_on > 0.0) {

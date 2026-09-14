@@ -785,8 +785,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
 // lane, THE TOGGLE AUDIO VIEW LAMP (2026-09-13, bare `t`'s face), and — since
 // 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
-// quartet's other three chords, WALK BOTH TABS, delta (a)'s second member,
-// THE PADLOCK, its third, ADD TO SELECTION, its fourth, and BPM ITERATIONS,
+// quartet's other three chords, THE PADLOCK, delta (a)'s third member (WALK
+// BOTH TABS was its second until that button's deletion on 2026-09-14), ADD TO SELECTION, its fourth, and BPM ITERATIONS,
 // which left delta (b) that evening. NO ARM THERE
 // COMPOSES A READ-ONLY HALF ANY MORE for the members whose chords the base
 // admits or never sees, and the members that do compose one do it for their
@@ -2176,15 +2176,19 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // THE PAIRED MARCH, MODE-LOCAL (architect 2026-08-18): "ctrl+shift+tab
         // is just short for 'tab, ctrl+tab, tab'", so it is built as exactly
         // that composition over the view's own vocabulary — the mode's Tab act,
-        // the A/B switch, the mode's Tab act again — the same three lines the
-        // live march is over live markers.
+        // the A/B switch, the mode's Tab act again. (THE LIVE MARCH RUNS `c`
+        // BEHIND EACH STEP since 2026-09-14, the architect's ruling for that
+        // arm; this one is untouched by it and still frames each step through
+        // the cycle's own recentre at the standing zoom — a RECORDED
+        // ASYMMETRY, the view's `c` being run_center_command's mode arm should
+        // a ruling carry it here.)
         //
         // WHAT IT LEAVES BEHIND is the march's own shape: the mode's focus is
         // ONE index over one diff-flag list (the two tabs share both marker
         // stores, so the list is the same on either side), and each step lands
         // THE THEN-ACTIVE TAB's playhead and recenters THAT tab's viewport at
         // its own zoom (snapped up to working first where that zoom is finer,
-        // inside the cycle — one snap per step, the live march's shape). So
+        // inside the cycle — one snap per step). So
         // the leaving tab is parked on one flag and the
         // arriving tab on the next, each in its own window — which is what
         // makes a march a march.
@@ -2192,7 +2196,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // THE SWITCH IS THE ALLOWLIST'S OWN Ctrl+Tab, spelled here rather than
         // dispatched: the same active_views call and the same target-render
         // trigger the live march ends on, so the two compositions differ in the
-        // cycle they name and in nothing else.
+        // cycle they name and in the live march's `c`.
         cycle_history_diff_flag_focus(true);
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_history_diff_flag_focus(true);
@@ -8344,14 +8348,27 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
     // march paired tabs forward in lockstep with one chord.
     //
-    // IT FRAMES BOTH TABS, DELIBERATELY AND BY ITS OWN STATEMENT (architect
-    // 2026-09-04): both steps pass MarkerLandingFrame::Center, so the march
-    // centres on each tab's new focus whatever the zoom is. The zoom governs
-    // the bare Tab walk's framing (marker_walk_frame), and the march is a
-    // different act that composes that walk rather than a Tab press wearing
-    // modifiers — when framing lived inside cycle_marker_focus the march
-    // inherited the walk's policy, which is the shape the required parameter
-    // now forbids.
+    // EACH STEP RUNS PLAIN `c` (architect 2026-09-14, superseding the
+    // 2026-09-04 statement that had both steps pass MarkerLandingFrame::Center
+    // at the standing zoom): the walk step moves the focus and lands the
+    // playhead, and then run_center_command — the `c` body itself, never a
+    // second spelling — sets the working zoom and centres on that focus, so
+    // both tabs end at the working zoom and centred, and the `y` lamp's
+    // zoom-crossing commit (commit_keep_centered_zoom, inside
+    // Viewport::apply_zoom_change) fires on each tab exactly as a `c` press
+    // fires it. Shift+`j` and the A/B audition reach the camera through the
+    // same body. `c` runs whether or not its step landed anything, as the key
+    // would: with no focus it is the zoom and the centre on the playhead.
+    //
+    // THE WALK STEP STATES FollowPage, NOT Center, and that is what keeps the
+    // camera to one recentre per step: `c` opens with its own
+    // jump_playhead_to_focused_marker(Center) and ends with the post-zoom
+    // centre, so a Center here would be a third centring thrown away twice.
+    // FollowPage leaves an on-screen landing's camera untouched and only
+    // pages an offscreen one in (Viewport::follow_scroll_if_needed), which
+    // `c` then recentres. The zoom still does not govern the march's framing:
+    // marker_walk_frame is the bare Tab walk's answer alone, and this arm
+    // states its own.
     //
     // BOTH STEPS FRAME BECAUSE THE VIEWPORT IS SAVED BETWEEN THEM, and that is
     // the whole point of a paired march: switch_active_tab_view_to pushes the
@@ -8359,14 +8376,15 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // (refresh_active_tab_view_from_app) before pulling the target tab's, so
     // the first step's centring is not a camera about to be thrown away — it
     // persists into tab A's saved viewport and is what tab A restores on the
-    // way back. Centring once at the end would silently leave tab A framed on
-    // its old focus. Do not collapse these two into one.
+    // way back. Running `c` once at the end would silently leave tab A framed
+    // on its old focus at its old zoom. Do not collapse these two into one.
     //
     // IT NEVER MEETS A BOUND CELL, because it never runs while grid iterations
     // is lit (architect 2026-09-10): the march is one of delta (a)'s members
     // at the authoring lock's keyboard gate, refused on
-    // kIterationLockCard with the Walk both tabs button greyed beside it
-    // (iteration_lock_key_blocked, above). The
+    // kIterationLockCard (iteration_lock_key_blocked, above) — the other
+    // tab's shifted press, the march's pointer road since 2026-09-14,
+    // dispatching this chord and meeting the same card. The
     // reason is this arm's own
     // middle — switch_active_tab_view_to CLEARS THE SELECTION and re-seats the
     // payload (Selection::seat_focus), so a second step through the purple
@@ -8375,13 +8393,16 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // step's shape. So both steps here are ordinary MARKER steps: with the
     // lamp dark marker_walk_step has no cell arm to take, and with it lit this
     // arm is unreachable.
-    // EACH STEP SNAPS ITS OWN TAB'S FINER ZOOM UP TO WORKING inside
+    // EACH WALK STEP STILL SNAPS ITS OWN TAB'S FINER ZOOM UP TO WORKING inside
     // cycle_marker_focus (Viewport::snap_zoom_to_working_if_finer), the second
-    // after the switch has restored the other tab's level.
+    // after the switch has restored the other tab's level; the `c` behind it
+    // then finds the level already at working whenever that snap fired.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
-        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        cycle_marker_focus(true, MarkerLandingFrame::FollowPage);
+        run_center_command();
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        cycle_marker_focus(true, MarkerLandingFrame::FollowPage);
+        run_center_command();
         target_render.trigger();
         return true;
     }

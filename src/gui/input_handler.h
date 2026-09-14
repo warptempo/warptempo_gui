@@ -2398,11 +2398,13 @@ struct GuiInputHandler {
     // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
     // (repair_last_selected + jump_playhead_to_focused_marker), the history
     // mode's re-expression walks its own diff-flag list and its own focus — so
-    // the FIVE call sites (re-greped 2026-09-02: the live `c` arm, the mode's
+    // the SIX call sites (re-greped 2026-09-14: the live `c` arm, the mode's
     // `c` claim, run_overview_command's already-full-out arm, the A/B
-    // audition's GuiAbAudition::apply_working_zoom, and Shift+`j`'s jump,
-    // which calls it TWICE — once on the tab it leaves and once on the tab it
-    // lands) share one decision instead of
+    // audition's GuiAbAudition::apply_working_zoom, Shift+`j`'s jump, which
+    // calls it TWICE — once on the tab it leaves and once on the tab it
+    // lands — and, since 2026-09-14, the Ctrl+Shift+Tab paired march, which
+    // also calls it twice, once behind each tab's walk step) share one
+    // decision instead of
     // spelling it each. Rationale at the definition.
     // PUBLIC because the audition's caller is another cluster: the audition opens
     // each of its halves with this command on the tab that half plays, run
@@ -2684,7 +2686,9 @@ private:
     // gated it. The zoom governs the BARE Tab walk's framing alone (architect
     // 2026-09-13), so the three bare arms pass
     // marker_walk_frame(app) (app_state.h, its one owner) while the
-    // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::Center outright.
+    // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::FollowPage
+    // outright and frames each step through run_center_command behind it
+    // (architect 2026-09-14, the march runs plain `c`).
     // The parameter carries no default precisely so a future third caller
     // cannot inherit either answer by saying nothing.
     // The WHOLE Tab family comes through here: the three bare chords and the
@@ -2734,8 +2738,9 @@ private:
     // states what ITS caller handed it.
     // Its land is the movement owner; its
     // callers are `c` (and, through `c`, Shift+`j`, the `0` command's second
-    // arm and the A/B audition) and cycle_marker_focus, which the three bare
-    // Tab arms and the Ctrl+Shift+Tab paired march reach.
+    // arm, the A/B audition and the Ctrl+Shift+Tab paired march) and
+    // cycle_marker_focus, which the three bare Tab arms and the march's two
+    // walk steps reach.
     bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
