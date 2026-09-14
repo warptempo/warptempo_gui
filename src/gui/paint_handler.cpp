@@ -961,7 +961,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // joined the zoom group, dissolving two separator-led groups into it; the
     // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
-    // carries every count since — TWENTY-FIVE in SIX since 2026-09-14, the
+    // carries every count since — TWENTY-SIX in SIX since 2026-09-14, the
+    // Ignore Waveform Magnification lamp's arrival hours after the
     // magnification pair's deletion.)
     // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
     // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
@@ -1016,8 +1017,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // to 2026-09-14 — magnify on bare `=` wearing zoom-in-y and reduce on bare
     // `-` wearing zoom-out-y — and left with the setting it stepped (architect
     // approval 2026-09-14), two boxes and two 2px gaps off the walk and no
-    // separator moving. zoom-out-y went with it; zoom-in-y stays for the
-    // per-marker magnification's opener.)
+    // separator moving. zoom-in-y stays for the per-marker magnification's
+    // opener.)
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14), bare `]`, behind
+    // `c` and ahead of Follow: zoom-out-y, the vertical magnifier's minus,
+    // restored the same day it left with the Reduce button — the picture
+    // taken back to level 0. It joins the group rather than opening one: one
+    // box and one 2px gap on the walk, no separator moving.
+    {RedesignButton::IconIgnoreWaveformMagnification, icons::Icon::ZoomOutY},
     // (THE SINGLE-MARKER VERBS opened a separator-led group here from
     // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
     // block on 2026-08-18; their four glyphs went with them and are at the
@@ -2668,7 +2675,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-FIVE members
+    // separator-divided groups of 32x32 buttons — TWENTY-SIX members
     // in SIX groups since 2026-09-14, RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE TWO VIEW LAMPS
@@ -2677,7 +2684,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
-    // until that ruling), then the zoom four (2026-08-12), FOLLOW, which came
+    // until that ruling), then the zoom four (2026-08-12), THE IGNORE WAVEFORM
+    // MAGNIFICATION LAMP behind them (2026-09-14), FOLLOW, which came
     // in from the
     // dissolved mass-marker group the same day, THE KEEP-CENTERED LAMP beside
     // it (2026-08-31, R11), and THE RESTRICT UNDO TO VIEWPORT LAMP closing
@@ -2693,7 +2701,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-five paint on every
+    // hiding/showing icons in top icon row"): all twenty-six paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2709,9 +2717,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
     // minus groups):
-    //   8 + 25·32 + (25−6)·2 + (6−1)·9 = 8 + 800 + 38 + 45 = 891px,
+    //   8 + 26·32 + (26−6)·2 + (6−1)·9 = 8 + 832 + 40 + 45 = 925px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 899.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 933.
+    //
+    // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ARITHMETIC (architect
+    // 2026-09-14, later the same day): ONE BOX and ONE GAP (+34) onto the 891
+    // the magnification pair's deletion had left, no separator moving (the
+    // viewport-class group has nine members), so the row stands at 925
+    // authored px. THE TABLET FIT CEILING GOES 258 → 249: the walk fits while
+    // 925·factor ≤ 2304, 925·2.49 = 2303.25, and 250 overruns by eight device
+    // px. The tablet's first-run 225 clears it by 222 device px (925·2.25 =
+    // 2081.25 against 2304) — 99 of the panel's 1024 logical px at that scale.
     //
     // THE MAGNIFICATION PAIR DELETION'S ARITHMETIC (architect approval
     // 2026-09-14): the row lost TWO BOXES and TWO GAPS — −64 and −4 off the 959
@@ -2783,13 +2800,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // under the crop-at-the-floor allowance at kMinWindowWidthPx, a sanctioned
     // casualty rather than a new rule — and the architect stepped it back to
     // 225 that evening for exactly that crop.)
-    // (Counting the trailing pad the ceiling is 256 rather than 258 — 899 is
-    // the ink plus the pad, 899·2.56 = 2301.4 fits and 257 overruns — but the
+    // (Counting the trailing pad the ceiling is 246 rather than 249 — 933 is
+    // the ink plus the pad, 933·2.46 = 2295.2 fits and 247 overruns — but the
     // pad is ground, not ink, so the icons themselves are the thing measured.)
-    // The laptop clears it outright at 899 of 1920; the retired Pi panel's
-    // 1024 at 100% would have cleared it by 125.
+    // The laptop clears it outright at 933 of 1920; the retired Pi panel's
+    // 1024 at 100% would have cleared it by 91.
     //
-    // (It was 959px at twenty-seven in six groups from the Center on Next
+    // (It was 891px at twenty-five in six groups from the magnification pair's
+    // deletion of 2026-09-14 until the Ignore Waveform Magnification lamp later
+    // that day; 959px at twenty-seven in six groups from the Center on Next
     // Marker deletion of 2026-09-13 until the magnification pair's deletion of
     // 2026-09-14; 993px at twenty-eight in six groups from 2026-09-04 until the
     // Center on Next Marker deletion of 2026-09-13; 918px at twenty-six in
@@ -2813,9 +2832,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE MARGIN IS THE
     // THING TO WATCH on this row: every further member costs 34px and a NEW
     // GROUP costs 41, which at the tablet's 225% is ~77 and ~92 device px
-    // against its panel — and after the magnification pair's deletion there
-    // are 299 of those device px left at 225%, room for three more members, a
-    // fourth one cropping.)
+    // against its panel — and after the Ignore Waveform Magnification lamp
+    // there are 222 of those device px left at 225%, room for two more
+    // members, a third one cropping.)
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -6421,7 +6440,7 @@ void GuiPaintHandler::maybe_rebuild_overview_bar_cache(const GuiRect& lane) {
     // THE KEY IS (width, height, gain profile hash) — the contract is at
     // OverviewBarCache. The profile is an input to these bars' own tip
     // mapping, so a change to it dirties them BY FIELD.
-    const WaveformGainProfileCache& gain = waveform_gain_profile_cached(app);
+    const WaveformGainProfileCache& gain = effective_waveform_gain_profile(app);
     if (overview_bar_cache.rendered &&
         overview_bar_cache.width  == lane.w &&
         overview_bar_cache.height == lane.h &&

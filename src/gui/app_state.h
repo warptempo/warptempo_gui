@@ -537,7 +537,8 @@ struct DragState {
 // not at all"). What it steps is the cell the press landed on, through the
 // arrows' own landing owners: the BASE TEMPO on a warp flag's payload, a BOUND
 // on either column's purple cell, and since 2026-09-14 the MEASURE (a blank or
-// direct integer) and the MAGNIFICATION on a warp flag's blue and green boxes.
+// direct integer) on a warp flag's blue box (the green magnification box is
+// hidden wherever the posture stands, so it has no arm).
 // The target rule is one predicate,
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
@@ -578,15 +579,14 @@ struct ValueDragState {
     // record of what was grabbed, not a defence against a switch.
     char       column  = 'W';
     // Which cell the press landed on — Payload (the base tempo), Lower /
-    // Upper (a bound), or since 2026-09-14 Measure (a steppable measure) and
-    // Magnification — value_drag_target decides which it may be.
+    // Upper (a bound), or since 2026-09-14 Measure (a steppable measure) —
+    // value_drag_target decides which it may be.
     MarkerCell cell    = MarkerCell::Payload;
     int        press_y = 0;    // window px: the travel is measured from here
     // The value the press found, in the cell's own domain: authored CENTS on
     // the payload and on a warp bound, HOPS on a phase-reset bound, the
     // MEASURE's integer (0 for a BLANK, so the first motion lands measure 1
-    // through measure_step_landing) and the MAGNIFICATION digit (the own
-    // digit, else the RESOLVED one — magnification_step_start). ON A PASS
+    // through measure_step_landing). ON A PASS
     // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
     // "the pass inherits whatever it was and then applies on up and down"):
     // the seed comes from warp_tempo_step_start (warpmarkers_ops.h), the very
@@ -2008,8 +2008,8 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-09 against kDropdownMenus and the chord table (51 chord
-// rows + 3 anchors = kRedesignButtonCount — re-counted 2026-09-14: 49 + 3);
+// re-greped 2026-09-09 against kDropdownMenus and the chord table (50 chord
+// rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-14);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -2275,6 +2275,18 @@ enum class RedesignButton {
     // of its rows a second path to a command that already had one — so these
     // four are the zoom commands' pointer home outright now.
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14) — the `]` lamp,
+    // right after the working-zoom center and ahead of Follow, wearing
+    // zoom-out-y (the vertical magnifier's minus). A viewport-class session
+    // posture: lit, every waveform picture renders at level 0 whatever the
+    // warp markers' magnifications resolve to (AppState::
+    // ignore_waveform_magnification). ITS LIT FACE READS THE FORCED ANSWER,
+    // waveform_magnification_ignored, so in target view on the warp column and
+    // in the `h` view — where the picture always ignores magnification — it is
+    // LIT AND GREYED whatever the bit (ignore_waveform_magnification_applies,
+    // the keep-centered lamp's T+W shape), and bare `]` cards there. Live on a
+    // locked tab and under the grid-iterations lock (a view posture).
+    IconIgnoreWaveformMagnification,
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
     // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
     // architect retired the setting it stepped (architect approval 2026-09-14):
@@ -2340,10 +2352,12 @@ enum class RedesignButton {
     // step whose restore would move the viewport refuses instead, cards, and
     // leaves both stacks exactly as they were.
     //
-    // SESSION-ONLY, unlike every other lamp in this group: the bit is
-    // AppState::restrict_undo_to_viewport, default OFF at every launch, in no
-    // settings file and in no vocabulary. It is a working posture — "hold my
-    // place while I take these back" — not a property of the piece.
+    // A PER-PROJECT SESSION POSTURE like every other lamp in this group: the
+    // bit is AppState::restrict_undo_to_viewport, DARK AT EVERY PROJECT OPEN
+    // (architect 2026-09-14, with the other lamps — the fresh per-project
+    // AppState is the reset), in no settings file and in no vocabulary. It is
+    // a working posture — "hold my place while I take these back" — not a
+    // property of the piece.
     //
     // LIVE ON A LOCKED TAB (bare `z` authors nothing; the lamp's own chord is
     // on the lock's allowlist even though the undo pair it governs is not) and
@@ -2963,13 +2977,18 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SIX in row 1, two
-// in row 3, TWENTY-FIVE in row 4 and NINETEEN in the bottom row — 52. Of
+// in row 3, TWENTY-SIX in row 4 and NINETEEN in the bottom row — 53. Of
 // those,
-// FORTY-NINE carry a chord in kToolbarChords and THREE are the dropdown
+// FIFTY carry a chord in kToolbarChords and THREE are the dropdown
 // anchors (File, Edit and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 53 SINCE 2026-09-14'S IGNORE WAVEFORM MAGNIFICATION LAMP (architect
+// 2026-09-14, later still): one pure chord addition inside an existing group,
+// the icon row's viewport-class group gaining IconIgnoreWaveformMagnification
+// on bare `]` behind `c` — 52 + 1, split 49 + 3 to 50 + 3, one box and one 2px
+// gap on the icon row's walk and no separator or group boundary moved.
 // 52 SINCE 2026-09-14'S MAGNIFICATION BUTTON (architect 2026-09-14, later
 // the same day): one pure chord addition inside an existing group, the bottom
 // row's verb group gaining IconMarkerMagnification on Ctrl+/ behind the
@@ -3153,7 +3172,9 @@ enum class RedesignButton {
 // 53 = 54 − THE CENTER ON NEXT MARKER LAMP (architect 2026-09-13): the walk's
 // framing became a function of the zoom at the landing (marker_walk_frame),
 // so the box and bare `n` leave together — the split going 51 + 3 to 50 + 3.
-inline constexpr int kRedesignButtonCount = 52;
+// 53 = 52 + THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-14),
+// the record at the roster's head above.
+inline constexpr int kRedesignButtonCount = 53;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3228,6 +3249,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
+        case RedesignButton::IconIgnoreWaveformMagnification:
         case RedesignButton::IconFollow:
         case RedesignButton::IconKeepCenteredWhileNudging:
         case RedesignButton::IconBpm:
@@ -5027,6 +5049,18 @@ struct AppState {
     // product asks this bit: it does not reach the camera, the walk or any
     // other act — it only decides whether one step runs at all.
     bool    restrict_undo_to_viewport = false;
+
+    // IGNORE WAVEFORM MAGNIFICATION — the lamp on bare `]` (architect
+    // 2026-09-14). A session posture in this family: per-project, DARK AT EVERY
+    // PROJECT OPEN (this AppState is built fresh per project, so the default
+    // IS the reset), never serialized, never in the undo domain, untouched by
+    // `'`. Its one writer is GuiInputHandler::set_ignore_waveform_magnification.
+    // Lit, every waveform picture renders at level 0 whatever the warp
+    // markers' magnifications resolve to. THE BIT IS NOT THE ANSWER: the
+    // picture reads waveform_magnification_ignored, which also forces the
+    // ignore in target view on the warp column and in the `h` view, and the
+    // bit keeps its own state underneath so leaving those views restores it.
+    bool    ignore_waveform_magnification = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
@@ -10684,6 +10718,50 @@ inline bool keep_centered_while_nudging_applies(const AppState& a) {
 inline constexpr const char* kKeepCenteredInertCard =
     "Nudging does not recenter in target view";
 
+// THE IGNORE WAVEFORM MAGNIFICATION LAMP'S APPLICABILITY (architect
+// 2026-09-14), the keep-centered lamp's shape: the lamp means something
+// everywhere but TARGET VIEW ON THE WARP COLUMN and the `h` VIEW, where the
+// picture ignores magnification whatever the bit says (below). There the
+// lamp is LIT AND GREYED and bare `]` cards kIgnoreMagnificationForcedCard.
+// Target view on the warp column is !active_column_authoring_allowed, read
+// rather than restated. TWO READERS: the button's face
+// (redesign_button_enabled) and bare `]`'s refusal (input_key_dispatch.cpp).
+inline bool ignore_waveform_magnification_applies(const AppState& a) {
+    return active_column_authoring_allowed(a) && !a.history_mode.active;
+}
+
+// DOES THE WAVEFORM PICTURE IGNORE MAGNIFICATION RIGHT NOW — ONE predicate
+// (architect 2026-09-14): the lamp's bit, or a view where the lamp does not
+// apply (above). READERS: effective_waveform_gain_profile
+// (warp_frame_map_view.h), which every waveform picture takes its gain from
+// — the plate's render inputs, the overview lane's bar cache and the gain
+// kick's hash — and the lamp's lit face (redesign_button_selected).
+inline bool waveform_magnification_ignored(const AppState& a) {
+    return a.ignore_waveform_magnification ||
+           !ignore_waveform_magnification_applies(a);
+}
+
+// Bare `]`'s refusal where the ignore is forced (above): one clause, sentence
+// case, the key's card while the greyed button's lift says nothing.
+inline constexpr const char* kIgnoreMagnificationForcedCard =
+    "Waveform magnification is always ignored in this view";
+
+// IS THE MAGNIFICATION FIELD HIDDEN (architect 2026-09-14: "prevent editing a
+// field we can't see") — TARGET VIEW ON THE WARP COLUMN, where the picture
+// ignores magnification, so the green box would name a gain nobody sees. The
+// `h` view is not a term: its lane paints diff flags, which carry no box. Hidden
+// means ABSENT: the flag pass paints no box and publishes no Magnification
+// boundary (render_flags), the open editor's riding run carries none
+// (render_flag_editor_box), so no hit, cell, wheel or drag reaches it; Ctrl+/
+// and the Magnification button refuse on kMagnificationHiddenCard
+// (marker_magnification_edit_refusal); and the S/T switch into target view
+// puts an addressed Magnification cell back on the Payload
+// (switch_active_audio_view_to) while its editor teardown closes a standing
+// magnification editor, so bare Up/Down cannot step it either.
+inline bool marker_magnification_field_hidden(const AppState& a) {
+    return !active_column_authoring_allowed(a);
+}
+
 // WHERE A Left / Right STEP WOULD LAND THE CURSOR in the WAVEFORM lane —
 // `delta_px` painted columns away (±1 bare, ±3 shifted, ±10 with ctrl since
 // 2026-08-31, the step ladder at arrow_step_magnitude in gui_input.h; it has
@@ -10897,13 +10975,19 @@ inline bool marker_measure_edit_actionable(const AppState& app) {
 // measure's shape, ONE OWNER for Ctrl+/ (the card), the Magnification
 // button's face (the grey) and Return's magnification arm
 // (flag_editor_open_actionable): the column first, phase resets carrying no
-// magnification (PhaseResetMarker), then the focus. nullptr is the open.
+// magnification (PhaseResetMarker), then target view, where the field is
+// hidden (architect 2026-09-14), then the focus. nullptr is the open.
 inline constexpr const char* kMagnificationNoFocusCard =
     "Select a marker to edit its magnification";
 inline constexpr const char* kMagnificationWarpOnlyCard =
     "Magnification is set on warp markers";
+inline constexpr const char* kMagnificationHiddenCard =
+    "Magnification is hidden in target view";
 inline const char* marker_magnification_edit_refusal(const AppState& app) {
     if (app.active_markers_view != 'W') return kMagnificationWarpOnlyCard;
+    // The field is hidden in target view on this column (architect
+    // 2026-09-14, marker_magnification_field_hidden).
+    if (marker_magnification_field_hidden(app)) return kMagnificationHiddenCard;
     if (!marker_focus_standing(app))    return kMagnificationNoFocusCard;
     return nullptr;
 }
@@ -11823,7 +11907,8 @@ inline int magnification_step_start(const std::vector<GuiWarpMarker>& mv,
 }
 
 // WHERE ONE MAGNIFICATION STEP LANDS — THE ONE LANDING OWNER, shared by the
-// key, the drag and the wheel: a clamp into [0, kMarkerMagnificationMax]
+// key and the wheel (the value drag has no magnification arm since the box
+// went hidden in target view): a clamp into [0, kMarkerMagnificationMax]
 // (marker_magnification.h, the range's one owner), so Down at 0 and Up at the
 // max land where they stand — the walls, silent.
 inline int magnification_step_landing(int start, int64_t delta) {
@@ -11961,9 +12046,11 @@ inline bool value_drag_posture(const AppState& a) {
 // on read_only_key_blocked's allowlist, so the keyboard refuses a bound step
 // on a locked tab and the pointer refuses it here.
 //
-// THE MEASURE AND MAGNIFICATION ARMS (2026-09-14) admit a steppable measure
-// (blank or a direct integer) and every magnification, on the warp column,
-// under neither lock — the arrows' own admissions.
+// THE MEASURE ARM (2026-09-14) admits a steppable measure (blank or a direct
+// integer) on the warp column, under neither lock — the arrows' own admission.
+// THERE IS NO MAGNIFICATION ARM (architect 2026-09-14): the posture stands in
+// target view alone, where the magnification box is hidden
+// (marker_magnification_field_hidden), so no press can land on the field.
 //
 // EVERYTHING ELSE IS FALSE: an offset measure (the arrows card it and the
 // pointer says it in silence), a phase reset's payload, a ref, a collapse
@@ -11995,23 +12082,22 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
     case MarkerCell::Upper:
         if (active_view_state(a).read_only) return false;
         return marker_paints_iter_cells(a, column, idx);
-    case MarkerCell::Measure:
-    case MarkerCell::Magnification: {
-        // THE MEASURE AND THE MAGNIFICATION (architect 2026-09-14): the value
-        // step's two newer axes, where the posture already stands (which is
-        // T+W in effect — a phase reset carries neither field). Both locks
-        // refuse as they refuse the payload, each field being serialized
-        // content the step records. The measure asks the arrows' kind owner
-        // about THIS marker (an offset has no number to step); the
-        // magnification has no kind refusal at all.
+    case MarkerCell::Measure: {
+        // THE MEASURE (architect 2026-09-14): the value step's newer axis,
+        // where the posture already stands (which is T+W in effect — a phase
+        // reset carries no measure). Both locks refuse as they refuse the
+        // payload, the field being serialized content the step records, and
+        // the arrows' kind owner is asked about THIS marker (an offset has no
+        // number to step).
         if (column != 'W') return false;
         if (authoring_locked(a)) return false;
         const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return false;
-        if (cell == MarkerCell::Measure)
-            return measure_step_kind_refusal_for(a, idx) == nullptr;
-        return true;
+        return measure_step_kind_refusal_for(a, idx) == nullptr;
     }
+    case MarkerCell::Magnification:
+        // Hidden wherever the posture stands (the header above).
+        return false;
     }
     return false;
 }
@@ -14085,6 +14171,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // it live in both audio views.
         case RedesignButton::IconKeepCenteredWhileNudging:
             return keep_centered_while_nudging_applies(a);
+        // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-14), the
+        // keep-centered lamp's shape: greyed where the ignore is forced —
+        // target view on the warp column and the `h` view — the key's refusal
+        // reading the same predicate; the lit face reads the forced answer, so
+        // there it paints lit AND dimmed.
+        case RedesignButton::IconIgnoreWaveformMagnification:
+            return ignore_waveform_magnification_applies(a);
         // THE RESTRICT-UNDO-TO-VIEWPORT LAMP MIRRORS NOTHING (2026-09-04),
         // the third on this answer: bare `z` toggles the posture in either
         // direction on any loaded piece and the lock admits it — the lamp
@@ -15241,6 +15334,12 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // nudge's recenter cannot drift — whoever wrote it: bare `y`, the zoom
         // commit or the open's seed (set_keep_centered_while_nudging).
         case RedesignButton::IconKeepCenteredWhileNudging: return a.keep_centered_while_nudging;
+        // The Ignore Waveform Magnification lamp (2026-09-14) reads the FORCED
+        // answer rather than its bit (waveform_magnification_ignored), so the
+        // face says what the picture is doing — lit in target view on the warp
+        // column and in the `h` view whatever the bit holds.
+        case RedesignButton::IconIgnoreWaveformMagnification:
+            return waveform_magnification_ignored(a);
         // The restrict-undo-to-viewport lamp (2026-09-04): the same toggle
         // pattern once more, reading the live bit bare `z` flips, so the lit
         // face and the refusal cannot drift.
@@ -15898,6 +15997,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconFollow: return {"Toggle Follow (F)", nullptr};
         case RedesignButton::IconKeepCenteredWhileNudging:
             return {"Toggle Keep Centered While Nudging (Y)", nullptr};
+        case RedesignButton::IconIgnoreWaveformMagnification:
+            return {"Toggle Ignore Waveform Magnification (])", nullptr};
         // THE UNDO POSTURE'S LAMP (2026-09-04), one line: bare `z` toggles and
         // has no shifted twin. It NAMES THE TOGGLE like the two above — the
         // state is the lamp's to tell — and it names the SWITCH, never what
@@ -17111,20 +17212,17 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // from the press through the crossing and on to the release with no gap.)
 //
 // AND ONLY ON THE CELLS THAT CAN MOVE A MAP (architect 2026-09-14): the
-// value drag's MEASURE and MAGNIFICATION arms are NOT members. Neither field is
-// a map input, so their per-motion writes move no target map hash and there is
-// nothing to protect the screen from — and the magnification SHOULD reach the
-// plate live, its whole point being the picture's gain: the motion arm kicks a
-// synchronous rebuild per step (value_drag.cpp), and a frozen basis would hold
-// that picture's staged promote and worker dispatch back until the release.
-// The PAYLOAD (a tempo, which moves the target map) and the two BOUND cells
-// keep the freeze as they had it.
+// value drag's MEASURE arm is NOT a member. The field is no map input, so its
+// per-motion writes move no target map hash and there is nothing to protect
+// the screen from. The PAYLOAD (a tempo, which moves the target map) and the
+// two BOUND cells keep the freeze as they had it. (A MAGNIFICATION arm stood
+// beside the measure's here for its first hours; the drag has none since the
+// box went hidden in target view, value_drag_target.)
 inline bool displayed_basis_frozen(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
            (app.value_drag.active &&
-            app.value_drag.cell != MarkerCell::Measure &&
-            app.value_drag.cell != MarkerCell::Magnification) ||
+            app.value_drag.cell != MarkerCell::Measure) ||
            app.pending_marker_press.active ||
            app.pending_trim_drag.active;
 }

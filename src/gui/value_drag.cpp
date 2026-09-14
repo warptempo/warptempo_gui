@@ -75,21 +75,17 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
         // Ctrl+Q hatch, which force-ends this gesture through its own commit).
         // The commit pushes it iff the value actually moved.
         st.pre_drag_snapshot = mv;
-    } else if (cell == MarkerCell::Measure ||
-               cell == MarkerCell::Magnification) {
-        // THE MEASURE AND MAGNIFICATION ARMS (architect 2026-09-14), seeded by
-        // the arrows' own start owners (app_state.h's value-step block): the
-        // measure's integer, 0 for a blank (a blank counts as 0, so the drag's
-        // first motion lands where that many single steps would),
-        // and the magnification's own digit, else the one it RESOLVES to (the
-        // first write freezing it to own). Both fields are serialized content,
-        // so the snapshot is captured here for the commit's one entry.
+    } else if (cell == MarkerCell::Measure) {
+        // THE MEASURE ARM (architect 2026-09-14), seeded by the arrows' own
+        // start owner (app_state.h's value-step block): the measure's integer,
+        // 0 for a blank (a blank counts as 0, so the drag's first motion lands
+        // where that many single steps would). The field is serialized
+        // content, so the snapshot is captured here for the commit's one
+        // entry. (There is no magnification arm: value_drag_target says why.)
         const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
         if (marker >= static_cast<int>(mv.size())) return false;
         st.start_value =
-            cell == MarkerCell::Measure
-                ? measure_step_start(mv[static_cast<size_t>(marker)].measure)
-                : magnification_step_start(mv, marker);
+            measure_step_start(mv[static_cast<size_t>(marker)].measure);
         st.pre_drag_snapshot = mv;
     } else if (column == 'P') {
         const std::vector<GuiPhaseResetMarker>& pv =
@@ -192,28 +188,6 @@ void ValueDragOps::apply_motion(int mouse_y) {
         if (spelled == now) return;
         if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx))
             m->measure = std::move(spelled);
-    } else if (app.value_drag.cell == MarkerCell::Magnification) {
-        // THE MAGNIFICATION WRITE, through its landing owner from the value
-        // standing now (the resolved digit while the field is still blank, so
-        // the first write freezes it to own). THE PICTURE FOLLOWS LIVE: a
-        // magnification drag is NOT in displayed_basis_frozen (the field moves
-        // no map), so the synchronous kick below renders the new gain into the
-        // plate in the frame the green box moves — the step's own road — and
-        // only when the resolved profile changed (a disabled marker's box or a
-        // coincident loser's moves the field and not the picture).
-        const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
-        const std::optional<uint8_t>& own = mv[static_cast<size_t>(idx)].magnification;
-        const int cur = magnification_step_start(mv, idx);
-        const uint8_t landed = static_cast<uint8_t>(
-            magnification_step_landing(cur, target - cur));
-        if (own && *own == landed) return;
-        const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
-        if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx))
-            m->magnification = landed;
-        viewport.invalidate_top_strip();
-        viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
-        return;
     } else if (app.value_drag.column == 'P') {
         const std::vector<GuiPhaseResetMarker>& pv =
             app.phaseresetmarkers.markers();
@@ -284,13 +258,12 @@ void ValueDragOps::commit() {
     // simply ends.
     if (st.cell == MarkerCell::Lower || st.cell == MarkerCell::Upper) return;
 
-    // THE MEASURE AND MAGNIFICATION ARMS' ONE ENTRY (2026-09-14), gated on the
-    // FIELD'S NET CHANGE against the press snapshot, fenced from the tap window
-    // by push_undo_warp's own stamp clear exactly as the tempo arm is (below).
-    // NO TEMPO TAIL: neither field is a map input, so there is no re-warp, no
-    // re-land and no render trigger; the plate already carries a dragged
-    // magnification (the motion arm kicked it live wherever the profile moved).
-    if (st.cell == MarkerCell::Measure || st.cell == MarkerCell::Magnification) {
+    // THE MEASURE ARM'S ONE ENTRY (2026-09-14), gated on the FIELD'S NET
+    // CHANGE against the press snapshot, fenced from the tap window by
+    // push_undo_warp's own stamp clear exactly as the tempo arm is (below).
+    // NO TEMPO TAIL: the field is no map input, so there is no re-warp, no
+    // re-land and no render trigger.
+    if (st.cell == MarkerCell::Measure) {
         const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
         if (st.marker < 0 || st.marker >= static_cast<int>(mv.size()) ||
             st.marker >= static_cast<int>(st.pre_drag_snapshot.size()))
@@ -298,10 +271,7 @@ void ValueDragOps::commit() {
         const GuiWarpMarker& now = mv[static_cast<size_t>(st.marker)];
         const GuiWarpMarker& was =
             st.pre_drag_snapshot[static_cast<size_t>(st.marker)];
-        const bool changed = st.cell == MarkerCell::Measure
-                                 ? now.measure != was.measure
-                                 : now.magnification != was.magnification;
-        if (!changed) return;
+        if (now.measure == was.measure) return;
         undo.push_undo_warp(std::move(st.pre_drag_snapshot));
         undo.recompute_dirty();
         return;

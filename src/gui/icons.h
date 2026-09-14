@@ -173,6 +173,10 @@ enum class Icon {
     // and its asset are deleted with the button, no button being left that
     // wears them — edit-comment's own precedent.)
     ZoomInY,             // IconMarkerMagnification's glyph (2026-09-14)
+    // ZOOM-OUT-Y, zoom-in-y's twin (the ruler beside a minus): deleted with the
+    // retired Reduce button on 2026-09-14 and restored the same day for the
+    // Ignore Waveform Magnification lamp (architect 2026-09-14).
+    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `]`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -621,7 +625,10 @@ enum class Icon {
 // button that wore it (architect approval 2026-09-14); zoom-in-y stays, worn
 // by the Marker Magnification button. A re-COUNT of the enumerators, the
 // deletion having left this number at 57 until the constant was retold.
-inline constexpr int kIconCount = 56;
+// 57 SINCE 2026-09-14, LATER THE SAME DAY: 56 + zoom-out-y, restored with its
+// def and asset for the Ignore Waveform Magnification lamp (architect
+// 2026-09-14). A re-COUNT of the enumerators.
+inline constexpr int kIconCount = 57;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

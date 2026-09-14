@@ -168,8 +168,8 @@ struct WaveformCache {
     // what the job takes.)
     int       fp_inset_px = -1;
     // THE GAIN PROFILE'S HASH the live pixels were rendered under
-    // (waveform_gain_profile_cached — the per-section magnification resolved
-    // from the warp markers). A FINGERPRINT FIELD in its own right, keyed
+    // (effective_waveform_gain_profile — the per-section magnification resolved
+    // from the warp markers, or the empty profile while it is ignored). A FINGERPRINT FIELD in its own right, keyed
     // directly like the inset: the profile is an input to the tip mapping
     // alone, so nothing else about the plate would move if it changed by
     // itself (a magnification edit moves no marker and no map), and without it
@@ -486,7 +486,7 @@ struct FlagCache {
 // 2026-09-14, replacing the retired setting's level): the gain is a function of
 // source time resolved from the warp markers, on every waveform picture — this
 // 24px band is where a quiet passage disappears first, and the lane is source-
-// domain, so it takes the plate's own profile (waveform_gain_profile_cached)
+// domain, so it takes the plate's own profile (effective_waveform_gain_profile)
 // with no view term. It is an input to these bars' tip mapping exactly as it is
 // to the plate's, so it is keyed BY FIELD beside the two dimensions rather than
 // left to ride one of them. PIXELS ONLY: the gain scales this picture and
@@ -755,7 +755,7 @@ private:
         // field — the plate's only non-area geometry, so nothing else would
         // move if it changed alone.
         int      inset_px      = 0;
-        // The waveform PICTURE's gain profile (waveform_gain_profile_cached,
+        // The waveform PICTURE's gain profile (effective_waveform_gain_profile,
         // an owned snapshot for the job) and its hash. The profile is the
         // render input and the HASH the fingerprint field, exactly like
         // inset_px above: it feeds the tip mapping and nothing else, so nothing
@@ -832,7 +832,7 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-five
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-six
     // view/mode/action buttons —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout,
     // the ITERATION PAIR came back from the menu row on 2026-09-04

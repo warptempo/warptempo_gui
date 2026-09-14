@@ -2301,7 +2301,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // two drags on the waveform overlay plus the SWEEP that writes it in one
     // stroke; trim is outside the selection system, so there is no Delete arm.
     // The bracket carries no other binding: Ctrl+[ and every alt form are
-    // unbound, and BracketRight is unbound outright.
+    // unbound. BARE BracketRight binds the Ignore Waveform Magnification lamp
+    // (architect 2026-09-14, handle_plain_bare_keys), its every modified form
+    // unbound.
     if (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft) {
         handle_toggle_trim_region();
         return;
@@ -3840,6 +3842,17 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 
         app.active_audio_view = 'T';
         going_to_target = true;
+        // THE MAGNIFICATION FIELD IS HIDDEN IN TARGET VIEW ON THE WARP COLUMN
+        // (architect 2026-09-14, marker_magnification_field_hidden), so an
+        // addressed Magnification cell goes back on the Payload here, at the
+        // one S/T writer, and bare Up/Down can never step a box nobody sees. A
+        // standing magnification editor is already closed by the teardown
+        // above. The W/P writer needs no twin: its selection clear seats the
+        // Payload (Selection::seat_focus), and nothing addresses the green box
+        // on the phase column.
+        if (marker_magnification_field_hidden(app) &&
+            app.addressed_cell == MarkerCell::Magnification)
+            app.addressed_cell = MarkerCell::Payload;
     } else {
         // T → S: inverse-translate the playhead.
         new_playhead_d = map_target_to_source(
@@ -4233,11 +4246,20 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
 }
 
 void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
-    // The contract — sole writer, session-only, history-less, no damage — is at
+    // The contract — sole writer, per-project, history-less, no damage — is at
     // the declaration (input_handler.h), which also states the scope: this bit
     // is read by undo_restore_within_viewport's caller and by nothing else. The
     // ONE caller is the bare-`z` arm, which the icon row's button reaches by
     // synthesizing that press, and there is nothing else: there is no settings
     // key to commit it from.
     app.restrict_undo_to_viewport = desired;
+}
+
+void GuiInputHandler::set_ignore_waveform_magnification(bool desired) {
+    // The contract — sole writer, per-project, history-less, the gain kick —
+    // is at the declaration (input_handler.h). The ONE caller is the bare-`]`
+    // arm, which the icon row's button reaches by synthesizing that press.
+    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
+    app.ignore_waveform_magnification = desired;
+    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
 }

@@ -277,6 +277,14 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Minus,  false, false, false, false, true},                            // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-14) — bare `]`, a
+    // TOGGLE with a lamp, right after `c` and ahead of Follow. Live on a
+    // locked tab and under the grid-iterations lock (a view posture on both
+    // allowlists); in the `h` view the chord is admitted and the face greys
+    // lit on the lamp's own applicability, as in target view on the warp
+    // column (ignore_waveform_magnification_applies).
+    {RedesignButton::IconIgnoreWaveformMagnification,
+     GuiKeys::BracketRight, false, false, false, false, true},                     // bare ]
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain is a per-section profile resolved from the
@@ -716,8 +724,13 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 48
-// rows against the roster's 51 since 2026-09-14'S MAGNIFICATION PAIR DELETION
+// every RedesignButton but the THREE menu anchors carries a chord here — 50
+// rows against the roster's 53 since 2026-09-14'S IGNORE WAVEFORM
+// MAGNIFICATION LAMP (architect 2026-09-14), bare `]`'s row joining the zoom
+// group behind `c` (a chord, so the pair moved together; a re-COUNT of the
+// rows, the magnification button's bottom-row row on Ctrl+/ earlier that day
+// having moved both numbers to 49 against 52 without a line here). It was 48
+// rows against 51 from 2026-09-14'S MAGNIFICATION PAIR DELETION
 // (architect approval 2026-09-14), which took bare `=`'s and bare `-`'s
 // Magnify / Reduce rows out with their buttons (chords, so the pairs moved
 // together; the bare keys went back to the zoom pair's own rows). It was 50
@@ -7802,7 +7815,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-five — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-six — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
 // eighteen since 2026-08-29: 51, the enum's
 // own count at kRedesignButtonCount — the stash is

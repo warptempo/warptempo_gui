@@ -736,7 +736,7 @@ void Viewport::center_viewport_on_playhead() {
 }
 
 uint64_t Viewport::waveform_gain_hash() const {
-    return waveform_gain_profile_cached(app).hash;
+    return effective_waveform_gain_profile(app).hash;
 }
 
 void Viewport::kick_waveform_sync_if_gain_changed(uint64_t prior_hash) {

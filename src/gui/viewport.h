@@ -117,14 +117,19 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: THREE MEMBERS since 2026-09-14, every road that
-    //    writes a warp marker's magnification — the MAGNIFICATION EDITOR'S
-    //    COMMIT (GuiFlagEditor::commit_magnification_edit), the VALUE STEP
+    //  - THE PLATE'S OWN GAIN: THREE MEMBERS since 2026-09-14 — the two roads
+    //    that write a warp marker's magnification, the MAGNIFICATION EDITOR'S
+    //    COMMIT (GuiFlagEditor::commit_magnification_edit) and the VALUE STEP
     //    (GuiWarpMarkersOps::adjust_magnification_step — bare Up/Down and the
-    //    plain wheel over the box) and the VALUE DRAG'S magnification motion
-    //    (ValueDragOps::apply_motion, live per step) — and ALL THREE kick
-    //    through kick_waveform_sync_if_gain_changed below, never this function
-    //    direct, so a write the resolved profile cannot see renders nothing.
+    //    plain wheel over the box), plus the IGNORE WAVEFORM MAGNIFICATION
+    //    lamp's setter (GuiInputHandler::set_ignore_waveform_magnification,
+    //    bare `]`) — and ALL THREE kick through
+    //    kick_waveform_sync_if_gain_changed below, never this function direct,
+    //    so a write the EFFECTIVE profile cannot see renders nothing. (The value
+    //    drag's magnification motion was a fourth for its first hours; the drag
+    //    lost that arm when the box went hidden in target view. The forced
+    //    ignore's other two terms — target view on the warp column and the `h`
+    //    view — change with a view switch, whose own kick below carries them.)
     //    Its one site from 2026-08-26 was the retired magnification level
     //    applier (architect approval 2026-09-14). The gain is a PER-SECTION
     //    PROFILE resolved from the warp markers now
@@ -230,14 +235,16 @@ struct Viewport {
 
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
     // inventory above): a magnification write kicks the synchronous rebuild
-    // ONLY WHEN THE RESOLVED GAIN PROFILE ACTUALLY CHANGED across it. The
+    // ONLY WHEN THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile —
+    // the resolved one, or the empty one while the picture ignores it)
+    // ACTUALLY CHANGED across it. The
     // caller captures `waveform_gain_hash()` BEFORE its store write and hands
     // it to `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives
     // here and nowhere else. A write the picture cannot see — a disabled
     // marker's field, a coincident loser's, a blank frozen to the digit it
-    // already inherited — changes the field and not the profile, and must not
-    // drain the worker and re-render the whole plate (on the value drag's
-    // cadence least of all). The caller's top-strip repaint, undo and dirty
+    // already inherited, any write while magnification is ignored — changes
+    // the field and not the profile, and must not drain the worker and
+    // re-render the whole plate. The caller's top-strip repaint, undo and dirty
     // work are the authored field's and stay unconditional.
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);

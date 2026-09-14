@@ -174,6 +174,20 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
     return c;
 }
 
+const WaveformGainProfileCache& effective_waveform_gain_profile(
+    const AppState& app) {
+    if (waveform_magnification_ignored(app)) {
+        static const WaveformGainProfileCache kIgnored = [] {
+            WaveformGainProfileCache c;
+            c.valid = true;
+            c.hash  = waveform_gain_profile_hash(c.profile);
+            return c;
+        }();
+        return kIgnored;
+    }
+    return waveform_gain_profile_cached(app);
+}
+
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app) {
     PhaseResetRedFlagCache& c = app.phase_reset_red_flag_cache;

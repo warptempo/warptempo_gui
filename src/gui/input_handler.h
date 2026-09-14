@@ -1534,7 +1534,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-five (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-six (the
     // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
     // back from the menu row since 2026-09-04, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
@@ -3993,9 +3993,9 @@ private:
     // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE SETTER (architect 2026-09-04) —
     // set_tab_read_only's shape with ONE road: bare `z`, which the
     // icon row's own button reaches by synthesizing that press. There is no
-    // settings-editor road, because there is no key: the bit is SESSION-ONLY
-    // (AppState::restrict_undo_to_viewport), off at every launch, in no
-    // sidecar and in no vocabulary.
+    // settings-editor road, because there is no key: the bit is a per-project
+    // SESSION POSTURE (AppState::restrict_undo_to_viewport), dark at every
+    // project open, in no sidecar and in no vocabulary.
     //
     // WHAT THE BIT GOVERNS IS UNDO AND REDO AND NOTHING ELSE. Lit, a step whose
     // restore would move the viewport refuses, cards and leaves both stacks
@@ -4012,6 +4012,19 @@ private:
     // toggle either way — the bit is read at the NEXT Ctrl+Z, so lighting it
     // changes nothing already on screen.
     void set_restrict_undo_to_viewport(bool desired);
+
+    // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect
+    // 2026-09-14) — the restrict-undo lamp's shape with ONE road: bare `]`,
+    // which the icon row's button reaches by synthesizing that press. The bit
+    // (AppState::ignore_waveform_magnification) is a per-project session
+    // posture, dark at every project open, never serialized and never in the
+    // undo domain. Writes the field, then kicks the synchronous rebuild iff
+    // the EFFECTIVE gain profile changed across the write
+    // (Viewport::kick_waveform_sync_if_gain_changed), so the picture lands in
+    // the press's own frame and a write that changes nothing visible — a
+    // forced view, or a piece with no magnification — renders nothing. The
+    // lamp's face rides the per-tick comparator. History-less.
+    void set_ignore_waveform_magnification(bool desired);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare

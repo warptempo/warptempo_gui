@@ -182,11 +182,12 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // Keyed on the warp store generation alone — the profile is a pure function of
 // the store's frames, magnifications, labels and disabled bits, and every
 // mutation of any of them bumps the generation (undo, redo, `'`, the load and
-// every authoring act included). Its readers are the two waveform pictures:
-// the plate's render inputs (compute_waveform_render_inputs, which copies the
-// profile into the job as it copies the warp map) and the overview lane's bar
-// cache (maybe_rebuild_overview_bar_cache). THE `h` VIEW'S PLATE IS THE LIVE
-// PLATE, so it reads this live store's profile, never the viewed checkpoint's.
+// every authoring act included). Its ONE reader is
+// effective_waveform_gain_profile (below), which the two waveform pictures
+// take — the plate's render inputs (compute_waveform_render_inputs, which
+// copies the profile into the job as it copies the warp map) and the overview
+// lane's bar cache (maybe_rebuild_overview_bar_cache). The `h` view never
+// reads a viewed checkpoint's profile: it forces the ignore.
 // The HASH alone keys both picture caches, so a gain-only change re-renders
 // through the fingerprint without touching the displayed basis.
 struct WaveformGainProfileCache {
@@ -196,6 +197,21 @@ struct WaveformGainProfileCache {
     uint64_t            hash        = 0;
 };
 const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app);
+
+// THE PROFILE EVERY WAVEFORM PICTURE TAKES (architect 2026-09-14): the live
+// resolved profile above, or — while waveform_magnification_ignored
+// (app_state.h: the Ignore Waveform Magnification lamp, target view on the
+// warp column, the `h` view) — the EMPTY profile, level 0 everywhere, hash 0.
+// ONE place, so the picture caches' existing hash keys re-render on every
+// lamp write and view switch that changes the answer with no per-caller code
+// (a live profile with no breakpoints is hash 0 as well, and there the two
+// answers are rightly the same picture). READERS: the plate's render inputs
+// (compute_waveform_render_inputs), the overview lane's bar cache
+// (maybe_rebuild_overview_bar_cache) and the gain kick's hash
+// (Viewport::waveform_gain_hash). waveform_gain_profile_cached keeps its one
+// other job, the resolved profile's memo.
+const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app);
 
 // Memoized target-view maps for states that are NOT live — the maps

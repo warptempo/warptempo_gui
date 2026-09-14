@@ -657,6 +657,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
         case GuiKeys::BracketLeft: return bare || sh;
+        // Toggle Ignore Waveform Magnification (architect 2026-09-14), bound
+        // in both modes: in the `h` view it cards the forced ignore.
+        case GuiKeys::BracketRight: return bare;
         // The zoom step, bare alone (architect approval 2026-09-14).
         case GuiKeys::Equal: case GuiKeys::Minus: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own

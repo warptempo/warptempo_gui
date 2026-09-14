@@ -57,8 +57,9 @@ struct WaveformJob {
     // font-derived geometry is snapshotted here for a coherent render.
     int       inset_px         = 0;
 
-    // THE WAVEFORM'S GAIN PROFILE (waveform_gain_profile_cached — the
-    // per-section magnification resolved from the live warp markers), an owned
+    // THE WAVEFORM'S GAIN PROFILE (effective_waveform_gain_profile — the
+    // per-section magnification resolved from the live warp markers, empty
+    // while it is ignored), an owned
     // snapshot taken on the GUI thread at job submission exactly as the warp
     // map is, so the worker reads no live store. Its HASH is the FINGERPRINT
     // field (WaveformCache::fp_gain_profile_hash), which is what keeps a plate

@@ -404,6 +404,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
+    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-14): a view
+    // posture about the picture, authoring nothing the lock protects, so it
+    // is admitted on a locked tab — and under the grid-iterations lock, whose
+    // gate falls through to this list.
+    const bool is_ignore_magnification =
+        (key == GuiKeys::BracketRight && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
@@ -615,7 +621,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
              is_follow || is_keep_centered_while_nudging ||
-             is_restrict_undo ||
+             is_restrict_undo || is_ignore_magnification ||
              is_center || is_sub_t || is_sub_p ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -2670,6 +2676,11 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // nothing. Its icon-row button stays LIVE in the view through the derived
     // partition on this line.
     const bool is_keep_centered_while_nudging = (key == GuiKeys::Y && bare);
+    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-14): admitted
+    // so that it reaches its own arm, which CARDS in here — the view forces the
+    // ignore (ignore_waveform_magnification_applies) — rather than being
+    // blocked with the view's generic sentence. Its button greys lit.
+    const bool is_ignore_magnification = (key == GuiKeys::BracketRight && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
@@ -2841,7 +2852,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     return !(is_zoom_symbol || is_zero || is_keep_centered_while_nudging ||
-             is_page_updown ||
+             is_ignore_magnification || is_page_updown ||
              is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
@@ -8605,6 +8616,22 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
+        break;
+    case GuiKeys::BracketRight:
+        // Toggle the Ignore Waveform Magnification lamp (architect
+        // 2026-09-14). The setter is GuiInputHandler::
+        // set_ignore_waveform_magnification, shared with the icon-row button's
+        // synthesized chord and with nothing else. History-less, one-shot,
+        // read-only- and iteration-lock-legal (a view posture). IN TARGET VIEW
+        // ON THE WARP COLUMN AND IN THE `h` VIEW IT REFUSES: the ignore is
+        // forced there (ignore_waveform_magnification_applies), the button is
+        // lit and greyed, and the key cards and leaves the bit as it stands.
+        if (!ignore_waveform_magnification_applies(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIgnoreMagnificationForcedCard);
+            break;
+        }
+        set_ignore_waveform_magnification(!app.ignore_waveform_magnification);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live
