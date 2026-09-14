@@ -150,7 +150,7 @@ inline constexpr KeyDef kLetterRow2[] = {
 // every prompt a finger can raise — the settings editor's value recall and
 // the ring walk on the dialogs that publish buttons. Its SPACE key and its comma are
 // deliberate DUPLICATES of row 3's, which is layer-blind — a hand already in
-// the symbol layer for the `/` of `12 7/8` should not have to look for the
+// the symbol layer for the `/` of `+7/8` should not have to look for the
 // space bar, and a physical keyboard's own numpad settles that a second
 // painted key onto the same synthesize_key road is not a second road. (There
 // is no blank slot on either layer any more, so the table has no role for

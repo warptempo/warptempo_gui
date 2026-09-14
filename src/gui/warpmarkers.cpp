@@ -1,6 +1,7 @@
 #include "warpmarkers.h"
 
 #include "frame_format.h"
+#include "marker_magnification.h"
 #include "settings_io.h"
 #include "value_format.h"
 #include "warp_frame_map_build.h"
@@ -44,7 +45,7 @@ std::string format_warpmarkers_text(
         const auto& m = markers_[i];
         // Canonical new format, no whitespace anywhere in the canonical
         // prefix:
-        //   [#]?<frame position>|PAYLOAD[ //<measure>]
+        //   [#]?<frame position>|PAYLOAD[ //<measure>,<magnification>]
         if (m.disabled) out << '#';
         out << format_authored_frame(m.time_frame) << '|';
 
@@ -78,13 +79,18 @@ std::string format_warpmarkers_text(
             }
         }
 
-        // The measure suffix (marker_measure.h), and the one place a
-        // space may appear on a marker line. An EMPTY measure emits nothing at
-        // all — the bare ` //` separator is load-fatal precisely because this
-        // writer never produces it, which is what keeps the removal path (an
-        // empty commit in the measure editor) and the load rules in agreement.
-        if (!m.measure.empty()) {
-            out << " //" << m.measure;
+        // The comment (split_marker_comment, marker_measure.h), and the one
+        // place a space may appear on a marker line: ` //<measure>,<mag>`
+        // with the comma ALWAYS written, emitted iff either field is set, so
+        // its three shapes are `//12,3`, `//12,` and `//,3` (architect
+        // 2026-09-14). Both fields blank emits nothing at all — the empty
+        // `//,` is load-fatal precisely because this writer never produces
+        // it, which is what keeps the removal paths (an empty commit in a
+        // field's editor) and the load rules in agreement.
+        if (!m.measure.empty() || m.magnification.has_value()) {
+            out << " //" << m.measure << ',';
+            if (m.magnification.has_value())
+                out << format_marker_magnification(*m.magnification);
         }
 
         out << '\n';

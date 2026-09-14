@@ -601,7 +601,7 @@ void GuiFlagEditor::enter_measure_edit(int idx) {
 // file parser and the warp history delta extractor use, which is what keeps
 // "loadable iff it commits" exact rather than merely likely. The type-time
 // filters cannot carry the grammar the way they carried the old byte class: a
-// half-typed `12 4` is a legal prefix of a legal token, so refusal belongs at
+// half-typed `+1/` is a legal prefix of a legal token, so refusal belongs at
 // the commit and nowhere earlier. There is deliberately NO Kind-dependent
 // keystroke filter; typing stays free and the commit decides.
 //
@@ -615,9 +615,10 @@ void GuiFlagEditor::enter_measure_edit(int idx) {
 // waveform pixel and there is no waveform-area edge to invalidate.
 //
 // AN EMPTY BUFFER REMOVES THE MEASURE and is exempt from the grammar (the
-// validator has no "empty is fine" reading — an empty tail on disk is
-// load-fatal), which is what makes the bare ` //` suffix a state the GUI can
-// never write.
+// validator has no "empty is fine" reading — a blank measure is the comment's
+// empty left half, never a token), so the comment's writer emits `//,<mag>`
+// or, with the magnification blank too, no comment at all — which is what
+// makes the empty `//,` a state the GUI can never write.
 void GuiFlagEditor::commit_measure_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (app.top_flag_editor.kind != text_editor::Kind::MeasureText) return;
@@ -794,12 +795,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // disabled is not the editor's field — the candidate carried the marker's
     // own bit, parse_single_canonical_line populated it; reapply.
     m.disabled      = parsed.disabled;
-    // THE MEASURE IS NOT THIS EDITOR'S and is preserved by construction: `m`
-    // is the live marker copied whole, and no line above writes the field. The
-    // candidate parsed at accept_measure = false, so `parsed.measure` is
-    // always empty and must never be assigned from — a ` //` typed into the
-    // payload buffer is a grammar error the parse already red-flashed. The
-    // measure has its own editor (Kind::MeasureText).
+    // THE MEASURE AND THE MAGNIFICATION ARE NOT THIS EDITOR'S and are
+    // preserved by construction: `m` is the live marker copied whole, and no
+    // line above writes either field. The candidate parsed at
+    // accept_comment = false, so `parsed.measure` is always empty and
+    // `parsed.magnification` always blank, and neither may be assigned from —
+    // a ` //` typed into the payload buffer is a grammar error the parse
+    // already red-flashed. The measure has its own editor (Kind::MeasureText).
 
     // Cascade rename: if label_def changed to another NON-EMPTY name,
     // every other marker that referenced old_def gets its ref updated to

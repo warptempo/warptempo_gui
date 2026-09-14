@@ -856,7 +856,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // have leaves its bits at the struct's false, which no painter or act reads:
     // each is meaningful exactly when its own half's bool is set.
     //
-    // A WARP token is rest-of-line and already carries its measure suffix;
+    // A WARP token is rest-of-line and already carries its comment;
     // phase resets carry no measure (PhaseResetMarker), so the phase fills
     // pass no token at all.
     if (app.active_markers_view == 'P') {

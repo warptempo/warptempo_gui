@@ -371,10 +371,11 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // out-parameter beside it. The hover popup it was named for died with the
 // row-5 redesign; the STATUS BAR's right cell carried the string for the one
 // day that bar existed; and on 2026-08-29 the bar folded into row 8 and the
-// readout retired with it. Nothing displays a resolved value any more — bare
-// `j` copies the payload and Shift+`j` jumps to the source marker — so the
-// display half, its sample_rate parameter and its format_timestamp use are
-// deleted rather than left producer-less.)
+// readout retired with it. No STATE surface displays a resolved value — bare
+// `j` copies the payload, its success card naming the copied value, and
+// Shift+`j` jumps to the source marker — so the display half, its
+// sample_rate parameter and its format_timestamp use are deleted rather than
+// left producer-less. Comment-only, architect approval 2026-09-14.)
 std::string resolved_marker_payload(const std::vector<WarpMarker>& mv, int idx,
                                     long total_frames,
                                     int* source_index_out = nullptr);

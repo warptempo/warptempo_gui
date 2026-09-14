@@ -3419,7 +3419,7 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // what keeps pass markers, label definitions, label references and typed scales
 // working with no vocabulary of their own here: whatever the file could hold,
 // the line holds, and the ONE grammar that reads it is the parser's — a
-// measure suffix included, since the token is rest-of-line. The phase reset
+// comment included, since the token is rest-of-line. The phase reset
 // column needs no such trip: frame and the disable bit ARE its line, and both
 // travel typed on the flag.
 void GuiInputHandler::run_history_revert() {
@@ -3619,17 +3619,17 @@ void GuiInputHandler::run_history_revert() {
         // The sidecar line this flag's then side came off, rebuilt: the disable
         // prefix, the canonical frame spelling (format_authored_frame, the one
         // serializer), the '|' and the verbatim payload token. The token is
-        // rest-of-line, so a ` //<measure>` suffix is already inside it and the
-        // rebuilt line is the sidecar's line byte for byte — which is why the
-        // parse accepts measures here; refusing them would fire the
-        // "unreachable" arm below on every measured marker.
+        // rest-of-line, so a ` //<measure>,<magnification>` comment is already
+        // inside it and the rebuilt line is the sidecar's line byte for byte —
+        // which is why the parse accepts comments here; refusing them would
+        // fire the "unreachable" arm below on every commented marker.
         std::string line;
         if (f.then_disabled) line += '#';
         line += format_authored_frame(f.time_frame);
         line += '|';
         line += f.then_token;
         auto parsed = warpmarkers_internal::parse_single_canonical_line(
-            line, /*accept_measure=*/true);
+            line, /*accept_comment=*/true);
         if (!parsed) {
             // UNREACHABLE BY CONSTRUCTION and stated loudly rather than
             // recovered from: every walk member is strict-load clean, so the
@@ -3653,9 +3653,9 @@ void GuiInputHandler::run_history_revert() {
             // IDENTICAL IS NOT A CHANGE, the phase arm's rule in the column that
             // needs it: the occupant's canonical line against the then side's,
             // both through format_warpmarkers_text, so the compare reads exactly
-            // the eight serialized fields — the measure included, which is
-            // content — and IGNORES the session-only iter/bpm
-            // scratch — which is also why a no-op replace leaves that scratch
+            // the nine serialized fields — the measure and the magnification
+            // included, which are content — and IGNORES the session-only
+            // iter/bpm scratch — which is also why a no-op replace leaves that scratch
             // standing instead of resetting it to a fresh marker's defaults.
             const auto& live = mv[static_cast<std::size_t>(at)];
             if (format_warpmarkers_text({live}) ==

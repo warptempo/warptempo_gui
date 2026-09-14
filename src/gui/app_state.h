@@ -12219,8 +12219,11 @@ inline bool warp_row_fields_differ(const GuiWarpMarker& a,
         || a.label_ref      != b.label_ref
         // The measure is a serialized field like the rest: a measure-only undo
         // mutates nothing else, so omitting it would strand the selection
-        // exactly as an omitted bracket would.
+        // exactly as an omitted bracket would. The magnification is the
+        // comment's other serialized half and stands beside it for the same
+        // reason (architect 2026-09-14).
         || a.measure        != b.measure
+        || a.magnification  != b.magnification
         // The session-only BPM fields ride undo snapshots, and row identity
         // means the whole struct for them: a bpm-only undo mutates only these,
         // so omitting them would leave the same-count matcher finding no

@@ -2,8 +2,10 @@
 #include "warpmarkers_parse.h"
 
 #include "frame_format.h"
+#include "marker_magnification.h"
 #include "marker_measure.h"
 #include "parse_text_util.h"
+#include "settings_file.h"
 #include "value_format.h"
 
 #include <expected>
@@ -211,6 +213,13 @@ bool parse_new_payload(const std::string& payload,
 
 } // namespace
 
+// THE TWO MAGNIFICATION RANGES ARE ONE NUMBER while the settings key
+// `waveform_magnification_level` still stands: a marker's magnification and
+// the key both count waveform-picture doublings, so their ceilings must not
+// drift apart (architect approval 2026-09-14; the key and this assert leave
+// together).
+static_assert(kMarkerMagnificationMax == kWaveformMagnificationLevelMax);
+
 namespace warpmarkers_internal {
 
 // --- single-line parser -----------------------------------------------------
@@ -218,28 +227,43 @@ namespace warpmarkers_internal {
 // Parses one canonical line into a WarpMarker, doing line-local validation
 // only. Cross-marker checks (label_def uniqueness, time ordering) are left
 // to the caller; label_ref resolvability is a render boundary verdict, not
-// a load check. `accept_measure` selects whether the ` //<measure>` suffix is
-// part of the grammar here; the four callers and their answers are at the
-// declaration. (Measure grammar: architect approval 2026-08-20.)
+// a load check. `accept_comment` selects whether the
+// ` //<measure>,<magnification>` comment is part of the grammar here; the
+// callers and their answers are at the declaration. (Measure grammar:
+// architect approval 2026-08-20; the comment's magnification half and the
+// rename: architect approval 2026-09-14.)
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
-    const std::string& raw_line, bool accept_measure) {
+    const std::string& raw_line, bool accept_comment) {
 
     WarpMarker out{};
 
     std::string t = raw_line;
     if (t.empty()) return std::unexpected<std::string>("empty line");
 
-    // The measure suffix comes off FIRST, so everything below judges the
-    // canonical prefix alone and keeps its byte-exact discipline unchanged —
-    // in particular the no-whitespace loop, which is what refuses a ` //` on
-    // the callers that pass false.
-    if (accept_measure) {
-        const MarkerMeasureSplit split = split_marker_measure(t);
-        if (split.had_measure) {
-            std::string measure_err;
-            if (!validate_marker_measure(split.measure, measure_err))
-                return std::unexpected(std::move(measure_err));
-            out.measure.assign(split.measure);
+    // The comment comes off FIRST, so everything below judges the canonical
+    // prefix alone and keeps its byte-exact discipline unchanged — in
+    // particular the no-whitespace loop, which is what refuses a ` //` on the
+    // callers that pass false. The split owns the comment's structure (the
+    // one comma, not `//,`); each non-blank half then meets its own judge
+    // (architect approval 2026-09-14).
+    if (accept_comment) {
+        MarkerCommentSplit split;
+        std::string        comment_err;
+        if (!split_marker_comment(t, split, comment_err))
+            return std::unexpected(std::move(comment_err));
+        if (split.had_comment) {
+            if (!split.measure.empty()) {
+                if (!validate_marker_measure(split.measure, comment_err))
+                    return std::unexpected(std::move(comment_err));
+                out.measure.assign(split.measure);
+            }
+            if (!split.magnification.empty()) {
+                uint8_t mag = 0;
+                if (!parse_marker_magnification(split.magnification, mag,
+                                                comment_err))
+                    return std::unexpected(std::move(comment_err));
+                out.magnification = mag;
+            }
             t.resize(split.prefix.size());
         }
     }
@@ -340,16 +364,19 @@ parse_warpmarkers_file(const std::string& path,
 
     for (size_t idx = 0; idx < raw_lines.size(); ++idx) {
         const int line_number = static_cast<int>(idx + 1);
-        // Marker lines are byte-exact canonical up to the measure separator:
+        // Marker lines are byte-exact canonical up to the comment separator:
         // no BOM, blank, or whitespace tolerance in the canonical prefix (the
         // writer emits none), so any space, tab, or CR there — and a byte-empty
         // line — is a hard, line-numbered parse error via
         // parse_single_canonical_line below. The one relaxation is the
-        // ` //<measure>` SUFFIX (marker_measure.h): the split comes off before
-        // the prefix is judged, and the measure's own ASCII grammar (bounded at
-        // kMaxMarkerMeasureBytes, one canonical spelling per value) is judged
-        // just as strictly — a CR landing inside a measure stays fatal, so the
-        // CRLF corruption tripwire survives the relaxation intact. (COMMENT
+        // ` //<measure>,<magnification>` COMMENT (split_marker_comment,
+        // marker_measure.h — architect approval 2026-09-14): the split comes
+        // off before the prefix is judged, and its structure and both halves'
+        // ASCII grammars (the measure bounded at kMaxMarkerMeasureBytes, the
+        // magnification one digit, one canonical spelling per value) are
+        // judged just as strictly — a CR landing inside the comment stays
+        // fatal, so the CRLF corruption tripwire survives the relaxation
+        // intact. (COMMENT
         // ONLY, architect approval 2026-08-20: the bound was spelled `12` here
         // until the section qualifier raised it, so it now names its owner
         // instead of restating a number. No code in this frozen file changed —
@@ -361,21 +388,21 @@ parse_warpmarkers_file(const std::string& path,
         // marker disabled, and parses the remainder exactly as an enabled
         // line would. A '#' line whose position or payload is malformed is a
         // parse error like any other malformed line — adversarial,
-        // load-fatal, first error only. A measure is a SUFFIX on a marker
+        // load-fatal, first error only. The comment is a SUFFIX on a marker
         // line; comment LINES do not exist in the grammar, so a line that is
-        // nothing but a ' //' suffix fails the position parse like any other
+        // nothing but a ' //' comment fails the position parse like any other
         // malformed line.
         auto parsed = warpmarkers_internal::parse_single_canonical_line(
-            t, /*accept_measure=*/true);
+            t, /*accept_comment=*/true);
         if (!parsed)
             return fail(line_number, std::move(parsed.error()));
         WarpMarker m = std::move(*parsed);
 
         // The validated position field's raw text (everything before the '|',
         // past any leading '#'), echoed verbatim in the decreasing-time
-        // diagnostic. Measure-inert by construction: it reads to the first
-        // '|', and the measure suffix begins past the whole canonical prefix,
-        // so no measure byte can reach this slice.
+        // diagnostic. Comment-inert by construction: it reads to the first
+        // '|', and the comment begins past the whole canonical prefix, so no
+        // comment byte can reach this slice.
         std::string_view pos_view = t;
         if (!pos_view.empty() && pos_view.front() == '#')
             pos_view.remove_prefix(1);

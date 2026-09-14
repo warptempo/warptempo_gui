@@ -214,8 +214,8 @@ constexpr int kMaxPendingCharsSettings = 1024;
 constexpr int kMaxPendingCharsCommitTitle = 256;
 // The marker MEASURE editor (bare `/`, its bottom-row button, the double-click
 // on the blue box). The cap IS the load bound, taken from its one owner rather
-// than re-spelled: kMaxMarkerMeasureBytes (marker_measure.h) is what both file
-// parsers refuse past, and the two must be the same number for "a measure that
+// than re-spelled: kMaxMarkerMeasureBytes (marker_measure.h) is what the warp
+// file parser refuses past, and the two must be the same number for "a measure that
 // commits here loads back" to hold exactly. Only the type changes — every cap
 // in this module is an int, which is what the cap tests read.
 constexpr int kMaxPendingCharsMeasure =
@@ -229,8 +229,8 @@ constexpr int kMaxPendingCharsMeasure =
 // uses BpmBracket; the settings-prompt editor uses SettingsAssignment
 // (`key=value`); the history mode's commit-title editor uses CommitTitle
 // (free one-line text, the message the checkpoint commit carries); the
-// MARKER MEASURE editor uses MeasureText (the ` //<measure>` suffix a marker
-// line may carry — an ASCII GRAMMAR since the field's 2026-08-20 rebrand,
+// MARKER MEASURE editor uses MeasureText (the measure half of the
+// ` //<measure>,<magnification>` comment a warp marker line may carry — an ASCII GRAMMAR since the field's 2026-08-20 rebrand,
 // judged at the commit by marker_measure.h and not at all on the keyboard);
 // and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is

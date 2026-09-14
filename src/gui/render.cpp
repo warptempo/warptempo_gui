@@ -2197,11 +2197,12 @@ void render_history_diff_flags(
                 // NO MEASURE BOX AND NO BOUND CELLS IN THIS MODE, so every
                 // boundary is the rect's own right edge and no point can fall
                 // past it: the view paints the delta's own two-tone flag and
-                // nothing else. MEASURES SHOW INLINE IN THE LABEL ON BOTH
-                // COLUMNS (architect 2026-08-22) — inside the warp token, which
-                // is rest-of-line, and appended as the same ` //<measure>`
-                // suffix on the phase halves — so the bytes are text this rect
-                // already covers and no second surface is born. The live
+                // nothing else. THE COMMENT SHOWS INLINE IN THE LABEL
+                // (architect 2026-08-22) — inside the warp token, which is
+                // rest-of-line, so a ` //<measure>,<magnification>` comment
+                // rides it; phase resets carry none (architect 2026-09-14) —
+                // so the bytes are text this rect already covers and no
+                // second surface is born. The live
                 // lane's blue box has no twin here, and neither do its cells:
                 // an iteration bracket is session-only and never in a commit,
                 // so a diff flag has no bounds to show and the mode's

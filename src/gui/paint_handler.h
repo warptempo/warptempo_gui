@@ -115,7 +115,7 @@ constexpr const char* kCommitTitleEditorPrefix = "Commit: ";
 //   * the CORNER passes disabled=false and the `scale=` token, the payload arm
 //     alone.
 //
-// A warp token is rest-of-line, so it carries its own measure suffix
+// A warp token is rest-of-line, so it carries its own comment
 // verbatim; phase resets carry no measure (PhaseResetMarker). ASCII by
 // construction: the signs are literals and every token comes from a sidecar
 // grammar that is ASCII-only.

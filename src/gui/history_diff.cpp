@@ -850,18 +850,18 @@ std::string scale_token_of(const std::string& settings_text) {
 // the flag can show the file's own spelling rather than a round trip through
 // the typed value.
 bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
-    // MEASURES ARE PART OF THE GRAMMAR HERE: these are the same on-disk lines
-    // the loader accepts, so the measure suffix is accepted too. Refusing it
-    // would drop every measured marker on the whitespace refusal and vanish
-    // it from the diff lane entirely.
+    // THE COMMENT IS PART OF THE GRAMMAR HERE: these are the same on-disk
+    // lines the loader accepts, so the ` //<measure>,<magnification>` comment
+    // is accepted too. Refusing it would drop every commented marker on the
+    // whitespace refusal and vanish it from the diff lane entirely.
     auto parsed = warpmarkers_internal::parse_single_canonical_line(
-        line, /*accept_measure=*/true);
+        line, /*accept_comment=*/true);
     if (!parsed) return false;
     out.frame    = parsed->time_frame;
     out.disabled = parsed->disabled;
     const std::size_t pipe = line.find('|');
     // The parse succeeded, so the '|' is there; the guard is defensive. The
-    // slice is rest-of-line, so any measure suffix rides inside the token —
+    // slice is rest-of-line, so any comment rides inside the token —
     // deliberately: the revert rebuilds its line out of exactly this text.
     out.tempo_token =
         (pipe == std::string::npos) ? std::string() : line.substr(pipe + 1);
@@ -900,7 +900,7 @@ std::map<std::string, bool> warp_side_effective_disabled(
     for (const std::string& line : lines) {
         if (line.empty()) continue;
         auto parsed = warpmarkers_internal::parse_single_canonical_line(
-            line, /*accept_measure=*/true);
+            line, /*accept_comment=*/true);
         if (!parsed) continue;
         mv.push_back(std::move(*parsed));
         line_of.push_back(&line);
