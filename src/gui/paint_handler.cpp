@@ -3715,9 +3715,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // CLOCK CELL starts at the pen it leaves — the architect's own ask, "move
     // bottom row timestamp to left alignment, place a separator between
     // transport buttons and timestamp". The RIGHT BLOCK anchors at the RIGHT
-    // margin as FIVE + SEPARATOR + THREE + SEPARATOR + FOUR — the MARKER
-    // VERBS with the MARKER MEASURE and ADD TO SELECTION
-    // behind them, the
+    // margin as NINE + SEPARATOR + THREE + SEPARATOR + FOUR (the nine counted
+    // off kMarkerVerbGroup) — the MARKER VERBS with the EDIT FLAG button, the
+    // MARKER MEASURE, the MARKER MAGNIFICATION, COPY VALUE and ADD TO
+    // SELECTION behind them, the
     // MARKER-WALK GROUP, and the CARDINAL ARROWS (↓ ↑ ← →, the
     // architect's order since 2026-08-14). The span between the cell and the
     // right block is THE STATUS CELL since 2026-08-29 (the status bar's fold
@@ -3743,8 +3744,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // starts at 72 on the 640px defensive floor, 456 on the retired rig's
     // 1024 and 1352 at 1920. The 9-glyph cell measures 79.2px at 100% (it
     // narrowed when the clock went to 11pt on 2026-08-14), which leaves the
-    // rig's own 1024 some 288px of ground between
-    // the cell and the verbs — the room THE STATUS CELL now takes, clipped
+    // rig's own 1024 (the tablet's logical width too) some 254px of ground
+    // between the cell and the verbs — the room THE STATUS CELL now takes, clipped
     // one pad short of the block. THE 640px DEFENSIVE FLOOR NOW CROPS INTO
     // THE CLOCK — the
     // block's origin lands left of the cell's ~202px right edge — and that is
@@ -3762,9 +3763,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // accepted at its landing, the message paying it; reclaiming the tablet's
     // room was half his reason for deleting it.) The STATE CELL is 1142
     // authored px wide at 100% on 1920 since 2026-09-14 (1176 for the day
-    // between the lamp's deletion and the Magnification's landing) and 364
-    // logical px on the tablet's 2560 device px at 225% (398 for that day),
-    // each measured from the clock's own right edge to the clip bound. THE
+    // between the lamp's deletion and the Magnification's landing) and 246
+    // logical px on the tablet's 2304 device px at 225% (280 for that day) —
+    // 2304 / 2.25 = 1024 logical, the block's left edge at 1024 − 8 − 560 =
+    // 456, the clip bound one pad short at 448, less the clock's ~202 right
+    // edge — each measured from the clock's own right edge to the clip bound. THE
     // ROW STILL CARRIES NO COLLISION RULE — none of the
     // redesign does, row 1's floats included — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx is what covers a scale driven
@@ -3773,7 +3776,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // clock's own ~202px right edge once the LOGICAL width (device width over
     // the factor) falls below about 770 — at 350% on a 2304px panel that is
     // 658, where the verb group lands on the cell outright; the tablet's own
-    // 225% leaves 1138 logical px and 364 of clear ground. Still no collision
+    // 225% leaves 1024 logical px and 246 of clear ground. Still no collision
     // rule, for the reason above: the row crops at its floor. THE STATUS CELL
     // TAKES THAT GROUND AND CANNOT PUSH ANYTHING: it CLIPS at the block's own
     // left edge less one pad, so a long line is cut rather than colliding.

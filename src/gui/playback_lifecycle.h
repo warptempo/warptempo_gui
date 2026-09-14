@@ -98,9 +98,11 @@ struct GuiPlaybackLifecycle {
     //     write)
     //     and `c`. The S/T switch `t` stops on its own standing ruling, the audio
     //     domain flipping under the running session.
-    //   * GROUP-PRESERVING VALUE STEPS DO NOT STOP: the Up/Down tempo cent
-    //     step edits values and leaves the selection and its span exactly as they
-    //     stood, so the audition plays on under the edit. The step ladder's
+    //   * VALUE STEPS DO NOT STOP: the Up/Down value step on the addressed
+    //     cell edits a value. Its tempo arm is GROUP-PRESERVING, leaving the
+    //     selection and its span exactly as they stood, so the audition plays
+    //     on under the edit; the bound, measure and magnification arms collapse
+    //     a group to its focus and stop nothing either. The step ladder's
     //     magnitude (bare one cent, three shifted, ten with ctrl) changes the
     //     number and not the class.
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,

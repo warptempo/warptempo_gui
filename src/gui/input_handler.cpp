@@ -886,9 +886,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              is authoring and drops here
     //                              (playhead_in_marker_lane)
     //   - Home/End (no mods)     → playhead to trim region bounds
-    //   - PageUp/PageDown        → viewport step scroll by the Alt-wheel
-    //     (no mods)                step. Pure navigation, same family as
-    //                              the playhead-step and Home/End entries.
+    //   - PageUp/PageDown        → viewport step scroll by the plain wheel's
+    //     (no mods)                stepped-pan step. Pure navigation, same
+    //                              family as the playhead-step and Home/End
+    //                              entries.
     //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → full zoom-out, else the `c` command
     //                              (run_overview_command)
@@ -2490,7 +2491,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // PageUp / PageDown: step the viewport back / forward by exactly the
-    // Alt-wheel step (samples_visible / 10). PageUp goes back, PageDown
+    // plain wheel's stepped-pan step (samples_visible / 10). PageUp goes back, PageDown
     // forward. Pure active-display navigation, so the read-only allowlist
     // admits it.
     if (!ctrl && !alt && !shift &&

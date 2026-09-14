@@ -144,29 +144,36 @@ MagnificationResolution resolve_magnification(
         if (!markers[i].label_def.empty()) def_index[markers[i].label_def] = i;
     }
 
-    // Pass A — the DEF values: a blank ref is transparent (rule 5).
+    // Pass A — the DEF values (rule 5): every label ref is transparent, a ref
+    // carrying its own value included, so `cur` advances only on an enabled
+    // NON-REF marker with an own value. Every row still records the carried
+    // value; only a def's entry is ever read.
     std::vector<uint8_t> value_a(n, 0);
     uint8_t cur = 0;
     for (size_t i = 0; i < n; ++i) {
         const GuiWarpMarker& m = markers[i];
-        if (r.enabled[i]) {
-            if (m.magnification.has_value()) cur = *m.magnification;
-            // a blank ref and a blank non-ref both leave `cur` untouched here
-        }
+        if (r.enabled[i] && m.label_ref.empty() && m.magnification.has_value())
+            cur = *m.magnification;
         value_a[i] = cur;
     }
 
-    // Pass B — the displayed values: a blank ref takes its def's pass-A value
-    // (rule 4), a dangling one carries (rule 6).
+    // Pass B — the displayed values: a blank DEF takes its own pass-A value
+    // (rule 5, so the def displays exactly what its refs read), a blank ref
+    // takes its def's pass-A value (rule 4), a dangling one carries (rule 6),
+    // and a ref's own value governs the ref and what follows it (rule 1).
     cur = 0;
     for (size_t i = 0; i < n; ++i) {
         const GuiWarpMarker& m = markers[i];
         if (!r.enabled[i]) {
-            r.resolved[i] = m.magnification.value_or(cur);
+            r.resolved[i] = m.magnification.has_value() ? *m.magnification
+                          : !m.label_def.empty()        ? value_a[i]
+                                                        : cur;
             continue;
         }
         if (m.magnification.has_value()) {
             cur = *m.magnification;
+        } else if (!m.label_def.empty()) {
+            cur = value_a[i];
         } else if (!m.label_ref.empty()) {
             const auto it = def_index.find(m.label_ref);
             if (it != def_index.end()) cur = value_a[it->second];

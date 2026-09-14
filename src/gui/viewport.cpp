@@ -735,6 +735,15 @@ void Viewport::center_viewport_on_playhead() {
     }
 }
 
+uint64_t Viewport::waveform_gain_hash() const {
+    return waveform_gain_profile_cached(app).hash;
+}
+
+void Viewport::kick_waveform_sync_if_gain_changed(uint64_t prior_hash) {
+    if (waveform_gain_hash() == prior_hash) return;
+    kick_waveform_sync();
+}
+
 void Viewport::invalidate_top_strip() {
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h + 1);

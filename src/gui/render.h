@@ -2572,7 +2572,7 @@ inline int playhead_half_px() {
 // flag into AppState::flag_hit_rects, and the marker-lane EDITOR'S painter
 // emits ONE MORE for the RIDING BOXES it paints beside its field — whichever of
 // the marker's boxes stand to the right of the one being edited, under any of
-// the three kinds (FlagEditorBox::riding_cells below). Both go through the same
+// the four kinds (FlagEditorBox::riding_cells below). Both go through the same
 // walk
 // (topmost_flag_rect, app_state.cpp) and the same boundary idiom, which is
 // what makes a press on a riding cell resolve to the same marker and the same
@@ -3176,7 +3176,7 @@ struct MarkerStem {
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
 // open marker-lane editor is standing in for it. THE ONE GRAPHIC MODEL, stated
-// once here and applied to all three editors (architect 2026-09-05, on the
+// once here and applied to all four editors (architect 2026-09-05, on the
 // tablet: "it just feels odd to have one nonvariant field in the middle ... the
 // two editors on the opposite ends behaving one way and the bounds one in the
 // middle behaving in a different way makes the whole thing seem hacked
@@ -3191,8 +3191,9 @@ struct MarkerStem {
 // ONE COMPARISON: it paints the boxes LEFT of that cell exactly as it does at
 // rest, and NOTHING from that cell rightward. A payload editor therefore takes
 // the marker's whole column (the flag is its leftmost box), a lower-bound
-// editor leaves the flag standing and takes the lower cell, the upper cell and
-// the measure, an upper-bound editor leaves the flag and the lower cell, a
+// editor leaves the flag standing and takes the lower cell, the upper cell, the
+// measure and the magnification box, an upper-bound editor leaves the flag and
+// the lower cell, a
 // measure editor takes the measure box and the magnification box beside it,
 // and a magnification editor takes the magnification box alone — the rule the
 // two separate indices this replaced applied to the two kinds they covered.

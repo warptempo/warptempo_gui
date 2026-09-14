@@ -19,12 +19,15 @@ struct GuiInputHandler;
 // pure repeat-identity model's "separate presses are separate entries" clause on
 // the live complaint that rapid manual taps each pushed their own entry). A burst
 // of eligible keyboard
-// gestures — FOUR of them, re-grepped 2026-09-04 (it was three from 2026-07-29,
-// when the W+target tempo-IMAGE step was deleted with the whole tempo-image
-// family, marker_drag.h): the warp and
+// gestures — FIVE of them, re-grepped 2026-09-14 from GestureKind below (it
+// was three from 2026-07-29, when the W+target tempo-IMAGE step was deleted
+// with the whole tempo-image family, marker_drag.h; four from 2026-09-04 with
+// the iteration bound step, which left the undo domain 2026-09-10; three again
+// until the measure and magnification steps joined 2026-09-14): the warp and
 // phase-reset position nudges (Left/Right in the
-// marker lane), the tempo cent step (Up/Down; no wheel route) and the same
-// arrows' ITERATION BOUND STEP (Up/Down on an addressed bound cell) — each in
+// marker lane) and the three coalescing arms of the Up/Down VALUE STEP on the
+// addressed cell — the tempo cent step, the measure step and the magnification
+// step, each also reached by the plain wheel over its flag cell — each in
 // the
 // step ladder's three magnitudes since 2026-08-31, which the coalescing is
 // blind to exactly as it is blind to direction (the record is at
@@ -88,8 +91,10 @@ struct GuiInputHandler;
 // their place (the stamped selection and A/B tab must still stand); the
 // derivation is at coalesce_gesture's definition.
 // THE ELIGIBLE KINDS, one per coalescing gesture plus None: the two position
-// nudges and the Up/Down cent step (TempoStep, singleton and group — its own
-// kind keeps a nudge burst and a tempo burst separate).
+// nudges and the Up/Down value step's three coalescing arms — the cent step
+// (TempoStep, singleton and group), the measure step (MeasureStep) and the
+// magnification step (MagnificationStep), both since 2026-09-14 — each its own
+// kind, so a nudge burst, a tempo burst and a field burst stay separate.
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h). ITERBOUNDSTEP WAS A FOURTH
 // FROM 2026-09-04 TO 2026-09-10 — the same arrows' second body, stepping a

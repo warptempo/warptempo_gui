@@ -1338,10 +1338,10 @@ void render_flag_boxes_impl(
     // editor is standing in for. It replaced two separate indices — one for
     // the payload editor's whole column, one for the measure box alone — the
     // day the bound field stopped being the odd one out: the rule is now ONE
-    // COMPARISON against flag_box_rank, so the three editor kinds are three
-    // cases of one model rather than three arms, and a fourth would need no
-    // new parameter. At most one box is ever suppressed, the three editors
-    // being one text_editor::State.
+    // COMPARISON against flag_box_rank, so the four editor kinds are four
+    // cases of one model rather than four arms (the magnification editor, the
+    // fourth, needed no new parameter). At most one box is ever suppressed, the
+    // four editors being one text_editor::State.
     SuppressedBox suppressed,
     // Reaches the LEFT CULL only — it widens the width bound by the two bound
     // cells. Which flags paint cells is the cells lambda's business, so this
@@ -2579,7 +2579,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE CARET'S COLUMN, AND WHERE EVERY FIELD FINDS IT. The caret at
     // end-of-text stands one column past the last glyph, so a field must own a
     // column its run does not — and IT BORROWS THAT COLUMN FROM ITS OWN RIGHT
-    // PAD rather than buying one, on all three kinds alike (architect
+    // PAD rather than buying one, on all four kinds alike (architect
     // 2026-09-05: "all flag editors should work under the same principle
     // graphically ... graphically to the user it should be transparent
     // switching between the comments, the bounds and the main payload; the
@@ -2587,8 +2587,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // So the box below is exactly two pads plus its run, which is exactly what
     // the resting box it stands in for is: at the open — where the run is the
     // committed text on the same font — the payload field IS the flag, the
-    // measure field IS the measure box and the bound field IS its cell, and
-    // nothing riding past the field steps sideways when it opens. What moves
+    // measure field IS the measure box, the magnification field IS the green
+    // box and the bound field IS its cell, and nothing riding past the field steps sideways when it opens. What moves
     // afterwards is what is TYPED, ON EVERY KIND ALIKE (architect 2026-09-05,
     // retiring the bound field's pin to its cell — "the two editors on the
     // opposite ends behaving one way and the bounds one in the middle behaving

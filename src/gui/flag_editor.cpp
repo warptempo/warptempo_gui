@@ -78,8 +78,10 @@ bool parse_signed_hops(const std::string& v, int& out) {
 
 } // namespace
 
-// Flag-editor cluster: the marker lane's three editors (the flag's
-// canonical-line editor, the measure editor, the iteration bound editor) —
+// Flag-editor cluster: the marker lane's four editors (the flag's
+// canonical-line editor, the iteration bound editor, the measure editor and
+// the magnification editor — text_editor::Kind's FlagPayload, IterBound,
+// MeasureText and MagnificationText) —
 // their enter / commit / exit paths — and the bpm-bracket editor session,
 // reaching undo and viewport through the struct's reference members. The
 // eligibility and flag-text helpers (iter_bracket_carrier,
@@ -784,8 +786,10 @@ void GuiFlagEditor::commit_magnification_edit() {
     }
 
     // ONE UNDO ENTRY: the field is serialized content.
+    uint64_t prior_gain_hash = 0;
     {
         std::vector<GuiWarpMarker> pre = app.warpmarkers.markers();
+        prior_gain_hash = viewport.waveform_gain_hash();
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (m) m->magnification = value;
         undo.push_undo_warp(std::move(pre));
@@ -795,13 +799,13 @@ void GuiFlagEditor::commit_magnification_edit() {
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
     // NO RENDER AND NO MAP REBUILD — the field reaches neither the engine nor
-    // the render fingerprint — BUT THE PICTURE MOVED: the store's new
-    // generation changes the waveform gain profile's hash, which dirties the
-    // plate fingerprint and the overview bar cache by field. The kick renders
-    // that plate synchronously, so the new gain lands in the frame the box
-    // does rather than a frame late through the async backstop (the gain
-    // category at Viewport::kick_waveform_sync, viewport.h).
-    viewport.kick_waveform_sync();
+    // the render fingerprint — BUT THE PICTURE MAY HAVE MOVED: when the resolved
+    // gain profile's hash changed, the plate fingerprint and the overview bar
+    // cache are dirty by field, and the kick renders that plate synchronously
+    // so the new gain lands in the frame the box does rather than a frame late
+    // through the async backstop; a write the profile cannot see renders
+    // nothing (the gain category at Viewport::kick_waveform_sync, viewport.h).
+    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
 }
 
 // Validate `pending` as a single canonical line and, on success, write

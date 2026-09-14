@@ -3725,9 +3725,10 @@ private:
     //   ctrl-exact Zoom arm from the lane rework (2026-08-12, "require ctrl on
     //   zoom strip also") until the redesign of 2026-08-15 DELETED the lane's
     //   dual-axis strip drag whole, so ctrl there binds nothing and answers the
-    //   Arrow with every other modifier (the ctrl+WHEEL zoom step is still
-    //   live on the lane and is deliberately uncued — this map answers what a
-    //   PRESS would do, and no wheel is cued anywhere).
+    //   Arrow with every other modifier (no wheel zooms anywhere since the
+    //   2026-09-14 retirement — every modified wheel is a swallowed no-op,
+    //   GuiInputHandler::on_wheel — and this map answers what a PRESS would do
+    //   in any case, no wheel being cued anywhere).
     // - TrimResize: the trim bar's inter-cap BRIDGE, plain — the pair drag,
     //   which moves BOTH bounds together — AND THE OVERVIEW BOX'S INTERIOR,
     //   plain (the lane rework): the drag there is the

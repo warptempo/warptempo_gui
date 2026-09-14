@@ -616,7 +616,12 @@ enum class Icon {
 // 57 SINCE 2026-09-13, THE CENTER ON NEXT MARKER LAMP'S DELETION, later the
 // same day: 58 − zoom-next, the enumerator, the def and the asset leaving with
 // the button that wore it (a re-COUNT of the enumerators).
-inline constexpr int kIconCount = 57;
+// 56 SINCE 2026-09-14, THE WAVEFORM MAGNIFICATION BUTTONS' DELETION: 57 −
+// zoom-out-y, the enumerator, the def and the asset leaving with the Reduce
+// button that wore it (architect approval 2026-09-14); zoom-in-y stays, worn
+// by the Marker Magnification button. A re-COUNT of the enumerators, the
+// deletion having left this number at 57 until the constant was retold.
+inline constexpr int kIconCount = 56;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

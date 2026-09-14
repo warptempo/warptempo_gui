@@ -285,11 +285,15 @@ struct WaveformGainProfile {
 //      after the ref inherit the ref's resolved value; a ref may precede its
 //      def.
 //   5. CYCLES CANNOT FORM, by tempo's own rule (resolve_inherited_tempo walks
-//      past refs): a DEF's inheritance walks PAST EVERY BLANK LABEL REF, so a
-//      blank def never reads "through" a blank ref sitting before it, while
-//      every other blank does. Two passes, O(n): pass A resolves the def values
-//      with blank refs transparent; pass B the displayed values, a blank ref
-//      taking pass A's value of its def.
+//      past refs): a blank DEF's inheritance walks PAST EVERY LABEL REF, a ref
+//      carrying its own value included (architect 2026-09-14), to the nearest
+//      earlier enabled NON-REF marker with an own value, so a blank def never
+//      reads "through" a ref sitting before it, while every other blank does.
+//      A ref's own value still governs the ref and what follows it — up to a
+//      blank def, which displays its walked value. Two passes, O(n): pass A
+//      resolves the def values with every ref transparent; pass B the
+//      displayed values, a blank def taking its own pass-A value and a blank
+//      ref its def's.
 //   6. A DANGLING REF (no def in the store) is transparent: it carries the
 //      previous value.
 //   7. COINCIDENT FRAMES follow store order: the LAST enabled marker at a frame

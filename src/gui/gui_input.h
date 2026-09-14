@@ -211,7 +211,9 @@ struct GuiInputState {
 // ONE unit, Shift is THREE and Ctrl is TEN, and the unit is whatever the bare
 // arrow's own act steps — a painted COLUMN for Left / Right (the playhead in
 // the waveform lane, the focused marker in the marker lane, both columns) and
-// a CENT for Up / Down (the tempo step, singleton and group). ONE OWNER for
+// for Up / Down the addressed cell's own unit — a CENT on the tempo (singleton
+// and group), a cent or a hop on a bound, a whole measure on the measure,
+// a doubling on the magnification. ONE OWNER for
 // all four arms, because the ladder is one ruling and not two: a second
 // spelling in the vertical arm could drift from the horizontal one.
 //
@@ -684,7 +686,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The shifted Tab's own keysym, admitted shift-agnostically as the
         // live walk admits it.
         case GuiKeys::IsoLeftTab: return bare || sh;
-        // The tempo cent step, and the playhead / marker position step —
+        // The value step on the addressed cell (the tempo, a bound, the
+        // measure or the magnification), and the playhead / marker position
+        // step —
         // EACH IN THREE MAGNITUDES since 2026-08-31 (R12): bare one unit,
         // Shift three, Ctrl ten, on whatever the bare arrow's own subject is
         // (the ladder's owner is arrow_step_magnitude above). Ctrl+Shift

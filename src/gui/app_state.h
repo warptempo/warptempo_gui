@@ -10089,7 +10089,8 @@ inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
     return a.active_markers_view != 'P';
 }
 
-// THE TEMPO CENT STEP'S COLUMN GATE — Up / Down author TEMPO, and tempo
+// THE TEMPO CENT STEP'S COLUMN GATE — Up / Down on the PAYLOAD author TEMPO,
+// and tempo
 // is the WARP column's alone: a phase reset has no tempo to step. It is the
 // first refusal in GuiWarpMarkersOps::adjust_tempo_cents (which the singleton
 // and the group arm share), and it is deliberately NOT
@@ -11776,21 +11777,29 @@ inline int64_t measure_step_start(std::string_view measure) {
 }
 
 // WHERE ONE MEASURE STEP LANDS — THE ONE LANDING OWNER, shared by the key, the
-// drag and the wheel. A BLANK (start 0) lands on MEASURE 1 FOR ANY DIRECTION
-// AND MAGNITUDE (the ruling: "Down on blank gives 1"); an integer clamps into
-// [1, kMeasureMaxWhole], so Down at 1 and Up at 999 land where they stand —
-// the WALLS, silent. The write spells the landing through the grammar's own
+// drag and the wheel, and ONE RULE: A BLANK COUNTS AS 0 and the landing is
+// clamp(start + delta, 1, kMeasureMaxWhole). So bare Up and bare Down on a
+// blank both land on MEASURE 1 (the ruling: "Down on blank gives 1"), Shift+Up
+// on a blank lands on 3, and Down at 1 and Up at 999 land where they stand —
+// the WALLS, silent. WHY NO BLANK SPECIAL CASE: a delta of k must land exactly
+// where k single steps would, because the platform COALESCES — the wheel sends
+// a completed frame's detents as one signed delta, and the value drag's first
+// motion may cross several step thresholds at once — so a blank that answered
+// 1 for every magnitude would make the authored result depend on how the
+// compositor batched the hand's detents. Counting the blank as 0 keeps every
+// detent its own step. The write spells the landing through the grammar's own
 // writer (format_marker_measure).
 inline int64_t measure_step_landing(int64_t start, int64_t delta) {
-    if (start <= 0) return 1;
     return std::clamp<int64_t>(start + delta, 1, kMeasureMaxWhole);
 }
 
 // THE MEASURE STEP'S DIRECTIONAL FACE — false on the kind refusal and on a
-// wall, true otherwise; A BLANK NEVER WALLS (it always lands on 1). Magnitude-
-// invariant for the tempo step's reason: a positive delta's clamped landing
-// equals the start iff the start IS the max, whatever the delta. A stale focus
-// answers true (a belt; the stable-state refusals own it).
+// wall, true otherwise; A BLANK NEVER WALLS (its start 0 lands on 1 or above
+// in either direction, never on itself — the landing owner's own arithmetic,
+// not a branch here). Magnitude-invariant for the tempo step's reason: a
+// positive delta's clamped landing equals the start iff the start IS the max,
+// whatever the delta. A stale focus answers true (a belt; the stable-state
+// refusals own it).
 inline bool measure_step_direction_actionable(const AppState& a,
                                               int64_t delta) {
     if (measure_step_kind_refusal(a)) return false;
@@ -11798,7 +11807,6 @@ inline bool measure_step_direction_actionable(const AppState& a,
     const int f = a.last_selected_marker;
     if (f < 0 || f >= static_cast<int>(mv.size())) return true;
     const int64_t start = measure_step_start(mv[static_cast<size_t>(f)].measure);
-    if (start <= 0) return true;
     return measure_step_landing(start, delta) != start;
 }
 
@@ -12281,7 +12289,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     (position_nudge.h), so the nudge never acts on a selection at all; what
 //     it acts on is a singleton, which is not a selection that was built;
 //   * BARE `j` and Shift+`j` — they read the FOCUS and write no store;
-//   * THE MARKER DROP, the three marker-lane EDITORS and the TAB WALK — none
+//   * THE MARKER DROP, the four marker-lane EDITORS and the TAB WALK — none
 //     of them consumes a selection: the drop makes one, the editors edit one
 //     marker and the walk is how a selection is navigated.
 // AND THE SEVEN SILENT CLEARS DELETED ON 2026-09-10 STAY DELETED: those were

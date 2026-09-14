@@ -117,20 +117,27 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: ONE MEMBER since 2026-09-14, the MAGNIFICATION
-    //    EDITOR'S COMMIT (GuiFlagEditor::commit_magnification_edit). Its one
-    //    site from 2026-08-26 was the retired magnification level applier
-    //    (architect approval 2026-09-14). The gain is a PER-SECTION PROFILE
-    //    resolved from the warp markers now (waveform_gain_profile_cached), so a
-    //    gain change is a warp-store mutation, whose profile hash dirties the
-    //    plate fingerprint and the overview bar cache BY FIELD — the tick's
-    //    async backstop would repaint it a frame late with no kick of its own,
-    //    and the commit takes this kick so the new gain lands in the frame its
-    //    box does. (A warp-store act that already kicks for its map — undo,
-    //    redo, the load-in-place family, the value family below — carries a
-    //    gain change with it for free.) A gain-only change is a plate CONTENT change with no geometry
-    //    behind it, so the reclamp below is a pure no-op for it. It touches no
-    //    audio: the gain is the picture's.
+    //  - THE PLATE'S OWN GAIN: THREE MEMBERS since 2026-09-14, every road that
+    //    writes a warp marker's magnification — the MAGNIFICATION EDITOR'S
+    //    COMMIT (GuiFlagEditor::commit_magnification_edit), the VALUE STEP
+    //    (GuiWarpMarkersOps::adjust_magnification_step — bare Up/Down and the
+    //    plain wheel over the box) and the VALUE DRAG'S magnification motion
+    //    (ValueDragOps::apply_motion, live per step) — and ALL THREE kick
+    //    through kick_waveform_sync_if_gain_changed below, never this function
+    //    direct, so a write the resolved profile cannot see renders nothing.
+    //    Its one site from 2026-08-26 was the retired magnification level
+    //    applier (architect approval 2026-09-14). The gain is a PER-SECTION
+    //    PROFILE resolved from the warp markers now
+    //    (waveform_gain_profile_cached), so a gain change is a warp-store
+    //    mutation, whose profile hash dirties the plate fingerprint and the
+    //    overview bar cache BY FIELD — the tick's async backstop would repaint
+    //    it a frame late with no kick of its own, and these writes take the
+    //    kick so the new gain lands in the frame its box does. (A warp-store act
+    //    that already kicks for its map — undo, redo, the load-in-place family,
+    //    the value family below — carries a gain change with it for free.) A
+    //    gain-only change is a plate CONTENT change with no geometry behind it,
+    //    so the reclamp below is a pure no-op for it. It touches no audio: the
+    //    gain is the picture's.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries
@@ -220,6 +227,20 @@ struct Viewport {
         if (request_waveform_sync_) request_waveform_sync_();
         else                        kick_waveform_render();
     }
+
+    // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
+    // inventory above): a magnification write kicks the synchronous rebuild
+    // ONLY WHEN THE RESOLVED GAIN PROFILE ACTUALLY CHANGED across it. The
+    // caller captures `waveform_gain_hash()` BEFORE its store write and hands
+    // it to `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives
+    // here and nowhere else. A write the picture cannot see — a disabled
+    // marker's field, a coincident loser's, a blank frozen to the digit it
+    // already inherited — changes the field and not the profile, and must not
+    // drain the worker and re-render the whole plate (on the value drag's
+    // cadence least of all). The caller's top-strip repaint, undo and dirty
+    // work are the authored field's and stay unconditional.
+    uint64_t waveform_gain_hash() const;
+    void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // Viewport mutators.
     // THE MOVEMENT OWNER — the cursor's live chokepoint, and since 2026-08-19

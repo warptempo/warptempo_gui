@@ -1609,18 +1609,19 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_magnification_step(
         return std::nullopt;  // belt: unreachable past the wall
     selection_consumed(app);
     std::vector<GuiWarpMarker> pre_state = mv_const;
+    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     if (GuiWarpMarker* m = app.warpmarkers.marker_mut(f))
         m->magnification = landed;
     if (!merge) undo.push_undo_warp(std::move(pre_state));
     undo.record_gesture(GestureKind::MagnificationStep, merge);
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
-    // THE PICTURE MOVED: the store's new generation changes the waveform gain
-    // profile's hash, which dirties the plate fingerprint and the overview bar
-    // cache. The synchronous kick lands the new gain in the frame the box
-    // does — the magnification editor's commit, the same road
-    // (GuiFlagEditor::commit_magnification_edit).
-    viewport.kick_waveform_sync();
+    // THE PICTURE MAY HAVE MOVED: if the resolved gain profile's hash changed,
+    // the plate fingerprint and the overview bar cache are dirty and the
+    // synchronous kick lands the new gain in the frame the box does; a write
+    // the profile cannot see renders nothing (the gain category's one owner,
+    // Viewport::kick_waveform_sync_if_gain_changed).
+    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
     return std::nullopt;
 }
 

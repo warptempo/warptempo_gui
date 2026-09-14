@@ -2173,9 +2173,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // deleted, and ctrl binds nothing there now, so the lane falls to the
     // Arrow this arm returns off the navigation surface (the map's standing
     // rule: a point arming nothing shows the Arrow, cue and gesture agreeing
-    // by construction — the same answer shift already gives on this lane. The
-    // ctrl+WHEEL zoom step is still live there and is deliberately not cued:
-    // the map answers what a PRESS would do, and no wheel is cued anywhere);
+    // by construction — the same answer shift already gives on this lane. No
+    // wheel zooms there or anywhere since 2026-09-14, every modified wheel a
+    // swallowed no-op (GuiInputHandler::on_wheel), and the map answers what a
+    // PRESS would do in any case, no wheel being cued anywhere);
     // over the
     // NAVIGATION SURFACE it is THE ONE NAV DRAG'S ZOOM MODIFIER (the
     // live-ctrl model, 2026-08-14 — ScrollDragState): the hover cue promises
@@ -3409,7 +3410,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // published box, the same rect the press claim and the cursor map's
     // I-beam read, so the three cannot disagree. The RIDING BOXES beside it —
     // whichever of the marker's boxes stand right of the field, re-painted at
-    // its right edge under any of the three kinds — are deliberately not in
+    // its right edge under any of the four kinds — are deliberately not in
     // the clause: a press there seats no caret and wears no I-beam, so a
     // finger there keeps the lane's own answer. That answer is the FLAG BOX'S,
     // not the pan's, and it needs no clause of its own either: the zone's flag
@@ -4495,7 +4496,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
-        // Read-only refuses every one of the three editors, as it always did.
+        // Read-only refuses every one of the four editors, as it always did.
         // The ITERATION lock refuses the payload, the measure and the
         // magnification — each opens over serialized content, each pushes —
         // and ADMITS a bound cell, the

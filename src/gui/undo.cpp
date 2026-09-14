@@ -47,8 +47,8 @@ namespace {
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the four coalescing kinds (both position nudges, the tempo cent step and the
-// iteration bound step)
+// the five coalescing kinds (GestureKind, undo.h, re-grepped: both position
+// nudges, the tempo cent step, the measure step and the magnification step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
 // verdicted on. There are three of them, re-grepped at this writing
@@ -262,8 +262,11 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // the selection on one of TWO stores rather than the selection itself.
     // Both went with the kind on 2026-09-10, when the iteration bracket left
     // the undo domain: the bound step pushes nothing, so it has no entry for a
-    // later tap to merge into and no subject to keep apart. The three kinds
-    // left are one-body kinds whose subject the selection carries whole.)
+    // later tap to merge into and no subject to keep apart. The five kinds
+    // standing now (GestureKind, undo.h, re-grepped: WarpNudge,
+    // PhaseResetNudge, TempoStep, MeasureStep, MagnificationStep) are one-body
+    // kinds whose subject the selection carries whole — the three value steps'
+    // FIELDS keep apart by the kind itself, each field its own kind.)
 
     bool merge = false;
     if (stamp_matches) {

@@ -4021,7 +4021,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Global dispatch: only the continuous step gestures repeat — the
     // ARROWS all four (Left/Right being the playhead step in the waveform lane
     // and the position nudge in the marker lane, Up/Down the
-    // tempo cent step; the lane split is decided per fire at dispatch, so the
+    // VALUE STEP on the addressed cell — the tempo, a bound, the measure or
+    // the magnification; the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family — and since 2026-08-31 they repeat on their
     // shifted and ctrl spellings too, which the arm below this one owns),
     // bare PageUp/PageDown, bare Equal/Minus (the horizontal ZOOM step, bare
