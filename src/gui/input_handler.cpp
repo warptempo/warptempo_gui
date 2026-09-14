@@ -1871,8 +1871,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         //     already rules exact-frame degeneracy the render boundary's to
         //     collapse, not the drop's.
         //   - inside a LABEL DEFINITION: only a preceding label REF is
-        //     special-cased, so a preceding label_def takes the ordinary numeric
-        //     arm. Both halves keep their local tempo, but a definition's SPAN
+        //     special-cased — stepped over to the marker behind it, as the pass
+        //     walk steps over it (architect 2026-09-13) — so a preceding
+        //     label_def takes the ordinary numeric arm. Both halves keep their local tempo, but a definition's SPAN
         //     IS ITS MEANING — the parser caches its target duration from where
         //     the section ends (warp_frame_map_build.cpp) — so the split reprices
         //     every reference to that label. A property of definitions, not a

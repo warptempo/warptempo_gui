@@ -16,7 +16,8 @@ struct GuiTargetRender;
 
 // Index of the nearest non-disabled marker strictly before `time_frame`,
 // or -1 if none. See the definition in warpmarkers_ops.cpp for the full
-// doc comment (matches the resolver's walk).
+// doc comment (the resolver's survival test; the label-ref skip is the
+// caller's).
 int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame);
 

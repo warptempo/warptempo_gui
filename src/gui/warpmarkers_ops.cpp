@@ -82,7 +82,10 @@
 // resolution and hover (effective_disabled: a marker is out if its own
 // disabled flag is set, or it is an enabled label ref whose target def is
 // disabled), so copy-previous copies the previous render-visible tempo
-// rather than attributing to a marker the render ignores. `time_frame`
+// rather than attributing to a marker the render ignores. It answers the
+// nearest SURVIVOR, label refs included: stepping past a ref to the marker
+// behind it, as the pass walk does, is drop_copy_previous_at_playhead's own
+// loop, which re-applies this same survival test at each step. `time_frame`
 // need not be present in `mv` — drop_copy_previous_at_playhead calls this
 // with the prospective drop time before insertion, landing on the same
 // slot insert_marker's lower_bound would place the new marker at, one
@@ -196,15 +199,21 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // PAIR also reads — bare `j`'s clipboard copy and Shift+`j`'s jump to the
 // marker the value came from (resolved_marker_payload; the readout that used
 // to display it retired 2026-08-29).
-// Exception: when the prior marker is a label ref, the copy is skipped and a
-// neutral owner (base 1.0 / empty scale) is dropped instead. Copying the
-// ref's resolved effective value would freeze a literal of the pre-drop
-// value, but inserting this marker re-deforms the ref's own segment so the
-// ref's effective value shifts — the new marker would then hold a value the
-// ref no longer carries. A 1.00 owner leaves the ref's segment unchanged.
-// Falls back to base 1.0 / no typed scale if there is no prior marker
-// (possible: the store may be empty or the playhead may sit before the
-// first marker — marker zero is an ordinary, deletable marker).
+// A LABEL REF IS SKIPPED TO THE MARKER BEHIND IT (architect 2026-09-13, the
+// drop taking the rule the pass inheritance walk took the same day,
+// resolve_inherited_tempo in warp_frame_map_build.h): when the prior survivor
+// is a label ref, the drop steps back past every surviving ref to the nearest
+// earlier non-ref survivor and copies THAT marker's value. Copying the ref's
+// resolved effective value would freeze a literal of the pre-drop value, but
+// inserting this marker re-deforms the ref's own segment so the ref's
+// effective value shifts — the new marker would then hold a value the ref no
+// longer carries. So skip the ref to the owner behind it, never its implied
+// rate, exactly as a pass at this slot would. Falls back to base 1.0 / no
+// typed scale when no non-ref survivor precedes the drop (possible: the store
+// may be empty, the playhead may sit before the first marker — marker zero is
+// an ordinary, deletable marker — or only refs may precede it), which is the
+// frame-0 seed's value, or the walk's own no-owner answer when a ref itself
+// sits at frame 0.
 //
 // Copy-previous is PROJECTION TRUTH end to end: the copied value is the tempo
 // that RENDERS after the prior marker, not the marker's authored member value.
@@ -213,47 +222,62 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // when the prior is an owner inside a 2+-survivor exact-frame group the render
 // replaces the whole group with one plain enabled 1.00 owner (no labels) while
 // marker_effective would still hand back e.g. 2.00 — a copy that would change
-// the rendered bytes. So a prior that is a member of a collapsed coincident
-// stack contributes the collapse's 1.00 (base 100 / no scale, the no-prior
-// fallback and exactly the synthetic owner the resolver seeds), skipping
-// marker_effective; the members' own hovers keep their authored readouts (the
-// ruled display split). The group predicate mirrors the resolver's stage-2
-// collapse: 2+ SURVIVORS sharing one exact int64 frame (effective_disabled is
-// the shared cascade survival test; disabled and cascade-disabled members do
-// not count). prev_idx itself survives by construction of find_immediate_prior,
-// so one OTHER surviving index at its frame makes the group.
+// the rendered bytes. So a stepped-over survivor that is a member of a
+// collapsed coincident stack — the non-ref marker the step lands on, OR ANY
+// REF IT PASSES, whose group the render likewise replaces with a synthetic
+// owner that is no ref and so ends the pass walk — contributes the collapse's
+// 1.00 (base 100 / no scale, exactly the synthetic owner the resolver seeds),
+// skipping marker_effective; the members' own hovers keep their authored
+// readouts (the ruled display split). The group predicate mirrors the
+// resolver's stage-2 collapse: 2+ SURVIVORS sharing one exact int64 frame
+// (effective_disabled is the shared cascade survival test; disabled and
+// cascade-disabled members do not count, and a disabled or cascade-disabled
+// ref is stepped over as the projection never held it). Every index the step
+// visits survives by construction (find_immediate_prior and the loop's own
+// survival test), so one OTHER surviving index at its frame makes the group.
 void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
     if (audio.sample_rate() <= 0) return;
     const int64_t src_frame =
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
     const double t = static_cast<double>(src_frame);
     const auto& mv = app.warpmarkers.markers();
-    const int prev_idx = find_immediate_prior(mv, t);
+    int                   prev_idx = find_immediate_prior(mv, t);
     int64_t               base_cents = 100;
     std::optional<double> scale;
-    if (prev_idx >= 0 && mv[prev_idx].label_ref.empty()) {
-        // Is prev_idx inside a 2+-survivor exact-frame group the render
-        // collapses to one plain 1.00 owner? Exact integer frame compares —
-        // coincidence IS frame equality in the authored domain.
-        const int64_t prev_frame = mv[prev_idx].time_frame;
-        bool collapsed_group = false;
+    // Is survivor i inside a 2+-survivor exact-frame group the render
+    // collapses to one plain 1.00 owner? Exact integer frame compares —
+    // coincidence IS frame equality in the authored domain.
+    auto in_collapsed_group = [&](int i) {
+        const int64_t frame = mv[i].time_frame;
         for (int j = 0; j < static_cast<int>(mv.size()); ++j) {
-            if (j != prev_idx && mv[j].time_frame == prev_frame &&
+            if (j != i && mv[j].time_frame == frame &&
                 !effective_disabled(mv, j)) {
-                collapsed_group = true;
-                break;
+                return true;
             }
         }
-        // Collapsed group: keep base_cents/scale at the synthetic 1.00 owner's
-        // values (the no-prior fallback). Otherwise resolve the prior's
-        // projection value (pass/ref/owner, incl. the frame-0 seed and
-        // label-ref fallbacks) through marker_effective.
-        if (!collapsed_group) {
-            const MarkerEffective eff = marker_effective(
-                slice_to_warp_markers(mv), prev_idx, audio.total_frames());
-            base_cents = eff.base_cents;
-            scale      = eff.scale;
+        return false;
+    };
+    // Step back past surviving label refs; a collapsed group met on the way
+    // ends the step at the synthetic owner's 1.00.
+    bool collapsed_group = false;
+    while (prev_idx >= 0) {
+        if (in_collapsed_group(prev_idx)) {
+            collapsed_group = true;
+            break;
         }
+        if (mv[prev_idx].label_ref.empty()) break;
+        --prev_idx;
+        while (prev_idx >= 0 && effective_disabled(mv, prev_idx)) --prev_idx;
+    }
+    // Collapsed group: keep base_cents/scale at the synthetic 1.00 owner's
+    // values (the no-prior fallback). Otherwise resolve the non-ref prior's
+    // projection value (owner, or a pass through the same walk the render
+    // runs, incl. the frame-0 seed) through marker_effective.
+    if (prev_idx >= 0 && !collapsed_group) {
+        const MarkerEffective eff = marker_effective(
+            slice_to_warp_markers(mv), prev_idx, audio.total_frames());
+        base_cents = eff.base_cents;
+        scale      = eff.scale;
     }
     drop_marker(t, /*inherit=*/false, base_cents, scale);
 }
