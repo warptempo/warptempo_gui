@@ -1806,14 +1806,12 @@ void render_flags(cairo_t* cr,
         [&](int i) { return flag_text(markers, i); },
         // The warp column's disabled verdict follows the label_ref cascade.
         [&](int i) { return effective_disabled(markers, i); },
-        // And its measure is the PLAIN FIELD, exactly as the phase column's is
-        // (architect 2026-08-20): a measure is hand-authored and INHERITS FROM
+        // And its measure is the PLAIN FIELD (architect 2026-08-20): a measure is hand-authored and INHERITS FROM
         // NOTHING down the LABEL CASCADE. It followed that cascade for one day
         // and he reversed it on what the field says: it is a POSITION in the
         // score, true where the definition sits and FALSE at a reference sitting
         // bars later, so rippling it puts a confident wrong bar number on every
-        // copy. The two columns read the same one line, which is why neither has
-        // a cascade resolver. (The '+' chain is a different axis entirely —
+        // copy, which is why there is no cascade resolver. (The '+' chain is a different axis entirely —
         // predecessor to successor, marker_measure.h — and is not resolved
         // here or anywhere in the painter.)
         [&](int i) -> const std::string& {
@@ -1857,11 +1855,12 @@ void render_phase_reset_flags(cairo_t* cr,
         [&](int) { return std::string(kPhaseResetLaneToken); },
         // No label_ref cascade on this column — the bool is the whole verdict.
         [&](int i) { return phase_resets[i].disabled; },
-        // NO INHERITANCE ON THIS COLUMN — the plain field is the whole answer.
-        // Labels are a warp-column form, so there is no definition to cite and
-        // nothing to resolve; the asymmetry is the label model's, not a gap.
-        [&](int i) -> const std::string& {
-            return phase_resets[static_cast<size_t>(i)].measure;
+        // RECORDED ASYMMETRY: phase resets carry no measure (architect
+        // 2026-09-14). The answer is always empty, so no measure box paints and
+        // no measure boundary is published (FlagHitRect's collapse rule).
+        [](int) -> const std::string& {
+            static const std::string kNoMeasure;
+            return kNoMeasure;
         },
         // THE TWO BOUND CELLS, on exactly the resets the sweep reads
         // (phase_iter_cells above), and none outside the mode. The bracket is
@@ -1870,20 +1869,20 @@ void render_phase_reset_flags(cairo_t* cr,
         // which is what tells the two columns' cells apart at a glance.
         [&](int i) { return phase_iter_cells(phase_resets, i, iteration_on); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        // THE PAYLOAD BOX IS THE ONE THIS COLUMN NEVER SUPPRESSES, and the
+        // THE BOUND CELLS ARE THE ONLY BOXES THIS COLUMN SUPPRESSES, and the
         // asymmetry is real rather than an oversight (the warp/phase-reset
-        // symmetry rule, conventions.md): the MEASURE editor is both columns'
-        // (measures are the fourth ruled exception to the home-view binding)
-        // and so is the BOUND editor since 2026-09-09, while the PAYLOAD
-        // editor is a WARP-column surface by its own open gates — a phase
-        // reset authors no payload line, its flag carrying a display-only
-        // token — so no phase-reset flag can ever be the edited one for that
-        // kind. THE FORK IS HERE rather than at the caller because this
-        // painter owns its column's asymmetry: a suppression naming the
-        // payload is dropped, so a warp target index can never be applied to
-        // this store. If a phase-reset payload editor is ever added, this is
-        // the line it changes.
-        suppressed.cell == MarkerCell::Payload ? SuppressedBox{} : suppressed,
+        // symmetry rule, conventions.md): the BOUND editor is both columns'
+        // since 2026-09-09, while the PAYLOAD and MEASURE editors are
+        // WARP-column surfaces by their own open gates — a phase reset authors
+        // no payload line, its flag carrying a display-only token, and carries
+        // no measure (the measure callback above) — so no phase-reset flag can
+        // ever be the edited one for either kind. THE FORK IS HERE rather than
+        // at the caller because this painter owns its column's asymmetry: a
+        // suppression naming the payload or the measure is dropped, so a warp
+        // target index can never be applied to this store.
+        (suppressed.cell == MarkerCell::Payload
+         || suppressed.cell == MarkerCell::Measure)
+            ? SuppressedBox{} : suppressed,
         iteration_on,
         focus_marker, focus_cell);
 }
@@ -2391,14 +2390,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // EITHER audio view since 2026-08-24 (the home-view binding's fifth ruled
     // exception, active_column_authoring_allowed, app_state.h) — which costs
     // this painter nothing, the column below being resolved on the DISPLAYED
-    // basis and the live map like every other lane item. The MEASURE editor is
-    // BOTH columns' (measures are the fourth ruled exception to the home-view
-    // binding) and so is the BOUND editor since 2026-09-09 (the phase-reset
-    // column carries an iteration bracket of its own), so their store is the
+    // basis and the live map like every other lane item. The MEASURE editor is a
+    // WARP-COLUMN surface too, in both audio views (the home-view binding's
+    // fourth ruled exception; phase resets carry no measure, PhaseResetMarker),
+    // while the BOUND editor is both columns' since 2026-09-09 (the phase-reset
+    // column carries an iteration bracket of its own), so its store is the
     // ACTIVE column's — the column the open route resolved the index against.
     // A target index the store has since shrunk past is the only failure
     // shape, and it simply paints nothing.
-    const bool phase = !payload_kind && app.active_markers_view == 'P';
+    const bool phase = bound_kind && app.active_markers_view == 'P';
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv = app.phaseresetmarkers.markers();
     const int idx = ed.target;
@@ -2903,8 +2903,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // WHAT RIDES, BY RANK: every box standing right of the field's own. The
     // MEASURE field's rank is the last, so nothing rides under it. THE STORE
     // BELOW IS THE FIELD'S OWN COLUMN since 2026-09-09, when the bound editor
-    // became both columns': the payload editor is still warp-only by its open
-    // gates, and `phase` already answered that question for the box above.
+    // became both columns': the payload and measure editors are warp-only by
+    // their open gates, and `phase` already answered that question for the box
+    // above.
     const int  field_rank  = flag_box_rank(field_cell);
     const bool ride_cells  = field_rank < flag_box_rank(MarkerCell::Upper);
     if (field_rank < flag_box_rank(MarkerCell::Measure)) {
@@ -2934,9 +2935,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             cl.present && field_rank < flag_box_rank(MarkerCell::Lower);
         const bool ride_upper =
             cl.present && field_rank < flag_box_rank(MarkerCell::Upper);
+        // The measure rides on the warp column alone (PhaseResetMarker).
+        static const std::string kNoMeasure;
         const std::string& ctext =
-            phase ? pmv[static_cast<std::size_t>(idx)].measure
-                  : mv[static_cast<std::size_t>(idx)].measure;
+            phase ? kNoMeasure : mv[static_cast<std::size_t>(idx)].measure;
         const bool ride_measure = !ctext.empty();
 
         // THE RUN'S THREE SEAM COLUMNS, accumulated left to right from the

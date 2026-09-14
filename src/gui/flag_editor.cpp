@@ -216,8 +216,8 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
                           flag_text(mv, idx));
 }
 
-// The contract is at the declaration; this is enter_measure_edit's mechanics
-// over TWO STORES with the cell's own eligibility in front.
+// The contract is at the declaration; this is enter_measure_edit's mechanics,
+// over TWO STORES, with the cell's own eligibility in front.
 void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
                                           MarkerCell side) {
     if (idx < 0) return;
@@ -521,21 +521,17 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 }
 
 // THE MEASURE EDITOR'S OPEN. The contract is at the declaration; this is the
-// mechanics, and they are enter_text_edit's shape written for TWO stores
-// instead of one.
+// mechanics, on the warp store alone.
 //
 // NO PLAYBACK STOP, the top-strip family's recorded exemption: this editor is
 // keyboard-modal and pointer/wheel-transparent exactly as the payload editor
 // is, so a live audition survives the open. The decision table is at
 // GuiPlaybackLifecycle::stop_playback_for_modal_open, which this surface — like
 // its sibling — deliberately does not call.
-void GuiFlagEditor::enter_measure_edit(char column, int idx) {
+void GuiFlagEditor::enter_measure_edit(int idx) {
+    if (app.active_markers_view != 'W') return;
     if (idx < 0) return;
-    const bool phase = (column == 'P');
-    const int  n = phase
-        ? static_cast<int>(app.phaseresetmarkers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
-    if (idx >= n) return;
+    if (idx >= static_cast<int>(app.warpmarkers.markers().size())) return;
 
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::MeasureText &&
@@ -557,9 +553,8 @@ void GuiFlagEditor::enter_measure_edit(char column, int idx) {
     // Target-switching: single-select the new target so the marker column's
     // outline follows it, and LAND the playhead on it — the marker lane owns
     // the playhead, and an editor open hands the lane a new focus (the rule is
-    // at land_playhead_on_marker, input_pointer.cpp). Both are column-agnostic:
-    // selection indices and the land alike resolve against the ACTIVE column's
-    // store, which is the column this open was called with.
+    // at land_playhead_on_marker, input_pointer.cpp). Both resolve against the
+    // ACTIVE column's store, which the guard above pinned to the warp column.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
     // THE OPEN SEATS THE CELL IT EDITS (architect 2026-09-05): the select
@@ -576,13 +571,12 @@ void GuiFlagEditor::enter_measure_edit(char column, int idx) {
     // display-time inheritance down the label cascade existed for one day and
     // the architect reversed it on 2026-08-20 (the field is a POSITION in the
     // score, wrong at a reference sitting bars later), so what a flag paints
-    // and what this editor opens with are the same one field on both columns.
+    // and what this editor opens with are the same one field.
     // That the seed is the marker's OWN is now trivially true and is still
     // spelled here, because it is what makes an empty commit a REMOVAL of this
     // marker's measure and nothing else's.
-    const std::string seed = phase
-        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].measure
-        : app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
+    const std::string seed =
+        app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
     text_editor::enter(app.top_flag_editor, idx, seed,
                        text_editor::Kind::MeasureText);
 
@@ -603,8 +597,8 @@ void GuiFlagEditor::enter_measure_edit(char column, int idx) {
 
 // THE MEASURE COMMIT, and it HAS a validator arm (2026-08-20, with the field's
 // rebrand from the free-text comment): the measure is a GRAMMAR, so the buffer
-// is judged HERE against validate_marker_measure — the same one judge the two
-// file parsers and both history delta extractors use, which is what keeps
+// is judged HERE against validate_marker_measure — the same one judge the warp
+// file parser and the warp history delta extractor use, which is what keeps
 // "loadable iff it commits" exact rather than merely likely. The type-time
 // filters cannot carry the grammar the way they carried the old byte class: a
 // half-typed `12 4` is a legal prefix of a legal token, so refusal belongs at
@@ -647,20 +641,16 @@ void GuiFlagEditor::commit_measure_edit() {
             return;
         }
     }
-    // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN, because the view
-    // CANNOT MOVE under an open session: every column-switching key (`p`, `t`,
-    // the 1/2/3 selectors, Ctrl+Tab) is dropped at the keyboard-modal gate
-    // while any editor stands, and every column-switching BUTTON acts at the
-    // LIFT whose own PRESS already closed this editor
-    // (close_top_flag_editor_for_outside_press). So the session needs no stored
-    // column of its own.
-    const bool phase = (app.active_markers_view == 'P');
-
+    // THE STORE IS THE WARP COLUMN'S, the open's own: the open refuses any
+    // other column, and the view CANNOT MOVE under an open session — every
+    // column-switching key (`p`, `t`, the 1/2/3 selectors, Ctrl+Tab) is
+    // dropped at the keyboard-modal gate while any editor stands, and every
+    // column-switching BUTTON acts at the LIFT whose own PRESS already closed
+    // this editor (close_top_flag_editor_for_outside_press).
+    //
     // The target may have gone out from under the editor (an undo or a delete
     // while it stood): drop the edit, exactly as the payload commit does.
-    const int n = phase
-        ? static_cast<int>(app.phaseresetmarkers.markers().size())
-        : static_cast<int>(app.warpmarkers.markers().size());
+    const int n = static_cast<int>(app.warpmarkers.markers().size());
     if (idx < 0 || idx >= n) {
         this->exit_top_flag_edit_no_commit();
         return;
@@ -668,9 +658,8 @@ void GuiFlagEditor::commit_measure_edit() {
 
     // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no dirty
     // bit, no store bump — the shape every no-op commit in the product takes.
-    const std::string& before = phase
-        ? app.phaseresetmarkers.markers()[static_cast<size_t>(idx)].measure
-        : app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
+    const std::string& before =
+        app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
     if (before == next) {
         this->exit_top_flag_edit_no_commit();
         return;
@@ -679,12 +668,7 @@ void GuiFlagEditor::commit_measure_edit() {
     // ONE UNDO ENTRY: a measure is serialized content and its edit dirties the
     // tab like any other authored change. The snapshot is taken before the
     // write, the store's own convention.
-    if (phase) {
-        std::vector<GuiPhaseResetMarker> pre = app.phaseresetmarkers.markers();
-        GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx);
-        if (m) m->measure = next;
-        undo.push_undo_phase_reset(std::move(pre));
-    } else {
+    {
         std::vector<GuiWarpMarker> pre = app.warpmarkers.markers();
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (m) m->measure = next;

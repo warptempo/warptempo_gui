@@ -3420,8 +3420,8 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // working with no vocabulary of their own here: whatever the file could hold,
 // the line holds, and the ONE grammar that reads it is the parser's — a
 // measure suffix included, since the token is rest-of-line. The phase reset
-// column needs no such trip: frame, the disable bit and the measure IS its
-// line, and all three travel typed on the flag.
+// column needs no such trip: frame and the disable bit ARE its line, and both
+// travel typed on the flag.
 void GuiInputHandler::run_history_revert() {
     if (!app.history_mode.active) return;
 
@@ -3581,17 +3581,6 @@ void GuiInputHandler::run_history_revert() {
             GuiPhaseResetMarker nm;
             nm.time_frame = f.time_frame;
             nm.disabled   = f.then_disabled;
-            // The then side's measure travels with the flag and is restored
-            // with the rest of the line. Dropping it would make the compare
-            // below report every measured marker as changed and then
-            // overwrite the measure away.
-            //
-            // THE THEN SIDE IS ALL THIS ACT EVER READS, unchanged by the
-            // 2026-08-22 ruling that made the phase halves PAINT their measure
-            // bytes: a revert restores what the commit had, so the added half's
-            // measure — which now shows in that half's label — is not a thing
-            // to restore and reaches no field here.
-            nm.measure    = f.then_measure;
             if (at >= 0) {
                 ++sk;
                 // IDENTICAL IS NOT A CHANGE — the canonical line the occupant

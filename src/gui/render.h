@@ -736,8 +736,8 @@ inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
 // went back to kdenlive itself with a bitmap font on the flag text and read
 // #000000 out of it for every colour and every state — the reference crops are
 // under tmp/screenshots/kdenlive/redesign). It covers the whole lane: the warp
-// and phase-reset flag LABELS on all three live classes, the MEASURE BOX's
-// text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
+// and phase-reset flag LABELS on all three live classes, the warp MEASURE
+// BOX's text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
 // they share its ink), and the flag editor's unrolled text and its caret,
 // which resolve through the same face. THE ONE EXCEPTION IS THE FLAG EDITOR'S
 // SELECTED SUBSTRING (architect 2026-08-28): a selected span is the accent
@@ -3259,7 +3259,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // shows it once: while a field stands, the FIELD is where its own cell's
 // brightness lives. The rule is stated once at
 // the selected pair's palette block (kMarkerFlagFillSel) and applies on both
-// columns — a phase reset's measure box is a cell too. Disabled and red
+// columns — a phase reset's bound cells are cells too. Disabled and red
 // blend cell by cell through the same ladders; the stem and the border read
 // the class alone.
 //
@@ -3291,10 +3291,11 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // drawn. THE STEM IS THE EXCEPTION on both counts — it paints and publishes for
 // the whole session, the editor unrolling from the flag's own column.
 //
-// BOTH COLUMNS TAKE IT, but the PAYLOAD cell is unreachable on the phase-reset
-// one: that editor is a warp-column surface by its own open gates (the measure
-// and bound editors are both columns'), and that painter enforces the
-// asymmetry at its own call rather than trusting its caller (recorded there).
+// BOTH COLUMNS TAKE IT, but the PAYLOAD and MEASURE cells are unreachable on
+// the phase-reset one: those editors are warp-column surfaces by their own
+// open gates (the bound editor is both columns'), and that painter enforces
+// the asymmetry at its own call rather than trusting its caller (recorded
+// there).
 //
 // `warp_frame_map`: the displayed-axis translation the painters share (the live
 // map in target view). `waveform_width` is the EFFECTIVE waveform width
@@ -3498,8 +3499,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // bound as a SIGNED WHOLE HOP of the analysis lattice
 // (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
 // on the warp column, and the ABSENT DECIMALS are what tell a hop cell from a
-// cent cell. The focus and its addressed cell arrive as they always did: this
-// column's measure box is a cell too, and it is the bright one when addressed.
+// cent cell. The focus and its addressed cell arrive as they always did. No
+// measure box paints on this column (render_phase_reset_flags' measure
+// callback records the asymmetry).
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -3548,9 +3550,8 @@ void render_phase_reset_flags(cairo_t* cr,
 // and hands it to the frozen parser, so the value travels as text the loader
 // itself judges and no second grammar is written anywhere
 // (GuiInputHandler::run_history_revert). Phase resets carry no token — their
-// line is frame plus the disable bit plus an optional measure suffix, and the
-// then-side measure rides its own `then_measure` field below rather than this
-// one — so `then_token` stays empty on that column.
+// line is frame plus the disable bit — so `then_token` stays empty on that
+// column.
 //
 // THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
 // 2026-08-22, deepened the same day it landed: the axis shipped reading each
@@ -3580,19 +3581,6 @@ struct HistoryDiffFlag {
     bool        then_disabled = false;           // verbatim local: the revert's
     bool        then_effective_disabled = false; // the removed half's paint
     bool        now_effective_disabled  = false; // the added half's paint
-    // THE PHASE COLUMN'S THEN-SIDE MEASURE, FOR THE REVERT AND NOTHING ELSE.
-    // The warp column needs no twin: its then side travels as `then_token`,
-    // which is rest-of-line and so already carries the measure suffix into the
-    // line the revert reconstitutes. This column has no token to ride on.
-    //
-    // THE PAINTED MEASURE IS NOT THIS FIELD (architect 2026-08-22, when the
-    // phase halves began carrying their measure bytes like the warp halves
-    // always have): each half's measure is composed INTO `removed_text` /
-    // `added_text` at the cache fill, through the one spelling owner
-    // history_diff_label, so the painter shapes one string per half and knows
-    // nothing about measures — and an ADDED half's measure, which the revert
-    // never restores, needs no field here at all.
-    std::string then_measure;
     // NO RED CLASS TRAVELS HERE, and that is deliberate (recorded 2026-09-02,
     // the disabled axis's sibling): the live lane's THIRD marker class — the
     // normalization red a coincident stack or a dangling reference earns — is

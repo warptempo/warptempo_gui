@@ -116,8 +116,7 @@ inline std::vector<PhaseResetMarker> slice_to_phase_reset_markers(
 // and the bound editor's seed (GuiFlagEditor::enter_iter_bound_edit) both read
 // it, so what a cell shows and what its editor opens with are one spelling of
 // one value. `side` is Lower or Upper; any other member answers the lower
-// bound, the harmless reading, since neither the payload nor the measure
-// carries a bound. The warp twin is format_iter_bound_cell (warpmarkers.h);
+// bound, the harmless reading, since no other cell carries a bound. The warp twin is format_iter_bound_cell (warpmarkers.h);
 // the two differ in their composer alone, and THE ABSENT DECIMALS ARE WHAT
 // TELL THE COLUMNS APART wherever the two meet — on the flag and in a sweep
 // cell's file name.

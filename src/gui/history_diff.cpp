@@ -4,7 +4,6 @@
 #include "device_config.h"   // shown_project_path (the card's name for a file)
 #include "frame_format.h"
 #include "history_prefetch.h"
-#include "marker_measure.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
 // marker_effectively_disabled, the one label-cascade owner — a header template
@@ -917,27 +916,16 @@ std::map<std::string, bool> warp_side_effective_disabled(
 
 // The phase reset column has NO callable per-line entry point — its parser's
 // parse_line lives in an anonymous namespace, whole-file only — so this
-// mirrors it exactly rather than relaxing anything: the ` //<measure>` suffix
-// off first, then no whitespace anywhere in what remains, an optional leading
-// '#' meaning disabled, then the CANONICAL authored frame spelling
-// (parse_authored_frame, frame_format.h) and nothing else. A byte-empty line
-// has no frame and is refused here just as it is at load; comment LINES are
-// not in the grammar.
-//
-// THE SPLIT IS NOT MIRRORED — it comes from marker_measure.h, the shared
-// header written so exactly one spelling of it exists. The frame parse below
-// remains this module's own hand-mirror of the loader's, the standing recorded
-// wart; the split deliberately does not join it.
+// mirrors it exactly rather than relaxing anything: no whitespace anywhere on
+// the line (so a ` //` suffix refuses, phase resets carrying no measure —
+// PhaseResetMarker), an optional leading '#' meaning disabled, then the
+// CANONICAL authored frame spelling (parse_authored_frame, frame_format.h) and
+// nothing else. A byte-empty line has no frame and is refused here just as it
+// is at load; comment LINES are not in the grammar. The frame parse is this
+// module's own hand-mirror of the loader's, the standing recorded wart.
 bool extract_phase_reset_entry(const std::string&         line,
                                GuiHistoryPhaseResetEntry& out) {
-    const MarkerMeasureSplit split = split_marker_measure(line);
-    std::string_view t = split.prefix;
-    out.measure.clear();
-    if (split.had_measure) {
-        std::string measure_err;
-        if (!validate_marker_measure(split.measure, measure_err)) return false;
-        out.measure.assign(split.measure);
-    }
+    std::string_view t = line;
     if (t.find_first_of(" \t\r") != std::string_view::npos) return false;
     out.disabled = false;
     if (!t.empty() && t.front() == '#') {
@@ -2733,13 +2721,6 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
             c.frame         = r.frame;
             c.then_disabled = r.disabled;
             c.now_disabled  = a.disabled;
-            // BOTH SIDES' MEASURES TRAVEL (architect 2026-08-22): the then
-            // side for the revert AND the removed half's label, the now side
-            // for the added half's label, so a measure-only edit paints two
-            // different halves instead of two identical ones (the pair's
-            // contract is at GuiHistoryPhaseResetChange).
-            c.then_measure  = r.measure;
-            c.now_measure   = a.measure;
             return c;
         });
 

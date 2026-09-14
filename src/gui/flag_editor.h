@@ -14,8 +14,8 @@
 struct GuiTargetRender;
 
 // Flag-editor cluster. Covers the marker lane's three editors — the flag's
-// canonical-line editor (the warp column's alone), the measure editor and the
-// iteration bound editor (both columns') — the BPM dialog editor, and the
+// canonical-line editor and the measure editor (the warp column's alone) and
+// the iteration bound editor (both columns') — the BPM dialog editor, and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 struct GuiFlagEditor {
     AppState&             app;
@@ -59,13 +59,12 @@ struct GuiFlagEditor {
     // THE ITERATION BOUND EDITOR'S ONE ENTRY (the seventh text_editor Kind,
     // architect 2026-09-05: "each should be like a mini flag with its own
     // double-click"). `column` is 'P' for the phase-reset store and anything
-    // else for the warp store — enter_measure_edit's own shape, and it is the
-    // ACTIVE markers view at every call site, the bound editor being BOTH
-    // COLUMNS' since 2026-09-09. `side` is Lower or Upper, the cell the editor
+    // else for the warp store, and it is the ACTIVE markers view at every call
+    // site, the bound editor being BOTH COLUMNS' since 2026-09-09. `side` is Lower or Upper, the cell the editor
     // opens over, and the open takes the cell's own eligibility (that column's
     // sweep predicate under a lit mode: no cell, no editor), refusing on the
     // bound step's kind sentence where the marker carries no live bracket. The
-    // mechanics are enter_measure_edit's over two stores: the focus repaired,
+    // mechanics are enter_measure_edit's, over two stores: the focus repaired,
     // the marker single-selected and landed, the addressed cell written to
     // `side` behind that select, the seed the cell's own token (`+0.00` or
     // `+0` on a blank bracket, the column deciding) fully selected.
@@ -90,20 +89,20 @@ struct GuiFlagEditor {
     // every path except the refusal.
     void commit_iter_bound_edit();
 
-    // THE MEASURE EDITOR'S ONE ENTRY (the sixth text_editor Kind). `column` is
-    // 'P' for the phase-reset store and anything else for the warp store, and
-    // it is the ACTIVE markers view at every call site — measures are the
-    // FOURTH ruled exception to the home-view binding, so this opens wherever
-    // the flag paints, on either column and in either audio view, and the
-    // callers' gates are read-only alone.
+    // THE MEASURE EDITOR'S ONE ENTRY (the sixth text_editor Kind), on the WARP
+    // column alone — phase resets carry no measure (PhaseResetMarker) — and in
+    // either audio view, measures being the FOURTH ruled exception to the
+    // home-view binding. The callers' gate is marker_measure_edit_actionable
+    // (app_state.h); a call with the phase-reset column active is a silent
+    // defensive no-op, the selection and the land resolving against the
+    // active column's store.
     //
-    // NOT enter_text_edit: that helper is warp-payload-only by recorded
-    // invariant (it bounds-checks the warp store and its comment says why), and
-    // the measure editor resolves its index against whichever store the column
-    // names. The seed is the marker's own measure field, which is the whole of
+    // NOT enter_text_edit: that helper is the payload's (it seeds the payload
+    // kind's open), while this editor seeds the measure and seats the measure
+    // cell. The seed is the marker's own measure field, which is the whole of
     // what a measure is — nothing inherits down the label cascade (architect
     // 2026-08-20).
-    void enter_measure_edit(char column, int idx);
+    void enter_measure_edit(int idx);
     // Commit the open measure session: an EMPTY buffer REMOVES the measure, a
     // non-empty one is JUDGED against the measure grammar (marker_measure.h)
     // and either stored verbatim or REFUSED with the editor left standing,

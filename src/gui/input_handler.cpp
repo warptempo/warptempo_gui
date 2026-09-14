@@ -1629,9 +1629,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // (the inventory is at active_column_authoring_allowed, app_state.h;
         // the commit's own tail carries the target-view re-warp and playhead
         // re-land). P view still refuses it — phase resets have no per-flag
-        // editor — while the measure editor is both columns' and so, since
-        // 2026-09-09, is the BOUND editor: a bound cell is addressed on either
-        // column's eligible flags now. THE REFUSALS ARE ONE
+        // editor — as it refuses the measure editor (marker_measure_edit_actionable),
+        // while the BOUND editor is both columns' since 2026-09-09: a bound
+        // cell is addressed on either column's eligible flags now. THE REFUSALS ARE ONE
         // PREDICATE since 2026-08-30 (flag_editor_open_actionable,
         // app_state.h, forking on the axis since 2026-09-05), which the Edit
         // flag button's face reads too — the truthful-buttons ruling. AND
@@ -1670,21 +1670,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                               app.addressed_cell);
             return;
         case MarkerCell::Measure:
-            flag_editor.enter_measure_edit(app.active_markers_view, focus);
+            flag_editor.enter_measure_edit(focus);
             return;
         }
         return;
     }
 
-    // Bare `/` opens the MEASURE editor on the focused marker — the Return
-    // arm's sibling, one exception wider. MEASURES ARE THE FOURTH RULED
-    // EXCEPTION TO THE HOME-VIEW BINDING (architect 2026-08-19; the inventory
-    // is at active_column_authoring_allowed, app_state.h): a measure names
-    // where a marker sits in the SCORE rather than authoring a musical value,
-    // so it is editable wherever the flag paints — BOTH COLUMNS, BOTH views —
-    // and this arm
-    // deliberately asks neither the P-view refusal nor
-    // active_column_authoring_allowed. Read-only still refuses: a measure IS
+    // Bare `/` opens the MEASURE editor on the focused warp marker — the
+    // Return arm's sibling. MEASURES ARE THE FOURTH RULED EXCEPTION TO THE
+    // HOME-VIEW BINDING (architect 2026-08-19; the inventory is at
+    // active_column_authoring_allowed, app_state.h): a measure names where a
+    // marker sits in the SCORE rather than authoring a musical value, so it is
+    // editable wherever a warp flag paints — the WARP column in BOTH audio
+    // views, phase resets carrying no measure — and this arm deliberately
+    // asks no active_column_authoring_allowed. Read-only still refuses: a measure IS
     // serialized content, and `/` is on no read_only_key_blocked entry, so a
     // locked tab drops this press before it reaches here. The
     // `h` view drops it at its own allowlist too.
@@ -1699,18 +1698,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // strict modifier validation makes it a consumed no-op, no arm anywhere.)
     if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
         selection.repair_last_selected();
-        // NOTHING FOCUSED SAYS SO (architect 2026-08-30), in the Return
-        // arm's shape: one term, one sentence, naming the subject the editor
-        // needs. Measures are BOTH columns', so unlike its sibling this card
-        // says "marker" and not "warp marker". The greyed Measure button
+        // THE REFUSAL SAYS SO, one owner for this card and the Measure
+        // button's grey (marker_measure_edit_refusal, app_state.h): the
+        // phase-reset column, then nothing focused. The greyed Measure button
         // never reaches it.
-        if (!marker_focus_standing(app)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Select a marker to edit its measure");
+        if (const char* refusal = marker_measure_edit_refusal(app)) {
+            notifications.notify(AppState::NotificationClass::Normal, refusal);
             return;
         }
-        flag_editor.enter_measure_edit(app.active_markers_view,
-                                       app.last_selected_marker);
+        flag_editor.enter_measure_edit(app.last_selected_marker);
         return;
     }
 

@@ -238,11 +238,9 @@ enum class GuiHistoryWalkSource {
 // spelling, never a re-derivation through the typed value and back. That slice
 // is rest-of-line, so a ` //<measure>` suffix RIDES INSIDE the token — which is
 // what carries a measure through the revert's line reconstitution unchanged,
-// and why the h view's warp labels show measure text inline. THAT INLINE
-// SPELLING IS THE LANE'S RULE ON BOTH COLUMNS SINCE 2026-08-22 rather than this
-// column's accident: the phase halves append the same ` //<measure>` suffix at
-// the label owner (the ruling is at GuiHistoryPhaseResetChange below). Neither
-// column paints a measure BOX in this mode — the bytes ride the label.
+// and why the h view's warp labels show measure text inline. No measure BOX
+// paints in this mode — the bytes ride the label. Phase resets carry no
+// measure (PhaseResetMarker).
 struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
     std::string tempo_token;
@@ -276,55 +274,25 @@ struct GuiHistoryWarpChange {
     bool        now_effective_disabled  = false;
 };
 
-// One phase reset line. The grammar is `[#]<frame position>[ //<measure>]` —
-// the frame, the disable prefix, and the measure suffix. Phase resets carry
-// no labels or references, so there is no cascade and the local `disabled`
-// bit IS the effective verdict — the warp entry's `effective_disabled` field
-// deliberately has no twin on this column (2026-08-22).
+// One phase reset line. The grammar is `[#]<frame position>` — the frame and
+// the disable prefix (phaseresetmarkers_parse.h). Phase resets carry no labels
+// or references, so there is no cascade and the local `disabled` bit IS the
+// effective verdict — the warp entry's `effective_disabled` field deliberately
+// has no twin on this column (2026-08-22).
 struct GuiHistoryPhaseResetEntry {
     int64_t     frame    = 0;
     bool        disabled = false;
-    // The measure bytes, without the ` //` separator. Empty means the line
-    // carried none. TWO READERS. The REVERT act, which restores the whole
-    // line: the column's compare is the serialized line, so a then side that
-    // dropped its measure would report every measured marker as changed and
-    // overwrite the measure away. And, since 2026-08-22, THE LABEL — a single
-    // flag (added-only or removed-only) paints its entry's measure in the
-    // sidecar's own ` //<measure>` spelling, the same ruling the changed pair
-    // takes (GuiHistoryPhaseResetChange below owns it).
-    std::string measure;
 };
 
 // A phase reset line present at the same frame on both sides with a different
-// disable prefix or a different measure. THE COLUMNS ARE SYMMETRIC HERE: the
-// phase reset line's payload is frame PLUS the disable bit PLUS an optional
-// measure, not the frame alone, so `100` -> `#100` or `100 //12` -> `100
-// //13` is each a genuine same-frame change exactly as a warp tempo edit is,
-// and it pairs the same way rather than reading as an unrelated remove and
-// add.
+// disable prefix. The phase reset line's payload is frame PLUS the disable
+// bit, not the frame alone, so `100` -> `#100` is a genuine same-frame change
+// exactly as a warp tempo edit is, and it pairs the same way rather than
+// reading as an unrelated remove and add.
 struct GuiHistoryPhaseResetChange {
     int64_t frame         = 0;
     bool    then_disabled = false;
     bool    now_disabled  = false;
-    // BOTH SIDES' MEASURES, symmetrically with the warp change above's token
-    // pair (architect 2026-08-22, ruling the open question the old recorded
-    // asymmetry left standing: THE PHASE HALVES PAINT THEIR MEASURE BYTES,
-    // exactly as the warp halves' rest-of-line tokens have always carried
-    // theirs). Before the ruling a measure-only phase edit (`100 //12` ->
-    // `100 //13`) diffed as a changed pair whose two halves painted
-    // IDENTICALLY — no token, same disable bits, same brightness — so the lane
-    // showed THAT the line changed and not WHAT; now each half's label carries
-    // its own line's ` //<measure>` suffix and the edit reads off the flag.
-    //
-    // THE TWO SIDES HAVE DIFFERENT READER COUNTS, and that is the whole
-    // remaining asymmetry: `then_measure` is read TWICE — by the REVERT, which
-    // reconstitutes the whole then line and would otherwise report every
-    // measured marker as changed and overwrite the measure away, and by the
-    // removed half's label — while `now_measure` is read ONCE, by the added
-    // half's label. The revert is untouched by the ruling: it restores the then
-    // side and nothing else, and never consults `now_measure`.
-    std::string then_measure;
-    std::string now_measure;
 };
 
 // One commit's whole answer. Every commit that gets one is a walk member, and

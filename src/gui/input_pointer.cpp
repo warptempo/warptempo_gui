@@ -592,9 +592,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // arm). ITS GATES ARE THE MEASURE'S but one exception narrower: the `h`
     // view consumes bare Return and greys it with the verbs, and so does the
     // READ-ONLY lock (the canonical line is serialized content). Where it
-    // differs from the Measure is the P VIEW with the payload addressed —
-    // phase resets have no per-flag editor, so the act refuses there — and
-    // that refusal GREYS the button since 2026-08-30
+    // differs from the Measure is the P VIEW with a BOUND cell addressed —
+    // the bound editor is both columns', while the payload and measure
+    // editors refuse there — and the P view's refusal GREYS the button since 2026-08-30
     // (flag_editor_open_actionable, the Return arm's own predicate, under
     // the truthful-buttons ruling; it was a consumed no-op with a live face
     // under the 2026-08-15 no-blink ruling until then).
@@ -603,7 +603,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // THE MARKER MEASURE (architect 2026-08-19), the verb group's sixth since
     // 2026-08-27 and its fifth before that, with the Copy resolved value
     // button seated immediately behind it since 2026-08-29: BARE
-    // `/`, which was free. It opens the measure editor on the focused marker,
+    // `/`, which was free. It opens the measure editor on the focused warp marker,
     // and button-is-its-chord holds literally — the press dispatches bare `/`
     // through on_key at the LIFT like every other chrome button, while the KEY
     // acts at the press like every other hotkey.
@@ -613,9 +613,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // ITS GATES: the `h` view consumes bare `/` and greys it with the four
     // verbs above, and so does the READ-ONLY lock (a measure is serialized
-    // content). It differs from those four in the one place that matters — no
-    // HOME-VIEW gate, measures being the fourth ruled exception to the
-    // home-view binding — but that refusal was never a face anyway.
+    // content), and it greys on the phase-reset column (phase resets carry no
+    // measure; marker_measure_edit_actionable). It differs from those four in
+    // one place — no AUDIO-VIEW gate, measures being the fourth ruled
+    // exception to the home-view binding.
     {RedesignButton::IconMarkerMeasure,
      GuiKeys::Slash,  false, false, false, false, true},                             // bare /
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
@@ -4387,10 +4388,10 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // paints is eligible, and the open is a belt behind that) on EITHER column
     // since 2026-09-09, while the
     // MEASURE editor asks the LOCK ALONE — measures are the fourth ruled
-    // exception to the home-view binding, so the phase column's measure
-    // double-click was that column's FIRST pointer authoring gesture,
-    // measure-scoped and nothing wider; a bound cell's is the second, and what
-    // it authors is a session-only render parameter rather than content. Since 2026-08-24 the payload editor
+    // exception to the home-view binding, and a measure box paints on warp
+    // flags alone (phase resets carry no measure); a phase-reset bound cell's
+    // double-click authors a session-only render parameter rather than
+    // content. Since 2026-08-24 the payload editor
     // no longer differs about the AUDIO view either: it is the fifth
     // exception's member and opens off warp's home as well. Every open route
     // opens fully SELECTED (open-selected), so there is no clicked-glyph
@@ -4424,15 +4425,17 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         case MarkerCell::Upper:
             // A bound cell paints on EITHER column's eligible markers under
             // a lit mode (2026-09-09 — the phase-reset column's own hop
-            // bracket), so the open takes the ACTIVE column exactly as the
-            // measure editor's does and its own belts re-ask the eligibility.
+            // bracket), so the open takes the ACTIVE column and its own belts
+            // re-ask the eligibility.
             flag_editor.enter_iter_bound_edit(app.active_markers_view, hit,
                                               dc_at_press.cell);
             return;
         case MarkerCell::Measure:
             // The seed is the marker's own measure, which is the whole of
-            // what a measure is — nothing inherits.
-            flag_editor.enter_measure_edit(app.active_markers_view, hit);
+            // what a measure is — nothing inherits. A measure box paints on
+            // warp flags alone (PhaseResetMarker), so this cell is warp-only
+            // by construction.
+            flag_editor.enter_measure_edit(hit);
             return;
         }
     }

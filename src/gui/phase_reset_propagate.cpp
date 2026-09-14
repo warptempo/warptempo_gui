@@ -593,11 +593,6 @@ void PhaseResetPropagate::paste_apply() {
                     phase_reset_frame_for_anchor(anchor_dst, map)),
                 0, reset_wall);
             nm.disabled     = p.disabled;
-            // NO MEASURE IS CARRIED, and that is by construction rather than by
-            // omission: `nm` is a FRESH marker, so its measure field rests
-            // empty. A paste materializes new resets rather than duplicating
-            // the captured ones, and a note about one marker is not a fact
-            // about the copies its section produced elsewhere in the piece.
             const int new_idx =
                 app.phaseresetmarkers.insert_marker(std::move(nm));
             for (int& ci : created_indices)
@@ -609,32 +604,21 @@ void PhaseResetPropagate::paste_apply() {
     // An undo entry represents a state change, not a gesture. The scan
     // compares WHOLE ROWS — the standard the undo restore's row-identity
     // comparators rule ("row identity means the whole struct", undo.cpp),
-    // which this scan is a second reader of: time_frame, disabled AND
-    // measure, because a paste materializes MEASURELESS replacements (the
-    // recorded drop above), so a self-paste onto the copy's own anchor
-    // reproduces the destination resets exactly on (frame, disabled)
-    // while the cleared originals' measures are destroyed — a real state
-    // change that owes its undo entry and its dirty recompute. (The scan
-    // compared only time_frame + disabled until 2026-08-22, resting on a
-    // "PhaseResetMarker is exactly time_frame + disabled" premise that
-    // went stale when the measure field landed 2026-08-19/20: that
-    // self-paste read "unchanged" and silently destroyed the span's
-    // measures with no undo entry.) A self-paste over a span that
-    // carried NO measures is still the designed no-op — every row
-    // reproduces whole — while a placement rescaled OUTSIDE the cleared
-    // windows (the lead-in / near-end cases) stacks a duplicate next to
-    // its surviving occupant — legal in the store
-    // (the parser collapses equal-frame enabled resets to one event at
-    // render/preview time, one stderr line per collapsed timestamp) — so
-    // the store genuinely changes there too.
+    // which this scan is a second reader of: time_frame and disabled, the
+    // whole of a phase-reset row's serialized content. A self-paste onto the
+    // copy's own anchor reproduces every row whole and is the designed no-op,
+    // while a placement rescaled OUTSIDE the cleared windows (the lead-in /
+    // near-end cases) stacks a duplicate next to its surviving occupant —
+    // legal in the store (the parser collapses equal-frame enabled resets to
+    // one event at render/preview time, one stderr line per collapsed
+    // timestamp) — so the store genuinely changes there.
     // Compare before pre_state is moved into the push. The stop message
     // and the switch to P below still run (this arm has matched blocks, so it
     // is past the produced-nothing path that keeps the view still).
     bool store_changed = out.size() != pre_state.size();
     for (size_t i = 0; !store_changed && i < out.size(); ++i) {
         if (out[i].time_frame != pre_state[i].time_frame ||
-            out[i].disabled     != pre_state[i].disabled ||
-            out[i].measure      != pre_state[i].measure) {
+            out[i].disabled     != pre_state[i].disabled) {
             store_changed = true;
         }
     }

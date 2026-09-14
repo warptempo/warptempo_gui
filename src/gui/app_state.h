@@ -2837,13 +2837,14 @@ enum class RedesignButton {
     // selection would blink at interaction cadence, the reasoning that took
     // the four cardinal arrows and the revert button always-on — which the
     // architect withdrew with "Any time a button would be a no-op, grey it".
-    // NO VIEW TERM, and rightly: measures are both columns', both views'. NO
-    // LAMP: it is an act, not a mode.
+    // ITS COLUMN TERM SINCE 2026-09-14: measures are the warp column's, in
+    // both audio views (marker_measure_edit_actionable). NO LAMP: it is an
+    // act, not a mode.
     //
     // IT IS NOT HOME-VIEW GATED: measures are
     // the FOURTH ruled exception to the home-view binding (the inventory is at
-    // active_column_authoring_allowed), so the button works on both columns in
-    // both audio views. That once set it apart from all four verbs above it;
+    // active_column_authoring_allowed), so the button works on the warp column
+    // in both audio views. That once set it apart from all four verbs above it;
     // since 2026-08-24 it is apart from the DROP alone, Delete / Disable /
     // Toggle inherit having joined the fifth ruled exception in the WARP
     // column (the drop is positional and keeps the binding — the WARP
@@ -9947,19 +9948,15 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // render nor a history entry — the cent step's own class of argument. The `i` TOGGLE ITSELF IS NOT ON THIS
 // LIST: it moves MODE STATE, not authored content, and simply gates on the warp
 // column in either view. (4) THE MARKER MEASURE (architect 2026-08-19, the
-// field rebranded from the marker comment 2026-08-20), the widest of the four
-// and the only one that is BOTH COLUMNS AND BOTH VIEWS: a measure names where
-// a marker sits IN THE SCORE rather than authoring a musical value — nothing
-// in it reaches the engine, the frame map or the render fingerprint — so it is
-// editable wherever the flag paints. Its three entry routes (bare `/`,
-// the bottom-row button, the double-click on the blue box) consult this
-// predicate nowhere; their one gate is READ-ONLY, which still refuses, a
-// measure being serialized content. The phase column's measure
-// double-click was
-// that column's FIRST pointer authoring gesture (recorded at the router arm,
-// run_marker_click_act) — measure-scoped alone until 2026-08-30, when the
-// S+P opening let the column's flag drag and empty-lane drop author in
-// source view too.
+// field rebranded from the marker comment 2026-08-20), on the WARP COLUMN
+// ALONE (phase resets carry no measure, PhaseResetMarker) and in BOTH AUDIO
+// VIEWS: a measure names where a marker sits IN THE SCORE rather than
+// authoring a musical value — nothing in it reaches the engine, the frame map
+// or the render fingerprint — so it is editable wherever a warp flag paints.
+// Its three entry routes (bare `/`, the bottom-row button, the double-click on
+// the blue box) consult this predicate nowhere; their gates are READ-ONLY,
+// which still refuses, a measure being serialized content, and the column
+// (marker_measure_edit_refusal).
 // (5) THE WARP STATUS/VALUE FAMILY IN W+TARGET (architect 2026-08-24, asked as
 // "why are Ctrl+D, Ctrl+N, Delete and the flag editor blocked there?" and
 // ruled "add the ones we can, and omit the ones we must omit"). FOUR MEMBERS,
@@ -10913,25 +10910,42 @@ inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
     return ed.iter_upper ? MarkerCell::Upper : MarkerCell::Lower;
 }
 
+// THE MEASURE EDITOR'S OPEN REFUSAL — ONE OWNER for bare `/` (the card) and
+// the Measure button's face (the grey): the focus first, then the column,
+// phase resets carrying no measure (PhaseResetMarker). nullptr is the open.
+inline constexpr const char* kMeasureNoFocusCard =
+    "Select a marker to edit its measure";
+inline constexpr const char* kMeasureWarpOnlyCard =
+    "Measures are set on warp markers";
+inline const char* marker_measure_edit_refusal(const AppState& app) {
+    if (app.active_markers_view != 'W') return kMeasureWarpOnlyCard;
+    if (!marker_focus_standing(app))    return kMeasureNoFocusCard;
+    return nullptr;
+}
+inline bool marker_measure_edit_actionable(const AppState& app) {
+    return marker_measure_edit_refusal(app) == nullptr;
+}
+
 // BARE RETURN'S OPEN REFUSAL, composed (architect 2026-08-30; over the
 // addressed cell since 2026-09-05): Return opens the ADDRESSED CELL'S editor
 // on the FOCUSED marker, so it wants a focus first, and then the cell's own
 // column — the flag's payload editor is the warp column's (the P view has no
-// per-flag editor), while the measure editor is both columns' and so, since
-// 2026-09-09, is the BOUND editor: a bound cell is addressed on either
-// column's eligible flags, so neither of those two arms asks the column. A bound cell's kind refusal
+// per-flag editor), the measure editor asks its own owner
+// (marker_measure_edit_actionable, above), while the BOUND editor is both
+// columns' since 2026-09-09: a bound cell is addressed on either column's
+// eligible flags, so that arm asks no column. A bound cell's kind refusal
 // (an owner disabled after its cell was addressed) stays the act's own
 // card behind a live face, as the Up/Down pair's is. READERS: the Return arm
 // (input_handler.cpp) and the Edit flag button's disabled face. The MEASURE
-// editor's own key (bare `/`) asks marker_focus_standing alone and its
-// button reads that atom directly.
+// editor's own key (bare `/`) and its button read
+// marker_measure_edit_refusal / marker_measure_edit_actionable.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
     case MarkerCell::Payload: return app.active_markers_view != 'P';
     case MarkerCell::Lower:
-    case MarkerCell::Upper:
-    case MarkerCell::Measure: return true;
+    case MarkerCell::Upper:   return true;
+    case MarkerCell::Measure: return marker_measure_edit_actionable(app);
     }
     return false;
 }
@@ -12228,10 +12242,7 @@ inline bool warp_row_fields_differ(const GuiWarpMarker& a,
 inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
                                           const GuiPhaseResetMarker& b) {
     return a.time_frame != b.time_frame
-        || a.disabled   != b.disabled
-        // The measure, for the warp column's reason: a measure-only undo
-        // mutates nothing else, and row identity means the whole struct.
-        || a.measure    != b.measure;
+        || a.disabled   != b.disabled;
     // The session-only HOP BRACKET is not in row identity, for the warp
     // comparator's own reason (2026-09-10): the bracket left the undo domain,
     // every push strips it from the snapshot it takes, and a term with no
@@ -14158,13 +14169,14 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    flag_editor_open_actionable(a);
-        // THE MEASURE GREYS WITH NOTHING FOCUSED (2026-08-30) — the `/` arm's
-        // one refusal past the lock, marker_focus_standing; no view term, the
-        // measure being both columns' in both views.
+        // THE MEASURE GREYS WITH NOTHING FOCUSED (2026-08-30) AND ON THE
+        // PHASE-RESET COLUMN (2026-09-14) — the `/` arm's refusal past the
+        // lock, its one owner marker_measure_edit_actionable; no audio-view
+        // term, the measure being the warp column's in both views.
         case RedesignButton::IconMarkerMeasure:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
-                   marker_focus_standing(a);
+                   marker_measure_edit_actionable(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
