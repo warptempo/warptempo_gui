@@ -432,7 +432,9 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // return) rather than assign-then-revert, and (b) the centering `visible`
     // below is computed at the FINAL level. clamp_viewport_start re-applies the
     // identical clamp as the chokepoint; this only sharpens the no-op detection
-    // and the centering math here.
+    // and the centering math here. The same clamp floors the request at the
+    // working zoom (clamp_zoom_level owns the floor), so a finer request lands
+    // at working rather than refusing.
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
@@ -539,7 +541,8 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: ALL THREE callers —
+    // `level_changed` reports a real move, not a request: ALL THREE gesture
+    // callers —
     // the nav drag's zoom phase (apply_nav_zoom_at,
     // which joined 2026-08-14 with the live-ctrl model; the deleted strip
     // drag's own body was the fourth until 2026-08-15), the two-finger
@@ -549,8 +552,11 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // (apply_overview_drag_at's edge arm, since the lane rework 2026-08-12) —
     // pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
-    // below, so the pre-assignment compare cannot read a wall-saturated no-op as
-    // movement. A both-unchanged frame suppresses nothing either way — mid-gesture
+    // below while the gesture is live, so the pre-assignment compare cannot read
+    // a wall-saturated no-op as movement; and the fourth caller, the gesture
+    // end's snap (snap_continuous_zoom_to_working), asks for the working zoom
+    // only from a level strictly finer, with the live bit down, where the
+    // clamp keeps exactly that request. A both-unchanged frame suppresses nothing either way — mid-gesture
     // the true-no-op early return above takes it, and the terminating event falls
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
@@ -583,10 +589,29 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     kick_waveform_sync();
 }
 
+// THE SNAP BACK TO THE WORKING ZOOM at a continuous zoom gesture's end — the
+// ruling, the pivot rule, the ordering against the live bit and the caller
+// inventory are at the declaration (viewport.h).
+void Viewport::snap_continuous_zoom_to_working(std::optional<ZoomPivot> pivot) {
+    if (audio.total_frames() <= 0) return;
+    if (!(app.zoom_level < kWorkingZoomLevel)) return;
+    if (!pivot) {
+        const double col =
+            static_cast<double>(waveform_area(app).w) / 2.0;
+        pivot = ZoomPivot{
+            static_cast<double>(app.viewport_start_sample) +
+                col * current_samples_per_pixel(app, audio),
+            col};
+    }
+    apply_strip_drag_zoom(kWorkingZoomLevel, pivot->sample, pivot->column,
+                          /*final=*/true);
+}
+
 void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     if (audio.total_frames() <= 0) return;
 
-    // Pre-clamp the requested level to the per-file window. clamp_viewport_start
+    // Pre-clamp the requested level to the per-file window, the working-zoom
+    // floor included (clamp_zoom_level owns it). clamp_viewport_start
     // re-applies the identical clamp as the chokepoint; this only sharpens the
     // no-op detection below.
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
@@ -777,21 +802,6 @@ void Viewport::recenter_after_nudge() {
     if (!app.keep_centered_while_nudging) return;
     if (!keep_centered_while_nudging_applies(app)) return;
     center_viewport_on_playhead();
-}
-
-// THE SNAP BACK UP TO THE WORKING ZOOM — the ruling and the caller inventory
-// are at the declaration (viewport.h). STRICTLY finer: the working level
-// itself snaps nothing. apply_zoom_change centres on the resting cursor (the
-// scanner while a play runs) and rebuilds the plate synchronously, and every
-// column read the callers make next — painted_column_of_source_frame,
-// authored_frame_at_column, playhead_pixel_step_landing — rides the LIVE
-// viewport start and zoom, so the act that follows steps on the new lattice
-// inside the same dispatch.
-bool Viewport::snap_zoom_to_working_if_finer() {
-    if (!(app.zoom_level < kWorkingZoomLevel)) return false;
-    const double before = app.zoom_level;
-    apply_zoom_change(kWorkingZoomLevel);
-    return app.zoom_level != before;
 }
 
 // Auto-follow during playback: when the scanner leaves the viewport,

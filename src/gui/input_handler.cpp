@@ -1739,8 +1739,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // DIVERGES from this (run_span_framing_command — it zooms to the
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
     // gesture — `0` reaches it only from full out, and by calling it — while
-    // the Tab family changes no zoom at the working zoom or coarser
-    // (2026-08-05; a finer level snaps up to working, 2026-09-13), so `0` is
+    // the Tab family changes no zoom (2026-08-05), so `0` is
     // the one command that reaches the whole song. DIGITS 1, 2
     // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
     // beside bare `t`, the axis handler they compose); 4..9 are unbound.
@@ -2587,8 +2586,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // reason. `frame` GOVERNS
     // MARKER-TO-MARKER STEPS ALONE for the same reason: there is no new marker
     // to frame, and a recentre here would move the camera under a user reading
-    // the cell he just stepped onto (the working-zoom snap below is the one
-    // camera write a cell step can make, and only from a finer level).
+    // the cell he just stepped onto.
     //
     // THE COLLAPSE IS WHAT KEEPS A BOUND AXIS SINGLETON, which every road onto
     // one now does (the plain cell press and the bound editor's open both
@@ -2601,19 +2599,6 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // axis write for the family's own reason: the seat resets the axis to the
     // payload (Selection::seat_focus), so the cell is written behind it, as
     // the marker press and the two cell editors' opens write theirs.
-    //
-    // EVERY STEP THAT ACTS SNAPS A FINER ZOOM UP TO WORKING first, THE CELL
-    // STEP INCLUDED (architect 2026-09-13; Viewport::snap_zoom_to_working_if_-
-    // finer carries the ruling and the inventory): past the wall above, so a
-    // press with nothing ahead moves no camera, and ahead of both the cell
-    // step's collapse and the marker step's select. The zoom centres on the
-    // resting cursor — on a cell step the cursor already sits on the seat, so
-    // the cell stays in view; that recentre is the snap's, not a framing of
-    // the cell, and at the working zoom or coarser nothing moves. The framing
-    // the bare arms handed in was asked at the finer level and is Center
-    // there, which is what marker_walk_frame answers at working too; the march
-    // states NoFrame at both of its steps and runs `c` behind each.
-    viewport.snap_zoom_to_working_if_finer();
 
     if (step.same_marker) {
         selection.set_single_selection(step.marker);
@@ -2643,21 +2628,15 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // to prevent: framing cannot be acquired by saying nothing.
     // Otherwise byte-identical to the `c` gesture's marker jump — the zoom is
     // what separates the two commands: `c` sets the working level whatever
-    // the level was, a Tab walk keeps the level the user is reading at unless
-    // it is FINER than working, which the snap above takes up to working.
-    // (The `h` view's diff-flag walk takes the same snap at the same place in
-    // its own body — GuiInputHandler::cycle_history_diff_flag_focus.)
+    // the level was, a Tab walk keeps the level the user is reading at.
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.
     //
-    // NO ZOOM ON TAB AT WORKING OR COARSER (architect 2026-08-05, reverting his
-    // own same-day ruling that had every step set kWorkingZoomLevel here; the
-    // finer half re-ruled 2026-09-13 as the snap above): the walk is
-    // navigation and must not re-frame the view under the user, so the whole
-    // family — the three bare chords and the Ctrl+Shift+Tab lockstep march,
-    // which calls this once per tab — lands at the level it was pressed at
-    // wherever that level is working or coarser. `c` remains the direct route
+    // NO ZOOM ON TAB (architect 2026-08-05): the walk is navigation and must
+    // not re-frame the view under the user, so the whole family — the three
+    // bare chords and the Ctrl+Shift+Tab lockstep march, which calls this once
+    // per tab — lands at the level it was pressed at. `c` remains the direct route
     // to the working zoom; `0`'s second arm reaches it through `c` whenever its
     // tab has stamped no return level (ViewState::zoom_recall_level).
     // The jump's own false return — a missing or out-of-range focus — cannot
@@ -2736,8 +2715,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
     // working zoom right after this returns, the Tab family sets nothing here
-    // (architect 2026-08-05, "no zoom on Tab"; its finer-than-working snap runs
-    // in cycle_marker_focus BEFORE this is called) — so this tail frames the stop at
+    // (architect 2026-08-05, "no zoom on Tab") — so this tail frames the stop at
     // whatever level it was called at, and only `c`'s apply_zoom_change
     // re-centers after it. Follow mode does not gate it either (architect
     // 2026-07-19, reversing the earlier follow-only rule).
@@ -3065,8 +3043,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // start by CENTERING the margined span in the window through the UNROUNDED
     // visible width (spp_t * W) — grid quantization is owned downstream by
     // clamp_viewport_start, so NO painter-quantized pre-rounding belongs here (see
-    // the centering block below). A span too small for kMinZoom to fill (the
-    // floor-saturated case) rests centered instead of left-aligned, and the
+    // the centering block below). A span too small for the working zoom to fill
+    // (the floor-saturated case) rests centered instead of left-aligned, and the
     // unclamped case degenerates to the span's left edge (unrounded spp_t * W ==
     // the margined span by the fit-level solve). Ends at apply_zoom_to_start.
     if (audio.total_frames() <= 0) return;
@@ -3087,16 +3065,20 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     }
 
     // Fit level: effective_max_zoom_level's formula with the span in place of
-    // total, clamped into [kMinZoom, per-file effective ceiling]. A zoom-OUT
-    // ceiling and a zoom-IN floor, so framing a tiny span may go deep (down to
-    // kMinZoom) while a span wider than the song saturates at whole-song-visible.
+    // total, clamped into [kWorkingZoomLevel, per-file effective ceiling]. A
+    // zoom-OUT ceiling and a zoom-IN floor, so framing a tiny span rests at the
+    // working zoom, centred, while a span wider than the song saturates at
+    // whole-song-visible. The floor wins over a ceiling finer than it, as at
+    // clamp_zoom_level (the floor's one owner, app_state.h), whose spelling
+    // this repeats because std::clamp's lo > hi is undefined.
     double span = fhi - flo;
     if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
     const double raw_level = 1.0 + std::log2(
         span * 1000.0 /
         (kZoomBaseMsPerPx * static_cast<double>(sr) * static_cast<double>(W)));
     const double ceiling = effective_max_zoom_level(W, total, sr);
-    const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
+    const double target_level =
+        std::max(kWorkingZoomLevel, std::min(raw_level, ceiling));
 
     // CENTER: place the margined span's midpoint at the window center, using the
     // UNROUNDED visible width (spp_t * W) — grid quantization is owned downstream
@@ -3148,7 +3130,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     change, no margin);
 //   - else -> frame_span_into_view with margin (the cannot-fit fallback; the
 //     framer only ever zooms OUT to fit — fit level + 2.5%-per-side, centered,
-//     clamped [kMinZoom, effective ceiling], NO playhead recenter). It
+//     clamped [kWorkingZoomLevel, effective ceiling], NO playhead recenter). It
 //     OVERWRITES the tentative viewport wholesale (level + start via
 //     apply_zoom_to_start), so the tentative write needs no revert.
 //

@@ -4,11 +4,20 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 
 class GuiAudio;
 class GuiPlatform;
 class GuiPlayback;
+
+// A continuous zoom gesture's pivot at its end: the active-domain SONG FRAME
+// the gesture holds and the waveform column (fractional px, the
+// apply_strip_drag_zoom anchor convention) it holds it at.
+struct ZoomPivot {
+    double sample = 0.0;
+    double column = 0.0;
+};
 
 // Viewport mutators and invalidation helpers. The struct holds references
 // to the long-lived state the methods read and write.
@@ -334,7 +343,9 @@ struct Viewport {
     // ALL, the box's span being the lane's whole zoom vocabulary now). All
     // three pre-clamp the level; this
     // places the anchor at
-    // the new level and clamps. For a pure pan
+    // the new level and clamps. A FOURTH caller places no gesture frame: the
+    // gesture end's snap back to the working zoom
+    // (snap_continuous_zoom_to_working, below). For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport
     // exactly. Never touches the playhead or selection. Repaint dispatch: a
     // mid-gesture event (final=false) with the level AND viewport both unchanged
@@ -345,6 +356,31 @@ struct Viewport {
     // synchronous rebuild plus the predictor resync so the rest state is exact.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final);
+    // THE CONTINUOUS ZOOM GESTURES' SNAP BACK TO THE WORKING ZOOM (architect
+    // 2026-09-14: nothing rests finer than the working zoom). The three
+    // continuous zoom gestures — the nav surface's Ctrl+drag zoom phase, the
+    // overview lane's box edge drags and the two-finger pinch — may go finer
+    // than kWorkingZoomLevel while they are live (the floor's exemption is
+    // continuous_zoom_gesture_live, read by clamp_zoom_level); at the
+    // gesture's END this lands a level STRICTLY finer than working back on
+    // working, and does nothing otherwise (no band on the coarse side). THE
+    // PIVOT HOLDS ITS COLUMN: the write is apply_strip_drag_zoom's own final
+    // placement of `pivot` — the gesture's held frame at its column — so the
+    // lift makes no camera jump; a gesture that holds no pivot at its end
+    // passes nullopt and the viewport's centre frame holds the centre column.
+    // Being a strip-drag apply it takes that applier's either-axis follow
+    // suppression during playback, the gesture having moved the level already.
+    // CALLED WITH THE GESTURE'S LIVE BIT ALREADY CLEARED, so the chokepoint's
+    // floor and this write agree (a short source whose ceiling is finer than
+    // working rests at working, not at the ceiling the live window would
+    // allow), and with nothing between that clear and this call that reaches
+    // clamp_viewport_start, which would floor the level about the old start
+    // and leave this nothing to do. THE SEVEN CALLERS are the gestures' ends,
+    // each immediately ahead of its commit_keep_centered_zoom:
+    // GuiInputHandler::end_touch_nav (the pinch's one end), and in
+    // input_pointer.cpp the nav drag's and the overview drag's release,
+    // lost-button and force-end (finalize_active_drags) arms.
+    void snap_continuous_zoom_to_working(std::optional<ZoomPivot> pivot);
     // Zoom-to-span apply: set the level AND the viewport start EXPLICITLY (the
     // start is a framed span's left edge, NOT a playhead recenter — the sole
     // difference from apply_zoom_change), then funnel both through the clamp
@@ -371,53 +407,6 @@ struct Viewport {
     // Left/Right nudge has just moved. The rule is at AppState::keep_centered_while_nudging;
     // the two callers are named at the definition.
     void recenter_after_nudge();
-    // THE SNAP BACK UP TO THE WORKING ZOOM (architect 2026-09-13): levels finer
-    // than kWorkingZoomLevel exist for the zoom gesture's feel, not for
-    // authoring — the working zoom is where the horizontal nudge lattice is
-    // the reproducible one — so the walk and the two nudges, when the active
-    // tab's level is
-    // STRICTLY finer than working, set the working zoom first and then run as
-    // they always have. At the working zoom or coarser this is a no-op and
-    // nothing about those acts changes. The write is the ORDINARY discrete
-    // zoom commit, apply_zoom_change, so the `y` lamp's edge trigger
-    // (commit_keep_centered_zoom) and the synchronous plate rebuild see it
-    // exactly as a `c` press. Returns whether the level moved.
-    // THE SNAP IS PART OF THE ACT, NOT OF THE PRESS: every caller asks it past
-    // its own refusals, so a refused or walled press leaves the camera alone.
-    // A HELD BURST SNAPS AT ITS FIRST FIRE ONLY by the condition itself: past
-    // that fire the level is the working zoom and later fires find nothing to
-    // do (no repeat-bit gate). THE CALLERS, the one inventory:
-    //   * GuiInputHandler::cycle_marker_focus — the bare Tab walk (Tab,
-    //     Shift+Tab, IsoLeftTab) and each of the Ctrl+Shift+Tab paired march's
-    //     two steps, past the walk's wall and ahead of both of its arms — the
-    //     grid-iterations same-marker cell step snaps as a marker step does;
-    //   * GuiInputHandler::cycle_history_diff_flag_focus
-    //     (input_key_dispatch.cpp) — the `h` view's own Tab walk and each of
-    //     its Ctrl+Shift+Tab march's two steps, past the walk's walls and its
-    //     empty-list arm, behind the stop and ahead of the focus write and the
-    //     land;
-    //   * position_nudge_prologue (position_nudge.cpp) — the marker nudge on
-    //     both columns (GuiWarpMarkersOps::nudge_selected_markers,
-    //     GuiPhaseResetMarkersOps::nudge_selected_phase_resets) at every
-    //     magnitude, ONE call past the prologue's refusal verdict, its stop and
-    //     a 2+ press's collapse and land: a singleton is past its wall there,
-    //     and a group's collapse is its committed act, so a group whose focus
-    //     then finds its wall in the twin has still snapped, while a walled
-    //     singleton refused ahead of it and leaves the camera alone;
-    //   * GuiInputHandler::run_waveform_lane_playhead_step — the playhead step
-    //     at every magnitude, past its wall.
-    // Key and the Left / Right / Walk buttons alike (the march's pointer road
-    // being the other tab's shifted press), the buttons synthesizing those
-    // chords. The march runs `c` behind each step besides (architect
-    // 2026-09-14), which finds the level already at working wherever this
-    // fired. NOT snapping: the drops, Shift+J and the A/B audition (both
-    // already run `c`), `c` itself, pointer gestures, undo / redo.
-    // THE SHORT-SOURCE EXCEPTION: for a source shorter than one working-zoom
-    // viewport the file's effective fit ceiling is itself finer than working,
-    // apply_zoom_change clamps the request to it, and the snap saturates there
-    // exactly as `c` does — such a file authors on that finer lattice, the
-    // same exception tools/sidecar_snap_common.h records for the lattice.
-    bool snap_zoom_to_working_if_finer();
     void follow_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the

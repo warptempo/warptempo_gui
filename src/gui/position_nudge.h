@@ -167,18 +167,12 @@ struct PositionNudgePrologue {
 // stop rule (playback_lifecycle.h) demands the stop there for both shapes, and
 // the rule's refusal gating stays exact (a press that writes nothing refused
 // at (1) and stopped nothing).
-// Then (4) THE WORKING-ZOOM SNAP (architect 2026-09-13,
-// Viewport::snap_zoom_to_working_if_finer, whose declaration carries the
-// ruling and the inventory): a zoom strictly finer than working is set to
-// working here, ONCE for both twins, behind the stop and the land so the zoom
-// centres on the resting cursor on the focus, and ahead of each twin's
-// landing, which is therefore asked on the working lattice.
 // A 2+ press that then refuses at its wall in the twin keeps the collapse, the
-// land, the stop and the snap — the collapse is the press's own committed act,
+// land and the stop — the collapse is the press's own committed act,
 // not a prelude to the step (its damage is collapse_to_focused's own, so a
 // refused press repaints correctly). That is the 2+ press's path alone since
 // the wall joined (1): a SINGLETON at its wall refuses ahead of everything,
-// having nothing to collapse, nothing to stop and nothing to snap.
+// having nothing to collapse and nothing to stop.
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
 // normalizes the resulting arrangement at render/preview time, there is no
 // gesture pin.

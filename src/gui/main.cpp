@@ -88,9 +88,10 @@ namespace {
 
 // ms-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1), computed
-// directly in samples_per_pixel_at. The level rests anywhere in the one
-// continuous domain [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest
-// zoom-in (0.625 ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
+// directly in samples_per_pixel_at. The level lives in the one continuous
+// domain [kMinZoom, kMaxZoom] — no sentinel — and rests no finer than the
+// working zoom (clamp_zoom_level). Level 1 is the deepest zoom-in, reached
+// inside a continuous zoom gesture alone (0.625 ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
 // rungs reproduce the historical ladder (0.625, 1.25, 2.5, ...) bit-for-bit,
 // and the fit-equivalent level (full zoom-out, whole song visible) is just the
 // point on the same curve where spp * width == total.
@@ -957,12 +958,17 @@ double clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level) 
     // The one owner of the level-bounds pair. No live frames (loading states) →
     // return the level untouched: effective_max_zoom_level collapses to kMinZoom
     // on a zero total, and stomping the level the load path is mid-assignment
-    // would be wrong. Otherwise clamp into [kMinZoom, per-file ceiling].
+    // would be wrong. Otherwise clamp into [floor, per-file ceiling], the floor
+    // the working zoom at rest and kMinZoom while a continuous zoom gesture is
+    // live — the ruling, and the floor-wins spelling, at the declaration
+    // (app_state.h).
     const int64_t total = live_total_frames(a, audio);
     if (total <= 0) return level;
-    return std::clamp(level, kMinZoom,
-                      effective_max_zoom_level(waveform_area(a).w, total,
-                                               audio.sample_rate()));
+    const double ceiling = effective_max_zoom_level(waveform_area(a).w, total,
+                                                    audio.sample_rate());
+    const double level_floor = continuous_zoom_gesture_live(a)
+                                   ? kMinZoom : kWorkingZoomLevel;
+    return std::max(level_floor, std::min(level, ceiling));
 }
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
@@ -1035,12 +1041,16 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // argument that placed the viewport grid snap below — so a per-file ceiling
     // assigned above (0/c full-out, the settings editor's active zoom commit,
     // the Ctrl+Tab band restore, a fresh short project's second tab) can never
-    // rest above the effective ceiling. The scattered tick/on_resize reclamps
+    // rest above the effective ceiling — nor below the working zoom outside a
+    // continuous zoom gesture (the floor, owned by clamp_zoom_level). The
+    // scattered tick/on_resize reclamps
     // that used to own this were the leaking surface; they now only trigger and
     // delegate here. Clamped BEFORE samples_visible below so `visible` reflects
     // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
-    // tab) ViewState bands deliberately store zoom requests verbatim and are
-    // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
+    // tab) ViewState bands deliberately store zoom requests unclamped against
+    // the ceiling (a sidecar's verbatim; the settings editor's typed value
+    // floored at working) and are governed here only once they go live -- at
+    // Ctrl+Tab restore or tab-in.
     //
     // AND 'THE WHOLE SONG IS VISIBLE' IS A STATE THE LEVEL FOLLOWS (architect
     // 2026-09-02, R-17g; the field is ViewState::whole_song_visible, whose
@@ -1053,7 +1063,10 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // the picture stays what bare `0` named. The zoom WRITERS clear the bit
     // before they reach this call, so an explicit request is never fought;
     // the live-frames guard is clamp_zoom_level's own no-op branch made
-    // explicit, so a load mid-assignment is untouched.
+    // explicit, so a load mid-assignment is untouched. The ceiling written here
+    // is floored at the working zoom by the clamp_zoom_level line right below
+    // (the floor's one owner), so a source whose whole-song fit is finer than
+    // working rests at working.
     if (active_view_state(a).whole_song_visible) {
         const int64_t live_total = live_total_frames(a, audio);
         if (live_total > 0) {

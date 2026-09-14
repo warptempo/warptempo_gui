@@ -21,7 +21,7 @@
 // twins' two verbatim copies collapsed into it when the Left / Right buttons'
 // face needed the landing as a const owner to compare against. What stays in
 // each twin is its own STORE read and its post-clamp identity no-op; the stop
-// and the working-zoom snap live in the prologue.
+// lives in the prologue.
 
 PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
@@ -104,15 +104,6 @@ PositionNudgePrologue position_nudge_prologue(
         selection.collapse_to_focused();
         land_playhead_on_marker(app, audio, viewport, focused);
     }
-    // A FINER ZOOM SNAPS UP TO WORKING HERE, ONCE, for both columns and both
-    // shapes (Viewport::snap_zoom_to_working_if_finer carries the ruling and
-    // the inventory): this is the one place where the press is known to act —
-    // a group has already collapsed and landed (its own committed act, even
-    // when the step then finds its wall in the twin), a singleton is past its
-    // wall. It sits behind the stop and the land so the zoom centres on the
-    // resting cursor on the focus, and ahead of each twin's landing, which is
-    // therefore asked on the working lattice.
-    viewport.snap_zoom_to_working_if_finer();
     r.ok      = true;
     r.merge   = merge;
     r.focused = focused;

@@ -637,7 +637,7 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 
 // Frame an ACTIVE-domain span [lo, hi] into the viewport: compute the margined
 // fit level (effective_max_zoom_level's formula over the span, clamped
-// [kMinZoom, effective ceiling]) and CENTER the span in the window, then apply
+// [kWorkingZoomLevel, effective ceiling]) and CENTER the span in the window, then apply
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
 // sync render). `margin` adds a 2.5%-per-side (region / trim / group cases); the
@@ -2669,12 +2669,9 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker. At the
-    // working zoom or coarser the zoom is untouched (architect 2026-08-05, "no
-    // zoom on Tab", reverting the same-day working-zoom landing this carried
-    // for one commit); a level strictly finer than working snaps up to working
-    // ahead of every step that acts, a grid-iterations cell step included
-    // (architect 2026-09-13, Viewport::snap_zoom_to_working_if_finer). `c`
+    // playback and move the playhead onto the newly focused marker. The zoom
+    // is untouched (architect 2026-08-05, "no zoom on Tab", reverting the
+    // same-day working-zoom landing this carried for one commit). `c`
     // remains the direct route to
     // kWorkingZoomLevel from any level, and `0`'s second arm reaches it through
     // `c` when its tab has stamped no return level. A step that focuses

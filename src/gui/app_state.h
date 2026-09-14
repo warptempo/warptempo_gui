@@ -37,8 +37,9 @@ struct GuiTargetRender;
 // enforces in both products — and app_state.h re-exports them through the
 // include above.
 //
-// The zoom level is a real-valued exponent resting anywhere in the ONE
-// continuous domain [kMinZoom, kMaxZoom] (Ableton-style free rest): manual zoom
+// The zoom level is a real-valued exponent in the ONE continuous domain
+// [kMinZoom, kMaxZoom], resting anywhere from the working zoom up to the
+// per-file ceiling (Ableton-style free rest, floored below): manual zoom
 // walks it by whole steps from its current, possibly fractional, rung, and
 // zoom-out saturates at the per-file effective ceiling
 // (effective_max_zoom_level), where full zoom-out rests at whole-song-visible.
@@ -52,14 +53,18 @@ struct GuiTargetRender;
 // `0` had been out and back, and while the state stands the level follows
 // whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
-// Tab family, which recenters on its stop, changes no zoom at the working
-// zoom or coarser and snaps a finer level up to working
-// (Viewport::snap_zoom_to_working_if_finer). Smaller
-// level = less file per window = more zoomed in. kMinZoom is
-// the deepest zoom-in the manual walk can reach (1.2 s); kWorkingZoomLevel is
-// the fine-tuning rest point the snap gestures land on (2.4 s, one
-// step shallower), where the working-zoom authoring-grid bit-exactness claims
-// hold.
+// Tab family, which recenters on its stop, changes no zoom. Smaller
+// level = less file per window = more zoomed in.
+// NOTHING RESTS FINER THAN THE WORKING ZOOM (architect 2026-09-14):
+// kWorkingZoomLevel (2.4 s) is the one authoring lattice, where the
+// working-zoom authoring-grid bit-exactness claims hold, and the floor of
+// every resting level — clamp_zoom_level owns it, and every road that writes
+// a level clamps up to it, never refuses; a source whose whole-song fit is
+// finer than working rests at working. kMinZoom (1.2 s, one step deeper) is
+// reached only INSIDE a continuous zoom gesture — the nav Ctrl+drag, the
+// overview box edge drag, the pinch (continuous_zoom_gesture_live) — whose
+// end snaps the level back to working holding its pivot
+// (Viewport::snap_continuous_zoom_to_working).
 //
 // The level→scale map is ms_per_px(level) = kZoomBaseMsPerPx * 2^(level - 1),
 // its base the ONE named constant every site that solves or evaluates the map
@@ -67,9 +72,10 @@ struct GuiTargetRender;
 // span framer in input_handler.cpp, the overview edge drag in
 // input_pointer.cpp).
 constexpr double kZoomBaseMsPerPx  = 0.625; // ms per pixel at level 1 (1.2 s)
-constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; manual
-                                           // zoom-in can go one step deeper to
-                                           // kMinZoom (1.2 s)
+constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom, the floor
+                                           // of every resting level; only a
+                                           // continuous zoom gesture goes one
+                                           // step deeper, to kMinZoom (1.2 s)
 
 // Viewport lead/overlap fraction, expressed as a divisor of the visible
 // span. Follow mode keeps this much of the window as lead context when it
@@ -5790,6 +5796,16 @@ struct AppState {
     // wl_touch.cancel and touch-capability loss alike.
     TouchNavZoomState touch_nav_zoom;
 
+    // THE TOUCH NAVIGATION GESTURE IS LIVE: set by the first delivered frame
+    // (GuiInputHandler::apply_touch_nav_update, refused frames included) and
+    // cleared by GuiInputHandler::end_touch_nav, the one body every touch end
+    // reaches — a finger lift, wl_touch.cancel and touch-capability loss
+    // alike, the platform firing that end iff a frame was delivered. NOT the
+    // seat above, which clears at the pinch's downgrade to one finger while
+    // the stream continues as a pan. Its one reader is
+    // continuous_zoom_gesture_live, the working-zoom floor's exemption.
+    bool touch_nav_live = false;
+
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
     EditorTextDragState editor_text_drag;
@@ -11426,9 +11442,28 @@ bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
                                  int sample_rate);
-// Clamp a requested zoom level into the per-file window [kMinZoom, effective
-// per-file ceiling]. The single owner of the level-bounds pair, shared by the
-// clamp_viewport_start chokepoint and apply_zoom_change's pre-clamp. A no-op
+// A CONTINUOUS ZOOM GESTURE IS LIVE — the nav surface's drag (its Ctrl zoom
+// phase and the pan phase a ctrl-up leaves it in), the overview lane's drag
+// (the box edge drags zoom; the pan shares the record) or the touch
+// navigation gesture (AppState::touch_nav_live). The one reader is
+// clamp_zoom_level: while this holds the level may rest finer than the working
+// zoom, and the gesture's end snaps it back (Viewport::
+// snap_continuous_zoom_to_working).
+inline bool continuous_zoom_gesture_live(const AppState& a) {
+    return a.scroll_drag.active || a.overview_drag.active || a.touch_nav_live;
+}
+
+// Clamp a requested zoom level into the per-file window [kWorkingZoomLevel,
+// effective per-file ceiling] — [kMinZoom, ceiling] while a continuous zoom
+// gesture is live (continuous_zoom_gesture_live). THE ONE OWNER OF THE
+// LEVEL-BOUNDS PAIR AND OF THE WORKING-ZOOM FLOOR (architect 2026-09-14:
+// nothing rests finer than the working zoom), shared by the
+// clamp_viewport_start chokepoint and the appliers' pre-clamps, so every road
+// that writes a level — load, restore, tab-in, resize, the whole-song
+// re-derive, the span framer, the typed settings value — clamps UP to working
+// and none refuses. THE FLOOR WINS over the ceiling: a source whose whole-song
+// fit is finer than working rests at the working zoom (spelled max(floor,
+// min(level, ceiling)), never std::clamp, whose lo > hi is undefined). A no-op
 // while loading (no live frames), so it cannot stomp a level the load path is
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
@@ -12207,8 +12242,7 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
 // includes the bound cells"). `marker` is -1 when the step would land nothing,
 // which is the whole refusal test; `same_marker` says the step never left the
 // seat it started on — an ADDRESSED-CELL write and nothing else, no select, no
-// playhead land, no framing (the working-zoom snap every acting step takes
-// from a finer level is the act's, cycle_marker_focus, and not this answer's).
+// playhead land, no framing.
 //
 // THE RANK IS THE PAINTED ORDER, purple only: payload < lower < upper. The
 // MEASURE box sits past upper and is NEVER A STOP — it is blue, it carries no
@@ -12283,10 +12317,12 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 // none.
 enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 
-// WHICH SIDE OF THE WORKING ZOOM A LEVEL IS ON — true at the working zoom or
-// finer (a smaller level is finer), the line inclusive (architect 2026-09-13:
-// "level 1 or 2 or in between"). The one spelling the keep-centered commit,
-// its seed and the Tab walk's framing share.
+// WHICH SIDE OF THE WORKING ZOOM A LEVEL IS ON — true AT THE WORKING ZOOM, a
+// level finer than it existing only inside a continuous zoom gesture
+// (clamp_zoom_level's floor) and counting as working there; false coarser.
+// The inclusive `<=` is what lets a mid-gesture level answer with no gesture
+// predicate. The one spelling the keep-centered commit, its seed and the Tab
+// walk's framing share.
 inline bool zoom_level_at_or_finer_than_working(double level) {
     return level <= kWorkingZoomLevel;
 }
@@ -12354,7 +12390,7 @@ inline void seed_keep_centered_zoom(AppState& a) {
 // THE BARE TAB WALK'S FRAMING IS THE ZOOM AT ITS LANDING (architect
 // 2026-09-13: at the working zoom the view is too narrow and a walk almost
 // always wants to centre; coarser, the reader wants the global picture). AT
-// THE WORKING ZOOM OR FINER the walk answers Center, recentering the viewport
+// THE WORKING ZOOM the walk answers Center, recentering the viewport
 // on the marker it lands on; COARSER it answers FollowPage, landing without
 // moving the camera unless the landing is offscreen, where follow's own page
 // (Viewport::follow_scroll_if_needed) brings it in. No stored bit, no writer,

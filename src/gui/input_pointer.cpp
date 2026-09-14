@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <optional>
 #include <vector>
 
 // GuiInputHandler pointer-gesture handlers (on_button_press,
@@ -2448,6 +2449,54 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     return col;
 }
 
+// A HELD FRAME'S PIVOT AT A CONTINUOUS ZOOM GESTURE'S END, for
+// Viewport::snap_continuous_zoom_to_working: the frame's column under the live
+// viewport, clamped into the waveform with the edge rebind, exactly as the
+// gesture's own frames derive it (apply_nav_zoom_at's pivot block and the
+// pinch's in apply_touch_nav_update), so the snap holds the point the last
+// frame held.
+static ZoomPivot held_frame_zoom_pivot(const AppState& app,
+                                       const GuiAudio& audio,
+                                       double anchor_sample) {
+    const GuiRect wf_area = waveform_area(app);
+    const double  spp     = current_samples_per_pixel(app, audio);
+    const double  vp      = static_cast<double>(app.viewport_start_sample);
+    if (spp <= 0.0) return ZoomPivot{anchor_sample, 0.0};
+    const double col     = (anchor_sample - vp) / spp;
+    const double clamped = clamp_col_into_waveform(wf_area, col);
+    if (clamped != col) return ZoomPivot{vp + clamped * spp, clamped};
+    return ZoomPivot{anchor_sample, col};
+}
+
+// THE NAV DRAG'S PIVOT AT ITS END: the seated frame while the drag is in its
+// zoom phase; none in the pan phase (a drag armed plain, or one a ctrl-up
+// has left panning since its zoom), whose held frame has walked with the pan,
+// so the snap falls back to the viewport's centre. Read BEFORE the record
+// is cleared.
+static std::optional<ZoomPivot> nav_drag_zoom_pivot(const AppState& app,
+                                                    const GuiAudio& audio) {
+    if (!app.scroll_drag.zooming) return std::nullopt;
+    return held_frame_zoom_pivot(app, audio, app.scroll_drag.anchor_sample);
+}
+
+// THE OVERVIEW DRAG'S PIVOT AT ITS END: an edge drag's FIXED opposite bound at
+// its own window column, the anchor every one of its frames placed (area.w for
+// a dragged left edge, 0 for a dragged right edge — apply_overview_drag_at's
+// edge arm); the box pan zooms nothing and holds none. Read BEFORE the record
+// is cleared.
+static std::optional<ZoomPivot> overview_drag_zoom_pivot(const AppState& app) {
+    switch (app.overview_drag.kind) {
+    case OverviewDragKind::EdgeBegin:
+        return ZoomPivot{app.overview_drag.fixed_edge_sample,
+                         static_cast<double>(waveform_area(app).w)};
+    case OverviewDragKind::EdgeEnd:
+        return ZoomPivot{app.overview_drag.fixed_edge_sample, 0.0};
+    case OverviewDragKind::Pan:
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
 // THE POINTER'S NOTIONAL COLUMN — the zoom pivot SEAT's one source, and A
 // PURE PROJECTION of the platform's notional pointer position into the
 // waveform's own bounds. The pivot seats WHEREVER THE CURSOR IS at the
@@ -3060,6 +3109,10 @@ RegionHit GuiInputHandler::region_manipulation_hit(int x, int y) const {
 // at the declaration (input_handler.h). One delivered frame = at most one
 // placement through the strip-drag family's own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
+    // THE GESTURE IS LIVE from its first delivered frame, refused or not, to
+    // end_touch_nav (AppState::touch_nav_live): the working-zoom floor's
+    // exemption, so a pinch may go finer than working until it ends.
+    app.touch_nav_live = true;
     // THE PINCH'S SEATED PIVOT IS CLEARED BY ANY FRAME THAT IS NOT TWO-FINGER,
     // and that clear LEADS THE BODY — it is the one thing here that happens
     // above the refusal (contract at TouchNavZoomState, app_state.h). THE TWO
@@ -3352,7 +3405,20 @@ void GuiInputHandler::end_touch_nav() {
     // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
     // rebuilds nothing of its own, so without the damage a hard end would
     // leave the pivot mark painted over a settled view.
+    // THE SNAP BACK TO THE WORKING ZOOM holds the pinch's seated frame, so
+    // its pivot is read BEFORE the seat's clear; a gesture whose seat is
+    // already gone (a pinch downgraded to a one-finger pan) holds none and
+    // snaps about the viewport's centre. The live bit clears between the read
+    // and the snap, with nothing in between reaching the viewport clamp
+    // (Viewport::snap_continuous_zoom_to_working carries the ordering).
+    const std::optional<ZoomPivot> pivot =
+        app.touch_nav_zoom.seated
+            ? std::optional<ZoomPivot>(held_frame_zoom_pivot(
+                  app, audio, app.touch_nav_zoom.anchor_sample))
+            : std::nullopt;
     clear_touch_zoom_seat(app, viewport);
+    app.touch_nav_live = false;
+    viewport.snap_continuous_zoom_to_working(pivot);
     if (playback.is_playing()) playback.resync_predictor();
     // AND THE PINCH COMMITS ITS ZOOM HERE, at the one body every touch end
     // reaches, never per frame (commit_keep_centered_zoom,
@@ -7505,11 +7571,15 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             apply_nav_zoom_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
         }
+        const std::optional<ZoomPivot> pivot = nav_drag_zoom_pivot(app, audio);
         app.scroll_drag = ScrollDragState{};
         if (moved) {
             if (!zooming && playback.is_playing())
                 playback.resync_predictor();
             end_strip_pointer_capture();
+            // The snap back to the working zoom, the record cleared first
+            // (Viewport::snap_continuous_zoom_to_working).
+            viewport.snap_continuous_zoom_to_working(pivot);
             // THE GESTURE'S END IS ITS ZOOM COMMIT, whichever phase it ended
             // in: a ctrl phase released mid-drag committed nothing at its
             // ctrl-up, and a pan-only drag finds the level on the side the
@@ -7548,11 +7618,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         if (moved) {
             apply_overview_drag_at(x, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
-            // The edge drags' zoom commits at the drag's end
+        }
+        const std::optional<ZoomPivot> pivot = overview_drag_zoom_pivot(app);
+        app.overview_drag = OverviewDragState{};
+        if (moved) {
+            // The snap back to the working zoom, the record cleared first
+            // (Viewport::snap_continuous_zoom_to_working), then the edge
+            // drags' zoom commits at the drag's end
             // (commit_keep_centered_zoom, app_state.h).
+            viewport.snap_continuous_zoom_to_working(pivot);
             commit_keep_centered_zoom(app);
         }
-        app.overview_drag = OverviewDragState{};
         return;
     }
     // (No scrub branch of its own: since 2026-08-13 the scrub has no drag
@@ -7743,15 +7819,22 @@ void GuiInputHandler::finalize_active_drags() {
         // A zoom-phase stem — painted from a ctrl press or a ctrl edge —
         // owes its erase on every one of these ends.
         const bool zooming = app.scroll_drag.zooming;
-        if (app.scroll_drag.moved) {
+        const bool moved   = app.scroll_drag.moved;
+        const std::optional<ZoomPivot> pivot = nav_drag_zoom_pivot(app, audio);
+        if (moved) {
             if (playback.is_playing()) playback.resync_predictor();
             if (zooming) viewport.kick_waveform_sync();
             end_strip_pointer_capture();
-            // A force-end is still the gesture's end, so it is the zoom's
-            // commit (commit_keep_centered_zoom, app_state.h).
-            commit_keep_centered_zoom(app);
         }
         app.scroll_drag = ScrollDragState{};
+        if (moved) {
+            // A force-end is still the gesture's end: the snap back to the
+            // working zoom, the record cleared first
+            // (Viewport::snap_continuous_zoom_to_working), then the zoom's
+            // commit (commit_keep_centered_zoom, app_state.h).
+            viewport.snap_continuous_zoom_to_working(pivot);
+            commit_keep_centered_zoom(app);
+        }
         if (zooming) viewport.invalidate_waveform_area();
     }
     if (app.overview_drag.active) {
@@ -7765,12 +7848,18 @@ void GuiInputHandler::finalize_active_drags() {
         // outside press's own teleport already ran at the press, so nothing is
         // lost here. (No pending phase can be in flight: the record holds a
         // real drag or nothing, the two-day Pending teleport being deleted.)
-        if (app.overview_drag.moved && playback.is_playing())
+        const bool moved = app.overview_drag.moved;
+        if (moved && playback.is_playing())
             playback.resync_predictor();
-        // The zoom's commit at the force-end, as at the release
-        // (commit_keep_centered_zoom, app_state.h).
-        if (app.overview_drag.moved) commit_keep_centered_zoom(app);
+        const std::optional<ZoomPivot> pivot = overview_drag_zoom_pivot(app);
         app.overview_drag = OverviewDragState{};
+        // The snap back to the working zoom and the zoom's commit at the
+        // force-end, as at the release (Viewport::
+        // snap_continuous_zoom_to_working, commit_keep_centered_zoom).
+        if (moved) {
+            viewport.snap_continuous_zoom_to_working(pivot);
+            commit_keep_centered_zoom(app);
+        }
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
     // no release here (the button is still held), and a force-end is not a
@@ -10393,13 +10482,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Pan, and the Pending phase that deferred the teleport is deleted.)
     if (app.overview_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
-            if (app.overview_drag.moved) {
+            const bool moved = app.overview_drag.moved;
+            if (moved)
                 apply_overview_drag_at(mouse_x, /*final_event=*/true);
-                // The zoom's commit, the release's own
-                // (commit_keep_centered_zoom, app_state.h).
+            const std::optional<ZoomPivot> pivot =
+                overview_drag_zoom_pivot(app);
+            app.overview_drag = OverviewDragState{};
+            if (moved) {
+                // The snap back and the zoom's commit, the release's own
+                // (Viewport::snap_continuous_zoom_to_working,
+                // commit_keep_centered_zoom).
+                viewport.snap_continuous_zoom_to_working(pivot);
                 commit_keep_centered_zoom(app);
             }
-            app.overview_drag = OverviewDragState{};
             return;
         }
         // Sub-threshold: still a click (the generic press-becomes-drag gate).
@@ -10438,6 +10533,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             const bool zooming = sd.zooming;
             if (moved && zooming)
                 apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/true);
+            const std::optional<ZoomPivot> pivot =
+                nav_drag_zoom_pivot(app, audio);
             app.scroll_drag = ScrollDragState{};
             // The stem's erase, when the zoom phase painted one — the moved
             // final apply's rebuild covers it, so this is the unmoved
@@ -10447,8 +10544,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (!zooming && playback.is_playing())
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
-                // The zoom's commit, the release's own
-                // (commit_keep_centered_zoom, app_state.h).
+                // The snap back and the zoom's commit, the release's own
+                // (Viewport::snap_continuous_zoom_to_working,
+                // commit_keep_centered_zoom).
+                viewport.snap_continuous_zoom_to_working(pivot);
                 commit_keep_centered_zoom(app);
             }
             return;

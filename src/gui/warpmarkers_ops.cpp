@@ -1705,9 +1705,8 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // SINGLETON at its wall never gets this far (the wall no-op touches
     // nothing — the rule is at the prologue), while a group press passes that
     // term unconditionally, collapses, lands, and then finds its wall here.
-    // (The press's playback stop and its working-zoom snap are the prologue's,
-    // past its refusal verdict and ahead of this landing, which is therefore
-    // asked on the working lattice — position_nudge_prologue.)
+    // (The press's playback stop is the prologue's, past its refusal verdict
+    // and ahead of this landing — position_nudge_prologue.)
     if (committed_f == orig_f)
         return std::nullopt;
 

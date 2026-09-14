@@ -408,8 +408,8 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall, the
     // warp twin's rule verbatim again: the prologue asks the same landing ahead
     // of the coalesce stamp, so a SINGLETON at its wall refuses there instead.
-    // (The press's playback stop and its working-zoom snap are the prologue's,
-    // the warp twin's statement verbatim — position_nudge_prologue.)
+    // (The press's playback stop is the prologue's, the warp twin's statement
+    // verbatim — position_nudge_prologue.)
     if (committed_f == orig_f)
         return std::nullopt;
     std::vector<GuiPhaseResetMarker> pre_state =

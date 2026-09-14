@@ -1834,14 +1834,6 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
         there = here - 1;
     }
     playback_lifecycle.stop_playback_if_playing();
-    // A FINER ZOOM SNAPS UP TO WORKING first, the live walk's own snap
-    // (architect 2026-09-13; Viewport::snap_zoom_to_working_if_finer carries
-    // the ruling and the inventory): past every wall and the empty arm above,
-    // so a press that lands nothing moves no camera, and ahead of the focus
-    // write and the land. Each of the mode's march steps runs this body, so
-    // the march snaps once per step exactly as the live march does — the
-    // second step at the level the switch has restored for the other tab.
-    viewport.snap_zoom_to_working_if_finer();
     // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
     // shape: the set clears and the focus alone stands, which is the plain
     // click's rest too. Ordered so the clearer cannot undo the focus it
@@ -1861,10 +1853,8 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // CURRENT ZOOM, follow mode not gating it, reading the flag it just landed
     // on, the live family's landing mirrored — and the march states NoFrame,
     // its `c` behind each step being the one framing. The zoom is the live
-    // walk's too: untouched at the working zoom or coarser (architect
-    // 2026-08-05, "no zoom on Tab" — a walk must not re-frame the view under
-    // the reader), and a strictly finer level already taken up to working by
-    // the snap above (architect 2026-09-13).
+    // walk's too: untouched (architect 2026-08-05, "no zoom on Tab" — a walk
+    // must not re-frame the view under the reader).
     switch (frame) {
         case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
         case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
@@ -8406,10 +8396,6 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // step's shape. So both steps here are ordinary MARKER steps: with the
     // lamp dark marker_walk_step has no cell arm to take, and with it lit this
     // arm is unreachable.
-    // EACH WALK STEP STILL SNAPS ITS OWN TAB'S FINER ZOOM UP TO WORKING inside
-    // cycle_marker_focus (Viewport::snap_zoom_to_working_if_finer), the second
-    // after the switch has restored the other tab's level; the `c` behind it
-    // then finds the level already at working whenever that snap fired.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
         cycle_marker_focus(true, MarkerLandingFrame::NoFrame);
         run_center_command();
@@ -8423,9 +8409,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
     // marker, moving the playhead to it and framing PER THE ZOOM —
     // marker_walk_frame(app) (app_state.h), whose only callers are these
-    // three arms: at the working zoom or finer the walk recentres (a finer
-    // level first snapping up to working inside cycle_marker_focus —
-    // Viewport::snap_zoom_to_working_if_finer); coarser, the camera holds and
+    // three arms: at the working zoom the walk recentres; coarser, the camera
+    // holds and
     // only an offscreen landing pages in, follow's way. The Ctrl+Tab
     // branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
@@ -8553,14 +8538,6 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // for all three (the twin rule's own resolution, at
     // horizontal_arrow_step_actionable).
     const int64_t cursor_before = app.playhead_cursor_sample;
-    // A FINER ZOOM SNAPS UP TO WORKING before the step
-    // (Viewport::snap_zoom_to_working_if_finer carries the ruling and the
-    // inventory): behind the stop, so the zoom centres on the resting cursor,
-    // and only for a step that will move — the wall test asked at the current
-    // level answers for the working one, a wall being a frame, not a column.
-    // A walled press keeps its stop, clear and hide and leaves the camera.
-    if (playhead_pixel_step_landing(app, audio, step_columns) != cursor_before)
-        viewport.snap_zoom_to_working_if_finer();
     viewport.move_playhead_pixels(step_columns);
     // KEEP CENTERED WHILE NUDGING (the rule at AppState::keep_centered_while_nudging): a
     // step that moved the cursor recenters on it while the `y` lamp is lit; a
