@@ -117,15 +117,18 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: NO MEMBER since 2026-09-14 (architect approval
-    //    2026-09-14). Its one site from 2026-08-26 was the retired
-    //    magnification level applier. The gain is a PER-SECTION PROFILE
+    //  - THE PLATE'S OWN GAIN: ONE MEMBER since 2026-09-14, the MAGNIFICATION
+    //    EDITOR'S COMMIT (GuiFlagEditor::commit_magnification_edit). Its one
+    //    site from 2026-08-26 was the retired magnification level applier
+    //    (architect approval 2026-09-14). The gain is a PER-SECTION PROFILE
     //    resolved from the warp markers now (waveform_gain_profile_cached), so a
     //    gain change is a warp-store mutation, whose profile hash dirties the
     //    plate fingerprint and the overview bar cache BY FIELD — the tick's
-    //    async backstop repaints it with no kick of its own, and an act that
-    //    wants it in one frame with its overlays takes this kick for that
-    //    reason. A gain-only change is a plate CONTENT change with no geometry
+    //    async backstop would repaint it a frame late with no kick of its own,
+    //    and the commit takes this kick so the new gain lands in the frame its
+    //    box does. (A warp-store act that already kicks for its map — undo,
+    //    redo, the load-in-place family, the value family below — carries a
+    //    gain change with it for free.) A gain-only change is a plate CONTENT change with no geometry
     //    behind it, so the reclamp below is a pure no-op for it. It touches no
     //    audio: the gain is the picture's.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the

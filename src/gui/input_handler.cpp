@@ -1671,6 +1671,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         case MarkerCell::Measure:
             flag_editor.enter_measure_edit(focus);
             return;
+        case MarkerCell::Magnification:
+            flag_editor.enter_magnification_edit(focus);
+            return;
         }
         return;
     }
@@ -1706,6 +1709,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         flag_editor.enter_measure_edit(app.last_selected_marker);
+        return;
+    }
+
+    // CTRL+/ opens the MAGNIFICATION editor on the focused warp marker
+    // (architect 2026-09-14) — bare `/`'s ctrl twin, ctrl-exact and one-shot.
+    // The gates are the Measure's by construction: the refusal owner
+    // (marker_magnification_edit_refusal, app_state.h — the warp column, then
+    // a focus) cards here and greys the Magnification button; the READ-ONLY
+    // lock and the `h` view drop the chord at their own allowlists, neither of
+    // which carries it; and the ITERATION LOCK drops it at
+    // iteration_lock_key_blocked, which admits it nowhere. NO TOGGLE: nothing
+    // but the editor's own empty commit clears the field.
+    if (key == GuiKeys::Slash && ctrl && !shift && !alt) {
+        selection.repair_last_selected();
+        if (const char* refusal = marker_magnification_edit_refusal(app)) {
+            notifications.notify(AppState::NotificationClass::Normal, refusal);
+            return;
+        }
+        flag_editor.enter_magnification_edit(app.last_selected_marker);
         return;
     }
 
@@ -2192,6 +2214,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                 app.addressed_cell, delta_cents));
             return;
         case MarkerCell::Measure:
+        case MarkerCell::Magnification:
             notifications.notify(AppState::NotificationClass::Normal,
                                  addressed_cell_step_refusal(app));
             return;
@@ -3706,7 +3729,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // `active_audio_view=` commit route here — Ctrl+Tab never changes
     // active_audio_view — so this is the one place either edge is handled.
     // THE CLOSE IS KIND-AGNOSTIC: it also tears down a live MEASURE editor
-    // (Kind::MeasureText) on T->S, where before 2026-08-24 it survived only
+    // (Kind::MeasureText) on T->S — and a MAGNIFICATION editor
+    // (Kind::MagnificationText) likewise — where before 2026-08-24 it survived only
     // because nothing closed it. Flagged for a ruling and the architect
     // ruled 2026-08-25: KEEP — "we want symmetry as much as possible", the
     // same reason as the payload editor's.

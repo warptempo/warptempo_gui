@@ -2002,7 +2002,8 @@ struct TrimBarPressSeed {
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
 // re-greped 2026-09-09 against kDropdownMenus and the chord table (51 chord
-// rows + 3 anchors = kRedesignButtonCount); the count was TWO, File and
+// rows + 3 anchors = kRedesignButtonCount — re-counted 2026-09-14: 49 + 3);
+// the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
 // 2026-08-15, ITERATIONS a fourth from 2026-08-27 until its own deletion on
@@ -2821,6 +2822,17 @@ enum class RedesignButton {
     // tab and in redesign_button_shift_admits; the jump left the product whole
     // and the button returned to the lock's set with it.)
     IconMarkerMeasure,
+    // THE MARKER MAGNIFICATION (architect 2026-09-14), seated RIGHT AFTER THE
+    // MEASURE in the verb group: CTRL+/, the zoom-in-vertical glyph (the one
+    // the retired Magnify button wore), opening the MAGNIFICATION EDITOR on
+    // the focused warp marker. Its enabled arm reads
+    // marker_magnification_edit_actionable (the warp column, then a focus —
+    // the Ctrl+/ arm's own refusal), and it greys with the Measure under the
+    // READ-ONLY lock and in the `h` view (Ctrl+/ is on neither allowlist) and
+    // under the ITERATION LOCK (iteration_lock_greys — a magnification is
+    // serialized content and pushes). A ctrl chord's own button: it admits no
+    // shift variant. NO LAMP: an act, not a mode.
+    IconMarkerMagnification,
     // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SEVENTH
     // member, seated IMMEDIATELY AFTER THE MEASURE (architect 2026-08-29, his
     // live pass that evening; it sat after Toggle inherit for the afternoon
@@ -2944,13 +2956,19 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above: SIX in row 1, two
-// in row 3, TWENTY-FIVE in row 4 and EIGHTEEN in the bottom row — 51. Of
+// in row 3, TWENTY-FIVE in row 4 and NINETEEN in the bottom row — 52. Of
 // those,
-// FORTY-EIGHT carry a chord in kToolbarChords and THREE are the dropdown
+// FORTY-NINE carry a chord in kToolbarChords and THREE are the dropdown
 // anchors (File, Edit and Settings), which is the split the chord
 // table's own
 // static_assert checks — 43 + 2 until 2026-08-13, when the Quit button left the
 // chord table and File joined the anchors in its slot (the count did not move).
+// 52 SINCE 2026-09-14'S MAGNIFICATION BUTTON (architect 2026-09-14, later
+// the same day): one pure chord addition inside an existing group, the bottom
+// row's verb group gaining IconMarkerMagnification on Ctrl+/ behind the
+// Measure — 51 + 1, split 48 + 3 to 49 + 3, no separator and no group
+// boundary moved. What the box spends is the STATE CELL's ground, 34 authored
+// px of it (the arithmetic is at paint_bottom_row_buttons_and_clock).
 // 51 SINCE 2026-09-14'S MAGNIFICATION PAIR DELETION (architect approval
 // 2026-09-14): Magnify and Reduce left the icon row's viewport-class group with
 // their chord rows and their setting — 53 − 2, split 50 + 3 to 48 + 3, two
@@ -3128,7 +3146,7 @@ enum class RedesignButton {
 // 53 = 54 − THE CENTER ON NEXT MARKER LAMP (architect 2026-09-13): the walk's
 // framing became a function of the zoom at the landing (marker_walk_frame),
 // so the box and bare `n` leave together — the split going 51 + 3 to 50 + 3.
-inline constexpr int kRedesignButtonCount = 51;
+inline constexpr int kRedesignButtonCount = 52;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3225,6 +3243,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
+        case RedesignButton::IconMarkerMagnification:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -3239,11 +3258,11 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-09-13: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — NINETEEN since 2026-09-14: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION, (2026-08-27)
-// the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button landing
-// behind them (the VALUE DRAG LAMP stood last in that group from 2026-09-10
+// the EDIT FLAG BUTTON, (2026-08-29) the COPY VALUE button and (2026-09-14)
+// the MARKER MAGNIFICATION landing behind them (the VALUE DRAG LAMP stood last in that group from 2026-09-10
 // to its deletion 2026-09-13), the MARKER-WALK GROUP's three (2026-08-15) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
@@ -3251,7 +3270,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these nineteen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3277,6 +3296,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
+        case RedesignButton::IconMarkerMagnification:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -6110,8 +6130,8 @@ struct AppState {
     // settings editor, the commit-title editor and the bpm bracket editor;
     // the top-strip flag
     // editor is deliberately not one of them in EITHER of its non-bracket
-    // kinds — FlagPayload or MeasureText, both of which paint in the top
-    // strip; the `h` view's load editor and the Open project editor were the
+    // kinds — FlagPayload, MeasureText, MagnificationText or IterBound, all of
+    // which paint in the top strip; the `h` view's load editor and the Open project editor were the
     // fifth and sixth until 2026-08-28, when both became the field-less
     // PICKER, which is a modal owner and not an editor — AppState::Picker).
     // The predicate GuiInputHandler::modal_dialog_editor_active is this id
@@ -6151,9 +6171,9 @@ struct AppState {
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SIX editor kinds, 0 when
-    // none stands — the accessor above widened by the two top-strip kinds it
-    // names as deliberate non-members (FlagPayload and MeasureText). It exists for
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SEVEN editor kinds, 0 when
+    // none stands — the accessor above widened by the four top-strip kinds it
+    // names as deliberate non-members. It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
     // with the edit they were armed in: keying them to this id turns "reset
     // when the editor closes" into a comparison rather than a list of close
@@ -6172,7 +6192,7 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the six
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the seven
     // editor kinds does, on a backend that asks for one, and it holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
@@ -7924,7 +7944,7 @@ struct AppState {
     // re-detect gesture fires while a confirmation is required.
     PromptState prompt;
 
-    // Shared text-editor state for FOUR editors distinguished by Kind: the
+    // Shared text-editor state for FIVE editors distinguished by Kind: the
     // top-strip flag editor (Kind::FlagPayload — active when editing a warp
     // marker's payload, its text run and caret painted live ON THE FLAG ITSELF
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
@@ -7932,7 +7952,9 @@ struct AppState {
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
     // other two dialog editors (2026-08-13), the marker MEASURE editor
     // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
-    // like the flag editor and carries no red-flash edge of its own, and the
+    // like the flag editor and carries no red-flash edge of its own, the
+    // marker MAGNIFICATION editor (Kind::MagnificationText, since 2026-09-14),
+    // the measure editor's twin over the green box, and the
     // ITERATION BOUND editor (Kind::IterBound, since 2026-09-05), which
     // paints over its bound cell in the top strip and carries no stem flash
     // either. The editor owns the keyboard while active.
@@ -10388,10 +10410,16 @@ inline bool iter_bound_step_actionable(const AppState& app) {
 // sentence or nullptr. THREE READERS: the Up/Down dispatch's fork
 // (input_handler.cpp), the Up/Down face (redesign_button_enabled) and their
 // tooltip, which drops its ladder line on it.
+//
+// THE MAGNIFICATION CELL TAKES THE SAME ROAD for now (2026-09-14): its step
+// is not built, so the press refuses on its own sentence and the buttons grey
+// on it exactly as on the measure.
 inline const char* addressed_cell_step_refusal(const AppState& app) {
-    return app.addressed_cell == MarkerCell::Measure
-               ? "A measure has no value to step"
-               : nullptr;
+    if (app.addressed_cell == MarkerCell::Measure)
+        return "A measure has no value to step";
+    if (app.addressed_cell == MarkerCell::Magnification)
+        return "A magnification has no step yet";
+    return nullptr;
 }
 
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
@@ -10866,6 +10894,24 @@ inline bool marker_measure_edit_actionable(const AppState& app) {
     return marker_measure_edit_refusal(app) == nullptr;
 }
 
+// THE MAGNIFICATION EDITOR'S OPEN REFUSAL (architect 2026-09-14) — the
+// measure's shape, ONE OWNER for Ctrl+/ (the card), the Magnification
+// button's face (the grey) and Return's magnification arm
+// (flag_editor_open_actionable): the column first, phase resets carrying no
+// magnification (PhaseResetMarker), then the focus. nullptr is the open.
+inline constexpr const char* kMagnificationNoFocusCard =
+    "Select a marker to edit its magnification";
+inline constexpr const char* kMagnificationWarpOnlyCard =
+    "Magnification is set on warp markers";
+inline const char* marker_magnification_edit_refusal(const AppState& app) {
+    if (app.active_markers_view != 'W') return kMagnificationWarpOnlyCard;
+    if (!marker_focus_standing(app))    return kMagnificationNoFocusCard;
+    return nullptr;
+}
+inline bool marker_magnification_edit_actionable(const AppState& app) {
+    return marker_magnification_edit_refusal(app) == nullptr;
+}
+
 // BARE RETURN'S OPEN REFUSAL, composed (architect 2026-08-30; over the
 // addressed cell since 2026-09-05): Return opens the ADDRESSED CELL'S editor
 // on the FOCUSED marker, so it wants a focus first, and then the cell's own
@@ -10878,7 +10924,9 @@ inline bool marker_measure_edit_actionable(const AppState& app) {
 // card behind a live face, as the Up/Down pair's is. READERS: the Return arm
 // (input_handler.cpp) and the Edit flag button's disabled face. The MEASURE
 // editor's own key (bare `/`) and its button read
-// marker_measure_edit_refusal / marker_measure_edit_actionable.
+// marker_measure_edit_refusal / marker_measure_edit_actionable, and the
+// MAGNIFICATION editor's (Ctrl+/) marker_magnification_edit_refusal /
+// marker_magnification_edit_actionable, which its arm here asks too.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
@@ -10886,6 +10934,8 @@ inline bool flag_editor_open_actionable(const AppState& app) {
     case MarkerCell::Lower:
     case MarkerCell::Upper:   return true;
     case MarkerCell::Measure: return marker_measure_edit_actionable(app);
+    case MarkerCell::Magnification:
+        return marker_magnification_edit_actionable(app);
     }
     return false;
 }
@@ -11537,13 +11587,15 @@ inline bool any_tab_read_only(const AppState& a) {
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
-        // The four marker verbs and the Measure: every one of them writes a
-        // store and pushes, which is the whole of what the lock holds back.
+        // The four marker verbs, the Measure and the Magnification: every one
+        // of them writes a store and pushes, which is the whole of what the
+        // lock holds back.
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerMeasure:
+        case RedesignButton::IconMarkerMagnification:
         // The Toggle Marker Column lamp — the lock's W/P delta, the mode being
         // lit for the column you are in.
         case RedesignButton::IconMarkerColumn:
@@ -11629,7 +11681,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
         // as the keyboard gate's own bound-axis test does: with Lower or Upper
         // addressed the press reaches the bound cells — the mode's one
-        // authoring surface — and on the PAYLOAD or the MEASURE axis it would
+        // authoring surface — and on the PAYLOAD, the MEASURE or the
+        // MAGNIFICATION axis it would
         // open an editor over serialized content or run the tempo step, both
         // of which push. The measure axis is a member for the same reason it
         // cards the lock's sentence at the key: the gate admits the two bound
@@ -11804,6 +11857,7 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
         if (active_view_state(a).read_only) return false;
         return marker_paints_iter_cells(a, column, idx);
     case MarkerCell::Measure:
+    case MarkerCell::Magnification:
         return false;
     }
     return false;
@@ -14082,6 +14136,14 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    marker_measure_edit_actionable(a);
+        // THE MARKER MAGNIFICATION (2026-09-14) takes the Measure's arm
+        // exactly over its own refusal owner, marker_magnification_edit_actionable
+        // (the Ctrl+/ arm's): the lock, the iteration lock, the warp column
+        // and a focus.
+        case RedesignButton::IconMarkerMagnification:
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
+                   marker_magnification_edit_actionable(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
@@ -15115,6 +15177,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // same editor machinery (2026-08-27).
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
+        // THE MARKER MAGNIFICATION answers as the Measure: an editor opener.
+        case RedesignButton::IconMarkerMagnification:
         // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
         // the jump its shifted twin runs. Nothing stays true afterwards for a
         // lamp to report.
@@ -15922,6 +15986,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerMeasure:
             return {"Measure (/)", nullptr};
+        // THE MARKER MAGNIFICATION (2026-09-14), one line: the act named, no
+        // modifier line, the button admitting no modified press.
+        case RedesignButton::IconMarkerMagnification:
+            return {"Magnification (Ctrl+/)", nullptr};
         // COPY RESOLVED VALUE (2026-08-29), the verb group's seventh since
         // that evening's reseat and its SECOND two-line form: bare `j` copies
         // the focused marker's resolved value, and the shifted twin JUMPS to
@@ -16454,6 +16522,8 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {"Edit Upper Bound (Return)", nullptr};
             case MarkerCell::Measure:
                 return {"Edit Measure (Return)", nullptr};
+            case MarkerCell::Magnification:
+                return {"Edit Magnification (Return)", nullptr};
             }
             break;
         // LEFT / RIGHT: the marker lane in T+W, where the nudge refuses WHOLE

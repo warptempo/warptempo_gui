@@ -2,6 +2,7 @@
 
 #include "gui_input.h"
 #include "marker_measure.h"
+#include "marker_magnification.h"
 #include "phaseresetmarkers.h"  // kIterHopMax — the hop cap's bound, taken
                                 // from its one owner rather than re-spelled,
                                 // exactly as the measure cap takes
@@ -220,6 +221,12 @@ constexpr int kMaxPendingCharsCommitTitle = 256;
 // in this module is an int, which is what the cap tests read.
 constexpr int kMaxPendingCharsMeasure =
     static_cast<int>(kMaxMarkerMeasureBytes);
+// The marker MAGNIFICATION editor (Ctrl+/, its bottom-row button, the
+// double-click on the green box; architect 2026-09-14). The cap IS the
+// grammar's one byte, taken from its owner (kMaxMarkerMagnificationBytes,
+// marker_magnification.h): the widest spelling of a single digit.
+constexpr int kMaxPendingCharsMagnification =
+    static_cast<int>(kMaxMarkerMagnificationBytes);
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -232,6 +239,9 @@ constexpr int kMaxPendingCharsMeasure =
 // MARKER MEASURE editor uses MeasureText (the measure half of the
 // ` //<measure>,<magnification>` comment a warp marker line may carry — an ASCII GRAMMAR since the field's 2026-08-20 rebrand,
 // judged at the commit by marker_measure.h and not at all on the keyboard);
+// the MARKER MAGNIFICATION editor uses MagnificationText (the magnification
+// half of that comment, one digit judged at its commit by
+// marker_magnification.h, since 2026-09-14);
 // and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
 // State::iter_upper below — judged at its commit against the bracket's walls).
@@ -240,9 +250,10 @@ constexpr int kMaxPendingCharsMeasure =
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
-// they name. THERE ARE SIX KINDS AND THREE OF THEM ARE
-// DIALOG EDITORS; the three top-strip kinds (FlagPayload, MeasureText,
-// IterBound) share the flag editor's State and paint in the marker lane.
+// they name. THERE ARE SEVEN KINDS AND THREE OF THEM ARE
+// DIALOG EDITORS; the four top-strip kinds (FlagPayload, MeasureText,
+// MagnificationText, IterBound) share the flag editor's State and paint in
+// the marker lane.
 // The MeasureText kind was architect-blessed 2026-08-19 and IterBound arrived on
 // 2026-09-05, when every cell became a mini flag with its own editor; TWO
 // KINDS RETIRED WHOLE on 2026-08-28 (architect, R22/R23: "we're not allowing
@@ -259,6 +270,7 @@ enum class Kind {
     CommitTitle,
     MeasureText,
     IterBound,
+    MagnificationText,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,

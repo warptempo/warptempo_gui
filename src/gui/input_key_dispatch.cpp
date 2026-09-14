@@ -6154,8 +6154,9 @@ void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
     // prompt VEILS everything and is itself the answer on screen — its
     // question is what the press has to deal with — while an editor is
-    // pointer-transparent in three of its six kinds the top-strip flag
-    // editor takes (FlagPayload, MeasureText and IterBound, text_editor.h), so
+    // pointer-transparent in the four of its seven kinds the top-strip flag
+    // editor takes (FlagPayload, MeasureText, MagnificationText and IterBound,
+    // text_editor.h), so
     // the File menu's Open project row is reachable under it and owes a
     // sentence. The KEY road never reaches either arm: Ctrl+O under any
     // editor dies at on_key's editor gate, which says these very words with
@@ -8643,19 +8644,20 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 }
 
 // Top-flag editor key routing. See the declaration for the consumed/command
-// contract. ALL THREE kinds take the shared modal route (architect 2026-07-28)
+// contract. ALL FIVE kinds take the shared modal route (architect 2026-07-28)
 // and differ only in their commit / cancel bodies and their repaint area: the
 // bpm bracket editor draws in the MODAL DIALOG on the bottom row (like the
 // settings editor; its damage is that row's own lane owner) and commits into a
 // render sweep, the FlagPayload editor draws in the TOP strip and commits the
 // flag's own payload, the MeasureText editor draws in the TOP strip too and
-// commits the marker's measure, and the IterBound editor draws over its bound
+// commits the marker's measure, the MagnificationText editor draws there too
+// and commits the marker's magnification, and the IterBound editor draws over its bound
 // cell in the TOP strip and commits that bound. None passes a bare-Tab hook,
 // having no vocabulary to complete: in the BPM editor, a DIALOG, bare Tab
-// walks the modal's focus ring from the first press, while for the three
+// walks the modal's focus ring from the first press, while for the four
 // top-strip kinds it never reaches this route at all — the on_key gate
 // swallows it, a flag editor publishing no dialog and so no ring
-// (route_modal_editor_key). For all four, Ctrl+S saves with the editor left
+// (route_modal_editor_key). For all five, Ctrl+S saves with the editor left
 // open and Esc / Enter are the session's only exits.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
@@ -8728,6 +8730,16 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
             [this] { flag_editor.commit_measure_edit(); },
+            [this] { flag_editor.exit_top_flag_edit_no_commit(); },
+            [this] { viewport.invalidate_top_strip(); });
+    }
+    if (app.top_flag_editor.kind == text_editor::Kind::MagnificationText) {
+        // The MAGNIFICATION editor (2026-09-14): the measure editor's route
+        // exactly, its red reaching no stem for the same reason.
+        return route_modal_editor_key(
+            app.top_flag_editor, key, mods,
+            /*autocomplete=*/nullptr,
+            [this] { flag_editor.commit_magnification_edit(); },
             [this] { flag_editor.exit_top_flag_edit_no_commit(); },
             [this] { viewport.invalidate_top_strip(); });
     }

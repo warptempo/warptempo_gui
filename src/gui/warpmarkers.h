@@ -370,24 +370,26 @@ inline std::string format_signed_hops(int hops) {
 // marker, the display token on a phase reset — Lower and Upper are the two
 // bound cells iteration mode paints to its right on an eligible marker OF
 // EITHER COLUMN (a warp marker's tempo bracket in cents, a phase reset's hop
-// bracket in whole lattice hops since 2026-09-09), and Measure is the blue box
-// that follows. It answers three questions with
+// bracket in whole lattice hops since 2026-09-09), Measure is the blue box
+// that follows, and Magnification is the green box past it (architect
+// 2026-09-14 — a WARP marker's own picture magnification, painted only where
+// the marker carries its own value; phase resets carry neither box). It answers three questions with
 // one value: WHICH BOX a press landed on (hit_test_flag_cell, app_state.cpp,
 // off the painter's published boundaries), WHICH CELL OF THE FOCUS IS
 // ADDRESSED (AppState::addressed_cell — the bright cell, the cell the vertical
 // arrows step, the cell Enter opens) and WHICH EDITOR a double-click or Enter
 // opens (the Payload editor, the bound editor on Lower or Upper, the measure
-// editor). The type lives here, beside the bracket two of its members
+// editor, the magnification editor). The type lives here, beside the bracket two of its members
 // address, because the painter (render.h) needs it and render.h cannot see
 // AppState.
 //
 // THE PAYLOAD IS THE MEMBERSHIP SURFACE; EVERY OTHER BOX TAKES THE PLAIN
 // PRESS ONLY (architect 2026-09-10, the bound cells being "a separate
-// system"): a ctrl or shift press landing on Lower, Upper or Measure is a
+// system"): a ctrl or shift press landing on Lower, Upper, Measure or Magnification is a
 // silent no-op at the one act owner (run_marker_click_act, input_pointer.cpp,
 // which argues it), so a selection is built and ranged from the flag box
 // alone while a plain press on any box selects, addresses that box and lands.
-enum class MarkerCell { Payload, Lower, Upper, Measure };
+enum class MarkerCell { Payload, Lower, Upper, Measure, Magnification };
 
 // Iteration mode: the text of ONE bound cell — the bound in the signed
 // two-decimal form, `+0.00` for a blank bracket on either side. THE BLANK

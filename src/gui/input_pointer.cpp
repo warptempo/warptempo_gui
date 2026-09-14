@@ -603,6 +603,18 @@ constexpr ToolbarChord kToolbarChords[] = {
     // exception to the home-view binding.
     {RedesignButton::IconMarkerMeasure,
      GuiKeys::Slash,  false, false, false, false, true},                             // bare /
+    // THE MARKER MAGNIFICATION (architect 2026-09-14), seated right behind
+    // the Measure: CTRL+/, which the retired measure propagate's copy had
+    // left free. It opens the magnification editor on the focused warp
+    // marker; the press dispatches Ctrl+/ through on_key at the LIFT like
+    // every other chrome button. A ctrl chord's own button, so it admits no
+    // shift variant. An act, not a mode — no lamp, no repeat. ITS GATES are
+    // the Measure's (marker_magnification_edit_actionable: the warp column and
+    // a focus; the `h` view and the read-only lock consume the chord, whose
+    // allowlists do not carry it) plus the ITERATION LOCK's grey
+    // (iteration_lock_greys), a magnification being serialized content.
+    {RedesignButton::IconMarkerMagnification,
+     GuiKeys::Slash,  true,  false, false, false, true},                             // Ctrl+/
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
     // SEVENTH and the value pair's pointer home: BARE `j`, which was free
     // (greped at the landing). Its plain lift copies the focused marker's
@@ -4368,7 +4380,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // 2026-09-05 — "each should be like a mini flag with its own
     // double-click"). The seed carries which cell of the run the FIRST press
     // landed on (MarkerCell): the flag box opens the payload editor, a bound
-    // cell its bound editor, the measure box the measure editor, and a pair
+    // cell its bound editor, the measure box the measure editor, the
+    // magnification box the magnification editor, and a pair
     // straddling a seam opens the one the first click named. The gates
     // differ with them: the PAYLOAD editor keeps the LOCK and the P view,
     // the BOUND editor read-only and the cell's own eligibility (a cell that
@@ -4391,8 +4404,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
         // Read-only refuses every one of the three editors, as it always did.
-        // The ITERATION lock refuses the payload and the measure — both open
-        // over serialized content, both push — and ADMITS a bound cell, the
+        // The ITERATION lock refuses the payload, the measure and the
+        // magnification — each opens over serialized content, each pushes —
+        // and ADMITS a bound cell, the
         // mode's own authoring surface, which is the keyboard's own delta at
         // iteration_lock_key_blocked (input_key_dispatch.cpp) written for the
         // pointer. Silent either way: a pointer gesture's non-event is its own
@@ -4423,6 +4437,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
             // warp flags alone (PhaseResetMarker), so this cell is warp-only
             // by construction.
             flag_editor.enter_measure_edit(hit);
+            return;
+        case MarkerCell::Magnification:
+            // The green box paints on a warp flag carrying its own value
+            // alone, so this cell is warp-only by construction; the gates are
+            // the measure's (architect 2026-09-14).
+            flag_editor.enter_magnification_edit(hit);
             return;
         }
     }

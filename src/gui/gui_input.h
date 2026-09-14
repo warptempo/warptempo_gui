@@ -648,8 +648,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Digit2: case GuiKeys::Digit3:
             return bare;
 
-        // The measure editor.
-        case GuiKeys::Slash: return bare;
+        // The measure editor, and the magnification editor on the ctrl
+        // spelling (architect 2026-09-14).
+        case GuiKeys::Slash: return bare || cl;
         // The settings editor, and the load in place / render player.
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.

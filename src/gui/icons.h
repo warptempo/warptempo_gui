@@ -172,7 +172,7 @@ enum class Icon {
     // worn by the MAGNIFICATION RESET from 2026-08-26 to 2026-08-27. Its def
     // and its asset are deleted with the button, no button being left that
     // wears them — edit-comment's own precedent.)
-    ZoomInY,             // the per-marker magnification's opener (kept 2026-09-14)
+    ZoomInY,             // IconMarkerMagnification's glyph (2026-09-14)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's

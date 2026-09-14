@@ -2337,8 +2337,8 @@ struct GuiInputHandler {
     // its kinds (unlike modal_dialog_editor_active, which names the three
     // DIALOG-hosted surfaces — those first two plus the flag editor's
     // BpmBracket kind — and omits
-    // the FlagPayload and MeasureText kinds, both of which paint in the marker
-    // lane). The platform's
+    // the FlagPayload, MeasureText, MagnificationText and IterBound kinds,
+    // all of which paint in the marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -2858,10 +2858,11 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. ALL THREE kinds now take route_modal_editor_key: the bpm
+    // close routing. ALL FIVE kinds now take route_modal_editor_key: the bpm
     // bracket editor as ever, the FlagPayload flag editor since it became
-    // keyboard-modal, and the MeasureText measure editor since 2026-08-19 —
-    // the three differ only in their commit/cancel bodies and in which area
+    // keyboard-modal, the MeasureText measure editor since 2026-08-19, the
+    // IterBound editor since 2026-09-05 and the MagnificationText editor since
+    // 2026-09-14 — they differ only in their commit/cancel bodies and in which area
     // they repaint. There is no longer a tail that cancels an edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);

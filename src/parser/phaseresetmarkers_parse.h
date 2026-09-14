@@ -19,9 +19,10 @@ struct PhaseResetMarker {
     int64_t time_frame  = 0;
     bool    disabled    = false;
 
-    // RECORDED ASYMMETRY: phase resets carry no measure (architect 2026-09-14,
-    // architect approval 2026-09-14 for this frozen touch). The measure is the
-    // warp column's alone (WarpMarker::measure, warpmarkers_parse.h).
+    // RECORDED ASYMMETRY: phase resets carry no measure and no magnification
+    // (architect 2026-09-14, architect approval 2026-09-14 for this frozen
+    // touch). Both are the warp column's alone (WarpMarker::measure and
+    // WarpMarker::magnification, warpmarkers_parse.h).
 };
 
 // Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on
