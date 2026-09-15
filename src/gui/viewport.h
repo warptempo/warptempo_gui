@@ -17,8 +17,11 @@ class GuiPlayback;
 // convention) it holds it at — the rule at
 // Viewport::snap_continuous_zoom_to_working.
 // PAINTED_COLUMN marks `column` as an INTEGER painted column the snap must
-// keep the frame IN at the working lattice, not merely hold it near: the
-// pinch's unpanned downgrade (the stem's own pixel, architect 2026-09-14).
+// keep the frame IN at the working lattice, not merely hold it near: EVERY
+// PIVOT THAT IS THE PAINTED ANCHOR STEM — the pinch seated to its end, its
+// unpanned downgrade and the captured nav drag zoom phase's end (the stem's own
+// pixel, architect 2026-09-14; the one producer is held_stem_zoom_pivot,
+// input_pointer.cpp). The pointer-under-cursor pivots stay fractional.
 struct ZoomPivot {
     double sample         = 0.0;
     double column         = 0.0;
@@ -375,10 +378,11 @@ struct Viewport {
     // 2026-09-14): the write is apply_strip_drag_zoom's own final placement of
     // `pivot` — a frame at its column — so the lift makes no camera jump. The
     // callers choose it: the nav drag the frame under the pointer's visible
-    // column (the seated frame at its stem during a CAPTURED zoom phase, the
-    // pointer's notional column otherwise — after a ctrl-up, and through an
-    // uncaptured zoom phase whose visible cursor never froze on the stem); the
-    // pinch its seated frame when seated to the end, its anchor from the
+    // column (the seated frame IN ITS STEM'S PAINTED COLUMN during a CAPTURED
+    // zoom phase, the pointer's notional column otherwise — after a ctrl-up,
+    // and through an uncaptured zoom phase whose visible cursor never froze on
+    // the stem); the pinch its seated frame IN THE STEM'S PAINTED COLUMN when
+    // seated to the end, its anchor from the
     // downgrade record IN THE STEM'S SAVED PAINTED COLUMN when it dropped to
     // one finger that has not travelled pinch_pivot_pan_px() (architect
     // 2026-09-14), else the frame under the stream's last delivered position

@@ -5943,7 +5943,8 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 
     // The stem's one column derivation (strip_anchor_stem_column over
     // displayed_column_at, warp_frame_map_view.h), on the PLATE basis — the
-    // same helper the pinch's downgrade record saves its column through.
+    // same helper the stem's zoom pivot (held_stem_zoom_pivot) takes its
+    // column through.
     const int col = strip_anchor_stem_column(anchor_sample, basis.vp_start,
                                              basis.spp, area.w);
     render_strip_anchor_stem(cr, area, col);

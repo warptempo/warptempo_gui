@@ -2330,23 +2330,45 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     return col;
 }
 
-// A HELD FRAME'S PIVOT AT A CONTINUOUS ZOOM GESTURE'S END, for
-// Viewport::snap_continuous_zoom_to_working: the frame's column under the live
-// viewport, clamped into the waveform with the edge rebind, exactly as the
-// gesture's own frames derive it (apply_nav_zoom_at's pivot block and the
-// pinch's in apply_touch_nav_update), so the snap holds the point the last
-// frame held.
-static ZoomPivot held_frame_zoom_pivot(const AppState& app,
-                                       const GuiAudio& audio,
-                                       double anchor_sample) {
+// THE ANCHOR STEM'S PIVOT, for Viewport::snap_continuous_zoom_to_working: a
+// seated frame held IN THE INTEGER COLUMN ITS STEM PAINTS (architect
+// 2026-09-14: a snap that holds the stem lands exactly on the stem). ONE body,
+// THREE readers — every pivot that IS the painted stem: the captured nav drag
+// zoom phase's end (nav_drag_zoom_pivot), the pinch seated to its end
+// (end_touch_nav) and the pinch's downgrade record (apply_touch_nav_update).
+// The FRAME is the gesture's own: its column under the live viewport, clamped
+// into the waveform with the edge rebind, exactly as the gesture's frames
+// derive it (apply_nav_zoom_at's pivot block and the pinch's), so an anchor a
+// wall has pushed past an edge becomes that edge pixel's content. The COLUMN is
+// strip_anchor_stem_column (warp_frame_map_view.h), the stem painter's own
+// derivation, on the live start and painter_samples_per_pixel — which ARE the
+// plate basis the painter reads (plate_viewport_basis): every viewport write
+// these gestures make, and every other one that can land while they stand,
+// takes the synchronous rebuild (kick_waveform_sync), which publishes
+// fp_vp_start = the live start and fp_vp_end − fp_vp_start = nearbyint(spp·w),
+// painter_quantized_spp's own expression. At an edge the rebound frame and the
+// painter's clamp name the same column (the painter's stem for an off-edge
+// anchor is the clamp itself). ZoomPivot::painted_column tells the snap to keep
+// the frame IN that column on the working lattice rather than near it.
+// The pointer-under-cursor pivots (pointer_column_zoom_pivot) are NOT the stem
+// and stay fractional.
+static ZoomPivot held_stem_zoom_pivot(const AppState& app,
+                                      const GuiAudio& audio,
+                                      double anchor_sample) {
     const GuiRect wf_area = waveform_area(app);
     const double  spp     = current_samples_per_pixel(app, audio);
+    const double  q       = painter_samples_per_pixel(app, audio, wf_area);
     const double  vp      = static_cast<double>(app.viewport_start_sample);
-    if (spp <= 0.0) return ZoomPivot{anchor_sample, 0.0};
+    if (spp <= 0.0 || q <= 0.0)
+        return ZoomPivot{anchor_sample, 0.0, /*painted_column=*/true};
     const double col     = (anchor_sample - vp) / spp;
     const double clamped = clamp_col_into_waveform(wf_area, col);
-    if (clamped != col) return ZoomPivot{vp + clamped * spp, clamped};
-    return ZoomPivot{anchor_sample, col};
+    const double sample  = clamped != col ? vp + clamped * spp : anchor_sample;
+    return ZoomPivot{
+        sample,
+        static_cast<double>(
+            strip_anchor_stem_column(sample, vp, q, wf_area.w)),
+        /*painted_column=*/true};
 }
 
 // A POINTER'S PIVOT AT A CONTINUOUS ZOOM GESTURE'S END: the frame under a
@@ -2365,10 +2387,14 @@ static ZoomPivot pointer_column_zoom_pivot(const AppState& app,
 // THE NAV DRAG'S PIVOT AT ITS END — THE FRAME UNDER THE POINTER'S VISIBLE
 // COLUMN, held at that column (architect 2026-09-14: the snap always holds the
 // frame under the pointer at the end), two ways:
-//   * A CAPTURED ZOOM PHASE: the seated frame at its stem column. While the
-//     stem shows under a capture the pointer IS the stem — the lateral freeze
-//     holds the notional x and the release restore is the stem override
-//     (apply_nav_zoom_at), so the cursor reappears on the stem's pixel.
+//   * A CAPTURED ZOOM PHASE: the seated frame IN ITS STEM'S PAINTED COLUMN
+//     (held_stem_zoom_pivot). While the stem shows under a capture the
+//     pointer IS the stem — the lateral freeze holds the notional x and the
+//     release restore is the stem override (apply_nav_zoom_at), so the cursor
+//     reappears on the stem's pixel. The moved release and lost-button arms
+//     run their final apply BEFORE this read, and that apply's synchronous
+//     rebuild publishes the basis the column is taken on; the force-end has
+//     no final apply, so the last applied event's rebuild is the basis.
 //   * EVERY OTHER END — the pan phase (a drag armed plain, or one a ctrl-up
 //     has left panning) and AN UNCAPTURED ZOOM PHASE: the pointer's notional
 //     column (nav_notional_col). Under a capture in the pan phase that is where
@@ -2386,7 +2412,7 @@ static ZoomPivot nav_drag_zoom_pivot(const AppState& app,
                                      double notional_col,
                                      bool pointer_captured) {
     if (app.scroll_drag.zooming && pointer_captured)
-        return held_frame_zoom_pivot(app, audio, app.scroll_drag.anchor_sample);
+        return held_stem_zoom_pivot(app, audio, app.scroll_drag.anchor_sample);
     return pointer_column_zoom_pivot(app, audio, notional_col);
 }
 
@@ -3054,29 +3080,19 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // exactly on the stem unless the one finger has panned past its own
     // threshold). THE COLUMN IS TAKEN HERE, ON THE TRANSITION FRAME, because
     // this frame applies nothing (the no-op return below): the viewport is
-    // still the last two-finger frame's, so held_frame_zoom_pivot answers the
+    // still the last two-finger frame's, so held_stem_zoom_pivot answers the
     // frame that frame's pivot held — the same re-derivation and edge rebind
-    // as the two-finger arm below — and strip_anchor_stem_column answers THE
-    // INTEGER COLUMN THE STEM PAINTED, the painter's own derivation
-    // (paint_strip_drag_anchor) on the live start and painter step, which are
-    // exactly the plate basis that frame's synchronous rebuild published (the
-    // plate's spp is nearbyint(spp * w) / w, painter_samples_per_pixel's own
-    // expression). The continuation's frames pan from the next frame on, and
-    // nothing re-derives the column from that moved viewport.
+    // as the two-finger arm below — IN THE INTEGER COLUMN THE STEM PAINTED, on
+    // the plate basis that frame's synchronous rebuild published (the basis
+    // argument at held_stem_zoom_pivot, the same body the seated end and the
+    // captured nav drag end read). The continuation's frames pan from the next
+    // frame on, and nothing re-derives the column from that moved viewport.
     if (!f.two_finger && app.touch_nav_zoom.seated) {
         const ZoomPivot stem =
-            held_frame_zoom_pivot(app, audio, app.touch_nav_zoom.anchor_sample);
-        const GuiRect wf = waveform_area(app);
-        const double  q  = painter_samples_per_pixel(app, audio, wf);
-        const int stem_col =
-            q > 0.0 ? strip_anchor_stem_column(
-                          stem.sample,
-                          static_cast<double>(app.viewport_start_sample), q,
-                          wf.w)
-                    : 0;
+            held_stem_zoom_pivot(app, audio, app.touch_nav_zoom.anchor_sample);
         clear_touch_zoom_seat(app, viewport);
         app.touch_nav_downgrade = TouchNavDowngradeState{
-            true, stem.sample, stem_col, f.x, f.y, false};
+            true, stem.sample, static_cast<int>(stem.column), f.x, f.y, false};
     } else if (!f.two_finger) {
         // THE PANNED LATCH: a continuation frame at or beyond
         // pinch_pivot_pan_px() from the downgrade position, Chebyshev — the
@@ -3379,7 +3395,9 @@ void GuiInputHandler::end_touch_nav() {
     // THE END (architect 2026-09-14: the snap always holds the frame under the
     // pointer), THREE WAYS, a lift, a cancel and a capability loss alike on
     // the last delivered state (a hard end having dropped its staged motion):
-    //   * SEATED TO THE END: the seated frame at the stem's column.
+    //   * SEATED TO THE END: the seated frame IN THE STEM'S PAINTED COLUMN at
+    //     the working lattice (held_stem_zoom_pivot) — the viewport and plate
+    //     are still the last applied frame's, the stem's own basis.
     //   * DOWNGRADED TO ONE FINGER AND NOT PANNED (architect 2026-09-14: the
     //     platform delivers a brief two-to-one frame before a near-simultaneous
     //     last lift): the PINCH'S ANCHOR from the downgrade record
@@ -3403,7 +3421,7 @@ void GuiInputHandler::end_touch_nav() {
     // (Viewport::snap_continuous_zoom_to_working carries the ordering).
     std::optional<ZoomPivot> pivot;
     if (app.touch_nav_zoom.seated) {
-        pivot = held_frame_zoom_pivot(app, audio,
+        pivot = held_stem_zoom_pivot(app, audio,
                                       app.touch_nav_zoom.anchor_sample);
     } else if (app.touch_nav_downgrade.recorded &&
                !app.touch_nav_downgrade.panned) {
