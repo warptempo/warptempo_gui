@@ -355,19 +355,22 @@ struct GuiRenderPlayer {
     void open_row(int index);
     // One folder up — THE MODAL ROW'S UP BUTTON AND BACKSPACE since the `..`
     // row retired (2026-09-01), and THE CAR'S OWN PREVIOUS in both of its
-    // arms: car_previous() composes this body at the band's first row AT REST
-    // and at the folder's first FILE inside the previous-track window WHILE
-    // LIVE, so the act has FOUR roads on ONE body as re-greped 2026-09-12 (the
-    // button, Backspace, and car_previous()'s two arms). NEITHER BARE Up NOR
-    // BARE Home IS ONE OF THEM: the arrow is the plain band walk and the left
-    // skip is the previous-track act, and leaving a folder is the CAR'S act
-    // and the two listed roads' (the architect's reasons are at the router's
-    // Up arm and at car_previous()). A SILENT consumed no-op at the root,
-    // which is `tmp/` (the wall's one owner is render_player_up_actionable,
-    // app_state.h, which the button's face reads too). Past that wall it
-    // UNLOADS THE ITEM (unload_item) and re-enters the root, so the player
-    // stands as a fresh open leaves it: nothing bound, nothing sounding, the
-    // band on row 0. The reasoning is at the body and nowhere else.
+    // arms: car_previous() composes this body at the band's first row WHILE
+    // IDLE and at the folder's first FILE inside the previous-track window
+    // WHILE LIVE OR PAUSED (architect 2026-09-15, narrowing the 2026-09-12
+    // "at rest" ruling — a paused transport takes the live arm's exit test,
+    // not the idle band walk), so the act has FOUR roads on ONE body as
+    // re-greped 2026-09-15 (the button, Backspace, and car_previous()'s two
+    // arms). NEITHER BARE Up NOR BARE Home IS ONE OF THEM: the arrow is the
+    // plain band walk and the left skip is the previous-track act, and
+    // leaving a folder is the CAR'S act and the two listed roads' (the
+    // architect's reasons are at the router's Up arm and at car_previous()).
+    // A SILENT consumed no-op at the root, which is `tmp/` (the wall's one
+    // owner is render_player_up_actionable, app_state.h, which the button's
+    // face reads too). Past that wall it UNLOADS THE ITEM (unload_item) and
+    // re-enters the root, so the player stands as a fresh open leaves it:
+    // nothing bound, nothing sounding, the band on row 0. The reasoning is at
+    // the body and nowhere else.
     void up();
     // The widget's three mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
@@ -503,8 +506,10 @@ struct GuiRenderPlayer {
     //   and PLAYS it, while the seek arm under it stays the idle road's silent
     //   refusal. IT NEVER LEAVES A FOLDER: going up is the Up button, Backspace
     //   and the car's Previous, and nothing else. It returns false only when
-    //   the previous-track arm's load refused (car_rewind's one read; the
-    //   keys and the button ignore it).
+    //   the previous-track arm's load refused (car_previous's one read, on a
+    //   live-or-paused transport — the failure has carded and the press must
+    //   not start the item it left behind; the keys and the button ignore
+    //   it).
     // next_track() — THE NEXT TRACK (architect 2026-09-04, "Next should always
     //   skip to the next song. The home/end analogy doesn't quite work — this
     //   isn't a playhead, this is audio playback"): the next wav of the
@@ -546,17 +551,26 @@ struct GuiRenderPlayer {
     //   takes play_button_act WHOLE, the tablet's Play button: a highlighted
     //   folder opens, a highlighted other wav plays, and the item's own row
     //   resumes or starts from its start.
-    // car_previous() — REWIND: at REST (paused and idle alike) it walks the
-    //   band UP one row, and AT THE BAND'S FIRST ROW it goes UP A FOLDER (up()
-    //   whole: the item unloaded, the sound stopped, the band seated on the
-    //   folder just left); at the ROOT's first row it is a silent walled no-op.
-    //   WHILE LIVE it is home() with the exit ahead of it — inside the
-    //   previous-track window WITH a file before this one, that file; inside
-    //   the window at the folder's FIRST file, one folder up; otherwise this
-    //   track's start.
-    // car_next() — FAST-FORWARD: at REST it walks the band DOWN one row, a
-    //   silent walled no-op at the listing's last row; WHILE LIVE it is
-    //   next_track().
+    // car_previous() — REWIND, THREE TRANSPORT CLASSES (architect 2026-09-15,
+    //   narrowing the 2026-09-12 "at rest" ruling — a PAUSED transport is not
+    //   at rest for this button, it is a LIVE one waiting to resume). IDLE
+    //   walks the band UP one row, and AT THE BAND'S FIRST ROW it goes UP A
+    //   FOLDER (up() whole: the item unloaded, the sound stopped, the band
+    //   seated on the folder just left); at the ROOT's first row it is a
+    //   silent walled no-op. LIVE AND PAUSED SHARE ONE BODY, home() with the
+    //   up-a-folder exit ahead of it — inside the previous-track window WITH a
+    //   file before this one, that file; inside the window at the folder's
+    //   FIRST file, one folder up; otherwise this track's start — and A PAUSED
+    //   TRANSPORT THEN PLAYS: where home()'s seek arm left it paused at its
+    //   new point (a refused previous-file load ends the press instead, its
+    //   card already said), transport_toggle_act resumes it from there.
+    // car_next() — FAST-FORWARD, THREE TRANSPORT CLASSES (the same narrowing).
+    //   IDLE walks the band DOWN one row, a silent walled no-op at the
+    //   listing's last row; LIVE AND PAUSED SHARE ONE BODY, next_track(),
+    //   which plays in either state — a paused press resumes into the next
+    //   track exactly as a live one advances into it — and at the folder's
+    //   last wav it is next_track's own silent wall, a paused transport
+    //   staying paused (no resume, no fallback).
     //
     // THE ASYMMETRY IS DELIBERATE — only the car's PREVIOUS ever leaves a
     // folder: the listener always knows which file is a folder's FIRST and
@@ -576,20 +590,6 @@ struct GuiRenderPlayer {
     void car_toggle();
     void car_previous();
     void car_next();
-
-    // THE CONSOLE'S FAST-FORWARD AND REWIND INSIDE A BATCH FOLDER (architect
-    // 2026-09-15; at the tmp/ root they stay the ±5 s seek). Both PLAY:
-    // car_fast_forward() — End + Play: an item bound takes next_track(), a
-    //   silent wall at the folder's last wav; nothing bound takes
-    //   play_button_act whole.
-    // car_rewind() — Home + Play: an item bound takes home() (the
-    //   previous-track window's file, else the restart) and then
-    //   transport_toggle_act if the transport is not LIVE — unless the
-    //   previous file's load refused, which ends the press; nothing bound takes
-    //   play_button_act whole.
-    // One caller each, on_media_command's FastForward / Rewind arm.
-    void car_fast_forward();
-    void car_rewind();
 
     // Left / Right's step: 5 s at the project source's rate (R6).
     int64_t seek_step_frames() const;
@@ -651,7 +651,9 @@ struct GuiRenderPlayer {
     //     arms carried, and the re-publishes their refusals made, are deleted
     //     with them — a constant PLAYING leaves no drifted display to correct.
     //   Previous / Next -> car_previous() / car_next(), the playlist walk with
-    //     the up-a-folder exit (their contract is at the declarations).
+    //     the up-a-folder exit WHILE IDLE and, LIVE OR PAUSED, the file step
+    //     that plays (a paused transport resumes into it; their contract is at
+    //     the declarations).
     //   Stop -> PAUSE AND THEN HOME, two direct acts in order (architect
     //     2026-09-01, with the player's own Stop act retired): a LIVE transport
     //     takes transport_toggle_act — the transport's own tail, past the
@@ -661,10 +663,12 @@ struct GuiRenderPlayer {
     //     next Play; what differs is the state left behind, PAUSED rather than
     //     IDLE, so the scrub stays live under it. The Accord has no stop
     //     button; the arm stays for any console that has one.
-    //   FastForward / Rewind -> at the tmp/ ROOT seek_by(±seek_step_frames()),
-    //     5 s a press; inside a BATCH FOLDER car_fast_forward() /
-    //     car_rewind() (next track, previous-track window or restart, both
-    //     playing; silent at the last wav — the contract at the declarations).
+    //   FastForward / Rewind -> seek_by(±seek_step_frames()) DIRECT, 5 s a
+    //     press, in every folder (architect 2026-09-15, retiring the same
+    //     day's folder-aware fork: that fork was built on the wrong pair — the
+    //     Accord's wheel sends Previous / Next, not FastForward / Rewind, so
+    //     the console's actual skips are car_previous() / car_next() above,
+    //     and this pair stays the plain seek everywhere a console has one).
     //   SeekTo -> seek_to DIRECT; its milliseconds are clamped to the item's
     //     own length BEFORE the conversion to frames, the arriving position
     //     being any int64 a head unit cares to send (the rule at the site).

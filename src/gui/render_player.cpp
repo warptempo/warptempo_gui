@@ -322,7 +322,7 @@ void GuiRenderPlayer::open_row(int index) {
 // shows, and a push per keystroke over a binder is not free. The two wrappers
 // are the whole pointer-and-keyboard road here: the router's Up / Down, the
 // row lift's first half (folder_overlay_highlight_row's player arm) and THE
-// CAR'S OWN Previous / Next AT REST, which compose this body rather than
+// CAR'S OWN Previous / Next WHILE IDLE, which compose this body rather than
 // walking a listing of their own and so reach the head unit's title through
 // this very push. The third writer is
 // rebuild_rows, which pushes in its own body, while play_wav's seat writes
@@ -1055,21 +1055,37 @@ void GuiRenderPlayer::car_toggle() {
     play_button_act();
 }
 
-// THE WHEEL'S REWIND. AT REST THE BAND IS THE PLAYLIST: a row above steps to
-// it, and the FIRST row leaves the folder instead — the one direction of
-// travel that does, because a listener knows which file starts a folder and
-// never how many it holds, so this exit is always deliberate. WHILE LIVE it is
-// the left skip's act with that same exit ahead of it: inside the
-// previous-track window at the folder's FIRST FILE one more press back is out
-// of the folder, exactly as it is at the band's first row.
+// THE WHEEL'S REWIND, THREE TRANSPORT CLASSES (architect 2026-09-15, narrowing
+// the 2026-09-12 "at rest walks the band" ruling: a PAUSED transport is not
+// AT REST for this button, it is a LIVE one waiting to resume). IDLE alone
+// walks the band: a row above steps to it, and the FIRST row leaves the
+// folder instead — the one direction of travel that does, because a listener
+// knows which file starts a folder and never how many it holds, so this exit
+// is always deliberate.
+//
+// LIVE AND PAUSED SHARE ONE BODY, the live arm's own file step with the
+// up-a-folder exit ahead of it: inside the previous-track window at the
+// folder's FIRST FILE one more press back is out of the folder (`up()`,
+// unloading the item — nothing to play, so the body returns there); elsewhere
+// it is home() — the previous-track window's file, or the item's own start.
+// A PAUSED transport THEN PLAYS: home()'s seek arm leaves a paused transport
+// paused at its new point (seek_to's own rule), so the transport is asked
+// again and, where it is still not LIVE, transport_toggle_act resumes it from
+// that point; the previous-file arm already played through play_wav, so this
+// second check is a no-op on that road and the only one it starts is the
+// seek's. A REFUSED PREVIOUS-FILE LOAD ENDS THE PRESS (home()'s own false):
+// the failure has carded one file, and starting the item it left behind would
+// make the same press play another.
 //
 // THE UP WALL IS ASKED because the alternative is the restart: at the ROOT
 // there is nothing above, so up() would return in silence and the press would
 // do nothing at all, and a press inside the window there is the restart it has
-// always been. Where the exit does not apply the body IS home(), so the file
-// step and the reseek have one owner and cannot drift from the tablet's.
+// always been. render_player_home_takes_previous and
+// render_player_inside_previous_window are POSITION-based
+// (render_player_position, which reads resume_frame off LIVE) and answer
+// truthfully on a paused transport exactly as they do on a live one.
 void GuiRenderPlayer::car_previous() {
-    if (app.render_player.transport != Transport::Live) {
+    if (app.render_player.transport == Transport::Idle) {
         if (folder_overlay::walk_origin_row(app) > 0) move_highlight(-1);
         else                                          up();
         return;
@@ -1080,55 +1096,29 @@ void GuiRenderPlayer::car_previous() {
         up();
         return;
     }
-    home();
+    if (!home()) return;
+    if (app.render_player.transport != Transport::Live) {
+        transport_toggle_act();
+    }
 }
 
-// THE WHEEL'S FAST-FORWARD — Rewind's mirror image with ONE difference, and it
-// is the ruling's own: this act NEVER LEAVES A FOLDER. At rest, one row down
-// and no further, the listing's last row a silent wall (move_highlight's own
-// clamp), never an exit and never a wrap; while live it is the next track.
+// THE WHEEL'S FAST-FORWARD, THREE TRANSPORT CLASSES (architect 2026-09-15,
+// the same narrowing as Previous's). IDLE walks the band one row down, the
+// listing's last row a silent wall (move_highlight's own clamp), never an
+// exit and never a wrap — the asymmetry with Previous is deliberate, only
+// leaving a folder is ever a known, intended act. LIVE AND PAUSED SHARE ONE
+// BODY, next_track(): it plays the next wav in any transport state
+// (render_player_next_track_actionable reads no transport term), so a paused
+// press resumes into the next track exactly as a live one advances into it;
+// at the folder's last wav it is next_track's own silent wall and a paused
+// transport STAYS PAUSED — no resume, no fallback, the wall being the whole
+// answer.
 void GuiRenderPlayer::car_next() {
-    if (app.render_player.transport != Transport::Live) {
+    if (app.render_player.transport == Transport::Idle) {
         move_highlight(+1);
         return;
     }
     next_track();
-}
-
-// THE CONSOLE'S FAST-FORWARD INSIDE A BATCH FOLDER (architect 2026-09-15):
-// End, then PLAY. With an item bound it is next_track() — which plays in any
-// transport state — and at the folder's last wav NOTHING, next_track's silent
-// wall, never a fall-back to play or resume. With nothing bound the End half
-// has nothing to skip and the press is the tablet's Play whole. The folder is
-// the BAND'S; while LIVE it is necessarily the item's too, because the root
-// lists only batch folders and up() unloads the item on its way out, so a
-// bound item always sits in the folder the band stands in.
-void GuiRenderPlayer::car_fast_forward() {
-    if (!app.render_player.item.empty()) {
-        next_track();
-        return;
-    }
-    play_button_act();
-}
-
-// THE CONSOLE'S REWIND INSIDE A BATCH FOLDER (architect 2026-09-15): Home,
-// then PLAY. With an item bound it is home() — the previous-track window's
-// file, else the seek to the item's start — and then, if that left the
-// transport resting (a paused seek stays paused, an idle one is refused), the
-// transport's own toggle starts it from resume_frame, 0 after the seek or at
-// an idle rest. A REFUSED PREVIOUS-FILE LOAD ENDS THE PRESS: the failure has
-// carded one file, and starting the item it left behind would make the same
-// press play another. With nothing bound it is the tablet's Play whole. The
-// folder derivation is car_fast_forward's.
-void GuiRenderPlayer::car_rewind() {
-    if (!app.render_player.item.empty()) {
-        if (!home()) return;
-        if (app.render_player.transport != Transport::Live) {
-            transport_toggle_act();
-        }
-        return;
-    }
-    play_button_act();
 }
 
 // THE FOLDER'S FORWARD STEP, ONE BODY FOR ITS TWO CALLERS (2026-09-04): the
@@ -1539,19 +1529,15 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             if (rp.transport == Transport::Live) transport_toggle_act();
             return;
         case Kind::FastForward:
-            // At the tmp/ root the 5 s seek; inside a batch folder the
-            // console's skip (architect 2026-09-15, the reason at the body).
-            if (rp.folder == Folder::Batch) {
-                car_fast_forward();
-                return;
-            }
+            // THE PLAIN 5 s SEEK, IN EVERY FOLDER (architect 2026-09-15,
+            // retiring the same day's folder-aware fork — that fork was built
+            // on the wrong pair: the Accord's wheel sends Previous / Next, not
+            // FastForward / Rewind, so car_previous / car_next below are the
+            // console's actual skips and this pair stays seek_by's plain step
+            // wherever the console has one).
             seek_by(+seek_step_frames());
             return;
         case Kind::Rewind:
-            if (rp.folder == Folder::Batch) {
-                car_rewind();
-                return;
-            }
             seek_by(-seek_step_frames());
             return;
         case Kind::SeekTo: {
