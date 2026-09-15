@@ -9127,15 +9127,33 @@ bool render_player_home_takes_previous(const AppState& a,
 
 // IS A RENDER RUNNING THAT A LOAD IN PLACE MUST NOT RACE — the batch queue
 // or an armed archival, both publishing into the folders the load wipes.
-// ONE OWNER, THREE READERS (2026-09-01; the expression stood spelled twice
-// before the face joined): the player's load act (render_player_load_in_place,
-// input_key_dispatch.cpp — the card "Cannot load in place while a render is
-// running"), the standalone mutator's own backstop
-// (load_render_entry_in_place) and the Load in place button's face
-// (render_player_button_enabled).
+// ONE OWNER, FOUR READERS as re-greped 2026-09-15 (the expression stood
+// spelled twice before the face joined): the player's load act
+// (render_player_load_in_place, input_key_dispatch.cpp — the card "Cannot
+// load in place while a render is running"), the standalone mutator's own
+// backstop (load_render_entry_in_place), the Load in place button's face
+// (render_player_button_enabled) and, since 2026-09-15, THE PLAYER'S OPEN
+// (GuiRenderPlayer::open, the card kRenderPlayerWhileRenderingCard below).
+// THE OPEN ASKS THE SAME QUESTION FOR A REASON OF ITS OWN, not the load's
+// race: closing the player — or pressing its Up — runs the unload's view
+// re-express, whose target-view ensure_ready triggers a fresh preview over a
+// dirty or empty one (a sweep parks the preview at its start, so that is the
+// usual case), and that trigger kills whatever the worker is running. So a
+// player opened over a run ends the run at its close. The armed archival is
+// the same run one beat early — a killed render draining with the next
+// command parked behind it, which the worker-idle pump then starts — so
+// both halves of this predicate are "a run stands", and the open reads it
+// whole rather than spelling a sibling that could drift from it.
 inline bool load_in_place_render_blocked(const AppState& a) {
     return a.queue_running || a.pending_archival.armed;
 }
+
+// THE PLAYER'S OPEN REFUSAL WHILE A RENDER RUN STANDS (architect 2026-09-15):
+// raised by GuiRenderPlayer::open, the one opener behind bare `l`, bare `'`
+// outside the `h` view and the Play renders button's plain lift. The reason
+// is at load_in_place_render_blocked above.
+inline constexpr const char* kRenderPlayerWhileRenderingCard =
+    "Render player is unavailable while rendering";
 
 // THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
 // live (the bound item's own domain, offset 0), the resume point otherwise;
@@ -13765,6 +13783,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // form is mirrored here at all. The `h` view's partition answers for
         // both, its allowlist dropping the shifted chord exactly as it drops
         // the bare one.
+        // A RUNNING RENDER DOES NOT GREY IT EITHER (architect 2026-09-15), and
+        // here the twin rule is the whole reason: the plain press's open
+        // refuses while a run stands (load_in_place_render_blocked, carding
+        // kRenderPlayerWhileRenderingCard), but the shifted press opens the
+        // stats panel, which touches no render and stays live — so one admitted
+        // form always does something, the button stays ENABLED, and the plain
+        // lift reaches the act, whose card says why.
         case RedesignButton::IconListen:
             return true;
         // THE READ-ONLY TOGGLE MIRRORED NOTHING UNTIL 2026-09-10 (2026-08-14):

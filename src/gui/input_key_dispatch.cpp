@@ -7689,8 +7689,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // loading gates in on_key run before this handler, so `l` is inert while
     // any of them owns the keyboard; inside the player the key is the mode's
     // own closer (route_render_player_key) and never reaches here. "Nothing
-    // to play: no renders under tmp/" is the opener's one status
-    // refusal.
+    // to play: no renders under tmp/" and, since 2026-09-15, "Render player
+    // is unavailable while rendering" are the opener's two card refusals.
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         toggle_render_player();
         return true;
@@ -7725,6 +7725,33 @@ void GuiInputHandler::toggle_render_player() {
         return;
     }
     (void)render_player.open();
+}
+
+// THE SWEEP'S AUTO-OPEN (the contract at the declaration). THE ADMISSION IS
+// BARE `l`'S, asked here because this road does not come through on_key: every
+// gate on_key runs ahead of that key's handler, in on_key's own order — a
+// prompt, an open dropdown, a standing list owner (the player itself, the
+// picker, the stats panel), the loading / no-audio state, an editor's text
+// drag, any keyboard-modal editor, a live pointer gesture (nothing pops
+// mid-gesture), and the `h` view, whose allowlist drops bare `l`. The lock and
+// the iteration lock admit bare `l`, so neither is asked. Each gate here is
+// SILENT where the key's is a card: a sweep finishing is not a press, and a
+// skipped open has nothing to explain. The opener's own two refusals cannot
+// card from this road — the run is over (finalize_render_run cleared it, and
+// a parked archival command implies a cancelled batch, which never reaches
+// here) and the folder holds a cell.
+void GuiInputHandler::open_render_player_after_sweep(
+        const std::filesystem::path& batch_folder) {
+    if (app.prompt.active) return;
+    if (app.dropdown.open()) return;
+    if (render_player_active() || picker_active() || stats_panel_active())
+        return;
+    if (app.loading || audio.total_frames() <= 0) return;
+    if (app.editor_text_drag.active) return;
+    if (keyboard_modal_editor_active()) return;
+    if (any_pointer_gesture_active(app)) return;
+    if (app.history_mode.active) return;
+    (void)render_player.open_in_batch(batch_folder);
 }
 
 // The AV sync stats panel's own toggle for Shift+L, toggle_render_player's

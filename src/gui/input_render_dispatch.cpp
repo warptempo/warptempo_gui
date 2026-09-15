@@ -747,9 +747,10 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 }
             }
         }
-        // A finished batch just leaves its artifacts on disk; nothing
-        // auto-opens. The user presses `l` to listen or `'` to load an
-        // entry in place by name.
+        // THE FOLDER AND THE CELL COUNT, read before the batch state is
+        // cleared: the auto-open below names the one and is gated on the other.
+        const std::filesystem::path finished_folder(batch_.folder);
+        const bool left_a_cell = batch_.rendered > 0;
         batch_.active = false;
         batch_.folder.clear();
         batch_.reqs.clear();
@@ -761,6 +762,28 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // batch stays symmetric with the single Cancelled outcome and never
         // re-establishes (Esc means the user took control; any edit re-previews).
         if (!cancelled) maybe_reestablish_target_buffer();
+        // A FINISHED SWEEP OPENS THE RENDER PLAYER IN ITS OWN FOLDER, ON ITS
+        // FIRST CELL (architect 2026-09-15) — both sweeps, this being the one
+        // terminal they share. THE RULES:
+        //   * only a NON-CANCELLED batch that left at least one cell — a
+        //     complete one, or a short one whose "Rendered N of M" card above
+        //     still stands. A cancel is his own act and opens nothing; an
+        //     all-failed batch has just had its folder removed and opens
+        //     nothing; a single archival render never reaches this body.
+        //   * only where bare `l` would be admitted right now (a prompt, an
+        //     editor, a list owner, a live gesture, the `h` view all skip it
+        //     SILENTLY — no defer, no card): open_render_player_after_sweep
+        //     asks the key road's admission and then the one opener.
+        //   * AFTER finalize_render_run, so queue_running is down and the
+        //     opener's running-render refusal does not refuse its own sweep;
+        //     and after the re-establish above, whose preview is judged by
+        //     complete_successful_buffer: a completion that lands while the
+        //     player stands defers its bind to the close's re-express, the
+        //     player's standing contract.
+        //   * the open stops project playback, as every modal open does.
+        if (!cancelled && left_a_cell && !finished_folder.empty()) {
+            open_render_player_after_sweep(finished_folder);
+        }
         return;
     }
 

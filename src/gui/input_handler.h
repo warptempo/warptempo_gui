@@ -4268,8 +4268,18 @@ private:
     // view: closes a standing player on `l`, opens it otherwise through the
     // one opener (GuiRenderPlayer::open). Its callers have already refused
     // the modal states (a prompt, an editor, the `h` view, loading — all
-    // above it in on_key).
+    // above it in on_key). A running render refuses at the opener itself
+    // (GuiRenderPlayer::open), not here.
     void toggle_render_player();
+
+    // THE SWEEP'S AUTO-OPEN (architect 2026-09-15): both sweeps open the
+    // player at a non-cancelled terminal that left at least one cell, entered
+    // in `batch_folder` on its first cell. ONE CALLER, dispatch_next_batch_entry's
+    // terminal, behind finalize_render_run. It opens only where bare `l` would
+    // be admitted at this moment and SKIPS SILENTLY otherwise — no defer, no
+    // card — so it asks the key road's admission (the gates on_key runs ahead
+    // of bare `l`'s handler) and then the one opener through open_in_batch.
+    void open_render_player_after_sweep(const std::filesystem::path& batch_folder);
 
     // THE OVERLAY'S POINTER HALF (bodies in input_pointer.cpp), ONE ROUTER
     // FOR EVERY CONTENT: the row press claim (arm at the press — a modified or

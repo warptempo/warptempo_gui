@@ -250,7 +250,10 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // entry, app_state.h). The KEYS are unchanged, an alias being a keyboard fact
 // and the no-second-road doctrine a pointer one — and
 // it refuses with "Nothing to play: no renders under tmp/" when
-// `tmp/` holds no cell; its callers refuse the modal
+// `tmp/` holds no cell and, since 2026-09-15, with
+// kRenderPlayerWhileRenderingCard while a render run stands (the close's
+// re-express would kill the run — app_state.h's load_in_place_render_blocked);
+// a finished sweep reaches it too, through open_in_batch; its callers refuse the modal
 // states (a prompt, an
 // editor, the `h` view, loading, no source) before it is asked. The open
 // takes the modal-open stop, the mode bit, a fresh modal session, the root
@@ -330,6 +333,13 @@ struct GuiRenderPlayer {
     // THE OPENER (the contract above). Returns whether the mode opened; a
     // refusal has already raised its card or has nothing to say.
     bool open();
+    // THE SWEEP'S OPEN (architect 2026-09-15): open() whole — every refusal
+    // and the modal-open stop included — and then the batch at `batch_folder`
+    // entered with its FIRST CELL highlighted, falling back to the root
+    // listing when the root does not list that folder. ONE CALLER,
+    // GuiInputHandler::open_render_player_after_sweep, which asks the key
+    // road's admission first. Returns whether the mode opened.
+    bool open_in_batch(const std::filesystem::path& batch_folder);
     // THE CLOSER (the contract above). A no-op when the mode is down.
     //
     // ITS CAUSES, FIVE CALL SITES (re-grepped 2026-08-28): the modal row's
