@@ -12,8 +12,10 @@ class GuiPlatform;
 class GuiPlayback;
 
 // A continuous zoom gesture's pivot at its end: the active-domain SONG FRAME
-// the gesture holds and the waveform column (fractional px, the
-// apply_strip_drag_zoom anchor convention) it holds it at.
+// under the pointer (or finger, or an overview edge drag's fixed bound) and
+// the waveform column (fractional px, the apply_strip_drag_zoom anchor
+// convention) it holds it at — the rule at
+// Viewport::snap_continuous_zoom_to_working.
 struct ZoomPivot {
     double sample = 0.0;
     double column = 0.0;
@@ -365,10 +367,18 @@ struct Viewport {
     // continuous_zoom_gesture_live, read by clamp_zoom_level); at the
     // gesture's END this lands a level STRICTLY finer than working back on
     // working, and does nothing otherwise (no band on the coarse side). THE
-    // PIVOT HOLDS ITS COLUMN: the write is apply_strip_drag_zoom's own final
-    // placement of `pivot` — the gesture's held frame at its column — so the
-    // lift makes no camera jump; a gesture that holds no pivot at its end
-    // passes nullopt and the viewport's centre frame holds the centre column.
+    // SNAP HOLDS THE FRAME UNDER THE POINTER AT THE END (architect
+    // 2026-09-14): the write is apply_strip_drag_zoom's own final placement of
+    // `pivot` — a frame at its column — so the lift makes no camera jump. The
+    // callers choose it: the nav drag the frame under the pointer's visible
+    // column in either phase (the seated frame at its stem while ctrl holds,
+    // the pointer's notional column after a ctrl-up); the pinch its seated
+    // frame when seated to the end, else the frame under the remaining
+    // finger's last position; an overview edge drag its FIXED opposite bound
+    // at its window edge. A caller with no position at all passes nullopt and
+    // the viewport's centre frame holds the centre column — reached only by
+    // the overview box pan and a touch stream that delivered neither a seat
+    // nor a one-finger frame, neither of which zooms.
     // Being a strip-drag apply it takes that applier's either-axis follow
     // suppression during playback, the gesture having moved the level already.
     // CALLED WITH THE GESTURE'S LIVE BIT ALREADY CLEARED, so the chokepoint's

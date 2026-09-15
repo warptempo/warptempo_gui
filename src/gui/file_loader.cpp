@@ -60,6 +60,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // The touch gesture's live bit goes with its seat
     // (AppState::touch_nav_live).
     app.touch_nav_live = false;
+    app.touch_nav_one_finger_x.reset();
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;

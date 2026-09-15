@@ -5509,6 +5509,13 @@ struct AppState {
     // the stream continues as a pan. Its one reader is
     // continuous_zoom_gesture_live, the working-zoom floor's exemption.
     bool touch_nav_live = false;
+    // THE TOUCH NAVIGATION STREAM'S LAST ONE-FINGER POSITION (window x, px):
+    // written by every delivered one-finger frame (apply_touch_nav_update,
+    // refused frames included) and cleared with touch_nav_live. Its one reader
+    // is end_touch_nav: a pinch downgraded to one finger snaps back to the
+    // working zoom holding the frame under this position (architect
+    // 2026-09-14), the seat above having cleared at the downgrade.
+    std::optional<double> touch_nav_one_finger_x;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
