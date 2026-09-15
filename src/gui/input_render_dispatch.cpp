@@ -57,10 +57,10 @@ static void remove_failed_render_files(
 }
 
 // A failed CELL's whole file set: the wav, its staging sibling, the
-// fingerprint attestation, and the three load-in-place sidecars do_render
+// fingerprint attestation, and the four load-in-place sidecars do_render
 // writes beside a batch wav (render_pipeline.cpp's
 // publish_load_in_place_critical_batch_sidecars is where they are authored;
-// the load road composes the same triple, input_key_dispatch.cpp). Composed
+// the load road composes the same four, input_key_dispatch.cpp). Composed
 // from the cell's folder and basename, which the dispatch captures before the
 // request is moved onto the worker.
 static void remove_failed_batch_cell(const std::string& batch_folder,
@@ -75,6 +75,7 @@ static void remove_failed_batch_cell(const std::string& batch_folder,
         std::filesystem::path(fingerprint_sidecar_path(wav.string())),
         folder / (batch_basename + ".warpmarkers"),
         folder / (batch_basename + ".phaseresetmarkers"),
+        folder / (batch_basename + ".magnificationlevelmarkers"),
         folder / (batch_basename + ".settings"),
     });
 }
@@ -1088,6 +1089,7 @@ bool GuiInputHandler::render_bpm_sweep() {
 
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(*cell_warp_markers), base_phase_resets,
+            app.magnificationlevelmarkers.markers(),
             std::move(cell_settings),
             app.trim.begin_frame, app.trim.end_frame,
         batch_folder.string(), std::move(basename));

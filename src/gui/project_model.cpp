@@ -1,6 +1,7 @@
 #include "project_model.h"
 
 #include "directory_walk.h"   // the one non-throwing listing walk
+#include "settings_io.h"      // kSidecarExtensions, the one sidecar list
 
 #include <algorithm>
 #include <system_error>
@@ -8,12 +9,8 @@
 
 namespace {
 
-// The three sidecar extensions, as the product writes them. One list, read by
-// the walk below and nowhere else.
-constexpr const char* kSidecarExtensions[] = {
-    ".warpmarkers", ".phaseresetmarkers", ".settings",
-};
-
+// A sidecar extension is one of the product's four (kSidecarExtensions,
+// settings_io.h — the one list), read by the walk below.
 bool is_sidecar_extension(const std::string& ext) {
     for (const char* e : kSidecarExtensions) {
         if (ext == e) return true;
@@ -89,7 +86,7 @@ std::expected<GuiProjectSource, std::string> resolve_project(
     // rather than winnowed to a pair while walking, because a pair chosen by
     // the walk's order and sorted afterwards would still be the walk's pair:
     // the same folder always refuses with the same words, at any number of
-    // stems. (A folder holds three sidecar names per piece, so both vectors are
+    // stems. (A folder holds four sidecar names per piece, so both vectors are
     // a handful of strings and the sort is free.)
     std::sort(wav_stems.begin(), wav_stems.end());
     std::sort(sidecar_stems.begin(), sidecar_stems.end());

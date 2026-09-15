@@ -211,15 +211,19 @@ struct Undo {
     // when the act stopped writing view state, and went with it.)
     //
     // `op_mode` names the COLUMN the restore returns to and whose
-    // post-restore rules run; both snapshots are written back whatever it
-    // says (restore_history_entry). ONE CALLER, the load in place. (The
+    // post-restore rules run; all three snapshots — the magnification level
+    // column's being this helper's own parameter, the one caller replacing
+    // that store too — are written back whatever it says
+    // (restore_history_entry). ONE CALLER, the load in place. (The
     // iteration-mode wipe was a second until 2026-09-10, pushing a
     // session-only entry over both stores; it pushes nothing now, the bracket
     // having left the undo domain, and the `affects_persistence` parameter
     // that existed for it went with it.)
-    void push_undo_both(std::vector<GuiWarpMarker> warp_pre,
-                        std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                        char op_mode);
+    void push_undo_both(
+        std::vector<GuiWarpMarker> warp_pre,
+        std::vector<GuiPhaseResetMarker> phase_reset_pre,
+        std::vector<GuiMagnificationLevelMarker> magnification_level_pre,
+        char op_mode);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules
     // dispatch. Markers are captured wholesale at push time (carry-

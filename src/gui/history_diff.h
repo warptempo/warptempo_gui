@@ -2,6 +2,7 @@
 
 #include "failure.h"
 #include "phaseresetmarkers.h"
+#include "magnificationlevelmarkers.h"
 #include "settings_file.h"
 #include "warpmarkers.h"
 
@@ -45,9 +46,10 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
 //
 // The architect commits his working checkpoints of a piece into an
-// ARCHITECT-ONLY corpus in this repository, as the same three sidecars a
+// ARCHITECT-ONLY corpus in this repository, as the same four sidecars a
 // source WAV carries beside it (`<base>.settings`, `<base>.warpmarkers`,
-// `<base>.phaseresetmarkers`, named by the source's own base name). The
+// `<base>.phaseresetmarkers`, `<base>.magnificationlevelmarkers`, named by
+// the source's own base name). The
 // recheck reads that history back: for each of the last commits that touched
 // those files, what would change if the committed state were compared against
 // what is authored in memory right now.
@@ -109,12 +111,12 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 //
 // THE WALK IS LOAD-GATED (architect 2026-08-04): membership in the walk is THE
 // LOAD-IN-PLACE GATE ITSELF — load_commit_sidecars_strict below, the exact
-// resolution + scratch staging + three strict frozen loaders the `'` act runs,
+// resolution + scratch staging + four strict frozen loaders the `'` act runs,
 // ONE predicate with no relaxed variant — so every checkpoint the mode can step
 // to is one it can load. A candidate that refuses (a missing sidecar, a parse
 // refusal, an ambiguous per-commit path resolution) leaves the walk, counted on
 // one stderr line at the end of the scan. That is what makes both sides of every
-// diff loader-clean text with all three files present: there is no missing-file
+// diff loader-clean text with all four files present: there is no missing-file
 // case, no unparseable line, and no legacy leniency arm anywhere in the diff
 // model — the architect's no-legacy rule (the program never imports leniently;
 // an old-format checkpoint is hand-edited, never tolerated).
@@ -130,7 +132,7 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // building a list of its own, so a visit costs no git at all in the ordinary
 // case and the walk may GROW while the view stands.
 //
-// THE NOW SIDE IS FROZEN AT init(): the three strings are captured once and
+// THE NOW SIDE IS FROZEN AT init(): the four strings are captured once and
 // every cached delta is measured against them, so a session that keeps
 // authoring after init keeps seeing the init-moment answer. The mode's entry
 // is the natural re-init point.
@@ -139,7 +141,7 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // module but the commit act runs only `log`, `show`, `ls-tree`, `rev-parse` and
 // `remote get-url` and writes no file, no ref and no index entry. THE COMMIT ACT
 // (commit_history_checkpoint, below) is the one writer in the product's whole
-// git surface: it writes the three sidecars into the piece's directory in the
+// git surface: it writes the four sidecars into the piece's directory in the
 // working tree and runs `add`, `commit` and `push` — through a SEPARATE
 // subprocess entry point (run_git_mutate in the .cpp), so which calls mutate
 // stays answerable by reading the call sites rather than by trusting a runtime
@@ -357,11 +359,15 @@ struct GuiHistoryCommitDelta {
     // checkpoint where it lies. The delta's own machinery never read it.)
 };
 
-// The three files' exact current bytes — what Ctrl+S would write at this
-// instant, and the fixed side of every diff. Built in memory only.
+// The four files' exact current bytes — what Ctrl+S would write at this
+// instant, the fixed side of every diff and the checkpoint's bytes. Built in
+// memory only. The magnification level markers' text is carried for the
+// checkpoint, which writes all four; the delta (compute_commit_delta) does not
+// read it.
 struct GuiHistoryNowSide {
     std::string warpmarkers_text;
     std::string phaseresetmarkers_text;
+    std::string magnificationlevelmarkers_text;
     std::string settings_text;
 };
 
@@ -393,9 +399,9 @@ std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
 std::string format_history_settings_text(const GuiHistoryGuiSide& gui,
                                          const EngineSettings&    engine);
 
-// Serialize the live state through the three writers' own string halves
+// Serialize the live state through the four writers' own string halves
 // (format_warpmarkers_text / format_phaseresetmarkers_text /
-// format_settings_text). The settings half goes through the two owners above,
+// format_magnificationlevelmarkers_text / format_settings_text). The settings half goes through the two owners above,
 // so the now side and every local walk member are spelled by one rule.
 GuiHistoryNowSide build_history_now_side(const AppState& app);
 
@@ -428,12 +434,13 @@ struct GuiHistorySidecarBlob {
     std::string text;
 };
 
-// One commit's three sidecars, read whole.
+// One commit's four sidecars, read whole.
 struct GuiHistoryCommitSidecars {
     // The full 40-char SHA git resolved the caller's spelling to.
     std::string sha;
     GuiHistorySidecarBlob warpmarkers;
     GuiHistorySidecarBlob phaseresetmarkers;
+    GuiHistorySidecarBlob magnificationlevelmarkers;
     GuiHistorySidecarBlob settings;
 };
 
@@ -469,7 +476,7 @@ std::string short_sha(const std::string& sha);
 // confident wrong (resolve_commit_paths owns the rules and why the session's own
 // directory stopped being an answer).
 //
-// A resolved commit that carries none of the three is NOT a failure here — every
+// A resolved commit that carries none of the four is NOT a failure here — every
 // blob comes back with an empty path and the CALLER decides what a missing
 // sidecar means. In practice the one caller is load_commit_sidecars_strict
 // below, which refuses on any missing file — for the `'` act and the walk's
@@ -478,7 +485,7 @@ std::string short_sha(const std::string& sha);
 // EVERY BLOB IT DOES RETURN IS WHOLE. A `git show` that could not run yields an
 // empty string, and an empty sidecar is a valid file both marker loaders accept,
 // so this cross-checks each read against the byte count the tree listing states
-// and refuses on any disagreement. That is what keeps "the commit's own three
+// and refuses on any disagreement. That is what keeps "the commit's own four
 // sidecars" a true description of the load-in-place's input rather than a
 // hope.
 //
@@ -486,7 +493,7 @@ std::string short_sha(const std::string& sha);
 // it CHANGED none of this piece's sidecars, when it changed them in more than
 // one directory, or when a blob could not be read whole. Nothing here writes
 // anything: this is `rev-parse`, then a `show` for the touched directory, then
-// `ls-tree` and three `show`s for the blobs — six children on the happy path,
+// `ls-tree` and four `show`s for the blobs — seven children on the happy path,
 // and TWO where the evidence refuses, the tree listing being asked only once a
 // directory has been named.
 //
@@ -498,7 +505,7 @@ bool read_commit_sidecars(const std::string&         repo_root,
                           GuiHistoryCommitSidecars&  out,
                           GuiFailure&                failure);
 
-// One commit's three sidecars READ AND PARSED WHOLE — what the strict gate
+// One commit's four sidecars READ AND PARSED WHOLE — what the strict gate
 // below produced when it passed. The parsed halves are what the `'` act
 // applies; the raw sidecars are what the walk keeps as each member's then
 // side, so a delta costs no further git.
@@ -507,6 +514,7 @@ struct GuiHistoryCommitLoad {
     SettingsFile                     settings;
     std::vector<GuiWarpMarker>       warp_markers;
     std::vector<GuiPhaseResetMarker> phase_reset_markers;
+    std::vector<GuiMagnificationLevelMarker> magnification_level_markers;
 };
 
 // THE STRICT WHOLE-SET LOAD — the load-in-place gate, and since 2026-08-04 THE
@@ -514,13 +522,15 @@ struct GuiHistoryCommitLoad {
 // ruling (no second predicate, no relaxed variant anywhere).
 //
 // The sequence is the `'` act's own validation, whole: read_commit_sidecars
-// resolves the spelling and reads the three blobs out of that commit's own
-// tree (size-cross-checked); a commit missing ANY of the three refuses (a
-// partial checkpoint can neither be loaded in place nor walked to); the bytes
-// are then staged through an RAII scratch directory and judged by the three
-// STRICT WHOLE-FILE LOADERS themselves — read_settings_file,
-// GuiWarpMarkers::load, GuiPhaseResetMarkers::load, all frozen-parser entry
-// points that take a PATH — because a GUI-side scanner over the strings would
+// resolves the spelling and reads the four blobs out of that commit's own
+// tree (size-cross-checked); a commit missing ANY of the four refuses (a
+// partial checkpoint can neither be loaded in place nor walked to — so a
+// commit from before the magnification level markers joined the set falls out
+// of the walk, accepted by the architect 2026-09-15); the bytes are then
+// staged through an RAII scratch directory and judged by the four STRICT
+// WHOLE-FILE LOADERS themselves — read_settings_file, GuiWarpMarkers::load,
+// GuiPhaseResetMarkers::load, GuiMagnificationLevelMarkers::load, all
+// frozen-parser entry points that take a PATH — because a GUI-side scanner over the strings would
 // be a SECOND GRAMMAR beside the strict one, which is precisely what this gate
 // exists to avoid. Staging the bytes is the cheap way to keep the loaders
 // themselves as the only judges.
@@ -701,7 +711,7 @@ struct GuiHistoryScanResult {
 //
 // `abandoned` IS ASKED BETWEEN CANDIDATES, and nowhere else: a superseding kick
 // or a shutdown wants this run to stop, and a candidate boundary is the finest
-// grain that costs nothing (the strict load of one commit's three tiny files).
+// grain that costs nothing (the strict load of one commit's four tiny files).
 // `on_done` fires on the abandoned path too, so the caller's own bookkeeping has
 // one shape.
 //
@@ -717,7 +727,7 @@ void scan_history_walk(
 
 // The session object: A BINDING TO THE PREFETCH STORE'S WALK (2026-08-07,
 // superseding the list this used to build for itself at init) — each member
-// carries the three sidecar snapshots the load gate read on the worker — with
+// carries the four sidecar snapshots the load gate read on the worker — with
 // each commit's delta computed lazily on first request and cached thereafter PER
 // (INDEX, COMPARE), so stepping back over a commit already visited costs nothing
 // in either reading and no delta ever runs git at all.
@@ -847,7 +857,7 @@ public:
     const std::string& project_directory() const { return project_directory_; }
 
     // THE FROZEN NOW SIDE, for the visit's OTHER walk. The local walk measures
-    // against the same three strings this session captured at init(), and it
+    // against the same four strings this session captured at init(), and it
     // takes them from here rather than building a second set: one capture per
     // visit is what makes "the two walks agree about now" structural instead of
     // a coincidence of two calls made a microsecond apart.
@@ -915,14 +925,14 @@ private:
 //     a counter-entry's snapshots are the state a redo would restore.
 //   * k == R — THE LIVE MEMBER, the session's current state. The walk already
 //     holds it as the frozen now side, so nothing is captured or serialized for
-//     it; its three texts are that side's own.
+//     it; its four texts are that side's own.
 //   * k > R — A PAST STATE, `undo_stack[U + R - k]`, whose snapshots are THE
 //     STATE BEFORE THE EVENT THAT ENTRY RECORDS (k = R+1 is the stack's top,
 //     one Ctrl+Z away; k = N-1 is undo_stack[0], the state at file open).
-// Both stacks carry all three snapshot pieces — the carry-everywhere shape at
-// UndoEntry, which restore_history_entry reproduces field for field on the
+// Both stacks carry all four pieces — three marker snapshots and the engine
+// block, the carry-everywhere shape at UndoEntry, which restore_history_entry reproduces field for field on the
 // counter-entry it pushes — so serializing them through the save writers' own
-// string halves gives the same three loader-clean texts a commit member carries,
+// string halves gives the same four loader-clean texts a commit member carries,
 // and the diff needs no second grammar and no second reader.
 //
 // SO THE MEMBERS ARE THE TIMELINE'S STATES, newest first, and every adjacent
@@ -1027,16 +1037,16 @@ public:
     const GuiHistoryCommitDelta* delta_at(std::size_t       index,
                                           GuiHistoryCompare compare);
 
-    // ONE MEMBER'S STATE, TYPED — the three pieces a load-in-place puts back
+    // ONE MEMBER'S STATE, TYPED — the four pieces a load-in-place puts back
     // into the live session, handed out as pointers into the state that is
     // already there (a stack entry's snapshots, or the live stores and engine
-    // block for THE LIVE MEMBER). It is deliberately NOT the member's three
+    // block for THE LIVE MEMBER). It is deliberately NOT the member's four
     // TEXTS: those are the DIFF's medium, and round-tripping typed state
     // through them to load it would put the strict parsers in a path that
     // needs no grammar at all.
     //
     // ONE CONSUMER — the Local tab's `'` load-in-place
-    // (GuiInputHandler::load_history_local_entry_in_place). It COPIES all three
+    // (GuiInputHandler::load_history_local_entry_in_place). It COPIES all four
     // before it writes anything, which is what keeps the identity load (loading
     // the live member) from assigning a store to itself.
     //
@@ -1046,6 +1056,8 @@ public:
     struct MemberState {
         const std::vector<GuiWarpMarker>*       warp_markers        = nullptr;
         const std::vector<GuiPhaseResetMarker>* phase_reset_markers = nullptr;
+        const std::vector<GuiMagnificationLevelMarker>*
+                                    magnification_level_markers     = nullptr;
         const EngineSettings*                   engine_settings     = nullptr;
     };
     // EMPTY is member_at's nullptr in optional's spelling and means the same
@@ -1057,17 +1069,18 @@ public:
     std::optional<MemberState> member_state(std::size_t index) const;
 
 private:
-    // One member's three texts, serialized on first ask and kept. Lazy for the
+    // One member's four texts, serialized on first ask and kept. Lazy for the
     // reason the commit walk's deltas are: a visit typically reads a handful of
     // members out of a timeline that may hold hundreds, and formatting all of
     // them at `h` would be exactly the entry stall the prefetch arc removed. (The
-    // LIVE member is the one that costs nothing either way — it copies the three
+    // LIVE member is the one that costs nothing either way — it copies the four
     // frozen now-side strings — and it takes the same lazy path rather than a
     // case of its own.)
     struct Member {
         bool        built = false;
         std::string warpmarkers_text;
         std::string phaseresetmarkers_text;
+        std::string magnificationlevelmarkers_text;
         std::string settings_text;
     };
     const Member* member_at(std::size_t index);
@@ -1130,11 +1143,11 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // Each is git's own account of the step that ended the act, the exit status
 // having been the verdict since 2026-09-06.
 //
-// WriteFailed — NOTHING REACHED THE REPOSITORY. The three sidecars could not be
+// WriteFailed — NOTHING REACHED THE REPOSITORY. The four sidecars could not be
 // written, or the act refused before writing them at all: a DETACHED HEAD is
 // unsanctioned use and throws here, since there is no branch to publish onto.
 //
-// CommitFailed — GIT REFUSED A STEP BEFORE ANYTHING WAS PUBLISHED, and the three
+// CommitFailed — GIT REFUSED A STEP BEFORE ANYTHING WAS PUBLISHED, and the four
 // files are sitting in the working tree where `git status` shows them and a hand
 // `git commit` finishes them: an unusable `git status`, or an `add` or `commit`
 // that exited nonzero (a rejecting `pre-commit` hook, an identity or signing
@@ -1167,13 +1180,13 @@ enum class GuiHistoryCommitOutcome {
     Committed,
 };
 
-// WRITE THE THREE SIDECARS AND COMMIT THEM. `repo_root` is the clone the act runs
+// WRITE THE FOUR SIDECARS AND COMMIT THEM. `repo_root` is the clone the act runs
 // in — the session's own derived root (GuiHistoryWalkHeader::repo_root, carried
-// onto the worker with everything else), which is what the three absolute writes
+// onto the worker with everything else), which is what the four absolute writes
 // resolve against and what every `git -C` here names. `project_directory` and
 // `base_name` are the session's own match (so the destination is the CURRENT
 // era's spelling, the directory the branch tip carries the sidecars in) and
-// `bytes` is what the three files are to contain. Every step states its own
+// `bytes` is what the four files are to contain. Every step states its own
 // failure on stderr in one line, and this returns how far it got; it prints its
 // own success line too, so the caller reports nothing.
 //

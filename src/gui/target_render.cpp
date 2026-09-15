@@ -628,9 +628,11 @@ void GuiTargetRender::dispatch_render_now() {
     app.target_buffer.clear();
     app.target_buffer_frames = 0;
 
+    // The magnification level column is passed EMPTY: it is display-only and
+    // a buffer render writes no sidecar, its one reader (RenderRequest).
     RenderRequest req = build_render_request(
         app.source_audio_path, app.warpmarkers.markers(),
-        app.phaseresetmarkers.markers(), app.engine_settings,
+        app.phaseresetmarkers.markers(), {}, app.engine_settings,
         app.trim.begin_frame, app.trim.end_frame);
     // Freeze the buffer's domain origin from the same trim values the request
     // was built with. At this instant they equal app.trim, but the request

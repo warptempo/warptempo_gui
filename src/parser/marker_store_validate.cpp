@@ -15,6 +15,7 @@
 std::optional<std::string> first_past_eof_wall_defect(
         const std::vector<WarpMarker>&       warp_markers,
         const std::vector<PhaseResetMarker>& phase_resets,
+        const std::vector<MagnificationLevelMarker>& magnification_level_markers,
         const SettingsTrim& tab_a_trim,
         const SettingsTrim& tab_b_trim,
         int64_t total_frames,
@@ -37,6 +38,17 @@ std::optional<std::string> first_past_eof_wall_defect(
     for (const auto& m : phase_resets) {
         if (m.time_frame > total_frames - 1) {
             return "Phase reset marker past end of audio at " +
+                   format_timestamp(m.time_frame / sr_d);
+        }
+    }
+    // Magnification level marker wall: total - 1, the two render columns'
+    // compare (architect approval 2026-09-15). The column is display-only, but
+    // a sidecar applies only to the audio it was authored against, and every
+    // gesture that will author it walls at total - 1 like the other columns,
+    // so a stored marker past it is adversarial load-fatal in both products.
+    for (const auto& m : magnification_level_markers) {
+        if (m.time_frame > total_frames - 1) {
+            return "Magnification level marker past end of audio at " +
                    format_timestamp(m.time_frame / sr_d);
         }
     }

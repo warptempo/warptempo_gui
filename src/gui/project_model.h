@@ -19,9 +19,11 @@
 // (file_loader.{h,cpp} and the frozen parser behind it).
 //
 // THE SOURCE IS DEFINED BY THE SIDECAR, AND BY NOTHING ELSE. A folder that
-// carries any of the three sidecars — `<stem>.warpmarkers`,
-// `<stem>.phaseresetmarkers`, `<stem>.settings` — names its source by that
-// stem, and `<stem>.wav` must exist. A folder with NO sidecar at all is a NEW
+// carries any of the four sidecars — `<stem>.warpmarkers`,
+// `<stem>.phaseresetmarkers`, `<stem>.magnificationlevelmarkers`,
+// `<stem>.settings` (kSidecarExtensions, settings_io.h) — names its source by
+// that stem, and `<stem>.wav` must exist; whether it carries ALL FOUR is the
+// loaders' question (sidecar_set_presence, settings_io.h), not this model's. A folder with NO sidecar at all is a NEW
 // project iff it holds EXACTLY ONE `.wav`: that wav is the source, and the
 // first open writes the template sidecars beside it as it always has. Every
 // other state is INVALID and says why, one sentence each: more than one sidecar
@@ -60,7 +62,7 @@
 // its ordinary sentence. The remembered road needs no test: the config reader
 // already refused a name that fails the grammar.
 //
-// EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the three sidecar spellings
+// EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the four sidecar spellings
 // as written: the product's own writers and the sync convention name every
 // file this way, so a `.WAV` is simply not a source, and no case folding or
 // other leniency is offered — strict knowledge required, no fallbacks.

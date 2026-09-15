@@ -2395,7 +2395,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             the Local walk consumes it): it opens the HISTORY
 //                             PICKER over the viewed walk's members, and the
 //                             open act on the REMOTE tab loads the commit's
-//                             three sidecars (load_history_commit_in_place),
+//                             four sidecars (load_history_commit_in_place),
 //                             on the LOCAL tab that state of the session's own
 //                             timeline as a new undo entry
 //                             (load_history_local_entry_in_place). It is a
@@ -3065,7 +3065,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 //
 // AND SINCE 2026-08-08 THE BIT ALSO LOCKS OUT EVERY SAVE, globally, which is
 // what makes the coincident-write paragraph below safe rather than merely
-// unlucky: the worker writes the three sidecars into projects/<id>/ off the main
+// unlucky: the worker writes the four sidecars into projects/<id>/ off the main
 // thread, and under the project-folder law a concurrent Ctrl+S would write the
 // very same paths through the same fixed temp name. The refusal lives at the one save
 // owner (GuiSaveOps::save) and its face is the Save button's "Committing...".
@@ -3457,7 +3457,7 @@ void GuiInputHandler::run_history_revert() {
             }
         }
         if (auto defect =
-                in_place_load_wall_defect(restored_warp, restored_phase)) {
+                in_place_load_wall_defect(restored_warp, restored_phase, {})) {
             // AN APPENDED REASON IS LOWERCASE (the rule and its one owner
             // lowercase_initial are at notifications.h): the wall defect is a
             // sentence at its frozen producer because two consumers use it
@@ -4664,6 +4664,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(cell_warp_markers),
             std::move(cell_phase_resets),
+            app.magnificationlevelmarkers.markers(),
             app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame,
             batch_folder.string(), std::move(basename));
@@ -4833,7 +4834,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // convention inside do_render.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
-            app.phaseresetmarkers.markers(), app.engine_settings,
+            app.phaseresetmarkers.markers(),
+            app.magnificationlevelmarkers.markers(), app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
@@ -4933,7 +4935,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // empty here and are assigned at dispatch-to-worker time.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
-            app.phaseresetmarkers.markers(), app.engine_settings,
+            app.phaseresetmarkers.markers(),
+            app.magnificationlevelmarkers.markers(), app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
@@ -4971,12 +4974,14 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 }
 
 // The promote roads' past-EOF wall guard (contract at the declaration): the
-// loader's own shared check, asked of a candidate marker pair against this
-// session's audio. The live trim pair rides along because the guard's six
-// checks are one call; only the two marker arms can answer here.
+// loader's own shared check, asked of a candidate marker set against this
+// session's audio. The live trim pair rides along because the guard's seven
+// checks are one call; only the three marker arms can answer here.
 std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
         const std::vector<GuiWarpMarker>& warp,
-        const std::vector<GuiPhaseResetMarker>& phase_resets) const {
+        const std::vector<GuiPhaseResetMarker>& phase_resets,
+        const std::vector<GuiMagnificationLevelMarker>& magnification_levels)
+        const {
     auto trim_of = [](const TrimState& t) {
         SettingsTrim s;
         s.begin_frame = t.begin_frame;
@@ -4985,6 +4990,7 @@ std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
     };
     return first_past_eof_wall_defect(
         slice_to_warp_markers(warp), slice_to_phase_reset_markers(phase_resets),
+        slice_to_magnification_level_markers(magnification_levels),
         trim_of(app.tab_a.trim), trim_of(app.tab_b.trim),
         audio.total_frames(), audio.sample_rate());
 }
@@ -4998,25 +5004,36 @@ std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
 void GuiInputHandler::apply_recipe_in_place(
         std::vector<GuiWarpMarker> warp,
         std::vector<GuiPhaseResetMarker> phase_resets,
+        std::vector<GuiMagnificationLevelMarker> magnification_levels,
         const EngineSettings& engine) {
     std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
         app.phaseresetmarkers.markers();
+    std::vector<GuiMagnificationLevelMarker> magnification_level_pre =
+        app.magnificationlevelmarkers.markers();
 
     app.warpmarkers.markers_mut()       = std::move(warp);
     app.phaseresetmarkers.markers_mut() = std::move(phase_resets);
+    // The magnification level column rides the recipe (architect 2026-09-15:
+    // `'` "definitely" carries it) in this SAME one undo entry. Display-only:
+    // the store's generation bump re-keys the gain profile, and the tail's
+    // synchronous plate render below reads it, so the new gain lands in this
+    // act's own frame; the target preview never reads it.
+    app.magnificationlevelmarkers.markers_mut() =
+        std::move(magnification_levels);
     // Wholesale authoring reset: the ONE selection goes, and there is nothing
     // else to reset — no per-tab per-mode slot holds a copy (the parked
     // selections died 2026-07-29, so a wholesale store replace no longer has to
     // hunt down stale index sets in either ViewState).
     selection.clear_selection();
 
-    // ONE cross-file undo entry: the marker pair plus the OUTGOING engine
+    // ONE cross-file undo entry: the three marker columns plus the OUTGOING engine
     // settings, which push_undo_both captures from `app` — so it must run
     // BEFORE the incoming block is applied below. It files under the LIVE tab
     // and the LIVE W/P column, which are the only ones this act touches now
     // that it performs no tab or column switch at all.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
+                        std::move(magnification_level_pre),
                         app.active_markers_view);
     undo.recompute_dirty();
 
@@ -5121,8 +5138,9 @@ void GuiInputHandler::apply_recipe_in_place(
 // declaration.
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
-// three sidecars (.settings, .warpmarkers, .phaseresetmarkers) must read and
-// validate. On ANY failure — the running-batch self-guard, a missing wav, or a
+// four sidecars (.settings, .warpmarkers, .phaseresetmarkers,
+// .magnificationlevelmarkers) must read and validate — all four REQUIRED, a
+// missing one refusing through its strict loader's own cannot-open words. On ANY failure — the running-batch self-guard, a missing wav, or a
 // malformed / unreadable sidecar — return false with NO state mutation, so a
 // failure leaves authoring untouched.
 //
@@ -5237,9 +5255,23 @@ bool GuiInputHandler::load_render_entry_in_place(
         }
         src_phase_resets = t.markers();
     }
+    std::vector<GuiMagnificationLevelMarker> src_magnification_levels;
+    {
+        GuiMagnificationLevelMarkers ml;
+        const std::filesystem::path mlp =
+            e.batch_folder / (e.basename + ".magnificationlevelmarkers");
+        auto r = ml.load(mlp.string(), &load_reason);
+        if (!r) {
+            return refuse("invalid magnification level markers in '" +
+                              shown_project_path(mlp) + "': " +
+                              load_words(r.error()),
+                          mlp);
+        }
+        src_magnification_levels = ml.markers();
+    }
 
     // THE PAST-EOF WALL, the loader's own adversarial guard asked of the
-    // parsed pair before anything is installed (in_place_load_wall_defect
+    // parsed columns before anything is installed (in_place_load_wall_defect
     // carries the whole reasoning). A cell authored against a longer take
     // would otherwise land markers past `total - 1` in the live store, Ctrl+S
     // would write them, and the next launch would refuse the file. The
@@ -5249,12 +5281,14 @@ bool GuiInputHandler::load_render_entry_in_place(
     // whole) and this is an APPENDING seam, so it lowercases through the one
     // owner lowercase_initial like its three siblings — notifications.h states
     // the rule, and every other reason handed to `refuse` is already lowercase.
-    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
+    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets,
+                                                src_magnification_levels)) {
         return refuse(lowercase_initial(*defect), {});
     }
 
     // Every input is in hand and valid; nothing below refuses. WHAT IS APPLIED
-    // IS THE RECIPE AND NOTHING ELSE — the marker pair and the engine block —
+    // IS THE RECIPE AND NOTHING ELSE — the three marker columns and the engine
+    // block —
     // through the shared owner apply_recipe_in_place, whose declaration
     // (input_handler.h) states the rule. The file's view keys, its two tab bands
     // and its session prefs are READ PAST: the entry sidecar carries them
@@ -5282,6 +5316,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     close_history_mode();
 
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
+                          std::move(src_magnification_levels),
                           settings->engine);
 
     const std::filesystem::path batch_root =
@@ -5363,14 +5398,14 @@ bool GuiInputHandler::load_render_entry_in_place(
 // (confirm_load_in_place) hands it a walk member
 // and nothing else; the typed spelling, and with it the "short SHA pasted out
 // of GitHub's web UI" use case, retired with the load prompt's field
-// (architect R23). ONE STATE IN, ONE STATE OUT: the three sidecars THAT
+// (architect R23). ONE STATE IN, ONE STATE OUT: the four sidecars THAT
 // commit carried become the live session, in memory, and the disk is never
 // touched — not the corpus, not the working sidecars, not tmp/.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
 // contract load_render_entry_in_place states and this path mirrors: ONE call,
 // load_commit_sidecars_strict (history_diff.h), which is the resolution, the
-// missing-sidecar refusals, the scratch staging and the three STRICT
+// missing-sidecar refusals, the scratch staging and the four STRICT
 // WHOLE-FILE LOADERS in one predicate — the same predicate that is WALK
 // MEMBERSHIP since 2026-08-04, so a walk member's own SHA passes by
 // construction and every refusal arm (an unresolvable spelling, a partial
@@ -5385,7 +5420,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // outranked the transient tier a refusal would have written).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
-// stores the three sidecars and no audio at all, so the LOADED SOURCE IS THE
+// stores the four sidecars and no audio at all, so the LOADED SOURCE IS THE
 // SOURCE — this loads a recipe in place for the file already open, exactly as
 // the mode's
 // diff measures a commit against the session for that same file. The render-entry
@@ -5402,12 +5437,13 @@ bool GuiInputHandler::load_render_entry_in_place(
 // any other authoring
 // edit.
 //
-// WHAT IS APPLIED is THE RECIPE — the commit's marker pair and its engine block,
+// WHAT IS APPLIED is THE RECIPE — the commit's three marker columns and its
+// engine block,
 // through the shared owner apply_recipe_in_place, which is also
 // load_render_entry_in_place's body and whose declaration (input_handler.h)
 // states the rule: a load in place writes exactly what its one undo entry
 // restores. Everything else the commit's `.settings` carries is READ PAST, the
-// three-sidecar set being a whole standard-schema state rather than a request:
+// four-sidecar set being a whole standard-schema state rather than a request:
 // its tab bands (the checkpoint's trim included), its S/T, W/P and A/B keys, its
 // camera, and its session prefs — `projects_repo` among them, so a commit whose
 // settings named a different projects home no longer installs that answer, and
@@ -5455,6 +5491,8 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     std::vector<GuiWarpMarker>       src_warp = std::move(loaded.warp_markers);
     std::vector<GuiPhaseResetMarker> src_phase_resets =
         std::move(loaded.phase_reset_markers);
+    std::vector<GuiMagnificationLevelMarker> src_magnification_levels =
+        std::move(loaded.magnification_level_markers);
 
     // THE PAST-EOF WALL, the sibling's own line and for its reason: a
     // checkpoint's sidecars are state authored against whatever audio stood
@@ -5462,7 +5500,8 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     // against no audio at all (in_place_load_wall_defect carries the whole
     // reasoning). The refusal is WHOLE and names its cause on stderr and on a
     // notification card like every other arm here.
-    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
+    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets,
+                                                src_magnification_levels)) {
         // Appended, so lowercase through the one owner (notifications.h).
         const std::string reason = lowercase_initial(*defect);
         std::fprintf(stderr,
@@ -5488,6 +5527,7 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
     close_history_mode();
 
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
+                          std::move(src_magnification_levels),
                           settings.engine);
 
     // NO tmp/ WIPE. That step is the render-entry load-in-place's cleanup
@@ -5528,8 +5568,8 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
 // resolve: N is the walk's own member count, and the number is an index into
 // it.
 //
-// WHAT IS APPLIED: an undo entry carries the two MARKER COLUMNS and the ENGINE
-// BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
+// WHAT IS APPLIED: an undo entry carries the three MARKER COLUMNS and the
+// ENGINE BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
 // exactly what this restores — the same three pieces the walk's delta vocabulary
 // is built from, and, since 2026-08-24, exactly what BOTH SIBLINGS write too: a
 // load in place writes what its undo entry restores, so the family's three acts
@@ -5595,6 +5635,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
     std::vector<GuiWarpMarker>       src_warp   = *state->warp_markers;
     std::vector<GuiPhaseResetMarker> src_phase_resets =
         *state->phase_reset_markers;
+    std::vector<GuiMagnificationLevelMarker> src_magnification_levels =
+        *state->magnification_level_markers;
     EngineSettings                   src_engine = *state->engine_settings;
 
     // Every input is in hand and valid; nothing below refuses.
@@ -5629,7 +5671,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
     // playhead's clamp and the cold displayed target basis belong to every
     // recipe apply — a timeline state's included.
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
-                          src_engine);
+                          std::move(src_magnification_levels), src_engine);
 
     // NO tmp/ WIPE and NO DISK WRITE of any kind: this act moved state that
     // was already in memory from one place in memory to another.

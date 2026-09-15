@@ -5,8 +5,10 @@
 #include "device_config.h"   // format_gui_scale_percent (the recall)
 #include "failure.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <iterator>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -21,8 +23,8 @@ struct AppState;
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Returns false on any I/O
-// failure, removing the partial `.tmp` first. Shared by the .settings,
-// .warpmarkers, and .phaseresetmarkers writers.
+// failure, removing the partial `.tmp` first. Shared by the four sidecar
+// writers (kSidecarExtensions below).
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data);
 
@@ -31,16 +33,45 @@ bool atomic_write_string_to_path(const std::string& path,
 // standing at a sidecar's name and then hands that name to the strict reader,
 // so a directory or a socket wearing `<stem>.settings` is a PARSE FAILURE and
 // not an absence, and the answer has to be the same on both roads that ask
-// (the real load's create_if_missing below, and source_load_dry_run's
-// pre-flight, file_loader.h) or the dry-run would approve a reopen the load
-// then refuses. A stat that FAILS is neither present nor absent: it answers
-// with the system's own words, never a silent "absent" — as the TWO CLAUSES
+// (the real load and source_load_dry_run's pre-flight, file_loader.h, both
+// through sidecar_set_presence below, and create_if_missing's own belt) or
+// the dry-run would approve a reopen the load then refuses. A stat that FAILS
+// is neither present nor absent: it answers with the system's own words, never a silent "absent" — as the TWO CLAUSES
 // of a GuiFailure (failure.h), the full path on the diagnostic for the
 // stderr line and the file named the basename rule's way (the project folder
 // and the file, shown_project_path) on the display, because the dry run
 // hands that clause to a notification card (messaging.md).
 std::expected<bool, GuiFailure> sidecar_present(
     const std::filesystem::path& p);
+
+// THE PROJECT'S SIDECAR SET — the four files a source carries beside it,
+// `<stem><extension>`, as the product writes them (architect 2026-09-15, the
+// magnification level markers column making the set four). THE ONE LIST: the
+// project model's source rule (resolve_project), the required-file rule
+// below, and the GitHub recheck's per-commit sidecar match, pathspecs and
+// checkpoint paths (history_diff.cpp) all read it, and its ORDER is the order
+// the recheck indexes its per-sidecar arrays by (warp markers, phase reset
+// markers, magnification level markers, settings).
+inline constexpr const char* kSidecarExtensions[] = {
+    ".warpmarkers", ".phaseresetmarkers", ".magnificationlevelmarkers",
+    ".settings",
+};
+inline constexpr std::size_t kSidecarCount = std::size(kSidecarExtensions);
+
+// THE REQUIRED-FILE RULE, ONE OWNER (architect 2026-09-15: "we never support
+// legacy — strictly migrate to the new and require manual update"): a
+// source's sidecar set is ALL OR NOTHING. `None` — no sidecar present at all —
+// is a NEW project, whose load writes the four templates; `All` is an
+// existing one, whose load reads all four strictly; SOME AND NOT ALL is a
+// refusal naming the first missing file in kSidecarExtensions order
+// ("Missing '<file>'"), and nothing is written. Presence is sidecar_present's
+// (EXISTS), and a stat that fails answers with its refusal. Read by BOTH
+// roads that must agree — the real load (GuiFileLoader::load_file, where a
+// refusal is fatal) and its strict preview (source_load_dry_run, where it is
+// the picker's and Revert's card).
+enum class SidecarSetPresence { None, All };
+std::expected<SidecarSetPresence, GuiFailure> sidecar_set_presence(
+    const std::filesystem::path& parent, const std::string& stem);
 
 // Ensure `p` exists with `contents`. If the file already exists, leave it
 // alone. Returns true on success or if file already exists. Failures are

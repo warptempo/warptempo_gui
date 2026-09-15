@@ -162,17 +162,31 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     return c;
 }
 
+const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app) {
+    WaveformGainProfileCache& c = app.waveform_gain_profile_cache;
+    const long long gen = app.magnificationlevelmarkers.generation();
+    if (c.valid && c.markers_gen == gen) return c;
+    c.profile     = build_waveform_gain_profile(
+        app.magnificationlevelmarkers.markers());
+    c.hash        = waveform_gain_profile_hash(c.profile);
+    c.markers_gen = gen;
+    c.valid       = true;
+    return c;
+}
+
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app) {
-    static const WaveformGainProfileCache kUnmagnified = [] {
-        WaveformGainProfileCache c;
-        c.hash = waveform_gain_profile_hash(c.profile);
-        return c;
-    }();
-    if (!zoom_level_at_or_finer_than_working(app.zoom_level))
+    if (!zoom_level_at_or_finer_than_working(app.zoom_level)) {
+        static const WaveformGainProfileCache kUnmagnified = [] {
+            WaveformGainProfileCache c;
+            c.valid = true;
+            c.hash  = waveform_gain_profile_hash(c.profile);
+            return c;
+        }();
         return kUnmagnified;
-    // Empty: no marker column carries a level.
-    return kUnmagnified;
+    }
+    return waveform_gain_profile_cached(app);
 }
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(

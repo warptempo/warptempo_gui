@@ -3250,8 +3250,9 @@ private:
     // A LOAD IN PLACE WRITES EXACTLY WHAT ITS ONE UNDO ENTRY RESTORES
     // (architect 2026-08-24: "load in place should overwrite elements which
     // have undo — so trim is excluded also"). That is the warp store, the phase
-    // reset store and the engine settings — what push_undo_both captures — and
-    // NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
+    // reset store, the magnification level store (architect 2026-09-15: `'`
+    // "definitely" carries the M column) and the engine settings — what
+    // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
     // tab, the camera, follow and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
@@ -3275,7 +3276,7 @@ private:
     // past its last refusal (nothing here can fail, and nothing may mutate
     // before it), and the `h` mode is already closed where each caller's own
     // reasoning puts that close. What it does, in order: snapshot the outgoing
-    // stores, replace both, clear the selection, push ONE cross-file undo entry
+    // stores, replace all three, clear the selection, push ONE cross-file undo entry
     // (the live W/P as its op_mode and NO tab override — the entry belongs to
     // the tab the user is standing in, no tab switch happening any more), run
     // the bpm scratch wipe (a statement over a set that already carries
@@ -3288,16 +3289,18 @@ private:
     // the coincidence auto-select and the sync/invalidate/trigger tail. Each
     // caller keeps its own tail after it (the tmp/ trash-then-wipe, the
     // stderr line, the full-window invalidate).
-    void apply_recipe_in_place(std::vector<GuiWarpMarker> warp,
-                               std::vector<GuiPhaseResetMarker> phase_resets,
-                               const EngineSettings& engine);
+    void apply_recipe_in_place(
+        std::vector<GuiWarpMarker> warp,
+        std::vector<GuiPhaseResetMarker> phase_resets,
+        std::vector<GuiMagnificationLevelMarker> magnification_levels,
+        const EngineSettings& engine);
 
     // THE PROMOTE ROADS' PAST-EOF WALL GUARD (2026-08-29), the ONE owner for
     // the three roads that install a marker set the LIVE stores did not
     // author. It asks the loader's own shared guard
     // (first_past_eof_wall_defect, marker_store_validate.h) of a candidate
-    // marker pair against THIS session's audio and hands back the guard's own
-    // first-offender sentence, or nullopt when every position is inside its
+    // marker set — the three columns — against THIS session's audio and hands
+    // back the guard's own first-offender sentence, or nullopt when every position is inside its
     // wall.
     //
     // WHY IT EXISTS: the startup loader and the picker's dry run both call
@@ -3314,29 +3317,33 @@ private:
     // THE TRIM PAIR PASSED IN IS THE LIVE ONE and can only pass: a load in
     // place writes no trim, every trim gesture walls at total-1, and the load
     // boundary proved this pair at startup. It is passed because the guard's
-    // six checks are one call; the marker arms are the only ones that can
+    // seven checks are one call; the marker arms are the only ones that can
     // fire here.
     //
     // THREE CALLERS: load_render_entry_in_place and
-    // load_history_commit_in_place (each of the parsed pair, before
+    // load_history_commit_in_place (each of the parsed three columns, before
     // apply_recipe_in_place) and run_history_revert (of the markers the
-    // subject's REMOVED flags would restore, refusing the whole revert). The
+    // subject's REMOVED flags would restore, refusing the whole revert — it
+    // writes no magnification level marker and passes that column empty). The
     // LOCAL-tab load is deliberately NOT a caller: its state is a snapshot of
     // THIS session's own stores, which were proved at the load boundary and
     // walled by every gesture since, so there is no foreign authoring in it.
     std::optional<std::string> in_place_load_wall_defect(
         const std::vector<GuiWarpMarker>& warp,
-        const std::vector<GuiPhaseResetMarker>& phase_resets) const;
+        const std::vector<GuiPhaseResetMarker>& phase_resets,
+        const std::vector<GuiMagnificationLevelMarker>& magnification_levels)
+        const;
 
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
     // (.settings + the marker pair) as the new authoring baseline, view-
     // agnostic (source OR target authoring view). Reads and validates the wav's
-    // existence and all three sidecars BEFORE mutating any store, and returns
+    // existence and all four sidecars BEFORE mutating any store, and returns
     // false leaving authoring untouched on any missing/malformed input — each
     // such genuine-failure arm naming its cause and path on stderr since
     // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
     // behind its red flash; otherwise applies the recipe through
-    // apply_recipe_in_place above — the marker pair and the engine block, the
+    // apply_recipe_in_place above — the three marker columns and the engine
+    // block, the
     // file's view keys and tab bands ignored — wipes tmp/, and returns true.
     // ONE CALLER, re-greped: the RENDER PLAYER's Load in place button through
     // its confirmation (confirm_load_in_place's player arm, the highlighted
@@ -3352,13 +3359,13 @@ private:
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
-    // source — apply the three sidecars commit `sha` carried (the full SHA
+    // source — apply the four sidecars commit `sha` carried (the full SHA
     // the prefetch store holds for the VIEWED member — the one caller,
     // confirm_load_in_place, hands it a store member; the typed spelling
     // retired with the load prompt's field) as the new
     // authoring baseline, in memory, with the disk untouched.
-    // Validate-before-mutate like its sibling: the resolve, the three-sidecar
-    // presence and all three STRICT whole-file parses run before any store is
+    // Validate-before-mutate like its sibling: the resolve, the four-sidecar
+    // presence and all four STRICT whole-file parses run before any store is
     // written, each failure returning false with one stderr line naming the
     // cause, the committed path and the SHA. No wav is compared (the corpus
     // stores no audio — the loaded source is the source), no tmp/ wipe and so
@@ -3374,7 +3381,7 @@ private:
     // baseline. Validate-before-mutate like both siblings: a zero,
     // out-of-range or unreadable member is one stderr line and a false return
     // with nothing touched. It restores exactly what an undo
-    // entry carries — the two marker columns and the engine block — which since
+    // entry carries — the three marker columns and the engine block — which since
     // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well,
     // and since 2026-08-24 it writes them THROUGH the same body
     // (apply_recipe_in_place above), so the three differ only in where the three

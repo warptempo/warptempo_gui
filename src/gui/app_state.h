@@ -12,6 +12,7 @@
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
+#include "magnificationlevelmarkers.h"
 #include "warp_frame_map_view.h"
 #include "warpmarkers.h"
 
@@ -230,10 +231,10 @@ struct SettingsSnapshot {
 // — there is no stored focus hint (a restore's visual is the selection + the
 // singleton land / group region, not a remembered anchor).
 //
-// Every entry also carries the pre-mutation phase reset snapshot and the mode
-// the operation was performed in. Both lists are always restored on undo/redo
-// so the inverse is symmetric regardless of which list the op actually
-// touched.
+// Every entry also carries the pre-mutation phase reset and magnification
+// level snapshots and the mode the operation was performed in. All three lists
+// are always restored on undo/redo so the inverse is symmetric regardless of
+// which list the op actually touched.
 //
 // THE AUTHORING VIEW IS THREE TAGS, NOT TWO (architect bug report 2026-08-28):
 // `op_mode` is the W/P column, `tab` the A/B tab and `audio_view` the S/T audio
@@ -260,6 +261,12 @@ struct SettingsSnapshot {
 struct UndoEntry {
     std::vector<GuiWarpMarker>      snapshot;
     std::vector<GuiPhaseResetMarker> phase_reset_snapshot;
+    // The third marker column's pre-mutation snapshot (architect 2026-09-15),
+    // carried on EVERY entry and restored on every undo/redo with the other
+    // two, exactly as the phase-reset snapshot is. No op_mode names this
+    // column yet: its store changes only through the loads in place, which
+    // file under the live W/P column (push_undo_both).
+    std::vector<GuiMagnificationLevelMarker> magnification_level_snapshot;
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
@@ -4921,6 +4928,9 @@ struct AppState {
     // Sibling `.phaseresetmarkers` path. Computed at file load. Empty when
     // no audio is loaded.
     std::string phaseresetmarkers_path;
+    // Sibling `.magnificationlevelmarkers` path. Computed at file load. Empty
+    // when no audio is loaded.
+    std::string magnificationlevelmarkers_path;
 
     // Absolute or relative path of the currently loaded audio file. Used by
     // the render hotkeys (Ctrl+Alt+R and its shifted twin) and
@@ -4939,6 +4949,15 @@ struct AppState {
     // Parsed phase reset markers. Authored by the GUI and compiled by the
     // parser (derive_phase_reset_frame_map) into engine input on every render.
     GuiPhaseResetMarkers phaseresetmarkers;
+
+    // Parsed magnification level markers (architect 2026-09-15): the third
+    // column, DISPLAY-ONLY. Its one reader is the waveform picture's gain
+    // profile (effective_waveform_gain_profile, warp_frame_map_view.h); it is
+    // outside every render input, the render fingerprint and the preview's
+    // request. It rides every road a sidecar does — the load, the save, the
+    // undo entry, the render entry's sidecar set, the three loads in place and
+    // the checkpoint.
+    GuiMagnificationLevelMarkers magnificationlevelmarkers;
 
     // Multi-selection set + focus. `last_selected_marker` is either -1 or
     // a member of `selected_markers`; keyed operations (Tab cycling, `j`)
@@ -5165,6 +5184,12 @@ struct AppState {
     // marker drag (the store mutates only at commit).
     mutable WarpRedFlagCache warp_red_flag_cache;
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
+
+    // The memoized waveform gain profile (waveform_gain_profile_cached,
+    // warp_frame_map_view.h), keyed on the magnification level marker store's
+    // generation. Mutable: refreshed from the const plate-input and overview
+    // paths.
+    mutable WaveformGainProfileCache waveform_gain_profile_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
     // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
@@ -6665,7 +6690,7 @@ struct AppState {
     // and its `scale=` value.
     //
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
-    // load-in-place gate itself — each candidate commit's three sidecars must
+    // load-in-place gate itself — each candidate commit's four sidecars must
     // pass the strict whole-set load (load_commit_sidecars_strict,
     // history_diff.h, the `'` act's own validation, one predicate) —
     // so every checkpoint the mode can step to is one `'` can load.
@@ -6917,7 +6942,7 @@ struct AppState {
     // SAVE beside the
     // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
     // dirty cleared with it) and only then writes the live authoring state as
-    // the three sidecars into the piece's directory in the projects repository,
+    // the four sidecars into the piece's directory in the projects repository,
     // commits them pathspec-scoped under the entered title and pushes
     // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
     // git route, and its only writer outside the user's own save). A FAILED SAVE
@@ -7610,6 +7635,16 @@ struct AppState {
     // device config immediately (device_config.h). Trim is
     // gesture-owned, excluded from undo/redo history, and render-affecting but
     // deliberately treated as transient view state.
+    //
+    // THE MAGNIFICATION LEVEL MARKERS HAVE NO FLAG OF THEIR OWN, and need
+    // none (2026-09-15): the three flags are the COLUMN OF THE ACT an entry
+    // records (its op_mode), not a diff of what it changed, and nothing reads
+    // them apart from their OR. Every road that changes the magnification
+    // level store pushes an entry — the three loads in place, through
+    // push_undo_both, file under the live W/P column — and a restore crosses
+    // one, so an M change lights `dirty` through that entry's flag and a save
+    // clears it with the rest. The column's own flag arrives with the first
+    // producer that files an entry under it.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty    = false;
     bool        settings_dirty       = false;
@@ -7642,7 +7677,8 @@ struct AppState {
     // tuple — VALUE-SHAPED ONLY, no selection and nothing else
     // index-shaped (the selection is never parked, architect 2026-07-29;
     // the rule is stated at ViewState) — but share the same
-    // warpmarkers, phaseresetmarkers, and engine_settings.
+    // warpmarkers, phaseresetmarkers, magnificationlevelmarkers and
+    // engine_settings.
     ViewState tab_a;
     ViewState tab_b;
     char active_tab_view = 'A';
@@ -7823,7 +7859,7 @@ struct AppState {
     // reopen one, so the first refusal's grey is structural, while the save
     // lockout shows as the Save button's "Committing..." wherever the user is.
     // Its reason is a real race rather than a policy — the worker writes the
-    // three sidecars into projects/<id>/ off the main thread, and in the
+    // four sidecars into projects/<id>/ off the main thread, and in the
     // coincident workflow a concurrent Ctrl+S writes those same paths through
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
@@ -14556,7 +14592,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // SAVE'S SECOND TERM IS THE PUBLISHING CHECKPOINT (2026-08-08), and it
         // is GLOBAL rather than mode-scoped because the act outlives the view it
-        // was launched from: while the worker writes the three sidecars into
+        // was launched from: while the worker writes the four sidecars into
         // projects/<id>/, every save is refused at the one save owner
         // (GuiSaveOps::save, which states why), so this arm is that refusal's
         // mirror exactly as the read-only terms below mirror the key gate. The

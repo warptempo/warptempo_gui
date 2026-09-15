@@ -182,19 +182,35 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // bar cache), so a gain-only change re-renders through the fingerprint
 // without touching the displayed basis.
 struct WaveformGainProfileCache {
+    bool                valid       = false;
+    long long           markers_gen = -1;
     WaveformGainProfile profile;
-    uint64_t            hash = 0;
+    uint64_t            hash        = 0;
 };
+
+// THE PROFILE, memoized per MAGNIFICATION LEVEL MARKER STORE GENERATION
+// (architect 2026-09-15): build_waveform_gain_profile
+// (magnificationlevelmarkers.h, the step rules) over the LIVE store, with its
+// hash. The profile is a pure function of that store's frames, levels and
+// disabled bits, and every road that changes any of them bumps the
+// generation — the load, the three loads in place and the undo/redo restore
+// all assign through the store's mutators — so no road needs a call of its
+// own to re-key it. Its ONE reader is effective_waveform_gain_profile below.
+const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app);
 
 // THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE (architect
 // 2026-09-14: magnification applies iff the zoom is at working or finer): a
 // profile applies AT THE WORKING ZOOM OR FINER
-// (zoom_level_at_or_finer_than_working), else — coarser — the EMPTY profile,
-// level 0 everywhere, hash 0. No view term: target view, source view and the
-// `h` view answer alike. ONE place, so the picture caches' existing hash keys
-// re-render on every zoom write that crosses the working level with no
-// per-caller code. Both arms answer the empty profile at present: no marker
-// column carries a level. READERS: the plate's render inputs
+// (zoom_level_at_or_finer_than_working) — the LIVE magnification level
+// store's memoized profile (waveform_gain_profile_cached above) — else,
+// coarser, the EMPTY profile, level 0 everywhere, hash 0. No view term:
+// target view, source view and the `h` view answer alike, the `h` view's plate
+// showing the LIVE store's gain, never the viewed checkpoint's. ONE place, so
+// the picture caches' existing hash keys re-render on every zoom write that
+// crosses the working level with no per-caller code (a live store with no
+// enabled level above 0 is hash 0 as well, and there the two answers are
+// rightly the same picture). READERS: the plate's render inputs
 // (compute_waveform_render_inputs), the overview lane's bar cache
 // (maybe_rebuild_overview_bar_cache) and the gain kick's hash
 // (Viewport::waveform_gain_hash).

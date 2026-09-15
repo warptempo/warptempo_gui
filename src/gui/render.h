@@ -770,7 +770,7 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
 // from the architect's kdenlive crops tmp/green-unselected.png and
 // tmp/green-selected.png (fill from the body rows, edge from row 0; the crops'
 // own left column samples to kMarkerFlagBorder). No painter reads them at
-// present: no marker column carries a level.
+// present: the magnification level markers column paints no flag.
 inline constexpr GuiColor kMarkerMagnificationFill    = hex(0x1ABC9C);
 inline constexpr GuiColor kMarkerMagnificationEdge    = hex(0x0E6857);
 inline constexpr GuiColor kMarkerMagnificationFillSel = hex(0x22F4CB);
@@ -2784,7 +2784,8 @@ struct WaveformBasis {
 // THE GAIN IS A FUNCTION OF SOURCE TIME (architect approval 2026-09-14), on
 // EVERY waveform picture — this plate and the overview lane's bars, both of
 // which take the same profile (effective_waveform_gain_profile,
-// warp_frame_map_view.h, empty while no marker column carries a level). A COLUMN TAKES THE LEVEL OF THE
+// warp_frame_map_view.h, built from the magnification level markers column).
+// A COLUMN TAKES THE LEVEL OF THE
 // SECTION CONTAINING ITS FIRST SOURCE FRAME s0 — the cell rule (CLAUDE.md
 // Rounding): the column's span [s0, s1) is a cell, and the section that contains
 // its origin owns it, so a section boundary inside a column never widens the

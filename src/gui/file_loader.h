@@ -107,15 +107,17 @@ struct GuiFileLoader {
 //     payload) and are deliberately not mirrored: a wav the probe accepts and
 //     the decoder refuses is a corrupt-media fault of the class the load's own
 //     exit answers.
-//   * the two STRICT marker readers and the STRICT whole-file settings schema,
-//     each on a companion that is PRESENT by the load's own presence predicate
-//     (`sidecar_present`, settings_io.h — EXISTS, so a non-regular object at a
-//     sidecar's name is a parse failure here exactly as it is there); a genuine
-//     absence is what the load will template, so a new project passes
-//     trivially, and a stat that fails is its own refusal in the system's
-//     words. Mirrored.
+//   * THE REQUIRED-FILE RULE (architect 2026-09-15), through the load's own
+//     owner `sidecar_set_presence` (settings_io.h): all four sidecars or none,
+//     presence being `sidecar_present`'s EXISTS — so a non-regular object at a
+//     sidecar's name is a parse failure here exactly as it is there — a
+//     partial set refusing "Missing '<file>'", a stat that fails refusing in
+//     the system's words, and a set with no sidecar at all being what the load
+//     will template, so a new project passes trivially. Mirrored.
+//   * the three STRICT marker readers and the STRICT whole-file settings
+//     schema, on an existing set. Mirrored.
 //   * `render_output_source_collision`, the source-clobber predicate. Mirrored.
-//   * `first_past_eof_wall_defect`, the six walls, against the probe's frame
+//   * `first_past_eof_wall_defect`, the seven walls, against the probe's frame
 //     count and rate (with no settings on disk the load's own full-window stamp
 //     is what the walls see, which is inside them by construction). Mirrored.
 //

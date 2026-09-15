@@ -40,10 +40,10 @@ namespace {
 
 // True when restoring `entry` would write back the marker stores THAT ARE
 // ALREADY LIVE — the question the coalesced burst's net-zero pop asks
-// (Undo::record_gesture, where the rule is stated). BOTH columns, because every
-// entry carries a full pair and a restore assigns both unconditionally, so a
-// 'W' entry that a merged press returned to its snapshot is only byte-equal
-// when the phase column matches too.
+// (Undo::record_gesture, where the rule is stated). ALL THREE columns, because
+// every entry carries the full set and a restore assigns each unconditionally,
+// so a 'W' entry that a merged press returned to its snapshot is only
+// byte-equal when the other two columns match too.
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
@@ -69,7 +69,10 @@ bool entry_restores_live_marker_stores(const AppState& app,
     // "these two stores hold the same state" has one spelling.
     return warp_rows_equal(entry.snapshot, app.warpmarkers.markers()) &&
            phase_reset_rows_equal(entry.phase_reset_snapshot,
-                                  app.phaseresetmarkers.markers());
+                                  app.phaseresetmarkers.markers()) &&
+           magnification_level_rows_equal(
+               entry.magnification_level_snapshot,
+               app.magnificationlevelmarkers.markers());
 }
 
 }  // namespace
@@ -155,6 +158,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    e.magnification_level_snapshot = app.magnificationlevelmarkers.markers();
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
@@ -173,6 +177,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
+    e.magnification_level_snapshot = app.magnificationlevelmarkers.markers();
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
@@ -185,12 +190,15 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
 
-void Undo::push_undo_both(std::vector<GuiWarpMarker> warp_pre,
-                          std::vector<GuiPhaseResetMarker> phase_reset_pre,
-                          char op_mode) {
+void Undo::push_undo_both(
+        std::vector<GuiWarpMarker> warp_pre,
+        std::vector<GuiPhaseResetMarker> phase_reset_pre,
+        std::vector<GuiMagnificationLevelMarker> magnification_level_pre,
+        char op_mode) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
+    e.magnification_level_snapshot = std::move(magnification_level_pre);
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
@@ -205,6 +213,7 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    e.magnification_level_snapshot = app.magnificationlevelmarkers.markers();
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = std::move(pre_state);
@@ -722,6 +731,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     UndoEntry counter;
     counter.snapshot            = app.warpmarkers.markers();
     counter.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    counter.magnification_level_snapshot =
+        app.magnificationlevelmarkers.markers();
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
     counter.tab                 = entry.tab;
@@ -831,9 +842,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // actual pre-edit settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
 
-    // BOTH columns are assigned on EVERY entry — an undo entry carries a full
-    // pair, so a 'W' entry restores a byte-identical phase-reset vector and an
-    // 'S' entry restores both unchanged — and the assigns are unconditional: a
+    // ALL THREE columns are assigned on EVERY entry — an undo entry carries
+    // the full set, so a 'W' entry restores byte-identical phase-reset and
+    // magnification level vectors and an 'S' entry restores all three
+    // unchanged — and the assigns are unconditional: a
     // field-only restore (a disabled toggle, a tempo, a label) moves no row but
     // must still land its values, and markers_mut's generation bump reports it
     // either way. No row-identity comparison rides these replaces any more: the
@@ -841,6 +853,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // selections' liveness rule, and both died 2026-07-29.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
+    // The magnification level column, display-only: the gain profile it feeds
+    // re-keys by the store's generation, which this assign bumps, and the
+    // tail's synchronous plate render (kick_waveform_sync, below) reads the
+    // new profile — so the picture's gain lands in the restore's own frame.
+    app.magnificationlevelmarkers.markers_mut() =
+        std::move(entry.magnification_level_snapshot);
 
     // THE MAP-CHANGE RE-LAND, the shape the product already owns for a map
     // rebuilt under a STANDING view (the family contract is at the head of

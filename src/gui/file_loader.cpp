@@ -126,15 +126,20 @@ std::optional<GuiFailure> source_load_dry_run(
     const std::string stem = source.stem().string();
     const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
     const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
+    const std::filesystem::path ml_path  =
+        parent / (stem + ".magnificationlevelmarkers");
     const std::filesystem::path set_path = parent / (stem + ".settings");
 
-    // The three strict readers, each on a companion that is PRESENT by the one
-    // presence predicate the real load asks (sidecar_present, settings_io.h) —
-    // so a non-regular object wearing a sidecar's name is parsed and refused
-    // here exactly as the load would refuse it, and only a genuine absence is
-    // read as "the load will write the template" (a new project passes
-    // trivially). A stat that fails is its own refusal, in the system's words.
-    // Fresh stores and a fresh SettingsFile, discarded at the return.
+    // THE REQUIRED-FILE RULE FIRST, through the load's own owner
+    // (sidecar_set_presence, settings_io.h — all four sidecars or none): a
+    // partial set refuses here with the load's own "Missing '<file>'", a stat
+    // that fails refuses in the system's words, and a set with NO sidecar is
+    // what the load will template, so a new project passes trivially.
+    //
+    // Then the four strict readers on an existing set, into fresh stores and a
+    // fresh SettingsFile discarded at the return — a non-regular object
+    // wearing a sidecar's name having counted as PRESENT, so it is parsed and
+    // refused here exactly as the load would refuse it.
     //
     // EACH REFUSAL NAMES THE FILE ONCE (the four-tier review's R-11 rule,
     // failure.h: the diagnostic carries the full path, the card the project's
@@ -144,9 +149,10 @@ std::optional<GuiFailure> source_load_dry_run(
     // their words apart from it (`path_free_reason`, the granted frozen touch
     // of 2026-09-02) and this composer takes the words alone; a line-numbered
     // parse error carries no path and its whole sentence is the reason. One
-    // lambda for the three readers, so the choice cannot drift between them.
-    GuiWarpMarkers       warp;
-    GuiPhaseResetMarkers phase_resets;
+    // lambda for the four readers, so the choice cannot drift between them.
+    GuiWarpMarkers                warp;
+    GuiPhaseResetMarkers          phase_resets;
+    GuiMagnificationLevelMarkers  magnification_levels;
     SettingsTrim tab_a_trim;
     SettingsTrim tab_b_trim;
     std::optional<std::string> load_reason;
@@ -156,25 +162,22 @@ std::optional<GuiFailure> source_load_dry_run(
         return path_failure(before, file, shown_project_path(file),
                             ": " + (load_reason ? *load_reason : composed));
     };
-    auto wm_here = sidecar_present(wm_path);
-    if (!wm_here) return wm_here.error();
-    if (*wm_here) {
+    auto presence = sidecar_set_presence(parent, stem);
+    if (!presence) return std::move(presence.error());
+    if (*presence == SidecarSetPresence::All) {
         if (auto r = warp.load(wm_path.string(), &load_reason); !r) {
             return sidecar_failure("Invalid warp markers in ", wm_path,
                                    r.error());
         }
-    }
-    auto tm_here = sidecar_present(tm_path);
-    if (!tm_here) return tm_here.error();
-    if (*tm_here) {
         if (auto r = phase_resets.load(tm_path.string(), &load_reason); !r) {
             return sidecar_failure("Invalid phase reset markers in ", tm_path,
                                    r.error());
         }
-    }
-    auto set_here = sidecar_present(set_path);
-    if (!set_here) return set_here.error();
-    if (*set_here) {
+        if (auto r = magnification_levels.load(ml_path.string(), &load_reason);
+            !r) {
+            return sidecar_failure("Invalid magnification level markers in ",
+                                   ml_path, r.error());
+        }
         auto sf = read_settings_file(set_path.string(), &load_reason);
         if (!sf) {
             return sidecar_failure("Invalid settings in ", set_path,
@@ -190,8 +193,8 @@ std::optional<GuiFailure> source_load_dry_run(
         tab_a_trim = sf->tab_a.trim;
         tab_b_trim = sf->tab_b.trim;
     } else {
-        // No settings yet: the load stamps the full window on both tabs, which
-        // is inside the wall by construction.
+        // No sidecar yet: the load stamps the full window on both tabs, which
+        // is inside the wall by construction, as the marker templates are.
         const TrimState full = full_trim_window(info->frames);
         tab_a_trim.begin_frame = tab_b_trim.begin_frame = full.begin_frame;
         tab_a_trim.end_frame   = tab_b_trim.end_frame   = full.end_frame;
@@ -199,6 +202,8 @@ std::optional<GuiFailure> source_load_dry_run(
     if (auto defect = first_past_eof_wall_defect(
             slice_to_warp_markers(warp.markers()),
             slice_to_phase_reset_markers(phase_resets.markers()),
+            slice_to_magnification_level_markers(
+                magnification_levels.markers()),
             tab_a_trim, tab_b_trim, info->frames, info->sample_rate)) {
         return plain_failure(std::move(*defect));
     }
@@ -310,8 +315,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // already read it out of the device config and applied it before this load
     // begins, so re-seeding it to 100 here would throw away the live value the
     // whole file exists to carry.)
-    // Companion files: discover paths, create <basename>.warpmarkers,
-    // <basename>.phaseresetmarkers, and <basename>.settings if missing.
+    // Companion files: discover the four paths (kSidecarExtensions,
+    // settings_io.h), and write the four templates for a NEW project alone.
     // Companion file convention is <source_dir>/<source_basename>.<ext>
     // (sibling, basename-prefixed), not the legacy hidden `./.warpmarkers`
     // form.
@@ -321,9 +326,12 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     const std::string stem = apath.stem().string();
     const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
     const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
+    const std::filesystem::path ml_path  =
+        parent / (stem + ".magnificationlevelmarkers");
     const std::filesystem::path set_path = parent / (stem + ".settings");
     app.warpmarkers_path      = wm_path.string();
     app.phaseresetmarkers_path = tm_path.string();
+    app.magnificationlevelmarkers_path = ml_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
     // THE WINDOW TITLE IS THE PROJECT NAME (architect 2026-08-01, replacing the
@@ -345,17 +353,42 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     gui.set_project_title(project.name);
     app.project_name = project.name;
 
-    create_if_missing(wm_path, "0|1.00\n");
-    // The empty file is the canonical blank phase reset sidecar: resets have
-    // no mandatory first marker, so the seed is empty content, unlike warp's
-    // seeded first-marker line.
-    create_if_missing(tm_path, "");
-    // The first-open template stamps the FULL trim window for this source on
-    // both tabs, so it needs the loaded total (the `-1` unset spelling it used
-    // to write no longer parses).
-    create_if_missing(set_path,
-                      format_default_settings_template(stem,
-                                                       audio.total_frames()));
+    // THE REQUIRED-FILE RULE (architect 2026-09-15, "we never support legacy
+    // — strictly migrate to the new and require manual update"; the one owner
+    // is sidecar_set_presence, settings_io.h, which source_load_dry_run asks
+    // too): a folder carrying NO sidecar is a new project and gets the four
+    // templates; a folder carrying ALL FOUR loads them; a folder carrying some
+    // and not all is refused naming the missing file, and NOTHING is written —
+    // a project from before a sidecar joined the set is migrated by hand. The
+    // refusal is this load's own class, FATAL, like every refusal below.
+    {
+        auto presence = sidecar_set_presence(parent, stem);
+        if (!presence) {
+            // An APPENDED reason is lowercase (notifications.h).
+            std::fprintf(stderr,
+                "warptempo_gui: Source load aborted: %s\n",
+                lowercase_initial(presence.error().diagnostic).c_str());
+            gui.request_exit();
+            return false;
+        }
+        if (*presence == SidecarSetPresence::None) {
+            create_if_missing(wm_path, "0|1.00\n");
+            // The empty file is the canonical blank phase reset sidecar:
+            // resets have no mandatory first marker, so the seed is empty
+            // content, unlike warp's seeded first-marker line.
+            create_if_missing(tm_path, "");
+            // The magnification level markers' blank is the phase-reset
+            // column's shape: no mandatory first marker, level 0 holding
+            // everywhere with none.
+            create_if_missing(ml_path, "");
+            // The first-open template stamps the FULL trim window for this
+            // source on both tabs, so it needs the loaded total (the `-1`
+            // unset spelling it used to write no longer parses).
+            create_if_missing(set_path,
+                              format_default_settings_template(
+                                  stem, audio.total_frames()));
+        }
+    }
 
     // Load the markers file. A present-but-malformed sidecar aborts the
     // load: GuiWarpMarkers::load clears the store before parsing, so a parse
@@ -366,6 +399,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // corrupt audio file or invalid engine settings below.
     app.warpmarkers.clear();
     app.phaseresetmarkers.clear();
+    app.magnificationlevelmarkers.clear();
     selection.clear_selection();
     app.active_markers_view    = 'W';
     app.drag = DragState{};
@@ -445,7 +479,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     }
 
     // Load the phase reset markers file. The empty file is the canonical
-    // no-resets form and parses to an empty list; the load-time creation
+    // no-resets form and parses to an empty list; the required-file rule
     // above guarantees the file is present, so the load is unconditional. A
     // present-but-malformed sidecar aborts the load: GuiPhaseResetMarkers::load
     // clears the store before parsing, so a parse failure would leave an empty
@@ -463,6 +497,28 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
         std::fprintf(stderr, "warptempo_gui: Parsed %zu phase_resets from %s\n",
                      app.phaseresetmarkers.markers().size(),
                      tm_path.string().c_str());
+    }
+
+    // Load the magnification level markers file, the phase-reset load's shape
+    // and for its reasons: required, the empty file the no-markers form, and a
+    // malformed sidecar aborting the load so an unconditional Ctrl+S can never
+    // overwrite the authored file with an emptied store. Display-only: the
+    // waveform's gain profile is built from this store
+    // (effective_waveform_gain_profile), and the first plate this load renders
+    // reads it.
+    if (auto r = app.magnificationlevelmarkers.load(ml_path.string()); !r) {
+        std::fprintf(stderr,
+            "warptempo_gui: Source load aborted: invalid magnification level "
+            "markers in '%s': %s\n",
+            ml_path.string().c_str(), r.error().c_str());
+        gui.request_exit();
+        return false;
+    } else {
+        std::fprintf(stderr,
+                     "warptempo_gui: Parsed %zu magnification level markers "
+                     "from %s\n",
+                     app.magnificationlevelmarkers.markers().size(),
+                     ml_path.string().c_str());
     }
 
     // Initial playhead: land at trim-begin if a b= marker was parsed,
@@ -621,7 +677,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // authored against, so a past-EOF position means the audio was swapped
     // outside the GUI. BOTH tabs' trim is checked — trim is per-tab, and an
     // inactive-tab bound would otherwise load and go live on the next tab
-    // switch. The six wall comparisons live in first_past_eof_wall_defect
+    // switch. The seven wall comparisons live in first_past_eof_wall_defect
     // (marker_store_validate.h), the one implementation the CLI runs too —
     // a file set is loadable or not, the same in both binaries. The
     // render-boundary EOF refusals downstream stay as breach backstops for
@@ -636,6 +692,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
         const auto detail = first_past_eof_wall_defect(
             slice_to_warp_markers(app.warpmarkers.markers()),
             slice_to_phase_reset_markers(app.phaseresetmarkers.markers()),
+            slice_to_magnification_level_markers(
+                app.magnificationlevelmarkers.markers()),
             trim_of(app.tab_a.trim), trim_of(app.tab_b.trim),
             audio.total_frames(), audio.sample_rate());
         if (detail) {

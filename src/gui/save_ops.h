@@ -6,13 +6,14 @@
 #include "undo.h"
 
 // Save-pipeline operations, extracted from main.cpp's
-// save_markers lambda. Coordinates the three on-disk writes
-// (.warpmarkers, .phaseresetmarkers, .settings) and the per-save
+// save_markers lambda. Coordinates the four on-disk writes
+// (.warpmarkers, .phaseresetmarkers, .magnificationlevelmarkers, .settings)
+// and the per-save
 // bookkeeping (active-tab snapshot refresh, then Undo::note_saved — the
 // history's mark_saved, the coalescing stamp's clear and the dirty-flag
 // refold, one tail). The .warpmarkers write is the primary
-// target; the .phaseresetmarkers write is a sibling; the .settings
-// write is required too, so any of the three failures keeps the save dirty.
+// target; the two other marker files are siblings; the .settings
+// write is required too, so any of the four failures keeps the save dirty.
 //
 // NO Viewport REFERENCE any more (2026-08-01): a save paints nothing of its
 // own. Its one damage request was the bottom row's dirty-mark cell, and that
@@ -24,11 +25,11 @@
 //
 // ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright
 // while a Save-and-Commit checkpoint is publishing, because that background act
-// writes these same three paths in the coincident projects/<id>/ workflow. The
+// writes these same four paths in the coincident projects/<id>/ workflow. The
 // term lives at the top of save() — one place, every caller — and the Save
 // button's "Committing..." face is its mirror.
 //
-// A FAILED SAVE SAYS SO HERE, AT THE OWNER (architect 2026-09-02): the three
+// A FAILED SAVE SAYS SO HERE, AT THE OWNER (architect 2026-09-02): the four
 // write arms and the numeric-locale refusal raise their own normal card, so
 // every caller inherits the sentence and none of them composes a second one
 // (the two callers that READ the bool decide with it — the quit prompt's Retry

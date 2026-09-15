@@ -54,6 +54,8 @@ struct LoadInPlaceCriticalSidecars {
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
+                                   std::vector<GuiMagnificationLevelMarker>
+                                       magnification_level_markers,
                                    EngineSettings engine_settings,
                                    int64_t trim_begin_frame,
                                    int64_t trim_end_frame,
@@ -64,6 +66,7 @@ RenderRequest build_render_request(std::string source_audio_path,
     req.warp_markers            = std::move(warp_markers);
     req.engine_settings    = std::move(engine_settings);
     req.phase_resets       = std::move(phase_resets);
+    req.magnification_level_markers = std::move(magnification_level_markers);
     req.trim_begin_frame     = trim_begin_frame;
     req.trim_end_frame       = trim_end_frame;
     req.batch_folder       = std::move(batch_folder);
@@ -401,6 +404,20 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             note_created(tm_path, existed);
 
+            // The magnification level markers, the fourth member of the set a
+            // source carries: required at every load, so a failed write fails
+            // the render as the other three do. Display-only — the render
+            // above read nothing of it.
+            const std::filesystem::path ml_path =
+                bf / (req.batch_basename + ".magnificationlevelmarkers");
+            existed = existed_before(ml_path);
+            if (!GuiMagnificationLevelMarkers::save(
+                    ml_path.string(), req.magnification_level_markers)) {
+                note_failure(ml_path);
+                return result;
+            }
+            note_created(ml_path, existed);
+
             // `.settings` sidecar: the SAME standard whole-file schema a
             // source carries, so the entry is a complete state on disk — a file
             // the strict reader, the CLI and a plain source load all take whole.
@@ -663,8 +680,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // On-disk wav publishes finish here. Ctrl+Alt+R one-off wavs are primary
     // artifacts: .fingerprint is warning-only. Sweep batch wavs are
     // loadable-in-place artifact sets: wav plus source-domain .warpmarkers,
-    // source-domain .phaseresetmarkers (including the empty-file form), and
-    // .settings. Those load-in-place-critical sidecars must publish before the wav
+    // source-domain .phaseresetmarkers (including the empty-file form),
+    // .magnificationlevelmarkers (likewise), and .settings. Those load-in-place-critical sidecars must publish before the wav
     // is reported as successful. .fingerprint is written last of all: it is
     // the attestation that the artifact set is complete, so a fingerprint
     // match on a later render implies those files exist. Process death

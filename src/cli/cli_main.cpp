@@ -1,6 +1,8 @@
 // Dead includes removed under grant (architect approval 2026-08-02).
 #include "warpmarkers_parse.h"          // WarpMarker, parse_warpmarkers_file
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker, parse_phaseresetmarkers_file
+#include "magnificationlevelmarkers_parse.h"  // MagnificationLevelMarker,
+                                              // parse_magnificationlevelmarkers_file
 #include "engine_settings.h"            // EngineSettings
 #include "settings_file.h"              // SettingsFile, read_settings_file
 #include "warp_frame_map_build.h"               // build_warp_frame_map,
@@ -95,22 +97,26 @@ int main(int argc, char** argv) {
     const std::string stem     = src.stem().string();
     const std::string wm_path  = (parent / (stem + ".warpmarkers")).string();
     const std::string pr_path  = (parent / (stem + ".phaseresetmarkers")).string();
+    const std::string ml_path  =
+        (parent / (stem + ".magnificationlevelmarkers")).string();
     const std::string set_path = (parent / (stem + ".settings")).string();
 
-    // --- settings: required, like the two marker sidecars below. The strict
+    // --- settings: required, like the three marker sidecars below. The strict
     // whole-file reader refuses an unopenable file with its own could-not-open
     // diagnostic, which surfaces verbatim through the print below.
     // title and the applied trim come from it. ---
     //
-    // "REQUIRED" IS THIS PRODUCT'S WORD ALONE (recorded 2026-09-02; architect
-    // approval 2026-09-02, comment-only): the GUI TEMPLATES an absent sidecar
-    // at load — a new project's first open writes all three beside its wav —
-    // so a set the GUI would create from nothing is a refusal here. That is
-    // the insurance render's own shape (it authors nothing and creates no
-    // authoring state), not a divergence in the loadability verdict, which is
-    // stated for FILES THAT EXIST just below.
+    // "REQUIRED" IS BOTH PRODUCTS' WORD FOR A SET THAT EXISTS (architect
+    // approval 2026-09-15): the GUI refuses a folder carrying some sidecars
+    // and not all four, and writes the four templates only for a folder
+    // carrying none — a new project's first open — so a set the GUI would
+    // create from nothing is a refusal here. That is the insurance render's
+    // own shape (it authors nothing and creates no authoring state), not a
+    // divergence in the loadability verdict, which is stated for FILES THAT
+    // EXIST just below.
     //
-    // Sidecar check order here is settings -> markers -> resets -> probe,
+    // Sidecar check order here is settings -> markers -> resets ->
+    // magnification level markers -> probe,
     // while the GUI load checks probe -> audio -> markers -> settings. On a
     // file set with multiple defects the two products therefore report a
     // DIFFERENT first error; the loadability verdict is identical (a set is
@@ -199,6 +205,23 @@ int main(int argc, char** argv) {
         resets = std::move(*prp);
     }
 
+    // --- magnification level markers: required and strictly parsed
+    // (architect approval 2026-09-15), exactly as the phase resets above, so
+    // a sidecar set is loadable in both products or neither; their frames meet
+    // the past-EOF wall below. NOT RENDERED: the column is display-only — the
+    // GUI's waveform picture is its one reader — so nothing past the wall
+    // reads it and it reaches no engine input. ---
+    std::vector<MagnificationLevelMarker> magnification_level_markers;
+    {
+        auto mlp = parse_magnificationlevelmarkers_file(ml_path);
+        if (!mlp) {
+            std::fprintf(stderr, "warptempo_cli: %s: %s\n",
+                         ml_path.c_str(), mlp.error().c_str());
+            return 1;
+        }
+        magnification_level_markers = std::move(*mlp);
+    }
+
     // --- source sample rate / total frames ---
     // Print the probe owner's diagnostic verbatim in the unified shape. The
     // CLI is insurance-only; per the non-adversarial rubric it gets the owner
@@ -251,8 +274,8 @@ int main(int argc, char** argv) {
     {
         const int64_t total = static_cast<int64_t>(total_frames);
         if (auto wall = first_past_eof_wall_defect(
-                markers, resets, sf.tab_a.trim, sf.tab_b.trim,
-                total, sample_rate)) {
+                markers, resets, magnification_level_markers,
+                sf.tab_a.trim, sf.tab_b.trim, total, sample_rate)) {
             std::fprintf(stderr, "warptempo_cli: %s\n", wall->c_str());
             return 1;
         }
@@ -480,7 +503,7 @@ int main(int argc, char** argv) {
     // terminal tool, whose exit code IS its verdict. (4) NO PROJECT MODEL: the
     // GUI resolves a project folder under `projects_path` and takes its source
     // from the sidecar stem, while this binary renders whatever source path it
-    // is handed and reads the three sidecars beside it — no folder shape, no
+    // is handed and reads the four sidecars beside it — no folder shape, no
     // legacy-layout refusal, no `last_project`. Also right for an insurance
     // render, and unstated until now.
     const std::string staging_output_path = render_staging_path(out_path);

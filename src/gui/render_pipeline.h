@@ -5,6 +5,7 @@
 #include "render_cache.h"
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
+#include "magnificationlevelmarkers.h"
 
 #include <atomic>
 #include <cstdint>
@@ -105,6 +106,19 @@ struct RenderRequest {
     // this field for sidecar emission.
     std::vector<GuiPhaseResetMarker> phase_resets;
 
+    // Full magnification level marker store snapshot (architect 2026-09-15),
+    // the phase resets' batch sidecar payload in shape: when batch_folder is
+    // set it is written verbatim as
+    // `<batch_folder>/<batch_basename>.magnificationlevelmarkers`, the empty
+    // file for an empty list, so the cell's sidecar set is the four a source
+    // carries and its `'` load in place brings the column back. DISPLAY-ONLY
+    // AND OUTSIDE EVERY RENDER INPUT: no engine stage, no map build, no
+    // render_fingerprint / compute_live_render_fingerprint term and no reuse
+    // rung reads it — the sidecar write is its one reader — so it changes no
+    // rendered byte and no render key, and the target preview's request
+    // carries it empty (it writes no sidecar).
+    std::vector<GuiMagnificationLevelMarker> magnification_level_markers;
+
     // Settings-side trim, sourced from AppState by the Ctrl+Alt+R / queue
     // submission paths. AppState::trim is the live mirror of the active tab's
     // trim; .settings stores tab_a_trim_begin / tab_a_trim_end and the B-tab
@@ -122,7 +136,8 @@ struct RenderRequest {
 
     // Nullable. When non-null, do_render routes the render to this buffer
     // instead of a staged .wav file. Skips the atomic rename and every batch
-    // sidecar write (.warpmarkers / .phaseresetmarkers / .settings) and the
+    // sidecar write (.warpmarkers / .phaseresetmarkers /
+    // .magnificationlevelmarkers / .settings) and the
     // cache-dir framemap pair. The post-engine chain
     // (post_trim crop when trimmed, then the always-on spectral + peak
     // limited chain, exactly as on the disk path) runs in place on this
@@ -136,7 +151,8 @@ struct RenderRequest {
     // writes its final `.wav` to `<batch_folder>/<batch_basename>.wav`
     // and attempts the per-render source-domain
     // `<batch_basename>.warpmarkers`, `<batch_basename>.phaseresetmarkers`,
-    // and `.settings` sidecars in the same folder. Those sidecars are
+    // `<batch_basename>.magnificationlevelmarkers` and `.settings` sidecars in
+    // the same folder. Those sidecars are
     // load-in-place-critical to success; `.fingerprint` is an optional cache
     // artifact.
     // The folder must already exist; do_render does not create it. When
@@ -241,10 +257,14 @@ RenderOutcome do_render(const RenderRequest& req,
 // the same validate-at-the-probe shape warp markers follow through
 // build_warp_frame_map (a sidecar is authored against one audio file's frame
 // grid). output_buffer is left at its nullptr default; the
-// target-view caller sets it after the call.
+// target-view caller sets it after the call. `magnification_level_markers`
+// is the batch sidecar payload alone (RenderRequest's field states why it is
+// no render input); the target-view caller passes it empty.
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
+                                   std::vector<GuiMagnificationLevelMarker>
+                                       magnification_level_markers,
                                    EngineSettings engine_settings,
                                    int64_t trim_begin_frame,
                                    int64_t trim_end_frame,

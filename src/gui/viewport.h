@@ -123,8 +123,15 @@ struct Viewport {
     //    calls this function direct when the displayed plate's gain
     //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
     //    release's plate lands in its own frame. No writer of a level calls
-    //    kick_waveform_sync_if_gain_changed at present: no marker column
-    //    carries a level, and the effective profile is empty.
+    //    kick_waveform_sync_if_gain_changed at present: the magnification
+    //    level markers store (the profile's one source,
+    //    waveform_gain_profile_cached, warp_frame_map_view.h) changes only on
+    //    roads that already run the UNCONDITIONAL synchronous rebuild after
+    //    their store write — the source load's first plate, the three loads
+    //    in place (GuiInputHandler::apply_recipe_in_place's tail) and the
+    //    undo/redo restore (Undo::restore_history_entry's tail) — and the
+    //    store's generation re-keys the profile, so each of those rebuilds
+    //    reads the new gain with no gain-change kick of its own.
     //    (The gain gate's other input, the zoom — magnification applies only
     //    at the working zoom or finer, effective_waveform_gain_profile — changes with a
     //    zoom write, whose applier's own synchronous kick carries it; the one

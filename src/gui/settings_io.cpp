@@ -223,6 +223,27 @@ std::expected<bool, GuiFailure> sidecar_present(
     return here;
 }
 
+std::expected<SidecarSetPresence, GuiFailure> sidecar_set_presence(
+        const std::filesystem::path& parent, const std::string& stem) {
+    std::size_t                          present = 0;
+    std::optional<std::filesystem::path> first_missing;
+    for (const char* ext : kSidecarExtensions) {
+        const std::filesystem::path p = parent / (stem + ext);
+        auto here = sidecar_present(p);
+        if (!here) return std::unexpected(std::move(here.error()));
+        if (*here) {
+            ++present;
+        } else if (!first_missing) {
+            first_missing = p;
+        }
+    }
+    if (present == 0) return SidecarSetPresence::None;
+    if (present == kSidecarCount) return SidecarSetPresence::All;
+    return std::unexpected(path_failure("Missing ", *first_missing,
+                                        shown_project_path(*first_missing),
+                                        ""));
+}
+
 bool create_if_missing(const std::filesystem::path& p,
                        const std::string& contents) {
     auto here = sidecar_present(p);
