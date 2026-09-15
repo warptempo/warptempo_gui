@@ -78,10 +78,9 @@ bool parse_signed_hops(const std::string& v, int& out) {
 
 } // namespace
 
-// Flag-editor cluster: the marker lane's four editors (the flag's
-// canonical-line editor, the iteration bound editor, the measure editor and
-// the magnification editor — text_editor::Kind's FlagPayload, IterBound,
-// MeasureText and MagnificationText) —
+// Flag-editor cluster: the marker lane's three editors (the flag's
+// canonical-line editor, the iteration bound editor and the measure editor —
+// text_editor::Kind's FlagPayload, IterBound and MeasureText) —
 // their enter / commit / exit paths — and the bpm-bracket editor session,
 // reaching undo and viewport through the struct's reference members. The
 // eligibility and flag-text helpers (iter_bracket_carrier,
@@ -617,10 +616,9 @@ void GuiFlagEditor::enter_measure_edit(int idx) {
 // waveform pixel and there is no waveform-area edge to invalidate.
 //
 // AN EMPTY BUFFER REMOVES THE MEASURE and is exempt from the grammar (the
-// validator has no "empty is fine" reading — a blank measure is the comment's
-// empty left half, never a token), so the comment's writer emits `//,<mag>`
-// or, with the magnification blank too, no comment at all — which is what
-// makes the empty `//,` a state the GUI can never write.
+// validator has no "empty is fine" reading — a blank measure is no comment at
+// all, never a token), so the writer emits no comment — which is what makes
+// the empty `//` a state the GUI can never write.
 void GuiFlagEditor::commit_measure_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (app.top_flag_editor.kind != text_editor::Kind::MeasureText) return;
@@ -684,128 +682,6 @@ void GuiFlagEditor::commit_measure_edit() {
     // so the box is the only thing that moved and the strip is the only damage.
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
-}
-
-// THE MAGNIFICATION EDITOR'S OPEN. The contract is at the declaration; this is
-// enter_measure_edit's mechanics with the green box's cell and seed. No
-// playback stop, the top-strip family's recorded exemption.
-void GuiFlagEditor::enter_magnification_edit(int idx) {
-    if (app.active_markers_view != 'W') return;
-    if (idx < 0) return;
-    if (idx >= static_cast<int>(app.warpmarkers.markers().size())) return;
-
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::MagnificationText &&
-        app.top_flag_editor.target == idx) {
-        // Re-open on the live session's own target: keep the pending text,
-        // just repaint (the payload editor's rule).
-        viewport.invalidate_top_strip();
-        return;
-    }
-
-    // The focus repaired, then single-selected and landed — the measure
-    // editor's open verbatim — and the cell seated behind the select, which
-    // reset it to the payload through the Selection chokepoint.
-    selection.repair_last_selected();
-    selection.set_single_selection(idx);
-    land_playhead_on_marker(app, audio, viewport, idx);
-    app.addressed_cell = MarkerCell::Magnification;
-
-    if (text_editor::is_active(app.top_flag_editor)) {
-        text_editor::deactivate(app.top_flag_editor);
-    }
-    // THE SEED: the marker's own digit, else the digit it resolves to — so the
-    // field always opens on the value the picture is drawn at here. A blank
-    // marker paints no green box at rest, so the field opening over it is the
-    // box appearing with the inherited digit in it, selected whole.
-    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
-    const std::optional<uint8_t>& own = mv[static_cast<size_t>(idx)].magnification;
-    const uint8_t seed_value =
-        own ? *own
-            : static_cast<uint8_t>(resolved_magnification_level(mv, idx));
-    text_editor::enter(app.top_flag_editor, idx,
-                       format_marker_magnification(seed_value),
-                       text_editor::Kind::MagnificationText);
-
-    // Open-selected: the digit is fully selected so the first keystroke
-    // replaces it. The seed is never empty.
-    app.top_flag_editor.selection_anchor = 0;
-    app.top_flag_editor.cursor_pos =
-        static_cast<int>(app.top_flag_editor.pending.size());
-
-    viewport.invalidate_top_strip();
-}
-
-// THE MAGNIFICATION COMMIT. The grammar is judged here against its one owner
-// (parse_marker_magnification, marker_magnification.h — the same judge the
-// warp file parser uses), so a value that commits loads back. The refusal is
-// the top-strip family's shape: `red = true`, a top-strip repaint, one stderr
-// line keeping the offending token, one normal card carrying the sentence, and
-// the session left standing.
-void GuiFlagEditor::commit_magnification_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    if (app.top_flag_editor.kind != text_editor::Kind::MagnificationText)
-        return;
-    const int idx = app.top_flag_editor.target;
-    const std::string next = app.top_flag_editor.pending;
-
-    // AN EMPTY BUFFER IS THE BLANK FIELD — the marker inherits again.
-    std::optional<uint8_t> value;
-    if (!next.empty()) {
-        uint8_t parsed = 0;
-        std::string err;
-        if (!parse_marker_magnification(next, parsed, err)) {
-            app.top_flag_editor.red = true;
-            viewport.invalidate_top_strip();
-            const std::string refusal =
-                "Magnification must be a digit from 0 to " +
-                std::to_string(kMarkerMagnificationMax);
-            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                         refusal.c_str(), next.c_str());
-            notifications.notify(AppState::NotificationClass::Normal, refusal);
-            return;
-        }
-        value = parsed;
-    }
-    // The warp store, the open's own (the view cannot move under an open
-    // session — commit_measure_edit's argument). The target may have gone out
-    // from under the editor: drop the edit.
-    const int n = static_cast<int>(app.warpmarkers.markers().size());
-    if (idx < 0 || idx >= n) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
-
-    // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE. An untouched inherited
-    // prefill IS a change (blank to own) and takes the entry below — the
-    // architect's 2026-09-14 ruling, stated at the open.
-    if (app.warpmarkers.markers()[static_cast<size_t>(idx)].magnification ==
-        value) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
-
-    // ONE UNDO ENTRY: the field is serialized content.
-    uint64_t prior_gain_hash = 0;
-    {
-        std::vector<GuiWarpMarker> pre = app.warpmarkers.markers();
-        prior_gain_hash = viewport.waveform_gain_hash();
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (m) m->magnification = value;
-        undo.push_undo_warp(std::move(pre));
-    }
-    undo.recompute_dirty();
-
-    text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_top_strip();
-    // NO RENDER AND NO MAP REBUILD — the field reaches neither the engine nor
-    // the render fingerprint — BUT THE PICTURE MAY HAVE MOVED: when the resolved
-    // gain profile's hash changed, the plate fingerprint and the overview bar
-    // cache are dirty by field, and the kick renders that plate synchronously
-    // so the new gain lands in the frame the box does rather than a frame late
-    // through the async backstop; a write the profile cannot see renders
-    // nothing (the gain category at Viewport::kick_waveform_sync, viewport.h).
-    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
 }
 
 // Validate `pending` as a single canonical line and, on success, write
@@ -919,11 +795,10 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // disabled is not the editor's field — the candidate carried the marker's
     // own bit, parse_single_canonical_line populated it; reapply.
     m.disabled      = parsed.disabled;
-    // THE MEASURE AND THE MAGNIFICATION ARE NOT THIS EDITOR'S and are
-    // preserved by construction: `m` is the live marker copied whole, and no
-    // line above writes either field. The candidate parsed at
-    // accept_comment = false, so `parsed.measure` is always empty and
-    // `parsed.magnification` always blank, and neither may be assigned from —
+    // THE MEASURE IS NOT THIS EDITOR'S and is preserved by construction: `m`
+    // is the live marker copied whole, and no line above writes the field. The
+    // candidate parsed at accept_comment = false, so `parsed.measure` is always
+    // empty and may not be assigned from —
     // a ` //` typed into the payload buffer is a grammar error the parse
     // already red-flashed. The measure has its own editor (Kind::MeasureText).
 

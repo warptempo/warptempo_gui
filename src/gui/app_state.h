@@ -453,28 +453,6 @@ struct DragState {
     // MOTION/PAINT value: at commit it converts back to an authored frame through
     // the pixel-anchoring column snap (commit_drag).
     std::vector<double> moveable_times;
-    // THE PROPOSAL AS THE COMMIT WOULD STORE IT (architect 2026-09-14, the
-    // gain following the drag): moveable_times[0] converted to a whole source
-    // frame by the commit's OWN conversion (committed_frame_for_proposal,
-    // marker_drag.cpp — the bit-exact untouched branch, the painted column
-    // snap through authored_frame_at_column, the integer walls), written
-    // beside moveable_times[0] at begin_drag and at every apply_drag_motion.
-    // Its ONE reader is the gain profile's drag slot
-    // (waveform_gain_profile_drag_cached, warp_frame_map_view.h), which builds
-    // the warp store as it would stand if the drag were released now — so the
-    // magnified sections move with the hand and land where the release puts
-    // them. The viewport and the displayed map are frozen for the gesture, so
-    // the motion-time answer is the commit's answer; commit_drag still
-    // converts for itself.
-    int64_t             proposed_authored_frame = 0;
-    // THE DEFERRED GAIN PREVIEW'S DEBT (2026-09-14): set by apply_drag_motion
-    // when a source-view motion moved the effective gain profile's hash but
-    // the synchronous plate render was SKIPPED because the displayed plate's
-    // geometry was not the live geometry (Viewport::
-    // displayed_plate_geometry_is_live). Its ONE reader is commit_drag, which
-    // repays it with a synchronous rebuild in the release's own frame; never
-    // cleared but by the release's wholesale DragState reset.
-    bool                gain_preview_deferred = false;
     // Press position in ACTIVE-domain frame doubles; the motion delta
     // (mouse_frame - anchor) therefore lives in active-domain frames, and
     // apply_drag_motion carries it into the source domain through the
@@ -559,8 +537,8 @@ struct DragState {
 // not at all"). What it steps is the cell the press landed on, through the
 // arrows' own landing owners: the BASE TEMPO on a warp flag's payload, a BOUND
 // on either column's purple cell, and since 2026-09-14 the MEASURE (a blank or
-// direct integer) and the MAGNIFICATION on a warp flag's purple and green
-// boxes (the measure box Breeze blue until 2026-09-15).
+// direct integer) on a warp flag's purple box (Breeze blue until
+// 2026-09-15).
 // The target rule is one predicate,
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
@@ -601,15 +579,14 @@ struct ValueDragState {
     // record of what was grabbed, not a defence against a switch.
     char       column  = 'W';
     // Which cell the press landed on — Payload (the base tempo), Lower /
-    // Upper (a bound), or since 2026-09-14 Measure (a steppable measure) and
-    // Magnification — value_drag_target decides which it may be.
+    // Upper (a bound), or since 2026-09-14 Measure (a steppable measure) —
+    // value_drag_target decides which it may be.
     MarkerCell cell    = MarkerCell::Payload;
     int        press_y = 0;    // window px: the travel is measured from here
     // The value the press found, in the cell's own domain: authored CENTS on
     // the payload and on a warp bound, HOPS on a phase-reset bound, the
     // MEASURE's integer (0 for a BLANK, so the first motion lands measure 1
-    // through measure_step_landing) and the MAGNIFICATION digit (the own
-    // digit, else the RESOLVED one — magnification_step_start). ON A PASS
+    // through measure_step_landing). ON A PASS
     // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
     // "the pass inherits whatever it was and then applies on up and down"):
     // the seed comes from warp_tempo_step_start (warpmarkers_ops.h), the very
@@ -627,12 +604,10 @@ struct ValueDragState {
     // early when the count has not moved, so a hand wandering inside one step's
     // kValueDragPxPerStep writes nothing and damages nothing.
     int64_t    last_steps  = 0;
-    // The undo payload of the TEMPO, MEASURE and MAGNIFICATION arms, captured
-    // at the begin and pushed by the commit iff the field netted a change —
-    // the tempo's tempo_inherits/tempo_cents PAIR (a pass converted and dragged
-    // back to its own base moved the pair, not the cents), the measure string,
-    // the magnification optional (a blank frozen to own at its resolved digit
-    // is a change). Empty on a bound drag by construction — that arm pushes
+    // The undo payload of the TEMPO and MEASURE arms, captured at the begin
+    // and pushed by the commit iff the field netted a change — the tempo's
+    // tempo_inherits/tempo_cents PAIR (a pass converted and dragged back to its
+    // own base moved the pair, not the cents) and the measure string. Empty on a bound drag by construction — that arm pushes
     // nothing.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
 };
@@ -2008,11 +1983,10 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's EIGHTEEN (re-counted 2026-09-14) — the
+// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-15) — the
 // transport three, the FOUR SINGLE-MARKER VERBS with the COPY VALUE button
 // (2026-08-29), the EDIT FLAG BUTTON (2026-08-27),
-// the MARKER MEASURE (2026-08-19), the MARKER MAGNIFICATION (2026-09-14),
-// ADD TO SELECTION (2026-08-18) behind
+// the MARKER MEASURE (2026-08-19), ADD TO SELECTION (2026-08-18) behind
 // them, the MARKER-WALK two
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
@@ -2032,8 +2006,8 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-09 against kDropdownMenus and the chord table (45 chord
-// rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-14);
+// re-greped 2026-09-09 against kDropdownMenus and the chord table (42 chord
+// rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-15);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -2282,9 +2256,8 @@ enum class RedesignButton {
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
     // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
     // architect retired the setting it stepped (architect approval 2026-09-14):
-    // the picture's gain is a per-section profile resolved from the warp
-    // markers now, each marker carrying its own magnification, so there is no
-    // piece-wide level for a button to step. Both buttons, the step owner and
+    // the picture's gain is a per-section profile, so there is no piece-wide
+    // level for a button to step. Both buttons, the step owner and
     // the applier were deleted whole.)
     // FOLLOW (bare `f`) — THE ZOOM GROUP'S LAST MEMBER SINCE 2026-08-27, and a
     // VIEWPORT-CLASS act like everything else in it: the mode that keeps the
@@ -2561,7 +2534,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. EIGHTEEN buttons in four groups, in painted order (the enum
+    // detection. SEVENTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2826,17 +2799,6 @@ enum class RedesignButton {
     // tab and in redesign_button_shift_admits; the jump left the product whole
     // and the button returned to the lock's set with it.)
     IconMarkerMeasure,
-    // THE MARKER MAGNIFICATION (architect 2026-09-14), seated RIGHT AFTER THE
-    // MEASURE in the verb group: CTRL+/, the zoom-in-vertical glyph (the one
-    // the retired Magnify button wore), opening the MAGNIFICATION EDITOR on
-    // the focused warp marker. Its enabled arm reads
-    // marker_magnification_edit_actionable (the warp column, then a focus —
-    // the Ctrl+/ arm's own refusal), and it greys with the Measure under the
-    // READ-ONLY lock and in the `h` view (Ctrl+/ is on neither allowlist) and
-    // under the ITERATION LOCK (iteration_lock_greys — a magnification is
-    // serialized content and pushes). A ctrl chord's own button: it admits no
-    // shift variant. NO LAMP: an act, not a mode.
-    IconMarkerMagnification,
     // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SEVENTH
     // member, seated IMMEDIATELY AFTER THE MEASURE (architect 2026-08-29, his
     // live pass that evening; it sat after Toggle inherit for the afternoon
@@ -2961,16 +2923,16 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-15, at
-// the two view lamps' whole-category deletion): SIX in row 1 (the three menu
-// anchors and the view bar's three), two in row 3, TWENTY in row 4 and
-// EIGHTEEN in the bottom row — 46. Of those, FORTY-THREE carry a chord in
+// the per-marker Magnification button's deletion): SIX in row 1 (the three
+// menu anchors and the view bar's three), two in row 3, TWENTY in row 4 and
+// SEVENTEEN in the bottom row — 45. Of those, FORTY-TWO carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 46;
+inline constexpr int kRedesignButtonCount = 45;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3062,7 +3024,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
-        case RedesignButton::IconMarkerMagnification:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -3076,12 +3037,13 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-09-14: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-15: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION, (2026-08-27)
-// the EDIT FLAG BUTTON, (2026-08-29) the COPY VALUE button and (2026-09-14)
-// the MARKER MAGNIFICATION landing behind them (the VALUE DRAG LAMP stood last in that group from 2026-09-10
-// to its deletion 2026-09-13), the MARKER-WALK GROUP's two (2026-08-15; three
+// the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button landing behind
+// them (the VALUE DRAG LAMP stood last in that group from 2026-09-10 to its
+// deletion 2026-09-13, and the MARKER MAGNIFICATION behind the Measure from
+// 2026-09-14 to 2026-09-15), the MARKER-WALK GROUP's two (2026-08-15; three
 // until Walk Both Tabs left on 2026-09-14) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
@@ -3089,7 +3051,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3115,7 +3077,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
-        case RedesignButton::IconMarkerMagnification:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -4887,9 +4848,8 @@ struct AppState {
 
     // (THE WAVEFORM'S VISUAL MAGNIFICATION LEVEL LEFT THIS STRUCT 2026-09-14
     // with its settings key, architect approval 2026-09-14: the picture's gain
-    // is a per-section profile resolved from the warp markers —
-    // waveform_gain_profile_cached, warp_frame_map_view.h — each warp marker
-    // carrying its own optional magnification.)
+    // is a per-section profile — effective_waveform_gain_profile,
+    // warp_frame_map_view.h.)
 
     // The repository that is the PROJECTS HOME — where the architect's
     // committed working checkpoints live, and the corpus the GitHub recheck
@@ -5205,14 +5165,6 @@ struct AppState {
     // marker drag (the store mutates only at commit).
     mutable WarpRedFlagCache warp_red_flag_cache;
     mutable PhaseResetRedFlagCache phase_reset_red_flag_cache;
-    // The memoized waveform gain profile (waveform_gain_profile_cached,
-    // warp_frame_map_view.h), keyed on the warp store generation. Mutable for
-    // the same reason as the red-flag sets: refreshed from const readers.
-    mutable WaveformGainProfileCache waveform_gain_profile_cache;
-    // Its DRAG SLOT (waveform_gain_profile_drag_cached): the profile of the
-    // store as a standing warp marker drag would commit it, keyed (store
-    // generation, dragged index, proposed frame). Same mutability argument.
-    mutable WaveformGainProfileCache waveform_gain_profile_drag_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
     // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
@@ -5912,7 +5864,7 @@ struct AppState {
     // settings editor, the commit-title editor and the bpm bracket editor;
     // the top-strip flag
     // editor is deliberately not one of them in EITHER of its non-bracket
-    // kinds — FlagPayload, MeasureText, MagnificationText or IterBound, all of
+    // kinds — FlagPayload, MeasureText or IterBound, all of
     // which paint in the top strip; the `h` view's load editor and the Open project editor were the
     // fifth and sixth until 2026-08-28, when both became the field-less
     // PICKER, which is a modal owner and not an editor — AppState::Picker).
@@ -5953,8 +5905,8 @@ struct AppState {
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SEVEN editor kinds, 0 when
-    // none stands — the accessor above widened by the four top-strip kinds it
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SIX editor kinds, 0 when
+    // none stands — the accessor above widened by the three top-strip kinds it
     // names as deliberate non-members. It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
     // with the edit they were armed in: keying them to this id turns "reset
@@ -5974,7 +5926,7 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the seven
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the six
     // editor kinds does, on a backend that asks for one, and it holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the symbol layer — and both are SESSION-SCOPED: `lamp_session`
@@ -7734,9 +7686,7 @@ struct AppState {
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
     // other two dialog editors (2026-08-13), the marker MEASURE editor
     // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
-    // like the flag editor and carries no red-flash edge of its own, the
-    // marker MAGNIFICATION editor (Kind::MagnificationText, since 2026-09-14),
-    // the measure editor's twin over the green box, and the
+    // like the flag editor and carries no red-flash edge of its own, and the
     // ITERATION BOUND editor (Kind::IterBound, since 2026-09-05), which
     // paints over its bound cell in the top strip and carries no stem flash
     // either. The editor owns the keyboard while active.
@@ -8200,8 +8150,7 @@ struct AppState {
     // the cells going with the mode; a Measure axis survives it.
     //
     // READERS: the Up/Down dispatch's fork (input_handler.cpp — THE VALUE
-    // STEP, one body per cell: the tempo, a bound, the measure, the
-    // magnification), the plain wheel over a flag cell (run_flag_cell_wheel,
+    // STEP, one body per cell: the tempo, a bound, the measure), the plain wheel over a flag cell (run_flag_cell_wheel,
     // input_pointer.cpp, which writes it first through the plain click's
     // select body and then steps it), the Return arm's
     // editor fork, the flag painter's bright cell (render_flags through the
@@ -10165,8 +10114,8 @@ inline bool marker_paints_iter_cells(const AppState& app, char column,
 // The vertical arrows' SECOND step body steps one bound of the focused
 // marker's iteration bracket while the addressed cell
 // (AppState::addressed_cell) is Lower or Upper; a Payload axis is the tempo
-// step and the Measure and Magnification axes run their own value steps
-// (measure_step_* / magnification_step_*, beside value_drag_target below).
+// step and the Measure axis runs its own value step (measure_step_*, beside
+// value_drag_target below).
 // Its predicates mirror the tempo step's above one for one —
 // the stable-state refusals, the landing owner, the
 // directional face, the kind refusal — and each has the same readers: the act,
@@ -10211,11 +10160,10 @@ inline bool iter_bound_step_actionable(const AppState& app) {
     return tempo_cent_step_actionable(app);
 }
 
-// (THE MEASURE AND MAGNIFICATION AXES were a refusal here —
-// addressed_cell_step_refusal, "A measure has no value to step" — until
-// 2026-09-14, when both cells gained a value step of their own: THE VALUE
-// STEP's measure and magnification owners stand beside value_drag_target
-// below, after authoring_locked, which they read.)
+// (THE MEASURE AXIS was a refusal here — addressed_cell_step_refusal, "A
+// measure has no value to step" — until 2026-09-14, when the cell gained a
+// value step of its own: THE VALUE STEP's measure owners stand beside
+// value_drag_target below, after authoring_locked, which they read.)
 
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
 // tempo_cent_step_landing in the bracket's delta domain. The start is the
@@ -10650,24 +10598,6 @@ inline bool marker_measure_edit_actionable(const AppState& app) {
     return marker_measure_edit_refusal(app) == nullptr;
 }
 
-// THE MAGNIFICATION EDITOR'S OPEN REFUSAL (architect 2026-09-14) — the
-// measure's shape, ONE OWNER for Ctrl+/ (the card), the Magnification
-// button's face (the grey) and Return's magnification arm
-// (flag_editor_open_actionable): the column first, phase resets carrying no
-// magnification (PhaseResetMarker), then the focus. nullptr is the open.
-inline constexpr const char* kMagnificationNoFocusCard =
-    "Select a marker to edit its magnification";
-inline constexpr const char* kMagnificationWarpOnlyCard =
-    "Magnification is set on warp markers";
-inline const char* marker_magnification_edit_refusal(const AppState& app) {
-    if (app.active_markers_view != 'W') return kMagnificationWarpOnlyCard;
-    if (!marker_focus_standing(app))    return kMagnificationNoFocusCard;
-    return nullptr;
-}
-inline bool marker_magnification_edit_actionable(const AppState& app) {
-    return marker_magnification_edit_refusal(app) == nullptr;
-}
-
 // BARE RETURN'S OPEN REFUSAL, composed (architect 2026-08-30; over the
 // addressed cell since 2026-09-05): Return opens the ADDRESSED CELL'S editor
 // on the FOCUSED marker, so it wants a focus first, and then the cell's own
@@ -10680,9 +10610,7 @@ inline bool marker_magnification_edit_actionable(const AppState& app) {
 // card behind a live face, as the Up/Down pair's is. READERS: the Return arm
 // (input_handler.cpp) and the Edit flag button's disabled face. The MEASURE
 // editor's own key (bare `/`) and its button read
-// marker_measure_edit_refusal / marker_measure_edit_actionable, and the
-// MAGNIFICATION editor's (Ctrl+/) marker_magnification_edit_refusal /
-// marker_magnification_edit_actionable, which its arm here asks too.
+// marker_measure_edit_refusal / marker_measure_edit_actionable.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
@@ -10690,8 +10618,6 @@ inline bool flag_editor_open_actionable(const AppState& app) {
     case MarkerCell::Lower:
     case MarkerCell::Upper:   return true;
     case MarkerCell::Measure: return marker_measure_edit_actionable(app);
-    case MarkerCell::Magnification:
-        return marker_magnification_edit_actionable(app);
     }
     return false;
 }
@@ -11328,7 +11254,7 @@ inline bool any_tab_read_only(const AppState& a) {
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
-        // The four marker verbs, the Measure and the Magnification: every one
+        // The four marker verbs and the Measure: every one
         // of them writes a store and pushes, which is the whole of what the
         // lock holds back.
         case RedesignButton::IconMarkerDrop:
@@ -11336,7 +11262,6 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerMeasure:
-        case RedesignButton::IconMarkerMagnification:
         // The Toggle History View button — the view's own acts push history,
         // and two modal views are not composed, so the ENTRY refuses
         // (handle_history_mode_key, input_key_dispatch.cpp).
@@ -11412,10 +11337,9 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
         // as the keyboard gate's own bound-axis test does: with Lower or Upper
         // addressed the press reaches the bound cells — the mode's one
-        // authoring surface — and on the PAYLOAD, the MEASURE or the
-        // MAGNIFICATION axis it would
+        // authoring surface — and on the PAYLOAD or the MEASURE axis it would
         // open an editor over serialized content or run a value step that
-        // pushes (the tempo, the measure or the magnification). The gate
+        // pushes (the tempo or the measure). The gate
         // admits the two bound cells and nothing else, so the lock is the
         // refusal that stands on every other axis under a lit lamp.
         case RedesignButton::IconMarkerEditFlag:
@@ -11442,30 +11366,29 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     }
 }
 
-// -- THE VALUE STEP'S MEASURE AND MAGNIFICATION AXES (architect 2026-09-14) --
+// -- THE VALUE STEP'S MEASURE AXIS (architect 2026-09-14) -------------------
 //
 // "The value step" is the NAME of bare Up/Down: they step the ADDRESSED
 // CELL's value, one body per cell — the tempo on the payload
 // (adjust_tempo_cents, whose tempo_cent_step_* symbols keep their names), a
 // bound on Lower / Upper (adjust_iter_bound_cents / _hops), and since
-// 2026-09-14 THE MEASURE and THE MAGNIFICATION (GuiWarpMarkersOps::
-// adjust_measure_step / adjust_magnification_step, warpmarkers_ops.cpp). The
-// owners below serve those two bodies and have the same readers as the tempo
+// 2026-09-14 THE MEASURE (GuiWarpMarkersOps::adjust_measure_step,
+// warpmarkers_ops.cpp). The owners below serve that body and have the same readers as the tempo
 // step's owners: the act, the Up / Down face (redesign_button_enabled), their
 // tooltip (the stateful overload), the VALUE DRAG (value_drag_target and
 // ValueDragOps) and the plain WHEEL over a flag cell (run_flag_cell_wheel,
 // input_pointer.cpp), which reaches the act itself.
 //
-// WHAT THE TWO SHARE: the warp column alone (a phase reset carries neither
-// field), a SINGLETON on the focus (a group press collapses to its focus, the
-// bound step's shape), both locks refusing (each field is serialized content
-// and each step pushes an undo entry — read-only and the iteration lock alike,
+// ITS SHAPE: the warp column alone (a phase reset carries no measure), a
+// SINGLETON on the focus (a group press collapses to its focus, the
+// bound step's shape), both locks refusing (the field is serialized content
+// and the step pushes an undo entry — read-only and the iteration lock alike,
 // authoring_locked), a silent wall asked ahead of the coalesce stamp, and
 // nothing past the write but the undo entry, the dirty bit and the damage: no
-// re-warp, no render, no re-land, the playhead unmoved (neither field moves a
-// map or a marker).
+// re-warp, no render, no re-land, the playhead unmoved (the field moves no
+// map and no marker).
 
-// THE STABLE-STATE REFUSALS, shared by both axes: the warp column, a standing
+// THE STABLE-STATE REFUSALS: the warp column, a standing
 // selection and a valid focus — the tempo step's own three terms, read rather
 // than restated. The LOCK is not a term here: the act asks authoring_locked on
 // its own so it can card the lock's sentence rather than this one, and the
@@ -11540,43 +11463,6 @@ inline bool measure_step_direction_actionable(const AppState& a,
     if (f < 0 || f >= static_cast<int>(mv.size())) return true;
     const int64_t start = measure_step_start(mv[static_cast<size_t>(f)].measure);
     return measure_step_landing(start, delta) != start;
-}
-
-// WHERE A MAGNIFICATION STEP STARTS — the marker's OWN digit, else the digit
-// it RESOLVES to (resolved_magnification_level, warpmarkers.h — the value the
-// picture is drawn at there, the editor's own seed). A BLANK FREEZES TO OWN AT
-// THE LANDING, the tempo step's pass shape: the step writes the landed digit
-// into the field, so a blank marker stepped Up from an inherited 2 owns 3.
-inline int magnification_step_start(const std::vector<GuiWarpMarker>& mv,
-                                    int idx) {
-    if (idx < 0 || idx >= static_cast<int>(mv.size())) return 0;
-    const std::optional<uint8_t>& own = mv[static_cast<size_t>(idx)].magnification;
-    return own ? static_cast<int>(*own) : resolved_magnification_level(mv, idx);
-}
-
-// WHERE ONE MAGNIFICATION STEP LANDS — THE ONE LANDING OWNER, shared by the
-// key, the drag and the wheel: a clamp into [0, kMarkerMagnificationMax]
-// (marker_magnification.h, the range's one owner), so Down at 0 and Up at the
-// max land where they stand — the walls, silent.
-inline int magnification_step_landing(int start, int64_t delta) {
-    return static_cast<int>(std::clamp<int64_t>(
-        static_cast<int64_t>(start) + delta, 0, kMarkerMagnificationMax));
-}
-
-// THE MAGNIFICATION STEP'S DIRECTIONAL FACE. There is NO kind refusal — every
-// warp marker carries the field, a label ref and a disabled marker included.
-// A BLANK NEVER WALLS, the tempo pass's rule (tempo_cent_step_direction_
-// actionable answers true for a pass in both directions): the freeze to own is
-// a change even where the resolved digit rests on a wall. An OWNED digit walls
-// at 0 (Down) and at the max (Up). A stale focus answers true (a belt).
-inline bool magnification_step_direction_actionable(const AppState& a,
-                                                    int64_t delta) {
-    const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
-    const int f = a.last_selected_marker;
-    if (f < 0 || f >= static_cast<int>(mv.size())) return true;
-    const std::optional<uint8_t>& own = mv[static_cast<size_t>(f)].magnification;
-    if (!own) return true;
-    return magnification_step_landing(*own, delta) != static_cast<int>(*own);
 }
 
 // IS THE FLAG'S PLAIN DRAG THE VALUE DRAG HERE — the gesture's POSTURE, a
@@ -11693,9 +11579,9 @@ inline bool value_drag_posture(const AppState& a) {
 // on read_only_key_blocked's allowlist, so the keyboard refuses a bound step
 // on a locked tab and the pointer refuses it here.
 //
-// THE MEASURE AND MAGNIFICATION ARMS (2026-09-14) admit a steppable measure
-// (blank or a direct integer) and every magnification, on the warp column,
-// under neither lock — the arrows' own admissions.
+// THE MEASURE ARM (2026-09-14) admits a steppable measure (blank or a direct
+// integer), on the warp column, under neither lock — the arrows' own
+// admission.
 //
 // EVERYTHING ELSE IS FALSE: an offset measure (the arrows card it and the
 // pointer says it in silence), a phase reset's payload, a ref, a collapse
@@ -11727,22 +11613,18 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
     case MarkerCell::Upper:
         if (active_view_state(a).read_only) return false;
         return marker_paints_iter_cells(a, column, idx);
-    case MarkerCell::Measure:
-    case MarkerCell::Magnification: {
-        // THE MEASURE AND THE MAGNIFICATION (architect 2026-09-14): the value
-        // step's two newer axes, where the posture already stands (which is
-        // T+W in effect — a phase reset carries neither field). Both locks
-        // refuse as they refuse the payload, each field being serialized
-        // content the step records. The measure asks the arrows' kind owner
-        // about THIS marker (an offset has no number to step); the
-        // magnification has no kind refusal at all.
+    case MarkerCell::Measure: {
+        // THE MEASURE (architect 2026-09-14): the value step's newer axis,
+        // where the posture already stands (which is T+W in effect — a phase
+        // reset carries no measure). Both locks refuse as they refuse the
+        // payload, the field being serialized content the step records. It
+        // asks the arrows' kind owner about THIS marker (an offset has no
+        // number to step).
         if (column != 'W') return false;
         if (authoring_locked(a)) return false;
         const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
         if (idx >= static_cast<int>(mv.size())) return false;
-        if (cell == MarkerCell::Measure)
-            return measure_step_kind_refusal_for(a, idx) == nullptr;
-        return true;
+        return measure_step_kind_refusal_for(a, idx) == nullptr;
     }
     }
     return false;
@@ -11891,7 +11773,7 @@ enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 // ONE AT-OR-FINER PREDICATE, the spelling THREE readers share, each deriving a
 // posture from the zoom (architect 2026-09-14): the Left/Right nudge's
 // recenter (Viewport::recenter_after_nudge), the waveform gain gate
-// (effective_waveform_gain_profile, warp_frame_map_view.cpp — magnification
+// (effective_waveform_gain_profile, warp_frame_map_view.cpp — a gain profile
 // applies finer than working too) and the bare Tab walk's framing
 // (marker_walk_frame, below).
 inline bool zoom_level_at_or_finer_than_working(double level) {
@@ -11954,11 +11836,10 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     singleton's changed path past that tail, and the group arm past its
 //     verdict (GuiWarpMarkersOps::adjust_tempo_cents and
 //     ::adjust_tempo_cents_group, warpmarkers_ops.cpp);
-//   * THE MEASURE STEP and THE MAGNIFICATION STEP (2026-09-14), the value
-//     step's two newer axes, on their one accepted exit each — the wall exit
-//     (an accepted step landing where it stands) and the changed path alike
-//     (GuiWarpMarkersOps::adjust_measure_step / ::adjust_magnification_step,
-//     warpmarkers_ops.cpp), the tempo step's placement;
+//   * THE MEASURE STEP (2026-09-14), the value step's newer axis, on its one
+//     accepted exit — the wall exit (an accepted step landing where it
+//     stands) and the changed path alike (GuiWarpMarkersOps::
+//     adjust_measure_step, warpmarkers_ops.cpp), the tempo step's placement;
 //   * THE WARP DELETE and the PHASE-RESET DELETE, Ctrl+D on both columns and
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete is
@@ -11983,7 +11864,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     (position_nudge.h), so the nudge never acts on a selection at all; what
 //     it acts on is a singleton, which is not a selection that was built;
 //   * BARE `j` and Shift+`j` — they read the FOCUS and write no store;
-//   * THE MARKER DROP, the four marker-lane EDITORS and the TAB WALK — none
+//   * THE MARKER DROP, the three marker-lane EDITORS and the TAB WALK — none
 //     of them consumes a selection: the drop makes one, the editors edit one
 //     marker and the walk is how a selection is navigated.
 // AND THE SEVEN SILENT CLEARS DELETED ON 2026-09-10 STAY DELETED: those were
@@ -12053,11 +11934,8 @@ inline bool warp_row_fields_differ(const GuiWarpMarker& a,
         || a.label_ref      != b.label_ref
         // The measure is a serialized field like the rest: a measure-only undo
         // mutates nothing else, so omitting it would strand the selection
-        // exactly as an omitted bracket would. The magnification is the
-        // comment's other serialized half and stands beside it for the same
-        // reason (architect 2026-09-14).
+        // exactly as an omitted bracket would.
         || a.measure        != b.measure
-        || a.magnification  != b.magnification
         // The session-only BPM fields ride undo snapshots, and row identity
         // means the whole struct for them: a bpm-only undo mutates only these,
         // so omitting them would leave the same-count matcher finding no
@@ -13966,14 +13844,6 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    marker_measure_edit_actionable(a);
-        // THE MARKER MAGNIFICATION (2026-09-14) takes the Measure's arm
-        // exactly over its own refusal owner, marker_magnification_edit_actionable
-        // (the Ctrl+/ arm's): the lock, the iteration lock, the warp column
-        // and a focus.
-        case RedesignButton::IconMarkerMagnification:
-            return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b) &&
-                   marker_magnification_edit_actionable(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
@@ -14159,7 +14029,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // its allowlist), THE FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT
         // FLAG BUTTON, THE MARKER MEASURE and ADD TO SELECTION (bare `j`,
         // bare Return, bare `k` and bare `/` are consumed in there like the
-        // verbs' four chords) — THIRTEEN of the eighteen. The two SKIPS and
+        // verbs' four chords) — THIRTEEN of the seventeen. The two SKIPS and
         // the MARKER-WALK GROUP'S TWO stay lit, being the mode's own
         // absolute jumps and its diff-flag cycle (the tab row's shifted press
         // carries the march that composes that cycle with the A/B switch, the
@@ -14420,9 +14290,9 @@ inline bool redesign_button_enabled(const AppState& a,
             if (iteration_lock_greys(a, b)) return false;
             // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
             // a bound cell addressed the pair reads the bound step's own
-            // owners, with the MEASURE or the MAGNIFICATION addressed that
-            // axis's value step owners (2026-09-14: the stable refusals, the
-            // measure's offset kind refusal, the walls — a blank never walls),
+            // owners, with the MEASURE addressed that axis's value step
+            // owners (2026-09-14: the stable refusals, the offset kind
+            // refusal, the walls),
             // otherwise the tempo step's — the same fork the dispatch makes,
             // so the face and the act read one decision either way. IT IS
             // STILL ONE SWITCH with the mode's second column (2026-09-09): the
@@ -14433,13 +14303,6 @@ inline bool redesign_button_enabled(const AppState& a,
                 if (!warp_value_step_actionable(a) || authoring_locked(a))
                     return false;
                 if (!measure_step_direction_actionable(a, delta)) return false;
-                break;
-            }
-            if (a.addressed_cell == MarkerCell::Magnification) {
-                if (!warp_value_step_actionable(a) || authoring_locked(a))
-                    return false;
-                if (!magnification_step_direction_actionable(a, delta))
-                    return false;
                 break;
             }
             if (a.addressed_cell != MarkerCell::Payload) {
@@ -14987,8 +14850,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // same editor machinery (2026-08-27).
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconMarkerMeasure:
-        // THE MARKER MAGNIFICATION answers as the Measure: an editor opener.
-        case RedesignButton::IconMarkerMagnification:
         // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
         // the jump its shifted twin runs. Nothing stays true afterwards for a
         // lamp to report.
@@ -15802,10 +15663,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerMeasure:
             return {"Measure (/)", nullptr};
-        // THE MARKER MAGNIFICATION (2026-09-14), one line: the act named, no
-        // modifier line, the button admitting no modified press.
-        case RedesignButton::IconMarkerMagnification:
-            return {"Magnification (Ctrl+/)", nullptr};
         // COPY RESOLVED VALUE (2026-08-29), the verb group's seventh since
         // that evening's reseat and its SECOND two-line form: bare `j` copies
         // the focused marker's resolved value, and the shifted twin JUMPS to
@@ -16294,12 +16151,10 @@ inline RedesignTooltipText redesign_button_tooltip(
         // with the same ladder line, dropped on the bound step's own kind
         // refusal (iter_bound_step_kind_refusal: a marker without a tempo of
         // its own, a disabled owner — magnitude-blind, every rung carding
-        // alike). WITH THE MEASURE OR THE MAGNIFICATION ADDRESSED
-        // (2026-09-14) the pair steps that field and the hint names it the
-        // same way ("Measure Up (Up)", "Magnification Up (Up)"), the ladder
-        // line dropping on the measure's offset kind refusal
-        // (measure_step_kind_refusal, magnitude-blind, the face's own grey);
-        // the magnification has no kind refusal, so its line stands. A second
+        // alike). WITH THE MEASURE ADDRESSED (2026-09-14) the pair steps that
+        // field and the hint names it the same way ("Measure Up (Up)"), the
+        // ladder line dropping on the measure's offset kind refusal
+        // (measure_step_kind_refusal, magnitude-blind, the face's own grey). A second
         // line only where the table already binds one: these two carry both
         // admissions.
         case RedesignButton::TransportUp:
@@ -16310,11 +16165,6 @@ inline RedesignTooltipText redesign_button_tooltip(
                         measure_step_kind_refusal(a)
                             ? nullptr
                             : redesign_button_tooltip(b).line2};
-            }
-            if (a.addressed_cell == MarkerCell::Magnification) {
-                return {up ? "Magnification Up (Up)"
-                           : "Magnification Down (Down)",
-                        redesign_button_tooltip(b).line2};
             }
             if (a.addressed_cell != MarkerCell::Payload) {
                 const char* name =
@@ -16343,8 +16193,6 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {"Edit Upper Bound (Return)", nullptr};
             case MarkerCell::Measure:
                 return {"Edit Measure (Return)", nullptr};
-            case MarkerCell::Magnification:
-                return {"Edit Magnification (Return)", nullptr};
             }
             break;
         // LEFT / RIGHT: the marker lane in T+W, where the nudge refuses WHOLE
@@ -16750,20 +16598,15 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // from the press through the crossing and on to the release with no gap.)
 //
 // AND ONLY ON THE CELLS THAT CAN MOVE A MAP (architect 2026-09-14): the
-// value drag's MEASURE and MAGNIFICATION arms are NOT members. Neither field is
-// a map input, so their per-motion writes move no target map hash and there is
-// nothing to protect the screen from — and the magnification SHOULD reach the
-// plate live, its whole point being the picture's gain: the motion arm kicks a
-// synchronous rebuild per step (value_drag.cpp) wherever the effective gain
-// moved, and a frozen basis would hold that picture's staged promote and
-// worker dispatch back until the release. The PAYLOAD (a tempo, which moves
+// value drag's MEASURE arm is NOT a member. The field is not a map input, so
+// its per-motion writes move no target map hash and there is nothing to
+// protect the screen from. The PAYLOAD (a tempo, which moves
 // the target map) and the two BOUND cells keep the freeze as they had it.
 inline bool displayed_basis_frozen(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
            (app.value_drag.active &&
-            app.value_drag.cell != MarkerCell::Measure &&
-            app.value_drag.cell != MarkerCell::Magnification) ||
+            app.value_drag.cell != MarkerCell::Measure) ||
            app.pending_marker_press.active ||
            app.pending_trim_drag.active;
 }

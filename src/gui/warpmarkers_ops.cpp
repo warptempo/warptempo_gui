@@ -1512,18 +1512,18 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     return std::nullopt;
 }
 
-// -- THE VALUE STEP'S MEASURE AND MAGNIFICATION BODIES (architect 2026-09-14) --
+// -- THE VALUE STEP'S MEASURE BODY (architect 2026-09-14) --------------------
 //
-// Bare Up/Down step the ADDRESSED CELL — the value step — and these are its two
-// newer axes. Each mirrors the tempo step's singleton arm clause for clause:
+// Bare Up/Down step the ADDRESSED CELL — the value step — and this is its
+// newer axis. It mirrors the tempo step's singleton arm clause for clause:
 // the leading refusal block the face reads, the lock (asked HERE, because the
-// plain wheel over a flag cell reaches these bodies past no keyboard gate of
+// plain wheel over a flag cell reaches this body past no keyboard gate of
 // its own — it asks the key gate's predicates itself, and this is the belt),
 // the kind refusal on a card (the measure's offset form), the wall asked
 // through the directional face AHEAD OF THE COALESCE STAMP and silent, the
 // collapse to the focus, the write through the one landing owner, one undo
 // entry per burst, the byte-equal pop through record_gesture and the dirty
-// re-derive. WHAT IS ABSENT IS THE TEMPO TAIL: neither field is a map input,
+// re-derive. WHAT IS ABSENT IS THE TEMPO TAIL: the field is not a map input,
 // so there is no warp_tempo_write_tail — no re-warp, no render trigger, no
 // re-land — and the playhead does not move. The owners are at app_state.h's
 // value-step block.
@@ -1577,51 +1577,6 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_measure_step(int64_t delta,
     undo.recompute_dirty();
     // The marker lane alone: the measure box's text moved and nothing else.
     viewport.invalidate_top_strip();
-    return std::nullopt;
-}
-
-GuiOpRefusal GuiWarpMarkersOps::adjust_magnification_step(
-        int64_t delta, bool synthesized_repeat) {
-    if (!warp_value_step_actionable(app))
-        return "Select a warp marker to change its magnification";
-    if (const char* refusal = warp_value_step_lock_refusal(app))
-        return refusal;
-    // NO KIND REFUSAL: every warp marker carries the field. THE WALL — an
-    // OWNED digit at 0 (Down) or at the max (Up); a blank never walls, its
-    // freeze to own being a change — silent, ahead of the stamp, spending the
-    // selection as an accepted step.
-    if (!magnification_step_direction_actionable(app, delta)) {
-        selection_consumed(app);
-        return std::nullopt;
-    }
-    const bool merge = undo.coalesce_gesture(GestureKind::MagnificationStep,
-                                             synthesized_repeat);
-    selection.collapse_to_focused();
-    const std::vector<GuiWarpMarker>& mv_const = app.warpmarkers.markers();
-    const int f = app.last_selected_marker;
-    if (f < 0 || f >= static_cast<int>(mv_const.size())) return std::nullopt;
-    // THE START IS THE RESOLVED DIGIT ON A BLANK and the landing FREEZES IT TO
-    // OWN (magnification_step_start, app_state.h — the tempo pass's shape).
-    const std::optional<uint8_t> landed = static_cast<uint8_t>(
-        magnification_step_landing(magnification_step_start(mv_const, f),
-                                   delta));
-    if (landed == mv_const[static_cast<size_t>(f)].magnification)
-        return std::nullopt;  // belt: unreachable past the wall
-    selection_consumed(app);
-    std::vector<GuiWarpMarker> pre_state = mv_const;
-    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
-    if (GuiWarpMarker* m = app.warpmarkers.marker_mut(f))
-        m->magnification = landed;
-    if (!merge) undo.push_undo_warp(std::move(pre_state));
-    undo.record_gesture(GestureKind::MagnificationStep, merge);
-    undo.recompute_dirty();
-    viewport.invalidate_top_strip();
-    // THE PICTURE MAY HAVE MOVED: if the resolved gain profile's hash changed,
-    // the plate fingerprint and the overview bar cache are dirty and the
-    // synchronous kick lands the new gain in the frame the box does; a write
-    // the profile cannot see renders nothing (the gain category's one owner,
-    // Viewport::kick_waveform_sync_if_gain_changed).
-    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
     return std::nullopt;
 }
 

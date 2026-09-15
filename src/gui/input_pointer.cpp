@@ -434,7 +434,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day; the MARKER MEASURE
     // joined the verb group 2026-08-19).
-    // EIGHTEEN
+    // SEVENTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -589,18 +589,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // exception to the home-view binding.
     {RedesignButton::IconMarkerMeasure,
      GuiKeys::Slash,  false, false, false, false, true},                             // bare /
-    // THE MARKER MAGNIFICATION (architect 2026-09-14), seated right behind
-    // the Measure: CTRL+/, which the retired measure propagate's copy had
-    // left free. It opens the magnification editor on the focused warp
-    // marker; the press dispatches Ctrl+/ through on_key at the LIFT like
-    // every other chrome button. A ctrl chord's own button, so it admits no
-    // shift variant. An act, not a mode — no lamp, no repeat. ITS GATES are
-    // the Measure's (marker_magnification_edit_actionable: the warp column and
-    // a focus; the `h` view and the read-only lock consume the chord, whose
-    // allowlists do not carry it) plus the ITERATION LOCK's grey
-    // (iteration_lock_greys), a magnification being serialized content.
-    {RedesignButton::IconMarkerMagnification,
-     GuiKeys::Slash,  true,  false, false, false, true},                             // Ctrl+/
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
     // SEVENTH and the value pair's pointer home: BARE `j`, which was free
     // (greped at the landing). Its plain lift copies the focused marker's
@@ -3303,7 +3291,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // published box, the same rect the press claim and the cursor map's
     // I-beam read, so the three cannot disagree. The RIDING BOXES beside it —
     // whichever of the marker's boxes stand right of the field, re-painted at
-    // its right edge under any of the four kinds — are deliberately not in
+    // its right edge under any of the three kinds — are deliberately not in
     // the clause: a press there seats no caret and wears no I-beam, so a
     // finger there keeps the lane's own answer. That answer is the FLAG BOX'S,
     // not the pan's, and it needs no clause of its own either: the zone's flag
@@ -4149,10 +4137,6 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
     case MarkerCell::Measure:
         (void)warpops.adjust_measure_step(delta, /*synthesized_repeat=*/false);
         return;
-    case MarkerCell::Magnification:
-        (void)warpops.adjust_magnification_step(delta,
-                                                /*synthesized_repeat=*/false);
-        return;
     }
 }
 
@@ -4366,8 +4350,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // 2026-09-05 — "each should be like a mini flag with its own
     // double-click"). The seed carries which cell of the run the FIRST press
     // landed on (MarkerCell): the flag box opens the payload editor, a bound
-    // cell its bound editor, the measure box the measure editor, the
-    // magnification box the magnification editor, and a pair
+    // cell its bound editor, the measure box the measure editor, and a pair
     // straddling a seam opens the one the first click named. The gates
     // differ with them: the PAYLOAD editor keeps the LOCK and the P view,
     // the BOUND editor read-only and the cell's own eligibility (a cell that
@@ -4389,9 +4372,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
-        // Read-only refuses every one of the four editors, as it always did.
-        // The ITERATION lock refuses the payload, the measure and the
-        // magnification — each opens over serialized content, each pushes —
+        // Read-only refuses every one of the three editors, as it always did.
+        // The ITERATION lock refuses the payload and the measure — each opens
+        // over serialized content, each pushes —
         // and ADMITS a bound cell, the
         // mode's own authoring surface, which is the keyboard's own delta at
         // iteration_lock_key_blocked (input_key_dispatch.cpp) written for the
@@ -4423,12 +4406,6 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
             // warp flags alone (PhaseResetMarker), so this cell is warp-only
             // by construction.
             flag_editor.enter_measure_edit(hit);
-            return;
-        case MarkerCell::Magnification:
-            // The green box paints on a warp flag carrying its own value
-            // alone, so this cell is warp-only by construction; the gates are
-            // the measure's (architect 2026-09-14).
-            flag_editor.enter_magnification_edit(hit);
             return;
         }
     }
@@ -7681,7 +7658,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's three menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-two — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// eighteen since 2026-08-29: 48, the enum's
+// seventeen since 2026-09-15: 45, the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

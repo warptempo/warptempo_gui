@@ -112,10 +112,10 @@ using warptempo_parse::prefix_line_error;
 //
 // THE WAVEFORM MAGNIFICATION LEVEL KEY LEFT THE SCHEMA 2026-09-14 (architect approval
 // 2026-09-14): the waveform picture's magnification is no longer one number for
-// the piece but a PER-SECTION PROFILE resolved from the warp markers, each warp
-// marker carrying an optional magnification in its sidecar comment
-// (marker_magnification.h, which owns the range now as
-// kMarkerMagnificationMax). The consequence is the standing one: a `.settings`,
+// the piece but a PER-SECTION PROFILE (marker_magnification.h owns the range
+// now as kMarkerMagnificationMax; the per-warp-marker field that first fed the
+// profile left the warp comment 2026-09-15, architect approval 2026-09-15).
+// The consequence is the standing one: a `.settings`,
 // a `renders/` recipe or a checkpoint still carrying the key is load-fatal in
 // both products by the unknown-key refusal below — no migration, no reader
 // leniency, the recipe refusing `'` and the checkpoint dropping out of the `h`

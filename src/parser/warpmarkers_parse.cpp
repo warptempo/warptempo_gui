@@ -2,7 +2,6 @@
 #include "warpmarkers_parse.h"
 
 #include "frame_format.h"
-#include "marker_magnification.h"
 #include "marker_measure.h"
 #include "parse_text_util.h"
 #include "value_format.h"
@@ -220,10 +219,10 @@ namespace warpmarkers_internal {
 // only. Cross-marker checks (label_def uniqueness, time ordering) are left
 // to the caller; label_ref resolvability is a render boundary verdict, not
 // a load check. `accept_comment` selects whether the
-// ` //<measure>,<magnification>` comment is part of the grammar here; the
-// callers and their answers are at the declaration. (Measure grammar:
-// architect approval 2026-08-20; the comment's magnification half and the
-// rename: architect approval 2026-09-14.)
+// ` //<measure>` comment is part of the grammar here; the callers and their
+// answers are at the declaration. (Measure grammar: architect approval
+// 2026-08-20; the comment back to the measure alone: architect approval
+// 2026-09-15.)
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
     const std::string& raw_line, bool accept_comment) {
 
@@ -235,27 +234,18 @@ std::expected<WarpMarker, std::string> parse_single_canonical_line(
     // The comment comes off FIRST, so everything below judges the canonical
     // prefix alone and keeps its byte-exact discipline unchanged — in
     // particular the no-whitespace loop, which is what refuses a ` //` on the
-    // callers that pass false. The split owns the comment's structure (the
-    // one comma, not `//,`); each non-blank half then meets its own judge
-    // (architect approval 2026-09-14).
+    // callers that pass false. The split owns the comment's structure (not
+    // empty, no comma); the measure then meets its own judge (architect
+    // approval 2026-09-15).
     if (accept_comment) {
         MarkerCommentSplit split;
         std::string        comment_err;
         if (!split_marker_comment(t, split, comment_err))
             return std::unexpected(std::move(comment_err));
         if (split.had_comment) {
-            if (!split.measure.empty()) {
-                if (!validate_marker_measure(split.measure, comment_err))
-                    return std::unexpected(std::move(comment_err));
-                out.measure.assign(split.measure);
-            }
-            if (!split.magnification.empty()) {
-                uint8_t mag = 0;
-                if (!parse_marker_magnification(split.magnification, mag,
-                                                comment_err))
-                    return std::unexpected(std::move(comment_err));
-                out.magnification = mag;
-            }
+            if (!validate_marker_measure(split.measure, comment_err))
+                return std::unexpected(std::move(comment_err));
+            out.measure.assign(split.measure);
             t.resize(split.prefix.size());
         }
     }
@@ -361,12 +351,11 @@ parse_warpmarkers_file(const std::string& path,
         // writer emits none), so any space, tab, or CR there — and a byte-empty
         // line — is a hard, line-numbered parse error via
         // parse_single_canonical_line below. The one relaxation is the
-        // ` //<measure>,<magnification>` COMMENT (split_marker_comment,
-        // marker_measure.h — architect approval 2026-09-14): the split comes
-        // off before the prefix is judged, and its structure and both halves'
-        // ASCII grammars (the measure bounded at kMaxMarkerMeasureBytes, the
-        // magnification one digit, one canonical spelling per value) are
-        // judged just as strictly — a CR landing inside the comment stays
+        // ` //<measure>` COMMENT (split_marker_comment, marker_measure.h —
+        // architect approval 2026-09-15): the split comes off before the
+        // prefix is judged, and its structure and the measure's ASCII grammar
+        // (bounded at kMaxMarkerMeasureBytes, one canonical spelling per
+        // value) are judged just as strictly — a CR landing inside the comment stays
         // fatal, so the CRLF corruption tripwire survives the relaxation
         // intact. (COMMENT
         // ONLY, architect approval 2026-08-20: the bound was spelled `12` here

@@ -101,7 +101,7 @@ struct GuiPlaybackLifecycle {
     //   * VALUE STEPS DO NOT STOP: the Up/Down value step on the addressed
     //     cell edits a value. Its tempo arm is GROUP-PRESERVING, leaving the
     //     selection and its span exactly as they stood, so the audition plays
-    //     on under the edit; the bound, measure and magnification arms collapse
+    //     on under the edit; the bound and measure arms collapse
     //     a group to its focus and stop nothing either. The step ladder's
     //     magnitude (bare one cent, three shifted, ten with ctrl) changes the
     //     number and not the class.

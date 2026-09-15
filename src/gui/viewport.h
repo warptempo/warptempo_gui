@@ -117,46 +117,26 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: FIVE MEMBERS since 2026-09-14 (re-grepped over
-    //    kick_waveform_sync_if_gain_changed's callers) — the two roads
-    //    that write a warp marker's magnification, the MAGNIFICATION EDITOR'S
-    //    COMMIT (GuiFlagEditor::commit_magnification_edit) and the VALUE STEP
-    //    (GuiWarpMarkersOps::adjust_magnification_step — bare Up/Down and the
-    //    plain wheel over the box), the VALUE DRAG'S magnification motion
-    //    (ValueDragOps::apply_motion, live per step), and the WARP MARKER
-    //    DRAG's two halves in source view —
-    //    its MOTION (MarkerDragOps::apply_drag_motion, a section boundary
-    //    riding the hand through the effective profile's drag slot, guarded
-    //    by displayed_plate_geometry_is_live under the drag's freeze) and its
-    //    COMMIT (MarkerDragOps::commit_drag, the release's column snap landing
-    //    in its own frame). The first four kick through
-    //    kick_waveform_sync_if_gain_changed below, never this function direct,
-    //    so a write the EFFECTIVE profile cannot see renders nothing; the
-    //    COMMIT is the one member that calls this function direct, and only
-    //    when its gain is actually owed — a motion's deferred preview
-    //    (DragState::gain_preview_deferred) or a displayed plate whose gain
-    //    fingerprint is stale (displayed_plate_gain_is_stale below) — because
-    //    a before/after hash across the release compares the drag's proposal
-    //    with the committed store, which are normally equal whatever the
-    //    pixels show (Sol round 11 of 2026-09-14; the rule is at the release).
+    //  - THE PLATE'S OWN GAIN: ONE MEMBER, re-grepped 2026-09-15 over
+    //    kick_waveform_sync_if_gain_changed's callers and this function's —
+    //    the WARP MARKER DRAG's COMMIT (MarkerDragOps::commit_drag), which
+    //    calls this function direct when the displayed plate's gain
+    //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
+    //    release's plate lands in its own frame. No writer of a level calls
+    //    kick_waveform_sync_if_gain_changed at present: no marker column
+    //    carries a level, and the effective profile is empty.
     //    (The gain gate's other input, the zoom — magnification applies only
     //    at the working zoom or finer, effective_waveform_gain_profile — changes with a
     //    zoom write, whose applier's own synchronous kick carries it; the one
     //    zoom write with no applier, the resize's clamp, runs the same
     //    before/after test itself at GuiPaintHandler::on_resize.)
-    //    Its one site from 2026-08-26 was the retired magnification level
-    //    applier (architect approval 2026-09-14). The gain is a PER-SECTION
-    //    PROFILE resolved from the warp markers now
-    //    (waveform_gain_profile_cached), so a gain change is a warp-store
-    //    mutation, whose profile hash dirties the plate fingerprint and the
-    //    overview bar cache BY FIELD — the tick's async backstop would repaint
-    //    it a frame late with no kick of its own, and these writes take the
-    //    kick so the new gain lands in the frame its box does. (A warp-store act
-    //    that already kicks for its map — undo, redo, the load-in-place family,
-    //    the value family below — carries a gain change with it for free.) A
-    //    gain-only change is a plate CONTENT change with no geometry behind it,
-    //    so the reclamp below is a pure no-op for it. It touches no audio: the
-    //    gain is the picture's.
+    //    A gain change dirties the plate fingerprint and the overview bar
+    //    cache BY FIELD — the tick's async backstop would repaint it a frame
+    //    late with no kick of its own, and a level write takes the kick so the
+    //    new gain lands in the frame its edit does. A gain-only change is a
+    //    plate CONTENT change with no geometry behind it, so the reclamp below
+    //    is a pure no-op for it. It touches no audio: the gain is the
+    //    picture's.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries
@@ -248,34 +228,17 @@ struct Viewport {
     }
 
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
-    // inventory above): a magnification write kicks the synchronous rebuild
-    // ONLY WHEN THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile —
-    // the resolved one at the working zoom or finer, the empty one coarser)
-    // ACTUALLY CHANGED across it. The
-    // caller captures `waveform_gain_hash()` BEFORE its store write and hands
-    // it to `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives
-    // here and nowhere else. A write the picture cannot see — a disabled
-    // marker's field, a coincident loser's, a blank frozen to the digit it
-    // already inherited, any write at a zoom coarser than working — changes
-    // the field and not the profile, and must not drain the worker and
-    // re-render the whole plate. The caller's top-strip repaint, undo and dirty
-    // work are the authored field's and stay unconditional.
+    // inventory above): a level write kicks the synchronous rebuild ONLY WHEN
+    // THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile — empty
+    // coarser than the working zoom) ACTUALLY CHANGED across it. The caller
+    // captures `waveform_gain_hash()` BEFORE its store write and hands it to
+    // `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives here and
+    // nowhere else. A write the picture cannot see — any write at a zoom
+    // coarser than working, a level equal to the one already in force —
+    // changes the store and not the profile, and must not drain the worker and
+    // re-render the whole plate.
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
-
-    // THE MARKER DRAG'S GUARD ON ITS PER-MOTION GAIN KICK (architect
-    // 2026-09-14; the argument is at the call, MarkerDragOps::apply_drag_motion):
-    // true when a plate is on screen and its fingerprint's GEOMETRY — viewport
-    // span, area, inset, the S/T bit and the warp map hash — equals the live
-    // inputs', so a synchronous rebuild would change the plate's gain and
-    // nothing else. Wired in main.cpp to
-    // GuiPaintHandler::displayed_plate_geometry_is_live; false unwired. Its
-    // one caller is that motion.
-    std::function<bool()> displayed_plate_geometry_is_live_;
-    bool displayed_plate_geometry_is_live() const {
-        return displayed_plate_geometry_is_live_ &&
-               displayed_plate_geometry_is_live_();
-    }
 
     // THE MARKER DRAG RELEASE'S TWO SEAMS (Sol round 11 of 2026-09-14; the
     // rule and its one reader are at MarkerDragOps::commit_drag's tail).

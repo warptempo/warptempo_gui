@@ -159,8 +159,9 @@ inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
 
 // (THE WAVEFORM MAGNIFICATION LEVEL'S range constant and range predicate LEFT
 // THIS HEADER 2026-09-14 with that settings key, architect
-// approval 2026-09-14: the magnification is a per-marker field now, and its
-// range has one owner, kMarkerMagnificationMax in marker_magnification.h.)
+// approval 2026-09-14: the level's range has one owner,
+// kMarkerMagnificationMax in marker_magnification.h — retold under architect
+// approval 2026-09-15.)
 
 // (kDefaultProjectsRepo LEFT THIS HEADER 2026-08-27 with the `projects_repo`
 // key, architect approval 2026-08-27: the repository is a fact about the one
@@ -213,8 +214,9 @@ struct SettingsFile {
     // them from a file — a sidecar or checkpoint still carrying one is
     // load-fatal here by the unknown-key refusal, no migration and no reader
     // leniency. The waveform magnification level went 2026-09-14 (architect
-    // approval 2026-09-14): the magnification is a per-marker field on the
-    // warp markers now, resolved per section by the GUI.)
+    // approval 2026-09-14): the waveform's magnification is a per-section
+    // profile of the GUI's own, never a settings key — retold under architect
+    // approval 2026-09-15.)
 };
 
 // Parse and validate the whole `.settings` file at `path`. An unopenable

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "marker_magnification.h"
-
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -19,21 +17,20 @@
 // block below. FIFTH FROZEN REOPEN, architect approval 2026-09-14: THE
 // SPACES LEFT THE GRAMMAR — the mixed `+<W> <n>/<d>` and the direct fraction
 // `<M> <n>/<d>` are refused, the byte bound re-derived again, and the ` //`
-// suffix became the `//<measure>,<magnification>` comment, warp lines only.)
+// suffix became the warp line's comment, warp lines only. SIXTH FROZEN
+// REOPEN, architect approval 2026-09-15: the comment carries the measure
+// ALONE again — no comma, no second field.)
 //
-// Every WARP marker line may carry a MEASURE REFERENCE, as the left half of
-// the line's COMMENT (architect approval 2026-09-14: the comment became
-// `//<measure>,<magnification>`, and phase resets lost measures whole):
+// Every WARP marker line may carry a MEASURE REFERENCE, as the line's COMMENT
+// (phase resets carry no measure):
 //
-//     <canonical line><space>//<measure>,<magnification>
+//     <canonical line><space>//<measure>
 //
-// The separator is UNCHANGED from the comment field this succeeds: the FIRST
-// occurrence of " //" on the line — the canonical prefix cannot contain a
-// space, so no earlier candidate exists, and everything past it is the
-// comment. The comment's split, its comma rule and its three shapes are
-// stated once at split_marker_comment below; the magnification half's range
-// and grammar live in marker_magnification.h. The canonical prefix keeps its
-// byte-exact discipline.
+// The separator is the FIRST occurrence of " //" on the line — the canonical
+// prefix cannot contain a space, so no earlier candidate exists, and
+// everything past it is the comment. The comment's split and its structural
+// refusals are stated once at split_marker_comment below. The canonical
+// prefix keeps its byte-exact discipline.
 //
 // THE FREE-UTF-8 BYTE CLASS IS RETIRED (architect 2026-08-20, one day after
 // it landed on 2026-08-19). The field was free text for exactly one day and
@@ -49,7 +46,7 @@
 // precedent — so the split, the grammar and the canonical spelling have
 // exactly one home. THE CONSUMERS, re-derived by grep 2026-09-14:
 //   * THE WARP FILE PARSER — warpmarkers_parse.cpp: parse_single_canonical_line
-//     splits the comment and validates both halves; every other reader of a
+//     splits the comment and validates the measure; every other reader of a
 //     warp sidecar line (the GitHub recheck's delta extractor and its
 //     per-side cascade pass, and the revert's reconstitution) enters through
 //     that per-line entry point and so consumes this header only through it.
@@ -99,11 +96,11 @@
 // binaries). The two-category rule holds exactly — a measure that commits in
 // the editor loads back, and every refusal here names a state the GUI can
 // never produce. A BLANK measure is not a token: it is the empty left half of
-// the comment (split_marker_comment below), which the editor's empty commit
+// the line having no comment at all, which the editor's empty commit
 // produces and this grammar never reads.
 //
 // THE CRLF TRIPWIRE SURVIVES: no grammar byte is whitespace — in the measure,
-// the comma or the magnification — so a `\r` reaching the comment is refused
+// or its comment separator — so a `\r` reaching the comment is refused
 // like any other stray byte, and a file that made a round trip through a
 // CRLF-writing tool still fails loudly.
 //
@@ -190,33 +187,30 @@ inline constexpr int64_t kMeasureMaxDenominator = 16;
 inline constexpr size_t kMaxMarkerMeasureBytes = 6;
 
 // THE MARKER COMMENT SPLIT — the comment's ONE owner (FIFTH FROZEN REOPEN,
-// architect approval 2026-09-14, generalizing the measure-only split that
-// stood here). A warp marker line may end in
+// architect approval 2026-09-14; SIXTH, architect approval 2026-09-15, the
+// comment back to the measure alone). A warp marker line may end in
 //
-//     <canonical line><space>//<measure>,<magnification>
+//     <canonical line><space>//<measure>
 //
-// with the COMMA REQUIRED, so the comment has exactly three shapes: `//12,3`
-// (both fields), `//12,` (a measure alone) and `//,3` (a magnification
-// alone). The writer emits NO comment when both fields are blank, so `//,` is
-// a state the GUI can never produce. THE STRUCTURAL REFUSALS ARE HERE, each
-// adversarial and load-fatal: a comment with no comma (today's measure-only
-// `//12` included — no migration), a comment with more than one comma, and
-// the empty comment `//,`. The two halves' TOKENS are not judged here —
-// validate_marker_measure below and parse_marker_magnification
-// (marker_magnification.h) are the judges, and a blank half is never handed
-// to either.
+// The writer emits NO comment when the measure is blank, so an empty comment
+// `//` is a state the GUI can never produce. THE STRUCTURAL REFUSALS ARE
+// HERE, each adversarial and load-fatal: the empty comment, and a comment
+// carrying a COMMA anywhere — the retired `//<measure>,<magnification>` form
+// included, with no migration. (The measure grammar below would refuse a
+// comma as a stray byte too; the split names it first so the retired form
+// fails on its own sentence.) The measure TOKEN is not judged here —
+// validate_marker_measure below is the judge.
 //
 // `prefix` is the canonical line the position/payload parsers see; `measure`
-// and `magnification` are the raw halves (either may be empty, never both
-// when `had_comment`); `had_comment` distinguishes "no separator on the line"
-// from a comment. Returns true on success; on failure returns false and sets
-// `error_out` to a one-line diagnostic in the readers' voice.
+// is the raw comment (never empty when `had_comment`); `had_comment`
+// distinguishes "no separator on the line" from a comment. Returns true on
+// success; on failure returns false and sets `error_out` to a one-line
+// diagnostic in the readers' voice.
 //
 // The views alias the caller's buffer; they are valid only as long as it is.
 struct MarkerCommentSplit {
     std::string_view prefix;
     std::string_view measure;
-    std::string_view magnification;
     bool             had_comment = false;
 };
 
@@ -230,24 +224,17 @@ inline bool split_marker_comment(std::string_view line,
         return true;
     }
     const std::string_view comment = line.substr(sep + 3);
-    const size_t comma = comment.find(',');
-    if (comma == std::string_view::npos) {
-        error_out = "marker comment must be '//<measure>,<magnification>' "
-                    "(missing ',')";
-        return false;
-    }
-    if (comment.find(',', comma + 1) != std::string_view::npos) {
-        error_out = "marker comment must carry exactly one ','";
-        return false;
-    }
-    if (comment.size() == 1) {
+    if (comment.empty()) {
         error_out = "empty marker comment after ' //'";
         return false;
     }
-    out.prefix        = line.substr(0, sep);
-    out.measure       = comment.substr(0, comma);
-    out.magnification = comment.substr(comma + 1);
-    out.had_comment   = true;
+    if (comment.find(',') != std::string_view::npos) {
+        error_out = "marker comment must be '//<measure>' (no ',')";
+        return false;
+    }
+    out.prefix      = line.substr(0, sep);
+    out.measure     = comment;
+    out.had_comment = true;
     return true;
 }
 

@@ -1,13 +1,11 @@
 #include "warpmarkers.h"
 
 #include "frame_format.h"
-#include "marker_magnification.h"
 #include "settings_io.h"
 #include "value_format.h"
 #include "warp_frame_map_build.h"
 
 #include <sstream>
-#include <unordered_map>
 
 std::expected<void, std::string> GuiWarpMarkers::load(
         const std::string& path,
@@ -46,7 +44,7 @@ std::string format_warpmarkers_text(
         const auto& m = markers_[i];
         // Canonical new format, no whitespace anywhere in the canonical
         // prefix:
-        //   [#]?<frame position>|PAYLOAD[ //<measure>,<magnification>]
+        //   [#]?<frame position>|PAYLOAD[ //<measure>]
         if (m.disabled) out << '#';
         out << format_authored_frame(m.time_frame) << '|';
 
@@ -81,18 +79,12 @@ std::string format_warpmarkers_text(
         }
 
         // The comment (split_marker_comment, marker_measure.h), and the one
-        // place a space may appear on a marker line: ` //<measure>,<mag>`
-        // with the comma ALWAYS written, emitted iff either field is set, so
-        // its three shapes are `//12,3`, `//12,` and `//,3` (architect
-        // 2026-09-14). Both fields blank emits nothing at all — the empty
-        // `//,` is load-fatal precisely because this writer never produces
-        // it, which is what keeps the removal paths (an empty commit in a
-        // field's editor) and the load rules in agreement.
-        if (!m.measure.empty() || m.magnification.has_value()) {
-            out << " //" << m.measure << ',';
-            if (m.magnification.has_value())
-                out << format_marker_magnification(*m.magnification);
-        }
+        // place a space may appear on a marker line: ` //<measure>`, emitted
+        // iff a measure is set. A blank measure emits nothing at all — the
+        // empty `//` is load-fatal precisely because this writer never
+        // produces it, which is what keeps the removal path (the measure
+        // editor's empty commit) and the load rules in agreement.
+        if (!m.measure.empty()) out << " //" << m.measure;
 
         out << '\n';
     }
@@ -118,102 +110,6 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
     // GuiWarpMarker so paint-loop callers pay no slice copy.
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;
     return marker_effectively_disabled(markers, static_cast<size_t>(idx));
-}
-
-namespace {
-
-// The two passes behind resolved_magnification_level and
-// build_waveform_gain_profile — the rules are stated once at their
-// declarations (warpmarkers.h). `resolved[i]` is marker i's answer: its own
-// value, else what an enabled marker displays / a disabled one would inherit.
-struct MagnificationResolution {
-    std::vector<char>    enabled;
-    std::vector<uint8_t> resolved;
-};
-
-MagnificationResolution resolve_magnification(
-        const std::vector<GuiWarpMarker>& markers) {
-    const size_t n = markers.size();
-    MagnificationResolution r;
-    r.enabled.assign(n, 0);
-    r.resolved.assign(n, 0);
-
-    std::unordered_map<std::string, size_t> def_index;
-    for (size_t i = 0; i < n; ++i) {
-        r.enabled[i] = effective_disabled(markers, static_cast<int>(i)) ? 0 : 1;
-        if (!markers[i].label_def.empty()) def_index[markers[i].label_def] = i;
-    }
-
-    // Pass A — the DEF values (rule 5): every label ref is transparent, a ref
-    // carrying its own value included, so `cur` advances only on an enabled
-    // NON-REF marker with an own value. Every row still records the carried
-    // value; only a def's entry is ever read.
-    std::vector<uint8_t> value_a(n, 0);
-    uint8_t cur = 0;
-    for (size_t i = 0; i < n; ++i) {
-        const GuiWarpMarker& m = markers[i];
-        if (r.enabled[i] && m.label_ref.empty() && m.magnification.has_value())
-            cur = *m.magnification;
-        value_a[i] = cur;
-    }
-
-    // Pass B — the displayed values: a blank DEF takes its own pass-A value
-    // (rule 5, so the def displays exactly what its refs read), a blank ref
-    // takes its def's pass-A value (rule 4), a dangling one carries (rule 6),
-    // and a ref's own value governs the ref and what follows it (rule 1).
-    cur = 0;
-    for (size_t i = 0; i < n; ++i) {
-        const GuiWarpMarker& m = markers[i];
-        if (!r.enabled[i]) {
-            r.resolved[i] = m.magnification.has_value() ? *m.magnification
-                          : !m.label_def.empty()        ? value_a[i]
-                                                        : cur;
-            continue;
-        }
-        if (m.magnification.has_value()) {
-            cur = *m.magnification;
-        } else if (!m.label_def.empty()) {
-            cur = value_a[i];
-        } else if (!m.label_ref.empty()) {
-            const auto it = def_index.find(m.label_ref);
-            if (it != def_index.end()) cur = value_a[it->second];
-        }
-        r.resolved[i] = cur;
-    }
-    return r;
-}
-
-}  // namespace
-
-int resolved_magnification_level(const std::vector<GuiWarpMarker>& markers,
-                                 int idx) {
-    if (idx < 0 || idx >= static_cast<int>(markers.size())) return 0;
-    return resolve_magnification(markers).resolved[static_cast<size_t>(idx)];
-}
-
-WaveformGainProfile build_waveform_gain_profile(
-        const std::vector<GuiWarpMarker>& markers) {
-    const MagnificationResolution r = resolve_magnification(markers);
-    WaveformGainProfile p;
-    auto& bp = p.breakpoints;
-    for (size_t i = 0; i < markers.size(); ++i) {
-        if (!r.enabled[i]) continue;
-        const int64_t f     = markers[i].time_frame;
-        const uint8_t level = r.resolved[i];
-        // Rule 7: a later enabled marker at the same frame replaces the
-        // earlier one's breakpoint; then drop the entry if it no longer
-        // changes the level it follows.
-        if (!bp.empty() && bp.back().source_frame == f) {
-            bp.back().level = level;
-            const uint8_t before =
-                bp.size() >= 2 ? bp[bp.size() - 2].level : uint8_t{0};
-            if (before == level) bp.pop_back();
-            continue;
-        }
-        const uint8_t current = bp.empty() ? uint8_t{0} : bp.back().level;
-        if (level != current) bp.push_back({f, level});
-    }
-    return p;
 }
 
 uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile) {

@@ -69,8 +69,8 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // fact about the panel, and this load must not overwrite what the config
     // said.)
     // (THE WAVEFORM MAGNIFICATION LEVEL LEFT THIS ROUTINE 2026-09-14 with its
-    // key: the picture's gain is a per-section profile resolved from the warp
-    // markers, which the load replaces through their own store.)
+    // key: the picture's gain is a per-section profile, never a settings
+    // field.)
     // (`projects_repo` LEFT THIS ROUTINE 2026-08-27 with its key: the projects
     // home is the DEVICE config's now, read once by gui_main and never by a
     // source load — device_config.h.)

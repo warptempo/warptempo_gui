@@ -253,12 +253,14 @@ inline int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
                                              : song_end_frame;
 }
 
-// THE WAVEFORM GAIN PROFILE — the per-section picture magnification, resolved
-// from the warp markers (architect approval 2026-09-14). A STEP FUNCTION OVER
+// THE WAVEFORM GAIN PROFILE — the per-section picture magnification. No
+// marker column carries a level at present, so every profile the product
+// builds is empty (effective_waveform_gain_profile, warp_frame_map_view.h).
+// A STEP FUNCTION OVER
 // SOURCE FRAMES: `breakpoints` is sorted strictly ascending by frame, each
 // entry's level holding from its frame up to the next entry's, and LEVEL 0
-// HOLDS BEFORE THE FIRST ENTRY (so a store with no magnification anywhere is
-// the empty profile). Consecutive entries never repeat a level — a breakpoint
+// HOLDS BEFORE THE FIRST ENTRY (so level 0 everywhere is the empty
+// profile). Consecutive entries never repeat a level — a breakpoint
 // exists only where the level changes. The level is a count of doublings in
 // [0, kMarkerMagnificationMax] (marker_magnification.h, the ONE range owner);
 // waveform_magnification_gain (render.h) is what a level means.
@@ -274,40 +276,6 @@ struct WaveformGainBreakpoint {
 struct WaveformGainProfile {
     std::vector<WaveformGainBreakpoint> breakpoints;
 };
-
-// THE RESOLUTION RULES, stated once here (architect 2026-09-14):
-//   1. A marker's OWN value sets the level from its frame on.
-//   2. A BLANK marker inherits the most recent EARLIER ENABLED marker's
-//      resolved value (store order is time order), 0 when none precedes it.
-//   3. DISABLED markers (effective_disabled, the ref cascade included) are
-//      INVISIBLE — they neither set nor carry a value.
-//   4. A LABEL REF with no own value takes its DEF's resolved value; markers
-//      after the ref inherit the ref's resolved value; a ref may precede its
-//      def.
-//   5. CYCLES CANNOT FORM, by tempo's own rule (resolve_inherited_tempo walks
-//      past refs): a blank DEF's inheritance walks PAST EVERY LABEL REF, a ref
-//      carrying its own value included (architect 2026-09-14), to the nearest
-//      earlier enabled NON-REF marker with an own value, so a blank def never
-//      reads "through" a ref sitting before it, while every other blank does.
-//      A ref's own value still governs the ref and what follows it — up to a
-//      blank def, which displays its walked value. Two passes, O(n): pass A
-//      resolves the def values with every ref transparent; pass B the
-//      displayed values, a blank def taking its own pass-A value and a blank
-//      ref its def's.
-//   6. A DANGLING REF (no def in the store) is transparent: it carries the
-//      previous value.
-//   7. COINCIDENT FRAMES follow store order: the LAST enabled marker at a frame
-//      wins the section from that frame (the earlier ones own zero-width
-//      sections).
-//
-// resolved_magnification_level answers rules 1–6 for one marker: its own
-// value if set, else what it displays. A DISABLED marker (rule 3) answers its
-// own value if set, else the value carried past it — what it would inherit if
-// it were enabled — while contributing nothing to anyone else.
-int resolved_magnification_level(const std::vector<GuiWarpMarker>& markers,
-                                 int idx);
-WaveformGainProfile build_waveform_gain_profile(
-    const std::vector<GuiWarpMarker>& markers);
 
 // The profile's identity for the picture caches (the plate fingerprint and
 // the overview bar cache's key): FNV-1a over every breakpoint. 0 for the
@@ -375,25 +343,24 @@ inline std::string format_signed_hops(int hops) {
 // bound cells iteration mode paints to its right on an eligible marker OF
 // EITHER COLUMN (a warp marker's tempo bracket in cents, a phase reset's hop
 // bracket in whole lattice hops since 2026-09-09), Measure is the purple box
-// (Breeze blue until 2026-09-15) that follows, and Magnification is the green box past it (architect
-// 2026-09-14 — a WARP marker's own picture magnification, painted only where
-// the marker carries its own value; phase resets carry neither box). It answers three questions with
+// (Breeze blue until 2026-09-15) that follows (a warp marker's alone; phase
+// resets carry no measure box). It answers three questions with
 // one value: WHICH BOX a press landed on (hit_test_flag_cell, app_state.cpp,
 // off the painter's published boundaries), WHICH CELL OF THE FOCUS IS
 // ADDRESSED (AppState::addressed_cell — the bright cell, the cell the vertical
 // arrows step, the cell Enter opens) and WHICH EDITOR a double-click or Enter
 // opens (the Payload editor, the bound editor on Lower or Upper, the measure
-// editor, the magnification editor). The type lives here, beside the bracket two of its members
+// editor). The type lives here, beside the bracket two of its members
 // address, because the painter (render.h) needs it and render.h cannot see
 // AppState.
 //
 // THE PAYLOAD IS THE MEMBERSHIP SURFACE; EVERY OTHER BOX TAKES THE PLAIN
 // PRESS ONLY (architect 2026-09-10, the bound cells being "a separate
-// system"): a ctrl or shift press landing on Lower, Upper, Measure or Magnification is a
+// system"): a ctrl or shift press landing on Lower, Upper or Measure is a
 // silent no-op at the one act owner (run_marker_click_act, input_pointer.cpp,
 // which argues it), so a selection is built and ranged from the flag box
 // alone while a plain press on any box selects, addresses that box and lands.
-enum class MarkerCell { Payload, Lower, Upper, Measure, Magnification };
+enum class MarkerCell { Payload, Lower, Upper, Measure };
 
 // Iteration mode: the text of ONE bound cell — the bound in the signed
 // two-decimal form, `+0.00` for a blank bracket on either side. THE BLANK

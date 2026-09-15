@@ -5,32 +5,24 @@
 #include <string>
 #include <string_view>
 
-// THE MARKER MAGNIFICATION — one range, one grammar, one spelling
-// (architect approval 2026-09-14, the frozen touch this header lands under).
+// THE MAGNIFICATION LEVEL — one range, one grammar, one spelling
+// (architect approval 2026-09-14, the frozen touch this header landed under;
+// retold under architect approval 2026-09-15).
 //
-// A WARP marker may carry a MAGNIFICATION: a count of waveform-picture
-// doublings in [0, kMarkerMagnificationMax], or BLANK, which means INHERIT.
-// It is serialized as the right half of the warp line's comment,
-// ` //<measure>,<magnification>` — the split, the comma rule and the three
-// comment shapes are stated once at split_marker_comment (marker_measure.h),
-// the comment's one owner. Phase resets carry no magnification (and no
-// measure) — architect 2026-09-14.
+// A magnification LEVEL is a count of waveform-picture doublings in
+// [0, kMarkerMagnificationMax]. No marker field carries one: the warp
+// marker's comment is the measure alone.
 //
 // THE GRAMMAR is a single ASCII digit `0`..`4`: no sign, no leading zero, no
-// whitespace, exactly one byte, so each value has exactly one spelling. A
-// blank field is not a token — it is the empty right half of the comment, and
-// no validator here reads it. Anything else is refused: ADVERSARIAL at load
-// (load-fatal, first error only, identically in both binaries).
+// whitespace, exactly one byte, so each value has exactly one spelling.
+// Anything else is refused: ADVERSARIAL at load (load-fatal, first error
+// only, identically in both binaries).
 //
-// THE FIELD IS AUTHORED CONTENT AND NOT A RENDER INPUT: no sample, no
-// playback path and no render reads it, and MarkerForRender carries it no
-// more than it carries a measure, so a magnification cannot move a render
-// key.
+// A LEVEL IS DISPLAY-ONLY AND NOT A RENDER INPUT: no sample, no playback path
+// and no render reads it, so a level cannot move a render key.
 //
 // THIS IS THE ONE RANGE OWNER: the waveform magnification level settings key
-// and its range left the schema 2026-09-14 (architect approval 2026-09-14),
-// and the GUI resolves these per-marker values into the waveform's per-section
-// gain profile (build_waveform_gain_profile, src/gui/warpmarkers.h).
+// and its range left the schema 2026-09-14 (architect approval 2026-09-14).
 inline constexpr int kMarkerMagnificationMax = 4;
 
 // The one byte bound: a single digit.

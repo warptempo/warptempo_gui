@@ -350,7 +350,6 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     // measureless flag answers Payload everywhere by construction.
     if (!r) return MarkerCell::Payload;
     const double x = static_cast<double>(mouse_x);
-    if (x >= r->magnification_boundary_x) return MarkerCell::Magnification;
     if (x >= r->measure_boundary_x)    return MarkerCell::Measure;
     if (x >= r->iter_upper_boundary_x) return MarkerCell::Upper;
     if (x >= r->iter_lower_boundary_x) return MarkerCell::Lower;
@@ -507,8 +506,8 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
     if (stop >= 0) {
         if (marker_paints_iter_cells(a, column, stop)) {
             // The seat's own boxes, in painted order: payload, lower, upper.
-            // Forward off the upper (or off the measure or the magnification,
-            // which sit past it — neither is ever a stop) leaves the marker;
+            // Forward off the upper (or off the measure, which sits past it
+            // and is never a stop) leaves the marker;
             // backward off the payload does.
             if (forward) {
                 switch (a.addressed_cell) {
@@ -518,13 +517,11 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                     return {stop, MarkerCell::Upper, true};
                 case MarkerCell::Upper:
                 case MarkerCell::Measure:
-                case MarkerCell::Magnification:
                     break;
                 }
             } else {
                 switch (a.addressed_cell) {
                 case MarkerCell::Measure:
-                case MarkerCell::Magnification:
                     return {stop, MarkerCell::Upper, true};
                 case MarkerCell::Upper:
                     return {stop, MarkerCell::Lower, true};

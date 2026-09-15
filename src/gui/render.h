@@ -765,15 +765,12 @@ inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x226181);
 inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0x73CFFF);
 inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
 
-// THE MARKER MAGNIFICATION BOX'S PAIRS (architect 2026-09-14): the green box
-// right of the measure, painted only on a warp marker that carries its OWN
-// magnification. ALL FOUR ARE SAMPLED, none derived — from the architect's
-// kdenlive crops tmp/green-unselected.png and tmp/green-selected.png (fill
-// from the body rows, edge from row 0). The anatomy is the measure box's
-// exactly: the kMarkerFlagBorder seam column outside the fill on its left
-// (the crops' own left column samples to that constant), a 1px top edge, no
-// right border, black ink (kMarkerFlagLabel), the disabled blend through
-// kMarkerDisabledMix and the selected pair on the addressed cell alone.
+// THE MAGNIFICATION COLUMN'S GREEN (architect 2026-09-14): the flag pairs of
+// the display-only magnification markers. ALL FOUR ARE SAMPLED, none derived —
+// from the architect's kdenlive crops tmp/green-unselected.png and
+// tmp/green-selected.png (fill from the body rows, edge from row 0; the crops'
+// own left column samples to kMarkerFlagBorder). No painter reads them at
+// present: no marker column carries a level.
 inline constexpr GuiColor kMarkerMagnificationFill    = hex(0x1ABC9C);
 inline constexpr GuiColor kMarkerMagnificationEdge    = hex(0x0E6857);
 inline constexpr GuiColor kMarkerMagnificationFillSel = hex(0x22F4CB);
@@ -2594,16 +2591,12 @@ inline int playhead_half_px() {
 // where the flag box ends and the LOWER cell's seam begins
 // (`iter_lower_boundary_x`), where the lower cell ends and the UPPER cell's
 // seam begins (`iter_upper_boundary_x`), and where the cells end and the
-// measure's seam begins (`measure_boundary_x`), and where the measure ends and
-// the green MAGNIFICATION box's seam begins (`magnification_boundary_x`,
-// architect 2026-09-14). They are non-decreasing, and
+// measure's seam begins (`measure_boundary_x`). They are non-decreasing, and
 // each collapses onto the next when its box did not paint — a cell-less flag
-// publishes both cell boundaries AT the measure boundary, a measureless flag
-// its measure boundary AT the magnification boundary, and a flag with no
-// magnification box of its own that boundary AT the rect's own right edge —
-// so hit_test_flag_cell's walk (Magnification first, then Measure, Upper,
-// Lower, else Payload) can never answer a cell that has no pixels. EVERY
-// PRODUCER SETS ALL FOUR (the flag pass, the editor's riding run and the `h`
+// publishes both cell boundaries AT the measure boundary, and a measureless
+// flag its measure boundary AT the rect's own right edge — so
+// hit_test_flag_cell's walk (Measure first, then Upper, Lower, else Payload)
+// can never answer a cell that has no pixels. EVERY PRODUCER SETS ALL THREE (the flag pass, the editor's riding run and the `h`
 // view's diff flags). ONE READER, hit_test_flag_cell (app_state.cpp),
 // whose MarkerCell answer the marker press reads for the addressed cell and
 // the double-click seed.
@@ -2613,7 +2606,7 @@ inline int playhead_half_px() {
 // flag into AppState::flag_hit_rects, and the marker-lane EDITOR'S painter
 // emits ONE MORE for the RIDING BOXES it paints beside its field — whichever of
 // the marker's boxes stand to the right of the one being edited, under any of
-// the four kinds (FlagEditorBox::riding_cells below). Both go through the same
+// the three kinds (FlagEditorBox::riding_cells below). Both go through the same
 // walk
 // (topmost_flag_rect, app_state.cpp) and the same boundary idiom, which is
 // what makes a press on a riding cell resolve to the same marker and the same
@@ -2628,7 +2621,6 @@ struct FlagHitRect {
     double iter_lower_boundary_x = 0.0;
     double iter_upper_boundary_x = 0.0;
     double measure_boundary_x    = 0.0;
-    double magnification_boundary_x = 0.0;
 };
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
@@ -2789,11 +2781,10 @@ struct WaveformBasis {
 // quiet passage readable, and a marker goes on a transient rather than in a
 // sustain.
 //
-// THE GAIN IS A FUNCTION OF SOURCE TIME, resolved from the warp markers
-// (architect approval 2026-09-14), on EVERY waveform picture — this plate and
-// the overview lane's bars, both of which take the same profile
-// (effective_waveform_gain_profile, warp_frame_map_view.h; the resolution rules at
-// build_waveform_gain_profile, warpmarkers.h). A COLUMN TAKES THE LEVEL OF THE
+// THE GAIN IS A FUNCTION OF SOURCE TIME (architect approval 2026-09-14), on
+// EVERY waveform picture — this plate and the overview lane's bars, both of
+// which take the same profile (effective_waveform_gain_profile,
+// warp_frame_map_view.h, empty while no marker column carries a level). A COLUMN TAKES THE LEVEL OF THE
 // SECTION CONTAINING ITS FIRST SOURCE FRAME s0 — the cell rule (CLAUDE.md
 // Rounding): the column's span [s0, s1) is a cell, and the section that contains
 // its origin owns it, so a section boundary inside a column never widens the
@@ -3217,7 +3208,7 @@ struct MarkerStem {
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
 // open marker-lane editor is standing in for it. THE ONE GRAPHIC MODEL, stated
-// once here and applied to all four editors (architect 2026-09-05, on the
+// once here and applied to all three editors (architect 2026-09-05, on the
 // tablet: "it just feels odd to have one nonvariant field in the middle ... the
 // two editors on the opposite ends behaving one way and the bounds one in the
 // middle behaving in a different way makes the whole thing seem hacked
@@ -3227,20 +3218,17 @@ struct MarkerStem {
 // by render_flag_editor_box.
 //
 // `cell` NAMES THE EDITED BOX in the marker's own left-to-right run — Payload
-// (the flag box itself), then Lower, Upper, Measure, Magnification — and this
-// pass's rule is
+// (the flag box itself), then Lower, Upper, Measure — and this pass's rule is
 // ONE COMPARISON: it paints the boxes LEFT of that cell exactly as it does at
 // rest, and NOTHING from that cell rightward. A payload editor therefore takes
 // the marker's whole column (the flag is its leftmost box), a lower-bound
-// editor leaves the flag standing and takes the lower cell, the upper cell, the
-// measure and the magnification box, an upper-bound editor leaves the flag and
-// the lower cell, a
-// measure editor takes the measure box and the magnification box beside it,
-// and a magnification editor takes the magnification box alone — the rule the
-// two separate indices this replaced applied to the two kinds they covered.
+// editor leaves the flag standing and takes the lower cell, the upper cell and
+// the measure, an upper-bound editor leaves the flag and the lower cell, and a
+// measure editor takes the measure box alone — the rule the two separate
+// indices this replaced applied to the two kinds they covered.
 //
 // ONE BOX AT MOST, which is why this is an index and a cell rather than a set:
-// the four editors are ONE text_editor::State, so no two can stand together.
+// the three editors are ONE text_editor::State, so no two can stand together.
 // `marker_index` -1, the resting value, suppresses nothing on any column.
 struct SuppressedBox {
     int        marker_index = -1;
@@ -3253,8 +3241,7 @@ struct SuppressedBox {
 // editor's own painter, which takes `cell` as the box its field stands in for.
 // So the pass that skips, the cache that keys and the painter that draws
 // cannot disagree about which box is being edited. Kind FlagPayload answers
-// Payload, MeasureText answers Measure, MagnificationText answers
-// Magnification, IterBound answers the session's own
+// Payload, MeasureText answers Measure, IterBound answers the session's own
 // side (iter_bound_editor_side, app_state.h); every other kind, and no editor
 // at all, answer the resting value.
 SuppressedBox suppressed_flag_box(const AppState& app);
@@ -3378,7 +3365,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // drawn. THE STEM IS THE EXCEPTION on both counts — it paints and publishes for
 // the whole session, the editor unrolling from the flag's own column.
 //
-// BOTH COLUMNS TAKE IT, but the PAYLOAD, MEASURE and MAGNIFICATION cells are
+// BOTH COLUMNS TAKE IT, but the PAYLOAD and MEASURE cells are
 // unreachable on the phase-reset one: those editors are warp-column surfaces by their own
 // open gates (the bound editor is both columns'), and that painter enforces
 // the asymmetry at its own call rather than trusting its caller (recorded
@@ -3412,12 +3399,10 @@ void render_flags(cairo_t* cr,
 // render_flag_editor_box and consumed by the pointer path. Every field is
 // DERIVED FROM A SHAPED RUN, which is exactly why it is published rather than
 // recomputed: a second shaping pass in the hit path could disagree with the
-// pixels. FOUR EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the
+// pixels. THREE EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the
 // flag unrolled), the MEASURE editor (the purple box as the field, Breeze
-// blue until 2026-09-15), the
-// MAGNIFICATION editor (the green box as the field) and the ITERATION BOUND
-// editor (one bound cell as the field) — and the pointer path
-// reads it identically for all four, which is why the consumers test the
+// blue until 2026-09-15) and the ITERATION BOUND editor (one bound cell as
+// the field) — and the pointer path reads it identically for all three, which is why the consumers test the
 // published rect and never the kind.
 //
 //   `box`           the painted box in window coordinates — for the payload
@@ -3461,15 +3446,14 @@ void render_flags(cairo_t* cr,
 //                   the edited box's width live (architect 2026-09-05, THE ONE
 //                   GRAPHIC MODEL — SuppressedBox above states it once). What
 //                   rides follows from which box the field stands in for: the
-//                   payload field carries the two bound cells, the measure
-//                   and the magnification, the LOWER-bound field the upper
-//                   cell and the two boxes past it, the UPPER-bound field the
-//                   measure and the magnification, the measure field the
-//                   magnification alone, and the magnification field
-//                   nothing, it being the rightmost box there is.
+//                   payload field carries the two bound cells and the
+//                   measure, the LOWER-bound field the upper cell and the
+//                   measure, the UPPER-bound field the measure, and the
+//                   measure field nothing, it being the rightmost box there
+//                   is.
 //                   Published as a FlagHitRect: the run's whole painted
 //                   extent, every seam divider included, keyed to the edited
-//                   marker and carrying the same four boundaries a resting
+//                   marker and carrying the same three boundaries a resting
 //                   run publishes — each one collapsing onto the next where
 //                   its box is not in the run — so the pointer resolves WHICH
 //                   CELL out of it exactly as it does at rest. marker_index -1
@@ -3506,7 +3490,7 @@ void render_flags(cairo_t* cr,
 //                   and this publication goes with them, on the frame the
 //                   close's own damage repaints.
 //
-// `valid` is false whenever none of the four marker-lane editors is open, and
+// `valid` is false whenever none of the three marker-lane editors is open, and
 // the painter writes that state on every frame it runs, so a stale box can
 // never outlive its session.
 //

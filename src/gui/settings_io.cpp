@@ -76,8 +76,7 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     // camera postures, which were session state in AppState from then (the
     // third deleted whole 2026-09-13) and are serialized nowhere. ONE MORE LEFT
     // IT 2026-09-14 — the waveform magnification level, the picture's gain being
-    // a per-section profile resolved from the warp markers since (architect
-    // approval 2026-09-14). The parser-side record of all eight, and the
+    // a per-section profile since (architect approval 2026-09-14). The parser-side record of all eight, and the
     // consequence for a sidecar still carrying one, is at
     // kCanonicalSettingsKeys, settings_file.cpp.)
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },

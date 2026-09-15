@@ -168,10 +168,9 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
-    // The waveform PICTURE's gain profile, resolved from the LIVE warp store
-    // at the working zoom or finer and empty coarser (effective_waveform_gain_profile
-    // — the `h` view's plate included, it being the live plate) and captured
-    // here
+    // The waveform PICTURE's gain profile, at the working zoom or finer and
+    // empty coarser (effective_waveform_gain_profile — the `h` view's plate
+    // included, it being the live plate), captured here
     // with the geometry as an owned snapshot, so the worker reads no live
     // store. Its HASH is the fingerprint field, which is what keeps a plate
     // from being shown at a gain that is no longer live.
@@ -745,19 +744,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // here closes the hit-test staleness window that otherwise lasts until the
     // next tick.
     maybe_rebuild_flag_cache();
-}
-
-bool GuiPaintHandler::displayed_plate_geometry_is_live() const {
-    if (!wf_cache.fp_rendered) return false;
-    const WaveformRenderInputs in = compute_waveform_render_inputs();
-    if (!in.valid) return false;
-    return wf_cache.fp_vp_start            == in.vp_start &&
-           wf_cache.fp_vp_end              == in.vp_end &&
-           wf_cache.fp_area_w              == in.area_w &&
-           wf_cache.fp_area_h              == in.area_h &&
-           wf_cache.fp_inset_px            == in.inset_px &&
-           wf_cache.fp_target              == in.is_target &&
-           wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
 }
 
 bool GuiPaintHandler::displayed_plate_gain_is_stale() const {

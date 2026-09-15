@@ -851,7 +851,7 @@ std::string scale_token_of(const std::string& settings_text) {
 // the typed value.
 bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
     // THE COMMENT IS PART OF THE GRAMMAR HERE: these are the same on-disk
-    // lines the loader accepts, so the ` //<measure>,<magnification>` comment
+    // lines the loader accepts, so the ` //<measure>` comment
     // is accepted too. Refusing it would drop every commented marker on the
     // whitespace refusal and vanish it from the diff lane entirely.
     auto parsed = warpmarkers_internal::parse_single_canonical_line(

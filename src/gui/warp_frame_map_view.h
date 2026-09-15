@@ -176,70 +176,28 @@ struct PhaseResetRedFlagCache {
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app);
 
-// THE WAVEFORM GAIN PROFILE, memoized (architect approval 2026-09-14): the
-// per-section magnification build_waveform_gain_profile resolves from the
-// LIVE warp store (warpmarkers.h carries the resolution rules), with its hash.
-// Keyed on the warp store generation alone — the profile is a pure function of
-// the store's frames, magnifications, labels and disabled bits, and every
-// mutation of any of them bumps the generation (undo, redo, `'`, the load and
-// every authoring act included). Its ONE reader is
-// effective_waveform_gain_profile (below), which the two waveform pictures
-// take — the plate's render inputs (compute_waveform_render_inputs, which
-// copies the profile into the job as it copies the warp map) and the overview
-// lane's bar cache (maybe_rebuild_overview_bar_cache). THE `h` VIEW'S PLATE IS
-// THE LIVE PLATE, so it reads this live store's profile, never the viewed
-// checkpoint's.
-// The HASH alone keys both picture caches, so a gain-only change re-renders
-// through the fingerprint without touching the displayed basis.
+// THE WAVEFORM GAIN PROFILE with its hash — the shape every waveform picture
+// takes (warpmarkers.h carries the profile's step-function contract). The
+// HASH alone keys both picture caches (the plate fingerprint and the overview
+// bar cache), so a gain-only change re-renders through the fingerprint
+// without touching the displayed basis.
 struct WaveformGainProfileCache {
-    bool                valid       = false;
-    long long           markers_gen = -1;
     WaveformGainProfile profile;
-    uint64_t            hash        = 0;
-    // THE DRAG SLOT'S TWO EXTRA KEY FIELDS (waveform_gain_profile_drag_cached,
-    // below) — the dragged marker's store index and its commit-rounded
-    // proposal. The resting slot neither writes nor reads them.
-    int                 dragged_marker = -1;
-    int64_t             dragged_frame  = 0;
+    uint64_t            hash = 0;
 };
-const WaveformGainProfileCache& waveform_gain_profile_cached(
-    const AppState& app);
-
-// THE GAIN PROFILE WHILE A WARP MARKER IS DRAGGED (architect 2026-09-14: the
-// magnified sections follow the drag, not the release). A marker drag leaves
-// the live store untouched until its commit (DragState), so the resting slot
-// above cannot see the hand. This SECOND SLOT builds the profile from a COPY of
-// the warp store with the dragged marker (DragState::dragging_markers[0]) at
-// DragState::proposed_authored_frame — the proposal converted by the commit's
-// own conversion — re-sorted by reorder_markers_by_time exactly as commit_drag
-// re-sorts, so every motion shows the picture the release would leave. Keyed
-// (warp store generation, dragged index, proposed frame), so the plate inputs,
-// the overview bar cache and the gain kick's hash share ONE build per
-// distinct proposal. A proposal still at the marker's stored frame answers
-// the resting slot itself (same store, same profile). Its one reader is
-// effective_waveform_gain_profile, and only while a WARP-column drag stands
-// (DragState::drag_mode 'W').
-const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
-    const AppState& app);
 
 // THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE (architect
-// 2026-09-14: magnification applies iff the zoom is at working or finer): the live
-// resolved profile above AT THE WORKING ZOOM OR FINER
+// 2026-09-14: magnification applies iff the zoom is at working or finer): a
+// profile applies AT THE WORKING ZOOM OR FINER
 // (zoom_level_at_or_finer_than_working), else — coarser — the EMPTY profile,
-// level 0 everywhere, hash 0.
-// No view term: target view, source view and the `h` view answer alike, the
-// `h` view's plate showing the LIVE store's gain (the struct above). ONE
-// place, so the picture caches' existing hash keys re-render on every zoom
-// write that crosses the working level with no per-caller code (a live
-// profile with no breakpoints is hash 0 as well, and there the two answers
-// are rightly the same picture). While a WARP-column marker drag stands at
-// the working zoom or finer, the live answer is the DRAG SLOT's
-// (waveform_gain_profile_drag_cached), so the picture shows the store as the
-// release would leave it. READERS: the plate's render inputs
+// level 0 everywhere, hash 0. No view term: target view, source view and the
+// `h` view answer alike. ONE place, so the picture caches' existing hash keys
+// re-render on every zoom write that crosses the working level with no
+// per-caller code. Both arms answer the empty profile at present: no marker
+// column carries a level. READERS: the plate's render inputs
 // (compute_waveform_render_inputs), the overview lane's bar cache
 // (maybe_rebuild_overview_bar_cache) and the gain kick's hash
-// (Viewport::waveform_gain_hash). waveform_gain_profile_cached keeps its one
-// other job, the resolved profile's memo.
+// (Viewport::waveform_gain_hash).
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app);
 

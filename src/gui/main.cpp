@@ -1531,10 +1531,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // GuiPaintHandler::force_synchronous_waveform_rebuild.
     viewport.request_waveform_sync_ =
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
-    // The marker drag's per-motion gain kick asks this first (the guard's
-    // contract at Viewport::displayed_plate_geometry_is_live).
-    viewport.displayed_plate_geometry_is_live_ =
-        [&]() { return paint_handler.displayed_plate_geometry_is_live(); };
     // The marker drag release's two seams (the rule at
     // MarkerDragOps::commit_drag's tail, the contracts at their Viewport
     // declarations): the displayed plate's gain staleness and the flag-only
@@ -2456,7 +2452,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its eighteen
+            // second arm covers both of the row's surfaces, its seventeen
             // roster buttons (the transport three, and the right block's four
             // marker verbs with the Edit flag button, the Marker Measure, the
             // Copy resolved value button and

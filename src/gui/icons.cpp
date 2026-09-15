@@ -892,7 +892,8 @@ constexpr IconPath kToolRectSelectionPaths[] = {
 // digit, media-record's own producer form) and implicit repetition; every
 // family has a committed producer already, so nothing here asked the
 // interpreter for anything new. (The plus and minus magnifiers of the same
-// file family left with the Zoom In / Zoom Out buttons on 2026-09-14,
+// file family left with the Zoom In / Zoom Out buttons on 2026-09-14, and
+// zoom-in-y with the per-marker Magnification button on 2026-09-15,
 // enumerators, defs and assets together.)
 
 constexpr IconPath kZoomFitBestPaths[] = {
@@ -902,31 +903,6 @@ constexpr IconPath kZoomFitBestPaths[] = {
      "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
      "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
      "7-7zm-4 3v1 6 1h8v-1-6-1h-8zm1 1h6v6h-6v-6z"},
-};
-
-// ZOOM-IN-Y (2026-08-26), the same family further along: the identical
-// magnifier except that the HANDLE STUB IS ONE UNIT SHORTER (2.400391 where
-// the two above carry 3.400391) and the lens holds a Y-AXIS RULER — the run of
-// tick pairs inside the ring — beside the plus. A single `.ColorScheme-Text`
-// path in the family's own idiom, transcribed byte-verbatim from breeze-dark's
-// actions/22/ like every entry here; zoom-in-y.svg is a symlink to
-// y-zoom-in.svg in the installed theme, so the committed asset holds the
-// resolved bytes. (Its twin zoom-out-y sat beside it until 2026-09-14, facing
-// the retired Reduce button and then, for the rest of that day, the Ignore
-// Waveform Magnification lamp; its paths and asset left with the lamp, having
-// had no other consumer.)
-// (zoom-fit-height sat third here from 2026-08-26 until the MAGNIFICATION
-// RESET button was retired on 2026-08-27; its paths and asset went with the
-// button, having had no other consumer.)
-constexpr IconPath kZoomInYPaths[] = {
-    {kIconText,
-     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
-     "4.892578-1.693359l2.400391 2.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
-     "0-1.414062l-2.40039-2.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
-     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-2-0.302734v-4.697266"
-     "h-1-1v1h1v1h-1v1h1v1h-0.5644531a7 7 0 0 1-3.4355469-6 7 7 0 0 1 "
-     "3.4355469-6h0.5644531v1h-1v1h1v1h-1v1h1 1v-4.6972656a7 7 0 0 1 "
-     "2-0.3027344zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
 };
 
 constexpr IconPath kZoomOriginalPaths[] = {
@@ -1154,7 +1130,6 @@ constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
 constexpr IconDef kToolRectSelection  {22.0, kToolRectSelectionPaths,   1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
 constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
-constexpr IconDef kZoomInY            {22.0, kZoomInYPaths,             1};
 constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
 constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
@@ -1206,7 +1181,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ToolRectSelection:   return kToolRectSelection;
         case Icon::ZoomFitBest:         return kZoomFitBest;
         case Icon::ZoomOriginal:        return kZoomOriginal;
-        case Icon::ZoomInY:             return kZoomInY;
         case Icon::ListAdd:             return kListAdd;
         case Icon::ListRemove:          return kListRemove;
         case Icon::ViewHidden:          return kViewHidden;

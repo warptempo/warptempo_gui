@@ -1,6 +1,5 @@
 #pragma once
 
-#include "marker_magnification.h"
 #include "marker_measure.h"
 
 #include <cstdint>
@@ -9,12 +8,12 @@
 #include <string>
 #include <vector>
 
-// One warp marker's serialized form — the nine fields the .warpmarkers
+// One warp marker's serialized form — the eight fields the .warpmarkers
 // file round-trips, and the only fields the parser domain and the
 // engine-bound render path read. Three independent state axes (the eighth
-// field, the measure, is a score reference and the ninth, the magnification,
-// a picture posture — neither is a state axis; architect approval 2026-09-14
-// for the ninth):
+// field, the measure, is a score reference, not a state axis; the ninth, a
+// per-marker magnification, left the marker whole — architect approval
+// 2026-09-15):
 //
 //   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo
 //      (`tempo_cents` is the numeric value). `tempo_inherits == true` (a
@@ -60,11 +59,10 @@ struct WarpMarker {
     bool disabled      = false;
 
     // MEASURE REFERENCE (architect approval 2026-08-20), serialized as the
-    // LEFT half of the ` //<measure>,<magnification>` comment past the
-    // canonical line (architect approval 2026-09-14) — grammar, canonical
-    // spelling and byte bound in marker_measure.h, the comment's split there
-    // too. Empty means no measure; the writer emits no comment at all when
-    // this and the magnification below are both blank, and `//,` is
+    // ` //<measure>` comment past the canonical line (architect approval
+    // 2026-09-15) — grammar, canonical spelling and byte bound in
+    // marker_measure.h, the comment's split there too. Empty means no
+    // measure; the writer emits no comment at all then, and an empty `//` is
     // load-fatal.
     //
     // IT IS HOMED ON THE BASE rather than on the GUI's derived marker because
@@ -75,15 +73,6 @@ struct WarpMarker {
     // only — so a measure cannot move a render key, and editing one can never
     // invalidate a completed render.
     std::string measure;
-
-    // MAGNIFICATION (architect approval 2026-09-14): a count of waveform
-    // picture doublings in [0, kMarkerMagnificationMax], serialized as the
-    // RIGHT half of the comment; nullopt is BLANK, which means inherit. Range,
-    // grammar and spelling in marker_magnification.h. Homed on the base for
-    // the measure's reason above, and like the measure it reaches no further:
-    // MarkerForRender carries neither field, so the render fingerprint cannot
-    // include a magnification and editing one never invalidates a render.
-    std::optional<uint8_t> magnification;
 };
 
 // Parse a .warpmarkers file in the canonical GUI-authored format. Never
@@ -93,11 +82,11 @@ struct WarpMarker {
 // missing frame-0 tempo owner is NOT a load rule — the render resolver
 // (resolve_warp_markers_for_render) normalizes it, silently seeding a plain
 // enabled 1.00 owner at frame 0, so any state the GUI can save loads back and
-// renders. Every line may carry the ` //<measure>,<magnification>` comment
-// (split_marker_comment, marker_measure.h — architect approval 2026-09-14); a
-// malformed one — no comma or more than one, the empty `//,`, a measure off
-// its grammar or past its byte bound, a magnification that is not one digit
-// 0..4 — is GUI-unproducible and load-fatal like any other adversarial line.
+// renders. Every line may carry the ` //<measure>` comment
+// (split_marker_comment, marker_measure.h — architect approval 2026-09-15); a
+// malformed one — the empty `//`, any comma, a measure off its grammar or
+// past its byte bound — is GUI-unproducible and load-fatal like any other
+// adversarial line.
 // This is the canonical .warpmarkers reader for both the GUI store and the
 // headless CLI.
 //
@@ -126,10 +115,9 @@ namespace warpmarkers_internal {
 // success, or a one-line diagnostic on failure.
 //
 // `accept_comment` selects whether the line may carry the
-// ` //<measure>,<magnification>` comment (split_marker_comment,
-// marker_measure.h; renamed from `accept_measure` with the comment's second
-// field, architect approval 2026-09-14). When true the comment is split off
-// first, both halves validated, and the measure and magnification attached;
+// ` //<measure>` comment (split_marker_comment, marker_measure.h; architect
+// approval 2026-09-15). When true the comment is split off first, the
+// measure validated and attached;
 // when false the comment is not a concept and the no-whitespace refusal
 // below rejects the line whole. The five callers and their answers:
 //

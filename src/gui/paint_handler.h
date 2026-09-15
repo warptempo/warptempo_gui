@@ -168,15 +168,13 @@ struct WaveformCache {
     // what the job takes.)
     int       fp_inset_px = -1;
     // THE GAIN PROFILE'S HASH the live pixels were rendered under
-    // (effective_waveform_gain_profile — the per-section magnification resolved
-    // from the warp markers at the working zoom or finer, or the empty profile
-    // coarser).
+    // (effective_waveform_gain_profile — the per-section magnification at the
+    // working zoom or finer, or the empty profile coarser).
     // A FINGERPRINT FIELD in its own right, keyed
     // directly like the inset: the profile is an input to the tip mapping
     // alone, so nothing else about the plate would move if it changed by
-    // itself (a magnification edit moves no marker and no map), and without it
-    // a plate rendered at one gain could go on being blitted after the markers
-    // changed it. The hash alone is enough to re-render — no basis freeze and
+    // itself (a level edit moves no map), and without it a plate rendered at
+    // one gain could go on being blitted after the profile changed. The hash alone is enough to re-render — no basis freeze and
     // no map term rides with it. PIXELS ONLY — this cache holds a picture, and
     // the profile reaches no sample anywhere.
     uint64_t  fp_gain_profile_hash = 0;
@@ -486,7 +484,7 @@ struct FlagCache {
 //
 // THE GAIN PROFILE'S HASH IS THE KEY'S THIRD FIELD (architect approval
 // 2026-09-14, replacing the retired setting's level): the gain is a function of
-// source time resolved from the warp markers, on every waveform picture — this
+// source time, on every waveform picture — this
 // 24px band is where a quiet passage disappears first, and the lane is source-
 // domain, so it takes the plate's own profile (effective_waveform_gain_profile)
 // with no view term. It is an input to these bars' tip mapping exactly as it is
@@ -669,14 +667,6 @@ struct GuiPaintHandler {
     // FOLLOW SCROLLING joined this route 2026-09-02 (the vanishing playhead
     // line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();
-
-    // True when a plate is displayed (wf_cache.fp_rendered) and every GEOMETRY
-    // field of its fingerprint — vp_start, vp_end, area_w, area_h, inset, the
-    // target bit and the warp map hash — equals the live render inputs'
-    // (compute_waveform_render_inputs), so the only field a synchronous
-    // rebuild could change is the gain profile hash. The contract and its one
-    // reader are at Viewport::displayed_plate_geometry_is_live.
-    bool displayed_plate_geometry_is_live() const;
 
     // True when a plate is displayed (wf_cache.fp_rendered) and its published
     // gain fingerprint (fp_gain_profile_hash) differs from the live effective
@@ -888,7 +878,7 @@ private:
     // 2026-08-12; the arrows flush right since the same day's relayout): the
     // transport three at the left pad, then the right margin's block — the
     // four marker verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG
-    // button, the MEASURE, the MARKER MAGNIFICATION and ADD TO SELECTION
+    // button, the MEASURE and ADD TO SELECTION
     // behind them + separator + marker-walk two + separator + arrow four (2026-08-15 for the walk
     // group, 2026-08-18 for the verbs) — at
     // the icon row's boxes, the

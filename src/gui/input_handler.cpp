@@ -1673,9 +1673,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         case MarkerCell::Measure:
             flag_editor.enter_measure_edit(focus);
             return;
-        case MarkerCell::Magnification:
-            flag_editor.enter_magnification_edit(focus);
-            return;
         }
         return;
     }
@@ -1711,25 +1708,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         flag_editor.enter_measure_edit(app.last_selected_marker);
-        return;
-    }
-
-    // CTRL+/ opens the MAGNIFICATION editor on the focused warp marker
-    // (architect 2026-09-14) — bare `/`'s ctrl twin, ctrl-exact and one-shot.
-    // The gates are the Measure's by construction: the refusal owner
-    // (marker_magnification_edit_refusal, app_state.h — the warp column, then
-    // a focus) cards here and greys the Magnification button; the READ-ONLY
-    // lock and the `h` view drop the chord at their own allowlists, neither of
-    // which carries it; and the ITERATION LOCK drops it at
-    // iteration_lock_key_blocked, which admits it nowhere. NO TOGGLE: nothing
-    // but the editor's own empty commit clears the field.
-    if (key == GuiKeys::Slash && ctrl && !shift && !alt) {
-        selection.repair_last_selected();
-        if (const char* refusal = marker_magnification_edit_refusal(app)) {
-            notifications.notify(AppState::NotificationClass::Normal, refusal);
-            return;
-        }
-        flag_editor.enter_magnification_edit(app.last_selected_marker);
         return;
     }
 
@@ -2170,20 +2148,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the mode goes off) the same chord at the same magnitude runs the SECOND
     // step body — adjust_iter_bound_cents on the warp column and
     // adjust_iter_bound_hops on the phase-reset one — whose refusal this arm
-    // cards exactly as it cards the tempo step's; with the MEASURE or the
-    // MAGNIFICATION addressed (2026-09-14) the same chord runs that field's
-    // own step body (adjust_measure_step / adjust_magnification_step, the
-    // owners at app_state.h's value-step block), whose refusals it cards the
-    // same way. THIS ARM IS THE VALUE STEP — the chord's name — and the cell
+    // cards exactly as it cards the tempo step's; with the MEASURE addressed
+    // (2026-09-14) the same chord runs that field's own step body
+    // (adjust_measure_step, the owners at app_state.h's value-step block),
+    // whose refusals it cards the same way. THIS ARM IS THE VALUE STEP — the chord's name — and the cell
     // is its subject. SAME LADDER: the bound step takes no repeat bit and no
     // coalescing at all (2026-09-10 — it records nothing, so a held run has no
-    // burst to open or merge into and simply steps), while the tempo, measure
-    // and magnification steps keep both, each under its own GestureKind. The
+    // burst to open or merge into and simply steps), while the tempo and
+    // measure steps keep both, each under its own GestureKind. The
     // Up/Down buttons' face forks on the same axis.
     //
     // AND UNDER A LIT LAMP ONLY THE BOUND ARM IS REACHED: the composed gate
     // above admits Up/Down exactly on a bound axis (iteration_lock_key_blocked),
-    // so the payload, measure and magnification steps all belong to a dark
+    // so the payload and measure steps both belong to a dark
     // lamp, and the buttons grey on the same fork.
     if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down)) {
@@ -2221,11 +2198,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         case MarkerCell::Measure:
             card_op_refusal(notifications,
                             warpops.adjust_measure_step(
-                                delta, mods.synthesized_repeat));
-            return;
-        case MarkerCell::Magnification:
-            card_op_refusal(notifications,
-                            warpops.adjust_magnification_step(
                                 delta, mods.synthesized_repeat));
             return;
         }
@@ -3273,7 +3245,7 @@ void GuiInputHandler::run_span_framing_command() {
 // eighth glass ruling moved the pan onto the bare form), on ALT from
 // 2026-08-27 while the plain wheel stepped the waveform magnification, and
 // plain again since 2026-09-14, when that setting retired — the picture's gain
-// is a per-section profile resolved from the warp markers now — with the ALT
+// is a per-section profile now — with the ALT
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
 // caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
@@ -3755,8 +3727,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // `active_audio_view=` commit route here — Ctrl+Tab never changes
     // active_audio_view — so this is the one place either edge is handled.
     // THE CLOSE IS KIND-AGNOSTIC: it also tears down a live MEASURE editor
-    // (Kind::MeasureText) on T->S — and a MAGNIFICATION editor
-    // (Kind::MagnificationText) likewise — where before 2026-08-24 it survived only
+    // (Kind::MeasureText) on T->S, where before 2026-08-24 it survived only
     // because nothing closed it. Flagged for a ruling and the architect
     // ruled 2026-08-25: KEEP — "we want symmetry as much as possible", the
     // same reason as the payload editor's.

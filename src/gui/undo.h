@@ -19,15 +19,15 @@ struct GuiInputHandler;
 // pure repeat-identity model's "separate presses are separate entries" clause on
 // the live complaint that rapid manual taps each pushed their own entry). A burst
 // of eligible keyboard
-// gestures — FIVE of them, re-grepped 2026-09-14 from GestureKind below (it
+// gestures — FOUR of them, re-grepped 2026-09-15 from GestureKind below (it
 // was three from 2026-07-29, when the W+target tempo-IMAGE step was deleted
 // with the whole tempo-image family, marker_drag.h; four from 2026-09-04 with
 // the iteration bound step, which left the undo domain 2026-09-10; three again
-// until the measure and magnification steps joined 2026-09-14): the warp and
+// until the measure step joined 2026-09-14): the warp and
 // phase-reset position nudges (Left/Right in the
-// marker lane) and the three coalescing arms of the Up/Down VALUE STEP on the
-// addressed cell — the tempo cent step, the measure step and the magnification
-// step, each also reached by the plain wheel over its flag cell — each in
+// marker lane) and the two coalescing arms of the Up/Down VALUE STEP on the
+// addressed cell — the tempo cent step and the measure step, each also
+// reached by the plain wheel over its flag cell — each in
 // the
 // step ladder's three magnitudes since 2026-08-31, which the coalescing is
 // blind to exactly as it is blind to direction (the record is at
@@ -91,10 +91,10 @@ struct GuiInputHandler;
 // their place (the stamped selection and A/B tab must still stand); the
 // derivation is at coalesce_gesture's definition.
 // THE ELIGIBLE KINDS, one per coalescing gesture plus None: the two position
-// nudges and the Up/Down value step's three coalescing arms — the cent step
-// (TempoStep, singleton and group), the measure step (MeasureStep) and the
-// magnification step (MagnificationStep), both since 2026-09-14 — each its own
-// kind, so a nudge burst, a tempo burst and a field burst stay separate.
+// nudges and the Up/Down value step's two coalescing arms — the cent step
+// (TempoStep, singleton and group) and the measure step (MeasureStep, since
+// 2026-09-14) — each its own kind, so a nudge burst, a tempo burst and a
+// measure burst stay separate.
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h). ITERBOUNDSTEP WAS A FOURTH
 // FROM 2026-09-04 TO 2026-09-10 — the same arrows' second body, stepping a
@@ -104,14 +104,14 @@ struct GuiInputHandler;
 // pushes nothing now, so it has nothing to coalesce INTO, and the two subject
 // terms that kind alone read — the addressed cell and the W/P column — went
 // with it.
-// MEASURESTEP AND MAGNIFICATIONSTEP (architect 2026-09-14) are the value
-// step's two newer axes — the same arrows (and the plain wheel over a flag
-// cell) stepping the measure or the magnification field, singleton on the
-// focus. They are SEPARATE KINDS rather than one keyed by the cell so that a
-// burst never merges across cells: a tempo tap then a measure tap on the same
-// marker open two entries, as a nudge tap then a tempo tap always did.
+// MEASURESTEP (architect 2026-09-14) is the value step's newer axis — the
+// same arrows (and the plain wheel over a flag cell) stepping the measure
+// field, singleton on the focus. It is a SEPARATE KIND rather than TempoStep
+// keyed by the cell so that a burst never merges across cells: a tempo tap
+// then a measure tap on the same marker open two entries, as a nudge tap then
+// a tempo tap always did.
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep, MeasureStep, MagnificationStep
+    None, WarpNudge, PhaseResetNudge, TempoStep, MeasureStep
 };
 
 // THE TAP-COALESCE WINDOW (architect 2026-08-01): two consecutive PHYSICAL

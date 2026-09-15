@@ -47,8 +47,8 @@ namespace {
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the five coalescing kinds (GestureKind, undo.h, re-grepped: both position
-// nudges, the tempo cent step, the measure step and the magnification step)
+// the four coalescing kinds (GestureKind, undo.h, re-grepped: both position
+// nudges, the tempo cent step and the measure step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
 // verdicted on. There are three of them, re-grepped at this writing
@@ -262,11 +262,11 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // the selection on one of TWO stores rather than the selection itself.
     // Both went with the kind on 2026-09-10, when the iteration bracket left
     // the undo domain: the bound step pushes nothing, so it has no entry for a
-    // later tap to merge into and no subject to keep apart. The five kinds
+    // later tap to merge into and no subject to keep apart. The four kinds
     // standing now (GestureKind, undo.h, re-grepped: WarpNudge,
-    // PhaseResetNudge, TempoStep, MeasureStep, MagnificationStep) are one-body
-    // kinds whose subject the selection carries whole — the three value steps'
-    // FIELDS keep apart by the kind itself, each field its own kind.)
+    // PhaseResetNudge, TempoStep, MeasureStep) are one-body kinds whose
+    // subject the selection carries whole — the two value steps' FIELDS keep
+    // apart by the kind itself, each field its own kind.)
 
     bool merge = false;
     if (stamp_matches) {
@@ -437,17 +437,17 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
     // preference. The routes are the nudges' shared prologue, both arms of
-    // the Up/Down cent step, and since 2026-09-14 the value step's measure and
-    // magnification bodies (grep this function's callers; the Up/Down BOUND
+    // the Up/Down cent step, and since 2026-09-14 the value step's measure
+    // body (grep this function's callers; the Up/Down BOUND
     // step was among them until 2026-09-10, when the iteration bracket left
     // the undo domain and that step stopped asking any verdict at all).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
     // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
-    // at every eligible route — SIX routes over FIVE call sites (the two
+    // at every eligible route — FIVE routes over FOUR call sites (the two
     // position nudges through their shared commit tail, the singleton and
-    // group arms of the Up/Down cent step, and the measure and magnification
-    // steps) — and ONLY on the
+    // group arms of the Up/Down cent step, and the measure step) — and ONLY
+    // on the
     // accepted path, so a REFUSED press
     // never enables a later merge into an older entry, tap or repeat. Presses
     // beyond the window, or after a subject change, open their own entries.
@@ -489,11 +489,11 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // the subject terms are untouched.
     //
     // ONE SEAM FOR EVERY KIND: every eligible route reaches this call
-    // post-mutation on its accepted path — SIX routes over FIVE call sites:
+    // post-mutation on its accepted path — FIVE routes over FOUR call sites:
     // the two position nudges through their shared commit tail, the singleton
-    // and group arms of the Up/Down cent step, and the measure and
-    // magnification steps (2026-09-14) at their own — so the equality question
-    // has ONE owner here rather than six copies; the
+    // and group arms of the Up/Down cent step, and the measure step
+    // (2026-09-14) at its own — so the equality question has ONE owner here
+    // rather than five copies; the
     // per-column readers it uses are the row enumerations at the head of this
     // file. (The Up/Down BOUND step was a fifth route over a fourth call site
     // until 2026-09-10, when the iteration bracket left the undo domain: it

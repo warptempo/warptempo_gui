@@ -58,8 +58,8 @@ struct WaveformJob {
     int       inset_px         = 0;
 
     // THE WAVEFORM'S GAIN PROFILE (effective_waveform_gain_profile — the
-    // per-section magnification resolved from the live warp markers at the
-    // working zoom, empty coarser), an owned
+    // per-section magnification at the working zoom or finer, empty coarser),
+    // an owned
     // snapshot taken on the GUI thread at job submission exactly as the warp
     // map is, so the worker reads no live store. Its HASH is the FINGERPRINT
     // field (WaveformCache::fp_gain_profile_hash), which is what keeps a plate

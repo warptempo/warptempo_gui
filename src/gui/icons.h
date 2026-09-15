@@ -149,24 +149,6 @@ enum class Icon {
     // other button wearing them.
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
-    // ZOOM-IN-Y, breeze's zoom-in-y (2026-08-26): the SAME magnifier
-    // construction as the two above, carrying a Y-AXIS MARK — a ruler of tick
-    // marks down the left of the lens with the plus in the dial — so the act it
-    // faces is a zoom of the amplitude axis rather than the time axis. It faced
-    // the icon row's Magnify waveform button until 2026-09-14, when that button,
-    // its Reduce twin (zoom-out-y, whose enumerator, def and asset left with
-    // it) and the setting they stepped retired (architect approval 2026-09-14);
-    // THIS ONE IS KEPT for the per-marker magnification's own bottom-row opener
-    // to wear. One `.ColorScheme-Text` path in the family's own idiom; in the
-    // installed theme zoom-in-y.svg is a symlink to y-zoom-in.svg,
-    // byte-identical, and the committed asset is the resolved bytes. The name
-    // is the PROVENANCE name (the theme-provenance rule).
-    //
-    // (ZOOMFITHEIGHT WAS A THIRD FACE FOR ONE DAY — breeze's zoom-fit-height,
-    // worn by the MAGNIFICATION RESET from 2026-08-26 to 2026-08-27. Its def
-    // and its asset are deleted with the button, no button being left that
-    // wears them — edit-comment's own precedent.)
-    ZoomInY,             // IconMarkerMagnification's glyph (2026-09-14)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -469,15 +451,16 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 50 SINCE 2026-09-15, THE TWO VIEW LAMPS' DELETION (architect 2026-09-15): a
-// re-COUNT of the enumerators, document-import and chronometer-start leaving
-// with the two lamp buttons that wore them — enumerators, defs and assets
-// together, the edit-cut precedent. It was 52 from 2026-09-14, the Keep
+// 49 SINCE 2026-09-15, THE PER-MARKER MAGNIFICATION'S RETIREMENT (architect
+// 2026-09-15): zoom-in-y left with the Magnification button that wore it —
+// enumerator, def and asset together. It was 50 earlier that day, after the
+// two view lamps' deletion, when document-import and chronometer-start left
+// with the two lamp buttons that wore them, the edit-cut precedent. It was 52 from 2026-09-14, the Keep
 // Centered While Nudging and Ignore Waveform Magnification deletion, when
 // align-horizontal-center and zoom-out-y left with the two lamps that wore
 // them. The count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 50;
+inline constexpr int kIconCount = 49;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

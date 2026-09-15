@@ -1541,7 +1541,7 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's eighteen — the transport three, then the right block's four marker
+    // row's seventeen — the transport three, then the right block's four marker
     // verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG button
     // (2026-08-27), the MARKER MEASURE
     // (2026-08-19) and ADD TO SELECTION (2026-08-18) behind them, three walk
@@ -2306,7 +2306,7 @@ struct GuiInputHandler {
     // closes it; then the flag under (x, y) is SELECTED exactly as a plain
     // click selects it (run_marker_plain_select — no prior selection needed,
     // every audio view and column) and THAT CELL takes THE VALUE STEP as
-    // Up / Down would — the tempo, a bound, the measure or the magnification,
+    // Up / Down would — the tempo, a bound or the measure,
     // a phase reset's payload stepping nothing — one step per detent, up =
     // increase, through the same bodies. The step asks the key's two lock
     // gates first; EVERY REFUSAL IS SILENT; synthesized_repeat is false, so a
@@ -2358,7 +2358,7 @@ struct GuiInputHandler {
     // its kinds (unlike modal_dialog_editor_active, which names the three
     // DIALOG-hosted surfaces — those first two plus the flag editor's
     // BpmBracket kind — and omits
-    // the FlagPayload, MeasureText, MagnificationText and IterBound kinds,
+    // the FlagPayload, MeasureText and IterBound kinds,
     // all of which paint in the marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
@@ -2879,11 +2879,10 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. ALL FIVE kinds now take route_modal_editor_key: the bpm
+    // close routing. ALL FOUR kinds now take route_modal_editor_key: the bpm
     // bracket editor as ever, the FlagPayload flag editor since it became
-    // keyboard-modal, the MeasureText measure editor since 2026-08-19, the
-    // IterBound editor since 2026-09-05 and the MagnificationText editor since
-    // 2026-09-14 — they differ only in their commit/cancel bodies and in which area
+    // keyboard-modal, the MeasureText measure editor since 2026-08-19 and the
+    // IterBound editor since 2026-09-05 — they differ only in their commit/cancel bodies and in which area
     // they repaint. There is no longer a tail that cancels an edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
@@ -3254,9 +3253,7 @@ private:
     // reset store and the engine settings — what push_undo_both captures — and
     // NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
-    // tab, the camera, follow and projects_repo (the waveform's per-section
-    // magnification is NOT on this list since 2026-09-14: it lives on the
-    // warp markers, so the recipe's store carries it in) — and gui_scale is outside the question
+    // tab, the camera, follow and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
     // view are how he then inspects what the load changed. (It SUPERSEDES the

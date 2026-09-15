@@ -13,9 +13,9 @@
 
 struct GuiTargetRender;
 
-// Flag-editor cluster. Covers the marker lane's four editors — the flag's
-// canonical-line editor, the measure editor and the magnification editor (the
-// warp column's alone) and the iteration bound editor (both columns') — the
+// Flag-editor cluster. Covers the marker lane's three editors — the flag's
+// canonical-line editor and the measure editor (the warp column's alone) and
+// the iteration bound editor (both columns') — the
 // BPM dialog editor, and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 struct GuiFlagEditor {
@@ -111,29 +111,6 @@ struct GuiFlagEditor {
     // the field actually changed; the editor closes on
     // every path except the refusal.
     void commit_measure_edit();
-
-    // THE MAGNIFICATION EDITOR'S ONE ENTRY (Kind::MagnificationText, architect
-    // 2026-09-14), on the WARP column alone — phase resets carry no
-    // magnification — the measure editor's open in every other respect: the
-    // focus repaired, the marker single-selected and landed, the addressed
-    // cell seated on Magnification, open-selected. The callers' gate is
-    // marker_magnification_edit_actionable (app_state.h); read-only and the
-    // iteration lock refuse at the callers, as the measure's do.
-    //
-    // THE SEED IS NEVER BLANK: the marker's OWN digit, else its RESOLVED
-    // inherited digit (resolved_magnification_level — a ref answering its
-    // definition's value), selected whole. So an untouched ENTER on an
-    // inheriting marker writes the inherited digit as the marker's OWN value
-    // (one undo entry — architect 2026-09-14); Esc, or an EMPTY commit, leaves
-    // it inheriting.
-    void enter_magnification_edit(int idx);
-    // Commit the open magnification session: an EMPTY buffer makes the field
-    // BLANK (inherit), exactly one digit 0..kMarkerMagnificationMax becomes the
-    // marker's own value, anything else REFUSES with the editor left standing,
-    // red, and a card. One undo entry when the field actually changed, whose
-    // tail re-renders the waveform picture at once (the gain profile moved);
-    // the editor closes on every path except the refusal.
-    void commit_magnification_edit();
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
     // closed). False on parse failure (editor stays open, red, and a card
