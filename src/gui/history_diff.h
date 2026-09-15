@@ -298,6 +298,28 @@ struct GuiHistoryPhaseResetChange {
     bool    now_disabled  = false;
 };
 
+// One magnification level marker line (architect 2026-09-15, the column made
+// visible in the `h` view). The grammar is `[#]<frame position>|<level>`
+// (magnificationlevelmarkers_parse.h): the frame, the one-digit level and the
+// disable prefix. No labels and no cascade, so the local `disabled` bit IS the
+// effective verdict, the phase-reset entry's rule.
+struct GuiHistoryMagnificationLevelEntry {
+    int64_t frame    = 0;
+    uint8_t level    = 0;
+    bool    disabled = false;
+};
+
+// A magnification level line present at the same frame on both sides with
+// different text — a changed LEVEL, a changed disable prefix, or both —
+// paired as the phase-reset column pairs its disable toggle.
+struct GuiHistoryMagnificationLevelChange {
+    int64_t frame         = 0;
+    uint8_t then_level    = 0;
+    uint8_t now_level     = 0;
+    bool    then_disabled = false;
+    bool    now_disabled  = false;
+};
+
 // One commit's whole answer. Every commit that gets one is a walk member, and
 // walk membership is the strict whole-set load (the gate at the file head), so
 // the lists below are typed out of loader-clean text on both sides — there is
@@ -314,6 +336,10 @@ struct GuiHistoryCommitDelta {
     std::vector<GuiHistoryPhaseResetEntry>  phase_reset_added;
     std::vector<GuiHistoryPhaseResetEntry>  phase_reset_removed;
     std::vector<GuiHistoryPhaseResetChange> phase_reset_changed;
+
+    std::vector<GuiHistoryMagnificationLevelEntry>  magnification_level_added;
+    std::vector<GuiHistoryMagnificationLevelEntry>  magnification_level_removed;
+    std::vector<GuiHistoryMagnificationLevelChange> magnification_level_changed;
 
     // THE SCALE IS THE ONLY SETTINGS KEY THIS MODE DISPLAYS (architect's
     // ruling) — a recorded asymmetry, not an oversight: every other settings
@@ -337,13 +363,16 @@ struct GuiHistoryCommitDelta {
     // commit at all — the act commits the LIVE state, so "nothing to
     // checkpoint" is live-vs-newest whatever the lane happens to be
     // displaying. The vocabulary is
-    // exactly this struct's — the two marker columns and `scale` — which is why
+    // exactly this struct's — the three marker columns and `scale` — which is why
     // a settings-only drift the mode never displays reads as empty here too (the
     // asymmetry is recorded at the field and in github-recheck.md).
     bool is_empty() const {
         return warp_added.empty() && warp_removed.empty() &&
                warp_changed.empty() && phase_reset_added.empty() &&
                phase_reset_removed.empty() && phase_reset_changed.empty() &&
+               magnification_level_added.empty() &&
+               magnification_level_removed.empty() &&
+               magnification_level_changed.empty() &&
                !scale_changed;
     }
 
@@ -361,9 +390,9 @@ struct GuiHistoryCommitDelta {
 
 // The four files' exact current bytes — what Ctrl+S would write at this
 // instant, the fixed side of every diff and the checkpoint's bytes. Built in
-// memory only. The magnification level markers' text is carried for the
-// checkpoint, which writes all four; the delta (compute_commit_delta) does not
-// read it.
+// memory only. All four are the delta's sides (compute_commit_delta reads the
+// magnification level markers' text too since 2026-09-15) and the
+// checkpoint's bytes.
 struct GuiHistoryNowSide {
     std::string warpmarkers_text;
     std::string phaseresetmarkers_text;
@@ -417,13 +446,16 @@ GuiHistoryNowSide build_history_now_side(const AppState& app);
 // `sha` is always the VIEWED member's, and EMPTY on the local walk: an undo
 // entry has no name, and the corner reads the emptiness rather than inventing
 // one (on the Local tab the corner shows `n/N` alone).
-GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
-                                           const std::string& then_warp,
-                                           const std::string& then_phase_reset,
-                                           const std::string& then_settings,
-                                           const std::string& now_warp,
-                                           const std::string& now_phase_reset,
-                                           const std::string& now_settings);
+GuiHistoryCommitDelta compute_commit_delta(
+    const std::string& sha,
+    const std::string& then_warp,
+    const std::string& then_phase_reset,
+    const std::string& then_magnification_level,
+    const std::string& then_settings,
+    const std::string& now_warp,
+    const std::string& now_phase_reset,
+    const std::string& now_magnification_level,
+    const std::string& now_settings);
 
 // ONE SIDECAR AS ONE COMMIT CARRIED IT. `path` is the committed path in THAT
 // commit's own tree and is EMPTY when the commit carries no file by that name —

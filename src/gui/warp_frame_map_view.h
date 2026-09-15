@@ -176,6 +176,25 @@ struct PhaseResetRedFlagCache {
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app);
 
+// The magnification level markers sibling (architect 2026-09-15, the column
+// made visible): a run of 2+ magnification level markers sharing one exact
+// frame reddens every member, WHATEVER THEIR DISABLED BITS — the other two
+// columns' participation-blind coincidence (3). It is this column's WHOLE red
+// cue: the column is no render input, so there is no normalization for a
+// second term to name (the gain profile's "last of equal frames wins" is the
+// picture's rule for such a run, not a repair of it). No `collapsed` subset,
+// the phase-reset set's reason: `red`'s one reader is the magnification level
+// flag pass, a painter. Keyed on the magnification level store generation
+// alone; the committed-store rule of the two siblings.
+struct MagnificationLevelRedFlagCache {
+    bool      valid       = false;
+    long long markers_gen = -1;
+    std::set<int> red;   // red magnification level store indices — PAINT only
+};
+
+const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
+    const AppState& app);
+
 // THE WAVEFORM GAIN PROFILE with its hash — the shape every waveform picture
 // takes (warpmarkers.h carries the profile's step-function contract). The
 // HASH alone keys both picture caches (the plate fingerprint and the overview

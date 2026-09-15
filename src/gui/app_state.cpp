@@ -402,15 +402,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // very same question ahead of the landing: "am I standing on a marker?" now
 // has one spelling for the in-group step and for the cell step alike.
 int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
-    const bool phase_reset = (a.active_markers_view == 'P');
-    const int n = phase_reset
-        ? static_cast<int>(a.phaseresetmarkers.markers().size())
-        : static_cast<int>(a.warpmarkers.markers().size());
+    // All three columns through the one store selector pair
+    // (active_marker_count / active_marker_time_frame, app_state.h).
+    const int n = active_marker_count(a);
     const int last = a.last_selected_marker;
     if (last < 0 || last >= n) return -1;
-    const int64_t src_f = phase_reset
-        ? a.phaseresetmarkers.markers()[static_cast<size_t>(last)].time_frame
-        : a.warpmarkers.markers()[static_cast<size_t>(last)].time_frame;
+    const int64_t src_f = active_marker_time_frame(a, last);
     return source_frame_to_active_domain(a, audio, src_f) ==
                    a.playhead_cursor_sample
                ? last
@@ -425,26 +422,30 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
 // read one landing; the act calls it and selects what it returns.
 int marker_walk_landing(const AppState& a, const GuiAudio& audio,
                         bool forward) {
-    const bool phase_reset = (a.active_markers_view == 'P');
     const std::vector<GuiWarpMarker>& warp_vec = a.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
         a.phaseresetmarkers.markers();
-    const int n = phase_reset ? static_cast<int>(phase_reset_vec.size())
-                              : static_cast<int>(warp_vec.size());
+    const std::vector<GuiMagnificationLevelMarker>& magnification_level_vec =
+        a.magnificationlevelmarkers.markers();
+    const int n = active_marker_count(a);
     // frame_of / is_disabled are only asked for indices in [0, n), so an
     // empty store simply yields no candidate. Frames are read in the ACTIVE
     // domain — source view is the identity, target view forward-translates
     // through the live map — so they compare with the playhead's frame.
     auto frame_of = [&](int i) -> int64_t {
-        const int64_t src_f = phase_reset ? phase_reset_vec[i].time_frame
-                                          : warp_vec[i].time_frame;
-        return source_frame_to_active_domain(a, audio, src_f);
+        return source_frame_to_active_domain(a, audio,
+                                             active_marker_time_frame(a, i));
     };
-    // The warp side respects the label_ref cascade; a phase reset reads its
-    // own bit.
+    // The warp side respects the label_ref cascade; a phase reset and a
+    // magnification level marker read their own bit (neither column has
+    // labels).
     auto is_disabled = [&](int i) -> bool {
-        return phase_reset ? phase_reset_vec[i].disabled
-                           : effective_disabled(warp_vec, i);
+        switch (a.active_markers_view) {
+            case 'W': return effective_disabled(warp_vec, i);
+            case 'P': return phase_reset_vec[i].disabled;
+            case 'M': return magnification_level_vec[i].disabled;
+        }
+        return false;
     };
     // The playhead frame is the sole cycle anchor. Strict frame inequalities
     // in the scan prevent re-landing on the stop being stood on; markers
@@ -558,6 +559,11 @@ PayloadEligibility payload_eligibility(const AppState& app,
                                        const GuiAudio& audio, int idx) {
     using E = PayloadEligibility;
     if (idx < 0) return E::NoResolvedValue;
+    // THE COLUMN: the value pair is the WARP column's alone — a phase reset
+    // carries no tempo, and a magnification level marker carries no tempo
+    // either (architect 2026-09-15: `j` and Shift+J are not eligible on the
+    // M column, the key carding the copy's own sentence and Copy Resolved
+    // Value greying on this same verdict).
     if (app.active_markers_view != 'W') return E::NoResolvedValue;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return E::NoResolvedValue;

@@ -37,16 +37,19 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     t.trim                = app.trim;
 }
 
-// Toggle active editing mode between 'W' (warp) and 'P' (phase reset), and
+// Set the active marker column — 'W' (warp), 'P' (phase reset) or 'M'
+// (magnification level, 2026-09-15) — and
 // CLEAR THE SELECTION: a COLUMN switch clears (the scope rule, architect
-// 2026-07-29 — the two columns hold different markers, so an index set means
+// 2026-07-29 — the columns hold different markers, so an index set means
 // nothing after the flip, and clearing is what returns the bare arrows to the
 // waveform lane instead of leaving an invisible authoring mode armed). Nothing
 // is parked and nothing is restored.
 // Visible state (viewport / zoom / playhead) is genuinely unaffected here — with
 // the selection emptied this helper owes the marker lane no land at all. ITS
-// FOUR CALLERS OWN WHAT HAPPENS NEXT, and this is their inventory:
-// toggle_active_markers_view (`p`, below) runs the coincidence auto-select;
+// CALLERS OWN WHAT HAPPENS NEXT, and this is their inventory:
+// select_active_markers_view (the column entry, below) runs the coincidence
+// auto-select; the S/T audio switch (input_handler.cpp) lands T+M on W before
+// it leaves for source view and runs nothing after;
 // the propagate paste's target-view tail (phase_reset_propagate.cpp) writes
 // its OWN selection and lands on that; the undo restore (undo.cpp) writes the
 // entry's column tag with its data already installed; and Shift+S's drop from
@@ -56,8 +59,21 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // basis of the pixels it erases. Caller decides what further invalidations to
 // run; the only damage this helper owns is the one a SEATED PINCH's clear owes
 // (below), which is why it holds the viewport reference at all.
+//
+// 'M' IS REFUSED OUTSIDE TARGET VIEW (architect 2026-09-15: the magnification
+// level markers column is target view only) — the column axis's half of the
+// one S-never-pairs-with-M invariant, the audio switch landing the column on
+// W before it leaves target being the other (switch_active_audio_view_to,
+// input_handler.cpp). A refusal writes nothing, clears nothing and is silent:
+// every caller that names 'M' crosses to target first and reads the column
+// back (bare 4 and the view bar, the settings editor's typed
+// `active_markers_view=M`, the undo restore of an 'M' entry), so the refusal
+// is reached only when that crossing itself refused, and the caller's own
+// read of the state is the answer. An unknown letter is refused the same way.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
+    if (target_mode != 'W' && target_mode != 'P' && target_mode != 'M') return;
+    if (target_mode == 'M' && app.active_audio_view != 'T') return;
     selection.clear_selection();
     // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
     // at the writer — rather than in the `p` toggle below, which is where codex
@@ -184,17 +200,23 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     viewport.invalidate_clock_area();
 }
 
-// `p` key: toggle into/out of phase reset view. Phase reset markers are
-// consumed by the engine on every wav render (the only product) and drive
-// the .phaseresetframemap column of the cache-dir framemap pair.
-void GuiActiveViews::toggle_active_markers_view() {
-    if (app.active_markers_view == 'P') {
-        this->switch_active_markers_view_to('W');
-    } else {
-        this->switch_active_markers_view_to('P');
-    }
+// THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect
+// 2026-09-15, when the column axis grew its third letter and a toggle stopped
+// naming a destination): the writer above, then the entry's own tail. Its
+// callers are bare 1/2/3/4 (and the view bar, which synthesizes them) and the
+// settings editor's typed `active_markers_view=`; the writer's other callers
+// reach it directly (its inventory).
+//
+// THE TAIL RUNS WHENEVER THE COLUMN IS THE TARGET AFTER THE WRITE, whichever
+// writer moved it: bare 1 from T+M finds the column already on W, the audio
+// switch having landed it there, and still owes the column entry's
+// coincidence auto-select. A write the writer REFUSED ('M' outside target
+// view) leaves the column elsewhere, and the tail does not run.
+void GuiActiveViews::select_active_markers_view(char target_mode) {
+    this->switch_active_markers_view_to(target_mode);
+    if (app.active_markers_view != target_mode) return;   // refused
     // THE SWAP LEFT THE SELECTION EMPTY (a column switch clears — the rule is at
-    // switch_active_markers_view_to), so `p` owes the marker lane no land: with no
+    // switch_active_markers_view_to), so the entry owes the marker lane no land: with no
     // lane the cursor IS the playhead and keeps its own value, and the playhead is
     // genuinely untouched across the flip.
     // (THE SWAP'S OVERLAY HIDE IS DELETED, 2026-08-19, with the A/B tab
@@ -233,8 +255,8 @@ void GuiActiveViews::toggle_active_markers_view() {
     // (switch_active_audio_view_to; the contract and the full clearer list
     // are at AppState::HistoryMode::focus). The focus is an ordinal into the
     // PAINTED diff-flag list, and this flip changes that list wholesale: the
-    // mode paints the ACTIVE column's half of a commit's delta, so W and P show
-    // different flags at different ordinals. Placed before the kick below, which
+    // mode paints the ACTIVE column's half of a commit's delta, so W, P and M
+    // show different flags at different ordinals. Placed before the kick below, which
     // rebuilds the flag cache — `focus` is one of that cache's fingerprint
     // fields. Unconditional, and a no-op with the mode down (the pair rests
     // empty there). It goes through the ONE clearer, which takes the mode's

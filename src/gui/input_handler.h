@@ -519,9 +519,10 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (bare
 //     `t`, the settings `active_audio_view=` key, the propagate paste's audio
 //     half), below its own refusals.
-//   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below its
-//     same-mode early return (`p` through toggle_active_markers_view, the
-//     settings key, the propagate paste, which reaches this helper direct, and
+//   * GuiActiveViews::switch_active_markers_view_to — the W/P/M writer, below
+//     its same-mode and not-in-target refusals (bare 1/2/3/4 and the settings
+//     key through select_active_markers_view, the S/T writer's landing of T+M
+//     on W, the propagate paste, which reaches this helper direct, and
 //     Undo's column restore, which reached it 2026-08-28 when the hand-kept copy
 //     of this body in restore_history_entry was deleted for it).
 //   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (Ctrl+Tab, the
@@ -537,7 +538,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // routine above in the same body, and it is invoked once from the startup tick,
 // before any input exists.
 // THE COMMAND WRAPPERS DO NOT SPELL IT — Ctrl+Tab keeps its call because it IS
-// the writer, while toggle_active_markers_view and
+// the writer, while select_active_markers_view and
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
@@ -623,7 +624,7 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // first-in-store tie-break. FOUR CALL SITES (re-greped 2026-08-24, the count
 // having fallen from six as the load-in-place family collapsed onto one body),
 // each stating only its own class and pointing there: the source load's tail
-// (file_loader.cpp), the `p` column entry (toggle_active_markers_view) and the
+// (file_loader.cpp), the column entry (select_active_markers_view) and the
 // Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
 // THE LOAD-IN-PLACE FAMILY'S ONE SHARED TAIL (apply_recipe_in_place,
 // input_key_dispatch.cpp), which all three acts reach — the `'` render-entry
@@ -3901,8 +3902,14 @@ private:
     // commit — and it is one line over the set-to
     // form, so both spellings own the same translation, the same target-view
     // entry gate, the same flag-editor teardown and the same history-focus
-    // clear. The SET-TO form exists for the callers that name a view rather than
-    // an axis: the bare 1/2/3 absolute selectors, the phase-reset propagate's
+    // clear — AND THE SAME S-NEVER-PAIRS-WITH-M LANDING (architect 2026-09-15):
+    // leaving target view while the magnification level markers column stands
+    // lands the column on W first, through its writer, the column writer's own
+    // refusal of 'M' outside target view being the invariant's other half.
+    // The SET-TO form exists for the callers that name a view rather than
+    // an axis: the bare 1/2/3/4 absolute selectors (and the settings editor's
+    // typed `active_markers_view=M`, which crosses to target through it), the
+    // phase-reset propagate's
     // land-in-target tail, and — both since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,

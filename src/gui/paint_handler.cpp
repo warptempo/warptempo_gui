@@ -546,6 +546,10 @@ constexpr ViewBarButtonDef kViewBarButtons[] = {
     {RedesignButton::ViewSW, "S+W"},
     {RedesignButton::ViewTP, "T+P"},
     {RedesignButton::ViewTW, "T+W"},
+    // The magnification level markers column (architect 2026-09-15), target
+    // view only — spelled as its siblings are, audio letter then column
+    // letter.
+    {RedesignButton::ViewTM, "T+M"},
 };
 constexpr int kViewBarButtonCount =
     static_cast<int>(std::size(kViewBarButtons));
@@ -6030,9 +6034,10 @@ bool GuiPaintHandler::playhead_stem_suppressed() const {
                    app, audio) == app.playhead_cursor_sample;
     };
 
-    const auto& wv = app.warpmarkers.markers();
-    const auto& pv = app.phaseresetmarkers.markers();
-    const bool phase = (app.active_markers_view == 'P');
+    // The stash is the ACTIVE column's (all three columns publish one), so the
+    // store is the active one through its selector pair (active_marker_count /
+    // active_marker_time_frame, app_state.h).
+    const int n = active_marker_count(app);
     for (const MarkerStem& stem : app.marker_stems) {
         const int i = stem.marker_index;
         if (i == dragged) return true;
@@ -6040,13 +6045,7 @@ bool GuiPaintHandler::playhead_stem_suppressed() const {
         // Index-guarded against the store the stash was published from having
         // shrunk since (an undo under a stale stash): a missing row simply does
         // not suppress.
-        if (phase) {
-            if (i < static_cast<int>(pv.size()) && coincident(pv[i].time_frame))
-                return true;
-        } else {
-            if (i < static_cast<int>(wv.size()) && coincident(wv[i].time_frame))
-                return true;
-        }
+        if (i < n && coincident(active_marker_time_frame(app, i))) return true;
     }
     return false;
 }

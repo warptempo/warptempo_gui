@@ -1,6 +1,7 @@
 #pragma once
 #include "warpmarkers.h"
 #include "phaseresetmarkers.h"
+#include "magnificationlevelmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
 #include "gui_input.h"        // kHoldBeatMs for the tooltip dwell
 
@@ -769,8 +770,12 @@ inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
 // the display-only magnification markers. ALL FOUR ARE SAMPLED, none derived —
 // from the architect's kdenlive crops tmp/green-unselected.png and
 // tmp/green-selected.png (fill from the body rows, edge from row 0; the crops'
-// own left column samples to kMarkerFlagBorder). No painter reads them at
-// present: the magnification level markers column paints no flag.
+// own left column samples to kMarkerFlagBorder). THEY ARE THE MAGNIFICATION
+// LEVEL MARKERS COLUMN'S FLAGS (architect 2026-09-15): the flag box in the
+// default and selected pairs, the default-class stem in the calm fill, and
+// the disabled blend of both through the one ladder
+// (FlagColumnFace::MagnificationLevel, resolve_flag_face, render.cpp); red
+// stays red there as on the other two columns.
 inline constexpr GuiColor kMarkerMagnificationFill    = hex(0x1ABC9C);
 inline constexpr GuiColor kMarkerMagnificationEdge    = hex(0x0E6857);
 inline constexpr GuiColor kMarkerMagnificationFillSel = hex(0x22F4CB);
@@ -3288,19 +3293,21 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              (no selected pair by ruling, the normalization cue unmasked).
 //   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed;
 //              border kMarkerFlagBorder undamped, like every live class. RED
-//              STAYS RED ON BOTH COLUMNS — the phase-reset fork below never
+//              STAYS RED ON ALL THREE COLUMNS — the column fork below never
 //              reaches this arm.
 //   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box (and on
 //              EVERY BOUND CELL, either column — the phase-reset column's own
 //              cells are its one exception to the fork below, architect
 //              2026-09-15: "fine for now" beside the purple measure box), or
 //              kPhaseResetFlagFill / kPhaseResetFlagEdge on the PHASE-RESET
-//              flag box (`FlagColumnFace`, resolve_flag_face's fourth
-//              argument — REQUIRED, never defaulted, since warp is never the
-//              unmarked default: every call site passes `Warp` or
-//              `PhaseReset` explicitly, and only the resting phase-reset flag
-//              box passes `PhaseReset`), swapping to the bright Sel pair on either
-//              column when selected — SELECTION IS THAT SWAP AND NOTHING
+//              flag box, or kMarkerMagnificationFill / kMarkerMagnificationEdge
+//              on the MAGNIFICATION LEVEL flag box (`FlagColumnFace`,
+//              resolve_flag_face's fourth argument — REQUIRED, never
+//              defaulted, since warp is never the unmarked default: every call
+//              site names its column explicitly, and only the resting
+//              phase-reset and magnification level flag boxes pass
+//              `PhaseReset` / `MagnificationLevel`), swapping to the bright Sel
+//              pair on any column when selected — SELECTION IS THAT SWAP AND NOTHING
 //              ELSE. The stem stays the CALM fill of whichever column's flag
 //              it belongs to, either way (the architect's explicit rule).
 //
@@ -3605,6 +3612,32 @@ void render_phase_reset_flags(cairo_t* cr,
                             // both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
+// The magnification level markers column's flags (architect 2026-09-15): the
+// identical box, class ladder and publication contract render_flags documents
+// above, in the column's green (FlagColumnFace::MagnificationLevel,
+// render.cpp). The LABEL is the marker's level digit
+// (format_marker_magnification). NO MEASURE BOX, NO BOUND CELLS, NO DRAG
+// OVERLAY AND NO SUPPRESSION — the column carries no measure, grid iterations
+// never lights on it, and no flag drag or marker-lane editor arms there — so
+// the signature takes none of those inputs, and the focus's addressed cell is
+// the payload by construction. Red is `red_set` alone, the coincidence set
+// (magnification_level_red_flag_set_cached, warp_frame_map_view.h).
+void render_magnification_level_flags(
+    cairo_t* cr,
+    GuiRect top_strip_area,
+    FlagLaneRects lanes,
+    int waveform_width,
+    const std::vector<GuiMagnificationLevelMarker>& magnification_levels,
+    long long viewport_start_sample,
+    long long viewport_end_sample,
+    int sample_rate,
+    const std::set<int>& selected_set,
+    const std::set<int>& red_set,
+    int focus_marker,
+    std::vector<FlagHitRect>* out_hit_rects = nullptr,
+    std::vector<MarkerStem>* out_stems = nullptr,
+    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
+
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
 // commit's delta into these; this file only paints what it is handed, so the
@@ -3627,7 +3660,8 @@ void render_phase_reset_flags(cairo_t* cr,
 // itself judges and no second grammar is written anywhere
 // (GuiInputHandler::run_history_revert). Phase resets carry no token — their
 // line is frame plus the disable bit — so `then_token` stays empty on that
-// column.
+// column; a magnification level line's payload past its '|' is the one-digit
+// level, so its `then_token` is that digit (2026-09-15).
 //
 // THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
 // 2026-08-22, deepened the same day it landed: the axis shipped reading each

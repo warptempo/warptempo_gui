@@ -40,6 +40,11 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     if (hit < 0) return false;
     const int sr = audio.sample_rate();
     if (sr <= 0) return false;
+    // THE MAGNIFICATION LEVEL COLUMN DRAGS NOTHING (architect 2026-09-15): the
+    // crossing already refuses there (input_pointer.cpp), and this belt keeps
+    // an 'M' index from ever reaching the warp arm below, which is what the
+    // two-arm `phase_reset` fork would otherwise make of it.
+    if (app.active_markers_view == 'M') return false;
     const bool phase_reset = (app.active_markers_view == 'P');
     if (hit >= active_marker_count(app)) return false;
 

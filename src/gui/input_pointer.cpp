@@ -163,15 +163,16 @@ struct ToolbarChord {
 // the prompt all read exactly as before. Everything else on rows 1, 3 and 4 and
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
-    // Row 1's RIGHT FLOAT — the view bar (2026-08-02). Bare 1/2/3, the ABSOLUTE
-    // view selectors: S+W, T+P, T+W. Everything the digits own arrives by
-    // construction through on_key's own handler — the audio-first-then-markers
+    // Row 1's RIGHT FLOAT — the view bar (2026-08-02; T+M 2026-09-15). Bare
+    // 1/2/3/4, the ABSOLUTE view selectors: S+W, T+P, T+W, T+M. Everything
+    // the digits own arrives by construction through on_key's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
     {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
     {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
     {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
+    {RedesignButton::ViewTM,     GuiKeys::Digit4, false, false, false, true, true}, // bare 4
     // The toolbar four — icon-row members since the 2026-08-12 relayout
     // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
     // only the face and the band changed hands).
@@ -1526,18 +1527,11 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // rule this time" is the hand-listed inventory in disguise.
 void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
                                Viewport& viewport, int hit) {
-    int64_t src_frame = 0;
-    bool valid = true;
-    if (app.active_markers_view == 'P') {
-        const auto& tv = app.phaseresetmarkers.markers();
-        if (hit < 0 || hit >= static_cast<int>(tv.size())) valid = false;
-        else src_frame = tv[hit].time_frame;
-    } else {
-        const auto& mv = app.warpmarkers.markers();
-        if (hit < 0 || hit >= static_cast<int>(mv.size())) valid = false;
-        else src_frame = mv[hit].time_frame;
-    }
-    if (valid) seat_playhead_on_source_frame(app, audio, viewport, src_frame);
+    // All three columns through the one store selector pair (active_marker_count
+    // / active_marker_time_frame, app_state.h).
+    if (hit < 0 || hit >= active_marker_count(app)) return;
+    seat_playhead_on_source_frame(app, audio, viewport,
+                                  active_marker_time_frame(app, hit));
 }
 
 // The frame-shaped half, above — the MOVEMENT owner's frame form: the hide and
@@ -1631,18 +1625,20 @@ static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport) {
-    const auto scan = [&](const auto& markers) {
-        for (size_t i = 0; i < markers.size(); ++i) {
+    // All three columns through the one store selector pair (active_marker_count
+    // / active_marker_time_frame, app_state.h).
+    const auto scan = [&]() {
+        const int n = active_marker_count(app);
+        for (int i = 0; i < n; ++i) {
             const int64_t sample = clamp_playhead_to_live_domain(
-                source_frame_to_active_domain(app, audio, markers[i].time_frame),
+                source_frame_to_active_domain(app, audio,
+                                              active_marker_time_frame(app, i)),
                 app, audio);
-            if (sample == app.playhead_cursor_sample) return static_cast<int>(i);
+            if (sample == app.playhead_cursor_sample) return i;
         }
         return -1;
     };
-    const int hit = (app.active_markers_view == 'P')
-        ? scan(app.phaseresetmarkers.markers())
-        : scan(app.warpmarkers.markers());
+    const int hit = scan();
     if (hit < 0) return;
     selection.set_single_selection(hit);
     // THROUGH THE RESEAT, NOT THE LAND (2026-08-19): the land HIDES the trim
@@ -1962,6 +1958,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                  app.pending_marker_press.cell)
                    ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
     }
+    // A pending press on the magnification level column promises no drag —
+    // the crossing begins none there — so it wears the Arrow.
+    if (app.pending_marker_press.active && app.active_markers_view == 'M')
+        return GuiCursorKind::Arrow;
     if (app.drag.active || app.pending_marker_press.active)
         return GuiCursorKind::TrimResize;
     // (THE REGION EDITOR'S OWN LIVE ARM STOOD HERE FROM 2026-08-15 TO
@@ -2273,6 +2273,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
+            // A MAGNIFICATION LEVEL FLAG arms no drag of either axis
+            // (architect 2026-09-15), so its box wears the Arrow; the `h`
+            // view's diff flags keep the one shape below on every column.
+            if (app.active_markers_view == 'M' && !app.history_mode.active)
+                return GuiCursorKind::Arrow;
             return GuiCursorKind::TrimResize;
         }
         // The rest of the strip: the button rows (claimed far above the
@@ -4120,13 +4125,17 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
     const int64_t delta = (up ? +1 : -1) * static_cast<int64_t>(std::max(count, 1));
     switch (cell) {
     case MarkerCell::Payload:
-        // A phase reset's payload is a POSITION with no value to step: the
-        // select was the whole act.
-        if (app.active_markers_view == 'P') return;
+        // A phase reset's payload is a POSITION with no value to step, and a
+        // magnification level marker authors nothing yet (architect
+        // 2026-09-15): on both the select was the whole act. The tempo step
+        // is the warp column's alone.
+        if (app.active_markers_view != 'W') return;
         (void)warpops.adjust_tempo_cents(delta, /*synthesized_repeat=*/false);
         return;
     case MarkerCell::Lower:
     case MarkerCell::Upper:
+        // A bound cell is W's or P's: the magnification level column paints
+        // none, so no press resolves one there.
         if (app.active_markers_view == 'P') {
             (void)phase_resets.adjust_iter_bound_hops(cell,
                                                       static_cast<int>(delta));
@@ -4386,7 +4395,11 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
          dc_at_press.cell == MarkerCell::Upper)) {
         switch (dc_at_press.cell) {
         case MarkerCell::Payload:
-            if (app.active_markers_view != 'P') {
+            // The payload editor is the WARP column's alone: a phase reset
+            // authors no payload line and a magnification level marker
+            // authors nothing yet (architect 2026-09-15), so both other
+            // columns fall through to the pending arm, silent.
+            if (app.active_markers_view == 'W') {
                 flag_editor.enter_top_flag_edit(hit);
                 return;
             }
@@ -7095,10 +7108,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
     // active_column_authoring_allowed admits W only in source view (warp
-    // drops legal there alone) and P in EITHER audio view (architect
+    // drops legal there alone), P in EITHER audio view (architect
     // 2026-08-30 — the drop body's own fork seeds with the lead-in in target
-    // view and exactly at the playhead in source view), so the view dispatch
-    // below needs no extra audio-view guard.
+    // view and exactly at the playhead in source view) and M in neither
+    // (2026-09-15), so the view dispatch below is W or P and needs no extra
+    // audio-view guard.
     if (app.active_markers_view == 'P')
         phase_resets.drop_phase_reset_lead_in_at_playhead();
     else
@@ -10575,8 +10589,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 value_drag.apply_motion(mouse_y);
             return;
         }
-        // No home-view test: T+W is the posture's, so only S+W, S+P and T+P
-        // with grid iterations dark reach here, all of them authoring views.
+        // THE MAGNIFICATION LEVEL COLUMN ARMS NO FLAG DRAG (architect
+        // 2026-09-15): its flags select and land at the press and move
+        // nothing yet, so the crossing begins no gesture there — silent, the
+        // pointer's non-event (value_drag_posture answers false on the column
+        // above, and this is the horizontal drag's half).
+        if (app.active_markers_view == 'M') return;
+        // No home-view test: T+W is the posture's and T+M is refused above, so
+        // only S+W, S+P and T+P with grid iterations dark reach here, all of
+        // them authoring views.
         if (authoring_locked(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta

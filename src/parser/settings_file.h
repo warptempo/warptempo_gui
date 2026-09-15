@@ -189,7 +189,7 @@ struct SettingsFile {
     // Every canonical key is required, so the reader always assigns these
     // fields; the member initializers below are construction-state only.
     char   active_audio_view       = 'S';   // S | T
-    char   active_markers_view     = 'W';   // W | P
+    char   active_markers_view     = 'W';   // W | P | M (M with T alone)
     char   active_tab_view         = 'A';   // A | B
     // (NINE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with
@@ -298,7 +298,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // free-text keys that remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
     bool        b    = false;   // tab_X_read_only
-    char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
+    char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P/M, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
     double      d    = 0.0;     // tab_X_zoom
 };

@@ -411,7 +411,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+P / T+W). They are
+    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+W / T+P / T+W / T+M —
+    // the fourth joined 2026-09-15 with the magnification level markers
+    // column, a switch like the other three). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no
@@ -419,7 +421,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // deleted — see above). Nothing new to weigh.
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-          key == GuiKeys::Digit3) && !ctrl && !shift && !alt);
+          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
+         !ctrl && !shift && !alt);
     const bool is_tab_cycle =
         (!ctrl && !alt && key == GuiKeys::Tab) ||
         (!ctrl && !alt && key == GuiKeys::IsoLeftTab);
@@ -803,12 +806,12 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3 —
+    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3/4 —
     // bare `t`/`p`, the two individual axis toggles, were deleted whole with
     // their view lamps on 2026-09-15, so the digits are its only road now),
     // BARE `o` (the read-only toggle — the lock's own reachability, the
     // header), BARE `k` (ADD TO SELECTION — the header's fourth member) and
-    // the paired march. Bare-exact on all five and ctrl-and-shift exact on
+    // the paired march. Bare-exact on all six and ctrl-and-shift exact on
     // the march, exactly as their dispatch arms spell them. (They lived in an
     // owner of their own until 2026-09-10, so that the gate could ask them
     // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
@@ -816,7 +819,7 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     if (!alt && !ctrl && !shift &&
         (key == GuiKeys::O || key == GuiKeys::K ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-         key == GuiKeys::Digit3))
+         key == GuiKeys::Digit3 || key == GuiKeys::Digit4))
         return true;
     if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
@@ -2807,7 +2810,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // which this mode cannot hide.
     const bool is_sync_external = is_sync_external_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
-    // bare-exact, read off its own arm in on_key: the 1/2/3 absolute
+    // bare-exact, read off its own arm in on_key: the 1/2/3/4 absolute
     // selectors, which compose the `t`/`p` handler bodies and are their only
     // road since the architect deleted the individual `t`/`p` keys and their
     // view lamps 2026-09-15. Admitting a shape the dispatch does not bind
@@ -2815,7 +2818,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // telling a lie about itself.
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-          key == GuiKeys::Digit3) && bare);
+          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) && bare);
     const bool is_esc = (key == GuiKeys::Escape && bare);
     // THE A/B TAB SWITCH (architect 2026-08-18): "ctrl+tab should work as
     // normal in history view — it becomes essentially another view but in
@@ -3422,7 +3425,17 @@ void GuiInputHandler::run_history_revert() {
 
     // THE COLUMN, hoisted above the wall guard below because both read it:
     // the active one by construction (the lane paints only that half of a
-    // delta), so the store is chosen once for the whole act.
+    // delta), so the store is chosen once for the whole act. THE
+    // MAGNIFICATION LEVEL COLUMN REFUSES WHOLE (architect 2026-09-15): its
+    // diff flags show and select, and reverting them authors that column,
+    // which nothing does yet — so `phase` below is the phase-reset / warp
+    // choice alone and never sees an M flag. (The Revert face stays lit on a
+    // standing subject there; the key's card is the answer.)
+    if (app.active_markers_view == 'M') {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kMagnificationLevelNotEditableCard);
+        return;
+    }
     const bool phase = (app.active_markers_view == 'P');
 
     // THE PAST-EOF WALL, ahead of everything (2026-08-29): the flags' THEN
@@ -5030,8 +5043,10 @@ void GuiInputHandler::apply_recipe_in_place(
     // ONE cross-file undo entry: the three marker columns plus the OUTGOING engine
     // settings, which push_undo_both captures from `app` — so it must run
     // BEFORE the incoming block is applied below. It files under the LIVE tab
-    // and the LIVE W/P column, which are the only ones this act touches now
-    // that it performs no tab or column switch at all.
+    // and the LIVE column — W, P or M, the last since 2026-09-15 (the restore
+    // takes an 'M' entry's target view ahead of its column, undo.cpp) — which
+    // are the only ones this act touches now that it performs no tab or column
+    // switch at all.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
                         std::move(magnification_level_pre),
                         app.active_markers_view);
@@ -7382,6 +7397,19 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
                 read_only_chord_card(spell_chord(key, mods)));
+            return true;
+        }
+        // GRID ITERATIONS NEVER LIGHTS ON THE MAGNIFICATION LEVEL COLUMN
+        // (architect 2026-09-15): the column has no bracket for a cell to show
+        // (marker_paints_iter_cells' 'M' arm), so the ON edge refuses there
+        // with its own card and the Grid Iterations face greys on the same
+        // column (redesign_button_enabled's IconIter arm). The OFF edge never
+        // meets it: under a lit lamp the column cannot become M, the lock
+        // refusing every column switch.
+        if (!app.iteration_mode_enabled && app.active_markers_view == 'M') {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Grid iterations do not apply to magnification level markers");
             return true;
         }
         // ADD TO SELECTION NEEDS NO REFUSAL HERE AND NO LONGER HAS ONE

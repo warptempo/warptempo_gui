@@ -222,6 +222,10 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
 void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
                                           MarkerCell side) {
     if (idx < 0) return;
+    // NO CELL ON THE MAGNIFICATION LEVEL COLUMN (2026-09-15): it paints no
+    // bound cell (marker_paints_iter_cells' 'M' arm), so the open refuses there
+    // ahead of the two-store fork below, which is W's or P's.
+    if (column != 'W' && column != 'P') return;
     const bool phase = (column == 'P');
     const auto& mv  = app.warpmarkers.markers();
     const auto& pmv = app.phaseresetmarkers.markers();
@@ -309,7 +313,8 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // this editor — so the session needs no stored column of its own. The
     // session's `iter_hops` bit is not that column: it exists for
     // text_editor.cpp alone, which selects the byte cap and cannot see the
-    // app.
+    // app. (The column is W or P: no bound editor opens on the magnification
+    // level column, enter_iter_bound_edit's own refusal.)
     if (app.active_markers_view == 'P') {
         this->commit_phase_iter_bound_edit(idx, side, next);
         return;

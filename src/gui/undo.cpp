@@ -99,7 +99,7 @@ void Undo::recompute_dirty() {
             const char m = h.undo_stack[i].op_mode;
             if      (m == 'P') app.phase_reset_dirty = true;
             else if (m == 'S') app.settings_dirty    = true;
-            else               app.warp_dirty        = true;
+            else               app.warp_dirty        = true;   // 'W' or 'M'
         }
     } else {
         // Saved is `n` redos ahead. The top n entries of redo_stack
@@ -113,7 +113,7 @@ void Undo::recompute_dirty() {
             const char m = h.redo_stack[i].op_mode;
             if      (m == 'P') app.phase_reset_dirty = true;
             else if (m == 'S') app.settings_dirty    = true;
-            else               app.warp_dirty        = true;
+            else               app.warp_dirty        = true;   // 'W' or 'M'
         }
     }
     const bool was_dirty = app.dirty;
@@ -886,19 +886,39 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // copy that used to stand at this spot went with the move onto the owner).
     // Gated off 'S' because op_mode is that entry kind's MARKER rather than a
     // column: a settings-only entry carries no authoring column to return to.
+    //
+    // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15: the
+    // magnification level markers column is target view only, and the column
+    // writer refuses 'M' outside it). Its audio tag is 'T' by construction —
+    // no entry can be filed from S+M — so the target entry below runs ahead
+    // of the column write rather than after it, the selection cleared first
+    // so the flip has no focus to re-express (the column switch would clear
+    // it one line later anyway). A refused target entry leaves the column
+    // writer refusing too, and the restore goes on in the view it has, the
+    // audio restore's own best-effort rule.
+    if (entry.op_mode == 'M') {
+        selection.clear_selection();
+        if (input) input->switch_active_audio_view_to(entry.audio_view);
+    }
     if (entry.op_mode != 'S') {
         active_views.switch_active_markers_view_to(entry.op_mode);
     }
 
-    // Settings-only entries carry no marker or focus post-restore work.
+    // Settings-only entries carry no marker or focus post-restore work, and
+    // neither does an 'M' entry: its one producer is the recipe load in place
+    // filed from T+M, which carries no touched hints and leaves no selection
+    // (the load clears it), so there is nothing to re-select — the selection
+    // stays as the column write left it, empty.
     if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.phaseresetmarkers.markers().size()));
-    } else if (entry.op_mode != 'S') {
+    } else if (entry.op_mode == 'W') {
         apply_post_restore_rules_warp(entry, before_w);
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.warpmarkers.markers().size()));
+    } else if (entry.op_mode == 'M') {
+        selection.clear_selection();
     }
 
     // THE 'S' ARM CLEARS THE SELECTION (architect 2026-07-29): a
@@ -1005,17 +1025,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // land nothing but recenter on the src_f=0 default). Defensive only:
             // post-sanitize the selection indices are always in range, so this
             // guards an impossible state, never a reachable one.
-            int64_t src_f   = 0;
-            bool    in_range = false;
-            if (app.active_markers_view == 'P') {
-                const auto& pv = app.phaseresetmarkers.markers();
-                in_range = (t >= 0 && t < static_cast<int>(pv.size()));
-                if (in_range) src_f = pv[t].time_frame;
-            } else {
-                const auto& wv = app.warpmarkers.markers();
-                in_range = (t >= 0 && t < static_cast<int>(wv.size()));
-                if (in_range) src_f = wv[t].time_frame;
-            }
+            // The active column's store through its selector pair
+            // (active_marker_count / active_marker_time_frame, app_state.h),
+            // all three columns.
+            const bool in_range = (t >= 0 && t < active_marker_count(app));
+            const int64_t src_f =
+                in_range ? active_marker_time_frame(app, t) : 0;
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
                 // move — and THE OVERLAY HIDE RIDES IT since 2026-08-19, the land
@@ -1122,18 +1137,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             int64_t lo = 0, hi = 0;
             bool    have = false;
             {
-                const bool phase_reset = (app.active_markers_view == 'P');
-                const auto& warp_vec = app.warpmarkers.markers();
-                const auto& phase_reset_vec = app.phaseresetmarkers.markers();
-                // The index bound from its one owner (active_marker_count,
-                // app_state.h — it reads the same live stores the refs above
-                // bind); the refs stay for the per-element time_frame reads.
+                // The index bound and the frame from the active column's one
+                // selector pair (active_marker_count / active_marker_time_frame,
+                // app_state.h), all three columns.
                 const int n = active_marker_count(app);
                 for (int idx : app.selected_markers) {
                     if (idx < 0 || idx >= n) continue;   // defensive
-                    const int64_t src_f = phase_reset
-                        ? phase_reset_vec[idx].time_frame
-                        : warp_vec[idx].time_frame;
+                    const int64_t src_f = active_marker_time_frame(app, idx);
                     const int64_t pos = clamp_playhead_to_live_domain(
                         source_frame_to_active_domain(app, viewport.audio, src_f),
                         app, viewport.audio);

@@ -44,7 +44,7 @@ struct AuthoringSnapshot {
     // Dispatch-time session prefs the standard .settings schema needs and
     // the request does not otherwise carry. Types match the AppState fields
     // they are captured from.
-    char        active_markers_view = 'W';   // 'W' or 'P'
+    char        active_markers_view = 'W';   // 'W', 'P' or 'M'
     // (EIGHT FIELDS LEFT THIS BLOCK WITH THEIR KEYS — playback_speed retired
     // 2026-08-27; gui_scale, audio_player and projects_repo moved to the
     // per-device config the same day, audio_player retiring there 2026-08-28;

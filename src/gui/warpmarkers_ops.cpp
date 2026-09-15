@@ -1386,6 +1386,8 @@ bool iter_bound_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           MarkerCell side,
                                           int64_t delta) {
+    // (Asked with a bound cell addressed, which never happens on the
+    // magnification level column — it paints none — so the fork is W or P.)
     // THE PHASE ARM: the same singleton compare in the hop domain. An
     // INELIGIBLE focus (a disabled reset) answers TRUE, its refusal being a
     // fact about the reset's state that the act cards through the kind refusal
@@ -1426,6 +1428,8 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // marker a CASCADE can disable without a toggle, a ref through a disabled
 // definition, is already answered by the first sentence.
 const char* iter_bound_step_kind_refusal(const AppState& a) {
+    // (A bound cell is never addressed on the magnification level column, so
+    // the fork is W or P.)
     // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
     // (there is no pass and no label ref on this column), so the only thing a
     // focused reset's kind can refuse on is being DISABLED — and a disabled

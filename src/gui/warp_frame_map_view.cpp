@@ -219,6 +219,34 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     return c;
 }
 
+// The magnification level column's red set — the contract is at the
+// declaration (warp_frame_map_view.h). The phase-reset body's run walk over
+// the third store: the store is time-sorted, so a coincident group is a run of
+// adjacent equal frames.
+const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
+    const AppState& app) {
+    MagnificationLevelRedFlagCache& c = app.magnification_level_red_flag_cache;
+    const long long gen = app.magnificationlevelmarkers.generation();
+    if (c.valid && c.markers_gen == gen) return c;
+
+    c.red.clear();
+    const std::vector<GuiMagnificationLevelMarker>& ml =
+        app.magnificationlevelmarkers.markers();
+    const int n = static_cast<int>(ml.size());
+    int i = 0;
+    while (i < n) {
+        int j = i + 1;
+        while (j < n && ml[j].time_frame == ml[i].time_frame) ++j;
+        if (j - i >= 2)
+            for (int k = i; k < j; ++k) c.red.insert(k);
+        i = j;
+    }
+
+    c.markers_gen = gen;
+    c.valid       = true;
+    return c;
+}
+
 // Definition; the descriptive comment lives at the declaration in
 // warp_frame_map_view.h. Exposed (non-anonymous) so main.cpp's viewport snap
 // in clamp_viewport_start takes its `q` from the same source as the

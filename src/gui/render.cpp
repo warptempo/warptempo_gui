@@ -3,6 +3,8 @@
 #include "audio.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
+#include "magnificationlevelmarkers.h"
+#include "marker_magnification.h"   // format_marker_magnification, the flag label
 #include "text_shape.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -1084,12 +1086,40 @@ struct FlagFace {
 // EVERY BOUND CELL ON EITHER COLUMN stay on kMarkerFlagFill's purple — a
 // bound cell's call site always passes `Warp` explicitly, with its own
 // comment there, "the flag's own class" being a warp-only phrase now that
-// the class has two flag boxes.
-enum class FlagColumnFace { Warp, PhaseReset };
+// the class has two flag boxes. THE THIRD FACE, MagnificationLevel (architect
+// 2026-09-15), is the magnification level markers column's green
+// (kMarkerMagnificationFill/Edge/FillSel/EdgeSel, render.h) on its flag box
+// and its stem; that column paints no bound cell and no measure box, so the
+// face reaches nothing else.
+enum class FlagColumnFace { Warp, PhaseReset, MagnificationLevel };
+
+// The default and selected pair of one column's flag box — the one place the
+// three columns' palettes are selected, so the live arm and the disabled arm
+// below cannot pick differently.
+static void flag_column_pair(FlagColumnFace column_face, bool selected,
+                             GuiColor& fill, GuiColor& edge) {
+    switch (column_face) {
+        case FlagColumnFace::Warp:
+            fill = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
+            edge = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
+            return;
+        case FlagColumnFace::PhaseReset:
+            fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
+            edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
+            return;
+        case FlagColumnFace::MagnificationLevel:
+            fill = selected ? kMarkerMagnificationFillSel
+                            : kMarkerMagnificationFill;
+            edge = selected ? kMarkerMagnificationEdgeSel
+                            : kMarkerMagnificationEdge;
+            return;
+    }
+    fill = kMarkerFlagFill;
+    edge = kMarkerFlagEdge;
+}
 
 FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
                            FlagColumnFace column_face) {
-    const bool phase_reset_column = (column_face == FlagColumnFace::PhaseReset);
     FlagFace f;
     if (disabled) {
         // The class the marker WOULD paint, blended — the LIVE LADDER RUN
@@ -1118,15 +1148,8 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         if (red) {
             base_fill = kMarkerFlagFillRed;
             base_edge = kMarkerFlagEdgeRed;
-        } else if (phase_reset_column) {
-            base_fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
-            base_edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
-        } else if (selected) {
-            base_fill = kMarkerFlagFillSel;
-            base_edge = kMarkerFlagEdgeSel;
         } else {
-            base_fill = kMarkerFlagFill;
-            base_edge = kMarkerFlagEdge;
+            flag_column_pair(column_face, selected, base_fill, base_edge);
         }
         f.fill  = mix_color(base_fill, kRedesignContentGround,
                             kMarkerDisabledMix);
@@ -1168,21 +1191,16 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         f.has_stem = true;
         return f;
     }
-    if (phase_reset_column) {
-        f.fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
-        f.edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
-    } else {
-        f.fill = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
-        f.edge = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
-    }
+    flag_column_pair(column_face, selected, f.fill, f.edge);
     f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
     f.label = kMarkerFlagLabel;
     // The stem reads the CLASS ALONE, never the selection bit: a selected
     // default marker keeps its calm stem colour (the architect's explicit
     // rule), so only the flag brightens — mirrored on the phase-reset column
-    // since 2026-09-15, whose default-class stem reads its own calm blue
-    // fill rather than the warp purple.
-    f.stem  = phase_reset_column ? kPhaseResetFlagFill : kMarkerFlagFill;
+    // and the magnification level column since 2026-09-15, each default-class
+    // stem reading its own column's calm fill (the unselected pair's fill).
+    GuiColor calm_edge;
+    flag_column_pair(column_face, /*selected=*/false, f.stem, calm_edge);
     f.has_stem = true;
     return f;
 }
@@ -1280,12 +1298,13 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
         cr, run, static_cast<double>(seam_x + border_w + pad_l), baseline);
 }
 
-// The one body both columns' painters call. `label_of(i)` composes the marker's
-// display text, `disabled_of(i)` answers its column's disabled question (the
-// warp side's label_ref cascade, the phase-reset side's bare bool), and
-// `measure_of(i)` answers its column's measure — the PLAIN FIELD on both, a
-// measure inheriting from nothing (architect 2026-08-20); the lambda survives
-// only because the two columns hold different marker types.
+// The one body all three columns' painters call. `label_of(i)` composes the
+// marker's display text, `disabled_of(i)` answers its column's disabled
+// question (the warp side's label_ref cascade, the phase-reset and
+// magnification level sides' bare bool), and `measure_of(i)` answers its
+// column's measure — the PLAIN FIELD on the warp column, a measure inheriting
+// from nothing (architect 2026-08-20), and always empty on the other two; the
+// lambdas survive because the columns hold different marker types.
 template <typename MarkerVec, typename LabelFn, typename DisabledFn,
           typename MeasureFn, typename CellsFn>
 void render_flag_boxes_impl(
@@ -1968,6 +1987,56 @@ void render_phase_reset_flags(cairo_t* cr,
         FlagColumnFace::PhaseReset);
 }
 
+void render_magnification_level_flags(
+        cairo_t* cr,
+        GuiRect top_strip_area,
+        FlagLaneRects lanes,
+        int waveform_width,
+        const std::vector<GuiMagnificationLevelMarker>& magnification_levels,
+        long long viewport_start_sample,
+        long long viewport_end_sample,
+        int sample_rate,
+        const std::set<int>& selected_set,
+        const std::set<int>& red_set,
+        int focus_marker,
+        std::vector<FlagHitRect>* out_hit_rects,
+        std::vector<MarkerStem>* out_stems,
+        const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+    render_flag_boxes_impl(
+        cr, top_strip_area, lanes, waveform_width, magnification_levels,
+        viewport_start_sample, viewport_end_sample, sample_rate,
+        selected_set, red_set,
+        // THE LABEL IS THE LEVEL DIGIT, in its one canonical spelling — the
+        // same byte the sidecar line carries after its `|`.
+        [&](int i) {
+            return format_marker_magnification(
+                magnification_levels[static_cast<std::size_t>(i)].level);
+        },
+        // No label cascade on this column — the bool is the whole verdict.
+        [&](int i) {
+            return magnification_levels[static_cast<std::size_t>(i)].disabled;
+        },
+        // RECORDED ASYMMETRY: a magnification level marker carries no measure,
+        // so the box never paints and its boundary never publishes.
+        [](int) -> const std::string& {
+            static const std::string kNoMeasure;
+            return kNoMeasure;
+        },
+        // RECORDED ASYMMETRY: no bound cells either — grid iterations never
+        // lights on this column (marker_paints_iter_cells' 'M' arm).
+        [](int) { return IterCellText{}; },
+        out_hit_rects, out_stems, warp_frame_map,
+        // NO DRAG OVERLAY: no flag drag arms on this column.
+        /*drag_overlay=*/nullptr,
+        // NO SUPPRESSION: no marker-lane editor opens on this column.
+        SuppressedBox{},
+        /*iteration_on=*/false,
+        // The focus's addressed cell is always the payload here: a press
+        // resolves no other cell on a flag that paints no other box.
+        focus_marker, MarkerCell::Payload,
+        FlagColumnFace::MagnificationLevel);
+}
+
 void render_history_diff_flags(
         cairo_t* cr,
         GuiRect top_strip_area,
@@ -2478,7 +2547,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // column carries an iteration bracket of its own), so its store is the
     // ACTIVE column's — the column the open route resolved the index against.
     // A target index the store has since shrunk past is the only failure
-    // shape, and it simply paints nothing.
+    // shape, and it simply paints nothing. NO EDITOR OPENS ON THE MAGNIFICATION
+    // LEVEL COLUMN (2026-09-15: its payload and measure opens are the warp
+    // column's, and it paints no bound cell), so `phase` is W's or P's answer.
     const bool phase = bound_kind && app.active_markers_view == 'P';
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv = app.phaseresetmarkers.markers();

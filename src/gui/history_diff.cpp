@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "device_config.h"   // shown_project_path (the card's name for a file)
 #include "frame_format.h"
+#include "marker_magnification.h"   // parse_marker_magnification, the level digit
 #include "history_prefetch.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
@@ -935,6 +936,29 @@ bool extract_phase_reset_entry(const std::string&         line,
         t.remove_prefix(1);
     }
     return parse_authored_frame(t, out.frame);
+}
+
+// The magnification level column's per-line mirror (architect 2026-09-15),
+// for the phase-reset mirror's reason exactly: its parser's parse_line is
+// file-local too. The same discipline — no whitespace anywhere, an optional
+// leading '#', the CANONICAL authored frame, one `|`, then the level through
+// the grammar's ONE implementation (parse_marker_magnification) and nothing
+// else.
+bool extract_magnification_level_entry(
+        const std::string& line, GuiHistoryMagnificationLevelEntry& out) {
+    std::string_view t = line;
+    if (t.find_first_of(" \t\r") != std::string_view::npos) return false;
+    out.disabled = false;
+    if (!t.empty() && t.front() == '#') {
+        out.disabled = true;
+        t.remove_prefix(1);
+    }
+    const std::size_t bar = t.find('|');
+    if (bar == std::string_view::npos) return false;
+    if (!parse_authored_frame(t.substr(0, bar), out.frame)) return false;
+    std::string level_error;
+    return parse_marker_magnification(t.substr(bar + 1), out.level,
+                                      level_error);
 }
 
 // Pair a removal and an addition sharing one frame into a change, leaving the
@@ -2656,19 +2680,24 @@ const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
 // happens to be (the old side in iterative, the old side in cumulative too). The
 // local walk passes it EMPTY — a state of the session's own timeline has no
 // name.
-GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
-                                           const std::string& then_warp,
-                                           const std::string& then_phase_reset,
-                                           const std::string& then_settings,
-                                           const std::string& now_warp,
-                                           const std::string& now_phase_reset,
-                                           const std::string& now_settings) {
+GuiHistoryCommitDelta compute_commit_delta(
+        const std::string& sha,
+        const std::string& then_warp,
+        const std::string& then_phase_reset,
+        const std::string& then_magnification_level,
+        const std::string& then_settings,
+        const std::string& now_warp,
+        const std::string& now_phase_reset,
+        const std::string& now_magnification_level,
+        const std::string& now_settings) {
     GuiHistoryCommitDelta d;
     d.sha = sha;
 
     const LineDiff warp_diff = diff_lines(then_warp, now_warp);
     const LineDiff phase_reset_diff =
         diff_lines(then_phase_reset, now_phase_reset);
+    const LineDiff magnification_level_diff =
+        diff_lines(then_magnification_level, now_magnification_level);
     const LineDiff settings_diff = diff_lines(then_settings, now_settings);
 
     // EVERY LINE HERE PARSES: the then side passed the strict whole-set load
@@ -2724,6 +2753,18 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
         GuiHistoryPhaseResetEntry e;
         if (extract_phase_reset_entry(line, e)) d.phase_reset_removed.push_back(e);
     }
+    // THE MAGNIFICATION LEVEL COLUMN (2026-09-15), the phase-reset loops'
+    // shape: no cascade, the local bit is the effective verdict.
+    for (const std::string& line : magnification_level_diff.added) {
+        GuiHistoryMagnificationLevelEntry e;
+        if (extract_magnification_level_entry(line, e))
+            d.magnification_level_added.push_back(e);
+    }
+    for (const std::string& line : magnification_level_diff.removed) {
+        GuiHistoryMagnificationLevelEntry e;
+        if (extract_magnification_level_entry(line, e))
+            d.magnification_level_removed.push_back(e);
+    }
 
     pair_changes_by_frame(
         d.warp_removed, d.warp_added, d.warp_changed,
@@ -2748,6 +2789,21 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
             c.now_disabled  = a.disabled;
             return c;
         });
+    // A same-frame pair is a changed LEVEL, a changed disable prefix, or both
+    // — the line's whole payload, as the phase-reset pair's is its bit.
+    pair_changes_by_frame(
+        d.magnification_level_removed, d.magnification_level_added,
+        d.magnification_level_changed,
+        [](const GuiHistoryMagnificationLevelEntry& r,
+           const GuiHistoryMagnificationLevelEntry& a) {
+            GuiHistoryMagnificationLevelChange c;
+            c.frame         = r.frame;
+            c.then_level    = r.level;
+            c.now_level     = a.level;
+            c.then_disabled = r.disabled;
+            c.now_disabled  = a.disabled;
+            return c;
+        });
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
@@ -2761,7 +2817,7 @@ GuiHistoryCommitDelta compute_commit_delta(const std::string& sha,
     // still diffed, coarsely, as replaced whole — unreachable on any real
     // corpus file (tens to a few hundred lines).
     if (warp_diff.degraded || phase_reset_diff.degraded ||
-        settings_diff.degraded) {
+        magnification_level_diff.degraded || settings_diff.degraded) {
         std::fprintf(stderr,
                      "warptempo_gui: History diff at %s exceeded the line cap; "
                      "the affected sidecar reads as replaced whole\n",
@@ -2793,8 +2849,9 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
     if (compare == GuiHistoryCompare::Cumulative) {
         slots[index] = compute_commit_delta(
             snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
-            snap.settings.text, now_.warpmarkers_text,
-            now_.phaseresetmarkers_text, now_.settings_text);
+            snap.magnificationlevelmarkers.text, snap.settings.text,
+            now_.warpmarkers_text, now_.phaseresetmarkers_text,
+            now_.magnificationlevelmarkers_text, now_.settings_text);
         return &*slots[index];
     }
 
@@ -2823,15 +2880,17 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
     if (index == 0) {
         slots[index] = compute_commit_delta(
             snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
-            snap.settings.text, now_.warpmarkers_text,
-            now_.phaseresetmarkers_text, now_.settings_text);
+            snap.magnificationlevelmarkers.text, snap.settings.text,
+            now_.warpmarkers_text, now_.phaseresetmarkers_text,
+            now_.magnificationlevelmarkers_text, now_.settings_text);
         return &*slots[index];
     }
     const GuiHistoryCommitSidecars& newer = commits[index - 1];
     slots[index] = compute_commit_delta(
         snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
-        snap.settings.text, newer.warpmarkers.text,
-        newer.phaseresetmarkers.text, newer.settings.text);
+        snap.magnificationlevelmarkers.text, snap.settings.text,
+        newer.warpmarkers.text, newer.phaseresetmarkers.text,
+        newer.magnificationlevelmarkers.text, newer.settings.text);
     return &*slots[index];
 }
 
@@ -3013,9 +3072,10 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
     // `n/N` alone).
     slots[index] = compute_commit_delta(
         std::string(), then_side->warpmarkers_text,
-        then_side->phaseresetmarkers_text, then_side->settings_text,
+        then_side->phaseresetmarkers_text,
+        then_side->magnificationlevelmarkers_text, then_side->settings_text,
         now_side->warpmarkers_text, now_side->phaseresetmarkers_text,
-        now_side->settings_text);
+        now_side->magnificationlevelmarkers_text, now_side->settings_text);
     return &*slots[index];
 }
 

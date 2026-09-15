@@ -281,7 +281,13 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return R(out);
     }
     if (key == "active_markers_view") {
-        if (value != "W" && value != "P") return err("must be W or P");
+        // THE THIRD COLUMN, M — the magnification level markers (architect
+        // approval 2026-09-15, the column made visible): one ASCII letter per
+        // column, W / P / M. M is TARGET VIEW ONLY, a PAIR rule this per-key
+        // grammar cannot see; read_settings_file refuses active_audio_view=S
+        // beside it once the whole file has scanned.
+        if (value != "W" && value != "P" && value != "M")
+            return err("must be W, P or M");
         out.c = value[0];
         return R(out);
     }
@@ -445,5 +451,16 @@ std::expected<SettingsFile, std::string> read_settings_file(
         return {};
     });
     if (!scan) return std::unexpected(std::move(scan.error()));
+    // S+M IS A STATE THE GUI CAN NEVER PRODUCE (architect approval
+    // 2026-09-15): the magnification level markers column shows in target view
+    // alone, every GUI road into source view landing the column on W first and
+    // every road into M crossing to target first. A file carrying the pair is
+    // therefore adversarial by the two-category rule — load-fatal, identically
+    // in both products — and the refusal is whole-file because the pair spans
+    // two keys.
+    if (out.active_markers_view == 'M' && out.active_audio_view == 'S') {
+        return std::unexpected<std::string>(
+            "active_markers_view=M requires active_audio_view=T");
+    }
     return out;
 }
