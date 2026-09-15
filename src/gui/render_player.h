@@ -572,6 +572,19 @@ struct GuiRenderPlayer {
     void car_previous();
     void car_next();
 
+    // THE CONSOLE'S FAST-FORWARD AND REWIND INSIDE A BATCH FOLDER (architect
+    // 2026-09-15; at the tmp/ root they stay the ±5 s seek). Both PLAY:
+    // car_fast_forward() — End + Play: an item bound takes next_track(), a
+    //   silent wall at the folder's last wav; nothing bound takes
+    //   play_button_act whole.
+    // car_rewind() — Home + Play: an item bound takes home() (the
+    //   previous-track window's file, else the restart) and then
+    //   transport_toggle_act if the transport is not LIVE; nothing bound takes
+    //   play_button_act whole.
+    // One caller each, on_media_command's FastForward / Rewind arm.
+    void car_fast_forward();
+    void car_rewind();
+
     // Left / Right's step: 5 s at the project source's rate (R6).
     int64_t seek_step_frames() const;
 
@@ -642,7 +655,10 @@ struct GuiRenderPlayer {
     //     next Play; what differs is the state left behind, PAUSED rather than
     //     IDLE, so the scrub stays live under it. The Accord has no stop
     //     button; the arm stays for any console that has one.
-    //   FastForward / Rewind -> seek_by(±seek_step_frames()), 5 s a press.
+    //   FastForward / Rewind -> at the tmp/ ROOT seek_by(±seek_step_frames()),
+    //     5 s a press; inside a BATCH FOLDER car_fast_forward() /
+    //     car_rewind() (next track, previous-track window or restart, both
+    //     playing; silent at the last wav — the contract at the declarations).
     //   SeekTo -> seek_to DIRECT; its milliseconds are clamped to the item's
     //     own length BEFORE the conversion to frames, the arriving position
     //     being any int64 a head unit cares to send (the rule at the site).

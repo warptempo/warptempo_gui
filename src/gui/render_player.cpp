@@ -1092,6 +1092,40 @@ void GuiRenderPlayer::car_next() {
     next_track();
 }
 
+// THE CONSOLE'S FAST-FORWARD INSIDE A BATCH FOLDER (architect 2026-09-15):
+// End, then PLAY. With an item bound it is next_track() — which plays in any
+// transport state — and at the folder's last wav NOTHING, next_track's silent
+// wall, never a fall-back to play or resume. With nothing bound the End half
+// has nothing to skip and the press is the tablet's Play whole. The folder is
+// the BAND'S; while LIVE it is necessarily the item's too, because the root
+// lists only batch folders and up() unloads the item on its way out, so a
+// bound item always sits in the folder the band stands in.
+void GuiRenderPlayer::car_fast_forward() {
+    if (!app.render_player.item.empty()) {
+        next_track();
+        return;
+    }
+    play_button_act();
+}
+
+// THE CONSOLE'S REWIND INSIDE A BATCH FOLDER (architect 2026-09-15): Home,
+// then PLAY. With an item bound it is home() — the previous-track window's
+// file, else the seek to the item's start — and then, if that left the
+// transport resting (a paused seek stays paused, an idle one is refused), the
+// transport's own toggle starts it from resume_frame, 0 after the seek or at
+// an idle rest. With nothing bound it is the tablet's Play whole. The folder
+// derivation is car_fast_forward's.
+void GuiRenderPlayer::car_rewind() {
+    if (!app.render_player.item.empty()) {
+        home();
+        if (app.render_player.transport != Transport::Live) {
+            transport_toggle_act();
+        }
+        return;
+    }
+    play_button_act();
+}
+
 // THE FOLDER'S FORWARD STEP, ONE BODY FOR ITS TWO CALLERS (2026-09-04): the
 // natural end's auto-advance and next_track, which the right skip's plain
 // press runs and the car's own Next composes on a live transport. Never
@@ -1487,9 +1521,19 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             if (rp.transport == Transport::Live) transport_toggle_act();
             return;
         case Kind::FastForward:
+            // At the tmp/ root the 5 s seek; inside a batch folder the
+            // console's skip (architect 2026-09-15, the reason at the body).
+            if (rp.folder == Folder::Batch) {
+                car_fast_forward();
+                return;
+            }
             seek_by(+seek_step_frames());
             return;
         case Kind::Rewind:
+            if (rp.folder == Folder::Batch) {
+                car_rewind();
+                return;
+            }
             seek_by(-seek_step_frames());
             return;
         case Kind::SeekTo: {
