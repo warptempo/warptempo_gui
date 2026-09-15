@@ -53,6 +53,7 @@
 #include "undo.h"
 #include "viewport.h"
 #include "warpmarkers_ops.h"
+#include "warp_frame_map_view.h"
 #include "platform.h"
 #include "project_model.h"
 #include "locale_check.h"
@@ -1006,7 +1007,7 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 
 int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // The rightmost ON-grid viewport start: the smallest painter-grid point
-    // >= max_start (= total - visible). Grid points g(k)=nearbyint(k*q) are
+    // >= max_start (= total - visible). Grid points viewport_grid_point(k, q) are
     // strictly increasing at numeric zoom (q >> 1), so starting at
     // floor(max_start/q) and stepping up finds it in O(1). Resting here shows
     // <1 px of inert padding past EOF (subsumed in the last column; get_peak_range
@@ -1028,11 +1029,8 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     if (q <= 0.0) return std::max<int64_t>(0, max_start);
     int64_t k = static_cast<int64_t>(std::floor(max_start / q));
     if (k < 0) k = 0;
-    auto grid = [q](int64_t kk) {
-        return static_cast<int64_t>(std::nearbyint(static_cast<double>(kk) * q));
-    };
-    while (grid(k) < max_start) ++k;
-    return grid(k);
+    while (viewport_grid_point(k, q) < max_start) ++k;
+    return viewport_grid_point(k, q);
 }
 
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
@@ -1107,11 +1105,8 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid
     // max_start first — that would pull a valid flush-right grid rest back
     // off-grid.)
-    auto grid = [q](int64_t kk) {
-        return static_cast<int64_t>(std::nearbyint(static_cast<double>(kk) * q));
-    };
-    int64_t snapped = grid(static_cast<int64_t>(
-        std::nearbyint(static_cast<double>(a.viewport_start_sample) / q)));
+    int64_t snapped = viewport_grid_point(static_cast<int64_t>(
+        std::nearbyint(static_cast<double>(a.viewport_start_sample) / q)), q);
     if (snapped < 0)               snapped = 0;
     if (snapped > max_start_grid)  snapped = max_start_grid;
     a.viewport_start_sample = snapped;

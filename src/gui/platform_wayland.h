@@ -404,6 +404,14 @@ public:
     // GuiInputCore::notional_pointer_x, input_core.h.
     double notional_pointer_x() const;
 
+    // IS A POINTER CAPTURE LIVE? The core's captured bit (contract at
+    // GuiInputCore::pointer_captured, input_core.h): true from the lock
+    // REQUEST to its release, false on a compositor missing either optional
+    // protocol and after a creation failure — the absolute fallback, where the
+    // visible cursor keeps following motion. Its one reader is the nav drag's
+    // end pivot (nav_drag_zoom_pivot, input_pointer.cpp).
+    bool pointer_captured() const;
+
     // THE ONE DOOR TO THE CURSOR IMAGE. The GUI names the kind it wants for the
     // pointer's current position; this remembers it and applies it only on a
     // CHANGE, so the once-per-loop-iteration call an unmoving answer makes costs

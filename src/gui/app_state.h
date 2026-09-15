@@ -1846,8 +1846,11 @@ struct TouchNavZoomState {
 // the seat it is about to clear: the pinch's held frame, THE STEM'S COLUMN and
 // the survivor's window position. THE COLUMN IS SAVED THERE, NOT RE-DERIVED AT
 // THE END (architect 2026-09-14): the transition frame applies nothing, so the
-// viewport is still the last two-finger frame's and the column is exactly the
-// one that frame's pivot held and the stem painted; the continuation's frames
+// viewport is still the last two-finger frame's, and the column is THE STEM'S
+// PAINTED INTEGER COLUMN — strip_anchor_stem_column (warp_frame_map_view.h),
+// the painter's own derivation, on the live viewport and the painter's
+// samples-per-pixel, which ARE the plate basis that frame's synchronous rebuild
+// published; the continuation's frames
 // then PAN the view (the latch carries, 2026-08-14 — untouched), and a column
 // re-derived from that moved viewport would land the snap that pan's distance
 // off the stem. PANNED latches — once, for the rest of the record's life —
@@ -1855,9 +1858,11 @@ struct TouchNavZoomState {
 // that position, CHEBYSHEV (max(|dx|, |dy|)), the touch translation's own
 // metric on its own larger number (4x the slop, architect 2026-09-14). It
 // decides the snap's pivot only; no motion waits on it. Its one reader is
-// end_touch_nav: a record NOT panned places `anchor_sample` back on the SAVED
-// `anchor_col`, undoing the sub-threshold pan exactly; a panned one yields to
-// the finger's last position (AppState::touch_nav_one_finger_x).
+// end_touch_nav: a record NOT panned places `anchor_sample` back IN the SAVED
+// painted column at the working lattice (ZoomPivot::painted_column,
+// Viewport::snap_continuous_zoom_to_working), undoing the sub-threshold pan
+// exactly; a panned one yields to the finger's last position
+// (AppState::touch_nav_last_x).
 // CLEARED by every two-finger frame (a re-upgrade seats a fresh pinch, whose
 // own downgrade records afresh), by end_touch_nav and by every
 // clear_touch_zoom_seat — the view-state writers and the load included, since
@@ -1866,7 +1871,7 @@ struct TouchNavZoomState {
 struct TouchNavDowngradeState {
     bool   recorded      = false;
     double anchor_sample = 0.0;   // the pinch's held SONG frame at the downgrade
-    double anchor_col    = 0.0;   // the stem's waveform column there
+    int    anchor_col    = 0;     // the stem's PAINTED waveform column there
     int    x             = 0;     // the survivor's window position there
     int    y             = 0;
     bool   panned        = false; // latched at pinch_pivot_pan_px()
@@ -5559,15 +5564,22 @@ struct AppState {
     // the stream continues as a pan. Its one reader is
     // continuous_zoom_gesture_live, the working-zoom floor's exemption.
     bool touch_nav_live = false;
-    // THE TOUCH NAVIGATION STREAM'S LAST ONE-FINGER POSITION (window x, px):
-    // written by every delivered one-finger frame (apply_touch_nav_update,
-    // refused frames included) and cleared with touch_nav_live. Its one reader
-    // is end_touch_nav: a pinch downgraded to one finger whose continuation
-    // has PANNED snaps back to the working zoom holding the frame under this
-    // position (architect 2026-09-14), the seat above having cleared at the
-    // downgrade; an unpanned one places the pinch's own anchor back on the
-    // stem's saved column instead (touch_nav_downgrade below).
-    std::optional<double> touch_nav_one_finger_x;
+    // THE TOUCH NAVIGATION STREAM'S LAST DELIVERED POSITION (window x, px) —
+    // the frame's `x` at EITHER finger count: the one finger's position, or
+    // the pair's centroid, the point the pinch seats its anchor under. Written
+    // by every delivered frame (apply_touch_nav_update, refused frames
+    // included, above the refusal as the seat's clear is) and cleared with
+    // touch_nav_live at end_touch_nav and at the load. DOMAIN-FREE BY DESIGN:
+    // it is a window position and never a song frame, so no view-state writer
+    // owes it a clear — clear_touch_zoom_seat drops the seat and the downgrade
+    // record (both song frames) and leaves this standing. Its one reader is
+    // end_touch_nav, the fallback WHENEVER NO SEAT AND NO UNPANNED DOWNGRADE
+    // RECORD SURVIVE: a downgraded pinch whose continuation has PANNED, a
+    // one-finger stream that never seated, and a stream whose seat or record a
+    // view writer cleared mid-gesture and that then ends hard before another
+    // frame reseats (architect 2026-09-14: the snap holds the frame under the
+    // finger at the end, never the viewport centre or a stale finger).
+    std::optional<double> touch_nav_last_x;
     // The pinch's downgrade record and its panned latch (contract at
     // TouchNavDowngradeState).
     TouchNavDowngradeState touch_nav_downgrade;

@@ -590,7 +590,36 @@ void Viewport::snap_continuous_zoom_to_working(std::optional<ZoomPivot> pivot) {
                 col * current_samples_per_pixel(app, audio),
             col};
     }
-    apply_strip_drag_zoom(kWorkingZoomLevel, pivot->sample, pivot->column,
+    double column = pivot->column;
+    if (pivot->painted_column) {
+        // THE PAINTED-COLUMN PLACEMENT (rule and residue at the declaration):
+        // choose the working lattice's grid start that paints the frame in the
+        // saved column, then express it as the column apply_strip_drag_zoom
+        // places at — nearbyint(sample - column * s) recovers the integer
+        // start, and clamp_viewport_start's snap (nearbyint(start / q), then
+        // viewport_grid_point) returns that same start, q being far above one
+        // frame. q and s are the working level's, read before the level is
+        // written, through the same quantization the chokepoint will use.
+        const double s = samples_per_pixel_at(kWorkingZoomLevel,
+                                              audio.sample_rate());
+        const double q = painter_quantized_spp(s, waveform_area(app).w);
+        if (q > 0.0) {
+            const int     c  = static_cast<int>(pivot->column);
+            const int64_t k0 = static_cast<int64_t>(
+                                   std::nearbyint(pivot->sample / q)) - c;
+            int64_t start = viewport_grid_point(k0, q);
+            for (const int64_t k : {k0, k0 - 1, k0 + 1}) {
+                const int64_t g = viewport_grid_point(k, q);
+                if (displayed_column_at(pivot->sample,
+                                        static_cast<double>(g), q) == c) {
+                    start = g;
+                    break;
+                }
+            }
+            column = (pivot->sample - static_cast<double>(start)) / s;
+        }
+    }
+    apply_strip_drag_zoom(kWorkingZoomLevel, pivot->sample, column,
                           /*final=*/true);
 }
 

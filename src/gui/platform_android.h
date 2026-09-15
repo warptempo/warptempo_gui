@@ -325,6 +325,12 @@ public:
     // one answer to "where is the pointer?" stays answerable on glass.
     double notional_pointer_x() const;
 
+    // IS A POINTER CAPTURE LIVE? The core's captured bit (contract at
+    // GuiInputCore::pointer_captured, input_core.h) — always false here, the
+    // capture's two halves being no-ops (above). Its one reader is the nav
+    // drag's end pivot (nav_drag_zoom_pivot, input_pointer.cpp).
+    bool pointer_captured() const;
+
     // THE ONE DOOR TO THE CURSOR IMAGE, and on Android it has no image behind
     // it: there is no pointer, so the kind is REMEMBERED (the core's policy,
     // including the drop of a kind named for a position the pointer does not

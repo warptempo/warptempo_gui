@@ -5919,8 +5919,9 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // zoom keeps moving the song under it — which is now visible ON GLASS exactly
 // as it is under the mouse, the ruling made watchable and the reason the
 // architect asked for the stem there.
-// render_strip_anchor_stem clamps the column to the visible edges — an
-// edge-pinned anchor draws the clamp itself.
+// strip_anchor_stem_column clamps the column to the visible edges (and
+// render_strip_anchor_stem's own clamp agrees) — an edge-pinned anchor draws
+// the clamp itself.
 // PRECEDENCE IS DECLARED RATHER THAN LEFT TO THE EXPRESSION'S SHAPE: a held
 // mouse capture and a glass contact are not structurally impossible together,
 // so the CAPTURING gesture goes first — the nav drag's zoom phase, then the
@@ -5940,10 +5941,11 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     const double anchor_sample = nav_zoom ? app.scroll_drag.anchor_sample
                                           : app.touch_nav_zoom.anchor_sample;
 
-    // The one column rounding (displayed_column_at, warp_frame_map_view.h), on
-    // the PLATE basis.
-    const int col = displayed_column_at(anchor_sample, basis.vp_start,
-                                        basis.spp);
+    // The stem's one column derivation (strip_anchor_stem_column over
+    // displayed_column_at, warp_frame_map_view.h), on the PLATE basis — the
+    // same helper the pinch's downgrade record saves its column through.
+    const int col = strip_anchor_stem_column(anchor_sample, basis.vp_start,
+                                             basis.spp, area.w);
     render_strip_anchor_stem(cr, area, col);
 }
 

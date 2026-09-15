@@ -354,6 +354,24 @@ struct GuiRect;
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area);
 
+// THE QUANTIZATION ITSELF, for a samples-per-pixel the caller already holds:
+// nearbyint(spp * w) / w, 0.0 on degenerate geometry. painter_samples_per_pixel
+// is this at the LIVE level; the gesture end's painted-column snap
+// (Viewport::snap_continuous_zoom_to_working) asks it at the WORKING level
+// before that level is written, so both read one rounding.
+inline double painter_quantized_spp(double spp, int w) {
+    if (w <= 0 || !(spp > 0.0)) return 0.0;
+    return std::nearbyint(spp * static_cast<double>(w)) /
+           static_cast<double>(w);
+}
+
+// THE VIEWPORT GRID'S k-TH POINT at painter step q: nearbyint(k * q) — the
+// resting starts clamp_viewport_start snaps to and max_viewport_start_grid
+// walks (main.cpp), and the candidates the painted-column snap chooses among.
+inline int64_t viewport_grid_point(int64_t k, double q) {
+    return static_cast<int64_t>(std::nearbyint(static_cast<double>(k) * q));
+}
+
 // Viewport-END sample for a strip `w` px wide at samples-per-pixel `spp`:
 // vp_start + nearbyint(spp * w), the painter-quantized right anchor the plate,
 // the flag/trim hit tests, and the trim column math all derive their upper
@@ -434,6 +452,22 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // exists to prevent.
 inline int displayed_column_at(double displayed, double vp_start, double spp) {
     return static_cast<int>(std::nearbyint((displayed - vp_start) / spp));
+}
+
+// THE ANCHOR STEM'S PAINTED COLUMN — displayed_column_at clamped into the
+// waveform's [0, w-1], the column render_strip_anchor_stem draws. ONE
+// derivation with two readers: the stem painter (paint_strip_drag_anchor, on
+// the PLATE basis) and the pinch's downgrade record (apply_touch_nav_update,
+// on the live viewport and painter_samples_per_pixel — the plate basis the
+// last applied frame's synchronous rebuild published), so the column the snap
+// later preserves is the pixel the stem stood on, not a fractional projection
+// beside it.
+inline int strip_anchor_stem_column(double displayed, double vp_start,
+                                    double spp, int w) {
+    int col = displayed_column_at(displayed, vp_start, spp);
+    if (col >= w) col = w - 1;
+    if (col < 0)  col = 0;
+    return col;
 }
 
 // Pixel-anchoring pair for gesture commits. Every gesture that moves an

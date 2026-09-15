@@ -16,9 +16,13 @@ class GuiPlayback;
 // the waveform column (fractional px, the apply_strip_drag_zoom anchor
 // convention) it holds it at — the rule at
 // Viewport::snap_continuous_zoom_to_working.
+// PAINTED_COLUMN marks `column` as an INTEGER painted column the snap must
+// keep the frame IN at the working lattice, not merely hold it near: the
+// pinch's unpanned downgrade (the stem's own pixel, architect 2026-09-14).
 struct ZoomPivot {
-    double sample = 0.0;
-    double column = 0.0;
+    double sample         = 0.0;
+    double column         = 0.0;
+    bool   painted_column = false;
 };
 
 // Viewport mutators and invalidation helpers. The struct holds references
@@ -371,17 +375,29 @@ struct Viewport {
     // 2026-09-14): the write is apply_strip_drag_zoom's own final placement of
     // `pivot` — a frame at its column — so the lift makes no camera jump. The
     // callers choose it: the nav drag the frame under the pointer's visible
-    // column in either phase (the seated frame at its stem while ctrl holds,
-    // the pointer's notional column after a ctrl-up); the pinch its seated
-    // frame when seated to the end, its anchor from the downgrade record ON
-    // THE STEM'S SAVED COLUMN when it dropped to one finger that has not
-    // travelled pinch_pivot_pan_px() (architect 2026-09-14), else
-    // the frame under the remaining finger's last position; an overview edge
-    // drag its FIXED opposite bound
-    // at its window edge. A caller with no position at all passes nullopt and
-    // the viewport's centre frame holds the centre column — reached only by
-    // the overview box pan and a touch stream that delivered neither a seat
-    // nor a one-finger frame, neither of which zooms.
+    // column (the seated frame at its stem during a CAPTURED zoom phase, the
+    // pointer's notional column otherwise — after a ctrl-up, and through an
+    // uncaptured zoom phase whose visible cursor never froze on the stem); the
+    // pinch its seated frame when seated to the end, its anchor from the
+    // downgrade record IN THE STEM'S SAVED PAINTED COLUMN when it dropped to
+    // one finger that has not travelled pinch_pivot_pan_px() (architect
+    // 2026-09-14), else the frame under the stream's last delivered position
+    // (AppState::touch_nav_last_x); an overview edge drag its FIXED opposite
+    // bound at its window edge. A caller with no position at all passes
+    // nullopt and the viewport's centre frame holds the centre column —
+    // reached only by the overview box pan, which zooms nothing.
+    // A PAINTED-COLUMN PIVOT (ZoomPivot::painted_column) is placed on the
+    // working lattice rather than at a fractional column: of the grid starts
+    // viewport_grid_point(k, q) at the working level's painter step q, it
+    // takes the one around nearbyint(sample / q) - column (that k, then its
+    // two neighbours) under which displayed_column_at puts `sample` in
+    // `column`, and hands apply_strip_drag_zoom the fractional column that
+    // reproduces that start, so clamp_viewport_start's own grid snap lands on
+    // it unchanged — the frame then PAINTS in the saved column (walls and a
+    // short file still win at that clamp). The only residue is a frame lying
+    // within one grid irregularity (under one frame, the grid points being
+    // nearbyint-rounded) of a column boundary, where no grid start puts it in
+    // that column and k itself is kept — one column off, by less than a frame.
     // Being a strip-drag apply it takes that applier's either-axis follow
     // suppression during playback, the gesture having moved the level already.
     // CALLED WITH THE GESTURE'S LIVE BIT ALREADY CLEARED, so the chokepoint's

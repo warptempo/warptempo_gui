@@ -256,10 +256,7 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area) {
     if (area.w <= 0) return 0.0;
-    const double spp = current_samples_per_pixel(app, audio);
-    if (spp <= 0.0) return 0.0;
-    return std::nearbyint(spp * static_cast<double>(area.w)) /
-           static_cast<double>(area.w);
+    return painter_quantized_spp(current_samples_per_pixel(app, audio), area.w);
 }
 
 int painted_column_of_source_frame_on_basis(

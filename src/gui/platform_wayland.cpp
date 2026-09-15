@@ -3310,3 +3310,4 @@ void GuiPlatform::set_notional_x_frozen(bool frozen)        { input_.set_notiona
 void GuiPlatform::set_notional_pointer_x(double surface_x)  { input_.set_notional_pointer_x(surface_x); }
 void GuiPlatform::set_capture_wrap_span(double lo, double hi) { input_.set_capture_wrap_span(lo, hi); }
 double GuiPlatform::notional_pointer_x() const { return input_.notional_pointer_x(); }
+bool GuiPlatform::pointer_captured() const { return input_.pointer_captured(); }
