@@ -1837,6 +1837,34 @@ struct TouchNavZoomState {
     double anchor_sample = 0.0;   // the held SONG frame (active domain)
 };
 
+// THE PINCH'S DOWNGRADE RECORD — what the snap back to the working zoom needs
+// once a seated pinch has dropped to one finger (architect 2026-09-14, on his
+// first glass pass of the last-finger pivot: lifting both fingers at nearly the
+// same moment still delivers a brief two-to-one frame before the last lift, and
+// a pivot on that finger jumped the camera although nothing had panned).
+// RECORDED at the downgrade's transition frame by apply_touch_nav_update, from
+// the seat it is about to clear: the pinch's held frame and the survivor's
+// window position. PANNED latches — once, for the rest of the record's life —
+// when a later one-finger frame lies at or beyond the touch slop from that
+// position, CHEBYSHEV (max(|dx|, |dy|)), the touch translation's own slop test
+// (GuiInputCore's moved latch and window resolution) against the same one
+// number, drag_moved_threshold_px(). Its one reader is end_touch_nav: a record
+// NOT panned holds `anchor_sample` at its column, exactly as a pinch seated to
+// the end does; a panned one yields to the finger's last position
+// (AppState::touch_nav_one_finger_x).
+// CLEARED by every two-finger frame (a re-upgrade seats a fresh pinch, whose
+// own downgrade records afresh), by end_touch_nav and by every
+// clear_touch_zoom_seat — the view-state writers and the load included, since
+// `anchor_sample` is an active-domain song frame exactly as the seat's is —
+// the touch nav body's own downgrade clear writing the record AFTER its call.
+struct TouchNavDowngradeState {
+    bool   recorded      = false;
+    double anchor_sample = 0.0;   // the pinch's held SONG frame at the downgrade
+    int    x             = 0;     // the survivor's window position there
+    int    y             = 0;
+    bool   panned        = false; // latched at the slop crossing
+};
+
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides
 // ScrollDragState like every other act on the navigation surface — its ONE
 // entry is the plain LOWER-HALF press's MOTIONLESS RELEASE, which runs one act
@@ -5512,10 +5540,15 @@ struct AppState {
     // THE TOUCH NAVIGATION STREAM'S LAST ONE-FINGER POSITION (window x, px):
     // written by every delivered one-finger frame (apply_touch_nav_update,
     // refused frames included) and cleared with touch_nav_live. Its one reader
-    // is end_touch_nav: a pinch downgraded to one finger snaps back to the
-    // working zoom holding the frame under this position (architect
-    // 2026-09-14), the seat above having cleared at the downgrade.
+    // is end_touch_nav: a pinch downgraded to one finger whose continuation
+    // has PANNED snaps back to the working zoom holding the frame under this
+    // position (architect 2026-09-14), the seat above having cleared at the
+    // downgrade; an unpanned one holds the pinch's own anchor instead
+    // (touch_nav_downgrade below).
     std::optional<double> touch_nav_one_finger_x;
+    // The pinch's downgrade record and its panned latch (contract at
+    // TouchNavDowngradeState).
+    TouchNavDowngradeState touch_nav_downgrade;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.

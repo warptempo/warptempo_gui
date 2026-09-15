@@ -491,14 +491,18 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // producer — its third when it joined, one of two since the overview strip
 // drag's deletion; the stem's contract is at paint_strip_drag_anchor,
 // paint_handler.cpp). It is a BODY for two reasons: (1) the EARLY RETURN makes
-// the damage fire exactly ONCE per phase however often the clear is reached,
-// and it is reached on every one-finger frame of the survivor's pan; (2) the
+// the damage fire exactly ONCE per phase however often the clear is reached
+// (the view-state writers below reach it with no seat standing); (2) the
 // damage is owed at all because a clear can land on a frame that APPLIES
 // NOTHING and therefore rebuilds nothing — a survivor pan refused off the
 // wheel's surfaces is exactly that frame, and it is the case the clear's own
 // ordering rule already names (the clear leads apply_touch_nav_update's body,
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
-// own mode edges spell.
+// own mode edges spell. IT ALSO DROPS THE PINCH'S DOWNGRADE RECORD
+// (TouchNavDowngradeState, app_state.h), AHEAD OF THE EARLY RETURN: the record
+// is a song frame taken from the seat, so every rule below that kills the seat
+// kills it too — which is why the touch nav body asks this clear only while a
+// seat stands, writing the record after it.
 //
 // FREE, AND BESIDE clear_region_highlight, SINCE codex round 20 — AND ON THE
 // VIEW-STATE WRITERS RATHER THAN THE COMMANDS SINCE ROUND 21: the seat is an
@@ -557,7 +561,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //
 // REACHABILITY, so none of this reads as theoretical: a two-finger frame under a
 // MODAL returns at apply_touch_nav_update's wheel_context refusal WITHOUT
-// clearing anything (the only per-frame clear is the one-finger arm), so a
+// clearing anything (the only per-frame clear is the downgrade's one-finger
+// frame), so a
 // seated pinch survives a whole modal editor session and resumes when the modal
 // closes — which is exactly how a settings editor's `active_audio_view=T` commit
 // reaches a seat taken in SOURCE.
@@ -570,8 +575,9 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //
 // A live pinch simply re-seats on its next frame, which is the same fresh grip
 // an upgrade takes.
-// Its two non-writer callers are unchanged: the touch nav body's top (any frame
-// that is not two-finger) and end_touch_nav (every end of the gesture). THE
+// Its two non-writer callers are unchanged: the touch nav body's top (a frame
+// that is not two-finger while a seat stands) and end_touch_nav (every end of
+// the gesture). THE
 // FIRST OF THOSE IS REACHED AT THE DOWNGRADE ITSELF, and by construction rather
 // than by luck: the core delivers ONE single-finger frame at the two-to-one
 // transition even when both of its deltas are no-ops (the no-op exemption at

@@ -3029,21 +3029,47 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // fingers had long since left behind. Refusing to navigate is not refusing
     // to notice that the pinch ended.
     // THE CLEAR OWES THE ERASE since the pinch became the anchor stem's third
-    // producer (2026-08-14) — and that is exactly why it is a body with an
-    // early return rather than an assignment here: this line runs on EVERY
-    // one-finger frame, while the stem must be rubbed out once, on the frame
-    // the seat actually dies (contract at clear_touch_zoom_seat).
+    // producer (2026-08-14) — and that is exactly why it is a body rather than
+    // an assignment here: the stem must be rubbed out once, on the frame the
+    // seat actually dies (contract at clear_touch_zoom_seat).
     // AND THE DOWNGRADE REACHES THIS LINE BY CONSTRUCTION: the platform
     // delivers one single-finger frame at the two-to-one transition even when
     // both of its deltas are no-ops (the exemption at set_touch_nav_hooks'
     // update contract), so a survivor left standing still cannot keep the dead
     // pinch's pivot seated and its stem painted under one finger — which is
     // what let a later upgrade zoom about the OLD song point.
-    if (!f.two_finger) clear_touch_zoom_seat(app, viewport);
+    // THE CLEAR IS ASKED ONLY WHILE A SEAT STANDS — the clear's own early
+    // return answers the same for the seat, but the clear also drops the
+    // DOWNGRADE RECORD (AppState::touch_nav_downgrade), which the continuation's
+    // frames must keep. So the downgrade reads the pinch's held frame first,
+    // clears, and then records it with the survivor's position, unpanned
+    // (architect 2026-09-14: the snap holds the pinch's anchor unless the one
+    // finger has panned).
+    if (!f.two_finger && app.touch_nav_zoom.seated) {
+        const double pinch_anchor = app.touch_nav_zoom.anchor_sample;
+        clear_touch_zoom_seat(app, viewport);
+        app.touch_nav_downgrade =
+            TouchNavDowngradeState{true, pinch_anchor, f.x, f.y, false};
+    } else if (!f.two_finger) {
+        // THE PANNED LATCH: a continuation frame at or beyond the touch slop
+        // from the downgrade position, Chebyshev — the touch translation's own
+        // slop test (GuiInputCore's moved latch) against the same one number
+        // the core's slop is pushed from. Once crossed it stays crossed.
+        TouchNavDowngradeState& d = app.touch_nav_downgrade;
+        if (d.recorded && !d.panned &&
+            std::max(std::abs(f.x - d.x), std::abs(f.y - d.y)) >=
+                drag_moved_threshold_px())
+            d.panned = true;
+    } else {
+        // A TWO-FINGER FRAME ENDS ANY DOWNGRADE: a re-upgrade seats a fresh
+        // pinch below, and its own downgrade records afresh.
+        app.touch_nav_downgrade = TouchNavDowngradeState{};
+    }
     // THE REMAINING FINGER'S LAST POSITION, bookkeeping beside the clear and
     // on the same side of the refusal: every delivered one-finger frame
-    // records where the finger is, so a pinch downgraded to one finger snaps
-    // back holding the frame under that finger at the end (end_touch_nav).
+    // records where the finger is, so a downgraded pinch whose continuation
+    // has panned snaps back holding the frame under that finger at the end
+    // (end_touch_nav).
     if (!f.two_finger) app.touch_nav_one_finger_x = static_cast<double>(f.x);
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
@@ -3295,6 +3321,9 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
 // once per phase, and the damage is owed because a clear can land on a frame
 // that applies nothing and so rebuilds nothing.
 void clear_touch_zoom_seat(AppState& app, Viewport& viewport) {
+    // The downgrade record holds a song frame taken from the seat, so every
+    // clear drops it too, seated or not (contract at TouchNavDowngradeState).
+    app.touch_nav_downgrade = TouchNavDowngradeState{};
     if (!app.touch_nav_zoom.seated) return;
     app.touch_nav_zoom = TouchNavZoomState{};
     viewport.invalidate_waveform_area();
@@ -3316,11 +3345,18 @@ void GuiInputHandler::end_touch_nav() {
     // leave the pivot mark painted over a settled view.
     // THE SNAP BACK TO THE WORKING ZOOM HOLDS THE FRAME UNDER THE FINGER AT
     // THE END (architect 2026-09-14: the snap always holds the frame under the
-    // pointer). A pinch seated to the end holds its seated frame at the stem's
-    // column, read BEFORE the seat's clear; a pinch downgraded to one finger
-    // holds the frame under the REMAINING FINGER'S LAST DELIVERED POSITION
-    // (AppState::touch_nav_one_finger_x) at that column — a lift, a cancel and
-    // a capability loss alike, a hard end having dropped its staged motion.
+    // pointer), THREE WAYS, a lift, a cancel and a capability loss alike on
+    // the last delivered state (a hard end having dropped its staged motion):
+    //   * SEATED TO THE END: the seated frame at the stem's column.
+    //   * DOWNGRADED TO ONE FINGER AND NOT PANNED (architect 2026-09-14: the
+    //     platform delivers a brief two-to-one frame before a near-simultaneous
+    //     last lift): the PINCH'S ANCHOR from the downgrade record
+    //     (AppState::touch_nav_downgrade) at its column, exactly as seated.
+    //   * DOWNGRADED AND PANNED past the touch slop — or a one-finger stream
+    //     that was never a seated pinch: the frame under the REMAINING FINGER'S
+    //     LAST DELIVERED POSITION (AppState::touch_nav_one_finger_x) at that
+    //     column.
+    // All three are read BEFORE the seat's clear, which drops the record too.
     // Only a stream that delivered neither (no seat and no one-finger frame)
     // passes no pivot and snaps about the viewport's centre, and such a stream
     // zoomed nothing. The live bit and the finger's position clear between the
@@ -3330,6 +3366,10 @@ void GuiInputHandler::end_touch_nav() {
     if (app.touch_nav_zoom.seated) {
         pivot = held_frame_zoom_pivot(app, audio,
                                       app.touch_nav_zoom.anchor_sample);
+    } else if (app.touch_nav_downgrade.recorded &&
+               !app.touch_nav_downgrade.panned) {
+        pivot = held_frame_zoom_pivot(app, audio,
+                                      app.touch_nav_downgrade.anchor_sample);
     } else if (app.touch_nav_one_finger_x) {
         const GuiRect wf_area = waveform_area(app);
         pivot = pointer_column_zoom_pivot(
@@ -3341,6 +3381,7 @@ void GuiInputHandler::end_touch_nav() {
     clear_touch_zoom_seat(app, viewport);
     app.touch_nav_live = false;
     app.touch_nav_one_finger_x.reset();
+    app.touch_nav_downgrade = TouchNavDowngradeState{};
     viewport.snap_continuous_zoom_to_working(pivot);
     if (playback.is_playing()) playback.resync_predictor();
 }
