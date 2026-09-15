@@ -3041,24 +3041,36 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // THE CLEAR IS ASKED ONLY WHILE A SEAT STANDS — the clear's own early
     // return answers the same for the seat, but the clear also drops the
     // DOWNGRADE RECORD (AppState::touch_nav_downgrade), which the continuation's
-    // frames must keep. So the downgrade reads the pinch's held frame first,
-    // clears, and then records it with the survivor's position, unpanned
-    // (architect 2026-09-14: the snap holds the pinch's anchor unless the one
-    // finger has panned).
+    // frames must keep. So the downgrade reads the pinch's held frame AND THE
+    // STEM'S COLUMN first, clears, and then records both with the survivor's
+    // position, unpanned (architect 2026-09-14: the snap lands exactly on the
+    // stem unless the one finger has panned past its own threshold). THE
+    // COLUMN IS TAKEN HERE, ON THE TRANSITION FRAME, because this frame applies
+    // nothing (the no-op return below): the viewport is still the last
+    // two-finger frame's, so held_frame_zoom_pivot answers exactly the column
+    // that frame's pivot held — the same re-derivation and edge clamp as the
+    // two-finger arm below — and the stem painted (displayed_column_at of the
+    // same frame on the plate basis that frame rebuilt). The continuation's
+    // frames pan from the next frame on, and nothing re-derives the column
+    // from that moved viewport.
     if (!f.two_finger && app.touch_nav_zoom.seated) {
-        const double pinch_anchor = app.touch_nav_zoom.anchor_sample;
+        const ZoomPivot stem =
+            held_frame_zoom_pivot(app, audio, app.touch_nav_zoom.anchor_sample);
         clear_touch_zoom_seat(app, viewport);
-        app.touch_nav_downgrade =
-            TouchNavDowngradeState{true, pinch_anchor, f.x, f.y, false};
+        app.touch_nav_downgrade = TouchNavDowngradeState{
+            true, stem.sample, stem.column, f.x, f.y, false};
     } else if (!f.two_finger) {
-        // THE PANNED LATCH: a continuation frame at or beyond the touch slop
-        // from the downgrade position, Chebyshev — the touch translation's own
-        // slop test (GuiInputCore's moved latch) against the same one number
-        // the core's slop is pushed from. Once crossed it stays crossed.
+        // THE PANNED LATCH: a continuation frame at or beyond
+        // pinch_pivot_pan_px() from the downgrade position, Chebyshev — the
+        // touch translation's own metric (GuiInputCore's moved latch), on the
+        // pivot decision's own larger number (4x the slop, architect
+        // 2026-09-14). Once crossed it stays crossed. IT GATES NO MOTION: every
+        // continuation frame pans below exactly as before; the latch only
+        // chooses the end's snap pivot.
         TouchNavDowngradeState& d = app.touch_nav_downgrade;
         if (d.recorded && !d.panned &&
             std::max(std::abs(f.x - d.x), std::abs(f.y - d.y)) >=
-                drag_moved_threshold_px())
+                pinch_pivot_pan_px())
             d.panned = true;
     } else {
         // A TWO-FINGER FRAME ENDS ANY DOWNGRADE: a re-upgrade seats a fresh
@@ -3351,8 +3363,11 @@ void GuiInputHandler::end_touch_nav() {
     //   * DOWNGRADED TO ONE FINGER AND NOT PANNED (architect 2026-09-14: the
     //     platform delivers a brief two-to-one frame before a near-simultaneous
     //     last lift): the PINCH'S ANCHOR from the downgrade record
-    //     (AppState::touch_nav_downgrade) at its column, exactly as seated.
-    //   * DOWNGRADED AND PANNED past the touch slop — or a one-finger stream
+    //     (AppState::touch_nav_downgrade) placed on THE STEM'S SAVED COLUMN,
+    //     never a column re-derived from the live viewport — the continuation
+    //     has panned it by the lift's wobble, and the snap's placement undoes
+    //     that pan exactly (up to the viewport chokepoint's sub-pixel grid).
+    //   * DOWNGRADED AND PANNED past pinch_pivot_pan_px() — or a one-finger stream
     //     that was never a seated pinch: the frame under the REMAINING FINGER'S
     //     LAST DELIVERED POSITION (AppState::touch_nav_one_finger_x) at that
     //     column.
@@ -3368,8 +3383,8 @@ void GuiInputHandler::end_touch_nav() {
                                       app.touch_nav_zoom.anchor_sample);
     } else if (app.touch_nav_downgrade.recorded &&
                !app.touch_nav_downgrade.panned) {
-        pivot = held_frame_zoom_pivot(app, audio,
-                                      app.touch_nav_downgrade.anchor_sample);
+        pivot = ZoomPivot{app.touch_nav_downgrade.anchor_sample,
+                          app.touch_nav_downgrade.anchor_col};
     } else if (app.touch_nav_one_finger_x) {
         const GuiRect wf_area = waveform_area(app);
         pivot = pointer_column_zoom_pivot(

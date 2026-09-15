@@ -373,8 +373,9 @@ struct Viewport {
     // callers choose it: the nav drag the frame under the pointer's visible
     // column in either phase (the seated frame at its stem while ctrl holds,
     // the pointer's notional column after a ctrl-up); the pinch its seated
-    // frame when seated to the end, its anchor from the downgrade record when
-    // it dropped to one finger that has not panned past the touch slop, else
+    // frame when seated to the end, its anchor from the downgrade record ON
+    // THE STEM'S SAVED COLUMN when it dropped to one finger that has not
+    // travelled pinch_pivot_pan_px() (architect 2026-09-14), else
     // the frame under the remaining finger's last position; an overview edge
     // drag its FIXED opposite bound
     // at its window edge. A caller with no position at all passes nullopt and

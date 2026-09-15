@@ -500,7 +500,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
 // own mode edges spell. IT ALSO DROPS THE PINCH'S DOWNGRADE RECORD
 // (TouchNavDowngradeState, app_state.h), AHEAD OF THE EARLY RETURN: the record
-// is a song frame taken from the seat, so every rule below that kills the seat
+// is a song frame (and its stem column) taken from the seat, so every rule below that kills the seat
 // kills it too — which is why the touch nav body asks this clear only while a
 // seat stands, writing the record after it.
 //

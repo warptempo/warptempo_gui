@@ -1843,15 +1843,21 @@ struct TouchNavZoomState {
 // same moment still delivers a brief two-to-one frame before the last lift, and
 // a pivot on that finger jumped the camera although nothing had panned).
 // RECORDED at the downgrade's transition frame by apply_touch_nav_update, from
-// the seat it is about to clear: the pinch's held frame and the survivor's
-// window position. PANNED latches — once, for the rest of the record's life —
-// when a later one-finger frame lies at or beyond the touch slop from that
-// position, CHEBYSHEV (max(|dx|, |dy|)), the touch translation's own slop test
-// (GuiInputCore's moved latch and window resolution) against the same one
-// number, drag_moved_threshold_px(). Its one reader is end_touch_nav: a record
-// NOT panned holds `anchor_sample` at its column, exactly as a pinch seated to
-// the end does; a panned one yields to the finger's last position
-// (AppState::touch_nav_one_finger_x).
+// the seat it is about to clear: the pinch's held frame, THE STEM'S COLUMN and
+// the survivor's window position. THE COLUMN IS SAVED THERE, NOT RE-DERIVED AT
+// THE END (architect 2026-09-14): the transition frame applies nothing, so the
+// viewport is still the last two-finger frame's and the column is exactly the
+// one that frame's pivot held and the stem painted; the continuation's frames
+// then PAN the view (the latch carries, 2026-08-14 — untouched), and a column
+// re-derived from that moved viewport would land the snap that pan's distance
+// off the stem. PANNED latches — once, for the rest of the record's life —
+// when a later one-finger frame lies at or beyond pinch_pivot_pan_px() from
+// that position, CHEBYSHEV (max(|dx|, |dy|)), the touch translation's own
+// metric on its own larger number (4x the slop, architect 2026-09-14). It
+// decides the snap's pivot only; no motion waits on it. Its one reader is
+// end_touch_nav: a record NOT panned places `anchor_sample` back on the SAVED
+// `anchor_col`, undoing the sub-threshold pan exactly; a panned one yields to
+// the finger's last position (AppState::touch_nav_one_finger_x).
 // CLEARED by every two-finger frame (a re-upgrade seats a fresh pinch, whose
 // own downgrade records afresh), by end_touch_nav and by every
 // clear_touch_zoom_seat — the view-state writers and the load included, since
@@ -1860,9 +1866,10 @@ struct TouchNavZoomState {
 struct TouchNavDowngradeState {
     bool   recorded      = false;
     double anchor_sample = 0.0;   // the pinch's held SONG frame at the downgrade
+    double anchor_col    = 0.0;   // the stem's waveform column there
     int    x             = 0;     // the survivor's window position there
     int    y             = 0;
-    bool   panned        = false; // latched at the slop crossing
+    bool   panned        = false; // latched at pinch_pivot_pan_px()
 };
 
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides
@@ -4033,6 +4040,21 @@ inline int drag_moved_threshold_px() {
     return scaled_px(kDragMovedThresholdPx, 1);
 }
 
+// THE PINCH'S PIVOT-PAN THRESHOLD — how far a downgraded pinch's surviving
+// finger must travel (Chebyshev, from its position at the two-to-one frame)
+// before the snap back to the working zoom pivots on that finger instead of on
+// the pinch's own stem (architect 2026-09-14: 4x the slop, so the roll-off of a
+// near-simultaneous two-finger lift never flips the pivot). IT DECIDES THE
+// SNAP'S PIVOT AND NOTHING ELSE: the one-finger continuation pans from its
+// first frame exactly as before, no dead zone added. An AUTHORED 100 % length
+// like the slop above, so it rides gui_scale (72 device px at 225 %); its one
+// reader is apply_touch_nav_update's panned latch (TouchNavDowngradeState).
+constexpr int kPinchPivotPanPx = 32;
+
+inline int pinch_pivot_pan_px() {
+    return scaled_px(kPinchPivotPanPx, 1);
+}
+
 // THE HOVER POPUP STATE IS DELETED (row 5, 2026-08-01). HoverPopupState cached
 // one hovered marker's identity, its composed lane text, its pass/ref resolved
 // readout, its pasteable copy payload and three staleness generations (both
@@ -5543,8 +5565,8 @@ struct AppState {
     // is end_touch_nav: a pinch downgraded to one finger whose continuation
     // has PANNED snaps back to the working zoom holding the frame under this
     // position (architect 2026-09-14), the seat above having cleared at the
-    // downgrade; an unpanned one holds the pinch's own anchor instead
-    // (touch_nav_downgrade below).
+    // downgrade; an unpanned one places the pinch's own anchor back on the
+    // stem's saved column instead (touch_nav_downgrade below).
     std::optional<double> touch_nav_one_finger_x;
     // The pinch's downgrade record and its panned latch (contract at
     // TouchNavDowngradeState).
