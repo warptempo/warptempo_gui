@@ -42,6 +42,32 @@ inline constexpr const char* kBatchFolderName = "tmp";
 // mirrors, and the load in place's tail trashes.
 std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
+// THE BATCH ROOT'S NUMBERING (moved here 2026-09-15, from a private static of
+// GuiInputHandler — the scan is pure filesystem over the root this file
+// already composes, no AppState reader in it, and THE RENDER PLAYER'S OPEN
+// needed the same answer with no back-pointer into that class to ask
+// through). Result of one walk over a batch root: the highest leading-index
+// `<digits>_...` folder, and that folder's own filename.
+struct RendersBatchScan {
+    int         max_index = 0;             // 0 when none / dir missing
+    std::string max_index_folder_name;     // filename of the max-index
+                                           // folder; empty when none
+};
+
+// Scan `renders_dir` for the highest leading-index batch folder. FOUR READERS
+// share this one walk (re-grepped 2026-09-15): the iteration and BPM sweeps
+// use `max_index + 1` alone for their next batch folder (a missing/empty dir
+// yields max_index 0, so the first folder is index 1 — the pre-factor
+// convention); the miscellaneous cell's allocator (Ctrl+Alt+Shift+R) also
+// reads `max_index_folder_name` to decide append-vs-new; and THE RENDER
+// PLAYER'S OPEN reads that same field to name the NEWEST batch folder to
+// enter (architect 2026-09-15) — "most recent" being this index, never a
+// filesystem timestamp a sync or a copy can disturb. A tie keeps the first
+// `<digits>_` folder at that index (strict `>` update), exact for the
+// always->=1 product folders.
+RendersBatchScan max_renders_batch_index(
+    const std::filesystem::path& renders_dir);
+
 // THE FAILURE WHEN A BATCH FOLDER CANNOT BE MADE (architect 2026-08-30; the
 // two-clause shape 2026-09-02, the four-tier review's R-11). THREE
 // dispatchers create one under the root above — the iteration sweep, the BPM

@@ -255,9 +255,14 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // re-express would kill the run — app_state.h's load_in_place_render_blocked);
 // its callers refuse the modal
 // states (a prompt, an
-// editor, the `h` view, loading, no source) before it is asked. The open
-// takes the modal-open stop, the mode bit, a fresh modal session, the root
-// listing and a whole-window damage. close() takes the panel down around
+// editor, the `h` view, loading, no source) before it is asked. THE OPEN
+// ENTERS THE NEWEST BATCH FOLDER (architect 2026-09-15): the highest
+// leading-index folder under tmp/ (max_renders_batch_index, renders_dir.h —
+// never a filesystem timestamp), the root listing the fallback when there is
+// none or the newest holds no playable wav; either way the band seats on row
+// 0, entering being memory-less as it always is. The open takes the
+// modal-open stop, the mode bit, a fresh modal session, that one listing and
+// a whole-window damage. close() takes the panel down around
 // unload_item(), which is THE ONE OWNER of the ordering the engine's pointer
 // demands — the stop body's fence, THE VIEW'S buffer rebound through the S/T
 // flip's own tail fork verbatim (ensure_ready in target view, rebind_to_source

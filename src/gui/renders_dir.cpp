@@ -32,6 +32,37 @@ std::filesystem::path project_batch_root(
     return project_folder_of(source_audio_path) / kBatchFolderName;
 }
 
+// THE BATCH ROOT'S NUMBERING (moved here 2026-09-15; the contract, its four
+// readers and the tie rule are at the declaration, renders_dir.h).
+RendersBatchScan max_renders_batch_index(
+        const std::filesystem::path& renders_dir) {
+    RendersBatchScan scan;
+    std::error_code ec;
+    if (!std::filesystem::is_directory(renders_dir, ec)) return scan;
+    // NON-THROWING (directory_walk.h): a batch root edited under the dispatch —
+    // the trash road, an external sync, a folder unmounted — answers what it
+    // saw, which is the same "highest index seen" this scan is, rather than
+    // terminating the process out of a range-for's increment.
+    for_each_directory_entry(renders_dir, ec, [&scan](
+            const std::filesystem::directory_entry& de) {
+        std::error_code entry_ec;
+        if (!de.is_directory(entry_ec) || entry_ec) return;
+        const std::string name = de.path().filename().string();
+        int v = 0;
+        size_t i = 0;
+        while (i < name.size() && name[i] >= '0' && name[i] <= '9') {
+            v = v * 10 + (name[i] - '0');
+            ++i;
+        }
+        if (i == 0 || i >= name.size() || name[i] != '_') return;
+        if (v > scan.max_index) {
+            scan.max_index             = v;
+            scan.max_index_folder_name = name;
+        }
+    });
+    return scan;
+}
+
 // Enumerate the flat render-entry list under <source parent>/tmp/.
 // Returns an empty vector if no source path is set or if the batch root
 // contains no valid entries.

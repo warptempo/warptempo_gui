@@ -2489,24 +2489,12 @@ private:
     std::atomic<bool> synthesis_started_{false};
     bool              status_promoted_ = false;
 
-    // Result of one walk over the tmp/ batch root: the highest
-    // leading-index `<digits>_...` folder, and that folder's filename.
-    struct RendersBatchScan {
-        int         max_index = 0;             // 0 when none / dir missing
-        std::string max_index_folder_name;     // filename of the max-index
-                                               // folder; empty when none
-    };
-
-    // Scan `renders_dir` for the highest leading-index batch folder. The three
-    // batch-dispatch sites share this one walk: the iteration and BPM sweeps
-    // use `max_index + 1` for their next batch folder (a missing/empty dir
-    // yields max_index 0, so the first folder is index 1 — the pre-factor
-    // convention), and Ctrl+Alt+Shift+R additionally reads
-    // `max_index_folder_name` to decide append-vs-new. A tie keeps the first
-    // `<digits>_` folder at that index (strict `>` update), exact for the
-    // always->=1 product folders.
-    static RendersBatchScan max_renders_batch_index(
-        const std::filesystem::path& renders_dir);
+    // (RendersBatchScan / max_renders_batch_index STOOD HERE — moved to
+    // renders_dir.h 2026-09-15, its scan being pure filesystem over the batch
+    // root that file already composes, so THE RENDER PLAYER'S OPEN could read
+    // the same "highest index" it names without a back-pointer into this
+    // class. The three dispatchers below call it unqualified, renders_dir.h
+    // reaching them through this header's own include.)
 
     // Start a multi-entry batch. Snapshots reqs + label, sets queue_running,
     // clears the cancel flag, dispatches the first entry. The on_done

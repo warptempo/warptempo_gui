@@ -25,35 +25,9 @@
 // render_bpm_sweep), grouped here to keep input_handler.cpp focused on the
 // event entry points.
 
-GuiInputHandler::RendersBatchScan
-GuiInputHandler::max_renders_batch_index(
-        const std::filesystem::path& renders_dir) {
-    RendersBatchScan scan;
-    std::error_code ec;
-    if (!std::filesystem::is_directory(renders_dir, ec)) return scan;
-    // NON-THROWING (directory_walk.h): a batch root edited under the dispatch —
-    // the trash road, an external sync, a folder unmounted — answers what it
-    // saw, which is the same "highest index seen" this scan is, rather than
-    // terminating the process out of a range-for's increment.
-    for_each_directory_entry(renders_dir, ec, [&scan](
-            const std::filesystem::directory_entry& de) {
-        std::error_code entry_ec;
-        if (!de.is_directory(entry_ec) || entry_ec) return;
-        const std::string name = de.path().filename().string();
-        int v = 0;
-        size_t i = 0;
-        while (i < name.size() && name[i] >= '0' && name[i] <= '9') {
-            v = v * 10 + (name[i] - '0');
-            ++i;
-        }
-        if (i == 0 || i >= name.size() || name[i] != '_') return;
-        if (v > scan.max_index) {
-            scan.max_index             = v;
-            scan.max_index_folder_name = name;
-        }
-    });
-    return scan;
-}
+// (max_renders_batch_index STOOD HERE — moved to renders_dir.h 2026-09-15;
+// the two call sites below reach it unqualified through this file's own
+// include of input_handler.h, which includes renders_dir.h.)
 
 // THE FAILED RENDER'S OWN REMOVAL (architect 2026-09-02) — one body, two
 // subjects: the deliverable pair in `render/` and a batch cell's file set

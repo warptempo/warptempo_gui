@@ -1309,6 +1309,39 @@ bool GuiRenderPlayer::open() {
         status("Nothing to play: no renders under tmp/");
         return false;
     }
+    // THE OPEN ENTERS THE NEWEST BATCH FOLDER (architect 2026-09-15): a
+    // sweep just finished, or the architect is back at a project he rendered
+    // earlier, and the folder he wants is the one he last wrote into, not
+    // tmp/'s own listing of every sweep this project has ever run.
+    // "NEWEST" IS THE PRODUCT'S OWN DEFINITION of it — the highest leading
+    // index, max_renders_batch_index's scan (renders_dir.h, shared with the
+    // three dispatchers that use the same number to name their NEXT folder)
+    // — NEVER A FILESYSTEM TIMESTAMP, which a sync or a copy can disturb.
+    // THE FALLBACK ASKS THAT FOLDER ALONE: a highest-index folder with no
+    // PLAYABLE wav in it (every cell bracket-rejected, or the folder made
+    // and nothing written into it yet) falls back to the root listing
+    // whole, exactly as an empty tmp/ does — never the next-highest
+    // playable folder, because the newest folder answering empty is the
+    // honest answer to "what did I just render". has_playable_render()
+    // above has already confirmed tmp/ holds SOMETHING playable; this asks
+    // only whether it is the newest folder that does.
+    Folder                open_folder = Folder::Root;
+    std::filesystem::path open_batch_dir;
+    const std::filesystem::path queue_root =
+        project_batch_root(app.source_audio_path);
+    const RendersBatchScan scan = max_renders_batch_index(queue_root);
+    if (!scan.max_index_folder_name.empty()) {
+        const std::filesystem::path candidate =
+            queue_root / scan.max_index_folder_name;
+        for (const AppState::RenderEntry& e :
+             renders_dir.enumerate_render_entries()) {
+            if (e.batch_folder == candidate) {
+                open_folder    = Folder::Batch;
+                open_batch_dir = candidate;
+                break;
+            }
+        }
+    }
     // A modal surface is opening: the shared modal stop
     // (stop_playback_for_modal_open — its declaration owns the decision table
     // and names this opener). Past every refusal above, as the rule demands.
@@ -1316,8 +1349,8 @@ bool GuiRenderPlayer::open() {
 
     rp.active         = true;
     rp.session        = text_editor::next_session_id();
-    rp.folder         = Folder::Root;
-    rp.batch_dir.clear();
+    rp.folder         = open_folder;
+    rp.batch_dir      = open_batch_dir;
     rp.item.clear();
     rp.item_folder.clear();
     rp.item_index     = -1;
@@ -1339,11 +1372,17 @@ bool GuiRenderPlayer::open() {
     // overlay, and every other field of the panel is reset with it.
     app.folder_overlay       = AppState::FolderOverlay{};
     app.folder_overlay.owner = AppState::FolderOverlay::Owner::Player;
-    // The open names no folder to seat on: the root listing takes its top.
-    // THE HEAD UNIT IS PUBLISHED BY THAT REBUILD and the open adds no push of
-    // its own: the session goes ACTIVE with the mode (R7) and its title is the
-    // silence track naming the fresh band's row — the first batch folder, or
-    // `tmp/` itself with nothing listed. Every field the push reads is written
+    // The open names no folder to seat on: ENTERING STAYS MEMORY-LESS
+    // whichever listing rp.folder now names, so the band takes the newest
+    // batch folder's top, or tmp/'s own top on the fallback. ONE REBUILD,
+    // ONE PUSH: rp.folder / rp.batch_dir are already the folder decided
+    // above, so this is the whole entry — no separate enter() call chases
+    // it with a second rebuild and a second publish. THE HEAD UNIT IS
+    // PUBLISHED BY THIS REBUILD and the open adds no push of its own: the
+    // session goes ACTIVE with the mode (R7) and its title is the silence
+    // track naming the fresh band's row — the newest batch folder's first
+    // cell, or `tmp/`'s own top row (its first batch folder, or nothing
+    // listed at all) on the fallback. Every field the push reads is written
     // above this line.
     rebuild_rows({});
     // A modal OPEN damages the whole window: the row's chrome greys, the band

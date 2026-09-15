@@ -36,13 +36,15 @@
 //
 //   THROUGH THIS OWNER
 //     renders_dir.cpp          enumerate_render_entries — the batch roots and,
-//                              per batch, its cells (two walks); and
+//                              per batch, its cells (two walks);
 //                              prune_render_folder — the `render/` folder,
 //                              classified whole and then removed from, so no
-//                              iterator is live while the folder changes
-//     input_render_dispatch.cpp  max_renders_batch_index — the batch root's
-//                              numbering; and the miscellaneous cell's own
-//                              next-index scan (two walks)
+//                              iterator is live while the folder changes; and
+//                              max_renders_batch_index — the batch root's
+//                              numbering (moved here 2026-09-15, from
+//                              input_render_dispatch.cpp, so the render
+//                              player's open() could read it too)
+//     input_render_dispatch.cpp  the miscellaneous cell's own next-index scan
 //     project_model.cpp        enumerate_project_names — the projects list
 //     render_cache.cpp         RenderCache::sweep_orphans — the stale PID dirs
 //
