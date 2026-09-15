@@ -57,12 +57,10 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // load_file's own two direct writes to these fields (the pre-parse 'W' reset
     // and the forced 'S' of a failed target-view restore).
     clear_touch_zoom_seat(app, viewport);
-    // The touch gesture's live bit, its last delivered position and its
-    // downgrade record go with its seat (AppState::touch_nav_live; the record
-    // is already dropped by the clear above, the reset stating it here).
-    app.touch_nav_live = false;
-    app.touch_nav_last_x.reset();
-    app.touch_nav_downgrade = TouchNavDowngradeState{};
+    // The pinch's live bit and its last centroid go with its seat
+    // (AppState::touch_pinch_live).
+    app.touch_pinch_live = false;
+    app.touch_pinch_centroid_x.reset();
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;

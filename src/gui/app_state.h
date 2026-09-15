@@ -1819,7 +1819,10 @@ struct OverviewDragState {
 // NO RE-JOIN WINDOW is built for a panel that drops a contact mid-pinch: the
 // downgrade clears the seat and the next upgrade takes a fresh one, which is
 // the architect's explicit ruling for the second time (touch.md's two-finger
-// section carries the first and his reason).
+// section carries the first and his reason). THE DOWNGRADE IS ALSO THE PINCH'S
+// END (architect 2026-09-15): the snap back to the working zoom runs there,
+// holding this seat's frame in its stem's painted column, read before the
+// clear (GuiInputHandler::apply_touch_nav_update).
 // THE SEAT IS ALSO THE ANCHOR STEM'S GATE since 2026-08-14, the pinch being
 // one of the stem's TWO producers since 2026-08-15 — it joined as the third and
 // the overview lane's strip drag left (paint_strip_drag_anchor,
@@ -1835,46 +1838,6 @@ struct OverviewDragState {
 struct TouchNavZoomState {
     bool   seated        = false;
     double anchor_sample = 0.0;   // the held SONG frame (active domain)
-};
-
-// THE PINCH'S DOWNGRADE RECORD — what the snap back to the working zoom needs
-// once a seated pinch has dropped to one finger (architect 2026-09-14, on his
-// first glass pass of the last-finger pivot: lifting both fingers at nearly the
-// same moment still delivers a brief two-to-one frame before the last lift, and
-// a pivot on that finger jumped the camera although nothing had panned).
-// RECORDED at the downgrade's transition frame by apply_touch_nav_update, from
-// the seat it is about to clear: the pinch's held frame, THE STEM'S COLUMN and
-// the survivor's window position. THE COLUMN IS SAVED THERE, NOT RE-DERIVED AT
-// THE END (architect 2026-09-14): the transition frame applies nothing, so the
-// viewport is still the last two-finger frame's, and the column is THE STEM'S
-// PAINTED INTEGER COLUMN — strip_anchor_stem_column (warp_frame_map_view.h),
-// the painter's own derivation, on the live viewport and the painter's
-// samples-per-pixel, which ARE the plate basis that frame's synchronous rebuild
-// published; the continuation's frames
-// then PAN the view (the latch carries, 2026-08-14 — untouched), and a column
-// re-derived from that moved viewport would land the snap that pan's distance
-// off the stem. PANNED latches — once, for the rest of the record's life —
-// when a later one-finger frame lies at or beyond pinch_pivot_pan_px() from
-// that position, CHEBYSHEV (max(|dx|, |dy|)), the touch translation's own
-// metric on its own larger number (4x the slop, architect 2026-09-14). It
-// decides the snap's pivot only; no motion waits on it. Its one reader is
-// end_touch_nav: a record NOT panned places `anchor_sample` back IN the SAVED
-// painted column at the working lattice (ZoomPivot::painted_column,
-// Viewport::snap_continuous_zoom_to_working), undoing the sub-threshold pan
-// exactly; a panned one yields to the finger's last position
-// (AppState::touch_nav_last_x).
-// CLEARED by every two-finger frame (a re-upgrade seats a fresh pinch, whose
-// own downgrade records afresh), by end_touch_nav and by every
-// clear_touch_zoom_seat — the view-state writers and the load included, since
-// `anchor_sample` is an active-domain song frame exactly as the seat's is —
-// the touch nav body's own downgrade clear writing the record AFTER its call.
-struct TouchNavDowngradeState {
-    bool   recorded      = false;
-    double anchor_sample = 0.0;   // the pinch's held SONG frame at the downgrade
-    int    anchor_col    = 0;     // the stem's PAINTED waveform column there
-    int    x             = 0;     // the survivor's window position there
-    int    y             = 0;
-    bool   panned        = false; // latched at pinch_pivot_pan_px()
 };
 
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides
@@ -4045,21 +4008,6 @@ inline int drag_moved_threshold_px() {
     return scaled_px(kDragMovedThresholdPx, 1);
 }
 
-// THE PINCH'S PIVOT-PAN THRESHOLD — how far a downgraded pinch's surviving
-// finger must travel (Chebyshev, from its position at the two-to-one frame)
-// before the snap back to the working zoom pivots on that finger instead of on
-// the pinch's own stem (architect 2026-09-14: 4x the slop, so the roll-off of a
-// near-simultaneous two-finger lift never flips the pivot). IT DECIDES THE
-// SNAP'S PIVOT AND NOTHING ELSE: the one-finger continuation pans from its
-// first frame exactly as before, no dead zone added. An AUTHORED 100 % length
-// like the slop above, so it rides gui_scale (72 device px at 225 %); its one
-// reader is apply_touch_nav_update's panned latch (TouchNavDowngradeState).
-constexpr int kPinchPivotPanPx = 32;
-
-inline int pinch_pivot_pan_px() {
-    return scaled_px(kPinchPivotPanPx, 1);
-}
-
 // THE HOVER POPUP STATE IS DELETED (row 5, 2026-08-01). HoverPopupState cached
 // one hovered marker's identity, its composed lane text, its pass/ref resolved
 // readout, its pasteable copy payload and three staleness generations (both
@@ -5555,34 +5503,30 @@ struct AppState {
     // wl_touch.cancel and touch-capability loss alike.
     TouchNavZoomState touch_nav_zoom;
 
-    // THE TOUCH NAVIGATION GESTURE IS LIVE: set by the first delivered frame
+    // A PINCH IS LIVE — the touch navigation stream's TWO-FINGER PHASE, the
+    // zoom-gesture phase of that stream (architect 2026-09-15: the pinch ends
+    // when the pinch ends). SET by every delivered two-finger frame
     // (GuiInputHandler::apply_touch_nav_update, refused frames included) and
-    // cleared by GuiInputHandler::end_touch_nav, the one body every touch end
-    // reaches — a finger lift, wl_touch.cancel and touch-capability loss
-    // alike, the platform firing that end iff a frame was delivered. NOT the
-    // seat above, which clears at the pinch's downgrade to one finger while
-    // the stream continues as a pan. Its one reader is
-    // continuous_zoom_gesture_live, the working-zoom floor's exemption.
-    bool touch_nav_live = false;
-    // THE TOUCH NAVIGATION STREAM'S LAST DELIVERED POSITION (window x, px) —
-    // the frame's `x` at EITHER finger count: the one finger's position, or
-    // the pair's centroid, the point the pinch seats its anchor under. Written
-    // by every delivered frame (apply_touch_nav_update, refused frames
-    // included, above the refusal as the seat's clear is) and cleared with
-    // touch_nav_live at end_touch_nav and at the load. DOMAIN-FREE BY DESIGN:
-    // it is a window position and never a song frame, so no view-state writer
-    // owes it a clear — clear_touch_zoom_seat drops the seat and the downgrade
-    // record (both song frames) and leaves this standing. Its one reader is
-    // end_touch_nav, the fallback WHENEVER NO SEAT AND NO UNPANNED DOWNGRADE
-    // RECORD SURVIVE: a downgraded pinch whose continuation has PANNED, a
-    // one-finger stream that never seated, and a stream whose seat or record a
-    // view writer cleared mid-gesture and that then ends hard before another
-    // frame reseats (architect 2026-09-14: the snap holds the frame under the
-    // finger at the end, never the viewport centre or a stale finger).
-    std::optional<double> touch_nav_last_x;
-    // The pinch's downgrade record and its panned latch (contract at
-    // TouchNavDowngradeState).
-    TouchNavDowngradeState touch_nav_downgrade;
+    // CLEARED at the pinch's end, through the one body both ends reach
+    // (end_touch_pinch, input_pointer.cpp): the TWO-TO-ONE DOWNGRADE's frame
+    // and GuiInputHandler::end_touch_nav (a lift of both fingers in one event,
+    // wl_touch.cancel, touch-capability loss). The clear LEADS the snap, so
+    // clamp_zoom_level's floor and the snap agree; the survivor's one-finger
+    // pan therefore runs under the working-zoom floor, as every one-finger pan
+    // does. A re-upgrade to two fingers sets it again, a fresh pinch. NOT the
+    // seat above, which a view writer may clear with two fingers still down.
+    // Its one reader is continuous_zoom_gesture_live, the floor's exemption.
+    bool touch_pinch_live = false;
+    // THE PINCH'S LAST CENTROID (window x, px) — the pair's centroid on the
+    // last delivered two-finger frame, refused frames included; written beside
+    // touch_pinch_live and cleared with it (the pinch's end, the load).
+    // DOMAIN-FREE BY DESIGN: a window position, never a song frame, so the
+    // view-state writers' seat clear leaves it standing. Its one reader is
+    // end_touch_pinch's fallback pivot, for the one pinch end that finds NO
+    // SEAT — a view writer cleared it with two fingers still down and no
+    // unrefused two-finger frame has reseated since — where the snap holds the
+    // frame under that centroid.
+    std::optional<double> touch_pinch_centroid_x;
 
     // Mouse drag-to-select inside the active text editor. Cleared on
     // button release, on a lost button mid-drag, and on file load.
@@ -11131,13 +11075,15 @@ double  effective_max_zoom_level(int waveform_width_px,
                                  int sample_rate);
 // A CONTINUOUS ZOOM GESTURE IS LIVE — the nav surface's drag (its Ctrl zoom
 // phase and the pan phase a ctrl-up leaves it in), the overview lane's drag
-// (the box edge drags zoom; the pan shares the record) or the touch
-// navigation gesture (AppState::touch_nav_live). The one reader is
-// clamp_zoom_level: while this holds the level may rest finer than the working
-// zoom, and the gesture's end snaps it back (Viewport::
-// snap_continuous_zoom_to_working).
+// (the box edge drags zoom; the pan shares the record) or the pinch — the
+// touch navigation stream's TWO-FINGER phase alone (AppState::touch_pinch_live;
+// the one-finger pan a downgrade leaves behind is not a zoom gesture and sees
+// the floor). The one reader is clamp_zoom_level: while this holds the level
+// may rest finer than the working zoom, and the gesture's end snaps it back
+// (Viewport::snap_continuous_zoom_to_working) — the pinch's end being its first
+// lift or its stream's end.
 inline bool continuous_zoom_gesture_live(const AppState& a) {
-    return a.scroll_drag.active || a.overview_drag.active || a.touch_nav_live;
+    return a.scroll_drag.active || a.overview_drag.active || a.touch_pinch_live;
 }
 
 // Clamp a requested zoom level into the per-file window [kWorkingZoomLevel,

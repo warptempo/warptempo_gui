@@ -498,11 +498,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // wheel's surfaces is exactly that frame, and it is the case the clear's own
 // ordering rule already names (the clear leads apply_touch_nav_update's body,
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
-// own mode edges spell. IT ALSO DROPS THE PINCH'S DOWNGRADE RECORD
-// (TouchNavDowngradeState, app_state.h), AHEAD OF THE EARLY RETURN: the record
-// is a song frame (and its stem column) taken from the seat, so every rule below that kills the seat
-// kills it too — which is why the touch nav body asks this clear only while a
-// seat stands, writing the record after it.
+// own mode edges spell.
 //
 // FREE, AND BESIDE clear_region_highlight, SINCE codex round 20 — AND ON THE
 // VIEW-STATE WRITERS RATHER THAN THE COMMANDS SINCE ROUND 21: the seat is an
@@ -575,9 +571,10 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //
 // A live pinch simply re-seats on its next frame, which is the same fresh grip
 // an upgrade takes.
-// Its two non-writer callers are unchanged: the touch nav body's top (a frame
-// that is not two-finger while a seat stands) and end_touch_nav (every end of
-// the gesture). THE
+// Its non-writer caller is the pinch's end, end_touch_pinch (input_pointer.cpp),
+// reached from the touch nav body's top (the first frame that is not
+// two-finger while a pinch is live, which snaps there) and from end_touch_nav
+// (every end of the gesture). THE
 // FIRST OF THOSE IS REACHED AT THE DOWNGRADE ITSELF, and by construction rather
 // than by luck: the core delivers ONE single-finger frame at the two-to-one
 // transition even when both of its deltas are no-ops (the no-op exemption at
@@ -1296,7 +1293,9 @@ struct GuiInputHandler {
     // pivot cleared, the gesture's one GUI-side record since 2026-08-14
     // (TouchNavZoomState, app_state.h) through clear_touch_zoom_seat below, so
     // a later pair seats afresh instead of inheriting a dead pinch's anchor —
-    // and so the anchor stem it gates is rubbed out at every end.
+    // and so the anchor stem it gates is rubbed out at every end — both through
+    // end_touch_pinch (input_pointer.cpp), which a pinch still live at the end
+    // also snaps back to the working zoom.
     void end_touch_nav();
     // (THE SEATED PINCH'S CLEAR is a FREE function since codex round 20 — the
     // view switches clear the seat too and they are not this class's:

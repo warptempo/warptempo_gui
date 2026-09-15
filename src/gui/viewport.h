@@ -18,10 +18,11 @@ class GuiPlayback;
 // Viewport::snap_continuous_zoom_to_working.
 // PAINTED_COLUMN marks `column` as an INTEGER painted column the snap must
 // keep the frame IN at the working lattice, not merely hold it near: EVERY
-// PIVOT THAT IS THE PAINTED ANCHOR STEM — the pinch seated to its end, its
-// unpanned downgrade and the captured nav drag zoom phase's end (the stem's own
-// pixel, architect 2026-09-14; the one producer is held_stem_zoom_pivot,
-// input_pointer.cpp). The pointer-under-cursor pivots stay fractional.
+// PIVOT THAT IS THE PAINTED ANCHOR STEM — the seated pinch's end (its first
+// lift or its stream's end) and the captured nav drag zoom phase's end (the
+// stem's own pixel, architect 2026-09-14; the one producer is
+// held_stem_zoom_pivot, input_pointer.cpp). The pointer-under-cursor pivots
+// stay fractional.
 struct ZoomPivot {
     double sample         = 0.0;
     double column         = 0.0;
@@ -381,12 +382,15 @@ struct Viewport {
     // column (the seated frame IN ITS STEM'S PAINTED COLUMN during a CAPTURED
     // zoom phase, the pointer's notional column otherwise — after a ctrl-up,
     // and through an uncaptured zoom phase whose visible cursor never froze on
-    // the stem); the pinch its seated frame IN THE STEM'S PAINTED COLUMN when
-    // seated to the end, its anchor from the
-    // downgrade record IN THE STEM'S SAVED PAINTED COLUMN when it dropped to
-    // one finger that has not travelled pinch_pivot_pan_px() (architect
-    // 2026-09-14), else the frame under the stream's last delivered position
-    // (AppState::touch_nav_last_x); an overview edge drag its FIXED opposite
+    // the stem); the pinch — whose end is its FIRST LIFT, the two-to-one
+    // downgrade, or its stream's end, whichever comes first (architect
+    // 2026-09-15, superseding for the pinch the 2026-09-14 rule that kept a
+    // downgraded pinch finer until the last lift and pivoted on that finger:
+    // the tablet has no infinite scroll, so the truthful anchor is the stem
+    // last seen; the laptop keeps the cursor) — its seated frame IN THE STEM'S
+    // PAINTED COLUMN, or, when a view writer cleared the seat with two fingers
+    // down, the frame under its last centroid (AppState::
+    // touch_pinch_centroid_x); an overview edge drag its FIXED opposite
     // bound at its window edge. A caller with no position at all passes
     // nullopt and the viewport's centre frame holds the centre column —
     // reached only by the overview box pan, which zooms nothing.
@@ -410,7 +414,8 @@ struct Viewport {
     // allow), and with nothing between that clear and this call that reaches
     // clamp_viewport_start, which would floor the level about the old start
     // and leave this nothing to do. THE SEVEN CALLERS are the gestures' ends:
-    // GuiInputHandler::end_touch_nav (the pinch's one end), and in
+    // end_touch_pinch (the pinch's one end, reached from its downgrade and from
+    // GuiInputHandler::end_touch_nav), and in
     // input_pointer.cpp the nav drag's and the overview drag's release,
     // lost-button and force-end (finalize_active_drags) arms.
     void snap_continuous_zoom_to_working(std::optional<ZoomPivot> pivot);

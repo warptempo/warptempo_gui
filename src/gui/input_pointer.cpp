@@ -2333,9 +2333,9 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // THE ANCHOR STEM'S PIVOT, for Viewport::snap_continuous_zoom_to_working: a
 // seated frame held IN THE INTEGER COLUMN ITS STEM PAINTS (architect
 // 2026-09-14: a snap that holds the stem lands exactly on the stem). ONE body,
-// THREE readers — every pivot that IS the painted stem: the captured nav drag
-// zoom phase's end (nav_drag_zoom_pivot), the pinch seated to its end
-// (end_touch_nav) and the pinch's downgrade record (apply_touch_nav_update).
+// TWO readers — every pivot that IS the painted stem: the captured nav drag
+// zoom phase's end (nav_drag_zoom_pivot) and the seated pinch's end at its
+// first lift or its stream's end (end_touch_pinch).
 // The FRAME is the gesture's own: its column under the live viewport, clamped
 // into the waveform with the edge rebind, exactly as the gesture's frames
 // derive it (apply_nav_zoom_at's pivot block and the pinch's), so an anchor a
@@ -2373,9 +2373,9 @@ static ZoomPivot held_stem_zoom_pivot(const AppState& app,
 
 // A POINTER'S PIVOT AT A CONTINUOUS ZOOM GESTURE'S END: the frame under a
 // waveform column (already clamped into the waveform) under the live viewport,
-// held at that column — the conversion the ctrl-down seat and the pinch's
-// one-finger pan use, so the snap holds exactly what is under the pointer or
-// the finger.
+// held at that column — the conversion the ctrl-down seat uses, so the snap
+// holds exactly what is under the pointer (or, for a pinch whose seat a view
+// writer cleared, under its last centroid).
 static ZoomPivot pointer_column_zoom_pivot(const AppState& app,
                                            const GuiAudio& audio,
                                            double col) {
@@ -3040,85 +3040,94 @@ RegionHit GuiInputHandler::region_manipulation_hit(int x, int y) const {
 // freeze, which names trim_drag: no waveform job may publish a new basis while
 // a trim drag is held.)
 
+// THE PINCH'S END — ONE body, TWO callers: the touch nav body's two-to-one
+// DOWNGRADE (the first not-two-finger frame while a pinch is live) and
+// end_touch_nav (a stream ending with the pinch still live — both fingers up
+// in one event, wl_touch.cancel, touch-capability loss). THE PINCH ENDS WHEN
+// THE PINCH ENDS (architect 2026-09-15, on glass: a pivot on the last finger
+// "feels unsteady", and the tablet has no infinite scroll, so the truthful
+// anchor is the stem last seen): the snap back to the working zoom runs HERE,
+// at the first lift or at the end, whichever comes first, and a survivor's
+// continuation is an ordinary one-finger pan under the floor.
+// THE PIVOT, read BEFORE the seat's clear:
+//   * SEATED: the seated frame IN THE STEM'S PAINTED COLUMN at the working
+//     lattice (held_stem_zoom_pivot). At the downgrade the transition frame
+//     applies nothing (its deltas are no-ops by construction — the exemption
+//     at set_touch_nav_hooks' update contract — and it reaches this body above
+//     every application), so the viewport and plate are still the last
+//     two-finger frame's, the stem's own basis; at end_touch_nav a hard end
+//     has dropped its staged motion and the same holds.
+//   * NOT SEATED — a view writer cleared the seat with two fingers still down
+//     and no unrefused two-finger frame has reseated since: the frame under
+//     the pinch's LAST CENTROID (AppState::touch_pinch_centroid_x), a window
+//     position the writers leave standing because it holds no song frame.
+// THE ORDERING: the pivot, then the seat's clear (which owes the stem's erase),
+// then the live bit and the centroid cleared, THEN the snap — nothing between
+// the bit's clear and the snap reaches clamp_viewport_start, so the chokepoint's
+// floor and the snap's write agree (Viewport::snap_continuous_zoom_to_working
+// carries the ordering). The snap is a no-op unless the level is strictly finer
+// than working, and its write is apply_strip_drag_zoom's final placement,
+// whose synchronous rebuild is what the transition frame's paint shows.
+static void end_touch_pinch(AppState& app, const GuiAudio& audio,
+                            Viewport& viewport) {
+    std::optional<ZoomPivot> pivot;
+    if (app.touch_nav_zoom.seated) {
+        pivot = held_stem_zoom_pivot(app, audio,
+                                     app.touch_nav_zoom.anchor_sample);
+    } else if (app.touch_pinch_centroid_x) {
+        const GuiRect wf_area = waveform_area(app);
+        pivot = pointer_column_zoom_pivot(
+            app, audio,
+            clamp_col_into_waveform(
+                wf_area, *app.touch_pinch_centroid_x -
+                             static_cast<double>(wf_area.x)));
+    }
+    clear_touch_zoom_seat(app, viewport);
+    app.touch_pinch_live = false;
+    app.touch_pinch_centroid_x.reset();
+    viewport.snap_continuous_zoom_to_working(pivot);
+}
+
 // THE TOUCH NAVIGATION BODY — two-finger frames and the phone model's
 // single-finger pan frames land here alike; contract, the ONE FINGER PANS,
 // TWO FINGERS ZOOM ruling, delivery-shape justification and refusal rationale
 // at the declaration (input_handler.h). One delivered frame = at most one
 // placement through the strip-drag family's own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
-    // THE GESTURE IS LIVE from its first delivered frame, refused or not, to
-    // end_touch_nav (AppState::touch_nav_live): the working-zoom floor's
-    // exemption, so a pinch may go finer than working until it ends.
-    app.touch_nav_live = true;
-    // THE PINCH'S SEATED PIVOT IS CLEARED BY ANY FRAME THAT IS NOT TWO-FINGER,
-    // and that clear LEADS THE BODY — it is the one thing here that happens
-    // above the refusal (contract at TouchNavZoomState, app_state.h). THE TWO
-    // HALVES SIT ON OPPOSITE SIDES OF THE REFUSAL DELIBERATELY: SEATING is a
-    // navigation act and takes the refusal with everything else (the ordering
-    // rule at the seat below), while CLEARING is bookkeeping — a one-finger
-    // frame means the two-finger phase is OVER whether or not this frame gets
-    // to navigate, and holding the anchor through a refused stretch of the
-    // survivor's pan would let a later upgrade zoom about a song frame the
-    // fingers had long since left behind. Refusing to navigate is not refusing
-    // to notice that the pinch ended.
+    // THE PINCH'S LIFECYCLE LEADS THE BODY, above the refusal — bookkeeping,
+    // not navigation. A TWO-FINGER FRAME, refused or not, means a pinch is
+    // live (AppState::touch_pinch_live, the working-zoom floor's exemption)
+    // and records its centroid, the fallback pivot. THE FIRST FRAME THAT IS
+    // NOT TWO-FINGER WHILE A PINCH IS LIVE IS THE PINCH'S END (end_touch_pinch
+    // above: the stem pivot read, the seat cleared, the bit down, the snap).
+    // THE TWO HALVES OF THE SEAT SIT ON OPPOSITE SIDES OF THE REFUSAL
+    // DELIBERATELY: SEATING is a navigation act and takes the refusal with
+    // everything else (the ordering rule at the seat below), while ENDING is
+    // bookkeeping — a one-finger frame means the two-finger phase is OVER
+    // whether or not this frame gets to navigate, and holding the anchor
+    // through a refused stretch of the survivor's pan would let a later
+    // upgrade zoom about a song frame the fingers had long since left behind.
+    // Refusing to navigate is not refusing to notice that the pinch ended.
     // THE CLEAR OWES THE ERASE since the pinch became the anchor stem's third
-    // producer (2026-08-14) — and that is exactly why it is a body rather than
-    // an assignment here: the stem must be rubbed out once, on the frame the
-    // seat actually dies (contract at clear_touch_zoom_seat).
+    // producer (2026-08-14) — the stem must be rubbed out once, on the frame
+    // the seat actually dies (contract at clear_touch_zoom_seat).
     // AND THE DOWNGRADE REACHES THIS LINE BY CONSTRUCTION: the platform
     // delivers one single-finger frame at the two-to-one transition even when
     // both of its deltas are no-ops (the exemption at set_touch_nav_hooks'
-    // update contract), so a survivor left standing still cannot keep the dead
-    // pinch's pivot seated and its stem painted under one finger — which is
-    // what let a later upgrade zoom about the OLD song point.
-    // THE CLEAR IS ASKED ONLY WHILE A SEAT STANDS — the clear's own early
-    // return answers the same for the seat, but the clear also drops the
-    // DOWNGRADE RECORD (AppState::touch_nav_downgrade), which the continuation's
-    // frames must keep. So the downgrade reads the pinch's held frame AND THE
-    // STEM'S PAINTED COLUMN first, clears, and then records both with the
-    // survivor's position, unpanned (architect 2026-09-14: the snap lands
-    // exactly on the stem unless the one finger has panned past its own
-    // threshold). THE COLUMN IS TAKEN HERE, ON THE TRANSITION FRAME, because
-    // this frame applies nothing (the no-op return below): the viewport is
-    // still the last two-finger frame's, so held_stem_zoom_pivot answers the
-    // frame that frame's pivot held — the same re-derivation and edge rebind
-    // as the two-finger arm below — IN THE INTEGER COLUMN THE STEM PAINTED, on
-    // the plate basis that frame's synchronous rebuild published (the basis
-    // argument at held_stem_zoom_pivot, the same body the seated end and the
-    // captured nav drag end read). The continuation's frames pan from the next
-    // frame on, and nothing re-derives the column from that moved viewport.
-    if (!f.two_finger && app.touch_nav_zoom.seated) {
-        const ZoomPivot stem =
-            held_stem_zoom_pivot(app, audio, app.touch_nav_zoom.anchor_sample);
-        clear_touch_zoom_seat(app, viewport);
-        app.touch_nav_downgrade = TouchNavDowngradeState{
-            true, stem.sample, static_cast<int>(stem.column), f.x, f.y, false};
-    } else if (!f.two_finger) {
-        // THE PANNED LATCH: a continuation frame at or beyond
-        // pinch_pivot_pan_px() from the downgrade position, Chebyshev — the
-        // touch translation's own metric (GuiInputCore's moved latch), on the
-        // pivot decision's own larger number (4x the slop, architect
-        // 2026-09-14). Once crossed it stays crossed. IT GATES NO MOTION: every
-        // continuation frame pans below exactly as before; the latch only
-        // chooses the end's snap pivot.
-        TouchNavDowngradeState& d = app.touch_nav_downgrade;
-        if (d.recorded && !d.panned &&
-            std::max(std::abs(f.x - d.x), std::abs(f.y - d.y)) >=
-                pinch_pivot_pan_px())
-            d.panned = true;
-    } else {
-        // A TWO-FINGER FRAME ENDS ANY DOWNGRADE: a re-upgrade seats a fresh
-        // pinch below, and its own downgrade records afresh.
-        app.touch_nav_downgrade = TouchNavDowngradeState{};
+    // update contract), so a survivor left standing still ends the pinch, and
+    // snaps it, on the frame of the lift. That frame carries no motion and
+    // dies at the exact-no-op return below, so the snap is the frame's one
+    // write and the survivor's pan starts from the snapped view on the next
+    // frame, at the floor-honouring level (the latch carries, 2026-08-14 — no
+    // delay, no dead zone). A seat exists only under a live pinch (both are
+    // set by two-finger frames and cleared together), so this one test also
+    // covers every seat the downgrade must clear.
+    if (f.two_finger) {
+        app.touch_pinch_live       = true;
+        app.touch_pinch_centroid_x = static_cast<double>(f.x);
+    } else if (app.touch_pinch_live) {
+        end_touch_pinch(app, audio, viewport);
     }
-    // THE STREAM'S LAST DELIVERED POSITION, bookkeeping beside the clear and
-    // on the same side of the refusal: EVERY delivered frame, at either finger
-    // count, records its x — the one finger, or the pair's centroid the seat
-    // below is taken under — so an end that finds no seat and no unpanned
-    // downgrade record still snaps holding the frame under the finger
-    // (end_touch_nav; contract at AppState::touch_nav_last_x). A window
-    // position, never a song frame, so the view writers' seat clear leaves it.
-    app.touch_nav_last_x = static_cast<double>(f.x);
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -3306,10 +3315,11 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // viewport — the waveform starts at the window edge), and no clamp is
         // needed on a pan: nothing persists between frames for an off-area
         // column to corrupt, and the placement runs through the viewport
-        // chokepoint's own clamps either way. The seat is already cleared at
-        // the top of the body — which is what makes the DOWNGRADE clean: a
-        // finger lifting from the pair continues as this pan, and the next
-        // upgrade takes a FRESH pivot rather than inheriting the dead pinch's.
+        // chokepoint's own clamps either way. The pinch has already ended at
+        // the top of the body — seat cleared, level snapped — which is what
+        // makes the DOWNGRADE clean: a finger lifting from the pair continues
+        // as this pan at a resting level, and the next upgrade takes a FRESH
+        // pivot rather than inheriting the dead pinch's.
         anchor_sample = vp + (static_cast<double>(f.x) - eff_dx) * spp_old;
         anchor_col    = static_cast<double>(f.x);
     } else {
@@ -3369,9 +3379,6 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
 // once per phase, and the damage is owed because a clear can land on a frame
 // that applies nothing and so rebuilds nothing.
 void clear_touch_zoom_seat(AppState& app, Viewport& viewport) {
-    // The downgrade record holds a song frame taken from the seat, so every
-    // clear drops it too, seated or not (contract at TouchNavDowngradeState).
-    app.touch_nav_downgrade = TouchNavDowngradeState{};
     if (!app.touch_nav_zoom.seated) return;
     app.touch_nav_zoom = TouchNavZoomState{};
     viewport.invalidate_waveform_area();
@@ -3382,65 +3389,18 @@ void GuiInputHandler::end_touch_nav() {
     // the one deferred piece is the playback predictor (mid-gesture frames
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
     // own tail.
-    // AND THE PINCH'S SEATED PIVOT IS CLEARED HERE, the gesture's one GUI-side
-    // record since 2026-08-14 (TouchNavZoomState, app_state.h — the old "every
-    // frame is applied whole and forgotten" is retired with it). Every end
-    // reaches this one body — a finger lift, wl_touch.cancel and
-    // touch-capability loss alike — so no later gesture can inherit a dead
-    // pinch's anchor; a fresh pair seats its own. It goes through
-    // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
-    // rebuilds nothing of its own, so without the damage a hard end would
-    // leave the pivot mark painted over a settled view.
-    // THE SNAP BACK TO THE WORKING ZOOM HOLDS THE FRAME UNDER THE FINGER AT
-    // THE END (architect 2026-09-14: the snap always holds the frame under the
-    // pointer), THREE WAYS, a lift, a cancel and a capability loss alike on
-    // the last delivered state (a hard end having dropped its staged motion):
-    //   * SEATED TO THE END: the seated frame IN THE STEM'S PAINTED COLUMN at
-    //     the working lattice (held_stem_zoom_pivot) — the viewport and plate
-    //     are still the last applied frame's, the stem's own basis.
-    //   * DOWNGRADED TO ONE FINGER AND NOT PANNED (architect 2026-09-14: the
-    //     platform delivers a brief two-to-one frame before a near-simultaneous
-    //     last lift): the PINCH'S ANCHOR from the downgrade record
-    //     (AppState::touch_nav_downgrade) kept IN THE STEM'S SAVED PAINTED
-    //     COLUMN at the working lattice (ZoomPivot::painted_column), never a
-    //     column re-derived from the live viewport — the continuation has
-    //     panned it by the lift's wobble, and the snap's placement undoes that
-    //     pan to the pixel (the residue at snap_continuous_zoom_to_working).
-    //   * EVERYTHING ELSE — downgraded and panned past pinch_pivot_pan_px(), a
-    //     one-finger stream that was never a seated pinch, and a stream whose
-    //     seat or record a view writer cleared mid-gesture before a hard end
-    //     (a cancel or capability loss delivers no fresh frame to reseat): the
-    //     frame under THE STREAM'S LAST DELIVERED POSITION
-    //     (AppState::touch_nav_last_x — the one finger, or the pair's
-    //     centroid) at that column, a window position that survives the view
-    //     writers because it holds no song frame.
-    // All three are read BEFORE the seat's clear, which drops the record too.
-    // Only a stream that delivered no frame passes no pivot, and the platform
-    // fires no end for one. The live bit and the position clear between the
-    // read and the snap, with nothing in between reaching the viewport clamp
-    // (Viewport::snap_continuous_zoom_to_working carries the ordering).
-    std::optional<ZoomPivot> pivot;
-    if (app.touch_nav_zoom.seated) {
-        pivot = held_stem_zoom_pivot(app, audio,
-                                      app.touch_nav_zoom.anchor_sample);
-    } else if (app.touch_nav_downgrade.recorded &&
-               !app.touch_nav_downgrade.panned) {
-        pivot = ZoomPivot{app.touch_nav_downgrade.anchor_sample,
-                          static_cast<double>(app.touch_nav_downgrade.anchor_col),
-                          /*painted_column=*/true};
-    } else if (app.touch_nav_last_x) {
-        const GuiRect wf_area = waveform_area(app);
-        pivot = pointer_column_zoom_pivot(
-            app, audio,
-            clamp_col_into_waveform(
-                wf_area, *app.touch_nav_last_x -
-                             static_cast<double>(wf_area.x)));
-    }
-    clear_touch_zoom_seat(app, viewport);
-    app.touch_nav_live = false;
-    app.touch_nav_last_x.reset();
-    app.touch_nav_downgrade = TouchNavDowngradeState{};
-    viewport.snap_continuous_zoom_to_working(pivot);
+    // AND THE PINCH ENDS HERE IF IT IS STILL LIVE (end_touch_pinch: its seated
+    // pivot cleared, the gesture's one GUI-side record since 2026-08-14 —
+    // TouchNavZoomState, app_state.h — and the snap back to the working zoom
+    // holding the stem). Every end reaches this one body — a finger lift,
+    // wl_touch.cancel and touch-capability loss alike — so no later gesture
+    // can inherit a dead pinch's anchor, and the clear owes the STEM'S ERASE:
+    // an end rebuilds nothing of its own, so without the damage a hard end
+    // would leave the pivot mark painted over a settled view. A stream whose
+    // pinch already ended at its downgrade (or that never pinched) finds the
+    // bit down: its level already rests at working or coarser, and nothing
+    // here moves the view — THE ONE-FINGER PAN SNAPS NOTHING.
+    if (app.touch_pinch_live) end_touch_pinch(app, audio, viewport);
     if (playback.is_playing()) playback.resync_predictor();
 }
 

@@ -458,8 +458,8 @@ inline int displayed_column_at(double displayed, double vp_start, double spp) {
 // waveform's [0, w-1], the column render_strip_anchor_stem draws. ONE
 // derivation with two readers: the stem painter (paint_strip_drag_anchor, on
 // the PLATE basis) and the stem's zoom pivot (held_stem_zoom_pivot,
-// input_pointer.cpp — the pinch's seated end and downgrade record and the
-// captured nav drag zoom phase's end — on the live viewport and
+// input_pointer.cpp — the seated pinch's end and the captured nav drag zoom
+// phase's end — on the live viewport and
 // painter_samples_per_pixel, the plate basis the last applied frame's
 // synchronous rebuild published), so the column the snap preserves is the
 // pixel the stem stood on, not a fractional projection beside it.
