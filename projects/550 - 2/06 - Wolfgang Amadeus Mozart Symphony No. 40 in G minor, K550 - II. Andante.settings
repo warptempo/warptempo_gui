@@ -7,7 +7,6 @@ cover=Winged Migration (2001)
 active_audio_view=S
 active_markers_view=W
 active_tab_view=B
-waveform_magnification_level=0
 tab_a_trim_begin=0
 tab_a_trim_end=100
 tab_a_read_only=false
