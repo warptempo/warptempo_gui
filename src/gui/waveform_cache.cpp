@@ -169,7 +169,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     // The waveform PICTURE's gain profile, resolved from the LIVE warp store
-    // at the working zoom and empty coarser (effective_waveform_gain_profile
+    // at the working zoom or finer and empty coarser (effective_waveform_gain_profile
     // — the `h` view's plate included, it being the live plate) and captured
     // here
     // with the geometry as an owned snapshot, so the worker reads no live

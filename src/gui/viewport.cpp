@@ -432,9 +432,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // return) rather than assign-then-revert, and (b) the centering `visible`
     // below is computed at the FINAL level. clamp_viewport_start re-applies the
     // identical clamp as the chokepoint; this only sharpens the no-op detection
-    // and the centering math here. The same clamp floors the request at the
-    // working zoom (clamp_zoom_level owns the floor), so a finer request lands
-    // at working rather than refusing.
+    // and the centering math here.
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
     if (new_zoom_level == app.zoom_level) return;
 
@@ -533,8 +531,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: ALL THREE gesture
-    // callers —
+    // `level_changed` reports a real move, not a request: ALL THREE callers —
     // the nav drag's zoom phase (apply_nav_zoom_at,
     // which joined 2026-08-14 with the live-ctrl model; the deleted strip
     // drag's own body was the fourth until 2026-08-15), the two-finger
@@ -544,11 +541,8 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // (apply_overview_drag_at's edge arm, since the lane rework 2026-08-12) —
     // pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
-    // below while the gesture is live, so the pre-assignment compare cannot read
-    // a wall-saturated no-op as movement; and the fourth caller, the gesture
-    // end's snap (snap_continuous_zoom_to_working), asks for the working zoom
-    // only from a level strictly finer, with the live bit down, where the
-    // clamp keeps exactly that request. A both-unchanged frame suppresses nothing either way — mid-gesture
+    // below, so the pre-assignment compare cannot read a wall-saturated no-op as
+    // movement. A both-unchanged frame suppresses nothing either way — mid-gesture
     // the true-no-op early return above takes it, and the terminating event falls
     // through this gate false.
     if ((level_changed || vp_changed) && playback.is_playing())
@@ -576,58 +570,10 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     kick_waveform_sync();
 }
 
-// THE SNAP BACK TO THE WORKING ZOOM at a continuous zoom gesture's end — the
-// ruling, the pivot rule, the ordering against the live bit and the caller
-// inventory are at the declaration (viewport.h).
-void Viewport::snap_continuous_zoom_to_working(std::optional<ZoomPivot> pivot) {
-    if (audio.total_frames() <= 0) return;
-    if (!(app.zoom_level < kWorkingZoomLevel)) return;
-    if (!pivot) {
-        const double col =
-            static_cast<double>(waveform_area(app).w) / 2.0;
-        pivot = ZoomPivot{
-            static_cast<double>(app.viewport_start_sample) +
-                col * current_samples_per_pixel(app, audio),
-            col};
-    }
-    double column = pivot->column;
-    if (pivot->painted_column) {
-        // THE PAINTED-COLUMN PLACEMENT (rule and residue at the declaration):
-        // choose the working lattice's grid start that paints the frame in the
-        // saved column, then express it as the column apply_strip_drag_zoom
-        // places at — nearbyint(sample - column * s) recovers the integer
-        // start, and clamp_viewport_start's snap (nearbyint(start / q), then
-        // viewport_grid_point) returns that same start, q being far above one
-        // frame. q and s are the working level's, read before the level is
-        // written, through the same quantization the chokepoint will use.
-        const double s = samples_per_pixel_at(kWorkingZoomLevel,
-                                              audio.sample_rate());
-        const double q = painter_quantized_spp(s, waveform_area(app).w);
-        if (q > 0.0) {
-            const int     c  = static_cast<int>(pivot->column);
-            const int64_t k0 = static_cast<int64_t>(
-                                   std::nearbyint(pivot->sample / q)) - c;
-            int64_t start = viewport_grid_point(k0, q);
-            for (const int64_t k : {k0, k0 - 1, k0 + 1}) {
-                const int64_t g = viewport_grid_point(k, q);
-                if (displayed_column_at(pivot->sample,
-                                        static_cast<double>(g), q) == c) {
-                    start = g;
-                    break;
-                }
-            }
-            column = (pivot->sample - static_cast<double>(start)) / s;
-        }
-    }
-    apply_strip_drag_zoom(kWorkingZoomLevel, pivot->sample, column,
-                          /*final=*/true);
-}
-
 void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     if (audio.total_frames() <= 0) return;
 
-    // Pre-clamp the requested level to the per-file window, the working-zoom
-    // floor included (clamp_zoom_level owns it). clamp_viewport_start
+    // Pre-clamp the requested level to the per-file window. clamp_viewport_start
     // re-applies the identical clamp as the chokepoint; this only sharpens the
     // no-op detection below.
     new_zoom_level = clamp_zoom_level(app, audio, new_zoom_level);
@@ -739,7 +685,7 @@ void Viewport::center_viewport_on_playhead() {
         if (playback.is_playing()) playback.resync_predictor();
         // Viewport actually moved (inside the changed guard). Center-on-
         // playhead is a one-shot discrete jump (the C key, the Tab recenter
-        // family and the nudge's recenter at the working zoom) — render the plate synchronously so the playhead overlay does
+        // family and the nudge's recenter at the working zoom or finer) — render the plate synchronously so the playhead overlay does
         // not lead the waveform by a frame.
         kick_waveform_sync();
     }
@@ -770,7 +716,7 @@ void Viewport::invalidate_all() {
 
 // THE NUDGE'S RECENTER (architect 2026-09-14, deriving it from the zoom; the
 // declaration in viewport.h states the rule): a Left/Right nudge that MOVED
-// SOMETHING calls this on its changed path, and AT THE WORKING ZOOM
+// SOMETHING calls this on its changed path, and AT THE WORKING ZOOM OR FINER
 // (zoom_level_at_or_finer_than_working) the viewport recenters on the result
 // through center_viewport_on_playhead — the standing zoom, the clamp at the
 // song's two ends, the pan's damage and the synchronous rebuild; coarser the
@@ -783,11 +729,8 @@ void Viewport::invalidate_all() {
 // a held arrow button's fires reach both through the same act bodies, so the
 // recenter runs at every step. NO VIEW TERM: in target view on the warp column
 // the marker nudge is refused upstream (active_column_authoring_allowed) and
-// never arrives, while the playhead step recenters there as anywhere. A
-// physical or Bluetooth keyboard's nudge CAN run while a pinch is live (touch
-// navigation is not a pointer-drag modal), so the level here may be finer
-// than working; the inclusive predicate is what answers that case as the
-// working zoom.
+// never arrives, while the playhead step recenters there as anywhere. THE
+// ZOOM IS NEVER CHANGED HERE: a finer level recenters at that level.
 void Viewport::recenter_after_nudge() {
     if (!zoom_level_at_or_finer_than_working(app.zoom_level)) return;
     center_viewport_on_playhead();

@@ -57,10 +57,6 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // load_file's own two direct writes to these fields (the pre-parse 'W' reset
     // and the forced 'S' of a failed target-view restore).
     clear_touch_zoom_seat(app, viewport);
-    // The pinch's live bit and its last centroid go with its seat
-    // (AppState::touch_pinch_live).
-    app.touch_pinch_live = false;
-    app.touch_pinch_centroid_x.reset();
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
@@ -303,10 +299,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
 
     app.playhead_cursor_sample       = 0;
     app.viewport_start_sample = 0;
-    // Open at the working zoom (2.4 s). A file too short for it opens there
-    // too, the whole song visible: nothing rests finer than the working zoom
-    // (the floor's one owner is clamp_zoom_level, app_state.h).
-    app.zoom_level = kWorkingZoomLevel;
+    // Open at the working zoom (2.4 s) for normal files; a file too short for
+    // it opens at its effective ceiling (whole-song-visible) instead.
+    app.zoom_level = std::min(kWorkingZoomLevel, effective_max_zoom_level(
+        waveform_area(app).w, audio.total_frames(), audio.sample_rate()));
     clamp_viewport_start(app, audio);
 
     // (NO PLAYBACK-SPEED OR gui_scale RESET HERE ANY MORE — 2026-08-27. The
@@ -543,17 +539,13 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
             return false;
         }
         // The schema already enforced syntax, non-negativity, and the zoom
-        // vocabulary; the per-tab view scratch applies verbatim here, the zoom
-        // floored at the working zoom. Viewport
+        // vocabulary; the per-tab view scratch applies verbatim here. Viewport
         // and playhead positions are display scratch, not authored data, so
         // there is no audio-relative range check on them — the runtime clamps
         // own any out-of-range value.
         auto apply = [&](const SettingsFileTab& src, ViewState& dst) {
             dst.viewport_start_sample = src.viewport_start;
-            // Floored at the working zoom as it enters the GUI band, the
-            // parked tab included (zoom_level_for_storage, app_state.h); the
-            // shared schema's vocabulary stays [kMinZoom, kMaxZoom].
-            dst.zoom_level            = zoom_level_for_storage(src.zoom);
+            dst.zoom_level            = src.zoom;
             // Applied verbatim here; the live-domain clamp runs on both tab
             // snapshots after this settings block, once the persisted S/T
             // domain is computable (the clamp site below).

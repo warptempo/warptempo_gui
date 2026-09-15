@@ -1833,12 +1833,24 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // CURRENT ZOOM, follow mode not gating it, reading the flag it just landed
     // on, the live family's landing mirrored — and the march states NoFrame,
     // its `c` behind each step being the one framing. The zoom is the live
-    // walk's too: untouched (architect 2026-08-05, "no zoom on Tab" — a walk
-    // must not re-frame the view under the reader).
+    // walk's too: untouched at the working zoom or coarser (architect
+    // 2026-08-05, "no zoom on Tab" — a walk must not re-frame the view under
+    // the reader), and A FRAMING STEP FROM A FINER LEVEL RETURNS TO WORKING
+    // (architect 2026-09-15, the live walk's rule at cycle_marker_focus): this
+    // walk's bare step DOES frame — the Tab arm states Center at every zoom —
+    // so a Center step strictly finer than working sets the working zoom and
+    // centres the flag it landed on, `c`'s own tail. Past every wall and the
+    // empty arm above, so a press that lands nothing moves no zoom; the march
+    // states NoFrame and its `c` sets the working zoom itself.
     switch (frame) {
         case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
         case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
         case MarkerLandingFrame::NoFrame:                                            break;
+    }
+    if (frame == MarkerLandingFrame::Center &&
+        app.zoom_level < kWorkingZoomLevel) {
+        viewport.apply_zoom_change(kWorkingZoomLevel);
+        viewport.center_viewport_on_playhead();
     }
     // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
     // above either returned or picked a different index), so the full-window
@@ -8310,7 +8322,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // and ends with the post-zoom centre, so a Center here would be a third
     // centring thrown away twice, and a FollowPage would still page-render an
     // OFFSCREEN landing only for `c` to supersede it at once. NoFrame moves
-    // the focus and lands the playhead and writes no camera. The zoom still
+    // the focus and lands the playhead and writes no camera — and no zoom:
+    // the bare walk's finer-level return to working rides a stated Center
+    // (cycle_marker_focus), so it never fires here and `c` is the one zoom
+    // write of each step. The zoom still
     // does not govern the march's framing: marker_walk_frame is the bare Tab
     // walk's answer alone, and this arm states its own. The `h` view's march
     // (handle_history_mode_key) is this composition over its own cycle.
@@ -8351,8 +8366,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
     // marker, moving the playhead to it and framing PER THE ZOOM —
     // marker_walk_frame(app) (app_state.h), whose only callers are these
-    // three arms: at the working zoom the walk recentres; coarser, the camera
-    // holds and
+    // three arms: at the working zoom the walk recentres, a finer level first
+    // returning to working on the marker step (cycle_marker_focus); coarser,
+    // the camera holds and
     // only an offscreen landing pages in, follow's way. The Ctrl+Tab
     // branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit
@@ -8482,7 +8498,8 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     const int64_t cursor_before = app.playhead_cursor_sample;
     viewport.move_playhead_pixels(step_columns);
     // THE RECENTER (the rule at Viewport::recenter_after_nudge): a step that
-    // moved the cursor recenters on it at the working zoom, in every view
+    // moved the cursor recenters on it at the working zoom or finer (never
+    // changing the zoom), in every view
     // target view on the warp column included; a walled step moved nothing
     // and recenters nothing. Every magnitude and
     // every held repeat — the key's and the Left / Right buttons' — runs

@@ -14,7 +14,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
-#include <optional>
 #include <vector>
 
 // GuiInputHandler pointer-gesture handlers (on_button_press,
@@ -269,8 +268,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the two skips), so a ctrl or shift click is refused at the band gate.
     // NEITHER REPEATS: the `repeats` column is unset on both rows. (The zoom
     // STEP that stood beside them — Zoom In / Zoom Out on bare `=` / `-` — is
-    // deleted whole, architect 2026-09-14: the working zoom is the rest
-    // lattice, and the zoom gestures are the ctrl-drag and the pinch.)
+    // deleted whole, architect 2026-09-14: the zoom gestures are the
+    // ctrl-drag and the pinch.)
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
@@ -2330,110 +2329,6 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     return col;
 }
 
-// THE ANCHOR STEM'S PIVOT, for Viewport::snap_continuous_zoom_to_working: a
-// seated frame held IN THE INTEGER COLUMN ITS STEM PAINTS (architect
-// 2026-09-14: a snap that holds the stem lands exactly on the stem). ONE body,
-// TWO readers — every pivot that IS the painted stem: the captured nav drag
-// zoom phase's end (nav_drag_zoom_pivot) and the seated pinch's end at its
-// first lift or its stream's end (end_touch_pinch).
-// The FRAME is the gesture's own: its column under the live viewport, clamped
-// into the waveform with the edge rebind, exactly as the gesture's frames
-// derive it (apply_nav_zoom_at's pivot block and the pinch's), so an anchor a
-// wall has pushed past an edge becomes that edge pixel's content. The COLUMN is
-// strip_anchor_stem_column (warp_frame_map_view.h), the stem painter's own
-// derivation, on the live start and painter_samples_per_pixel — which ARE the
-// plate basis the painter reads (plate_viewport_basis): every viewport write
-// these gestures make, and every other one that can land while they stand,
-// takes the synchronous rebuild (kick_waveform_sync), which publishes
-// fp_vp_start = the live start and fp_vp_end − fp_vp_start = nearbyint(spp·w),
-// painter_quantized_spp's own expression. At an edge the rebound frame and the
-// painter's clamp name the same column (the painter's stem for an off-edge
-// anchor is the clamp itself). ZoomPivot::painted_column tells the snap to keep
-// the frame IN that column on the working lattice rather than near it.
-// The pointer-under-cursor pivots (pointer_column_zoom_pivot) are NOT the stem
-// and stay fractional.
-static ZoomPivot held_stem_zoom_pivot(const AppState& app,
-                                      const GuiAudio& audio,
-                                      double anchor_sample) {
-    const GuiRect wf_area = waveform_area(app);
-    const double  spp     = current_samples_per_pixel(app, audio);
-    const double  q       = painter_samples_per_pixel(app, audio, wf_area);
-    const double  vp      = static_cast<double>(app.viewport_start_sample);
-    if (spp <= 0.0 || q <= 0.0)
-        return ZoomPivot{anchor_sample, 0.0, /*painted_column=*/true};
-    const double col     = (anchor_sample - vp) / spp;
-    const double clamped = clamp_col_into_waveform(wf_area, col);
-    const double sample  = clamped != col ? vp + clamped * spp : anchor_sample;
-    return ZoomPivot{
-        sample,
-        static_cast<double>(
-            strip_anchor_stem_column(sample, vp, q, wf_area.w)),
-        /*painted_column=*/true};
-}
-
-// A POINTER'S PIVOT AT A CONTINUOUS ZOOM GESTURE'S END: the frame under a
-// waveform column (already clamped into the waveform) under the live viewport,
-// held at that column — the conversion the ctrl-down seat uses, so the snap
-// holds exactly what is under the pointer (or, for a pinch whose seat a view
-// writer cleared, under its last centroid).
-static ZoomPivot pointer_column_zoom_pivot(const AppState& app,
-                                           const GuiAudio& audio,
-                                           double col) {
-    return ZoomPivot{static_cast<double>(app.viewport_start_sample) +
-                         col * current_samples_per_pixel(app, audio),
-                     col};
-}
-
-// THE NAV DRAG'S PIVOT AT ITS END — THE FRAME UNDER THE POINTER'S VISIBLE
-// COLUMN, held at that column (architect 2026-09-14: the snap always holds the
-// frame under the pointer at the end), two ways:
-//   * A CAPTURED ZOOM PHASE: the seated frame IN ITS STEM'S PAINTED COLUMN
-//     (held_stem_zoom_pivot). While the stem shows under a capture the
-//     pointer IS the stem — the lateral freeze holds the notional x and the
-//     release restore is the stem override (apply_nav_zoom_at), so the cursor
-//     reappears on the stem's pixel. The moved release and lost-button arms
-//     run their final apply BEFORE this read, and that apply's synchronous
-//     rebuild publishes the basis the column is taken on; the force-end has
-//     no final apply, so the last applied event's rebuild is the basis.
-//   * EVERY OTHER END — the pan phase (a drag armed plain, or one a ctrl-up
-//     has left panning) and AN UNCAPTURED ZOOM PHASE: the pointer's notional
-//     column (nav_notional_col). Under a capture in the pan phase that is where
-//     the cursor reappears (the restore falls back to the notional position,
-//     the ctrl-up having handed it the stem's column); with NO capture — the
-//     Wayland fallback on a compositor missing either optional protocol, and
-//     every uncaptured backend — it is the real delivered position, which the
-//     visible cursor has kept following through the zoom while the stem stayed
-//     seated where ctrl went down, so the stem is NOT under the pointer there.
-// `pointer_captured` is the platform's own answer (GuiPlatform::
-// pointer_captured, the core's captured bit). Read BEFORE the record is
-// cleared and before the capture ends.
-static ZoomPivot nav_drag_zoom_pivot(const AppState& app,
-                                     const GuiAudio& audio,
-                                     double notional_col,
-                                     bool pointer_captured) {
-    if (app.scroll_drag.zooming && pointer_captured)
-        return held_stem_zoom_pivot(app, audio, app.scroll_drag.anchor_sample);
-    return pointer_column_zoom_pivot(app, audio, notional_col);
-}
-
-// THE OVERVIEW DRAG'S PIVOT AT ITS END: an edge drag's FIXED opposite bound at
-// its own window column, the anchor every one of its frames placed (area.w for
-// a dragged left edge, 0 for a dragged right edge — apply_overview_drag_at's
-// edge arm); the box pan zooms nothing and holds none. Read BEFORE the record
-// is cleared.
-static std::optional<ZoomPivot> overview_drag_zoom_pivot(const AppState& app) {
-    switch (app.overview_drag.kind) {
-    case OverviewDragKind::EdgeBegin:
-        return ZoomPivot{app.overview_drag.fixed_edge_sample,
-                         static_cast<double>(waveform_area(app).w)};
-    case OverviewDragKind::EdgeEnd:
-        return ZoomPivot{app.overview_drag.fixed_edge_sample, 0.0};
-    case OverviewDragKind::Pan:
-        return std::nullopt;
-    }
-    return std::nullopt;
-}
-
 // THE POINTER'S NOTIONAL COLUMN — the zoom pivot SEAT's one source, and A
 // PURE PROJECTION of the platform's notional pointer position into the
 // waveform's own bounds. The pivot seats WHEREVER THE CURSOR IS at the
@@ -3040,94 +2935,35 @@ RegionHit GuiInputHandler::region_manipulation_hit(int x, int y) const {
 // freeze, which names trim_drag: no waveform job may publish a new basis while
 // a trim drag is held.)
 
-// THE PINCH'S END — ONE body, TWO callers: the touch nav body's two-to-one
-// DOWNGRADE (the first not-two-finger frame while a pinch is live) and
-// end_touch_nav (a stream ending with the pinch still live — both fingers up
-// in one event, wl_touch.cancel, touch-capability loss). THE PINCH ENDS WHEN
-// THE PINCH ENDS (architect 2026-09-15, on glass: a pivot on the last finger
-// "feels unsteady", and the tablet has no infinite scroll, so the truthful
-// anchor is the stem last seen): the snap back to the working zoom runs HERE,
-// at the first lift or at the end, whichever comes first, and a survivor's
-// continuation is an ordinary one-finger pan under the floor.
-// THE PIVOT, read BEFORE the seat's clear:
-//   * SEATED: the seated frame IN THE STEM'S PAINTED COLUMN at the working
-//     lattice (held_stem_zoom_pivot). At the downgrade the transition frame
-//     applies nothing (its deltas are no-ops by construction — the exemption
-//     at set_touch_nav_hooks' update contract — and it reaches this body above
-//     every application), so the viewport and plate are still the last
-//     two-finger frame's, the stem's own basis; at end_touch_nav a hard end
-//     has dropped its staged motion and the same holds.
-//   * NOT SEATED — a view writer cleared the seat with two fingers still down
-//     and no unrefused two-finger frame has reseated since: the frame under
-//     the pinch's LAST CENTROID (AppState::touch_pinch_centroid_x), a window
-//     position the writers leave standing because it holds no song frame.
-// THE ORDERING: the pivot, then the seat's clear (which owes the stem's erase),
-// then the live bit and the centroid cleared, THEN the snap — nothing between
-// the bit's clear and the snap reaches clamp_viewport_start, so the chokepoint's
-// floor and the snap's write agree (Viewport::snap_continuous_zoom_to_working
-// carries the ordering). The snap is a no-op unless the level is strictly finer
-// than working, and its write is apply_strip_drag_zoom's final placement,
-// whose synchronous rebuild is what the transition frame's paint shows.
-static void end_touch_pinch(AppState& app, const GuiAudio& audio,
-                            Viewport& viewport) {
-    std::optional<ZoomPivot> pivot;
-    if (app.touch_nav_zoom.seated) {
-        pivot = held_stem_zoom_pivot(app, audio,
-                                     app.touch_nav_zoom.anchor_sample);
-    } else if (app.touch_pinch_centroid_x) {
-        const GuiRect wf_area = waveform_area(app);
-        pivot = pointer_column_zoom_pivot(
-            app, audio,
-            clamp_col_into_waveform(
-                wf_area, *app.touch_pinch_centroid_x -
-                             static_cast<double>(wf_area.x)));
-    }
-    clear_touch_zoom_seat(app, viewport);
-    app.touch_pinch_live = false;
-    app.touch_pinch_centroid_x.reset();
-    viewport.snap_continuous_zoom_to_working(pivot);
-}
-
 // THE TOUCH NAVIGATION BODY — two-finger frames and the phone model's
 // single-finger pan frames land here alike; contract, the ONE FINGER PANS,
 // TWO FINGERS ZOOM ruling, delivery-shape justification and refusal rationale
 // at the declaration (input_handler.h). One delivered frame = at most one
 // placement through the strip-drag family's own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
-    // THE PINCH'S LIFECYCLE LEADS THE BODY, above the refusal — bookkeeping,
-    // not navigation. A TWO-FINGER FRAME, refused or not, means a pinch is
-    // live (AppState::touch_pinch_live, the working-zoom floor's exemption)
-    // and records its centroid, the fallback pivot. THE FIRST FRAME THAT IS
-    // NOT TWO-FINGER WHILE A PINCH IS LIVE IS THE PINCH'S END (end_touch_pinch
-    // above: the stem pivot read, the seat cleared, the bit down, the snap).
-    // THE TWO HALVES OF THE SEAT SIT ON OPPOSITE SIDES OF THE REFUSAL
-    // DELIBERATELY: SEATING is a navigation act and takes the refusal with
-    // everything else (the ordering rule at the seat below), while ENDING is
-    // bookkeeping — a one-finger frame means the two-finger phase is OVER
-    // whether or not this frame gets to navigate, and holding the anchor
-    // through a refused stretch of the survivor's pan would let a later
-    // upgrade zoom about a song frame the fingers had long since left behind.
-    // Refusing to navigate is not refusing to notice that the pinch ended.
+    // THE PINCH'S SEATED PIVOT IS CLEARED BY ANY FRAME THAT IS NOT TWO-FINGER,
+    // and that clear LEADS THE BODY — it is the one thing here that happens
+    // above the refusal (contract at TouchNavZoomState, app_state.h). THE TWO
+    // HALVES SIT ON OPPOSITE SIDES OF THE REFUSAL DELIBERATELY: SEATING is a
+    // navigation act and takes the refusal with everything else (the ordering
+    // rule at the seat below), while CLEARING is bookkeeping — a one-finger
+    // frame means the two-finger phase is OVER whether or not this frame gets
+    // to navigate, and holding the anchor through a refused stretch of the
+    // survivor's pan would let a later upgrade zoom about a song frame the
+    // fingers had long since left behind. Refusing to navigate is not refusing
+    // to notice that the pinch ended.
     // THE CLEAR OWES THE ERASE since the pinch became the anchor stem's third
-    // producer (2026-08-14) — the stem must be rubbed out once, on the frame
+    // producer (2026-08-14) — and that is exactly why it is a body with an
+    // early return rather than an assignment here: this line runs on EVERY
+    // one-finger frame, while the stem must be rubbed out once, on the frame
     // the seat actually dies (contract at clear_touch_zoom_seat).
     // AND THE DOWNGRADE REACHES THIS LINE BY CONSTRUCTION: the platform
     // delivers one single-finger frame at the two-to-one transition even when
     // both of its deltas are no-ops (the exemption at set_touch_nav_hooks'
-    // update contract), so a survivor left standing still ends the pinch, and
-    // snaps it, on the frame of the lift. That frame carries no motion and
-    // dies at the exact-no-op return below, so the snap is the frame's one
-    // write and the survivor's pan starts from the snapped view on the next
-    // frame, at the floor-honouring level (the latch carries, 2026-08-14 — no
-    // delay, no dead zone). A seat exists only under a live pinch (both are
-    // set by two-finger frames and cleared together), so this one test also
-    // covers every seat the downgrade must clear.
-    if (f.two_finger) {
-        app.touch_pinch_live       = true;
-        app.touch_pinch_centroid_x = static_cast<double>(f.x);
-    } else if (app.touch_pinch_live) {
-        end_touch_pinch(app, audio, viewport);
-    }
+    // update contract), so a survivor left standing still cannot keep the dead
+    // pinch's pivot seated and its stem painted under one finger — which is
+    // what let a later upgrade zoom about the OLD song point.
+    if (!f.two_finger) clear_touch_zoom_seat(app, viewport);
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -3315,11 +3151,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // viewport — the waveform starts at the window edge), and no clamp is
         // needed on a pan: nothing persists between frames for an off-area
         // column to corrupt, and the placement runs through the viewport
-        // chokepoint's own clamps either way. The pinch has already ended at
-        // the top of the body — seat cleared, level snapped — which is what
-        // makes the DOWNGRADE clean: a finger lifting from the pair continues
-        // as this pan at a resting level, and the next upgrade takes a FRESH
-        // pivot rather than inheriting the dead pinch's.
+        // chokepoint's own clamps either way. The seat is already cleared at
+        // the top of the body — which is what makes the DOWNGRADE clean: a
+        // finger lifting from the pair continues as this pan, and the next
+        // upgrade takes a FRESH pivot rather than inheriting the dead pinch's.
         anchor_sample = vp + (static_cast<double>(f.x) - eff_dx) * spp_old;
         anchor_col    = static_cast<double>(f.x);
     } else {
@@ -3389,18 +3224,16 @@ void GuiInputHandler::end_touch_nav() {
     // the one deferred piece is the playback predictor (mid-gesture frames
     // skip the resync exactly as the strip drag's do) — the grab-pan release's
     // own tail.
-    // AND THE PINCH ENDS HERE IF IT IS STILL LIVE (end_touch_pinch: its seated
-    // pivot cleared, the gesture's one GUI-side record since 2026-08-14 —
-    // TouchNavZoomState, app_state.h — and the snap back to the working zoom
-    // holding the stem). Every end reaches this one body — a finger lift,
-    // wl_touch.cancel and touch-capability loss alike — so no later gesture
-    // can inherit a dead pinch's anchor, and the clear owes the STEM'S ERASE:
-    // an end rebuilds nothing of its own, so without the damage a hard end
-    // would leave the pivot mark painted over a settled view. A stream whose
-    // pinch already ended at its downgrade (or that never pinched) finds the
-    // bit down: its level already rests at working or coarser, and nothing
-    // here moves the view — THE ONE-FINGER PAN SNAPS NOTHING.
-    if (app.touch_pinch_live) end_touch_pinch(app, audio, viewport);
+    // AND THE PINCH'S SEATED PIVOT IS CLEARED HERE, the gesture's one GUI-side
+    // record since 2026-08-14 (TouchNavZoomState, app_state.h — the old "every
+    // frame is applied whole and forgotten" is retired with it). Every end
+    // reaches this one body — a finger lift, wl_touch.cancel and
+    // touch-capability loss alike — so no later gesture can inherit a dead
+    // pinch's anchor; a fresh pair seats its own. It goes through
+    // clear_touch_zoom_seat because the clear owes the STEM'S ERASE: an end
+    // rebuilds nothing of its own, so without the damage a hard end would
+    // leave the pivot mark painted over a settled view.
+    clear_touch_zoom_seat(app, viewport);
     if (playback.is_playing()) playback.resync_predictor();
 }
 
@@ -7548,19 +7381,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
             apply_nav_zoom_at(x, y, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
         }
-        const ZoomPivot pivot =
-            nav_drag_zoom_pivot(app, audio, nav_notional_col(),
-                                gui.pointer_captured());
         app.scroll_drag = ScrollDragState{};
         if (moved) {
             if (!zooming && playback.is_playing())
                 playback.resync_predictor();
             end_strip_pointer_capture();
-            // The snap back to the working zoom holding the frame under the
-            // pointer's visible column, read above before the capture ended,
-            // the record cleared first
-            // (Viewport::snap_continuous_zoom_to_working).
-            viewport.snap_continuous_zoom_to_working(pivot);
             return;
         }
         // The motionless zoom-phase press painted a stem from the press (or
@@ -7589,18 +7414,11 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // it since 2026-08-18 commits per motion event), so no act is owed to
         // any lift here. No capture to end, no stem to erase, and the lane
         // seeds no double-click candidate of its own.
-        const bool moved = app.overview_drag.moved;
-        if (moved) {
+        if (app.overview_drag.moved) {
             apply_overview_drag_at(x, /*final_event=*/true);
             app.double_click = DoubleClickCandidate{};
         }
-        const std::optional<ZoomPivot> pivot = overview_drag_zoom_pivot(app);
         app.overview_drag = OverviewDragState{};
-        if (moved) {
-            // The snap back to the working zoom, the record cleared first
-            // (Viewport::snap_continuous_zoom_to_working).
-            viewport.snap_continuous_zoom_to_working(pivot);
-        }
         return;
     }
     // (No scrub branch of its own: since 2026-08-13 the scrub has no drag
@@ -7791,23 +7609,12 @@ void GuiInputHandler::finalize_active_drags() {
         // A zoom-phase stem — painted from a ctrl press or a ctrl edge —
         // owes its erase on every one of these ends.
         const bool zooming = app.scroll_drag.zooming;
-        const bool moved   = app.scroll_drag.moved;
-        const ZoomPivot pivot =
-            nav_drag_zoom_pivot(app, audio, nav_notional_col(),
-                                gui.pointer_captured());
-        if (moved) {
+        if (app.scroll_drag.moved) {
             if (playback.is_playing()) playback.resync_predictor();
             if (zooming) viewport.kick_waveform_sync();
             end_strip_pointer_capture();
         }
         app.scroll_drag = ScrollDragState{};
-        if (moved) {
-            // A force-end is still the gesture's end: the snap back to the
-            // working zoom holding the frame under the pointer's visible
-            // column, read above before the capture ended, the record cleared
-            // first (Viewport::snap_continuous_zoom_to_working).
-            viewport.snap_continuous_zoom_to_working(pivot);
-        }
         if (zooming) viewport.invalidate_waveform_area();
     }
     if (app.overview_drag.active) {
@@ -7821,14 +7628,9 @@ void GuiInputHandler::finalize_active_drags() {
         // outside press's own teleport already ran at the press, so nothing is
         // lost here. (No pending phase can be in flight: the record holds a
         // real drag or nothing, the two-day Pending teleport being deleted.)
-        const bool moved = app.overview_drag.moved;
-        if (moved && playback.is_playing())
+        if (app.overview_drag.moved && playback.is_playing())
             playback.resync_predictor();
-        const std::optional<ZoomPivot> pivot = overview_drag_zoom_pivot(app);
         app.overview_drag = OverviewDragState{};
-        // The snap back to the working zoom at the force-end, as at the
-        // release (Viewport::snap_continuous_zoom_to_working).
-        if (moved) viewport.snap_continuous_zoom_to_working(pivot);
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
     // no release here (the button is still held), and a force-end is not a
@@ -10450,17 +10252,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // Pan, and the Pending phase that deferred the teleport is deleted.)
     if (app.overview_drag.active) {
         if (!mods.primary_button_held) {     // button lost -> end like release
-            const bool moved = app.overview_drag.moved;
-            if (moved)
+            if (app.overview_drag.moved)
                 apply_overview_drag_at(mouse_x, /*final_event=*/true);
-            const std::optional<ZoomPivot> pivot =
-                overview_drag_zoom_pivot(app);
             app.overview_drag = OverviewDragState{};
-            if (moved) {
-                // The snap back, the release's own
-                // (Viewport::snap_continuous_zoom_to_working).
-                viewport.snap_continuous_zoom_to_working(pivot);
-            }
             return;
         }
         // Sub-threshold: still a click (the generic press-becomes-drag gate).
@@ -10499,9 +10293,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             const bool zooming = sd.zooming;
             if (moved && zooming)
                 apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/true);
-            const ZoomPivot pivot =
-                nav_drag_zoom_pivot(app, audio, nav_notional_col(),
-                                    gui.pointer_captured());
             app.scroll_drag = ScrollDragState{};
             // The stem's erase, when the zoom phase painted one — the moved
             // final apply's rebuild covers it, so this is the unmoved
@@ -10511,10 +10302,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 if (!zooming && playback.is_playing())
                     playback.resync_predictor();
                 end_strip_pointer_capture(); // reappear the cursor (idempotent)
-                // The snap back, the release's own: the frame under the
-                // pointer's visible column, read above before the capture
-                // ended (Viewport::snap_continuous_zoom_to_working).
-                viewport.snap_continuous_zoom_to_working(pivot);
             }
             return;
         }

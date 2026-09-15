@@ -4,30 +4,11 @@
 
 #include <cstdint>
 #include <functional>
-#include <optional>
 #include <utility>
 
 class GuiAudio;
 class GuiPlatform;
 class GuiPlayback;
-
-// A continuous zoom gesture's pivot at its end: the active-domain SONG FRAME
-// under the pointer (or finger, or an overview edge drag's fixed bound) and
-// the waveform column (fractional px, the apply_strip_drag_zoom anchor
-// convention) it holds it at — the rule at
-// Viewport::snap_continuous_zoom_to_working.
-// PAINTED_COLUMN marks `column` as an INTEGER painted column the snap must
-// keep the frame IN at the working lattice, not merely hold it near: EVERY
-// PIVOT THAT IS THE PAINTED ANCHOR STEM — the seated pinch's end (its first
-// lift or its stream's end) and the captured nav drag zoom phase's end (the
-// stem's own pixel, architect 2026-09-14; the one producer is
-// held_stem_zoom_pivot, input_pointer.cpp). The pointer-under-cursor pivots
-// stay fractional.
-struct ZoomPivot {
-    double sample         = 0.0;
-    double column         = 0.0;
-    bool   painted_column = false;
-};
 
 // Viewport mutators and invalidation helpers. The struct holds references
 // to the long-lived state the methods read and write.
@@ -159,7 +140,7 @@ struct Viewport {
     //    with the committed store, which are normally equal whatever the
     //    pixels show (Sol round 11 of 2026-09-14; the rule is at the release).
     //    (The gain gate's other input, the zoom — magnification applies only
-    //    at the working zoom, effective_waveform_gain_profile — changes with a
+    //    at the working zoom or finer, effective_waveform_gain_profile — changes with a
     //    zoom write, whose applier's own synchronous kick carries it; the one
     //    zoom write with no applier, the resize's clamp, runs the same
     //    before/after test itself at GuiPaintHandler::on_resize.)
@@ -269,7 +250,7 @@ struct Viewport {
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
     // inventory above): a magnification write kicks the synchronous rebuild
     // ONLY WHEN THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile —
-    // the resolved one at the working zoom, the empty one coarser)
+    // the resolved one at the working zoom or finer, the empty one coarser)
     // ACTUALLY CHANGED across it. The
     // caller captures `waveform_gain_hash()` BEFORE its store write and hands
     // it to `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives
@@ -354,9 +335,7 @@ struct Viewport {
     // ALL, the box's span being the lane's whole zoom vocabulary now). All
     // three pre-clamp the level; this
     // places the anchor at
-    // the new level and clamps. A FOURTH caller places no gesture frame: the
-    // gesture end's snap back to the working zoom
-    // (snap_continuous_zoom_to_working, below). For a pure pan
+    // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport
     // exactly. Never touches the playhead or selection. Repaint dispatch: a
     // mid-gesture event (final=false) with the level AND viewport both unchanged
@@ -367,58 +346,6 @@ struct Viewport {
     // synchronous rebuild plus the predictor resync so the rest state is exact.
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final);
-    // THE CONTINUOUS ZOOM GESTURES' SNAP BACK TO THE WORKING ZOOM (architect
-    // 2026-09-14: nothing rests finer than the working zoom). The three
-    // continuous zoom gestures — the nav surface's Ctrl+drag zoom phase, the
-    // overview lane's box edge drags and the two-finger pinch — may go finer
-    // than kWorkingZoomLevel while they are live (the floor's exemption is
-    // continuous_zoom_gesture_live, read by clamp_zoom_level); at the
-    // gesture's END this lands a level STRICTLY finer than working back on
-    // working, and does nothing otherwise (no band on the coarse side). THE
-    // SNAP HOLDS THE FRAME UNDER THE POINTER AT THE END (architect
-    // 2026-09-14): the write is apply_strip_drag_zoom's own final placement of
-    // `pivot` — a frame at its column — so the lift makes no camera jump. The
-    // callers choose it: the nav drag the frame under the pointer's visible
-    // column (the seated frame IN ITS STEM'S PAINTED COLUMN during a CAPTURED
-    // zoom phase, the pointer's notional column otherwise — after a ctrl-up,
-    // and through an uncaptured zoom phase whose visible cursor never froze on
-    // the stem); the pinch — whose end is its FIRST LIFT, the two-to-one
-    // downgrade, or its stream's end, whichever comes first (architect
-    // 2026-09-15, superseding for the pinch the 2026-09-14 rule that kept a
-    // downgraded pinch finer until the last lift and pivoted on that finger:
-    // the tablet has no infinite scroll, so the truthful anchor is the stem
-    // last seen; the laptop keeps the cursor) — its seated frame IN THE STEM'S
-    // PAINTED COLUMN, or, when a view writer cleared the seat with two fingers
-    // down, the frame under its last centroid (AppState::
-    // touch_pinch_centroid_x); an overview edge drag its FIXED opposite
-    // bound at its window edge. A caller with no position at all passes
-    // nullopt and the viewport's centre frame holds the centre column —
-    // reached only by the overview box pan, which zooms nothing.
-    // A PAINTED-COLUMN PIVOT (ZoomPivot::painted_column) is placed on the
-    // working lattice rather than at a fractional column: of the grid starts
-    // viewport_grid_point(k, q) at the working level's painter step q, it
-    // takes the one around nearbyint(sample / q) - column (that k, then its
-    // two neighbours) under which displayed_column_at puts `sample` in
-    // `column`, and hands apply_strip_drag_zoom the fractional column that
-    // reproduces that start, so clamp_viewport_start's own grid snap lands on
-    // it unchanged — the frame then PAINTS in the saved column (walls and a
-    // short file still win at that clamp). The only residue is a frame lying
-    // within one grid irregularity (under one frame, the grid points being
-    // nearbyint-rounded) of a column boundary, where no grid start puts it in
-    // that column and k itself is kept — one column off, by less than a frame.
-    // Being a strip-drag apply it takes that applier's either-axis follow
-    // suppression during playback, the gesture having moved the level already.
-    // CALLED WITH THE GESTURE'S LIVE BIT ALREADY CLEARED, so the chokepoint's
-    // floor and this write agree (a short source whose ceiling is finer than
-    // working rests at working, not at the ceiling the live window would
-    // allow), and with nothing between that clear and this call that reaches
-    // clamp_viewport_start, which would floor the level about the old start
-    // and leave this nothing to do. THE SEVEN CALLERS are the gestures' ends:
-    // end_touch_pinch (the pinch's one end, reached from its downgrade and from
-    // GuiInputHandler::end_touch_nav), and in
-    // input_pointer.cpp the nav drag's and the overview drag's release,
-    // lost-button and force-end (finalize_active_drags) arms.
-    void snap_continuous_zoom_to_working(std::optional<ZoomPivot> pivot);
     // Zoom-to-span apply: set the level AND the viewport start EXPLICITLY (the
     // start is a framed span's left edge, NOT a playhead recenter — the sole
     // difference from apply_zoom_change), then funnel both through the clamp
@@ -438,8 +365,9 @@ struct Viewport {
     void center_viewport_on_playhead();
     // THE NUDGE'S RECENTER (architect 2026-09-14): a Left/Right nudge that
     // moved something recenters on the playhead it just moved IFF the zoom is
-    // at working (zoom_level_at_or_finer_than_working); coarser the camera
-    // holds. No lamp and no view term. Nothing else recenters. The two callers
+    // at working or finer (zoom_level_at_or_finer_than_working), at that zoom
+    // and never changing it; coarser the camera holds. No lamp and no view
+    // term. The two callers
     // are named at the definition.
     void recenter_after_nudge();
     void follow_scroll_if_needed();

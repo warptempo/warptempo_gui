@@ -209,7 +209,7 @@ void finish_position_nudge(
     // movement owner.
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) THE RECENTER: at the working zoom the viewport recenters on the
+    // (f) THE RECENTER: at the working zoom or finer the viewport recenters on the
     // playhead (e) just landed on the nudged marker — at every step, a held
     // key's repeats and a held arrow button's fires included, because each of
     // them runs this tail; coarser the camera holds. This tail is the nudge's

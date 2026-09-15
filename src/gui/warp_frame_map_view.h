@@ -223,18 +223,17 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
 // THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE (architect
-// 2026-09-14: magnification applies iff the zoom is at working): the live
-// resolved profile above AT THE WORKING ZOOM
-// (zoom_level_at_or_finer_than_working — a finer level exists only inside a
-// continuous zoom gesture and counts as working, so the snap-back flickers
-// nothing), else — coarser — the EMPTY profile, level 0 everywhere, hash 0.
+// 2026-09-14: magnification applies iff the zoom is at working or finer): the live
+// resolved profile above AT THE WORKING ZOOM OR FINER
+// (zoom_level_at_or_finer_than_working), else — coarser — the EMPTY profile,
+// level 0 everywhere, hash 0.
 // No view term: target view, source view and the `h` view answer alike, the
 // `h` view's plate showing the LIVE store's gain (the struct above). ONE
 // place, so the picture caches' existing hash keys re-render on every zoom
 // write that crosses the working level with no per-caller code (a live
 // profile with no breakpoints is hash 0 as well, and there the two answers
 // are rightly the same picture). While a WARP-column marker drag stands at
-// the working zoom, the live answer is the DRAG SLOT's
+// the working zoom or finer, the live answer is the DRAG SLOT's
 // (waveform_gain_profile_drag_cached), so the picture shows the store as the
 // release would leave it. READERS: the plate's render inputs
 // (compute_waveform_render_inputs), the overview lane's bar cache
@@ -356,9 +355,7 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 
 // THE QUANTIZATION ITSELF, for a samples-per-pixel the caller already holds:
 // nearbyint(spp * w) / w, 0.0 on degenerate geometry. painter_samples_per_pixel
-// is this at the LIVE level; the gesture end's painted-column snap
-// (Viewport::snap_continuous_zoom_to_working) asks it at the WORKING level
-// before that level is written, so both read one rounding.
+// is this at the LIVE level.
 inline double painter_quantized_spp(double spp, int w) {
     if (w <= 0 || !(spp > 0.0)) return 0.0;
     return std::nearbyint(spp * static_cast<double>(w)) /
@@ -367,7 +364,7 @@ inline double painter_quantized_spp(double spp, int w) {
 
 // THE VIEWPORT GRID'S k-TH POINT at painter step q: nearbyint(k * q) — the
 // resting starts clamp_viewport_start snaps to and max_viewport_start_grid
-// walks (main.cpp), and the candidates the painted-column snap chooses among.
+// walks (main.cpp).
 inline int64_t viewport_grid_point(int64_t k, double q) {
     return static_cast<int64_t>(std::nearbyint(static_cast<double>(k) * q));
 }
@@ -455,14 +452,8 @@ inline int displayed_column_at(double displayed, double vp_start, double spp) {
 }
 
 // THE ANCHOR STEM'S PAINTED COLUMN — displayed_column_at clamped into the
-// waveform's [0, w-1], the column render_strip_anchor_stem draws. ONE
-// derivation with two readers: the stem painter (paint_strip_drag_anchor, on
-// the PLATE basis) and the stem's zoom pivot (held_stem_zoom_pivot,
-// input_pointer.cpp — the seated pinch's end and the captured nav drag zoom
-// phase's end — on the live viewport and
-// painter_samples_per_pixel, the plate basis the last applied frame's
-// synchronous rebuild published), so the column the snap preserves is the
-// pixel the stem stood on, not a fractional projection beside it.
+// waveform's [0, w-1], the column render_strip_anchor_stem draws. Its one
+// reader is the stem painter (paint_strip_drag_anchor, on the PLATE basis).
 inline int strip_anchor_stem_column(double displayed, double vp_start,
                                     double spp, int w) {
     int col = displayed_column_at(displayed, vp_start, spp);

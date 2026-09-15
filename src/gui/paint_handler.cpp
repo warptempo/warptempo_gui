@@ -5942,9 +5942,7 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
                                           : app.touch_nav_zoom.anchor_sample;
 
     // The stem's one column derivation (strip_anchor_stem_column over
-    // displayed_column_at, warp_frame_map_view.h), on the PLATE basis — the
-    // same helper the stem's zoom pivot (held_stem_zoom_pivot) takes its
-    // column through.
+    // displayed_column_at, warp_frame_map_view.h), on the PLATE basis.
     const int col = strip_anchor_stem_column(anchor_sample, basis.vp_start,
                                              basis.spp, area.w);
     render_strip_anchor_stem(cr, area, col);
@@ -9443,9 +9441,9 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // the playback predictor, so re-anchor it.
     //
     // A LEVEL MOVE ACROSS THE WORKING ZOOM FLIPS THE MAGNIFICATION (the gain
-    // applies only at working, effective_waveform_gain_profile): a 2.1 rest
-    // clamped to the floor, or a whole-song-visible level following a ceiling
-    // across 2.0. The overview's bar cache keys the effective hash and follows
+    // applies only at working or finer, effective_waveform_gain_profile): a
+    // whole-song-visible level following a ceiling across 2.0, or a short
+    // file's ceiling clamping a coarser rest down across it. The overview's bar cache keys the effective hash and follows
     // at the next paint, while the plate would blit its old gain until the
     // worker publishes, so the two pictures would disagree. When the effective
     // hash moved, rebuild the plate synchronously here — the gain category's

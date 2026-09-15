@@ -325,7 +325,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     cursor field only (playback was stopped by the prologue, past its
 //     refusal verdict and ahead of the first write, so this tail always runs
 //     stopped).
-// (f) THE RECENTER: Viewport::recenter_after_nudge, which at the working zoom
+// (f) THE RECENTER: Viewport::recenter_after_nudge, which at the working zoom or finer
 //     recenters the viewport on the playhead (e) just landed (the rule at its
 //     declaration, viewport.h). Every press that reaches this
 //     tail moved its marker — the twins return on the post-clamp identity

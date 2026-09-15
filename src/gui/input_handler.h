@@ -491,8 +491,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // producer — its third when it joined, one of two since the overview strip
 // drag's deletion; the stem's contract is at paint_strip_drag_anchor,
 // paint_handler.cpp). It is a BODY for two reasons: (1) the EARLY RETURN makes
-// the damage fire exactly ONCE per phase however often the clear is reached
-// (the view-state writers below reach it with no seat standing); (2) the
+// the damage fire exactly ONCE per phase however often the clear is reached,
+// and it is reached on every one-finger frame of the survivor's pan; (2) the
 // damage is owed at all because a clear can land on a frame that APPLIES
 // NOTHING and therefore rebuilds nothing — a survivor pan refused off the
 // wheel's surfaces is exactly that frame, and it is the case the clear's own
@@ -557,8 +557,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //
 // REACHABILITY, so none of this reads as theoretical: a two-finger frame under a
 // MODAL returns at apply_touch_nav_update's wheel_context refusal WITHOUT
-// clearing anything (the only per-frame clear is the downgrade's one-finger
-// frame), so a
+// clearing anything (the only per-frame clear is the one-finger arm), so a
 // seated pinch survives a whole modal editor session and resumes when the modal
 // closes — which is exactly how a settings editor's `active_audio_view=T` commit
 // reaches a seat taken in SOURCE.
@@ -571,10 +570,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //
 // A live pinch simply re-seats on its next frame, which is the same fresh grip
 // an upgrade takes.
-// Its non-writer caller is the pinch's end, end_touch_pinch (input_pointer.cpp),
-// reached from the touch nav body's top (the first frame that is not
-// two-finger while a pinch is live, which snaps there) and from end_touch_nav
-// (every end of the gesture). THE
+// Its two non-writer callers are unchanged: the touch nav body's top (any frame
+// that is not two-finger) and end_touch_nav (every end of the gesture). THE
 // FIRST OF THOSE IS REACHED AT THE DOWNGRADE ITSELF, and by construction rather
 // than by luck: the core delivers ONE single-finger frame at the two-to-one
 // transition even when both of its deltas are no-ops (the no-op exemption at
@@ -640,7 +637,7 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 
 // Frame an ACTIVE-domain span [lo, hi] into the viewport: compute the margined
 // fit level (effective_max_zoom_level's formula over the span, clamped
-// [kWorkingZoomLevel, effective ceiling]) and CENTER the span in the window, then apply
+// [kMinZoom, effective ceiling]) and CENTER the span in the window, then apply
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
 // sync render). `margin` adds a 2.5%-per-side (region / trim / group cases); the
@@ -1293,9 +1290,7 @@ struct GuiInputHandler {
     // pivot cleared, the gesture's one GUI-side record since 2026-08-14
     // (TouchNavZoomState, app_state.h) through clear_touch_zoom_seat below, so
     // a later pair seats afresh instead of inheriting a dead pinch's anchor —
-    // and so the anchor stem it gates is rubbed out at every end — both through
-    // end_touch_pinch (input_pointer.cpp), which a pinch still live at the end
-    // also snaps back to the working zoom.
+    // and so the anchor stem it gates is rubbed out at every end.
     void end_touch_nav();
     // (THE SEATED PINCH'S CLEAR is a FREE function since codex round 20 — the
     // view switches clear the seat too and they are not this class's:
@@ -2674,9 +2669,13 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker. The zoom
-    // is untouched (architect 2026-08-05, "no zoom on Tab", reverting the
-    // same-day working-zoom landing this carried for one commit). `c`
+    // playback and move the playhead onto the newly focused marker. At the
+    // working zoom or coarser the zoom is untouched (architect 2026-08-05, "no
+    // zoom on Tab", reverting the same-day working-zoom landing this carried
+    // for one commit); a MARKER step handed Center from a level strictly finer
+    // than working sets the working zoom and centres its landing, `c`'s own
+    // tail (architect 2026-09-15 — a same-marker cell step and a refused press
+    // take no zoom). `c`
     // remains the direct route to
     // kWorkingZoomLevel from any level, and `0`'s second arm reaches it through
     // `c` when its tab has stamped no return level. A step that focuses
@@ -2684,8 +2683,9 @@ private:
     //
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
-    // about the camera and reads no preference of its own — follow mode never
-    // gated it. The zoom governs the BARE Tab walk's framing alone (architect
+    // about the camera beyond what `frame` states (the finer-level return to
+    // working rides a stated Center) and reads no preference of its own —
+    // follow mode never gated it. The zoom governs the BARE Tab walk's framing alone (architect
     // 2026-09-13), so the three bare arms pass
     // marker_walk_frame(app) (app_state.h, its one owner) while the
     // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::NoFrame
@@ -2698,15 +2698,15 @@ private:
     // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
-    // this rule, over its own list (handle_history_mode_key), the working-zoom
-    // snap included.
+    // this rule, over its own list (handle_history_mode_key), the finer-level
+    // return to working on a Center step included.
     //
     // THE STEP'S UNIT IS A CELL WHILE GRID ITERATIONS IS LIT (architect
     // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
     // seat's purple boxes in painted order, then the next marker — and this
     // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
-    // and damages the marker lane, and does NOTHING else but the working-zoom
-    // snap above: no select, no playhead land, no framing, so `frame` governs
+    // and damages the marker lane, and does NOTHING else: no select, no
+    // playhead land, no framing and no zoom, so `frame` governs
     // marker-to-marker steps alone. A marker step runs the
     // gate, the select and the jump as it always has and then seats the step's
     // cell behind them. THE MARCH MEETS NO CELL AT ALL: it is refused while
@@ -2728,7 +2728,9 @@ private:
     // whose `c` behind each step frames).
     // The zoom belongs to the caller too, and the callers differ in it: `c`
     // sets the working zoom right after this returns, the Tab family sets
-    // nothing (2026-08-05).
+    // nothing (2026-08-05) but for a Center step from a level finer than
+    // working, which cycle_marker_focus takes to working right after this
+    // returns (architect 2026-09-15).
     // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the

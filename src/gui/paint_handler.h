@@ -169,7 +169,8 @@ struct WaveformCache {
     int       fp_inset_px = -1;
     // THE GAIN PROFILE'S HASH the live pixels were rendered under
     // (effective_waveform_gain_profile — the per-section magnification resolved
-    // from the warp markers at the working zoom, or the empty profile coarser).
+    // from the warp markers at the working zoom or finer, or the empty profile
+    // coarser).
     // A FINGERPRINT FIELD in its own right, keyed
     // directly like the inset: the profile is an input to the tip mapping
     // alone, so nothing else about the plate would move if it changed by

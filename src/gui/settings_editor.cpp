@@ -12,7 +12,6 @@
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
 
-#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <filesystem>
@@ -427,20 +426,16 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     if (suffix == "zoom") {
         // validate_gui_setting already accepted the one continuous
         // [kMinZoom, kMaxZoom] double vocabulary and red-flashed anything else
-        // (0 and 0.5 included); gv.d carries the level. A level finer than
-        // the working zoom is CLAMPED UP, never refused, on both arms: the
-        // active arm through the applier's own clamp (clamp_zoom_level, the
-        // floor's one owner), the parked arm at store time here, so a typed
-        // value never parks — nor reaches a sidecar — finer than working.
-        const double v = zoom_level_for_storage(gv.d);
+        // (0 and 0.5 included); gv.d carries the level.
+        const double v = gv.d;
         if (active) {
             if (v == app.zoom_level) { unchanged(); return true; }
             // A discrete zoom through the applier.
             viewport.apply_zoom_change(v);
         } else {
             if (v == band.zoom_level) { unchanged(); return true; }
-            // Stored floored and otherwise verbatim, unclamped against
-            // today's per-file effective ceiling: the ceiling is width- and domain-dependent (a narrower
+            // Stored verbatim, unclamped against today's per-file effective
+            // ceiling: the ceiling is width- and domain-dependent (a narrower
             // window raises it; target view computes it against the deformed
             // total), and this parked band activates later under whatever
             // width and view are live then, so a store-time clamp against the

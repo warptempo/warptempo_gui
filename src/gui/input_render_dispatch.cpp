@@ -115,11 +115,9 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.active_markers_view = app.active_markers_view;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is
-    // an active_audio_view=T state). Zoom rides through floored at the
-    // working zoom (zoom_level_for_storage — a keyboard dispatch can run
-    // under a live pinch); the playhead and viewport express where the user
-    // was AT THIS DISPATCH.
-    s.view_zoom_level = zoom_level_for_storage(app.zoom_level);
+    // an active_audio_view=T state). Zoom rides through unchanged; the
+    // playhead and viewport express where the user was AT THIS DISPATCH.
+    s.view_zoom_level = app.zoom_level;
     if (app.active_audio_view == 'T') {
         // Already target-axis: take the live values verbatim. A SWEEP CELL
         // REACHES THIS ARM, and since 2026-09-13 ONLY THIS ARM (grid
@@ -159,9 +157,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
             // Derive the viewport so the translated playhead keeps its
             // pre-flip screen column: ph_px is the playhead's column in the
             // source domain; the target-domain viewport start places the
-            // translated playhead at that same column, at the STORED zoom
-            // (s.view_zoom_level, which differs from the live one only under
-            // a live pinch), so the entry's viewport and zoom agree.
+            // translated playhead at that same column, at the unchanged zoom.
             const double cur_spp = samples_per_pixel_at(
                 app.zoom_level, audio.sample_rate());
             const double ph_px = (cur_spp > 0.0)
@@ -169,7 +165,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
                                        app.viewport_start_sample) / cur_spp)
                 : 0.0;
             const double new_spp = samples_per_pixel_at(
-                s.view_zoom_level, audio.sample_rate());
+                app.zoom_level, audio.sample_rate());
             const double new_vp_d =
                 static_cast<double>(tph) - ph_px * new_spp;
             s.view_viewport_start_frame =
