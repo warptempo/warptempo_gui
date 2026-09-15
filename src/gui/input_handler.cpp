@@ -2611,26 +2611,31 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // gate proved. Nothing here reads it; the return exists for the other
     // caller (run_center_command).
     // A step is a movement like any other through the land owner.
-    jump_playhead_to_focused_marker(frame);
-
+    //
     // A FRAMING STEP FROM A FINER ZOOM RETURNS TO WORKING (architect
     // 2026-09-15: each centring behaviour has ONE act, and centring on the
     // next marker is Tab's): when the stated frame is Center and the level is
-    // strictly finer than working, the step sets the working zoom and centres
-    // the marker it just landed on — `c`'s own tail (run_center_command's
-    // live recipe) over the landing above, so the result is the `c` framing
-    // about that marker. ONLY HERE, past the wall refusal and the same-marker
-    // return, so a refused press and a cell step move no camera and no zoom.
-    // Center comes from the three bare arms alone (marker_walk_frame, which
-    // answers Center at working or finer); the Ctrl+Shift+Tab paired march
-    // states NoFrame and runs `c` behind each step, which sets the working
-    // zoom itself, so nothing here fires for it. A short file whose ceiling is
-    // finer than working saturates at that ceiling exactly as `c` does
-    // (apply_zoom_change's clamp).
+    // strictly finer than working, the step lands WITHOUT framing, sets the
+    // working zoom and then centres the marker it landed on — `c`'s own tail
+    // (run_center_command's live recipe), so the result is the `c` framing
+    // about that marker. The landing takes NoFrame there because a Center
+    // landing at the finer level would render a plate the zoom replaces at
+    // once, two synchronous renders for one resting view; the trailing centre
+    // is a no-op after a real zoom change and still frames a short file whose
+    // ceiling is finer than working, where the zoom request saturates and
+    // changes nothing (apply_zoom_change's clamp). ONLY HERE, past the wall
+    // refusal and the same-marker return, so a refused press and a cell step
+    // move no camera and no zoom. Center comes from the three bare arms alone
+    // (marker_walk_frame, which answers Center at working or finer); the
+    // Ctrl+Shift+Tab paired march states NoFrame and runs `c` behind each
+    // step, which sets the working zoom itself, so nothing here fires for it.
     if (frame == MarkerLandingFrame::Center &&
         app.zoom_level < kWorkingZoomLevel) {
+        jump_playhead_to_focused_marker(MarkerLandingFrame::NoFrame);
         viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();
+    } else {
+        jump_playhead_to_focused_marker(frame);
     }
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because

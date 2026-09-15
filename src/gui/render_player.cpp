@@ -997,15 +997,18 @@ bool render_player_home_takes_previous(const AppState& a,
 // (architect 2026-09-12, from the car, restoring the act after the day on
 // which it walked the band and went up: "the car is a separate interface" —
 // going up is the Up button, Backspace and the car's own Previous).
-void GuiRenderPlayer::home() {
+// Returns false only when the previous-track arm's load refused (play_wav has
+// carded it and left the item and transport as they were); the seek arm's own
+// refusals are not reported, an idle rest already being at frame 0.
+bool GuiRenderPlayer::home() {
     if (render_player_home_takes_previous(app, playback, audio)) {
         const AppState::RenderPlayer& rp = app.render_player;
         const std::vector<Row> folder = rp.item_folder;
         const int i = rp.item_index - 1;
-        play_wav(folder[static_cast<size_t>(i)].path, folder, i);
-        return;
+        return play_wav(folder[static_cast<size_t>(i)].path, folder, i);
     }
     seek_to(0);
+    return true;
 }
 
 // THE RIGHT SKIP'S ACT — bare End and the NextTrack button's plain press
@@ -1113,11 +1116,13 @@ void GuiRenderPlayer::car_fast_forward() {
 // file, else the seek to the item's start — and then, if that left the
 // transport resting (a paused seek stays paused, an idle one is refused), the
 // transport's own toggle starts it from resume_frame, 0 after the seek or at
-// an idle rest. With nothing bound it is the tablet's Play whole. The folder
-// derivation is car_fast_forward's.
+// an idle rest. A REFUSED PREVIOUS-FILE LOAD ENDS THE PRESS: the failure has
+// carded one file, and starting the item it left behind would make the same
+// press play another. With nothing bound it is the tablet's Play whole. The
+// folder derivation is car_fast_forward's.
 void GuiRenderPlayer::car_rewind() {
     if (!app.render_player.item.empty()) {
-        home();
+        if (!home()) return;
         if (app.render_player.transport != Transport::Live) {
             transport_toggle_act();
         }

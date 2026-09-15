@@ -1839,18 +1839,23 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // (architect 2026-09-15, the live walk's rule at cycle_marker_focus): this
     // walk's bare step DOES frame — the Tab arm states Center at every zoom —
     // so a Center step strictly finer than working sets the working zoom and
-    // centres the flag it landed on, `c`'s own tail. Past every wall and the
-    // empty arm above, so a press that lands nothing moves no zoom; the march
-    // states NoFrame and its `c` sets the working zoom itself.
-    switch (frame) {
-        case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
-        case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
-        case MarkerLandingFrame::NoFrame:                                            break;
-    }
+    // centres the flag it landed on, `c`'s own tail — the zoom first and the
+    // centre once after it, so the finer level's centred plate is never
+    // rendered only to be replaced (the centre is a no-op after a real zoom
+    // change and frames a short file whose ceiling saturates the request).
+    // Past every wall and the empty arm above, so a press that lands nothing
+    // moves no zoom; the march states NoFrame and its `c` sets the working
+    // zoom itself.
     if (frame == MarkerLandingFrame::Center &&
         app.zoom_level < kWorkingZoomLevel) {
         viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();
+    } else {
+        switch (frame) {
+            case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
+            case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
+            case MarkerLandingFrame::NoFrame:                                            break;
+        }
     }
     // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
     // above either returned or picked a different index), so the full-window

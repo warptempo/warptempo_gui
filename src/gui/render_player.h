@@ -509,7 +509,9 @@ struct GuiRenderPlayer {
     //   construction, so an idle press with a file before this one steps back
     //   and PLAYS it, while the seek arm under it stays the idle road's silent
     //   refusal. IT NEVER LEAVES A FOLDER: going up is the Up button, Backspace
-    //   and the car's Previous, and nothing else.
+    //   and the car's Previous, and nothing else. It returns false only when
+    //   the previous-track arm's load refused (car_rewind's one read; the
+    //   keys and the button ignore it).
     // next_track() — THE NEXT TRACK (architect 2026-09-04, "Next should always
     //   skip to the next song. The home/end analogy doesn't quite work — this
     //   isn't a playhead, this is audio playback"): the next wav of the
@@ -530,7 +532,7 @@ struct GuiRenderPlayer {
     // (The right one was a seek to the item's END before 2026-09-04, which
     // under a lit Repeat one or a rest came back to the same file and made
     // Next a button that did nothing in the car.)
-    void home();
+    bool home();
     void next_track();
 
     // -- THE CAR'S OWN THREE ACTS (architect 2026-09-12, from the car) -------
@@ -589,7 +591,8 @@ struct GuiRenderPlayer {
     //   play_button_act whole.
     // car_rewind() — Home + Play: an item bound takes home() (the
     //   previous-track window's file, else the restart) and then
-    //   transport_toggle_act if the transport is not LIVE; nothing bound takes
+    //   transport_toggle_act if the transport is not LIVE — unless the
+    //   previous file's load refused, which ends the press; nothing bound takes
     //   play_button_act whole.
     // One caller each, on_media_command's FastForward / Rewind arm.
     void car_fast_forward();
