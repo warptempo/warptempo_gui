@@ -1303,8 +1303,7 @@ bool GuiRenderPlayer::open() {
     // and its Up re-express the view through unload_item, whose target-view
     // ensure_ready would kill the run — the reasoning is at the predicate,
     // app_state.h. ONE PLACE for every road (bare `l`, bare `'` outside the
-    // `h` view, the Play renders button's plain lift, the sweep's own
-    // auto-open), and ahead of the listing's walk, a run being the more
+    // `h` view, the Play renders button's plain lift), and ahead of the listing's walk, a run being the more
     // fundamental answer. THE CONSEQUENCE, confirmed at 2026-09-15: nothing
     // starts a render while the player stands — its router consumes the
     // render chords, the icon row is dead under it, and a parked archival
@@ -1361,24 +1360,6 @@ bool GuiRenderPlayer::open() {
     // appears over the waveform, and the modal row has no rect before its
     // first paint.
     viewport.invalidate_all();
-    return true;
-}
-
-// THE SWEEP'S OPEN (architect 2026-09-15; the contract at the declaration):
-// the one opener above, whole, and then the batch entered as a folder row's
-// click enters it. The entry names no seat folder, so the seat rule lands the
-// band on row 0 — the first cell — there being no item bound after a fresh
-// open. The root's listing is asked for the folder rather than the disk, so
-// a folder the enumeration refuses (its name, or no cell left in it) keeps
-// the root listing the open already built and seated.
-bool GuiRenderPlayer::open_in_batch(const std::filesystem::path& batch_folder) {
-    if (!open()) return false;
-    for (const Row& r : app.folder_overlay.rows) {
-        if (r.kind == Row::Kind::Folder && r.path == batch_folder) {
-            enter(Folder::Batch, batch_folder, {});
-            break;
-        }
-    }
     return true;
 }
 
