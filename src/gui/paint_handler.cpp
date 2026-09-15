@@ -9438,8 +9438,26 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // live in clamp_viewport_start now; the resize keeps only its TRIGGER role
     // and delegates. When the level actually moved the reflow changed spp under
     // the playback predictor, so re-anchor it.
-    const double old_zoom = app.zoom_level;
+    //
+    // A LEVEL MOVE ACROSS THE WORKING ZOOM FLIPS THE MAGNIFICATION (the gain
+    // applies only at working, effective_waveform_gain_profile): a 2.1 rest
+    // clamped to the floor, or a whole-song-visible level following a ceiling
+    // across 2.0. The overview's bar cache keys the effective hash and follows
+    // at the next paint, while the plate would blit its old gain until the
+    // worker publishes, so the two pictures would disagree. When the effective
+    // hash moved, rebuild the plate synchronously here — the gain category's
+    // before/after shape (Viewport::kick_waveform_sync_if_gain_changed, which
+    // this handler holds no Viewport to call). Safe at this point: both
+    // platforms fire on_resize after the new dimensions are installed and the
+    // presentation buffers recreated, the rebuild renders into the plate's own
+    // image surface off app.width / app.height and the settled clamp, and its
+    // damage (window top through the waveform) joins the full-surface damage
+    // the resize already queued. Every other resize stays on the worker.
+    const double   old_zoom       = app.zoom_level;
+    const uint64_t old_gain_hash  = effective_waveform_gain_profile(app).hash;
     clamp_viewport_start(app, audio);
     if (app.zoom_level != old_zoom && playback.is_playing())
         playback.resync_predictor();
+    if (effective_waveform_gain_profile(app).hash != old_gain_hash)
+        force_synchronous_waveform_rebuild();
 }

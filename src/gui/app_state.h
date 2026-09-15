@@ -39,11 +39,12 @@ struct GuiTargetRender;
 //
 // The zoom level is a real-valued exponent in the ONE continuous domain
 // [kMinZoom, kMaxZoom], resting anywhere from the working zoom up to the
-// per-file ceiling (Ableton-style free rest, floored below): manual zoom
-// walks it by whole steps from its current, possibly fractional, rung, and
-// zoom-out saturates at the per-file effective ceiling
-// (effective_max_zoom_level), where full zoom-out rests at whole-song-visible.
-// There is no fit-file mode and no sentinel level. Bare-digit keys are unbound
+// per-file ceiling (Ableton-style free rest, floored below). There is no
+// discrete zoom step: the level moves only under the continuous zoom gestures
+// (below) and the two absolute commands `0` and `c`, and every write saturates
+// at the per-file effective ceiling (effective_max_zoom_level), where full
+// zoom-out rests at whole-song-visible. There is no fit-file mode and no
+// sentinel level. Bare-digit keys are unbound
 // for zoom: `0` goes to full zoom-out and, pressed once already there, runs the
 // `c` command — at the level it stamped on the way out when its tab has one
 // (ViewState::zoom_recall_level, architect 2026-08-18), at the working zoom
@@ -11079,6 +11080,31 @@ inline bool continuous_zoom_gesture_live(const AppState& a) {
 // while loading (no live frames), so it cannot stomp a level the load path is
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
+
+// A ZOOM LEVEL ENTERING STORED STATE — a parked tab band, a sidecar, a render
+// entry, a history snapshot — floored at the working zoom, WHATEVER THE
+// GESTURE BIT SAYS. The finer levels exist only while a continuous zoom
+// gesture is live (clamp_zoom_level's exemption), and a physical or Bluetooth
+// keyboard can save, switch tabs or dispatch a render while a pinch is live
+// (touch navigation is not a pointer-drag modal), so a copy of the live level
+// taken then would park or persist a level no rest may hold. NO CEILING TERM,
+// like the settings editor's parked arm: the ceiling depends on the window's
+// width and the active domain's total, both of which may differ when the
+// stored value is next activated, and the tab-in / load clamp
+// (clamp_viewport_start → clamp_zoom_level) honours it there. THE INVENTORY
+// (grepped over every copy of a live or parsed zoom into stored state, SEVEN
+// sites): the leaving tab's push (GuiActiveViews::
+// refresh_active_tab_view_from_app, active_views.cpp), the render entry's
+// capture (GuiInputHandler::snapshot_current_authoring_state), the settings
+// recall's mirror of the save (settings_io.cpp), the history now-side mirror
+// (capture_history_gui_side, history_diff.cpp), the sidecar load's two parsed
+// tab bands (load_file's apply, file_loader.cpp), the typed parked/active zoom
+// value (settings_editor.cpp) and bare `0`'s recall stamp
+// (ViewState::zoom_recall_level, run_overview_command). Undo entries carry no
+// zoom.
+inline double zoom_level_for_storage(double level) {
+    return std::max(kWorkingZoomLevel, level);
+}
 
 // WHAT BARE `0` WOULD DO — the overview command's one fork and its one
 // resolve, named 2026-09-01 (architect, the truthful-tooltips ruling: at the

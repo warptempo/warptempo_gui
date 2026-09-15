@@ -432,7 +432,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // active arm through the applier's own clamp (clamp_zoom_level, the
         // floor's one owner), the parked arm at store time here, so a typed
         // value never parks — nor reaches a sidecar — finer than working.
-        const double v = std::max(kWorkingZoomLevel, gv.d);
+        const double v = zoom_level_for_storage(gv.d);
         if (active) {
             if (v == app.zoom_level) { unchanged(); return true; }
             // A discrete zoom through the applier.

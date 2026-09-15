@@ -150,7 +150,9 @@ struct Viewport {
     //    pixels show (Sol round 11 of 2026-09-14; the rule is at the release).
     //    (The gain gate's other input, the zoom — magnification applies only
     //    at the working zoom, effective_waveform_gain_profile — changes with a
-    //    zoom write, whose applier's own synchronous kick carries it.)
+    //    zoom write, whose applier's own synchronous kick carries it; the one
+    //    zoom write with no applier, the resize's clamp, runs the same
+    //    before/after test itself at GuiPaintHandler::on_resize.)
     //    Its one site from 2026-08-26 was the retired magnification level
     //    applier (architect approval 2026-09-14). The gain is a PER-SECTION
     //    PROFILE resolved from the warp markers now

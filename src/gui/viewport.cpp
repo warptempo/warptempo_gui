@@ -754,9 +754,11 @@ void Viewport::invalidate_all() {
 // a held arrow button's fires reach both through the same act bodies, so the
 // recenter runs at every step. NO VIEW TERM: in target view on the warp column
 // the marker nudge is refused upstream (active_column_authoring_allowed) and
-// never arrives, while the playhead step recenters there as anywhere. A nudge
-// runs under no pointer gesture, so the level here is never finer than
-// working; the inclusive predicate answers the working zoom.
+// never arrives, while the playhead step recenters there as anywhere. A
+// physical or Bluetooth keyboard's nudge CAN run while a pinch is live (touch
+// navigation is not a pointer-drag modal), so the level here may be finer
+// than working; the inclusive predicate is what answers that case as the
+// working zoom.
 void Viewport::recenter_after_nudge() {
     if (!zoom_level_at_or_finer_than_working(app.zoom_level)) return;
     center_viewport_on_playhead();

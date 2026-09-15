@@ -374,7 +374,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     ViewState eff_b = app.tab_b;
     ViewState& eff_active = (app.active_tab_view == 'B') ? eff_b : eff_a;
     eff_active.viewport_start_sample  = app.viewport_start_sample;
-    eff_active.zoom_level             = app.zoom_level;
+    eff_active.zoom_level             = zoom_level_for_storage(app.zoom_level);
     eff_active.playhead_cursor_sample = app.playhead_cursor_sample;
     eff_active.trim                   = app.trim;
 

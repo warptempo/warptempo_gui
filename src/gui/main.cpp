@@ -1048,8 +1048,8 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // delegate here. Clamped BEFORE samples_visible below so `visible` reflects
     // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
     // tab) ViewState bands deliberately store zoom requests unclamped against
-    // the ceiling (a sidecar's verbatim; the settings editor's typed value
-    // floored at working) and are governed here only once they go live -- at
+    // the ceiling (every one floored at working on its way in,
+    // zoom_level_for_storage) and are governed here only once they go live -- at
     // Ctrl+Tab restore or tab-in.
     //
     // AND 'THE WHOLE SONG IS VISIBLE' IS A STATE THE LEVEL FOLLOWS (architect
@@ -1523,7 +1523,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // worker's undriven work — a compositor resize and the launch load, both of
     // which run on_resize, which only stores the new dimensions, re-clamps
     // zoom/viewport, and re-anchors the playback predictor if the level moved:
-    // no enqueue and no cache rebuild there — is discovered when
+    // no enqueue and no cache rebuild there, except the synchronous plate
+    // rebuild when the clamp moved the effective gain (the reasoning at
+    // GuiPaintHandler::on_resize) — is discovered when
     // maybe_enqueue_waveform_render's dirty-detect sees the changed fingerprint
     // on the next tick, which is also where the cache rebuild happens. (Pan, zoom, center and the one-shot jumps do NOT come here at
     // all: they are user-driven and render synchronously through

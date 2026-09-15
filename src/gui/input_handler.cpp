@@ -2984,8 +2984,13 @@ void GuiInputHandler::run_overview_command() {
         // historical. The live app.zoom_level is the value: it is the clamped
         // truth (clamp_viewport_start's zoom clamp owns every write to it) and
         // it is strictly below the ceiling on this arm, so a stamp can never
-        // name full zoom-out and make the return trip a no-op.
-        active_view_state(app).zoom_recall_level = app.zoom_level;
+        // name full zoom-out and make the return trip a no-op. It is stored
+        // floored at the working zoom (zoom_level_for_storage — a keyboard `0`
+        // can run under a live pinch); on a short file whose ceiling is finer
+        // than working that floor can meet the ceiling, which the recall's
+        // own clamp and its fallen-ceiling spend already answer.
+        active_view_state(app).zoom_recall_level =
+            zoom_level_for_storage(app.zoom_level);
         viewport.apply_zoom_change(target.level);
         // AND THE WHOLE-SONG STATE IS RAISED, after the applier (which clears
         // it, as every zoom write that moves the level does — the inventory is

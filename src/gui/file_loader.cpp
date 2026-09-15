@@ -542,13 +542,17 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
             return false;
         }
         // The schema already enforced syntax, non-negativity, and the zoom
-        // vocabulary; the per-tab view scratch applies verbatim here. Viewport
+        // vocabulary; the per-tab view scratch applies verbatim here, the zoom
+        // floored at the working zoom. Viewport
         // and playhead positions are display scratch, not authored data, so
         // there is no audio-relative range check on them — the runtime clamps
         // own any out-of-range value.
         auto apply = [&](const SettingsFileTab& src, ViewState& dst) {
             dst.viewport_start_sample = src.viewport_start;
-            dst.zoom_level            = src.zoom;
+            // Floored at the working zoom as it enters the GUI band, the
+            // parked tab included (zoom_level_for_storage, app_state.h); the
+            // shared schema's vocabulary stays [kMinZoom, kMaxZoom].
+            dst.zoom_level            = zoom_level_for_storage(src.zoom);
             // Applied verbatim here; the live-domain clamp runs on both tab
             // snapshots after this settings block, once the persisted S/T
             // domain is computable (the clamp site below).

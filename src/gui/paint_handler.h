@@ -662,8 +662,9 @@ struct GuiPaintHandler {
     // async one. This is the route for EVERY user-driven viewport change,
     // PANNING INCLUDED since the incremental shift-and-strip path was retired
     // (architect 2026-07-26 — moving and resting plates come off one code path;
-    // see the routing rules at the definition). Undriven changes — resize, the
-    // launch load, the preview completion's repaint — stay on the worker;
+    // see the routing rules at the definition). Undriven changes — resize (but
+    // for a clamp that moves the effective gain, GuiPaintHandler::on_resize),
+    // the launch load, the preview completion's repaint — stay on the worker;
     // FOLLOW SCROLLING joined this route 2026-09-02 (the vanishing playhead
     // line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();

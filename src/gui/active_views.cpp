@@ -25,7 +25,9 @@
 void GuiActiveViews::refresh_active_tab_view_from_app() {
     ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
     t.viewport_start_sample = app.viewport_start_sample;
-    t.zoom_level            = app.zoom_level;
+    // Floored at the working zoom: a keyboard Ctrl+Tab or Ctrl+S can run
+    // under a live pinch (zoom_level_for_storage, app_state.h).
+    t.zoom_level            = zoom_level_for_storage(app.zoom_level);
     t.playhead_cursor_sample       = app.playhead_cursor_sample;
     // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
     // live-mirror field means updating this push, that pull, and ViewState.

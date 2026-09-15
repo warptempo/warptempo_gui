@@ -618,7 +618,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //   2. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
 //      load, and the on_tick safety net that catches residual fingerprint
-//      drift. (FOLLOW'S PAGE TURN LEFT THIS LIST 2026-09-02: it takes the
+//      drift. (A resize whose zoom clamp moves the effective gain profile
+//      takes this function instead, so the plate and the overview lane agree
+//      in the resize frame — GuiPaintHandler::on_resize.) (FOLLOW'S PAGE TURN LEFT THIS LIST 2026-09-02: it takes the
 //      synchronous kick now — kick_waveform_sync at
 //      Viewport::follow_scroll_if_needed — so the playhead line never paints
 //      against a plate that is still a page behind.) The marker and trim
