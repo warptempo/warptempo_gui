@@ -559,7 +559,8 @@ struct DragState {
 // not at all"). What it steps is the cell the press landed on, through the
 // arrows' own landing owners: the BASE TEMPO on a warp flag's payload, a BOUND
 // on either column's purple cell, and since 2026-09-14 the MEASURE (a blank or
-// direct integer) and the MAGNIFICATION on a warp flag's blue and green boxes.
+// direct integer) and the MAGNIFICATION on a warp flag's purple and green
+// boxes (the measure box Breeze blue until 2026-09-15).
 // The target rule is one predicate,
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
@@ -942,7 +943,8 @@ struct EditorTextDragState {
 // WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON is a MarkerCell
 // (warpmarkers.h — the one enum for the press, the addressed cell and the
 // editors since 2026-09-05; a four-way span of its own from 2026-08-19).
-// The flag, its two iteration BOUND CELLS and its blue MEASURE box are one
+// The flag, its two iteration BOUND CELLS and its purple MEASURE box (Breeze
+// blue until 2026-09-15) are one
 // clickable surface for press, drag and select — one marker, one rect — and
 // the pressed cell decides two things. THE ADDRESSED CELL: every marker press
 // writes AppState::addressed_cell from the cell it landed on, inside
@@ -2165,10 +2167,9 @@ enum class RedesignButton {
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
-    // living on as the tooltips), the TWO VIEW LAMPS sharing one group since
-    // 2026-09-04, THE VIEWPORT-CLASS GROUP — the Show trim region button
-    // leading the zoom pair (2026-08-12, the architect's live placement "after
-    // the trim"), Follow and the three lamps behind
+    // living on as the tooltips), THE VIEWPORT-CLASS GROUP — the Show trim
+    // region button leading the zoom pair (2026-08-12, the architect's live
+    // placement "after the trim"), Follow and the three lamps behind
     // them, the last of which arrived from the toolbar group later on
     // 2026-09-04 — THE ITERATION PAIR, back from the menu row later that same
     // day, the
@@ -2176,6 +2177,14 @@ enum class RedesignButton {
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
     // (since 2026-09-01) the LOAD IN PLACE, which left the render-entry group
     // for it.
+    //
+    // (THE TWO VIEW LAMPS — IconAudioView and IconMarkerColumn — stood as
+    // their own group here from 2026-09-04 to 2026-09-15, one button per
+    // axis toggling Source/Target and Warp/Phase Reset away from home. The
+    // architect deleted the category whole (bare `t` and bare `p` with it):
+    // the axes stay reachable through bare 1/2/3 and the view bar alone,
+    // which is what a two-button group bought nothing over. The row's group
+    // count drops by one with it.)
     //
     // THE 2026-08-18 ROSTER RELAYOUT is what gave the row that tail and took
     // its verbs away, both in the architect's own words: "move
@@ -2203,31 +2212,6 @@ enum class RedesignButton {
     // group order was built on — keeping the history opener's x fixed across
     // the toggle — is answered by construction now rather than by placement.
     Save, Undo, Redo, Render,
-    // The two view lamps (architect 2026-09-04). The row's three radio PAIRS
-    // collapsed into three lamp TOGGLES that day — six buttons to three, to
-    // make room on the tablet's row — so IconS/IconT and IconW/IconP are
-    // deleted and one button per axis stands where each pair did.
-    //
-    // Each lamp toggles its AXIS rather than selecting a state, which makes it
-    // its chord's exact twin: bare `t` flips the audio view and bare `p` the
-    // marker column, so the press does what the key does and the tooltip names
-    // the ACT ("Toggle Audio View (T)", "Toggle Marker Column (P)") because it
-    // has to be true in both states. Bare 1/2/3 stay the absolute selectors and
-    // the primary road; these two are indicators first.
-    //
-    // The lamp lights AWAY FROM HOME. Source + Warp is view 1 and the home
-    // state, so the audio lamp lights in Target and the marker lamp in Phase
-    // Reset, each wearing the lit state's own glyph — document-import and
-    // chronometer-start. The three retired glyphs left the icon roster with
-    // their buttons (document-export, speedometer and, at the walk lamp below,
-    // deep-history).
-    //
-    // Everything else carries over per axis untouched: the `h` view's admission
-    // of each chord, the read-only rules, the undo entry's three view tags and
-    // one enabled arm per lamp reading exactly what the two halves read. The
-    // pairs' `radio` flag in kToolbarChords lost these four users and the walk
-    // lamp's two; row 3's tabs and the view bar's three still carry it.
-    IconAudioView, IconMarkerColumn,
     // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 as "Show region",
     // given its settled name on 2026-08-19 — the one the enumerator carried
     // throughout): THE ZOOM GROUP'S LEADER SINCE 2026-08-27, and the second
@@ -2367,9 +2351,13 @@ enum class RedesignButton {
     // REVERSE and it satisfies the same doctrine from the other side: the two
     // commands have exactly ONE pointer home, and it is these buttons rather
     // than a menu — which is what the Navigation menu's own 2026-08-15
-    // deletion did for the zoom commands. The chords never moved: bare `m` and
-    // bare `i` are what the keyboard has had throughout, and each button is
-    // its chord through the ordinary table.
+    // deletion did for the zoom commands. Neither chord moved with the
+    // button's return: bare `m` and bare `i` are what the keyboard had
+    // throughout this history, and each button is its chord through the
+    // ordinary table. (BARE `m` ITSELF MOVED LATER, ON 2026-09-15, when the
+    // architect gave the BPM opener Ctrl+B instead — a Ctrl chord guards
+    // against a stray bare press, as Ctrl+D / Ctrl+N do — with no further
+    // change to this history or to the button's place in the row.)
     //
     // THE VOCABULARY IS THE MENU'S, WHICH IS THE ARCHITECT'S OWN (his
     // 2026-08-31 rebrand of his 2026-08-27 naming): BPM Iterations and Grid
@@ -2381,10 +2369,11 @@ enum class RedesignButton {
     // card that names a mode read the same words, and the marker's own payload
     // keeps its own ("iteration bracket", "iteration ranges").
     //
-    // THE BPM OPENER IS A MOMENTARY ACT, not a mode: bare `m` opens the BPM
+    // THE BPM OPENER IS A MOMENTARY ACT, not a mode: Ctrl+B (bare `m` until
+    // 2026-09-15) opens the BPM
     // sweep's editor over the selected run, so there is no bit for a lamp and
     // the button carries none. ITS FACE READS THE SWEEP'S OWN VERDICT
-    // (bpm_sweep_plan, below) — the whole ten-arm ladder bare `m` refuses on,
+    // (bpm_sweep_plan, below) — the whole ten-arm ladder the chord refuses on,
     // extracted rather than mirrored so the face and the card are one
     // decision — under the READ-ONLY LOCK, which drops the chord, and, since
     // 2026-09-10, UNDER THE ITERATION LOCK, which ranks ahead of the ladder:
@@ -2418,7 +2407,7 @@ enum class RedesignButton {
     // multiplication cross.
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
-    // hand-listed, which is what their chord rows buy: bare `m` and bare `i`
+    // hand-listed, which is what their chord rows buy: Ctrl+B and bare `i`
     // are neither the mode's own vocabulary nor on its allowlist, so
     // history_mode_disables_button answers dead for both — the answer the
     // ITERATIONS ANCHOR needed a hand-named arm for while it was a menu.
@@ -2971,17 +2960,17 @@ enum class RedesignButton {
     TransportWalkPrev, TransportWalkNext,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-09-14, at
-// the Keep Centered While Nudging and Ignore Waveform Magnification
-// deletion): SIX in row 1 (the three menu anchors and the view bar's three),
-// two in row 3, TWENTY-TWO in row 4 and EIGHTEEN in the bottom row — 48. Of
-// those, FORTY-FIVE carry a chord in kToolbarChords
+// THE ROSTER, re-derived by counting the enumerators above (2026-09-15, at
+// the two view lamps' whole-category deletion): SIX in row 1 (the three menu
+// anchors and the view bar's three), two in row 3, TWENTY in row 4 and
+// EIGHTEEN in the bottom row — 46. Of those, FORTY-THREE carry a chord in
+// kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 48;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3049,8 +3038,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Redo:
         case RedesignButton::IconRestrictUndo:
         case RedesignButton::Render:
-        case RedesignButton::IconAudioView:
-        case RedesignButton::IconMarkerColumn:
         case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
@@ -3189,13 +3176,21 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // fact about the roster's order and this is where the order is stated. ONE
 // reader now — paint_icon_row's layout walk.
 //
-// THE SIX GROUPS, in painted order: the toolbar four, THE TWO VIEW LAMPS,
+// THE FIVE GROUPS, in painted order: the toolbar four,
 // THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom pair,
 // FOLLOW and the restrict-undo lamp), THE ITERATION PAIR, the
 // render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
 // HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
 // load-in-place at the tail.
+//
+// FIVE SINCE 2026-09-15, DOWN FROM SIX, when the architect deleted THE TWO
+// VIEW LAMPS' whole category (buttons, group slot, separator) rather than
+// leaving a hollowed group behind: IconAudioView stopped opening a group and
+// nothing takes its place, so the leader count fell by one and no other
+// group's membership moved (bare `t`/`p` and the lamps bought the group
+// nothing the view bar and bare 1/2/3 do not already answer). The paragraphs
+// below are the group's history up to that deletion, kept for the record.
 //
 // SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
 // no other boundary: the architect deleted the menu-row dropdown and put
@@ -3261,11 +3256,6 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
-        // The audio-view lamp opens the pair of view lamps, which is one group
-        // since the second of 2026-09-04's row rulings; IconMarkerColumn led a
-        // group of itself for the hours between the radio-pair collapse and
-        // that ruling, and IconW led the marker pair before the collapse.
-        case RedesignButton::IconAudioView:
         // THE ZOOM GROUP'S LEADER, and the merged group's since 2026-08-27:
         // the boundary that used to stand in front of the zoom buttons is deleted,
         // so this one separator now opens the whole viewport class. (The
@@ -3278,7 +3268,8 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         case RedesignButton::IconShowRegion:
         // THE ITERATION PAIR'S LEADER SINCE 2026-09-04, and it is the same
         // button that led the mass-marker group from 2026-08-20 until the
-        // Series relocation deleted it: bare `m` opens the group again, with
+        // Series relocation deleted it: the BPM opener (Ctrl+B since
+        // 2026-09-15, bare `m` before it) opens the group again, with
         // bare `i` behind it and nothing else in it.
         case RedesignButton::IconBpm:
         case RedesignButton::IconListen:
@@ -8118,8 +8109,9 @@ struct AppState {
     // is visible directly on the flags (it is a flag-cache fingerprint field
     // for exactly that reason). THE TWO WRITERS OF THE OFF EDGE both run
     // GuiFlagEditor::wipe_iter_state first — bare `i`'s off arm and the
-    // sweep's fire (BPM mode's forced exit is retired: bare `m` refuses
-    // while the lamp is lit, since 2026-09-10) — which is where an addressed
+    // sweep's fire (BPM mode's forced exit is retired: the BPM opener
+    // refuses while the lamp is lit, since 2026-09-10 — bare `m` then,
+    // Ctrl+B since 2026-09-15) — which is where an addressed
     // bound cell below falls back to the payload.
     //
     // WHILE IT STANDS, THE PIECE IS LOCKED (architect 2026-09-10: "Nothing
@@ -8222,10 +8214,13 @@ struct AppState {
     // (GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
     MarkerCell addressed_cell = MarkerCell::Payload;
 
-    // BPM mode. Entered by plain `m` in warp view. MUTUALLY EXCLUSIVE WITH
+    // BPM mode. Entered by Ctrl+B in warp view (bare `m` until 2026-09-15,
+    // when the architect moved the opener off it, a Ctrl chord guarding
+    // against a stray bare press as Ctrl+D / Ctrl+N do). MUTUALLY EXCLUSIVE WITH
     // iteration_mode_enabled BY REFUSAL, NOT BY A SWAP (architect 2026-09-10,
     // that evening: "we should card the exit, because it is still one button
-    // automatically affecting the other" — NO SILENT SWAPS ANYWHERE): bare `m`
+    // automatically affecting the other" — NO SILENT SWAPS ANYWHERE): the
+    // chord
     // is REFUSED while grid iterations stands, at the keyboard gate with the
     // lock's own card and on the BPM Iterations button's greyed face
     // (iteration_lock_key_blocked, iteration_lock_greys), so this bit can only
@@ -9728,7 +9723,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // authoring a musical value — nothing in it reaches the engine, the frame map
 // or the render fingerprint — so it is editable wherever a warp flag paints.
 // Its three entry routes (bare `/`, the bottom-row button, the double-click on
-// the blue box) consult this predicate nowhere; their gates are READ-ONLY,
+// the box — purple since 2026-09-15, Breeze blue before it) consult this
+// predicate nowhere; their gates are READ-ONLY,
 // which still refuses, a measure being serialized content, and the column
 // (marker_measure_edit_refusal).
 // (5) THE WARP STATUS/VALUE FAMILY IN W+TARGET (architect 2026-08-24, asked as
@@ -11167,17 +11163,20 @@ inline const ViewState& active_view_state(const AppState& a) {
 // Ctrl+S, both render chords, Synchronize, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
-// reachable), bare `m` (BPM iterations, the one road that leaves this mode
-// by entering another and which lands nothing in history at the press) and
+// reachable) and
 // THE CLIPBOARD COPY, Ctrl+P, which is the exception: it reads a run into a
 // session clipboard and pushes nothing, so the undo domain this lock protects
 // has no interest in it, while the read-only lock eats the propagate family
 // whole for its own reason — one tab's authored content. The two PASTES stay
-// refused by both. WHAT
-// IT TAKES AWAY IS THE W/P COLUMN SWITCH AND THE PAIRED MARCH (architect
-// 2026-09-10): the mode is lit for the column you are in, so bare `p` and the
-// absolute view selectors 1/2/3 — which compose that switch — refuse while the
-// lamp stands, and the Toggle Marker Column button greys with the sentence;
+// refused by both. (THE BPM OPENER — bare `m`, Ctrl+B since 2026-09-15 — WAS
+// A FIFTH ADDITION until 2026-09-10, when the architect ruled its own
+// swap-the-mode exit out; it falls to the base list, which refuses it, same
+// as any other authoring chord.) WHAT
+// IT TAKES AWAY IS THE COLUMN SWITCH AND THE PAIRED MARCH (architect
+// 2026-09-10): the mode is lit for the column you are in, so the
+// absolute view selectors 1/2/3 — which compose the W/P handler body (bare
+// `p` itself deleted with its view lamp 2026-09-15) — refuse while the
+// lamp stands;
 // and Ctrl+Shift+Tab refuses with them, its own tab switch clearing the
 // selection so that its second step could never walk the bound cells honestly
 // (the other tab's shifted press reaches the same card, the tab itself staying
@@ -11338,16 +11337,6 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconMarkerMagnification:
-        // The Toggle Marker Column lamp — the lock's W/P delta, the mode being
-        // lit for the column you are in.
-        case RedesignButton::IconMarkerColumn:
-        // THE TOGGLE AUDIO VIEW LAMP (architect 2026-09-13): grid iterations
-        // lives in TARGET view alone, so the S/T switch back to source is one
-        // of the acts the lock refuses (bare `t` at the gate, the delta's
-        // newest member). Unconditional for the column lamp's reason: under a
-        // lit lamp the view IS target (AppState::iteration_mode_enabled's
-        // invariant), so every press of this toggle would go T->S.
-        case RedesignButton::IconAudioView:
         // The Toggle History View button — the view's own acts push history,
         // and two modal views are not composed, so the ENTRY refuses
         // (handle_history_mode_key, input_key_dispatch.cpp).
@@ -11819,10 +11808,16 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
 // playhead land, no framing.
 //
 // THE RANK IS THE PAINTED ORDER, purple only: payload < lower < upper. The
-// MEASURE box sits past upper and is NEVER A STOP — it is blue, it carries no
-// value the arrows can step, and the architect kept the walk to the boxes the
-// colour ties together ("only the purple cells — measure is excluded, which is
-// a good reason we went with purple for the payload and the bounds"). A
+// MEASURE box sits past upper and is NEVER A STOP — the architect kept the
+// walk to the boxes the colour tied together at the 2026-09-10 ruling ("only
+// the purple cells — measure is excluded, which is a good reason we went
+// with purple for the payload and the bounds"), the measure box wearing
+// Breeze blue at the time; THE MEASURE BOX ITSELF TOOK THE SAME PURPLE ON
+// 2026-09-15, so the colour argument no longer distinguishes it from the
+// walk's three stops — the exclusion is BY RULE now (this walk cycles the
+// iteration bracket alone, and a measure carries none), not by hue, and
+// stands unchanged; a colour-only reader re-deriving the ruling today would
+// find the quote's premise gone. A
 // Measure axis is still a legal SEAT (a press lands on that box), so the
 // backward step reads it as "one box right of upper" and walks into whatever
 // box actually stands left of it — ON A FLAG THAT PAINTS CELLS, and only
@@ -12870,7 +12865,8 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 }
 
 // THE BPM SWEEP'S OPEN VERDICT (2026-09-04, with the BPM ITERATIONS button's
-// return to the icon row) — bare `m`'s WHOLE guard ladder as one const owner,
+// return to the icon row) — the BPM opener's (bare `m` then, Ctrl+B since
+// 2026-09-15) WHOLE guard ladder as one const owner,
 // the iteration sweep's plan above in the sibling act's domain and
 // tempo_cent_step_group_actionable's shape in a longer one.
 //
@@ -12899,7 +12895,7 @@ inline bool iteration_sweep_actionable(const AppState& a) {
 // everything else is a walk of tens of markers. `audio` is what that cache
 // keys on, which is why this takes it where iteration_sweep_plan does not.
 //
-// TWO READERS: the bare `m` dispatch (input_key_dispatch.cpp) and the BPM
+// TWO READERS: the Ctrl+B dispatch (input_key_dispatch.cpp) and the BPM
 // Iterations button's face (redesign_button_enabled below), which composes it
 // with the read-only lock. Defined in warpmarkers_ops.cpp beside
 // tempo_cent_step_group_actionable, the other const owner over this store.
@@ -13282,10 +13278,12 @@ inline bool playback_launch_playable(const AppState& a,
 //     tooltip class was deleted). SEVEN ARMS BELOW COMPOSE BOTH HALVES — Drop marker, Delete,
 //     Disable, Toggle inherit, Measure, Edit flag and the Up/Down pair, the
 //     last three admitted on a BOUND AXIS, where the cells are the mode's own
-//     authoring surface. TWO ASK THE ITERATION HALF ALONE, having no
-//     read-only term to compose: TOGGLE MARKER COLUMN (bare `p` is on the base
-//     allowlist) and TOGGLE HISTORY VIEW (the mode is claimed above the gate
-//     and a locked tab reads history as a writable one does). LEFT / RIGHT
+//     authoring surface. ONE ASKS THE ITERATION HALF ALONE, having no
+//     read-only term to compose: TOGGLE HISTORY VIEW (the mode is claimed
+//     above the gate and a locked tab reads history as a writable one does)
+//     — TOGGLE MARKER COLUMN stood beside it on the same shape (bare `p` was
+//     on the base allowlist) until the architect deleted the button whole
+//     with its view lamp 2026-09-15. LEFT / RIGHT
 //     compose both halves around one lane term at their own arm. TWO ASK THE
 //     TAB'S BIT ALONE, and it is GRID ITERATIONS: the lamp
 //     that turns the mode off cannot be greyed by it (its OTHER term is the
@@ -13296,7 +13294,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
-//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/`, bare `m` and
+//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/`, the BPM opener
+//     (bare `m` then, Ctrl+B since 2026-09-15) and
 //     bare `i` — EIGHT as of 2026-09-04, when the ITERATION PAIR came back to
 //     the icon row from the deleted Iterations menu and the two chords the gate
 //     had gone on eating got faces again. It was SIX from
@@ -13978,7 +13977,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
-        // member's: bare `m` and bare `i` sit on no read_only_key_blocked
+        // member's: the BPM opener's chord (bare `m` then, Ctrl+B since
+        // 2026-09-15) and bare `i` sit on no read_only_key_blocked
         // allowlist entry — a tempo sweep rewrites the warp store and the mode
         // bit selects what Ctrl+Alt+R renders — so the gate eats both chords,
         // and from 2026-08-27 to 2026-09-04 it ate them with no face left to
@@ -14006,29 +14006,12 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    bpm_sweep_open_actionable(a, audio);
-        // THE MARKER COLUMN LAMP IS THE ITERATION LOCK'S OTHER DELTA
-        // (architect 2026-09-10): the mode is lit for the column you are IN,
-        // so the W/P switch is one of the acts the lock refuses and this
-        // button — bare `p`, which the three absolute view selectors compose
-        // too — greys while the lamp stands, WEARING ITS OWN ACT'S NAME AND NO
-        // REASON: the sentence its key cards rode this face as a tooltip line
-        // until 2026-09-12, when the refusal-reason tooltip class was ruled out
-        // whole (the record is at redesign_button_tooltip's stateful overload).
-        // IT IS THE ONE MEMBER OF THIS ARM WITH NO READ-ONLY
-        // TERM: bare `p` is on read_only_key_blocked's allowlist (a column
-        // switch authors nothing), so a locked tab with the lamp DARK leaves
-        // it lit exactly as it leaves the chord live, and this face mirrors
-        // the ITERATION half of the gate alone — which loses nothing, a lit
-        // lamp implying a writable active tab since the two locks stopped
-        // composing (authoring_locked). ITS AUDIO-VIEW TWIN JOINED THIS ARM
-        // ON 2026-09-13 (architect: grid iterations lives in target view
-        // alone, so bare `t` back to source refuses under the lamp) and on the
-        // same footing: bare `t` is read-only-legal, so the iteration half is
-        // the whole of what its face mirrors. It stood in the never-grey group
-        // above until then, the mode having been target-legal in both views.
-        case RedesignButton::IconMarkerColumn:
-        case RedesignButton::IconAudioView:
-            return !iteration_lock_greys(a, b);
+        // (THE MARKER COLUMN LAMP AND THE AUDIO VIEW LAMP stood here through
+        // 2026-09-15, each greying under the iteration lock's own delta
+        // (iteration_lock_greys) with no read-only term — bare `p` and bare
+        // `t` were each read-only-legal, a column or S/T switch authoring
+        // nothing. The architect deleted both buttons whole that day; the
+        // view bar's three below carry the same delta on for the digits.)
         // THE VIEW BAR'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
         // and they left the never-grey group above for it: bare 1/2/3 COMPOSE
         // the `p` handler, so they are three of the four chords the column
@@ -14874,19 +14857,12 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
                                                 a.active_markers_view == 'W';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
-        // THE TWO VIEW LAMPS LIGHT AWAY FROM HOME (architect 2026-09-04, the
-        // radio-pair collapse): Source + Warp is view 1 and the home state, so
-        // the audio lamp lights in TARGET and the marker lamp in PHASE RESET,
-        // each reading the very axis its own chord flips. That is why the glyph
-        // each wears is the LIT state's — document-import and
-        // chronometer-start — and why the tooltip names the ACT instead of a
-        // state: a lamp whose face said "Target" would lie half the time.
-        // (Until that day these were four radios, IconS/IconT and IconW/IconP,
-        // each reading its own half of the axis.)
-        case RedesignButton::IconAudioView:
-            return a.active_audio_view   == 'T';
-        case RedesignButton::IconMarkerColumn:
-            return a.active_markers_view == 'P';
+        // (THE TWO VIEW LAMPS LIT AWAY FROM HOME here from 2026-09-04 to
+        // 2026-09-15 — Source + Warp is view 1 and the home state, so the
+        // audio lamp lit in TARGET and the marker lamp in PHASE RESET, each
+        // reading the very axis its own chord flipped. The architect deleted
+        // both buttons whole with bare `t`/`p`; the view bar's three above
+        // are the axes' one remaining face.)
         // FOLLOW'S LAMP IS THE ARM AT REST AND THE CHASE DURING A PROJECT PLAY
         // (architect 2026-09-12): at rest the field is the one-shot the next
         // play will spend, so the face says exactly what the lamp promises;
@@ -15527,18 +15503,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
                                                  "Press Shift to walk both tabs."};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)",
                                                  "Press Shift to walk both tabs."};
-        // The two view lamps, one line each: each chord is a toggle over its
-        // axis and neither has a shifted twin. THE TEXT NAMES THE ACT because
-        // the button is one lamp over a two-state axis (architect 2026-09-04,
-        // the radio-pair collapse) — "Toggle Target" would lie in Target, which
-        // is the lamp rule at this table's head applied to an axis rather than
-        // to a mode. The four radios these replaced named their own states:
-        // "Source View (T)" / "Target View (T)" and "Warp Markers (P)" /
-        // "Phase Resets (P)".
-        case RedesignButton::IconAudioView:
-            return {"Toggle Audio View (T)", nullptr};
-        case RedesignButton::IconMarkerColumn:
-            return {"Toggle Marker Column (P)", nullptr};
+        // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
+        // Column (P), one line each, neither with a shifted twin — stood here
+        // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
+        // category: their axes are bare 1/2/3's and the view bar's alone now.)
         // THE TRIM REGION TOGGLE, TWO LINES: its twin IS Shift+[ the
         // maximizer, so the hint says so and the shift admission and the line
         // are the one fact the static_assert below keeps together. The
@@ -15592,9 +15560,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // "Grid Iterations" alone would lie on the lit face. The accelerators
         // are bare letters and so uppercase, this table's rule and the
         // product's since 2026-09-01 — which is the spelling the two deleted
-        // menu rows had carried from the crop since 2026-08-27.
+        // menu rows had carried from the crop since 2026-08-27 — EXCEPT THE
+        // BPM OPENER'S OWN, Ctrl+B since 2026-09-15 (moved off bare `m`, a
+        // Ctrl chord guarding against a stray bare press as Ctrl+D / Ctrl+N
+        // do), spelled the product's Ctrl+ convention.
         case RedesignButton::IconBpm:
-            return {"BPM Iterations (M)", nullptr};
+            return {"BPM Iterations (Ctrl+B)", nullptr};
         case RedesignButton::IconIter:
             return {"Toggle Grid Iterations (I)", nullptr};
         // PLAY RENDERS IS THE PLAYER'S ONE ICON-ROW OPENER since 2026-09-01
@@ -16571,8 +16542,9 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // authoring views — the stash holds the ACTIVE column's boxes only, because
 // that is the column the painter drew.
 // SINCE 2026-08-19 THE BOX MAY INCLUDE A MEASURE BOX past the flag's own right
-// edge (the flag continued in blue), and it is part of the same rect: one
-// marker, one clickable surface for press, drag and select.
+// edge (the flag continued in blue until 2026-09-15, in purple since), and it
+// is part of the same rect: one marker, one clickable surface for press, drag
+// and select.
 // AND SINCE 2026-09-05 IT ALSO READS THE OPEN EDITOR'S RIDING BOXES
 // (AppState::flag_editor_box.riding_cells): while any marker-lane editor
 // stands the flag pass drops the edited box and everything right of it, and

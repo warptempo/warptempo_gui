@@ -1095,8 +1095,8 @@ const char* tempo_cent_step_kind_refusal(const AppState& a,
 // ladder.
 //
 // THE ARMS ARE THE DISPATCH'S OWN, IN ITS OWN ORDER, and each is argued at the
-// dispatch where its sentence is raised (input_key_dispatch.cpp's bare `m`
-// arm). What is worth stating HERE is the one thing the extraction changed:
+// dispatch where its sentence is raised (input_key_dispatch.cpp's Ctrl+B
+// arm, bare `m` until 2026-09-15). What is worth stating HERE is the one thing the extraction changed:
 // the coincident-collapse test reads warp_red_flag_set_cached's `collapsed`
 // set rather than calling warp_coincident_collapse_members fresh. It is the
 // SAME verdict — that cache's pass 1 is that classifier over the same slice of

@@ -1054,7 +1054,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // exiting the mode is the clear on every route, so a bracket exists only while
 // the mode paints it on the flags. ENTER_BPM_MODE'S FORCED ITER-OFF WAS THE
 // THIRD and it is gone with the swap it performed (architect 2026-09-10: NO
-// SILENT SWAPS — bare `m` is REFUSED under a lit lamp now rather than being
+// SILENT SWAPS — the BPM opener (bare `m` then, Ctrl+B since 2026-09-15) is
+// REFUSED under a lit lamp now rather than being
 // its second exit), so bare `i` is the only key that reaches this. THE S->T AUDIO-VIEW TOGGLE IS NO LONGER ONE
 // OF THEM (2026-08-07): iteration mode is target-legal, so entering target view
 // neither exits the mode nor clears anything (the record is at

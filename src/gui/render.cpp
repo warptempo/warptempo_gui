@@ -1074,7 +1074,22 @@ struct FlagFace {
 // which pair produced the flag it sits on. Neither is a fade — both resolve to
 // an opaque color before cairo sees them, which is the point of the no-alpha
 // rule when flags overlap.
-FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
+// WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
+// retold the same day on the naming-symmetry ruling: warp is never the
+// unmarked default, so this is a REQUIRED argument at every call, never a
+// defaulted bool). The phase-reset flag box paints in the pair the measure
+// box wore until this same ruling moved it here (Breeze highlight blue,
+// #3daee9 sampled, the other three RECORDED DERIVATIONS off it —
+// kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag box and
+// EVERY BOUND CELL ON EITHER COLUMN stay on kMarkerFlagFill's purple — a
+// bound cell's call site always passes `Warp` explicitly, with its own
+// comment there, "the flag's own class" being a warp-only phrase now that
+// the class has two flag boxes.
+enum class FlagColumnFace { Warp, PhaseReset };
+
+FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
+                           FlagColumnFace column_face) {
+    const bool phase_reset_column = (column_face == FlagColumnFace::PhaseReset);
     FlagFace f;
     if (disabled) {
         // The class the marker WOULD paint, blended — the LIVE LADDER RUN
@@ -1103,6 +1118,9 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         if (red) {
             base_fill = kMarkerFlagFillRed;
             base_edge = kMarkerFlagEdgeRed;
+        } else if (phase_reset_column) {
+            base_fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
+            base_edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
         } else if (selected) {
             base_fill = kMarkerFlagFillSel;
             base_edge = kMarkerFlagEdgeSel;
@@ -1150,14 +1168,21 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
         f.has_stem = true;
         return f;
     }
-    f.fill  = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
-    f.edge  = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
+    if (phase_reset_column) {
+        f.fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
+        f.edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
+    } else {
+        f.fill = selected ? kMarkerFlagFillSel : kMarkerFlagFill;
+        f.edge = selected ? kMarkerFlagEdgeSel : kMarkerFlagEdge;
+    }
     f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
     f.label = kMarkerFlagLabel;
     // The stem reads the CLASS ALONE, never the selection bit: a selected
-    // default marker keeps the calm #9b59b6 stem (the architect's explicit
-    // rule), so only the flag brightens.
-    f.stem  = kMarkerFlagFill;
+    // default marker keeps its calm stem colour (the architect's explicit
+    // rule), so only the flag brightens — mirrored on the phase-reset column
+    // since 2026-09-15, whose default-class stem reads its own calm blue
+    // fill rather than the warp purple.
+    f.stem  = phase_reset_column ? kPhaseResetFlagFill : kMarkerFlagFill;
     f.has_stem = true;
     return f;
 }
@@ -1165,19 +1190,24 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected) {
 // THE MEASURE BOX'S FACE — a two-pair ladder beside the flag's three-pair one,
 // and the difference is the whole ruling: SELECTION swaps the pair, DISABLED
 // damps it through the same mix owner at the same fraction toward the same lane
-// ground, and RED DOES NOT REACH IT AT ALL (the measure box stays blue on a red
-// marker). Red is the flag's normalization cue and says nothing about the
+// ground, and RED DOES NOT REACH IT AT ALL (the measure box stays PURPLE on a
+// red marker — Breeze blue until 2026-09-15, when the architect moved the four
+// values to the flag's own purple pair, "fine for now" beside the purple bound
+// cells). Red is the flag's normalization cue and says nothing about the
 // score position; giving the measure a red face would claim the reference
 // itself was suspect.
 //
 // The label ink follows the flag's own disabled-label rule EXACTLY, both halves
 // of it: a fraction of itself over the surface it actually sits on — which here
 // is the measure fill — and that fraction is the LABEL's own
-// (kMarkerDisabledLabelMix) rather than the surfaces' beside it. This box is
-// where the split reads best, its fill being the lighter of the two: a disabled
-// measure lands at ~1.90:1 against its own #274557, near the 2.10 ceiling that
-// fill allows, where the calm purple flag's darker #3f304a caps at 1.73 whatever
-// fraction is chosen.
+// (kMarkerDisabledLabelMix) rather than the surfaces' beside it. (THIS BOX WAS
+// WHERE THE SPLIT READ BEST WHILE THE FILL WAS BLUE, kept for the record: a
+// disabled measure landed at ~1.90:1 against its own #274557, near the 2.10
+// ceiling that lighter fill allowed, where the calm purple flag's darker
+// #3f304a capped at 1.73 whatever fraction was chosen. SINCE 2026-09-15 THE
+// TWO FILLS ARE THE SAME COLOUR, so the measure box's disabled blend is
+// byte-identical to the flag's own — there is no split left to read, only the
+// seam column between them.)
 struct MeasureFace {
     GuiColor fill;
     GuiColor edge;
@@ -1350,7 +1380,17 @@ void render_flag_boxes_impl(
     // The focus and its addressed cell (render_flags' declaration): the one
     // selected marker whose bright cell is not the payload, or -1.
     int focus_marker,
-    MarkerCell focus_cell) {
+    MarkerCell focus_cell,
+    // WHICH COLUMN'S FLAG BOX THIS IS, REQUIRED rather than defaulted (the
+    // naming-symmetry ruling: warp is never the unmarked default) — render_flags
+    // passes `FlagColumnFace::Warp`, render_phase_reset_flags passes
+    // `FlagColumnFace::PhaseReset` (the phase-reset blue,
+    // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the ONE
+    // resting flag-box face below and nowhere else — the bound cells pass
+    // `FlagColumnFace::Warp` explicitly at their own call, "fine for now"
+    // being the architect's own words for the bound cells sitting beside the
+    // purple measure box on either column.
+    FlagColumnFace column_face) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -1586,7 +1626,8 @@ void render_flag_boxes_impl(
                 return sel && c == bright;
             };
             const FlagFace face =
-                resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload));
+                resolve_flag_face(dis, red, cell_selected(MarkerCell::Payload),
+                                  column_face);
 
             // THE EDITED MARKER'S BOX IS NOT PAINTED HERE — the open editor
             // owns every pixel of it (render_flag_editor_box, which paints the
@@ -1668,9 +1709,13 @@ void render_flag_boxes_impl(
             // THE BOUND CELLS: the flag CONTINUED rightward, twice, in the
             // flag's OWN class — fill, top edge, seam column and ink all off
             // the same ladder, so a cell reads as another payload of the same
-            // flag and not as a second surface (the measure's blue is the
-            // score position's; a bound is tempo, and wears tempo's colour).
-            // Each cell resolves its own face, because the selected pair is
+            // flag and not as a second surface (a bound is tempo, and wears
+            // tempo's colour, purple on either column — the measure box
+            // shares that same purple since 2026-09-15, so the contrast this
+            // used to draw against the measure's own blue no longer holds;
+            // what still holds is that a bound cell never reads as the
+            // phase-reset flag's own blue). Each cell resolves its own face,
+            // because the selected pair is
             // the addressed cell's alone (above). The seam is the flag's own
             // left-border column laid on each cell's left edge, exactly the
             // measure's seam. No budget and no truncation: the token is
@@ -1685,7 +1730,13 @@ void render_flag_boxes_impl(
                     paint_iter_bound_cell(
                         cr, lane, seam_x, fill_w, border_w, edge_h, pad_l,
                         baseline, crun,
-                        resolve_flag_face(dis, red, cell_selected(which)));
+                        // ALWAYS `Warp`, ON EITHER COLUMN'S CELLS (architect
+                        // 2026-09-15, "fine for now" beside the purple measure
+                        // box): a bound cell never wears the phase-reset
+                        // flag's blue, regardless of which store `mv`/`pmv`
+                        // this pass is painting.
+                        resolve_flag_face(dis, red, cell_selected(which),
+                                          FlagColumnFace::Warp));
                 };
                 paint_cell(lower_x, lower_w, cl.lower_run, MarkerCell::Lower);
                 // The upper cell is the lower's own right-hand neighbour, so it
@@ -1717,7 +1768,11 @@ void render_flag_boxes_impl(
             // does, and it sits OUTSIDE the measure fill on its left, which is
             // that border's own geometry. If it survives the glass the
             // borderless record hardens the other way; until then this comment
-            // is the whole of the change.
+            // is the whole of the change. (THE MEASURE FILL ITSELF LEFT BLUE
+            // FOR PURPLE 2026-09-15 — the chromostereopsis this history
+            // describes no longer applies, purple now meeting purple, but the
+            // seam column stays: the architect kept it as the boundary mark
+            // regardless, "fine for now" beside the purple bound cells.)
             //
             // OCCLUSION IS UNCHANGED AND THE MEASURE RIDES IT: the walk is
             // later-over-earlier with no z arbitration at all, so a later
@@ -1956,7 +2011,8 @@ void render_flags(cairo_t* cr,
         [&](int i) { return warp_iter_cells(markers, i, iteration_on); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
         suppressed, iteration_on,
-        focus_marker, focus_cell);
+        focus_marker, focus_cell,
+        FlagColumnFace::Warp);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -2022,7 +2078,8 @@ void render_phase_reset_flags(cairo_t* cr,
          || suppressed.cell == MarkerCell::Magnification)
             ? SuppressedBox{} : suppressed,
         iteration_on,
-        focus_marker, focus_cell);
+        focus_marker, focus_cell,
+        FlagColumnFace::PhaseReset);
 }
 
 void render_history_diff_flags(
@@ -2774,7 +2831,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //
     // THE MEASURE FIELD TAKES THE MEASURE BOX'S FACE by the same argument, one
     // ladder narrower (resolve_measure_face: selection swaps, disabled damps,
-    // red does not reach it) — the open field IS the blue box, only wider — and
+    // red does not reach it) — the open field IS the purple box (Breeze blue
+    // until 2026-09-15), only wider — and
     // it carries the SEAM DIVIDER as its left border, exactly as the resting
     // box and the riding pad do (the border geometry a few lines below): the
     // colour change and the divider column mark the boundary together, not
@@ -2804,7 +2862,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const MarkerCell bright = idx == app.last_selected_marker
                                   ? app.addressed_cell : MarkerCell::Payload;
     const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
-    FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell));
+    // ALWAYS `Warp` HERE, EVEN WHEN `phase` IS TRUE: the payload, measure and
+    // magnification editors are warp-column surfaces by their own open
+    // gates, so the only field this ever reaches on the phase-reset column is
+    // a BOUND field, and a bound field stays on the purple pair beside the
+    // purple measure box, "fine for now" (architect 2026-09-15) — never the
+    // phase-reset flag's blue.
+    FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell),
+                                      FlagColumnFace::Warp);
     // The border column the box wears: the flag's own for the payload editor,
     // and the SEAM DIVIDER for the measure field and the bound field — the
     // same constant, the same width, the same face.border, standing on the
@@ -3087,8 +3152,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // carries the same border, the ladder having no per-class variant of
         // it; this names it once for the measure's seam, which has no face of
         // its own to take it from.)
+        // `Warp` HERE TOO: only `.border` is read off this face below (the
+        // seam colour, class-invariant across the purple/blue fork), so the
+        // column argument is inert for this call — passed explicitly anyway,
+        // never a default.
         const FlagFace class_face =
-            resolve_flag_face(dis, red_class, /*selected=*/false);
+            resolve_flag_face(dis, red_class, /*selected=*/false,
+                              FlagColumnFace::Warp);
 
         // The cells, off the ONE composer and the ONE measurer the flag pass
         // reads, so the re-paint cannot show a different token or a different
@@ -3134,8 +3204,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             paint_iter_bound_cell(
                 cr, lane, cursor_x, cl.lower_w, border_w, edge_h, pad_l,
                 baseline, cl.lower_run,
+                // `Warp`: a riding bound cell stays purple on either column,
+                // beside the purple measure box (architect 2026-09-15).
                 resolve_flag_face(dis, red_class,
-                                  cell_selected(MarkerCell::Lower)));
+                                  cell_selected(MarkerCell::Lower),
+                                  FlagColumnFace::Warp));
             cursor_x += border_w + cl.lower_w;
         }
         const int upper_seam = cursor_x;
@@ -3143,8 +3216,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             paint_iter_bound_cell(
                 cr, lane, cursor_x, cl.upper_w, border_w, edge_h, pad_l,
                 baseline, cl.upper_run,
+                // `Warp`, same reason as the lower cell just above.
                 resolve_flag_face(dis, red_class,
-                                  cell_selected(MarkerCell::Upper)));
+                                  cell_selected(MarkerCell::Upper),
+                                  FlagColumnFace::Warp));
             cursor_x += border_w + cl.upper_w;
         }
 

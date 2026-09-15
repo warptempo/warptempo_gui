@@ -337,7 +337,7 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     is a description ("BPM iterations work in source view"), while the
 //     TOOLTIP naming the same act is that control's name ("Render Grid
 //     Iterations (Ctrl+Alt+R)"), which is also the icon-row button's own
-//     ("BPM Iterations (M)"). No reader compares any of these as strings — the
+//     ("BPM Iterations (Ctrl+B)"). No reader compares any of these as strings — the
 //     three item
 //     tables are read by index (kFilePopupItems, kEditPopupItems,
 //     kSettingsPopupItems, app_state.h) —
@@ -917,21 +917,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
-    // THE TWO VIEW LAMPS SHARE ONE GROUP since later on 2026-09-04, where the
-    // radio-pair collapse had left each of them alone behind a separator of its
-    // own: one lamp per view axis, side by side, is what the pair reads as, so
-    // the architect deleted the divider between them. The group is the row's
-    // second and IconAudioView opens it.
-    //
-    // THE COLLAPSE ITSELF (architect 2026-09-04): one
-    // button per axis where four radios stood. Each wears THE LIT STATE'S OWN
-    // GLYPH, which is the collapse's rule across all three lamps — the audio
-    // lamp lights in Target and wears document-import, the marker lamp lights
-    // in Phase Reset and wears chronometer-start. The two glyphs the retired
-    // halves wore, document-export and speedometer, left icons::Icon with
-    // them; the picks and their runners-up are still recorded at that enum.
-    {RedesignButton::IconAudioView,    icons::Icon::DocumentImport},
-    {RedesignButton::IconMarkerColumn, icons::Icon::ChronometerStart},
+    // (THE TWO VIEW LAMPS SHARED ONE GROUP here from 2026-09-04 to 2026-09-15
+    // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
+    // chronometer-start lit in Phase Reset, one button per axis where four
+    // radios had stood before that day's collapse. The architect deleted the
+    // whole category 2026-09-15, group slot and separator with it: bare 1/2/3
+    // and the view bar are the axes' only faces now. The two glyphs the
+    // radios' retired halves wore, document-export and speedometer, had
+    // already left icons::Icon with the collapse; the picks and their
+    // runners-up are still recorded at that enum.)
     // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
     // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
     // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
@@ -2695,26 +2689,28 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups):
-    //   8 + 22·32 + (22−6)·2 + (6−1)·9 = 8 + 704 + 32 + 45 = 789px,
+    // minus groups): TWENTY MEMBERS IN FIVE GROUPS since 2026-09-15, when the
+    // architect deleted the two view lamps' whole category (down from 22 in
+    // 6):
+    //   8 + 20·32 + (20−5)·2 + (5−1)·9 = 8 + 640 + 30 + 36 = 714px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 797.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 722.
     //
-    // THE TABLET FIT CEILING IS 292 (re-derived 2026-09-14 at the Keep
-    // Centered While Nudging and Ignore Waveform Magnification deletion): the
-    // walk fits while 789·factor ≤ 2304, 789·2.92 = 2303.88, and 293 overruns
-    // (789·2.93 = 2311.77). (Counting the trailing pad the ceiling is 289 —
-    // 797·2.89 = 2303.33 fits and 290 overruns — but the pad is ground, not
+    // THE TABLET FIT CEILING IS 322 (re-derived 2026-09-15 at the view-lamp
+    // deletion): the
+    // walk fits while 714·factor ≤ 2304, 714·3.22 = 2299.08, and 323 overruns
+    // (714·3.23 = 2306.22). (Counting the trailing pad the ceiling is 319 —
+    // 722·3.19 = 2303.18 fits and 320 overruns — but the pad is ground, not
     // ink, so the icons themselves are the thing measured.) The tablet's
-    // first-run 225 clears it by 528.75 device px (789·2.25 = 1775.25 against
-    // 2304) — 235 of the panel's 1024 logical px at that scale. The laptop
-    // clears it outright at 797 of 1920. The row's width succession is in git
+    // first-run 225 clears it by 697.5 device px (714·2.25 = 1606.5 against
+    // 2304) — 310 of the panel's 1024 logical px at that scale. The laptop
+    // clears it outright at 722 of 1920. The row's width succession is in git
     // history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 225% is ~77 and ~92
-    // device px against its panel — room for six more members at 225%, a
-    // seventh one cropping.
+    // device px against its panel — room for nine more members at 225%, a
+    // tenth one cropping.
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -5672,16 +5668,19 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE RING IS THE STEM'S PURPLE (architect 2026-08-01): kMarkerFlagFill
-    // #9b59b6, the phase-reset class's own UNSELECTED fill — "they're one unit",
-    // the ring and the stem of the reset it annotates. Hard-coded per the
+    // THE RING IS THE STEM'S COLOUR (architect 2026-08-01, retold 2026-09-15):
+    // the phase-reset class's own UNSELECTED fill — "they're one unit", the
+    // ring and the stem of the reset it annotates. Hard-coded per the
     // redesign's colour ruling, superseding the tunable grey #7f8c8d this drew
     // in, whose ONE paint site this was — which is what left its config key
-    // unread and, a day later, deleted with the whole tunable palette. It reads
-    // the same constant the
-    // stems resolve to rather than a copy of its value, so the two cannot drift.
-    cairo_set_source_rgb(cr, kMarkerFlagFill.r, kMarkerFlagFill.g,
-                         kMarkerFlagFill.b);
+    // unread and, a day later, deleted with the whole tunable palette. IT WAS
+    // kMarkerFlagFill (the warp purple) from 2026-08-01 to 2026-09-15, when the
+    // architect moved the phase-reset column's default-class flag and stem to
+    // their own blue (kPhaseResetFlagFill, render.h) and this ring moved with
+    // them — it reads the same constant the stems resolve to rather than a
+    // copy of its value, so the two cannot drift.
+    cairo_set_source_rgb(cr, kPhaseResetFlagFill.r, kPhaseResetFlagFill.g,
+                         kPhaseResetFlagFill.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
     // bottom border's last), with the verticals spanning every row between them.

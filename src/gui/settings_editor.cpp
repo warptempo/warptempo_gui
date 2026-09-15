@@ -170,28 +170,31 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
 // engine-key arm in commit() asks authoring_locked for both locks at once —
-// but its keyboard gate refuses EIGHT chords the read-only allowlist admits
+// but its keyboard gate refuses SIX chords the read-only allowlist admits
 // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
-// bare `p`, bare `k`, bare `t`, the three absolute view selectors and the
-// paired march), so a GUI-kind key whose chokepoint is one of those chords
-// owes a gate of its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
+// bare `k`, the three absolute view selectors and the paired march — bare
+// `t`/`p`, the individual axis toggles, were deleted with their view lamps
+// 2026-09-15, so the digits are the column/audio-view switch's only key now),
+// so a GUI-kind key whose chokepoint is one of those chords owes a gate of
+// its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
 // validate_gui_setting's whole key set (2026-09-13), THREE KEYS OWE ONE AND
 // ALL THREE CARRY IT, EACH IN THE SHAPE ITS OWN CHORD REFUSES IN:
-//   * `active_markers_view=` — bare `p` (and the column half of 1/2/3) —
-//     BOTH DIRECTIONS, the gate standing AHEAD of the no-op gate: the chord
-//     refuses whichever column it is pressed in, so a typed same-column
-//     commit is that same press asking the same question, and the mode is lit
-//     for the column it was pressed in.
+//   * `active_markers_view=` — the column half of 1/2/3 (bare `p`, the
+//     individual toggle, is gone) — BOTH DIRECTIONS, the gate standing AHEAD
+//     of the no-op gate: the chord refuses whichever column it is pressed in,
+//     so a typed same-column commit is that same press asking the same
+//     question, and the mode is lit for the column it was pressed in.
 //   * `tab_X_read_only=` — bare `o`, PIECE-WIDE — ONE DIRECTION, the gate
 //     standing BEHIND the no-op gate and asking the REQUESTED value: a lock
 //     of either tab refuses while an UNLOCK commits, an unlock only widening
 //     what is reachable, and an unchanged value is the ordinary no-op with
 //     nothing for the lock to exclude.
-//   * `active_audio_view=` — bare `t` (and the audio half of 1/2/3), since
-//     2026-09-13, when grid iterations became target-view-only — asking the
-//     REQUESTED value, `S` refused: under a lit lamp the view IS target
-//     (AppState::iteration_mode_enabled's invariant), so a typed `S` is the
-//     one spelling that could move it and a typed `T` is the ordinary no-op.
+//   * `active_audio_view=` — the audio half of 1/2/3 (bare `t`, the
+//     individual toggle, is gone), since 2026-09-13, when grid iterations
+//     became target-view-only — asking the REQUESTED value, `S` refused:
+//     under a lit lamp the view IS target (AppState::iteration_mode_enabled's
+//     invariant), so a typed `S` is the one spelling that could move it and a
+//     typed `T` is the ordinary no-op.
 // AND THE REST DO NOT, each because its own chord is live under a lit lamp:
 // `active_tab_view=` is Ctrl+Tab, and the per-tab
 // `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
@@ -323,13 +326,14 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // being the zoom's at the landing.)
     if (key == "active_audio_view") {
         // THE ITERATION LOCK REFUSES THE SWITCH BACK TO SOURCE (architect
-        // 2026-09-13: grid iterations lives in target view alone), the typed
-        // spelling of bare `t`'s refusal at the keyboard gate
-        // (iteration_lock_key_blocked's delta (a)). It asks the REQUESTED
-        // value rather than the direction of a flip: under a lit lamp the view
-        // is target by invariant, so `S` is the only value that could move it,
-        // and a typed `T` falls to the no-op below. Red flash plus card, the
-        // column arm's own shape and sentence.
+        // 2026-09-13: grid iterations lives in target view alone) — bare `t`
+        // carried this same refusal at the keyboard gate until the architect
+        // deleted the key with its view lamp 2026-09-15; this typed road is
+        // what is left of it (iteration_lock_key_blocked's delta (a)). It asks
+        // the REQUESTED value rather than the direction of a flip: under a lit
+        // lamp the view is target by invariant, so `S` is the only value that
+        // could move it, and a typed `T` falls to the no-op below. Red flash
+        // plus card, the column arm's own shape and sentence.
         if (app.iteration_mode_enabled && gv.c == 'S') {
             app.settings_editor.red = true;
             viewport.invalidate_modal_dialog_area();
@@ -339,34 +343,34 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             return true;
         }
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
-        // The bare-`t` route (no editor-state guard); it flips S<->T.
+        // THE BODY BARE `t` USED TO CALL (no editor-state guard); it flips
+        // S<->T. Bare `t` itself was deleted with its view lamp 2026-09-15;
+        // the digit selectors reach this same body now.
         input->handle_active_audio_view_toggle();
         applied(); return true;
     }
     if (key == "active_markers_view") {
-        // THE ITERATION LOCK REFUSES THE COLUMN SWITCH (architect 2026-09-10),
-        // the typed spelling of bare `p`'s own refusal at the keyboard gate
+        // THE ITERATION LOCK REFUSES THE COLUMN SWITCH (architect 2026-09-10)
+        // — the typed spelling of bare `p`'s own refusal at the keyboard gate
+        // until the architect deleted that key with its view lamp 2026-09-15
         // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp,
-        // which eats bare `p` and the three absolute view selectors alike):
-        // the mode is LIT FOR THE COLUMN IT WAS PRESSED IN and the column is
-        // frozen with it, so a typed `active_markers_view=P` under a lit lamp
-        // would leave the cells painted and the sweep aimed at a column the
-        // brackets were never authored on. The Settings dropdown opens this
-        // editor under the lock — the lock governs the KEYS and not the
-        // surface — and its field is free text, so without this arm the
-        // editor is a second road onto the state the ruling exists to delete;
-        // it is the sibling of the tab_X_read_only refusal below, which
-        // answers bare `o` the same way.
+        // which still eats the three absolute view selectors): the mode is
+        // LIT FOR THE COLUMN IT WAS PRESSED IN and the column is frozen with
+        // it, so a typed `active_markers_view=P` under a lit lamp would leave
+        // the cells painted and the sweep aimed at a column the brackets were
+        // never authored on. The Settings dropdown opens this editor under
+        // the lock — the lock governs the KEYS and not the surface — and its
+        // field is free text, so without this arm the editor is a second
+        // road onto the state the ruling exists to delete; it is the sibling
+        // of the tab_X_read_only refusal below, which answers bare `o` the
+        // same way.
         //
         // IT REFUSES IN BOTH DIRECTIONS, ahead of the unchanged() no-op gate
-        // rather than behind it: bare `p` refuses whichever column it is
+        // rather than behind it: the chord refused whichever column it was
         // pressed in, and a typed same-column commit is the same press asking
         // the same question. One press, one answer, whatever the column.
         // Red flash plus card, this surface's shape, on the GENERIC sentence
         // (kIterationLockCard) the gate itself says for every chord it eats.
-        // The greyed Toggle Marker Column button states nothing: since
-        // 2026-09-12 a tooltip names the act and the reason lives here, at the
-        // press that has something to answer.
         if (app.iteration_mode_enabled) {
             app.settings_editor.red = true;
             viewport.invalidate_modal_dialog_area();
@@ -376,7 +380,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             return true;
         }
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
-        // The bare-`p` route; it flips W<->P and repaints.
+        // The body bare `p` used to call; it flips W<->P and repaints.
         active_views.toggle_active_markers_view();
         applied(); return true;
     }

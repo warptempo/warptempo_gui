@@ -89,35 +89,32 @@ enum class Icon {
     // Row 4, the icon row. (ZoomOut / ZoomIn lived here 2026-08-01..08-02, for
     // the icon row's zoom pair; both went with those buttons.)
     //
-    // THE TWO VIEW LAMPS' FACES (architect-picked 2026-08-11 off a rendered
-    // candidate sheet, for the four radios these two buttons replaced): the S/T
-    // audio pair and the W/P marker pair wore shaped LETTER GLYPHS from the
-    // row's first day until then — the row's only non-icon buttons, and the
-    // reason the architect briefly ruled the radios deleted altogether ("ugly
-    // letter blips"); he reversed that the same day and gave them real glyphs
-    // instead, which is what killed the letter arm (no producer left; the
-    // painter's shaped-letter branch went with it).
-    //   TARGET is document-import, the arrow ENTERING a document. Its Source
-    //   partner was document-export, the arrow LEAVING one — his own metaphor,
-    //   the source being where the audio comes FROM.
-    //   PHASE RESET is chronometer-start, the stopwatch with the solid play
-    //   triangle in its dial: start the clock anew. Picked over
-    //   chronometer-reset and view-refresh — indistinguishable from each other
-    //   at row size, and chronometer-reset's dial does not survive the
-    //   rendering — and over the bare chronometer. Its Warp partner was
-    //   speedometer, the gauge with the needle: warping IS a speed change, and
-    //   "change speed" is kdenlive's own word for it. That was his FIRST pick,
-    //   reversed to distortionfx (the spiral, "time bends") in the same breath
-    //   and RESTORED at his second look later the same day, which leaves
-    //   distortionfx the recorded runner-up beside player-time.
-    // TWO OF THE FOUR LEFT ON 2026-09-04, when the architect collapsed the
-    // row's three radio pairs into three lamps: a lamp wears the LIT state's
-    // glyph, so document-export and speedometer went with the Source and Warp
-    // halves — enumerators, defs and assets together, the edit-cut precedent.
-    // Their picks and runners-up stay recorded above so none is re-proposed
-    // without a new ruling.
-    DocumentImport,      // The audio-view lamp, lit in Target (bare `t`)
-    ChronometerStart,    // The marker-column lamp, lit in Phase Reset (bare `p`)
+    // (THE TWO VIEW LAMPS' FACES — document-import and chronometer-start,
+    // architect-picked 2026-08-11 off a rendered candidate sheet for the four
+    // radios these two buttons replaced — lived here from 2026-08-11 to
+    // 2026-09-15, when the architect deleted both lamp buttons whole with
+    // their view-lamp category: enumerators, table defs and assets together,
+    // the edit-cut precedent, since neither glyph had a second consumer.
+    // TARGET had worn document-import, the arrow ENTERING a document, its
+    // Source partner document-export having left the same way on 2026-09-04
+    // when the radios first collapsed to lamps; PHASE RESET had worn
+    // chronometer-start, the stopwatch with the solid play triangle in its
+    // dial — start the clock anew — picked over chronometer-reset and
+    // view-refresh (indistinguishable from each other at row size, and
+    // chronometer-reset's dial not surviving the rendering) and over the bare
+    // chronometer, its Warp partner speedometer having left with document-export
+    // on 2026-09-04 too. Before the 2026-08-11 glyphs, the S/T and W/P pairs
+    // wore shaped LETTER GLYPHS from the row's first day — the row's only
+    // non-icon buttons, and the reason the architect briefly ruled the radios
+    // deleted altogether ("ugly letter blips") before reversing that the same
+    // day; the painter's shaped-letter branch left with that reversal, well
+    // before the buttons themselves went. All picks and runners-up stay
+    // recorded here so none is re-proposed without a new ruling: document-export
+    // was the arrow LEAVING a document against document-import's arrow
+    // entering one; speedometer was the gauge with the needle, his first pick,
+    // reversed to distortionfx (the spiral, "time bends") in the same breath
+    // and restored at his second look that evening, leaving distortionfx and
+    // player-time the runners-up.)
     // (THE TRIM SCISSORS' EDIT-CUT IS DELETED with its button, 2026-08-18: the
     // architect retired the "set trim from region" BUTTON in the roster
     // relayout — and the ACT went with it later the same day, when the region
@@ -215,7 +212,8 @@ enum class Icon {
     TimelineLift,        // Toggle restrict undo to viewport (`z`)
     // THE ITERATION GROUP'S TWO GLYPHS, BACK WITH THEIR BUTTONS (architect
     // 2026-09-04): the row had room again, so the Iterations dropdown was
-    // deleted and the BPM opener (bare `m`) and grid iteration mode (bare `i`)
+    // deleted and the BPM opener (bare `m` then, Ctrl+B since 2026-09-15) and
+    // grid iteration mode (bare `i`)
     // returned to the icon row in a group of their own. Both files are the
     // ones the 2026-08-27 relocation deleted, re-transcribed verbatim from the
     // shipped SVGs and re-committed under assets/icons/breeze/ — Breeze's
@@ -230,7 +228,7 @@ enum class Icon {
     // a grid iteration sweep is — where the SUMMATION SIGMA it yielded to on
     // 2026-08-18 says summing, which is the reading the history walk wanted
     // (BlackSum below carries that succession).
-    MusicNote16th,       // BPM iterations (bare `m`)
+    MusicNote16th,       // BPM iterations (Ctrl+B)
     Mathmode,            // Toggle grid iterations (bare `i`)
     PreviewRenderOn,     // Listen to a render
     // THE CHECKMARK HAS TWO READERS SINCE 2026-09-01, one per surface that
@@ -471,12 +469,15 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 52 SINCE 2026-09-14, THE KEEP CENTERED WHILE NUDGING AND IGNORE WAVEFORM
-// MAGNIFICATION DELETION (architect 2026-09-14): a re-COUNT of the
-// enumerators, align-horizontal-center and zoom-out-y leaving with the two
-// lamps that wore them — enumerators, defs and assets together. The count's succession is in git history; a glyph joining or
+// 50 SINCE 2026-09-15, THE TWO VIEW LAMPS' DELETION (architect 2026-09-15): a
+// re-COUNT of the enumerators, document-import and chronometer-start leaving
+// with the two lamp buttons that wore them — enumerators, defs and assets
+// together, the edit-cut precedent. It was 52 from 2026-09-14, the Keep
+// Centered While Nudging and Ignore Waveform Magnification deletion, when
+// align-horizontal-center and zoom-out-y left with the two lamps that wore
+// them. The count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 52;
+inline constexpr int kIconCount = 50;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

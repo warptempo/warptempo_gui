@@ -541,8 +541,9 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The bare 1/2/3 selectors, the view bar's buttons, the two icon-row VIEW LAMPS
-// and the settings keys all compose those writers and inherit it.
+// The bare 1/2/3 selectors, the view bar's buttons (the two icon-row VIEW
+// LAMPS deleted 2026-09-15) and the settings keys all compose those writers
+// and inherit it.
 //
 // WHICH HALF IS CORRECTNESS AND WHICH IS THE FRESH-GRIP RULE, said plainly
 // because the two read alike at the call site: an S/T write CHANGES WHAT THE
@@ -3903,8 +3904,9 @@ private:
     // is allowed once the target buffer is ready; target render
     // update-in-progress gates playback elsewhere.
     //
-    // `handle_active_audio_view_toggle` is the FLIP — bare `t` and the settings
-    // editor's `active_audio_view=` commit — and it is one line over the set-to
+    // `handle_active_audio_view_toggle` is the FLIP — bare `t` until its
+    // 2026-09-15 deletion, and still the settings editor's `active_audio_view=`
+    // commit — and it is one line over the set-to
     // form, so both spellings own the same translation, the same target-view
     // entry gate, the same flag-editor teardown and the same history-focus
     // clear. The SET-TO form exists for the callers that name a view rather than

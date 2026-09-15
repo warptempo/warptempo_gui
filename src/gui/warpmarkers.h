@@ -374,8 +374,8 @@ inline std::string format_signed_hops(int hops) {
 // marker, the display token on a phase reset — Lower and Upper are the two
 // bound cells iteration mode paints to its right on an eligible marker OF
 // EITHER COLUMN (a warp marker's tempo bracket in cents, a phase reset's hop
-// bracket in whole lattice hops since 2026-09-09), Measure is the blue box
-// that follows, and Magnification is the green box past it (architect
+// bracket in whole lattice hops since 2026-09-09), Measure is the purple box
+// (Breeze blue until 2026-09-15) that follows, and Magnification is the green box past it (architect
 // 2026-09-14 — a WARP marker's own picture magnification, painted only where
 // the marker carries its own value; phase resets carry neither box). It answers three questions with
 // one value: WHICH BOX a press landed on (hit_test_flag_cell, app_state.cpp,

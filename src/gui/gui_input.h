@@ -574,14 +574,18 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
 // reaches on_key only as a character inside an editor); the digits 4..9;
-// Backspace, and every letter the ladder never tests (A, B, E, W, X, Y — Y
+// Backspace, and every letter the ladder never tests (A, E, T, W, X, Y — Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
 // on 2026-09-14 with that lamp's deletion; V left it on 2026-09-01, the
 // `h` view's revert act moving onto it off Ctrl+H; X left it on 2026-09-10
 // for the Value Drag lamp, the letter the trim family left free on
 // 2026-08-24, and came BACK on 2026-09-13 with that lamp's deletion; BARE N
 // left it 2026-09-04 for the Center on next marker lamp and came BACK on
-// 2026-09-13 with that lamp's deletion, Ctrl+N alone binding the letter);
+// 2026-09-13 with that lamp's deletion, Ctrl+N alone binding the letter;
+// T CAME BACK 2026-09-15, when the architect deleted bare `t`'s S/T flip
+// whole with its view lamp — B LEFT THE LIST THE SAME DAY, moving the other
+// direction, when the BPM opener moved off bare `m` onto Ctrl+B, so the
+// ladder now tests B for the first time, admitting only the ctrl chord);
 // every key the boards carry that this switch names nowhere (the keypad, the
 // editing and system block, the vendor strip — the speller named them too
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
@@ -597,14 +601,19 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     switch (key) {
-        // -- letters, bare only, bound in EVERY state: the view toggles and the
+        // -- letters, bare only, bound in EVERY state: the view toggle and the
         // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
-        // selection, `m` bpm mode and `t` the S/T flip; `x` the value drag's
-        // lamp stood here 2026-09-10 to 2026-09-13, `y` the keep-centered lamp
-        // 2026-08-31 to 2026-09-14).
+        // selection; `x` the value drag's lamp stood here 2026-09-10 to
+        // 2026-09-13, `y` the keep-centered lamp 2026-08-31 to 2026-09-14,
+        // `m` the bpm opener and `t` the S/T flip both 2026-08-01 (`m`)/
+        // earlier to 2026-09-15, when the architect moved the opener to
+        // Ctrl+B, below, and deleted `t` whole with its view lamp).
         case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
-        case GuiKeys::K: case GuiKeys::M: case GuiKeys::T:
+        case GuiKeys::K:
             return bare;
+        // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
+        // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
+        case GuiKeys::B: return cl;
         // The folder overlay's two openers on one letter (2026-09-03): bare
         // `l` toggles the render player and Shift+L toggles the AV sync stats
         // panel. It left the bare-only group above the day the shifted twin
@@ -623,8 +632,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::S: return bare || sh || cl;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
-        // The W/P flip and the three phase-reset propagate chords.
-        case GuiKeys::P: return bare || cl || ca || cas;
+        // The three phase-reset propagate chords (the W/P flip's bare `p` was
+        // deleted whole with its view lamp 2026-09-15).
+        case GuiKeys::P: return cl || ca || cas;
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven

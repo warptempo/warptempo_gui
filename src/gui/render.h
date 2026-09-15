@@ -672,8 +672,8 @@ inline constexpr GuiColor kOverviewBoxLine  = hex(0xC2C2C2);
 // an editor opened; a focus reached any other way — a walk, a jump, a clear,
 // a restore — is addressed at its payload. A bracket-only undo entry's
 // restore brought back the bound it had moved until 2026-09-10, when the
-// bracket left the undo domain with that entry). The measure box swaps its own blue pair by the same rule
-// (kMarkerMeasureFillSel below). The geometry, the stem and the hit rect are
+// bracket left the undo domain with that entry). The measure box swaps its own purple pair by the same rule
+// (kMarkerMeasureFillSel below, the flag's own pair since 2026-09-15). The geometry, the stem and the hit rect are
 // identical either way. This RETIRES the "selection is not a class" ruling
 // for the marker flags — that rule existed because a selected OUTLINE would
 // have outranked the disabled pair; here the swap can never outrank
@@ -699,19 +699,25 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
-// THE MEASURE BOX'S TWO PAIRS (2026-08-19). A marker carrying a measure
-// reference extends its flag RIGHTWARD with a second box in Breeze's own
-// selection blue — the whole point being that the blue reads instantly as "not
-// the flag" beside the purple. (The box was the marker COMMENT's for one day;
-// the field became the MEASURE on 2026-08-20 and the four values are unchanged
-// by that rebrand — a rename, never a retune.)
+// THE MEASURE BOX'S TWO PAIRS (2026-08-19 to 2026-09-13, Breeze's own
+// selection blue; PURPLE SINCE 2026-09-15). A marker carrying a measure
+// reference extends its flag RIGHTWARD with a second box that SHARES THE
+// FLAG'S OWN PURPLE PAIR (architect 2026-09-15): the measure now sits beside
+// the purple bound cells — "fine for now" — so the box that used to read
+// instantly as "not the flag" beside the purple reads as the flag's own
+// colour continuing across the seam instead. (The box was the marker
+// COMMENT's for one day; the field became the MEASURE on 2026-08-20 and the
+// four values were unchanged by that rebrand — a rename, never a retune.)
 //
-// PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one sampled
-// value here; the other three are RECORDED DERIVATIONS off it in exactly the
-// relationships the marker crops show between their own four — the edge a
-// darkened shade of the fill, the selected pair a lifted fill over a
-// mid-darkness edge. They are FIRST GUESSES on the glass and a retune is a
-// recompile like every other value in this block.
+// THE FOUR VALUES ARE THE FLAG'S OWN, spelled as their own constants by the
+// hard-coded rule (two facts that agree, not one referenced twice) rather
+// than aliased to kMarkerFlagFill/Edge/FillSel/EdgeSel — a retune of one
+// surface must not silently retune the other. (THE BLUE PAIR'S OWN
+// PROVENANCE, KEPT FOR THE RECORD: #3daee9 was the Breeze highlight blue,
+// the palette's one sampled value there; the other three were RECORDED
+// DERIVATIONS off it — the edge a darkened shade of the fill, the selected
+// pair a lifted fill over a mid-darkness edge. The pair moved to the
+// phase-reset flag box below, which wears it now.)
 //
 // THE SEAM CARRIED NO BORDER FROM 2026-08-19 (architect: "run the blue right
 // next to the purple base") AND CARRIES ONE UNDER TRIAL FROM 2026-08-20. The
@@ -722,14 +728,42 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // kMarkerFlagBorder column on the seam, the same dark rule that already sits
 // one column left of every flag and reads as a drop shadow there. IT SURVIVED
 // THE GLASS AND IS A STANDING RULING since 2026-09-02; the borderless record
-// above is history, kept because it is the reading someone will re-derive. Everything else is unchanged: the flag's own
+// above is history, kept because it is the reading someone will re-derive. THE
+// SEAM COLUMN STAYS under the purple-on-purple pairing too (architect
+// 2026-09-15: the boundary is still worth marking even where the
+// chromostereopsis argument no longer applies). Everything else is unchanged: the flag's own
 // 1px left border stands where it always did, the measure box has no right
 // border (matching the flag's own open right edge), and the top edge anatomy
 // is the flag's — a 1px edge over the fill, across the whole box.
-inline constexpr GuiColor kMarkerMeasureFill     = hex(0x3DAEE9);
-inline constexpr GuiColor kMarkerMeasureEdge     = hex(0x226181);
-inline constexpr GuiColor kMarkerMeasureFillSel  = hex(0x73CFFF);
-inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x40738E);
+inline constexpr GuiColor kMarkerMeasureFill     = hex(0x9B59B6);
+inline constexpr GuiColor kMarkerMeasureEdge     = hex(0x563165);
+inline constexpr GuiColor kMarkerMeasureFillSel  = hex(0xC974ED);
+inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x704083);
+
+// THE PHASE-RESET FLAG BOX'S PAIRS (architect 2026-09-15): the phase-reset
+// column's flag box — default and selected classes, and the disabled blend
+// of both — now paints in the pair the MEASURE BOX wore until this same
+// ruling moved it here, freeing the blue for a column that previously shared
+// the warp flag's purple outright. PROVENANCE UNCHANGED FROM THE MEASURE
+// BOX'S OWN RECORD: #3daee9 is the Breeze highlight blue, the palette's one
+// sampled value; the other three are RECORDED DERIVATIONS off it in the
+// relationships the marker crops showed between their own four — the edge a
+// darkened shade of the fill, the selected pair a lifted fill over a
+// mid-darkness edge. RED STAYS RED ON BOTH COLUMNS (kMarkerFlagFillRed /
+// kMarkerFlagEdgeRed, resolve_flag_face's first arm, asked before the
+// column), and the phase-reset STEM mirrors the warp rule — it reads the
+// CLASS alone, so a selected default-class reset keeps this calm fill and
+// only the flag brightens. THE BOUND (hop) CELLS ON THIS COLUMN DO NOT TAKE
+// THIS PAIR: the architect kept them on the purple beside the measure box's
+// own bound cells ("fine for now"), so every bound-cell call site into
+// resolve_flag_face passes `FlagColumnFace::Warp` EXPLICITLY — the argument
+// is required, never defaulted (warp is never the unmarked default), so a
+// bound cell's purple is a stated choice at its own call, not an omission
+// that happens to land on the warp pair.
+inline constexpr GuiColor kPhaseResetFlagFill    = hex(0x3DAEE9);
+inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x226181);
+inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0x73CFFF);
+inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
 
 // THE MARKER MAGNIFICATION BOX'S PAIRS (architect 2026-09-14): the green box
 // right of the measure, painted only on a warp marker that carries its OWN
@@ -939,9 +973,16 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // 1.73 — so 0.75 buys nearly all of the reachable contrast while leaving the
 // label visibly inside the disabled face rather than painting it at full live
 // strength. On the brighter dimmed pairs it lands where the ruling asked: the
-// selected flag 1.80, the red flag 1.81, and THE MEASURE BOX 1.90 against its
-// own #274557 (whose ceiling is 2.10 — a lighter fill has the headroom the calm
-// purple does not). ONE fraction for both surfaces, glass retunes.
+// selected flag 1.80, the red flag 1.81. (THE MEASURE BOX READ 1.90 AGAINST
+// ITS OWN #274557 — a lighter blue fill whose ceiling was 2.10, headroom the
+// calm purple does not have — until 2026-09-15, when the architect moved the
+// measure box onto the flag's own purple pair: it shares the flag's 1.73
+// ceiling now, having no fill of its own left to give it headroom. THE SAME
+// DAY GAVE THE PHASE-RESET FLAG BOX THAT BLUE INSTEAD — kPhaseResetFlagFill,
+// the same #3daee9 — so a disabled phase-reset flag's label is where the
+// ~1.90 headroom lives now, off the generic mix_color call resolve_flag_face
+// feeds it; no new constant, the fraction unchanged.) ONE
+// fraction for both surfaces, glass retunes.
 inline constexpr double kMarkerDisabledLabelMix = 0.75;
 
 // -- ROW 6: THE WAVEFORM ITSELF ---------------------------------------------
@@ -3258,11 +3299,22 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              RED STILL REFUSES THE LIFT, exactly as the live red class does
 //              (no selected pair by ruling, the normalization cue unmasked).
 //   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed;
-//              border kMarkerFlagBorder undamped, like every live class.
-//   Otherwise: kMarkerFlagFill / kMarkerFlagEdge, swapping to the bright
-//              kMarkerFlagFillSel / kMarkerFlagEdgeSel pair when selected —
-//              SELECTION IS THAT SWAP AND NOTHING ELSE. The stem stays the
-//              CALM kMarkerFlagFill either way (the architect's explicit rule).
+//              border kMarkerFlagBorder undamped, like every live class. RED
+//              STAYS RED ON BOTH COLUMNS — the phase-reset fork below never
+//              reaches this arm.
+//   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box (and on
+//              EVERY BOUND CELL, either column — the phase-reset column's own
+//              cells are its one exception to the fork below, architect
+//              2026-09-15: "fine for now" beside the purple measure box), or
+//              kPhaseResetFlagFill / kPhaseResetFlagEdge on the PHASE-RESET
+//              flag box (`FlagColumnFace`, resolve_flag_face's fourth
+//              argument — REQUIRED, never defaulted, since warp is never the
+//              unmarked default: every call site passes `Warp` or
+//              `PhaseReset` explicitly, and only the resting phase-reset flag
+//              box passes `PhaseReset`), swapping to the bright Sel pair on either
+//              column when selected — SELECTION IS THAT SWAP AND NOTHING
+//              ELSE. The stem stays the CALM fill of whichever column's flag
+//              it belongs to, either way (the architect's explicit rule).
 //
 // `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
 // phase-reset painter below carries the same parameter for its own hop
@@ -3361,7 +3413,8 @@ void render_flags(cairo_t* cr,
 // DERIVED FROM A SHAPED RUN, which is exactly why it is published rather than
 // recomputed: a second shaping pass in the hit path could disagree with the
 // pixels. FOUR EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the
-// flag unrolled), the MEASURE editor (the blue box as the field), the
+// flag unrolled), the MEASURE editor (the purple box as the field, Breeze
+// blue until 2026-09-15), the
 // MAGNIFICATION editor (the green box as the field) and the ITERATION BOUND
 // editor (one bound cell as the field) — and the pointer path
 // reads it identically for all four, which is why the consumers test the
@@ -3369,7 +3422,7 @@ void render_flags(cairo_t* cr,
 //
 //   `box`           the painted box in window coordinates — for the payload
 //                   editor the marker's flag, unrolled to hold the FULL
-//                   untruncated pending; for the measure editor the blue
+//                   untruncated pending; for the measure editor the purple
 //                   measure box in the same role, anchored past the committed
 //                   flag; for the bound editor the bound cell in the same
 //                   role, anchored at that cell's own seam. ONE WIDTH RULE FOR

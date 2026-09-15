@@ -845,9 +845,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // true OR grid iterations stands (authoring_locked, app_state.h).
     //
     // THE LIST BELOW IS THE READ-ONLY ONE. The iteration lock's is that list
-    // MINUS THE W/P COLUMN SWITCH — bare `p` and the three absolute view
-    // selectors bare 1 / 2 / 3, which run the `t` and `p` handlers and so
-    // carry the column with them; the mode is lit for the column you are in —
+    // MINUS THE COLUMN SWITCH — the three absolute view selectors bare 1 / 2 /
+    // 3, which run the `t` and `p` handler BODIES and so carry the column
+    // with them (the individual bare `t`/`p` keys were deleted whole with
+    // their view lamps 2026-09-15, so the digits are the axis's only road);
+    // the mode is lit for the column you are in —
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
     // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
@@ -857,9 +859,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // half is bare `i`'s own arm, which refuses to LIGHT the lamp while
     // either tab is locked and is no allowlist's business, any_tab_read_only
     // in app_state.h) —
-    // AND PLUS FIVE ADMISSIONS: bare `i` (the off edge must always be
-    // reachable), bare `m` (BPM iterations, the one road that leaves this
-    // mode by entering another, landing nothing in history at the press),
+    // AND PLUS FOUR ADMISSIONS: bare `i` (the off edge must always be
+    // reachable — the BPM opener, bare `m` then and Ctrl+B now, was a fifth
+    // until 2026-09-10, when the architect ruled its own swap-the-mode exit
+    // out and it fell to the base list, which refuses it),
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
@@ -1110,9 +1113,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // binding's own rationale is that a PLACEMENT edit in target view mutates
     // the map the view is displayed in, which says nothing about a status, an
     // existence or a value edit — so the predicate's consumers on this
-    // dispatch are the marker drop and the `m` bpm open (which rewrites tempo
-    // through a derivation over a SPAN); the phase-reset Ctrl+D and Delete
-    // arms carried it until the P side opened.
+    // dispatch are the marker drop and the Ctrl+B bpm open (which rewrites
+    // tempo through a derivation over a SPAN); the phase-reset Ctrl+D and
+    // Delete arms carried it until the P side opened.
     // THE RULED EXCEPTIONS ARE ENUMERATED AT ONE SITE,
     // active_column_authoring_allowed (app_state.h); the members that
     // dispatch from here are the bare UP/DOWN TEMPO CENT STEP in W+target
@@ -1122,34 +1125,33 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tempo-image step were deleted, marker_drag.h, leaving bare Left/Right in
     // W+target a consumed refusal at the split below), the phase-reset
     // propagate paste (it starts in source view and lands in target through
-    // the `t` toggle chokepoint), the iteration-bracket wipe, the marker
+    // handle_active_audio_view_toggle, bare 1/2/3's own chokepoint now that
+    // bare `t` is deleted), the iteration-bracket wipe, the marker
     // MEASURE, and — since 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
     // Ctrl+N, Delete and the flag editor's Return open, each admitted in
     // W+target with the cent step's re-land contract in its own tail.
 
-    // Bare `t` toggles view-domain (S ↔ T). Placed before the marker /
-    // phase reset edit handlers so the toggle wins over any future
-    // bare-t binding; placed after the prompt / editor / queue gates so
-    // those still own the keyboard when active.
-    if (key == GuiKeys::T && !ctrl && !shift && !alt) {
-        handle_active_audio_view_toggle();
-        return;
-    }
+    // (BARE `t` TOGGLED VIEW-DOMAIN (S <-> T) HERE FROM 2026-08-01 TO
+    // 2026-09-15, when the architect deleted the key whole with its icon-row
+    // view lamp: source/target is reachable through bare 1/2/3 and the view
+    // bar alone now. handle_active_audio_view_toggle is the body it called —
+    // it stays, and bare 1/2/3 below are its only remaining keyboard road.)
 
     // BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01): `1` is
     // S+W, `2` is T+P, `3` is T+W. They name a COMBINATION rather than flipping
     // an axis, so pressing the key for the combination you are already in is a
-    // consumed no-op — that is the whole difference from `t` and `p`, which are
-    // toggles. (S+P deliberately has NO key: phase resets author in target view,
+    // consumed no-op — that is the whole difference from the deleted `t` and
+    // `p` toggles. (S+P deliberately has NO key: phase resets author in target view,
     // so S+P is the one combination that is display-only on both axes, and the
     // architect gave the three keys to the three worth reaching directly. He
     // intends dedicated BUTTONS for these later, outside today's icon-row
     // layout; for now the keyboard is the whole surface.)
     //
     // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very chokepoint
-    // its own key uses — switch_active_audio_view_to for S/T (the body bare `t`
-    // flips through) and GuiActiveViews::toggle_active_markers_view for W/P
-    // (bare `p`) — and only when that axis actually differs, which the S/T
+    // its own key used to use — switch_active_audio_view_to for S/T (the body
+    // bare `t` flipped through before its 2026-09-15 deletion) and
+    // GuiActiveViews::toggle_active_markers_view for W/P (bare `p`,
+    // deleted the same day) — and only when that axis actually differs, which the S/T
     // chokepoint's own same-view no-op decides rather than a guard spelled
     // here. Every invariant those two own therefore
     // arrives by construction: the target-view entry validation and its error

@@ -214,7 +214,7 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // view's `'` raises a plain confirmation now, with nothing to type at all.)
 constexpr int kMaxPendingCharsCommitTitle = 256;
 // The marker MEASURE editor (bare `/`, its bottom-row button, the double-click
-// on the blue box). The cap IS the load bound, taken from its one owner rather
+// on the box — purple since 2026-09-15, Breeze blue before it). The cap IS the load bound, taken from its one owner rather
 // than re-spelled: kMaxMarkerMeasureBytes (marker_measure.h) is what the warp
 // file parser refuses past, and the two must be the same number for "a measure that
 // commits here loads back" to hold exactly. Only the type changes — every cap

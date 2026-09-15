@@ -208,14 +208,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // row 4's own toggle now.)
     {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
     {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true,  false},  // Ctrl+Tab
-    // Row 4 — the icon row. THE TWO VIEW LAMPS (architect 2026-09-04, the
-    // radio-pair collapse): one button per axis where IconS/IconT and
-    // IconW/IconP were four radios over these same two chords. Each is a plain
-    // TOGGLE now and carries NO radio flag — bare `t` flips the audio view and
-    // bare `p` the marker column, so the press does exactly what the key does
-    // in both directions and there is no wrong half to consume.
-    {RedesignButton::IconAudioView,    GuiKeys::T, false, false, false, false, true}, // bare t
-    {RedesignButton::IconMarkerColumn, GuiKeys::P, false, false, false, false, true}, // bare p
+    // Row 4 — the icon row. (THE TWO VIEW LAMPS stood here from 2026-09-04,
+    // the radio-pair collapse, to 2026-09-15 — one button per axis where
+    // IconS/IconT and IconW/IconP were four radios over the bare `t`/`p`
+    // chords, each a plain TOGGLE carrying NO radio flag. The architect
+    // deleted the whole category with those two keys; bare 1/2/3 below are
+    // the axes' only keyboard road now.)
     // THE TRIM GROUP — the Show trim region button, alone in it since the scissors
     // were deleted on 2026-08-18 (the scissors opened the group in 2026-08-11
     // and led it until the architect's 2026-08-16 reorder). THIS TABLE DOES NOT
@@ -313,19 +311,19 @@ constexpr ToolbarChord kToolbarChords[] = {
     // row, and their 2026-08-27 rows verbatim: the architect deleted the
     // Iterations dropdown once the icon row had room again, so both commands
     // are BUTTONS once more and this table is their chord half. BPM'S KEY IS
-    // BARE `m`, NOT `b` — the brief that first asked for this button expected
-    // `b` and the code says otherwise (the arm is at handle_mode_keys,
-    // input_key_dispatch.cpp); the button is its chord, so it takes the chord
-    // the keyboard actually has.
+    // CTRL+B (architect 2026-09-15, moved off bare `m`): a Ctrl chord guards
+    // against a stray bare press, as Ctrl+D and Ctrl+N do (the arm is at
+    // handle_mode_keys, input_key_dispatch.cpp); the button is its chord, so
+    // it admits the same modifier the keyboard actually has.
     //
-    // NEITHER ADMITS A MODIFIER and neither repeats: the BPM opener raises a
-    // modal editor, which a repeat could only raise onto itself, and the mode
-    // toggle is one bit. Both are TOGGLES-or-acts rather than radios — the
-    // mode flag presses through in both directions — and both are consumed by
-    // the `h` view, which greys them through the derived partition below with
-    // nothing hand-listed, the answer the ITERATIONS ANCHOR needed a hand-named
-    // arm for while it was a menu.
-    {RedesignButton::IconBpm,  GuiKeys::M,   false, false, false, false, true},     // bare m
+    // NEITHER ADMITS A FURTHER MODIFIER and neither repeats: the BPM opener
+    // raises a modal editor, which a repeat could only raise onto itself, and
+    // the mode toggle is one bit. Both are TOGGLES-or-acts rather than radios
+    // — the mode flag presses through in both directions — and both are
+    // consumed by the `h` view, which greys them through the derived
+    // partition below with nothing hand-listed, the answer the ITERATIONS
+    // ANCHOR needed a hand-named arm for while it was a menu.
+    {RedesignButton::IconBpm,  GuiKeys::B,   true,  false, false, false, true},     // Ctrl+B
     {RedesignButton::IconIter, GuiKeys::I,   false, false, false, false, true},     // bare i
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
@@ -962,7 +960,7 @@ struct ActiveEditorText {
     // field (modal_dialog.field, the painter's published rect; the box
     // around it is chrome) or the marker lane's whole published box
     // (flag_editor_box.box — the unrolled flag under the payload editor, the
-    // blue measure box under the measure editor, pads included: the box is
+    // measure box under the measure editor (purple since 2026-09-15), pads included: the box is
     // the field, and a click in its padding puts the caret at the nearest
     // end as clicking a text field's margin does). The press claim and the
     // touch translation's editor-field query both read this, so "in the
@@ -1259,7 +1257,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   partition's dead one, and the walk says so with nothing hand-listed);
 //   copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
-//   opener (bare `m`), iteration mode (bare `i`), follow (bare `f`), listen
+//   opener (Ctrl+B), iteration mode (bare `i`), follow (bare `f`), listen
 //   (bare `l`); the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
@@ -9263,7 +9261,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     //
     // (THE SERIES MENU JOINED THE LOCKOUT ON 2026-08-27 on that same
     // criterion and left it with its own deletion on 2026-09-04: both of its
-    // rows — bare `m` and bare `i` — were chords the mode's allowlist drops,
+    // rows — the BPM opener (bare `m` then, Ctrl+B since 2026-09-15) and
+    // bare `i` — were chords the mode's allowlist drops,
     // and they still are. What changed is where the face lives: the two
     // commands are icon-row BUTTONS again, so the DERIVED walk below greys
     // them with nothing hand-listed, which is what a chord-bearing button buys

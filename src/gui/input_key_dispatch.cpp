@@ -392,29 +392,31 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
-    // Bare `t` (the S/T audio-view switch) IS PURE NAVIGATION AGAIN, and WRITES
-    // NO STORE AT ALL since 2026-08-07. It used to write the warp store on one
-    // edge — entering target view exited iteration mode through wipe_iter_state,
-    // clearing every bracket and pushing an undo entry, admitted here because
-    // iter brackets are session-only (never serialized, outside the undo
-    // domain since 2026-09-10, excluded from the render recipe) so the write
-    // reached neither disk
-    // nor a render. THAT WIPE IS DELETED with the ruling that iteration mode is
-    // TARGET-LEGAL (the record is at switch_active_audio_view_to,
-    // input_handler.cpp), so the admission now rests on nothing but the
-    // persistent-mutation standard above. The former reasoning is kept because
+    // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
+    // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
+    // and admitted here on that standard until the architect deleted both
+    // keys whole with their view lamps on 2026-09-15 (bare 1/2/3 are the
+    // axes' only keyboard road now, immediately below). Before that: each
+    // used to write the warp store on one edge — entering target view exited
+    // iteration mode through wipe_iter_state, clearing every bracket and
+    // pushing an undo entry, admitted here because iter brackets are
+    // session-only (never serialized, outside the undo domain since
+    // 2026-09-10, excluded from the render recipe) so the write reached
+    // neither disk nor a render. THAT WIPE WAS DELETED with the ruling that
+    // iteration mode is TARGET-LEGAL (the record is at
+    // switch_active_audio_view_to, input_handler.cpp), so the admission
+    // rested on nothing but the persistent-mutation standard above by the
+    // time the keys themselves went. The former reasoning is kept because
     // TWO OTHER GATES leaned on it (the history mode's allowlist below, and the
     // local walk's frozen-stack premise) and both are re-derived by this
-    // deletion.
-    const bool is_sub_t =
-        (key == GuiKeys::T && !ctrl && !shift && !alt);
-    const bool is_sub_p =
-        (key == GuiKeys::P && !ctrl && !shift && !alt);
+    // history.
+    //
     // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+P / T+W). They are
-    // admitted for exactly the reason `t` and `p` are, and by exactly the same
-    // argument: they RUN those two handlers and nothing else, so they reach no
+    // admitted for exactly the reason `t` and `p` were, and by exactly the same
+    // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
+    // switch_active_markers_view_to) and nothing else, so they reach no
     // store write at all (the S->T iter wipe that was the one exception is
-    // deleted — see is_sub_t above). Nothing new to weigh.
+    // deleted — see above). Nothing new to weigh.
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3) && !ctrl && !shift && !alt);
@@ -602,7 +604,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_zero ||
              is_follow ||
              is_restrict_undo ||
-             is_center || is_sub_t || is_sub_p ||
+             is_center ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
@@ -641,11 +643,15 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // first tests below.
 //
 // DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, and
-// FIVE MEMBERS wide: THE W/P COLUMN SWITCH's four chords — bare `p` and the
-// three ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3, which run the `t` and `p`
-// handlers and so carry the column with them (architect 2026-09-10: the mode
-// is lit for the column you are IN, which is also what retired the stamped
-// column that stood beside the mode bit for a few hours of that day) — THE
+// FOUR MEMBERS wide since 2026-09-15 (bare `t`/`p`, the individual axis
+// toggles, were deleted whole with their view lamps that day, so the column
+// switch's only remaining road is the digits below — see the S/T paragraph's
+// retirement note further down): THE COLUMN SWITCH's three chords — the
+// ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3, which run the `t` and `p` handler
+// BODIES (unchanged; only their bare keys are gone) and so carry the column
+// with them (architect 2026-09-10: the mode is lit for the column you are IN,
+// which is also what retired the stamped column that stood beside the mode
+// bit for a few hours of that day) — THE
 // Ctrl+Shift+Tab PAIRED MARCH, whose tab switch clears the selection and
 // re-seats the payload, so its second tab could never walk the cells honestly
 // (architect 2026-09-10) — and BARE `o`, THE READ-ONLY TOGGLE (architect
@@ -683,18 +689,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // either side. (A per-tab switch refusal stood between them for one afternoon
 // that day and was deleted with the state it answered.)
 //
-// AND BARE `t`, THE S/T SWITCH (architect 2026-09-13: grid iterations lives in
-// target view alone). Bare `i` pressed in source view crosses to target
-// before it lights the mode, so under a lit lamp the view IS target
-// (AppState::iteration_mode_enabled's invariant) and every `t` would go T->S —
-// which is why the refusal is UNCONDITIONAL rather than a direction test: the
-// only direction a press can have is the refused one. Bare 1 was already
-// refused above as a column-quartet member and is the same answer's second
-// road; 2 and 3 name target and would move only the column. The Toggle Audio
-// View lamp greys with it (iteration_lock_greys, app_state.h) and the settings
-// editor's typed `active_audio_view=S` refuses beside it on the same card.
-// Until that ruling `t` was admitted here, the mode having been target-legal
-// in BOTH views and a bracket reading no audio view.
+// BARE `t`, THE S/T SWITCH, WAS A FIFTH MEMBER FROM 2026-09-13 TO 2026-09-15
+// (architect 2026-09-13: grid iterations lives in target view alone, so a
+// press that would cross back to source refused unconditionally — the mode's
+// own invariant means the only direction bare `t` could have was the refused
+// one). The architect deleted the key itself 2026-09-15 with its view lamp,
+// so there is nothing left for this delta to refuse: `active_audio_view=S`
+// still refuses under the lock at its own site (the settings editor), on the
+// same card this member used to raise, but the keyboard road is gone.
 // Ctrl+Tab IS NOT ONE of them, and that is by construction rather than by
 // exception — the two tabs SHARE the warp and phase-reset stores, so a bracket
 // is common to both tabs and a plain switch can strand nothing.
@@ -716,8 +718,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // it was admitted as the one road that LEFT this mode by entering another,
 // enter_bpm_mode having run the same wipe the `i` toggle runs, and the
 // architect ruled that swap out the same evening — "we should card the exit,
-// because it is still one button automatically affecting the other" — so `m`
-// falls to the base list, which refuses it, and bare `i` is the only exit):
+// because it is still one button automatically affecting the other" — so the
+// BPM opener (bare `m` then, Ctrl+B since 2026-09-15) falls to the base list,
+// which refuses it, and bare `i` is the only exit):
 //   * BARE `i` — the off edge. A lock that could not be left by the switch
 //     that entered it is a trap; the mode's own lamp stays live for exactly
 //     this reason (IconIter's face, app_state.h).
@@ -761,13 +764,17 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // 2026-09-12, when the refusal-reason tooltip lines went: a greyed button
 // names its own act, the grey is the message, and the reason lives at the
 // key's card). Its members are the four marker verbs, the Measure, the
-// Toggle Marker Column lamp, the Toggle History View button, Edit flag and the
+// Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
-// lane, THE TOGGLE AUDIO VIEW LAMP (2026-09-13, bare `t`'s face), and — since
+// lane, and — since
 // 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
 // quartet's other three chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14), ADD TO SELECTION, its fourth, and BPM ITERATIONS,
-// which left delta (b) that evening. NO ARM THERE
+// which left delta (b) that evening. (THE TOGGLE MARKER COLUMN AND TOGGLE
+// AUDIO VIEW LAMPS were members here too, through 2026-09-15 — bare `p`'s and
+// bare `t`'s own faces (the latter since 2026-09-13) — and left the
+// membership whole when the architect deleted both buttons with their
+// group.) NO ARM THERE
 // COMPOSES A READ-ONLY HALF ANY MORE for the members whose chords the base
 // admits or never sees, and the members that do compose one do it for their
 // act rather than for a rank: the two locks are mutually exclusive, so under
@@ -796,18 +803,19 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the W/P column switch, BARE `o`
-    // (the read-only toggle — the lock's own reachability, the header), BARE
-    // `k` (ADD TO SELECTION — the header's fourth member), BARE `t` (the S/T
-    // switch back to source — its fifth, 2026-09-13) and the paired march.
-    // Bare-exact on all seven and ctrl-and-shift exact on the march, exactly
-    // as their dispatch arms spell them. (They lived in an
+    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3 —
+    // bare `t`/`p`, the two individual axis toggles, were deleted whole with
+    // their view lamps on 2026-09-15, so the digits are its only road now),
+    // BARE `o` (the read-only toggle — the lock's own reachability, the
+    // header), BARE `k` (ADD TO SELECTION — the header's fourth member) and
+    // the paired march. Bare-exact on all five and ctrl-and-shift exact on
+    // the march, exactly as their dispatch arms spell them. (They lived in an
     // owner of their own until 2026-09-10, so that the gate could ask them
     // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
     // state unreachable, and the owner went with it.)
     if (!alt && !ctrl && !shift &&
-        (key == GuiKeys::O || key == GuiKeys::P || key == GuiKeys::K ||
-         key == GuiKeys::T || key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+        (key == GuiKeys::O || key == GuiKeys::K ||
+         key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
          key == GuiKeys::Digit3))
         return true;
     if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
@@ -1944,7 +1952,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     //
     // ONE CHORD, ONE BUTTON, ONE AXIS since the 2026-09-04 collapse: the walk
     // lamp is this chord's twin and flips the axis in both directions, exactly
-    // as bare `t` and bare `p` and their two view lamps do. It was a RADIO PAIR
+    // as bare `t` and bare `p` and their two view lamps did before the
+    // architect deleted that whole category 2026-09-15. It was a RADIO PAIR
     // over this chord from 2026-08-18 until then, the `radio` flag making a
     // press on the lit half a consumed nothing instead of a switch away from
     // what the user had just clicked; with one button there is no wrong half.
@@ -2797,14 +2806,13 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // outside the project entirely, and its sentences are notification cards,
     // which this mode cannot hide.
     const bool is_sync_external = is_sync_external_key(key, mods);
-    // THE VIEW SWITCHES, in EXACTLY the shapes the ordinary dispatch requires —
-    // all three bare-exact, read off their own arms in on_key (the `t` toggle,
-    // the `p` toggle, and the 1/2/3 absolute selectors, which compose those two
-    // handlers and add no third route). Admitting a shape the dispatch does not
-    // bind would admit a press that then does nothing, which is the allowlist
+    // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
+    // bare-exact, read off its own arm in on_key: the 1/2/3 absolute
+    // selectors, which compose the `t`/`p` handler bodies and are their only
+    // road since the architect deleted the individual `t`/`p` keys and their
+    // view lamps 2026-09-15. Admitting a shape the dispatch does not bind
+    // would admit a press that then does nothing, which is the allowlist
     // telling a lie about itself.
-    const bool is_audio_view_switch  = (key == GuiKeys::T && bare);
-    const bool is_marker_view_switch = (key == GuiKeys::P && bare);
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3) && bare);
@@ -2836,7 +2844,6 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     return !(is_zero || is_page_updown ||
-             is_audio_view_switch || is_marker_view_switch ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q || is_open_project || is_revert_project ||
@@ -7256,12 +7263,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `p` (no modifiers) toggles phase reset view globally.
-    if (key == GuiKeys::P && !ctrl && !shift && !alt) {
-        active_views.toggle_active_markers_view();
-        return true;
-    }
-
     // `i` (no modifiers) toggles grid iterations, IN EITHER COLUMN since
     // 2026-09-09 (the arm below carries the ruling; the P-column card it used
     // to answer with is deleted with the premise that a phase reset had
@@ -7420,13 +7421,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `m` (no modifiers): open the BPM editor on the FIRST of a contiguous
+    // Ctrl+B: open the BPM editor on the FIRST of a contiguous
     // run of selected markers whose sections define the sweep span. Warp
     // view only, and the P column is answered on a card. MUTUAL EXCLUSION WITH
     // GRID ITERATIONS IS A REFUSAL AND NOT A SWAP since 2026-09-10 (architect:
     // "we should card the exit, because it is still one button automatically
     // affecting the other"): this arm cannot be reached under a lit lamp at
-    // all — the keyboard gate eats bare `m` with the lock's card and the BPM
+    // all — the keyboard gate eats this chord with the lock's card and the BPM
     // Iterations button greys — so enter_bpm_mode's forced iter-off is
     // deleted and nothing here turns the other lamp off. The section rule (architect
     // 2026-07-23, in its EFFECTIVE-PARTICIPATION form here since 2026-08-24):
@@ -7454,11 +7455,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (bpm_popup_eligible_marker excludes disabled — a disabled owner was a
     // render-inert rewrite).
     // There is no toggle-off branch: the bpm editor is a modal dialog
-    // surface, so while it is open `m` never reaches this dispatch — it is
-    // just a typed character the bracket grammar rejects — and bpm mode never
-    // rests without its editor (the mode's only exits are the editor's own:
-    // Esc, and Enter's dispatch tail).
-    if (key == GuiKeys::M && !ctrl && !shift && !alt) {
+    // surface, so while it is open Ctrl+B never reaches this dispatch — `b`
+    // is just a typed character the bracket grammar rejects — and bpm mode
+    // never rests without its editor (the mode's only exits are the editor's
+    // own: Esc, and Enter's dispatch tail).
+    if (key == GuiKeys::B && ctrl && !shift && !alt) {
         // EVERY ARM OF THIS GATE NAMES THE RULE IT BROKE (architect
         // 2026-08-30, the strictness ruling). The ladder is ten tests deep and
         // its whole answer used to be one indistinguishable non-response — the
