@@ -399,7 +399,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
-    // keys whole with their view lamps on 2026-09-15 (bare 1/2/3 are the
+    // keys whole with their view lamps on 2026-09-15 (bare 1/2/3/4 are the
     // axes' only keyboard road now, immediately below). Before that: each
     // used to write the warp store on one edge — entering target view exited
     // iteration mode through wipe_iter_state, clearing every bracket and
@@ -749,8 +749,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     every other chord and the wrong one for the two the user pressed to ask
 //     about history. The arm refuses first, ahead of its own two terms, and
 //     history_step_actionable greys both buttons on the same fact.
-//   * THE CLIPBOARD COPY — Ctrl+P (the phase-reset placements) — which is
-//     CLIPBOARD-ONLY: it reads a
+//   * THE TWO CLIPBOARD COPIES — Ctrl+P (the phase-reset placements) and
+//     Ctrl+M (the magnification levels) — which are
+//     CLIPBOARD-ONLY: each reads a
 //     contiguous labeled run into a session clipboard and writes no store, no
 //     undo entry and no dirty bit, so the whole reason this lock exists says
 //     nothing about them (the lock protects the undo domain; nothing here can
@@ -901,9 +902,9 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
 // included, so the view leaves it exactly where the review left it and each A/B
 // tab keeps whatever band it had. THE THREE LOAD-IN-PLACES ARE UNAFFECTED, and
 // the asymmetry that made this worth stating is GONE: all three route through
-// apply_recipe_in_place (2026-08-24), which writes the two marker columns and
-// the engine block and NOTHING ELSE — no tab band, no view bits, no clamps — so
-// the COMMIT load applies no band either now, and there is no restore under or
+// apply_recipe_in_place (2026-08-24), which writes the three marker columns
+// and the engine block and NOTHING ELSE — no tab band, no view bits, no clamps
+// — so the COMMIT load applies no band either now, and there is no restore under or
 // over any of them. AppState::HistoryMode's field block owns the ruling and the
 // record of what went.
 //
@@ -1084,9 +1085,9 @@ void GuiInputHandler::close_history_mode() {
 // switch_active_tab_view_to ends in the same kick_waveform_sync, so the
 // arriving band's flags are republished inside the press. THE LIST ITSELF DOES
 // NOT CHANGE ACROSS A TAB SWITCH AT ALL, which is the stronger fact: the two
-// tabs share both marker stores and the engine settings, so the delta a switch
-// arrives at is the delta it left — only the WINDOW the flags are laid on
-// moves.
+// tabs share all three marker stores and the engine settings, so the delta a
+// switch arrives at is the delta it left — only the WINDOW the flags are laid
+// on moves.
 void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.flag_hit_rects.clear();
     app.marker_stems.clear();
@@ -2466,7 +2467,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             is measured once and cannot change while the mode
 //                             stands (AppState::HistoryMode::head_delta_empty
 //                             owns it, the asymmetry included: "no changes" is
-//                             the delta's vocabulary, the two marker columns
+//                             the delta's vocabulary, the three marker columns
 //                             plus `scale`, so a settings-only drift greys the
 //                             act too). A PUSH-PENDING bit sat beside it for
 //                             one day of 2026-08-09, admitting the chord as an
@@ -2596,7 +2597,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // re-reads THE SAME piece — the same three sidecar texts the now side was
 // frozen from, the same delta, another column of it — and SO DOES A TAB SWITCH,
 // which is what makes the admission cheap rather than a re-entry: the tabs hold
-// a value-shaped band alone and share both marker stores and the engine
+// a value-shaped band alone and share all three marker stores and the engine
 // settings, so nothing the delta is made of moves with them. THE OLD REFUSAL'S
 // PREMISE was that a tab switch "swaps the per-tab band the session was
 // measured with", and the band is not what the session is measured with; the
@@ -2839,9 +2840,10 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // THE MODE RE-BINDS NOTHING, and that is why this is one allowlist entry
     // rather than a re-entry: the A/B tabs hold a VALUE-SHAPED BAND ALONE
     // (viewport, zoom, playhead, trim, read_only) and share the warp store, the
-    // phase-reset store and the engine settings, while the displayed delta's
-    // whole vocabulary is those two stores plus `scale` — so the two walks, the
-    // frozen now side and the head delta describe the same piece on either tab.
+    // phase-reset store, the magnification level store and the engine settings,
+    // while the displayed delta's whole vocabulary is those three stores plus
+    // `scale` — so the two walks, the frozen now side and the head delta
+    // describe the same piece on either tab.
     // The undo/redo stacks the LOCAL walk indexes are session-global for the
     // same reason. What the switch does move is the WINDOW, which the view has
     // not owned since the entry stopped framing and the exit stopped restoring.
@@ -5164,8 +5166,8 @@ void GuiInputHandler::apply_recipe_in_place(
 
     // THE LOAD IS NOT AN ITERATION-MODE EXIT ROUTE (architect 2026-09-02:
     // "iteration mode is where you stand"), and SINCE 2026-09-10 IT CANNOT
-    // RUN UNDER A LIT LAMP AT ALL: the load rewrites both marker stores and
-    // the engine block and pushes the entry above, so the ITERATION LOCK
+    // RUN UNDER A LIT LAMP AT ALL: the load rewrites all three marker stores
+    // and the engine block and pushes the entry above, so the ITERATION LOCK
     // refuses it — by key, by the player's button and by the `h` view's own
     // road (authoring_locked, app_state.h). The 2026-09-02 ruling therefore
     // holds vacuously and is kept as the reason this block resets nothing:
@@ -7593,9 +7595,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // looking, and they stay there for the duration of the lamp being
         // lit."). It needs NO STAMP to be, and had one for a few hours of that
         // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
-        // (bare `p` and the three absolute view selectors, at
-        // iteration_lock_key_blocked; the Toggle Marker Column button greys
-        // with the sentence), so the column cannot move while the lamp stands
+        // (the four absolute view selectors bare 1/2/3/4, at
+        // iteration_lock_key_blocked; the view bar's four buttons grey with
+        // the sentence), so the column cannot move while the lamp stands
         // and `iteration_column_lit` reads the LIVE column. There is no
         // second lamp, no second key and no column term on this button — and
         // no other column to stand on while lit.
@@ -7605,8 +7607,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // crossing shape (drop_phase_reset_in_target_view, input_handler.cpp),
         // below, past every refusal. The column is unchanged (S+W lights in
         // T+W, S+P in T+P). While the lamp stands the lock refuses every road
-        // back to source (bare `t` joins iteration_lock_key_blocked's delta
-        // (a)), so the OFF edge always runs in target and needs no crossing;
+        // back to source (the four selectors are iteration_lock_key_blocked's
+        // delta (a)), so the OFF edge always runs in target and needs no
+        // crossing;
         // the invariant is stated once at AppState::iteration_mode_enabled.
         // (From 2026-08-07 until this ruling the mode was TARGET-LEGAL in both
         // views and this arm had no audio-view term at all; before that it
@@ -7623,7 +7626,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // AND THE LOCK'S SUBJECT HERE IS THE PIECE, WHICH IS THIS ARM'S OWN
         // REFUSAL (architect 2026-09-10, that evening: "simpler to just
         // prevent i mode if o mode is on anywhere and vice versa"). THE TWO
-        // A/B TABS SHARE BOTH MARKER STORES, so a bracket is common to both
+        // A/B TABS SHARE ALL THREE MARKER STORES, so a bracket is common to
+        // both
         // by construction and a lock on EITHER tab is a lock on the markers
         // the cells would tune — a piece-wide question about STATE that no
         // keyboard allowlist can ask, the gate above being chord-keyed and
@@ -7678,7 +7682,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // THE CROSSING, ON THE ON EDGE ALONE AND PAST EVERY REFUSAL ABOVE (the
         // gate's read-only and modal refusals and the piece-wide lock just
         // above), so a refused `i` switches nothing. switch_active_audio_view_to
-        // is the SAME chokepoint bare `t` runs, in its SET-TO spelling, so
+        // is the SAME chokepoint the absolute selectors run, so
         // every invariant it owns — the entry validation, the domain
         // translation of playhead and viewport, the editor teardown, the
         // re-warp — arrives by construction. A REFUSED ENTRY STOPS THE WHOLE
@@ -8453,9 +8457,9 @@ void GuiInputHandler::render_player_load_in_place() {
     // where what the site knows differs.
     //
     // AND IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h):
-    // the load rewrites both marker stores and the engine block and pushes one
-    // undo entry, so grid iterations refuses it exactly as the read-only bit
-    // does — through the one composer that forks the sentence
+    // the load rewrites all three marker stores and the engine block and
+    // pushes one undo entry, so grid iterations refuses it exactly as the
+    // read-only bit does — through the one composer that forks the sentence
     // (authoring_lock_card). Bare `'` still OPENS the player under a lit lamp,
     // the key being admitted; it is the LOAD that refuses, by key and by
     // button, which is the same division the read-only lock has always kept
@@ -8612,9 +8616,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // held alongside makes the chord an unbound no-op, never this binding.
     //
     // THE ITERATION LOCK ADMITS IT IN EVERY STATE, and by construction rather
-    // than by exception: the two tabs SHARE both marker stores, so a bracket
-    // is common to both and a switch strands nothing. (It was refused INTO A
-    // LOCKED TAB for one afternoon on 2026-09-10, the lamp being global where
+    // than by exception: the two tabs SHARE all three marker stores, so a
+    // bracket is common to both and a switch strands nothing. (It was refused
+    // INTO A LOCKED TAB for one afternoon on 2026-09-10, the lamp being global where
     // `read_only` is per tab; the piece-wide exclusion ruled that evening —
     // the lamp cannot be lit while ANY tab is locked, bare `i`'s own arm —
     // deleted the composed state instead, so there is no locked tab to switch
@@ -8913,7 +8917,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // unbound-keys ruling), the strict-modifier tail's other half and its
         // identical answer — this dispatch is the end of the bare road, so a
         // key reaching here binds nothing at all in this state (bare `u`, `g`,
-        // `v`, `,` and `.` outside the `h` view; the digits 4..9; a keysym with
+        // `v`, `,` and `.` outside the `h` view; the digits 5..9; a keysym with
         // no spelling), and saying nothing is what identifies it as unbound.
         // AND THE GATES AGREE WITH THIS ARM SINCE 2026-09-01 (U4): the
         // read-only lock, the two drag gates and the loading gate carded those

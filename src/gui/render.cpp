@@ -1047,8 +1047,9 @@ struct FlagFace {
     bool     has_stem;
 };
 
-// THE COLOR-CLASS LADDER, one owner for both marker columns (the full statement
-// is at render_flags' declaration): disabled wins outright, then red, then the
+// THE COLOR-CLASS LADDER, one owner for all three marker columns (the full
+// statement is at render_flags' declaration): disabled wins outright, then
+// red, then the
 // default pair with selection swapping it for the bright one — and the DISABLED
 // arm runs that same red-then-selection ladder INSIDE ITSELF to pick the pair it
 // blends, so selection lifts a disabled marker exactly as it lifts a live one
@@ -2572,9 +2573,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // column carries an iteration bracket of its own), so its store is the
     // ACTIVE column's — the column the open route resolved the index against.
     // A target index the store has since shrunk past is the only failure
-    // shape, and it simply paints nothing. NO EDITOR OPENS ON THE MAGNIFICATION
-    // LEVEL COLUMN (2026-09-15: its payload and measure opens are the warp
-    // column's, and it paints no bound cell), so `phase` is W's or P's answer.
+    // shape, and it simply paints nothing. NO PAYLOAD, MEASURE OR BOUND EDITOR
+    // OPENS ON THE MAGNIFICATION LEVEL COLUMN (2026-09-15: the payload and
+    // measure opens are the warp column's, and that column paints no bound
+    // cell) — the LEVEL editor is its own, forked above on `level_kind` — so
+    // `phase` is W's or P's answer.
     const bool phase = bound_kind && app.active_markers_view == 'P';
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv = app.phaseresetmarkers.markers();
@@ -2808,7 +2811,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                 : effective_disabled(mv, idx);
     // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
     // pass for this column reads, so the field and the boxes riding it wear
-    // the red their resting twins wear on both columns.
+    // the red their resting twins wear on every column.
     const bool red_class =
         level_kind
             ? magnification_level_red_flag_set_cached(app).red.count(idx) > 0

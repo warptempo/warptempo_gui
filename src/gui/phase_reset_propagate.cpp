@@ -624,17 +624,19 @@ void PhaseResetPropagate::paste_state_apply() {
     // (anchor_source_frame); the destination's are computed here against the
     // live map, exactly as the placement paste's clear window computes them.
     //
-    // Capture produces block-ordered, within-block-time-ordered placements,
-    // and the anchor is monotone in the frame under one map, so a flat
-    // concatenation is already anchor-ordered; sort defensively.
+    // THE CONCATENATION IS ALREADY ANCHOR-ORDERED AND IS LEFT ALONE: capture
+    // produces block-ordered, within-block-time-ordered placements, and the
+    // anchor is monotone in the frame under one map, so the blocks come out
+    // anchor-ascending and each block's placements anchor-ordered within it.
+    // The defensive std::sort that used to stand here was deleted 2026-09-16 —
+    // it could only ever permute EQUAL anchors (std::sort is not stable), i.e.
+    // coincident resets, which is the one thing it must not do: the pairing
+    // below walks this list against the destination indices positionally, so a
+    // tie reshuffle would hand a coincident run's states to the wrong rows.
     std::vector<const ClipboardPlacement*> all_placements;
     for (const auto& cb : clip_blocks)
         for (const auto& p : cb.placements)
             all_placements.push_back(&p);
-    std::sort(all_placements.begin(), all_placements.end(),
-        [](const ClipboardPlacement* a, const ClipboardPlacement* b) {
-            return a->anchor_source_frame < b->anchor_source_frame;
-        });
 
     // Snapshot pre-state up front; we commit a single undo entry only
     // if at least one flag actually changes.
@@ -812,7 +814,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
 // wholesale region hide, then the selection set (the playhead land rides with
 // it, after the swap):
-//   * switch_active_audio_view_to is the SAME chokepoint the `t` key runs
+//   * switch_active_audio_view_to is the SAME chokepoint the digit selectors run
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
 //     the region hide, kick_waveform_sync, and target_render.ensure_ready all
 //     fire exactly once). It is the SET-TO spelling, so naming 'T' from a
@@ -847,8 +849,8 @@ void PhaseResetPropagate::paste_state_apply() {
 // below installs one — so ordinary invalidation alone blits the leaving column's
 // W flag pixels (and the pre-paste selection's) under P-live text / stem / overlay
 // passes for one frame. kick_waveform_sync commits plate, fingerprint and flag
-// cache before that paint, which is exactly what the bare `p` toggle takes for
-// the same reason (active_views.cpp).
+// cache before that paint, which is exactly what the column switch itself takes
+// for the same reason (active_views.cpp).
 // IT COVERS BOTH ENTRY CONTEXTS, and it is needed in both:
 //   * W+SOURCE entry — the S/T switch runs and kicks, but it
 //     kicks BEFORE the column swap below, so its rebuild reads the OLD

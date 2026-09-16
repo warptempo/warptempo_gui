@@ -929,7 +929,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // iterations and grid iterations — which author renders; a tempo step is an
 // edit of the one marker's own field, disabled or not.
 // The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits), a ref
-// (non-empty label_ref) — the singleton step's payload predicates — a
+// (non-empty label_ref) — the ref being the singleton step's payload
+// predicate too, the pass no longer since the singleton freezes one in both
+// audio views (the split is stated just below) — a
 // coincident-collapsed ENABLED marker (warp_red_flag_set_cached's `collapsed`,
 // never its paint cue `red` — the resolver
 // replaces the stack with one 1.00 owner, so the write is render-inert), or

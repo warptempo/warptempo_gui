@@ -170,9 +170,9 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
 // engine-key arm in commit() asks authoring_locked for both locks at once —
-// but its keyboard gate refuses SIX chords the read-only allowlist admits
+// but its keyboard gate refuses SEVEN chords the read-only allowlist admits
 // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
-// bare `k`, the three absolute view selectors and the paired march — bare
+// bare `k`, the four absolute view selectors and the paired march — bare
 // `t`/`p`, the individual axis toggles, were deleted with their view lamps
 // 2026-09-15, so the digits are the column/audio-view switch's only key now),
 // so a GUI-kind key whose chokepoint is one of those chords owes a gate of
@@ -357,7 +357,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // — the typed spelling of bare `p`'s own refusal at the keyboard gate
         // until the architect deleted that key with its view lamp 2026-09-15
         // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp,
-        // which still eats the three absolute view selectors): the mode is
+        // which still eats the four absolute view selectors): the mode is
         // LIT FOR THE COLUMN IT WAS PRESSED IN and the column is frozen with
         // it, so a typed `active_markers_view=P` under a lit lamp would leave
         // the cells painted and the sweep aimed at a column the brackets were
@@ -524,9 +524,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // THE ITERATION LOCK REFUSES A LOCK OF EITHER TAB (architect
         // 2026-09-10), the typed spelling of bare `o`'s own refusal and
         // scoped as the exclusion is scoped — PIECE-WIDE, not per tab: the
-        // two A/B tabs SHARE both marker stores, so a lock ANYWHERE is a lock
-        // on the markers the bound cells would tune, and bare `i` refuses to
-        // light the lamp while either bit stands (any_tab_read_only,
+        // two A/B tabs SHARE all three marker stores, so a lock ANYWHERE is a
+        // lock on the markers the bound cells would tune, and bare `i` refuses
+        // to light the lamp while either bit stands (any_tab_read_only,
         // app_state.h). A REMOTE lock (`tab_B_read_only=true` typed from tab
         // A) therefore refuses with a self-lock; it was admitted for one
         // afternoon that day, under a per-tab rule in which the switch INTO

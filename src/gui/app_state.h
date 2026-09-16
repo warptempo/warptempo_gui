@@ -1799,9 +1799,9 @@ struct OverviewDragState {
 //     for the next pair to pinch about a song point the fingers had left.
 //   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE since codex round 20, ON THE
 //     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
-//     with every command that reaches one (the `t`/`p`/Ctrl+Tab keys, the 1/2/3
-//     selectors, the view bar, the two view lamps, the settings keys, the
-//     propagate paste and undo/redo) inheriting it by
+//     with every command that reaches one (the bare 1/2/3/4 selectors, Ctrl+Tab,
+//     the view bar, the settings keys, the
+//     propagate pastes and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
 //     ACTIVE DOMAIN, and nothing stops a keyboard command, a mouse click or a
 //     modal load from moving that domain with two fingers still down: the S/T
@@ -2008,8 +2008,8 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
-// plus the view bar's three, row 3's two
-// TABS, row 4's TWENTY-FOUR
+// plus the view bar's FOUR, row 3's two
+// TABS, row 4's TWENTY
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -2188,7 +2188,7 @@ enum class RedesignButton {
     // their own group here from 2026-09-04 to 2026-09-15, one button per
     // axis toggling Source/Target and Warp/Phase Reset away from home. The
     // architect deleted the category whole (bare `t` and bare `p` with it):
-    // the axes stay reachable through bare 1/2/3 and the view bar alone,
+    // the axes stay reachable through bare 1/2/3/4 and the view bar alone,
     // which is what a two-button group bought nothing over. The row's group
     // count drops by one with it.)
     //
@@ -2651,7 +2651,7 @@ enum class RedesignButton {
     //     BUTTONS OVER ONE CHORD, which is what this collapse removes: with one
     //     button there is no wrong half to press, so the `radio` flag and the
     //     pair's `redesign_button_selected` lamp are DELETED rather than kept.
-    //     The generic radio consume is untouched — the view bar's three and the
+    //     The generic radio consume is untouched — the view bar's four and the
     //     tabs still use it. (The S/T and W/P rows used it too until 2026-09-04,
     //     when those pairs collapsed into single lamps for the same reason this
     //     one did: one button over one chord has no wrong half.)
@@ -3184,7 +3184,7 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // leaving a hollowed group behind: IconAudioView stopped opening a group and
 // nothing takes its place, so the leader count fell by one and no other
 // group's membership moved (bare `t`/`p` and the lamps bought the group
-// nothing the view bar and bare 1/2/3 do not already answer). The paragraphs
+// nothing the view bar and bare 1/2/3/4 do not already answer). The paragraphs
 // below are the group's history up to that deletion, kept for the record.
 //
 // SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
@@ -5202,8 +5202,10 @@ struct AppState {
 
     // Active audio view: 'S' = source (the authored timeline), 'T' =
     // target (the engine's deformed-output timeline). Orthogonal to
-    // active_markers_view ('W'/'P'): `t` toggles S/T, `p` toggles
-    // W/P. While 'T', app.viewport_start_sample / playhead_cursor_sample /
+    // active_markers_view ('W'/'P'/'M'), and written by the same writers that
+    // axis has: the bare 1/2/3/4 absolute selectors (with the view bar, which
+    // synthesizes them) and the settings editor's typed `active_audio_view=`.
+    // While 'T', app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level carry target-frame values; the live fields'
     // interpretation flips on toggle. Target view was
     // formerly read-only; the target-render audio subsystem makes target
@@ -6853,9 +6855,9 @@ struct AppState {
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
-    //   LIT — the view bar's three (bare 1/2/3), the
-    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), the two view lamps (bare
-    //   `t` / `p`), BOTH row-3 tabs (Ctrl+Tab, which the ALLOWLIST admits since
+    //   LIT — the view bar's four (bare 1/2/3/4), the
+    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), BOTH row-3 tabs
+    //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — the tabs switch tabs in here like everywhere else), the
     //   history button and the WALK LAMP
     //   (bare `h` and bare `g`, the mode's OWN vocabulary, which the derivation
@@ -6902,9 +6904,10 @@ struct AppState {
     // active tab, which costs the mode NOTHING to re-bind because the two tabs
     // share one piece. tab_a and tab_b hold a VALUE-SHAPED BAND ALONE (viewport,
     // zoom, playhead, trim, read_only) and share the warp store, the phase-reset
-    // store and the engine settings, while the delta's whole vocabulary is those
-    // two stores plus `scale` — so the walks, the frozen now side and the head
-    // delta describe the same piece on either tab.
+    // store, the magnification level store and the engine settings, while the
+    // delta's whole vocabulary is those three stores plus `scale` — so the
+    // walks, the frozen now side and the head delta describe the same piece on
+    // either tab.
     // (From 2026-08-05 to 2026-08-18 the tabs were the WALK SELECTOR instead —
     // two slots, "Remote" and "Local" — with Ctrl+Tab cycling the walk; the walk
     // has its own lamp in row 4 now, and the row's record is at
@@ -7233,8 +7236,8 @@ struct AppState {
         //     lists, and the S/T flip re-lays the same list on another domain.
         //     The clear sits at each axis's own chokepoint — switch_active_-
         //     audio_view_to and GuiActiveViews::select_active_markers_view — which is
-        //     what makes the 1/2/3 selectors, the view bar and the icon row's
-        //     two view lamps inherit it by composition.
+        //     what makes the 1/2/3/4 selectors and the view bar inherit it by
+        //     composition.
         //   - entry and exit (the whole-struct reset at both owners)
         //   - bare HOME / END (2026-08-05), the mode's SHIFT FORMER's press,
         //     and the DEFERRED CLICK ACT at a motionless navigation-surface
@@ -7395,7 +7398,7 @@ struct AppState {
         // is what keeps that true if the pairing ever moves again.
         //
         // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
-        // 2026-08-05): the delta's vocabulary is the two marker columns plus
+        // 2026-08-05): the delta's vocabulary is the three marker columns plus
         // `scale`, so a session whose only drift is the invisible settings
         // bookkeeping — the per-tab view band the mode's own navigation moves —
         // reads EMPTY and greys the act, even though a byte-level commit would
@@ -8169,9 +8172,10 @@ struct AppState {
     // SOURCE view CROSSES TO TARGET FIRST, through the S/T chokepoint, and a
     // refused entry stops the whole press with the mode still dark (the arm
     // in input_key_dispatch.cpp, Shift+S's crossing shape); and while the lamp
-    // stands every road back to source refuses — bare `t` and bare 1 at the
-    // iteration lock's gate (iteration_lock_key_blocked's delta (a)), the
-    // Toggle Audio View lamp and the view bar's selectors greying with them,
+    // stands every road back to source refuses — bare 1 and its three
+    // fellow selectors at the iteration lock's gate
+    // (iteration_lock_key_blocked's delta (a)), the view bar's four greying
+    // with them,
     // the settings editor's typed `active_audio_view=S` on the lock's card,
     // and the undo/redo restore, Shift+S, the load in place and the `h` entry
     // all refused under the lock for their own reasons. So no reader forks on
@@ -10976,9 +10980,9 @@ int64_t live_total_frames(const AppState& a, const GuiAudio& audio);
 //
 // ITS TWO CALLERS are apply_settings_engine_and_prefs (the source load, where
 // the outgoing map is ANOTHER FILE's) and apply_recipe_in_place (the WHOLE
-// load-in-place family's one body since 2026-08-24, where the marker pair and
-// the engine block that built the map are both replaced — a timeline state's
-// load reaches it there like both sidecar loads).
+// load-in-place family's one body since 2026-08-24, where the three marker
+// columns and the engine block that built the map are all replaced — a timeline
+// state's load reaches it there like every sidecar load).
 // The undo restore, which also replaces those three pieces,
 // deliberately does not call it: a restore is a step inside one session's own
 // timeline and its ordinary staging is what advances the basis.
@@ -10996,10 +11000,11 @@ inline void reset_displayed_target_basis(AppState& a) {
 
 // Live-domain playhead clamp — the single spelling of the playhead domain
 // ruling: the playhead rests in [0, total - 1] of its LIVE view's domain,
-// everywhere, after any gesture. All authored positions — both marker columns
-// and both trim bounds — wall at total - 1, so every sync onto one is in-domain
-// by construction; the clamp is the load-lenient runtime guard for persisted
-// scratch values, not a source-view authored-position concern. Every playhead write
+// everywhere, after any gesture. All authored positions — all three marker
+// columns and both trim bounds — wall at total - 1, so every sync onto one is
+// in-domain by construction; the clamp is the load-lenient runtime guard for
+// persisted scratch values, not a source-view authored-position concern. Every
+// playhead write
 // funnels through here: Viewport::move_playhead_to (the gesture route),
 // and the non-gesture live-ization routes a persisted or stashed value
 // takes into the live fields — the source load's tab snapshots and the
@@ -11308,9 +11313,9 @@ inline const ViewState& active_view_state(const AppState& a) {
 // CANNOT BE LIT WHILE ANY TAB IS LOCKED, bare `i`'s own arm asking
 // any_tab_read_only below and the Grid Iterations button greying on the same
 // answer. The subject is why it is piece-wide rather than per tab: the two
-// tabs SHARE both marker stores, so a lock on either is a lock on the markers
-// iterations would author. So this OR can be true for exactly one of its two
-// reasons at a time, and NOTHING RANKS THEM: the composer above and the
+// tabs SHARE all three marker stores, so a lock on either is a lock on the
+// markers iterations would author. So this OR can be true for exactly one of
+// its two reasons at a time, and NOTHING RANKS THEM: the composer above and the
 // keyboard gate each still fork on WHICH reason stood, because the two
 // sentences differ, but the fork chooses rather than outranks. (It was
 // ordered until that morning, read-only first, because `i` then `o` reached
@@ -11369,10 +11374,10 @@ inline bool any_tab_read_only(const AppState& a) {
 // own read-only half:
 //   * most of the members' read-only half is the tab's bare bit (the marker
 //     verbs, the Measure, Edit flag, Up/Down);
-//   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the Toggle Marker
-//     Column lamp (bare `p` is on read_only_key_blocked's allowlist), the
+//   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
-//     writable one does), the view bar's three and the
+//     writable one does), the view bar's four (bare 1/2/3/4 are on
+//     read_only_key_blocked's allowlist) and the
 //     PADLOCK — so those arms read this predicate and nothing else. Nothing
 //     is lost by the omission: the two locks are MUTUALLY EXCLUSIVE
 //     (authoring_locked, above), so under a lit lamp NO tab is locked at all
@@ -12147,7 +12152,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 // AHEAD OF ITS CHANGED-PATH TEST. A refused act consumed nothing and leaves the
 // lamp lit; an accepted one that happens to land the value already standing did
 // consume the selection, because "in fact I have already acted" reads the
-// PRESS. The callers, by act (re-greped 2026-09-12):
+// PRESS. The callers, by act (re-greped 2026-09-16):
 //   * THE TEMPO CENT STEP, BRANCH-LOCALLY — its refusals are per-branch (the
 //     group's walled / empty verdict, target view's kind refusals, source
 //     view's label ref, the last of them inside the changed-path tail), so the
@@ -12160,18 +12165,23 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     accepted exit — the wall exit (an accepted step landing where it
 //     stands) and the changed path alike (GuiWarpMarkersOps::
 //     adjust_measure_step, warpmarkers_ops.cpp), the tempo step's placement;
-//   * THE WARP DELETE and the PHASE-RESET DELETE, Ctrl+D on both columns and
-//     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
-//     column fork (input_handler.cpp) — the co-equal-axes rule says a delete is
-//     a delete in either column;
+//   * THE MAGNIFICATION LEVEL STEP (2026-09-15), the third value axis, on its
+//     two accepted exits exactly as the two above — the singleton's silent
+//     clamp and the changed path past the no-change belt
+//     (GuiMagnificationLevelMarkersOps::adjust_magnification_level_step,
+//     magnificationlevelmarkers_ops.cpp);
+//   * DELETE and Ctrl+D, which fork THREE WAYS since 2026-09-15 (warp, phase
+//     reset, magnification level), plus Ctrl+N, at their dispatch arms past
+//     the carded refusal and ahead of the column fork (input_handler.cpp) —
+//     the co-equal-axes rule says a delete is a delete in every column;
 //   * THE TWO CLIPBOARD COPIES, Ctrl+P and (2026-09-15) Ctrl+M, each past
 //     its three gates;
 //   * THE FOUR PROPAGATE PASTES — each family's confirmed placement paste
 //     (PhaseResetPropagate::paste_apply,
 //     MagnificationLevelPropagate::paste_apply) and its state paste
 //     (paste_state_apply on both), each past its own last refusal;
-//   * BARE `m` (GuiFlagEditor::enter_bpm_mode, at the flag flip past its five
-//     bails);
+//   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
+//     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
 //     which is a use case rather than an act: the mode's bound cells are
 //     addressed by a PLAIN press, which the sticky ctrl would eat.
@@ -12186,7 +12196,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     (position_nudge.h), so the nudge never acts on a selection at all; what
 //     it acts on is a singleton, which is not a selection that was built;
 //   * BARE `j` and Shift+`j` — they read the FOCUS and write no store;
-//   * THE MARKER DROP, the three marker-lane EDITORS and the TAB WALK — none
+//   * THE MARKER DROP, the FOUR marker-lane EDITORS and the TAB WALK — none
 //     of them consumes a selection: the drop makes one, the editors edit one
 //     marker and the walk is how a selection is navigated.
 // AND THE SEVEN SILENT CLEARS DELETED ON 2026-09-10 STAY DELETED: those were
@@ -12371,16 +12381,18 @@ inline bool magnification_level_row_fields_differ(
 //           front-to-back, so with k rows at frame F before and k+1 after it
 //           names the LAST row of the group — while insert_marker places by
 //           lower_bound (marker_store.h) and so lands a new marker FIRST in it,
-//           the exact opposite. Coincident drops are legal on both columns, so
-//           the two drops hint their inserted row on the LIVE side (their
+//           the exact opposite. Coincident drops are legal on every column, so
+//           the three drops hint their inserted row on the LIVE side (their
 //           snapshot side is empty by construction — the row does not exist
-//           there — and takes the removal arm), the two deletes
-//           (delete_selected_marker, delete_selected_phase_reset) hint their
+//           there — and takes the removal arm), the three deletes
+//           (delete_selected_marker, delete_selected_phase_reset and, since
+//           2026-09-15, delete_selected_magnification_levels) hint their
 //           deleted rows on the SNAPSHOT side (their live side is empty for the
 //           same reason), and the two propagate placement pastes
 //           (PhaseResetPropagate::paste_apply and, since 2026-09-15,
 //           MagnificationLevelPropagate::paste_apply) hint their materialized
-//           rows on the LIVE side. Shift+S's lead-in drop and the `s` drop are
+//           rows on the LIVE side. Shift+S's lead-in drop, Ctrl+Shift+S's
+//           crossing and the `s` drop are
 //           not separate producers: every drop road funnels through the drop
 //           bodies named.
 //   * A GROWN COLUMN: the after-rows whose time_frame no before-row can be
@@ -12415,7 +12427,8 @@ inline bool magnification_level_row_fields_differ(
 // grow a column: the `h` view's REVERT (GuiInputHandler::run_history_revert),
 // which inserts and removes wholesale under a cleared selection; the
 // render-entry LOAD IN PLACE (push_undo_both, which carries no hint parameters
-// at all — it replaces both stores from a file and has no touched row to name);
+// at all — it replaces all three stores from a file and has no touched row to
+// name);
 // and the UNDO direction of the propagate paste, whose restored rows are the
 // ones its per-block clear destroyed and which the act does not enumerate. For
 // those three, a coincident group is still resolved by position alone and the
@@ -13552,9 +13565,8 @@ inline bool playback_launch_playable(const AppState& a,
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
-//     viewport), the two VIEW LAMPS
-//     (bare `t` / `p`), the zoom pair, follow, the
-//     KEEP-CENTERED LAMP, the CENTER-ON-NEXT-MARKER lamp and the
+//     viewport), the VIEW BAR'S FOUR
+//     (bare 1/2/3/4), the zoom pair, follow, the
 //     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
@@ -13901,14 +13913,15 @@ inline bool redesign_button_enabled(const AppState& a,
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
         // architect's design (he provided five states and no disabled one), rows
         // 1 and 3 by their face scope. (ROW 2's ICON MARKER COLUMN LEFT THIS
-        // GROUP ON 2026-09-10 with the iteration lock's W/P delta — it greys
-        // while grid iterations stands, at its own arm below. Its AUDIO-VIEW
-        // twin stays here: bare `t` is admitted under both locks. ROW 2's
-        // TOGGLE HISTORY VIEW left the group the same day and for the same
+        // GROUP ON 2026-09-10 with the iteration lock's W/P delta, and both
+        // VIEW LAMPS were deleted whole on 2026-09-15 with the bare `t` / `p`
+        // keys. ROW 2's
+        // TOGGLE HISTORY VIEW left the group on 2026-09-10 and for the same
         // lock, at its own arm below.)
         //
-        // (THE VIEW BAR'S THREE LEFT THIS ARM ON 2026-09-10 with the iteration
-        // lock — they answer at their own arm below, where the `false` buys a
+        // (THE VIEW BAR'S SELECTORS LEFT THIS ARM ON 2026-09-10 with the
+        // iteration lock — they answer at their own arm below, where the
+        // `false` buys a
         // DEAD PRESS and no paint at all, this row still having no disabled
         // face to wear.)
         // (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
@@ -14232,10 +14245,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // (iteration_lock_greys) with no read-only term — bare `p` and bare
         // `t` were each read-only-legal, a column or S/T switch authoring
         // nothing. The architect deleted both buttons whole that day; the
-        // view bar's three below carry the same delta on for the digits.)
-        // THE VIEW BAR'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
-        // and they left the never-grey group above for it: bare 1/2/3 COMPOSE
-        // the `p` handler, so they are three of the four chords the column
+        // view bar's four below carry the same delta on for the digits.)
+        // THE VIEW BAR'S FOUR TAKE THAT SAME DELTA (architect 2026-09-10; T+M
+        // joined 2026-09-15),
+        // and they left the never-grey group above for it: bare 1/2/3/4 COMPOSE
+        // the column chokepoint, so they are the four chords the column
         // quartet blocks (iteration_lock_key_blocked's first test), and a
         // press that cannot act must not act — the roster's own rule, applied
         // here through arm_redesign_press's disabled line, which consumes the
@@ -15100,7 +15114,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // 2026-09-15 — Source + Warp is view 1 and the home state, so the
         // audio lamp lit in TARGET and the marker lamp in PHASE RESET, each
         // reading the very axis its own chord flipped. The architect deleted
-        // both buttons whole with bare `t`/`p`; the view bar's three above
+        // both buttons whole with bare `t`/`p`; the view bar's four above
         // are the axes' one remaining face.)
         // FOLLOW'S LAMP IS THE ARM AT REST AND THE CHASE DURING A PROJECT PLAY
         // (architect 2026-09-12): at rest the field is the one-shot the next
@@ -15664,10 +15678,12 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 // <Mode> (<key>)", constant in both states and true in both — the lamp says
 // which way the next press goes, and the text never has to swap between a
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
-// every lamp-carried toggle here (trim region, follow, keep centered while nudging,
-// read-only, history view, cumulative, add to selection) and by the render
-// player's Repeat one. Until then those rows named a CONSTANT ACT while the
-// lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
+// every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
+// line 1 begins "Toggle " and which redesign_button_selected lights: trim
+// region, follow, restrict undo to viewport, grid iterations, read-only,
+// history view, history walk, cumulative and add to selection — and by the
+// render player's Repeat one. Until then those rows named a CONSTANT ACT while
+// the lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
 // which read "Show trim region" over a lit lamp whose press HIDES it, the lie
 // the ruling retired; a RADIO's unlit half still names its own act, a press
 // on the lit half being the consumed nothing the lamp shows.
@@ -15744,7 +15760,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
-        // category: their axes are bare 1/2/3's and the view bar's alone now.)
+        // category: their axes are bare 1/2/3/4's and the view bar's alone now.)
         // THE TRIM REGION TOGGLE, TWO LINES: its twin IS Shift+[ the
         // maximizer, so the hint says so and the shift admission and the line
         // are the one fact the static_assert below keeps together. The
@@ -16741,7 +16757,7 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // state (the accent outline over the selected fill) and row 3 does not. So the
 // zone's carve-out names the tabs alone; the icon row's toggles — the
 // Cumulative one included, back on that row since 2026-08-18 — and the
-// view bar's three are hoverable in
+// view bar's four are hoverable in
 // both states, and a radio's already-selected press is refused in the ACTION
 // (the chord table's `radio` flag, whose users are the view bar and the tabs
 // since the 2026-09-04 collapse), not in its hoverability. (The transport's

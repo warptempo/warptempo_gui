@@ -143,8 +143,8 @@ std::optional<GuiFailure> source_load_dry_run(
 // the window exists — device_config.h, where audio_player then retired whole
 // 2026-08-28. A source load must not write any of them.) THE SOURCE LOAD IS THE ONLY CALLER since
 // 2026-08-24, when a load in place narrowed to what its undo entry restores —
-// the marker pair and the engine block — and so stopped applying a file's view
-// keys, tab bands and session prefs at all (the rule is stated at
+// the three marker columns and the engine block — and so stopped applying a
+// file's view keys, tab bands and session prefs at all (the rule is stated at
 // GuiInputHandler::apply_recipe_in_place, input_handler.h). The routine stays a
 // named routine rather than folding into load_file: it is the whole-file
 // values-only apply, and that is one act worth reading as one. SettingsFile is

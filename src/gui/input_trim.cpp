@@ -15,10 +15,10 @@
 // spelling: it renders untrimmed and plays to the natural end, and Shift+[ is
 // how the user gets back to it.
 // Every gesture clamps each bound to its absolute walls — frame 0 to EOF-1,
-// the same wall both marker columns hold. All authored positions (both marker
-// columns and both trim bounds) share the inclusive [0, total-1] domain — the
-// end bound's old exclusive-at-total wall is retired. Every wall check is a
-// plain integer compare — literally the load guard's comparison.
+// the same wall all three marker columns hold. All authored positions (all
+// three marker columns and both trim bounds) share the inclusive [0, total-1]
+// domain — the end bound's old exclusive-at-total wall is retired. Every wall
+// check is a plain integer compare — literally the load guard's comparison.
 //
 // PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
 // be one blanket "there are no partner walls" clause). What is unchanged

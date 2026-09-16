@@ -110,8 +110,9 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // act and face readers that ask whether the render normalizes a marker read
 // `collapsed` (the one normalization that is not already walled on the
 // marker's kind — pass-2 reddens only refs), so `red` has only
-// painters for readers: the two flag passes (waveform_cache.cpp) and the open
-// marker-lane field's face (render.cpp).
+// painters for readers: the three flag passes (waveform_cache.cpp's W, P and M
+// arms, each over its own column's cache) and the open marker-lane field's
+// face (render.cpp).
 //
 // Keyed on the warp store generation plus the audio identity (total_frames
 // feeds marker_effective's last-segment envelope distance). It reads the

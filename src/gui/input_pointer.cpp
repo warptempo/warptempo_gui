@@ -213,7 +213,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the radio-pair collapse, to 2026-09-15 — one button per axis where
     // IconS/IconT and IconW/IconP were four radios over the bare `t`/`p`
     // chords, each a plain TOGGLE carrying NO radio flag. The architect
-    // deleted the whole category with those two keys; bare 1/2/3 below are
+    // deleted the whole category with those two keys; bare 1/2/3/4 below are
     // the axes' only keyboard road now.)
     // THE TRIM GROUP — the Show trim region button, alone in it since the scissors
     // were deleted on 2026-08-18 (the scissors opened the group in 2026-08-11
@@ -688,10 +688,11 @@ constexpr ToolbarChord kToolbarChords[] = {
 };
 
 // THE TABLE IS TOTAL OVER THE ROSTER, ENFORCED AT COMPILE TIME (2026-08-06):
-// every RedesignButton but the THREE menu anchors carries a chord here — 45
-// rows against the roster's 48 since 2026-09-14's Keep Centered While Nudging
-// and Ignore Waveform Magnification deletion
-// (the count's succession is in git history). It is keyed by id and every
+// every RedesignButton but the THREE menu anchors carries a chord here — the
+// table's length plus the three anchors is kRedesignButtonCount, and the
+// static_assert below is the check, so no number is restated here
+// (kRedesignButtonCount carries the split; the count's succession is in git
+// history). It is keyed by id and every
 // reader matches by id or by published rect, so the row order it is kept in
 // is for the reader alone; a button moving BETWEEN ROWS moves no count, and
 // an anchor carries no chord, so it moves the roster and not this table —
@@ -741,7 +742,7 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
 // rect is the painter's stash and nothing here re-shapes or re-measures, so the
 // pointer reads exactly what the painter published — which for every button but
-// the view bar's three is also the box it drew. THE VIEW BAR IS THE ONE
+// the view bar's four is also the box it drew. THE VIEW BAR IS THE ONE
 // INTENTIONAL PAINT-ONLY INSET (architect 2026-09-09: the hit box is the blue
 // div's own height): the walk publishes the lane-tall rect and paints the
 // vertically inset face through `view_bar_face_rect`, so the top and bottom
@@ -1157,8 +1158,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare
-//   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
+//   LIVE — the view bar's ViewSW/ViewTP/ViewTW/ViewTM (bare
+//   1/2/3/4, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
 //   allowlist for the act, its own arm in redesign_button_enabled greying it
@@ -1166,8 +1167,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
-//   the icon row's two VIEW LAMPS (bare `t` / `p`, admitted with the view
-//   switches), THE ZOOM PAIR since the 2026-08-12 relayout (bare `0` is the
+//   THE ZOOM PAIR since the 2026-08-12 relayout (bare `0` is the
 //   allowlist's own zoom admission and bare `c`
 //   is the mode's vocabulary — pure navigation, live with nothing hand-listed),
 //   the load-editor opener (bare `'`, which in this mode loads THE
@@ -7679,10 +7679,10 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's three menu anchors and the view bar's three, row 3's two
-// tabs, row 4's twenty-two — the toolbar four included since the 2026-08-12
+// (row 1's three menu anchors and the view bar's four, row 3's two
+// tabs, row 4's twenty — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// seventeen since 2026-09-15: 45, the enum's
+// seventeen since 2026-09-15: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).
@@ -7822,8 +7822,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // menu-row exclusion the state-free table owns; the stateful overload
         // (whose every arm returns a non-null line 1) is the painter's, which
         // reads the words at paint time. THE TWO PARTED ON ROW 1 ON 2026-09-10
-        // and this line is why nothing changed on screen: the view bar's three
-        // joined the iteration lock's membership, so the stateful overload's
+        // and this line is why nothing changed on screen: the view bar's
+        // selectors joined the iteration lock's membership, so the stateful overload's
         // shared lock fork would hand them a sentence — and they are asked for
         // one exactly never, the exclusion being the CONSTANT table's.
         if (hovered_tip < 0 && under_pointer && !modal_owns_the_keyboard &&
@@ -7881,7 +7881,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // whether a button has one. Re-derived from redesign_button_tooltip's
     // stateful overload, whose every arm returns a non-null line 1 and so
     // takes no hint away from any button (and since 2026-09-10 its shared
-    // iteration-lock fork would GIVE one to the view bar's three, which the
+    // iteration-lock fork would GIVE one to the view bar's four, which the
     // walk above never asks): it moved the words on THREE — SAVE
     // (a publishing checkpoint first, then the history view's "Save and
     // commit"), RENDER (the mid-render Cancel, then the iteration bit) and,
@@ -9662,7 +9662,7 @@ void GuiInputHandler::seed_roster_tooltip_dwell(RedesignButton b,
                                                 int64_t press_ms) {
     // The walk's own two terms before it stamps, asked in its order: no dwell
     // under a modal surface, and the CONSTANT table's membership (the menu-row
-    // anchors and the view bar's three carry no hint in any state — the
+    // anchors and the view bar's four carry no hint in any state — the
     // stateful overload is the painter's and is not asked here).
     if (tooltip_dwell_suppressed()) return;
     if (redesign_button_tooltip(b).line1 == nullptr) return;
@@ -9984,7 +9984,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // rather than named, so the rule covers whatever row 1 holds by the
         // fact "row 1" and a new row-1 button inherits it by existing. WHAT IT
         // COVERS TODAY, re-derived from the two predicates rather than
-        // remembered: THE VIEW BAR'S THREE — row 1's other two buttons are the
+        // remembered: THE VIEW BAR'S FOUR — row 1's other two buttons are the
         // anchors, and an
         // ANCHOR is skipped (the OPEN menu's own does nothing at all — no
         // re-open, no close — and another one SWITCHES through the walk below,

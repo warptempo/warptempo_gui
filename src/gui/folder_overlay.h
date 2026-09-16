@@ -47,7 +47,7 @@
 // band on every content — its press exempted from the three veils at
 // press_on_live_menu_anchor, its menu opening onto Quit and Synchronize —
 // while Edit and Settings grey and refuse at menu_anchor_dead_in_mode, the
-// view bar's 1/2/3 grey through redesign_button_enabled's first arm — shown
+// view bar's four grey through redesign_button_enabled's first arm — shown
 // by the bar's own inactive ground (view_bar_focused) and, since 2026-09-10,
 // by the row's disabled face, the two dead UNSELECTED labels dimmed while the
 // selected view keeps its ink — and every icon-row button

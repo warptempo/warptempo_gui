@@ -129,7 +129,8 @@ bool GuiSaveOps::save() {
     const bool ok = app.warpmarkers.save(app.warpmarkers_path);
     if (!ok) {
         report(notifications,
-               save_write_failure("Save failed", app.warpmarkers_path));
+               save_write_failure("Warp markers save failed",
+                                  app.warpmarkers_path));
         return false;
     }
 
@@ -140,7 +141,7 @@ bool GuiSaveOps::save() {
     if (!app.phaseresetmarkers_path.empty()) {
         if (!app.phaseresetmarkers.save(app.phaseresetmarkers_path)) {
             report(notifications,
-                   save_write_failure("phase_reset save failed",
+                   save_write_failure("Phase reset markers save failed",
                                       app.phaseresetmarkers_path));
             return false;
         }

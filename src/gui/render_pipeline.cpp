@@ -429,7 +429,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 //
                 // THE VIEW KEYS ARE WRITTEN FOR THE FILE, NOT FOR THE `'` LOAD.
                 // Since 2026-08-24 the load-in-place applies only the recipe —
-                // the marker pair and the engine block — and IGNORES
+                // the three marker columns and the engine block — and IGNORES
                 // active_audio_view, both tab bands and every session pref this
                 // writer emits (the rule at
                 // GuiInputHandler::apply_recipe_in_place, input_handler.h). They

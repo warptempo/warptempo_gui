@@ -573,7 +573,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 //
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
-// reaches on_key only as a character inside an editor); the digits 4..9;
+// reaches on_key only as a character inside an editor); the digits 5..9;
 // Backspace, and every letter the ladder never tests (A, E, T, W, X, Y — Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
 // on 2026-09-14 with that lamp's deletion; V left it on 2026-09-01, the

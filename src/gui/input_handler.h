@@ -519,7 +519,8 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
 //   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (bare
-//     `t`, the settings `active_audio_view=` key, the propagate paste's audio
+//     1/2/3/4, the settings `active_audio_view=` key, the two crossings, bare
+//     `i`'s own, the undo restore's tag and the two propagate pastes' audio
 //     half), below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P/M writer, below
 //     its same-mode and not-in-target refusals (bare 1/2/3/4 and the settings
@@ -544,9 +545,9 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The bare 1/2/3 selectors, the view bar's buttons (the two icon-row VIEW
-// LAMPS deleted 2026-09-15) and the settings keys all compose those writers
-// and inherit it.
+// The bare 1/2/3/4 selectors, the view bar's four buttons (the two icon-row
+// VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
+// writers and inherit it.
 //
 // WHICH HALF IS CORRECTNESS AND WHICH IS THE FRESH-GRIP RULE, said plainly
 // because the two read alike at the call site: an S/T write CHANGES WHAT THE
@@ -1554,7 +1555,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-two (the
+    // the view bar's four, row 3's two tabs, row 4's twenty (the
     // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
     // back from the menu row since 2026-09-04, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
@@ -3357,8 +3358,8 @@ private:
         const;
 
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
-    // (.settings + the marker pair) as the new authoring baseline, view-
-    // agnostic (source OR target authoring view). Reads and validates the wav's
+    // (.settings + the three marker columns) as the new authoring baseline,
+    // view-agnostic (source OR target authoring view). Reads and validates the wav's
     // existence and all four sidecars BEFORE mutating any store, and returns
     // false leaving authoring untouched on any missing/malformed input — each
     // such genuine-failure arm naming its cause and path on stderr since
@@ -3930,8 +3931,8 @@ private:
     // The SET-TO form exists for the callers that name a view rather than
     // an axis: the bare 1/2/3/4 absolute selectors (and the settings editor's
     // typed `active_markers_view=M`, which crosses to target through it), the
-    // phase-reset propagate's
-    // land-in-target tail, and — both since 2026-08-28 —
+    // phase-reset and magnification level propagates'
+    // land-in-target tails, and — both since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, drop_phase_reset_in_target_view,

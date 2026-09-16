@@ -9,14 +9,16 @@
 #include <utility>
 #include <vector>
 
-// Naming symmetry: both marker columns share this ONE store implementation —
-// GuiWarpMarkers and GuiPhaseResetMarkers are GuiMarkerStore instantiated
-// over their per-column GUI marker types, so the store mechanics (the
+// Naming symmetry: all three marker columns share this ONE store
+// implementation — GuiWarpMarkers, GuiPhaseResetMarkers and
+// GuiMagnificationLevelMarkers are GuiMarkerStore instantiated over their
+// per-column GUI marker types, so the store mechanics (the
 // sorted-by-time_frame vector, the generation token, and the
 // clear-bump-parse-upcast load shape) are identical by construction. The
-// pair vocabulary `warp_X` / `phase_reset_X`, the per-column parse calls and
-// serializer contracts, and the GUI-only field docs live at the concrete
-// classes (warpmarkers.h / phaseresetmarkers.h).
+// per-column vocabulary `warp_X` / `phase_reset_X` / `magnification_level_X`,
+// the per-column parse calls and serializer contracts, and the GUI-only field
+// docs live at the concrete classes (warpmarkers.h / phaseresetmarkers.h /
+// magnificationlevelmarkers.h).
 template <typename GuiM>
 class GuiMarkerStore {
 public:

@@ -652,7 +652,7 @@ void GuiFlagEditor::commit_measure_edit() {
     }
     // THE STORE IS THE WARP COLUMN'S, the open's own: the open refuses any
     // other column, and the view CANNOT MOVE under an open session — every
-    // column-switching key (`p`, `t`, the 1/2/3 selectors, Ctrl+Tab) is
+    // column-switching key (the bare 1/2/3/4 selectors, Ctrl+Tab) is
     // dropped at the keyboard-modal gate while any editor stands, and every
     // column-switching BUTTON acts at the LIFT whose own PRESS already closed
     // this editor (close_top_flag_editor_for_outside_press).

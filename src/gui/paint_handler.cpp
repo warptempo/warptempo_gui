@@ -448,8 +448,8 @@ constexpr MenuButtonDef kMenuButtons[] = {
 
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
-// Color" bar, the one row the redesign had left out) reborn as the three
-// ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, which are bare 1/2/3.
+// Color" bar, the one row the redesign had left out) reborn as the four
+// ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, T+M, which are bare 1/2/3/4.
 //
 // THE FLOAT'S ROOM, re-measured 2026-09-09 when the HELP ANCHOR was deleted
 // (and 2026-09-04 for the ITERATIONS one): the LEFT float is 173 authored px
@@ -925,7 +925,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
     // chronometer-start lit in Phase Reset, one button per axis where four
     // radios had stood before that day's collapse. The architect deleted the
-    // whole category 2026-09-15, group slot and separator with it: bare 1/2/3
+    // whole category 2026-09-15, group slot and separator with it: bare 1/2/3/4
     // and the view bar are the axes' only faces now. The two glyphs the
     // radios' retired halves wore, document-export and speedometer, had
     // already left icons::Icon with the collapse; the picks and their

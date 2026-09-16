@@ -845,15 +845,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // true OR grid iterations stands (authoring_locked, app_state.h).
     //
     // THE LIST BELOW IS THE READ-ONLY ONE. The iteration lock's is that list
-    // MINUS THE COLUMN SWITCH — the three absolute view selectors bare 1 / 2 /
-    // 3, which run the `t` and `p` handler BODIES and so carry the column
-    // with them (the individual bare `t`/`p` keys were deleted whole with
-    // their view lamps 2026-09-15, so the digits are the axis's only road);
-    // the mode is lit for the column you are in —
+    // MINUS THE COLUMN SWITCH — the four absolute view selectors bare 1 / 2 /
+    // 3 / 4, which run the S/T and column chokepoint BODIES and so carry the
+    // column with them (the individual bare `t`/`p` keys were deleted whole
+    // with their view lamps 2026-09-15, so the digits are the axis's only
+    // road); the mode is lit for the column you are in —
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
     // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
-    // tabs sharing both stores) — MINUS BARE `o`, the
+    // tabs sharing all three stores) — MINUS BARE `o`, the
     // read-only toggle (architect 2026-09-10: the padlock refuses under a lit
     // lamp, half of what makes the two locks mutually exclusive; the other
     // half is bare `i`'s own arm, which refuses to LIGHT the lamp while
@@ -866,9 +866,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
-    // CLIPBOARD COPY Ctrl+P (it reads a run into a session clipboard and
-    // pushes nothing, so the undo domain this lock protects has no interest in
-    // it; its two ALT-bearing pastes stay refused). That
+    // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+M, ctrl-exact (each reads a run
+    // into a session clipboard and pushes nothing, so the undo domain this
+    // lock protects has no interest in them; the FOUR ALT-BEARING PASTES stay
+    // refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
@@ -899,11 +900,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead
-    //   - t (no mods)            → S/T sub-view toggle
-    //   - p (no mods)            → W/P sub-view toggle
-    //   - 1/2/3 (no mods)        → the absolute view selectors (S+W / T+P /
-    //                              T+W), which run exactly the two handlers
-    //                              above
+    //   - 1/2/3/4 (no mods)      → the absolute view selectors (S+W / T+P /
+    //                              T+W / T+M), the ONE road onto both view
+    //                              axes: each composes the S/T chokepoint
+    //                              switch_active_audio_view_to with the column
+    //                              entry GuiActiveViews::select_active_markers_view
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
@@ -955,7 +956,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
     // commits are authored content), `i`, `'` in the `h` view, the
-    // propagate copy/paste (Ctrl+P and the Ctrl+Alt+P pair), and undo/redo
+    // propagate copy/paste of BOTH families (the Ctrl+P three and the Ctrl+M
+    // three), and undo/redo
     // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
     // POINTER path too has gone, the trim band's gate having been deleted with
@@ -1125,7 +1127,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tempo-image step were deleted, marker_drag.h, leaving bare Left/Right in
     // W+target a consumed refusal at the split below), the phase-reset
     // propagate paste (it starts in source view and lands in target through
-    // handle_active_audio_view_toggle, bare 1/2/3's own chokepoint now that
+    // handle_active_audio_view_toggle, bare 1/2/3/4's own chokepoint now that
     // bare `t` is deleted), the iteration-bracket wipe, the marker
     // MEASURE, and — since 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
     // Ctrl+N, Delete and the flag editor's Return open, each admitted in
@@ -1133,9 +1135,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // (BARE `t` TOGGLED VIEW-DOMAIN (S <-> T) HERE FROM 2026-08-01 TO
     // 2026-09-15, when the architect deleted the key whole with its icon-row
-    // view lamp: source/target is reachable through bare 1/2/3 and the view
+    // view lamp: source/target is reachable through bare 1/2/3/4 and the view
     // bar alone now. handle_active_audio_view_toggle is the body it called —
-    // it stays, and bare 1/2/3 below are its only remaining keyboard road.)
+    // it stays, and bare 1/2/3/4 below are its only remaining keyboard road.)
 
     // BARE 1 / 2 / 3 / 4 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01;
     // `4` 2026-09-15): `1` is S+W, `2` is T+P, `3` is T+W, `4` is T+M. They
@@ -1143,7 +1145,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // consumed no-op — that is the whole difference from the deleted `t` and
     // `p` toggles. (S+P deliberately has NO key: phase resets author in target view,
     // so S+P is the one combination that is display-only on both axes, and the
-    // architect gave the three keys to the three worth reaching directly. He
+    // architect gave the four keys to the four worth reaching directly. He
     // intends dedicated BUTTONS for these later, outside today's icon-row
     // layout; for now the keyboard is the whole surface.)
     //
@@ -1750,9 +1752,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
     // gesture — `0` reaches it only from full out, and by calling it — while
     // the Tab family changes no zoom (2026-08-05), so `0` is
-    // the one command that reaches the whole song. DIGITS 1, 2
-    // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is up
-    // beside bare `t`, the axis handler they compose); 4..9 are unbound.
+    // the one command that reaches the whole song. DIGITS 1, 2,
+    // 3 and 4 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (`4` since
+    // 2026-09-15; their block is up beside the axis handlers they compose);
+    // 5..9 are unbound.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_overview_command();
         return;
@@ -1849,9 +1852,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // P / I / M / K / L letter keys (phase-reset clipboard, view toggle,
-    // iteration, bpm mode, add-to-selection, the render player on bare `l`
-    // and the AV sync stats panel on its shifted twin since 2026-09-03).
+    // P / M / I / K / L letter keys (the Ctrl+P-family phase-reset clipboard
+    // ops, the Ctrl+M-family magnification level clipboard ops, `i` iteration
+    // mode, `k` add-to-selection, and `l` / Shift+L, the folder overlay's two
+    // openers).
     if (handle_mode_keys(key, mods)) return;
 
     // The platform boundary case-folds letters and delivers the
@@ -1978,7 +1982,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // THE BARE DROP, and the home-view gate lives INSIDE its arm since
         // 2026-08-30 rather than above it: the gate is the ACT'S refusal, so
         // it must not swallow a spelling that never meant to drop — an
-        // unbound Ctrl+Shift+S or Alt+S now falls past this block to the
+        // unbound Alt+S now falls past this block to the
         // strict-modifier tail and is answered as the unbound chord it is.
         // One press, one card, the right one.
         if (!ctrl && !shift && !alt) {
@@ -3719,8 +3723,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
     return std::move(*r);
 }
 
-// THE FLIP, one line over the set-to form below — bare `t` and the settings
-// editor's `active_audio_view=` commit. Every invariant the switch owns lives in
+// THE FLIP, one line over the set-to form below — ONE CALLER since bare `t`
+// was deleted on 2026-09-15, the settings editor's `active_audio_view=`
+// commit. Every invariant the switch owns lives in
 // the one body; the contract for both spellings is at the declaration
 // (input_handler.h).
 void GuiInputHandler::handle_active_audio_view_toggle() {
@@ -3728,7 +3733,7 @@ void GuiInputHandler::handle_active_audio_view_toggle() {
 }
 
 void GuiInputHandler::switch_active_audio_view_to(char target_view) {
-    // Audio must be loaded — `t` is a silent no-op in blank state.
+    // Audio must be loaded — the switch is a silent no-op in blank state.
     // (The blank/loading guard near the top of on_key already covers
     // this, but the helper is defensive in case future callers reach
     // it from elsewhere.)
@@ -3737,7 +3742,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // THE SAME-VIEW NO-OP, the set-to form's own first line: naming the view you
     // are already in changes nothing — no stop, no translation, no editor
     // teardown, no kick. It is what lets a caller that names a COMBINATION (the
-    // 1/2/3 selectors, the undo restore) hand this axis its tag unconditionally
+    // 1/2/3/4 selectors, the undo restore) hand this axis its tag unconditionally
     // instead of spelling the guard by hand. The flip above can never reach it.
     if (target_view != 'S' && target_view != 'T') return;
     if (target_view == app.active_audio_view) return;
@@ -3816,9 +3821,9 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // the PAINTED diff-flag list, and the switch is about to rebuild that list
     // (the contract, and the full clearer list, are at AppState::HistoryMode::
     // focus). This axis's clear lives HERE, at the S/T chokepoint, so the bare
-    // `t` key, the icon row's audio-view lamp and the 1/2/3 selectors that compose
-    // this handler all inherit it with no second route; the W/P axis clears at
-    // its own toggle. Placed BELOW the refusal above (a switch that never
+    // 1/2/3/4 selectors and every other caller of this chokepoint inherit it
+    // with no second route; the column axis clears at its own switch. Placed
+    // BELOW the refusal above (a switch that never
     // happened must not clear anything) and far above the kick at the tail,
     // which is what rebuilds the flag cache — `focus` is one of that cache's
     // fingerprint fields, so it has to be settled before the rebuild reads it.
@@ -3874,8 +3879,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // different reason. SINCE 2026-09-13 THE MODE NEVER CROSSES THIS EDGE AT
     // ALL: it lives in target view alone, bare `i` crossing S -> T through
     // this very chokepoint before it lights, and every caller that could name
-    // 'S' under a lit lamp refusing ahead of it (bare `t` and bare 1 at the
-    // iteration lock's gate, the settings editor's typed
+    // 'S' under a lit lamp refusing ahead of it (bare 1 and its three fellow
+    // selectors at the iteration lock's gate, the settings editor's typed
     // `active_audio_view=S`, and the undo/redo restore, which the lock
     // refuses whole) — the invariant is at AppState::iteration_mode_enabled,
     // and this body takes no term for it.)
@@ -3990,9 +3995,13 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // flip would strand) died with the stored span: the overlay is DERIVED from
     // the trim every frame, through trim_overlay_span, which re-crosses the
     // bounds into whichever domain is live. Nothing here re-shows it.
-    // ALL THREE CALLERS get this: the bare `t` key, the settings editor's
-    // `active_audio_view=` GUI-key twin, and the propagate paste's tail (moot
-    // there — its column swap clears the selection immediately after).
+    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped: the four absolute
+    // view selectors bare 1/2/3/4 (and the view bar, which synthesizes them),
+    // the settings editor's `active_audio_view=` GUI-key twin, the two
+    // crossings Shift+S and Ctrl+Shift+S, bare `i`'s own crossing into target,
+    // the undo/redo restore's audio-view tag, and the two propagate pastes'
+    // target-view tails (moot there — their column swap clears the selection
+    // immediately after).
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
@@ -4184,15 +4193,15 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 // It is the propagate paste's target-view tail one act over
 // (land_paste_in_target_view, phase_reset_propagate.cpp), and it takes that
 // tail's shape verbatim:
-//   * switch_active_audio_view_to is the SAME chokepoint bare `t` runs, in its
-//     SET-TO spelling, so naming 'T' from a session already in target view is
+//   * switch_active_audio_view_to is the SAME chokepoint the absolute view
+//     selectors run, so naming 'T' from a session already in target view is
 //     the chokepoint's own no-op and this body spells no guard for it. Every
 //     invariant it owns — the entry validation, the domain translation of
 //     playhead and viewport, the flag-editor teardown, the seated-pinch clear,
 //     kick_waveform_sync and the target render's ensure_ready — arrives by
 //     construction.
 //   * A REFUSED ENTRY STOPS THE WHOLE PRESS, the absolute view selectors' own
-//     rule (bare 1/2/3, on_key): entering target view can fail its validity
+//     rule (bare 1/2/3/4, on_key): entering target view can fail its validity
 //     gate (the tripwire class, unreachable from program-written input, silent
 //     on screen), and dropping into the column while the audio view stayed
 //     behind would
