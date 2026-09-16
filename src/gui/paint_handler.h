@@ -673,7 +673,7 @@ struct GuiPaintHandler {
     // True when a plate is displayed (wf_cache.fp_rendered) and its published
     // gain fingerprint (fp_gain_profile_hash) differs from the live effective
     // gain profile's hash (effective_waveform_gain_profile). The contract and
-    // its one reader are at Viewport::displayed_plate_gain_is_stale.
+    // its readers are at Viewport::displayed_plate_gain_is_stale.
     bool displayed_plate_gain_is_stale() const;
     // displayed_plate_geometry_is_live: true when a plate is displayed and
     // every GEOMETRY field of its published fingerprint — the viewport pair,

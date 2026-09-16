@@ -4165,18 +4165,24 @@ enum class DialogTrigger {
 // which one; the BUTTON ORDER is untouched by either value, so Cancel stays
 // LAST on every prompt and fact (i)'s derivation holds whichever is chosen.
 //   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
-//                 the unsaved-work prompt (and its save-failed rung) and the
-//                 paste confirmation, whose Enter must not commit anything.
-//   FirstButton — THE TWO CONFIRMATIONS: the LOAD CONFIRMATION on both its
+//                 the three-way prompts alone: the unsaved-work prompt and
+//                 its save-failed rung (Save / Discard / Cancel, Retry /
+//                 Discard / Cancel). Those are NOT confirmations of an act
+//                 already asked for — they interpose a question the user did
+//                 not raise — so their Enter must commit nothing.
+//   FirstButton — THE CONFIRMATIONS: the LOAD CONFIRMATION on both its
 //                 subjects (the player's render entry and the `h` view's walk
-//                 member) and, since 2026-09-13, File → Revert's (architect:
+//                 member), since 2026-09-13 File → Revert's (architect:
 //                 "revert should be just the same as load … both should use
-//                 the same default, OK"). Each prompt is already the
-//                 deliberate second step of an explicit act — the `'` press,
-//                 the Revert row or its chord — so the question itself is the
-//                 safeguard and its Enter confirms the act just asked for;
-//                 the `'` roads answer Enter the same way rather than
-//                 opposite ways, and the revert answers it as they do.
+//                 the same default, OK") and, since 2026-09-16, THE TWO
+//                 PROPAGATE PASTE CONFIRMATIONS (architect: "align — paste
+//                 should open on the equivalent of OK"). Each prompt is
+//                 already the deliberate second step of an explicit act — the
+//                 `'` press, the Revert row or its chord, the paste chord or
+//                 its Edit row — so the question itself is the safeguard and
+//                 its Enter confirms the act just asked for; the `'` roads
+//                 answer Enter the same way rather than opposite ways, and
+//                 the revert and the pastes answer it as they do.
 enum class PromptInitialFocus { LastButton, FirstButton };
 
 struct PromptState {
@@ -10196,6 +10202,17 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
 const char* tempo_cent_step_kind_refusal(const AppState& a,
                                          const GuiAudio& audio);
 
+// THE COINCIDENT-COLLAPSE STEP SENTENCE — ONE SENTENCE FOR ONE CONDITION ON
+// BOTH VALUE COLUMNS (architect 2026-09-16): the tempo step's kind refusal
+// above raises it for an enabled member of a warp run the render collapses,
+// and the magnification level step's (magnification_level_step_kind_refusal_for,
+// the level-step block below) for an enabled member of a run the picture
+// collapses to level 0. A stepped value on such a member changes nothing the
+// render or the picture reads, so the press is refused on the marker's KIND —
+// the frame it shares — and the two columns say it in the same words.
+inline constexpr const char* kCoincidentCollapseStepCard =
+    "That marker shares its frame with another";
+
 // DOES THIS COLUMN CARRY GRID ITERATIONS RIGHT NOW — the mode's ONE
 // column-shaped question. `column` is 'W' or 'P'.
 //
@@ -11655,9 +11672,11 @@ inline bool measure_step_direction_actionable(const AppState& a,
 // TEMPO STEP'S TWO ARMS (architect 2026-09-16) — the singleton's clamp silent,
 // the group ALL-OR-NOTHING and carded — both locks refusing (the digit is
 // serialized content and the step pushes an undo entry — authoring_locked), the
-// wall asked ahead of the coalesce stamp, and nothing past the write but the
-// undo entry, the dirty bit, the damage and the picture's own gain kick: no
-// re-warp, no render, no re-land, the playhead unmoved.
+// ONE KIND REFUSAL this column has (a coincident-collapse member, the owner
+// below) asked where the tempo step asks its own, the wall asked ahead of the
+// coalesce stamp, and nothing past the write but the undo entry, the dirty
+// bit, the damage and the picture's own gain kick: no re-warp, no render, no
+// re-land, the playhead unmoved.
 
 // THE STABLE-STATE REFUSALS: the M column, a standing selection and a valid
 // focus — the tempo step's own three terms in this column's, read by the act
@@ -11678,22 +11697,63 @@ inline int64_t magnification_level_step_landing(int64_t start, int64_t delta) {
     return std::clamp<int64_t>(start + delta, 0, kMarkerMagnificationMax);
 }
 
+// THE LEVEL STEP'S KIND REFUSAL — THIS COLUMN'S ONE, the tempo pair's shape
+// (tempo_cent_step_kind_refusal_for / tempo_cent_step_kind_refusal, above;
+// architect 2026-09-16, the sibling's rule read onto this column). An ENABLED
+// member of a frame run the picture collapses — the red cache's `collapsed`
+// subset (magnification_level_red_flag_set_cached, warp_frame_map_view.h; the
+// classifier is the profile builder's own run walk) — refuses on
+// kCoincidentCollapseStepCard: the picture reads such a run as the neutral
+// level 0 whatever its members' digits say (coincidence is never intentional,
+// architect 2026-09-13), so a stepped digit there is picture-inert, and the
+// press is refused on the marker's KIND rather than let land on nothing. A
+// DISABLED member of such a run steps, as on W: the picture never counted it,
+// so it is no member of the collapse. NO VIEW TERM — the column exists in
+// target view alone — and no other term: every magnification level marker
+// carries a level of its own (no pass, no label ref, no offset form), so the
+// collapse is the whole of this column's kind. Defined in
+// magnificationlevelmarkers_ops.cpp beside the cluster it refuses for.
+//
+// TWO FORMS, ONE BODY, the tempo pair's split: the INDEX form carries the
+// verdict — a fact about ONE marker — and the FOCUS form is the group
+// short-circuit over it, asked of `last_selected_marker`. READERS: the act's
+// singleton arm (GuiMagnificationLevelMarkersOps::adjust_magnification_level_step,
+// the focus form, carded and asked ahead of the wall and the coalesce stamp,
+// exactly where the tempo singleton asks), the GROUP wall scan below (the
+// index form of every member — the whole press refuses on one), the Up / Down
+// face's singleton arm (magnification_level_step_direction_actionable, the
+// index form), the Up / Down tooltip overload's ladder-line drop (the focus
+// form) and the plain wheel over an M flag, which reaches the act's body and
+// inherits its refusal silently (run_flag_cell_wheel drops the sentence, a
+// pointer gesture's non-event being its own answer). THE VALUE DRAG HAS NO ARM
+// TO READ IT: value_drag_posture answers no on this column (the plain flag
+// drag is the horizontal move here), so no crossing and no cursor asks.
+const char* magnification_level_step_kind_refusal_for(const AppState& a,
+                                                      int idx);
+const char* magnification_level_step_kind_refusal(const AppState& a);
+
 // THE GROUP STEP'S WALL SCAN on this column, its own const owner (architect
 // 2026-09-16): true when EVERY selected marker could take a step of `delta` —
-// none landing outside the level bracket under the WHOLE step — and false when
-// one could not. IT IS THE TEMPO GROUP'S ALL (tempo_cent_step_group_actionable),
-// not the per-member clamp this axis shipped with on 2026-09-15: a group press
-// is ONE act on the selection, so it moves the selection it was aimed at or it
-// moves nothing, and a press that quietly left some members standing would pool
-// them against the rest — exactly what GROUP RIGIDITY refuses. The levels of a
-// selection are read against each other as its tempos are: a section two steps
-// brighter than its neighbour stays two steps brighter across the press.
+// none refused on its kind, none landing outside the level bracket under the
+// WHOLE step — and false when one could not. IT IS THE TEMPO GROUP'S ALL
+// (tempo_cent_step_group_actionable), not the per-member clamp this axis
+// shipped with on 2026-09-15: a group press is ONE act on the selection, so it
+// moves the selection it was aimed at or it moves nothing, and a press that
+// quietly left some members standing would pool them against the rest —
+// exactly what GROUP RIGIDITY refuses. The levels of a selection are read
+// against each other as its tempos are: a section two steps brighter than its
+// neighbour stays two steps brighter across the press.
 // A DISABLED MEMBER IS A MEMBER, this column's rule at every act: the disable
 // bit says what the PICTURE reads, not what the arrows may author, so a disabled
-// marker counts toward the wall and steps with the rest. NO KIND TERM EXISTS
-// HERE — every magnification level marker carries a level of its own, with no
-// pass, no label ref and no offset form to refuse on — so the bracket is the
-// whole of what a member can wall on, and this scan is the whole verdict.
+// marker counts toward the wall and steps with the rest. THE KIND TERM IS THE
+// COLLAPSE (architect 2026-09-16, the tempo scan's own collapse wall): an
+// enabled coincident-collapse member walls the whole press, asked through the
+// column's one kind owner above rather than off the cache directly — the tempo
+// scan reads the cache itself because its kind owner carries terms the group
+// refuses on its own (the ref, the view); this column's kind owner IS the
+// collapse and nothing else, so the scan asks it by name and the two cannot
+// be two readings of one subset. Otherwise the bracket is the whole of what
+// a member can wall on.
 // THE MAGNITUDE MATTERS, as it does on the tempo scan: the arm adds RAW, so the
 // ten-step chord walls a selection the bare press would move. THE TWIN RULE IS
 // ANSWERED BY MONOTONICITY — a longer step in the same direction walls a
@@ -11708,6 +11768,7 @@ inline bool magnification_level_step_group_actionable(const AppState& a,
     const int n = static_cast<int>(mv.size());
     for (const int idx : a.selected_markers) {
         if (idx < 0 || idx >= n) continue;   // belt
+        if (magnification_level_step_kind_refusal_for(a, idx)) return false;
         const int64_t start =
             static_cast<int64_t>(mv[static_cast<std::size_t>(idx)].level);
         if (magnification_level_step_landing(start, delta) != start + delta)
@@ -11726,13 +11787,19 @@ inline bool magnification_level_step_group_actionable(const AppState& a,
 //     magnification level change"), a group edit not being the one-dimensional
 //     already-at-its-state refusal that goes silent, its effect having been
 //     every selected flag's digit;
-//   * a singleton compares magnification_level_step_landing against the level
-//     the marker already holds — Up greys at kMarkerMagnificationMax, Down at 0
-//     — and that refusal is SILENT at the key, the tempo singleton's own clamp,
-//     so there the grey is the whole cue.
+//   * a singleton asks the member's KIND refusal first (architect 2026-09-16
+//     — a coincident-collapse member, magnification_level_step_kind_refusal_for,
+//     magnitude-blind, so every admitted rung refuses alike, the tempo face's
+//     own order) and then compares magnification_level_step_landing against
+//     the level the marker already holds — Up greys at kMarkerMagnificationMax,
+//     Down at 0 — the kind refusal CARDED at the key and the clamp SILENT
+//     there, the tempo singleton's own pairing, so on the clamp the grey is
+//     the whole cue.
 // THE SINGLETON ARM READS THE SELECTED MEMBER, not the focus, because the act's
-// loop does: the two cannot answer about different markers that way. It is the
-// old ANY over a set of one, and a stale index is skipped as a belt, so an empty
+// loop does: the two cannot answer about different markers that way (a
+// singleton's focus IS its member by the seat rule, so the act's focus-form
+// kind refusal and this arm's index-form one name one marker). It is the old
+// ANY over a set of one, and a stale index is skipped as a belt, so an empty
 // live set answers false.
 // MAGNITUDE-INVARIANT AT THE SINGLETON for the tempo step's reason: a positive
 // delta's clamped landing equals the start iff the start IS the max, whatever
@@ -11748,6 +11815,7 @@ inline bool magnification_level_step_direction_actionable(const AppState& a,
     const int n = static_cast<int>(mv.size());
     for (const int idx : a.selected_markers) {
         if (idx < 0 || idx >= n) continue;   // belt
+        if (magnification_level_step_kind_refusal_for(a, idx)) return false;
         const int64_t start =
             static_cast<int64_t>(mv[static_cast<std::size_t>(idx)].level);
         if (magnification_level_step_landing(start, delta) != start) return true;
@@ -12116,15 +12184,18 @@ inline bool zoom_level_at_or_finer_than_working(double level) {
 // (Viewport::follow_scroll_if_needed) brings it in. No stored bit, no writer,
 // no record: the active tab's live level is the whole answer.
 //
-// It is the bare Tab / Shift+Tab / IsoLeftTab arms' own answer and nobody
-// else's. It lives out here rather than inside the walk so the walk carries
-// no framing policy at all: the three bare arms call this by name, the
-// Ctrl+Shift+Tab paired march states MarkerLandingFrame::NoFrame at both of
-// its walk steps and runs `c` behind each (architect 2026-09-14), and `c`
-// states Center. `c`, Shift+`j`, the A/B audition and the march frame through
-// run_center_command, and marker clicks land through
-// their own act owner; none of them asks this. A second caller would be a
-// second act claiming the walk's policy.
+// It is the bare Tab / Shift+Tab / IsoLeftTab arms' own answer — the live
+// walk's three and, since 2026-09-16, the `h` view's one over its diff-flag
+// cycle (handle_history_mode_key, input_key_dispatch.cpp; architect
+// 2026-09-16, the mode's walk mirroring the live walk's landing arm for arm)
+// — and nobody else's. It lives out here rather than inside the walk so the
+// walk carries no framing policy at all: the four bare arms call this by
+// name (re-grepped 2026-09-16), the Ctrl+Shift+Tab paired march, live and
+// `h`, states MarkerLandingFrame::NoFrame at both of its walk steps and runs
+// `c` behind each (architect 2026-09-14), and `c` states Center. `c`,
+// Shift+`j`, the A/B audition and the march frame through run_center_command,
+// and marker clicks land through their own act owner; none of them asks
+// this. A fifth caller would be a second act claiming the walk's policy.
 inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
     return zoom_level_at_or_finer_than_working(a.zoom_level)
                ? MarkerLandingFrame::Center
@@ -16571,12 +16642,17 @@ inline RedesignTooltipText redesign_button_tooltip(
             // AND THE PAYLOAD AXIS NAMES ITS COLUMN'S FIELD (2026-09-15): on
             // the MAGNIFICATION LEVEL column the pair steps the LEVEL DIGIT, so
             // the hint says which, the measure axis's shape exactly. The ladder
-            // line STAYS — the step has no kind refusal on that column (every
-            // magnification level marker carries a level of its own), so all
-            // three rungs are live wherever the face is.
+            // line drops on that column's ONE kind refusal (architect
+            // 2026-09-16 — a coincident-collapse member,
+            // magnification_level_step_kind_refusal, magnitude-blind, every
+            // rung carding alike, the tempo arm's own drop below); elsewhere
+            // on the column it stays, every marker carrying a level of its
+            // own and all three rungs live wherever the face is.
             if (a.active_markers_view == 'M') {
                 return {up ? "Level Up (Up)" : "Level Down (Down)",
-                        redesign_button_tooltip(b).line2};
+                        magnification_level_step_kind_refusal(a)
+                            ? nullptr
+                            : redesign_button_tooltip(b).line2};
             }
             if (tempo_cent_step_kind_refusal(a, audio))
                 return {redesign_button_tooltip(b).line1, nullptr};

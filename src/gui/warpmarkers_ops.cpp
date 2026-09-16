@@ -1074,8 +1074,11 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
     const std::set<int>& collapsed = warp_red_flag_set_cached(
         a, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).collapsed;
+    // THE SENTENCE IS SHARED WITH THE LEVEL STEP'S KIND REFUSAL (architect
+    // 2026-09-16, kCoincidentCollapseStepCard at app_state.h): one condition,
+    // one sentence, on both value columns.
     return (collapsed.count(idx) && !effective_disabled(mv, idx))
-               ? "That marker shares its frame with another"
+               ? kCoincidentCollapseStepCard
                : nullptr;
 }
 

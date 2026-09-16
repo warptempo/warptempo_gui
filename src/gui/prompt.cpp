@@ -65,10 +65,14 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (PromptInitialFocus::
 // FirstButton), so a bare Enter answers OK — the load confirmation's default
 // exactly (architect 2026-09-13: "revert should be just the same as load …
-// both should use the same default, OK"): each of the two confirmations is
+// both should use the same default, OK"): each of the confirmations — three
+// since 2026-09-16, the load's, this one and the propagate pastes' (architect
+// 2026-09-16, "align — paste should open on the equivalent of OK") — is
 // already the deliberate second step of an explicit act (the File row or its
-// chord here, the `'` press there), so the question itself is the safeguard
-// and its Enter confirms the act the user just asked for. `o` is OK's letter,
+// chord here, the `'` press there, the paste chord or its Edit row), so the
+// question itself is the safeguard and its Enter confirms the act the user
+// just asked for; the three-way Save / Discard / Cancel prompts above and
+// below are no such confirmation and keep the last button. `o` is OK's letter,
 // the load confirmation's. The stop below is every prompt's own opening act, not
 // something this one adds: playback stops, an A/B audition ends and an
 // engaged follow chase drops, exactly as raising any other prompt does.

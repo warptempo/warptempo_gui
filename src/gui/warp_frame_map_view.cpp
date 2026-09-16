@@ -2,6 +2,7 @@
 
 #include "app_state.h"
 #include "audio.h"
+#include "magnificationlevelmarkers.h"   // magnification_level_collapse_members
 #include "gui_display_context.h"
 #include "warp_frame_map_build.h"   // resolve_warp_markers_for_render, build_warp_frame_map
 #include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lattice
@@ -253,10 +254,14 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 
 // The magnification level column's red set — the contract is at the
 // declaration (warp_frame_map_view.h). The phase-reset body's run walk over
-// the third store: the store is time-sorted, so a coincident group is a run of
-// adjacent equal frames. Participation-blind, so the cue is WIDER than the
-// picture's collapse (which counts enabled members alone), the warp cue's own
-// relation to warp_coincident_collapse_members.
+// the third store for `red`: the store is time-sorted, so a coincident group
+// is a run of adjacent equal frames. Participation-blind, so the cue is WIDER
+// than the picture's collapse (which counts enabled members alone), the warp
+// cue's own relation to warp_coincident_collapse_members. `collapsed` is the
+// warp body's shape (architect 2026-09-16): the classifier's per-row verdict
+// (magnification_level_collapse_members — the picture's own run walk) copied
+// into the subset in the same rebuild, under the same key, no second
+// computation anywhere.
 const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
     const AppState& app) {
     MagnificationLevelRedFlagCache& c = app.magnification_level_red_flag_cache;
@@ -264,6 +269,7 @@ const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
     if (c.valid && c.markers_gen == gen) return c;
 
     c.red.clear();
+    c.collapsed.clear();
     const std::vector<GuiMagnificationLevelMarker>& ml =
         app.magnificationlevelmarkers.markers();
     const int n = static_cast<int>(ml.size());
@@ -275,6 +281,9 @@ const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
             for (int k = i; k < j; ++k) c.red.insert(k);
         i = j;
     }
+    const std::vector<char> members = magnification_level_collapse_members(ml);
+    for (int k = 0; k < n; ++k)
+        if (members[static_cast<std::size_t>(k)]) c.collapsed.insert(k);
 
     c.markers_gen = gen;
     c.valid       = true;

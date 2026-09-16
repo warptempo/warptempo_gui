@@ -33,10 +33,25 @@ std::string format_magnificationlevelmarkers_text(
 
 namespace {
 
-// THE COLUMN'S LEVEL-PER-FRAME RULE, THE ONE OWNER both readers below call
-// (architect 2026-09-16). The store is frame-ascending, so a coincident group
-// is a run of adjacent equal frames; `visit(frame, level)` is called once per
-// run that contributes a level, in ascending frame order:
+// ONE CONTRIBUTING RUN of the walk below — what the visitor is handed.
+// `frame` and `level` are the contribution (the level the run puts in force
+// from that frame); `begin` / `end` are the run's rows in store order, the
+// half-open [begin, end); `collapsed` says the run had 2+ enabled members and
+// so contributed the neutral level 0 — a level-0 contribution alone cannot
+// tell a collapse from a single enabled level-0 marker, and the collapse
+// classifier below needs the difference.
+struct MagnificationLevelRun {
+    int64_t     frame;
+    uint8_t     level;
+    std::size_t begin;
+    std::size_t end;
+    bool        collapsed;
+};
+
+// THE COLUMN'S LEVEL-PER-FRAME RULE, THE ONE OWNER the three readers below
+// call (architect 2026-09-16). The store is frame-ascending, so a coincident
+// group is a run of adjacent equal frames; `visit(run)` is called once per run
+// that contributes a level, in ascending frame order:
 //   * a run with >= 2 ENABLED members COLLAPSES TO THE NEUTRAL LEVEL 0 — the
 //     warp column's coincident rule on this axis (a run of 2+ effectively
 //     enabled tempo markers collapses to a neutral 1.00 owner,
@@ -49,7 +64,10 @@ namespace {
 // Disabled members never count toward the run's enabled tally (the red cue,
 // magnification_level_red_flag_set_cached, is the wider participation-blind
 // question — it reddens a run of 2+ ROWS whatever their disabled bits, as the
-// warp cue does).
+// warp cue does). The visitor is handed the run's ROWS as well as its
+// contribution so that the collapse classifier
+// (magnification_level_collapse_members) can name the members of a collapsed
+// run without a second walk restating this rule.
 template <typename Visit>
 void for_each_magnification_level_run(
         const std::vector<GuiMagnificationLevelMarker>& markers, Visit visit) {
@@ -67,9 +85,12 @@ void for_each_magnification_level_run(
             }
         }
         if (enabled >= 2) {
-            visit(markers[i].time_frame, uint8_t{0});
+            visit(MagnificationLevelRun{markers[i].time_frame, uint8_t{0},
+                                        i, j, /*collapsed=*/true});
         } else if (enabled == 1) {
-            visit(markers[i].time_frame, markers[last_enabled].level);
+            visit(MagnificationLevelRun{markers[i].time_frame,
+                                        markers[last_enabled].level,
+                                        i, j, /*collapsed=*/false});
         }
         i = j;
     }
@@ -84,9 +105,9 @@ WaveformGainProfile build_waveform_gain_profile(
     // One contribution per frame (the run walk above), so a breakpoint is
     // pushed exactly where the level CHANGES and nothing is ever rewritten.
     for_each_magnification_level_run(
-        markers, [&bp](int64_t frame, uint8_t level) {
+        markers, [&bp](const MagnificationLevelRun& run) {
             const uint8_t current = bp.empty() ? uint8_t{0} : bp.back().level;
-            if (level != current) bp.push_back({frame, level});
+            if (run.level != current) bp.push_back({run.frame, run.level});
         });
     return p;
 }
@@ -100,10 +121,27 @@ uint8_t magnification_level_in_force(
         int64_t frame) {
     uint8_t level = 0;
     for_each_magnification_level_run(
-        markers, [&level, frame](int64_t run_frame, uint8_t run_level) {
-            if (run_frame <= frame) level = run_level;
+        markers, [&level, frame](const MagnificationLevelRun& run) {
+            if (run.frame <= frame) level = run.level;
         });
     return level;
+}
+
+// The contract is at the declaration. The third reader of the one run walk:
+// a run the walk reports as collapsed is exactly a run the picture reads as
+// level 0 for having 2+ enabled members, and its ENABLED rows are the members
+// this marks — the disabled rows of such a run are no members for the picture
+// (the walk never counted them) and step like any disabled marker.
+std::vector<char> magnification_level_collapse_members(
+        const std::vector<GuiMagnificationLevelMarker>& markers) {
+    std::vector<char> members(markers.size(), 0);
+    for_each_magnification_level_run(
+        markers, [&members, &markers](const MagnificationLevelRun& run) {
+            if (!run.collapsed) return;
+            for (std::size_t k = run.begin; k < run.end; ++k)
+                if (!markers[k].disabled) members[k] = 1;
+        });
+    return members;
 }
 
 bool GuiMagnificationLevelMarkers::save(const std::string& path) const {

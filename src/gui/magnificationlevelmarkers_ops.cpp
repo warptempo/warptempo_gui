@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -14,9 +15,12 @@
 // over the third store, with this column's two deltas stated once at the
 // header: NO GuiTargetRender (a level is display-only, so no act here may
 // dispatch a preview) and THE PICTURE'S OWN GAIN KICK in its place. Every body
-// below captures the gain hash before its store write and hands it to
-// kick_waveform_sync_if_gain_changed after; the comments here carry only what
-// is this column's.
+// below but the nudge captures the gain hash before its store write and hands
+// it to kick_waveform_sync_if_gain_changed after; THE NUDGE ASKS THE DISPLAYED
+// PLATE INSTEAD (architect 2026-09-16, at its tail), because its shared commit
+// tail may already have rendered the new gain through the at-working
+// recentre, and a compare against the pre-write hash would render that same
+// plate twice. The comments here carry only what is this column's.
 
 namespace {
 
@@ -33,6 +37,39 @@ const char* magnification_level_lock_refusal(const AppState& app) {
 }
 
 }  // namespace
+
+// THE LEVEL STEP'S KIND REFUSAL — the contract, the readers and the two-form
+// split are at the declaration (app_state.h, the level-step block). The tempo
+// pair's bodies over this column's cache (tempo_cent_step_kind_refusal_for /
+// tempo_cent_step_kind_refusal, warpmarkers_ops.cpp), less the terms this
+// column has no producer for: no view fork (the column exists in target view
+// alone), no label-ref arm (no marker here names another), and no enabled
+// test of its own — the cache's `collapsed` subset already holds the ENABLED
+// members alone (magnification_level_red_flag_set_cached,
+// warp_frame_map_view.h), so membership is the whole test and a disabled row
+// of a collapsed run steps as on W.
+const char* magnification_level_step_kind_refusal_for(const AppState& a,
+                                                      int idx) {
+    // The index is the MAGNIFICATION LEVEL store's: on the other two columns
+    // the pair steps no level (the column gate,
+    // magnification_level_step_actionable), so an index there names another
+    // list and this refusal has nothing to say.
+    if (a.active_markers_view != 'M') return nullptr;
+    const auto& mv = a.magnificationlevelmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return nullptr;
+    const std::set<int>& collapsed =
+        magnification_level_red_flag_set_cached(a).collapsed;
+    return collapsed.count(idx) ? kCoincidentCollapseStepCard : nullptr;
+}
+
+const char* magnification_level_step_kind_refusal(const AppState& a) {
+    // A GROUP PRESS IS NOT THIS REFUSAL'S BUSINESS — the group arm's own
+    // refusal is the wall scan's, which asks the index form of every member —
+    // so the short-circuit stays here, on the focus form, and does not travel
+    // into the index body.
+    if (a.selected_markers.size() >= 2) return nullptr;
+    return magnification_level_step_kind_refusal_for(a, a.last_selected_marker);
+}
 
 // The contract is at the declaration. This is drop_phase_reset_at_position's
 // body over the third store, with the LEVEL COPY in place of that column's
@@ -192,8 +229,8 @@ void GuiMagnificationLevelMarkersOps::toggle_magnification_level_disabled() {
 // target equal to the current frame writes NOTHING. Crossing a neighbour is
 // legal and goes through the reorder-and-remap path below — and on this column
 // a crossing can change the PICTURE even where nothing else does, two adjacent
-// boundaries swapping which level holds between them, which the tail's gain
-// kick carries.
+// boundaries swapping which level holds between them, which the tail's plate
+// check carries.
 GuiOpRefusal
 GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
         int step_columns, bool synthesized_repeat) {
@@ -226,7 +263,6 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // playback stop — and says nothing, the unmoved flag being its own answer.
     if (committed_f == orig_f)
         return std::nullopt;
-    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     std::vector<GuiMagnificationLevelMarker> pre_state =
         app.magnificationlevelmarkers.markers();
     // Identity hint: the nudged marker in PRE-reorder snapshot coordinates (the
@@ -259,12 +295,33 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // Shared commit tail: record/dirty/invalidate, playhead follow, the
     // at-working recentre, and the point command's region collapse. IT PASSES
     // A NULL GuiTargetRender — this column reaches no render input, so the
-    // tail's (h) is skipped and the PICTURE's kick takes its place below (the
-    // pointer's contract is at finish_position_nudge's declaration).
+    // tail's (h) is skipped and the PICTURE's repayment takes its place below
+    // (the pointer's contract is at finish_position_nudge's declaration).
     finish_position_nudge(app, audio, viewport, undo,
                           GestureKind::MagnificationLevelNudge, merge,
                           committed_f, /*target_render=*/nullptr);
-    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+    // THE PICTURE IS REPAID ONLY WHERE THE DISPLAYED PLATE IS STALE (architect
+    // 2026-09-16, "prefer the correct way"): the M drag's release rule
+    // (MarkerDragOps::commit_drag's tail) rather than the cluster's pre-write
+    // hash compare. The tail above may already have rendered the new gain —
+    // at the working zoom or finer its recentre moves the viewport through
+    // center_viewport_on_playhead, whose synchronous kick reads the committed
+    // store's profile and publishes the displayed fingerprint with it — and a
+    // compare against the hash captured BEFORE the write would then render
+    // that same plate a second time, synchronously, on every held repeat that
+    // moved a breakpoint. Asking the DISPLAYED plate's own gain fingerprint
+    // (Viewport::displayed_plate_gain_is_stale — its published gain hash
+    // against the live effective profile's) answers both halves at once: a
+    // recentre that rendered leaves the fingerprint current and nothing more
+    // is owed; a recentre that moved no viewport, or none at all coarser than
+    // working, leaves it stale exactly when the profile moved — and coarser
+    // than working the effective profile is empty on both sides, so nothing
+    // renders there either, the cluster's own rule. No hash fallback is kept
+    // for the unwired case: the predicate is wired in main.cpp ahead of the
+    // loop, and the drag's release relies on the same wiring; with no plate
+    // displayed it answers false and the tick's dirty-detect renders the first
+    // plate, as it does for the drag.
+    if (viewport.displayed_plate_gain_is_stale()) viewport.kick_waveform_sync();
     return std::nullopt;
 }
 
@@ -287,15 +344,22 @@ GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
         return "Select a magnification level marker to change its level";
     if (const char* refusal = magnification_level_lock_refusal(app))
         return refusal;
-    // THE WALL, ahead of the stamp and FORKING WHERE THE TEMPO STEP FORKS
-    // (architect 2026-09-16). NO KIND REFUSAL EXISTS ON THIS COLUMN: every
-    // magnification level marker carries a level of its own — no pass, no label
-    // ref, no offset form to refuse on — so the level bracket is the whole of
-    // what either arm answers.
+    // THE KIND REFUSAL AND THE WALL, ahead of the stamp and FORKING WHERE THE
+    // TEMPO STEP FORKS (architect 2026-09-16). ONE KIND REFUSAL EXISTS ON THIS
+    // COLUMN SINCE 2026-09-16, THE COLLAPSE (magnification_level_step_kind_refusal,
+    // app_state.h — the tempo step's own collapse refusal read onto this
+    // column): an enabled member of a run the picture collapses to level 0
+    // refuses on a CARD, because coincidence is never intentional (architect
+    // 2026-09-13) and a collapsed member's digit is picture-inert — the run
+    // reads as 0 whatever it says. Nothing else refuses on kind: every
+    // magnification level marker carries a level of its own — no pass, no
+    // label ref, no offset form — so past the collapse the level bracket is
+    // the whole of what either arm answers.
     //
     // THE GROUP ARM IS THE TEMPO GROUP'S ALL, replacing the per-member clamp of
-    // 2026-09-15: ANY member that cannot take the WHOLE step refuses the WHOLE
-    // press, before any level changes, and IT SAYS SO — a group step would have
+    // 2026-09-15: ANY member that cannot take the WHOLE step — a collapsed
+    // member, or one that would leave the bracket — refuses the WHOLE press,
+    // before any level changes, and IT SAYS SO — a group step would have
     // moved every selected flag's digit, so it is not the one-dimensional
     // already-at-its-state refusal that goes silent, and the sentence names the
     // group rather than the member for the tempo card's reason (what the press
@@ -305,15 +369,29 @@ GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
         if (!magnification_level_step_group_actionable(app, delta))
             return "One of the selected markers cannot take this magnification "
                    "level change";
-    } else if (!magnification_level_step_direction_actionable(app, delta)) {
-        // THE SINGLETON'S CLAMP IS SILENT, the tempo singleton's verbatim: Down
-        // with the marker at 0, Up with it at the maximum is an accepted step
-        // that lands where it stands — a benign one-dimensional refusal already
-        // at its state, the flag's own digit being the one place to glance — so
-        // it spends the selection and says nothing (selection_consumed,
-        // app_state.h).
-        selection_consumed(app);
-        return std::nullopt;
+    } else {
+        // THE SINGLETON'S KIND REFUSAL IS ASKED FIRST, the tempo singleton's
+        // order: it runs AHEAD OF THE WALL because the directional face below
+        // answers false on both and the wall's exit is silent — asked the
+        // other way round, a collapsed member resting on a bracket end would
+        // fall into that exit and lose its sentence. Before any mutation, and
+        // spending nothing. The plain wheel over an M flag reaches this same
+        // line and drops the sentence (run_flag_cell_wheel), silent as the
+        // tempo wheel is.
+        if (const char* refusal = magnification_level_step_kind_refusal(app))
+            return refusal;
+        if (!magnification_level_step_direction_actionable(app, delta)) {
+            // THE SINGLETON'S CLAMP IS SILENT, the tempo singleton's
+            // verbatim: Down with the marker at 0, Up with it at the maximum
+            // is an accepted step that lands where it stands — a benign
+            // one-dimensional refusal already at its state, the flag's own
+            // digit being the one place to glance — so it spends the
+            // selection and says nothing (selection_consumed, app_state.h).
+            // The kind refusal was asked just above and passed, so what this
+            // refuses on is the wall alone.
+            selection_consumed(app);
+            return std::nullopt;
+        }
     }
     const bool merge = undo.coalesce_gesture(
         GestureKind::MagnificationLevelStep, synthesized_repeat);

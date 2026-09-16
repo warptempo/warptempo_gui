@@ -1849,24 +1849,27 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
         app, audio, viewport,
         app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
     // THE CAMERA IS THE CALLER'S STATEMENT, the live walk's own
-    // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker):
-    // the mode's Tab arm states Center — THE HISTORY WALK RECENTERS AT THE
-    // CURRENT ZOOM, follow mode not gating it, reading the flag it just landed
-    // on, the live family's landing mirrored — and the march states NoFrame,
-    // its `c` behind each step being the one framing. The zoom is the live
-    // walk's too: untouched at the working zoom or coarser (architect
-    // 2026-08-05, "no zoom on Tab" — a walk must not re-frame the view under
-    // the reader), and A FRAMING STEP FROM A FINER LEVEL RETURNS TO WORKING
-    // (architect 2026-09-15, the live walk's rule at cycle_marker_focus): this
-    // walk's bare step DOES frame — the Tab arm states Center at every zoom —
-    // so a Center step strictly finer than working sets the working zoom and
-    // centres the flag it landed on, `c`'s own tail — the zoom first and the
-    // centre once after it, so the finer level's centred plate is never
-    // rendered only to be replaced (the centre is a no-op after a real zoom
-    // change and frames a short file whose ceiling saturates the request).
-    // Past every wall and the empty arm above, so a press that lands nothing
-    // moves no zoom; the march states NoFrame and its `c` sets the working
-    // zoom itself.
+    // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker),
+    // and THE LIVE FAMILY'S LANDING IS MIRRORED ARM FOR ARM (architect
+    // 2026-09-16): the mode's bare Tab arm hands this marker_walk_frame(app)
+    // exactly as the three live bare arms do — Center at the working zoom or
+    // finer, recentring on the flag it just landed on, follow mode not gating
+    // it; FollowPage coarser, the camera holding unless the landing is
+    // offscreen, where follow's own page (Viewport::follow_scroll_if_needed)
+    // brings it in — and the march states NoFrame, its `c` behind each step
+    // being the one framing. The zoom is the live walk's too: untouched at
+    // the working zoom or coarser (architect 2026-08-05, "no zoom on Tab" — a
+    // walk must not re-frame the view under the reader), and A FRAMING STEP
+    // FROM A FINER LEVEL RETURNS TO WORKING (architect 2026-09-15, the live
+    // walk's rule at cycle_marker_focus): a Center step strictly finer than
+    // working sets the working zoom and centres the flag it landed on, `c`'s
+    // own tail — the zoom first and the centre once after it, so the finer
+    // level's centred plate is never rendered only to be replaced (the centre
+    // is a no-op after a real zoom change and frames a short file whose
+    // ceiling saturates the request); a finer level always answers Center, so
+    // the FollowPage arm never meets one. Past every wall and the empty arm
+    // above, so a press that lands nothing moves no zoom; the march states
+    // NoFrame and its `c` sets the working zoom itself.
     if (frame == MarkerLandingFrame::Center &&
         app.zoom_level < kWorkingZoomLevel) {
         viewport.apply_zoom_change(kWorkingZoomLevel);
@@ -2224,9 +2227,14 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         target_render.trigger();
         return true;
     }
+    // THE BARE STEP FRAMES BY THE ZOOM AT ITS LANDING, the live bare Tab's
+    // own answer (architect 2026-09-16, the sibling's rule): marker_walk_frame
+    // (app_state.h) — Center at the working zoom or finer, FollowPage coarser,
+    // where the camera holds unless the landing is offscreen — so the two
+    // walks frame alike at every level.
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
         cycle_history_diff_flag_focus(key == GuiKeys::Tab && !mods.shift,
-                                      MarkerLandingFrame::Center);
+                                      marker_walk_frame(app));
         return true;
     }
 
@@ -8523,7 +8531,8 @@ void GuiInputHandler::render_player_load_in_place() {
     // OK's letter.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
     // raised from its TWO subjects (architect 2026-08-28), and File → Revert's
-    // confirmation takes the same default (architect 2026-09-13): a bare ENTER
+    // confirmation (architect 2026-09-13) and the two propagate paste
+    // confirmations (architect 2026-09-16) take the same default: a bare ENTER
     // here answers OK, because the prompt is already the deliberate second
     // step of an explicit act — the `'` press — so the question itself is the
     // safeguard and its Enter confirms the act just asked for (the load also
@@ -8692,10 +8701,11 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
     // marker, moving the playhead to it and framing PER THE ZOOM —
-    // marker_walk_frame(app) (app_state.h), whose only callers are these
-    // three arms: at the working zoom the walk recentres, a finer level first
-    // returning to working on the marker step (cycle_marker_focus); coarser,
-    // the camera holds and
+    // marker_walk_frame(app) (app_state.h), whose callers are these three
+    // arms and the `h` view's own bare Tab arm over its diff-flag cycle
+    // (handle_history_mode_key, since 2026-09-16): at the working zoom the
+    // walk recentres, a finer level first returning to working on the marker
+    // step (cycle_marker_focus); coarser, the camera holds and
     // only an offscreen landing pages in, follow's way. The Ctrl+Tab
     // branch above runs first and
     // returns, so Ctrl+Tab is consumed before reaching here; the explicit

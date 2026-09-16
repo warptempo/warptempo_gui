@@ -122,14 +122,19 @@ void MagnificationLevelPropagate::open_paste_confirmation() {
     playback_lifecycle.stop_playback_if_playing();
     // The sibling's prompt, word for word in its shape — `y` answers Yes,
     // raised through PromptState::present (the one raise route, which clears
-    // the PAINTED bit), ONE QUESTION with the consequence riding inside it.
+    // the PAINTED bit), ONE QUESTION with the consequence riding inside it,
+    // and RAISED ON ITS FIRST BUTTON so a bare Enter answers Yes (architect
+    // 2026-09-16, the sibling's own ruling: a paste confirmation is the
+    // deliberate second step of an explicit act — the Ctrl+Alt+M chord or the
+    // Edit row — and takes the load's and the Revert's default; the reasoning
+    // is at the phase-reset opener and at PromptInitialFocus, app_state.h).
     app.prompt.present(
         "Paste magnification levels into matching blocks, "
         "clearing the ones already there?",
         {'y', '\x1b'},
         {"Yes", "Cancel"},
         DialogTrigger::PASTE_CONFIRM,
-        PromptInitialFocus::LastButton);
+        PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
 }
 

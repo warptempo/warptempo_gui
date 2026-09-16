@@ -307,6 +307,14 @@ void PhaseResetPropagate::open_paste_confirmation() {
     // through PromptState::present, the one raise route — which clears the
     // PAINTED bit, so the confirmation cannot be answered before it is on the
     // screen (the rule is at PromptState).
+    // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON, so a bare Enter answers
+    // Yes (architect 2026-09-16, "align — paste should open on the equivalent
+    // of OK"): this confirmation is the deliberate second step of an explicit
+    // act — the Ctrl+Alt+P chord or the Edit row — exactly as the load
+    // confirmation's and File → Revert's are, so it takes their default
+    // (PromptInitialFocus, app_state.h, where the three-way Save / Discard /
+    // Cancel prompts keep the last button for not being confirmations of an
+    // act already asked for). It opened on Cancel until that ruling.
     // ONE QUESTION AND NOTHING AFTER IT (architect 2026-09-01, the
     // capitalization sweep's sentence shape): the consequence rides inside the
     // question rather than in a period-terminated statement behind it, which
@@ -318,7 +326,7 @@ void PhaseResetPropagate::open_paste_confirmation() {
         {'y', '\x1b'},
         {"Yes", "Cancel"},
         DialogTrigger::PASTE_CONFIRM,
-        PromptInitialFocus::LastButton);
+        PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
 }
 

@@ -90,10 +90,29 @@ WaveformGainProfile build_waveform_gain_profile(
 // store generation for the PICTURE's sake; asking this directly costs one walk
 // and keeps the drop free of the cache's keying. The rule ITSELF is shared, not
 // merely agreed: both bodies call the one run walk in the .cpp
-// (for_each_magnification_level_run), so neither can drift from the other.
+// (for_each_magnification_level_run), as the collapse classifier below does,
+// so none of the three can drift from the others.
 // `markers` is the store in its resting (frame-ascending) order.
 uint8_t magnification_level_in_force(
     const std::vector<GuiMagnificationLevelMarker>& markers, int64_t frame);
+
+// THE COLLAPSE MEMBERS (architect 2026-09-16): one byte per store row, 1 for
+// every ENABLED member of a frame run with 2+ enabled members — the rows whose
+// levels the picture reads as the neutral level 0 above — and 0 for every
+// other row, a disabled row inside such a run included (the picture never
+// counted it, so it is no member and steps like any disabled marker). The
+// warp column's classifier in this column's terms
+// (warp_coincident_collapse_members, warp_frame_map_build.h; that one marks
+// the whole raw run and leaves the enabled test to its readers, this one
+// answers the enabled question itself because every reader asks it). ONE
+// READER, the red-flag cache's `collapsed` subset
+// (magnification_level_red_flag_set_cached, warp_frame_map_view.h), which
+// memoizes it per store generation for the level step's kind refusal, the
+// group step's wall and the Up / Down face. The same run walk the builder and
+// the level-in-force take, so a run is collapsed here iff the picture collapses
+// it. `markers` is the store in its resting (frame-ascending) order.
+std::vector<char> magnification_level_collapse_members(
+    const std::vector<GuiMagnificationLevelMarker>& markers);
 
 // The store mechanics (sorted vector, generation token, insert/remove/mut
 // accessors) are the shared GuiMarkerStore base (marker_store.h); this class

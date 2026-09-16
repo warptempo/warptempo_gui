@@ -117,16 +117,21 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: ONE MEMBER, re-grepped 2026-09-15 over
+    //  - THE PLATE'S OWN GAIN: TWO MEMBERS, re-grepped 2026-09-16 over
     //    kick_waveform_sync_if_gain_changed's callers and this function's —
-    //    the WARP MARKER DRAG's COMMIT (MarkerDragOps::commit_drag), which
-    //    calls this function direct when the displayed plate's gain
+    //    the MARKER DRAG's COMMIT (MarkerDragOps::commit_drag) and, since
+    //    2026-09-16, THE MAGNIFICATION LEVEL NUDGE'S TAIL
+    //    (GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels),
+    //    each calling this function direct when the displayed plate's gain
     //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
-    //    release's plate lands in its own frame. THE LEVEL WRITERS THAT CARRY
+    //    release's or the nudge's plate lands in its own frame — the nudge
+    //    asks the displayed plate rather than a pre-write hash because its
+    //    shared commit tail's at-working recentre may already have rendered
+    //    the new gain (architect 2026-09-16). THE LEVEL WRITERS THAT CARRY
     //    A GAIN-CHANGE KICK OF THEIR OWN call kick_waveform_sync_if_gain_changed
-    //    (re-grepped 2026-09-15): the authoring cluster's five bodies
-    //    (magnificationlevelmarkers_ops.cpp — the drop, the delete, the
-    //    disable toggle, the nudge and the level step), the level editor's
+    //    (re-grepped 2026-09-16): the authoring cluster's four hash-comparing
+    //    bodies (magnificationlevelmarkers_ops.cpp — the drop, the delete, the
+    //    disable toggle and the level step), the level editor's
     //    commit (GuiFlagEditor::commit_magnification_level_edit), the `h`
     //    revert's level arm (run_history_revert) and the M drag's release
     //    (MarkerDragOps::commit_drag). THE OTHER LEVEL WRITERS TAKE NO KICK
@@ -256,10 +261,14 @@ struct Viewport {
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // THE MARKER DRAG RELEASE'S TWO SEAMS (Sol round 11 of 2026-09-14; the
-    // rule and its one reader are at MarkerDragOps::commit_drag's tail).
+    // rule is at MarkerDragOps::commit_drag's tail).
     // displayed_plate_gain_is_stale: true when a plate is displayed and its
     // published gain fingerprint (wf_cache.fp_gain_profile_hash) differs from
-    // the live effective gain profile's hash. Wired in main.cpp to
+    // the live effective gain profile's hash. TWO READERS since 2026-09-16:
+    // the drag's commit and the magnification level nudge's tail
+    // (GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels,
+    // architect 2026-09-16 — the same question for the same reason, a plate
+    // that may already carry the new gain). Wired in main.cpp to
     // GuiPaintHandler::displayed_plate_gain_is_stale; false unwired (the tick's
     // dirty-detect then catches the plate).
     std::function<bool()> displayed_plate_gain_is_stale_;

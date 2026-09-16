@@ -35,7 +35,12 @@ class GuiAudio;
 //     frame its edit does rather than a tick late on the async backstop. A
 //     write the picture cannot see — a drop copying the level already in force,
 //     a nudge inside one section, any write at a zoom coarser than working —
-//     moves no hash and renders nothing, which is that owner's own rule.
+//     moves no hash and renders nothing, which is that owner's own rule. THE
+//     NUDGE IS THE ONE EXCEPTION (architect 2026-09-16): its shared commit
+//     tail may already have rendered the new gain through the at-working
+//     recentre, so it asks the DISPLAYED plate's gain fingerprint instead
+//     (Viewport::displayed_plate_gain_is_stale, the M drag release's rule)
+//     and renders only a plate that is still stale.
 //
 //   * THE COLUMN AUTHORS IN TARGET VIEW, the only view it exists in
 //     (active_column_authoring_allowed's 'M' arm, app_state.h). Its positions
@@ -99,7 +104,12 @@ struct GuiMagnificationLevelMarkersOps {
                                                      bool synthesized_repeat);
     // THE VALUE STEP ON THIS COLUMN — bare Up/Down (and the plain wheel over an
     // M flag) stepping the LEVEL DIGIT by `delta` through the same arrow
-    // ladder, clamped into [0, kMarkerMagnificationMax] silently.
+    // ladder, clamped into [0, kMarkerMagnificationMax] silently. ONE KIND
+    // REFUSAL (architect 2026-09-16, the tempo step's rule): an enabled
+    // coincident-collapse member — a marker of a run the picture reads as
+    // level 0 — refuses on a card in the singleton and walls the group
+    // (magnification_level_step_kind_refusal_for, app_state.h); a disabled
+    // member of such a run steps.
     //
     // SINGLETON AND GROUP, AND THE GROUP ARM IS THE TEMPO STEP'S
     // ALL-OR-NOTHING SCAN (architect 2026-09-16, retiring the per-member clamp
