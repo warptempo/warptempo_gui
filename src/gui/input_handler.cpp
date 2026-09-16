@@ -216,8 +216,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // day, SUPERSEDING this gate's own "a prompt opens with no button
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
         // what makes it safe is that the focused button is the ESCAPE SENTINEL
-        // — on every prompt but the load and revert confirmations, which ask
-        // for their OK deliberately, each being the second step of an explicit
+        // — on every prompt but the FIVE CONFIRMATIONS (the load's two
+        // raisers, File → Revert's and, since 2026-09-16, the two propagate
+        // pastes'), which ask for their OK — or Yes — deliberately, each
+        // being the second step of an explicit
         // act (PromptState's PromptInitialFocus) — plus the
         // painted gate directly above (PromptState carries the supersession in
         // full). The route is shared with the editor dialogs' —
@@ -2808,9 +2810,10 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // WRITES NO CAMERA AT ALL (2026-09-14), an offscreen landing included: its
     // caller frames behind it.
     //
-    // WHO PASSES WHAT, re-grepped 2026-09-14: `c` (run_center_command) states
-    // Center; the three bare Tab arms state marker_walk_frame(app), the zoom's
-    // answer (Center or FollowPage); the Ctrl+Shift+Tab paired march states
+    // WHO PASSES WHAT, re-grepped 2026-09-16: `c` (run_center_command) states
+    // Center; the FOUR bare Tab arms state marker_walk_frame(app), the zoom's
+    // answer (Center or FollowPage) — the live walk's three and the `h` view's
+    // one over its diff-flag cycle, which joined them on 2026-09-16; the Ctrl+Shift+Tab paired march states
     // NoFrame at each walk step and then runs run_center_command, so every
     // landing, on screen or off, is framed once, by `c`, and no FollowPage
     // page-render lands for `c` to supersede at once.

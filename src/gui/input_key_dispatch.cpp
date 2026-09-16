@@ -5369,8 +5369,14 @@ bool GuiInputHandler::load_render_entry_in_place(
                           d.path);
         }
         if (*presence == SidecarSetPresence::None) {
+            // The refusal names the FIRST member of kSidecarExtensions' order,
+            // exactly as a partial set's does, and it names it BY THE NAMED
+            // INDEX (kSidecarWarp, pinned to its string by the static_asserts
+            // in sidecar_set.h) rather than by a raw ordinal, so this spelling
+            // is under the same protection as every other composed sidecar
+            // path.
             const std::filesystem::path first =
-                sidecar_path(e.batch_folder, e.basename, 0);
+                sidecar_path(e.batch_folder, e.basename, kSidecarWarp);
             return refuse("the recipe file '" + shown_project_path(first) +
                               "' is missing",
                           first);

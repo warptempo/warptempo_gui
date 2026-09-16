@@ -96,7 +96,8 @@ void GuiPrompt::open_revert_confirm() {
 // did, one stderr line and nothing on screen, because its refusals are
 // unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
 // QUESTIONS ALONE now: the unsaved-work question with its save-failed rung,
-// the paste confirmation, the load confirmation and the revert confirmation.)
+// the two propagate paste confirmations, the load confirmation and the revert
+// confirmation.)
 
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the

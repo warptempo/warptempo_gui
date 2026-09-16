@@ -141,8 +141,16 @@ int main(int argc, char** argv) {
             return 1;
         }
         if (*presence == SidecarSetPresence::None) {
+            // The refusal names the FIRST member of kSidecarExtensions' order,
+            // exactly as a partial set's does, and it names it BY THE NAMED
+            // INDEX (kSidecarWarp, pinned to its string by the static_asserts
+            // in sidecar_set.h) rather than by a raw ordinal, so this spelling
+            // is under the same protection as every other composed sidecar
+            // path (architect approval 2026-09-16).
             std::fprintf(stderr, "warptempo_cli: Missing '%s'\n",
-                         sidecar_path(parent, stem, 0).string().c_str());
+                         sidecar_path(parent, stem, kSidecarWarp)
+                             .string()
+                             .c_str());
             return 1;
         }
     }

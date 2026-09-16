@@ -151,8 +151,9 @@ struct GuiPrompt {
     // 2026-08-29 it is a CRITICAL NOTIFICATION CARD.
     //
     // WHAT SURVIVES THIS STRUCT ARE THE QUESTIONS ALONE — the unsaved-work
-    // question with its save-failed rung, the paste confirmation, the load
-    // confirmation and, since 2026-09-13, the revert confirmation — so EVERY
+    // question with its save-failed rung, the propagate paste confirmations
+    // (the phase reset's, and the magnification level's since 2026-09-15), the
+    // load confirmation and, since 2026-09-13, the revert confirmation — so EVERY
     // PROMPT IN THE PRODUCT IS NOW A QUESTION, which is the messaging split's
     // own rule read back into the type.
     //
