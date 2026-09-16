@@ -2,6 +2,8 @@
 
 #include "marker_store.h"
 #include "magnificationlevelmarkers_parse.h"
+#include "marker_magnification.h"   // the level grammar and its ONE range
+                                    // owner, kMarkerMagnificationMax
 #include "warpmarkers.h"   // WaveformGainProfile, the picture's step function
 
 #include <expected>
@@ -64,6 +66,25 @@ inline bool magnification_level_rows_equal(
 // (warp_frame_map_view.h).
 WaveformGainProfile build_waveform_gain_profile(
     const std::vector<GuiMagnificationLevelMarker>& markers);
+
+// THE LEVEL IN FORCE AT A SOURCE FRAME — the step function above READ AT ONE
+// POINT, and the same three rules stated once for both readers (architect
+// 2026-09-15): level 0 before the first enabled marker, each enabled marker's
+// level holding from its own frame forward, a DISABLED marker invisible, and
+// the LAST enabled row of a coincident group winning. Its one caller is THE
+// DROP (GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position),
+// whose new marker copies the level already in force at the playhead, so a drop
+// changes the picture nowhere until its level is stepped or edited.
+//
+// A SEPARATE BODY RATHER THAN A PROBE OF THE BUILT PROFILE: the drop asks about
+// ONE frame on a store it is about to mutate, and the profile is memoized per
+// store generation for the PICTURE's sake; asking this directly costs one walk
+// and keeps the drop free of the cache's keying. The rules are the builder's
+// and are restated in code at neither site — both walk the same store the same
+// way, and this declaration is where the agreement is written down.
+// `markers` is the store in its resting (frame-ascending) order.
+uint8_t magnification_level_in_force(
+    const std::vector<GuiMagnificationLevelMarker>& markers, int64_t frame);
 
 // The store mechanics (sorted vector, generation token, insert/remove/mut
 // accessors) are the shared GuiMarkerStore base (marker_store.h); this class

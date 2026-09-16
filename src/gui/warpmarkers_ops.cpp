@@ -1713,6 +1713,6 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, merge, committed_f,
-                                target_render);
+                                &target_render);
     return std::nullopt;
 }

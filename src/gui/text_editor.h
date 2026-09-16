@@ -1,6 +1,8 @@
 #pragma once
 
 #include "gui_input.h"
+#include "marker_magnification.h"  // kMaxMarkerMagnificationBytes — the level
+                                   // cap's bound, taken from the grammar's owner
 #include "marker_measure.h"
 #include "phaseresetmarkers.h"  // kIterHopMax — the hop cap's bound, taken
                                 // from its one owner rather than re-spelled,
@@ -220,6 +222,16 @@ constexpr int kMaxPendingCharsCommitTitle = 256;
 // in this module is an int, which is what the cap tests read.
 constexpr int kMaxPendingCharsMeasure =
     static_cast<int>(kMaxMarkerMeasureBytes);
+// The MAGNIFICATION LEVEL editor (bare Return on a focused magnification level
+// marker, and that flag's double-click). ITS GRAMMAR IS ONE ASCII DIGIT `0`..`4`
+// — no sign, no leading zero, no whitespace (marker_magnification.h, the
+// grammar's one owner) — so ONE BYTE is its widest spelling and its cap, taken
+// from that owner rather than re-spelled, exactly as the measure's cap is. A
+// TIGHT BOUND: the cap advertises exactly what parse_marker_magnification
+// accepts, and the second character is refused by the field-full card, which is
+// the truthful refusal for a field that could never commit one.
+constexpr int kMaxPendingCharsMagnificationLevel =
+    static_cast<int>(kMaxMarkerMagnificationBytes);
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -240,9 +252,14 @@ constexpr int kMaxPendingCharsMeasure =
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
-// they name. THERE ARE SIX KINDS AND THREE OF THEM ARE
-// DIALOG EDITORS; the three top-strip kinds (FlagPayload, MeasureText,
-// IterBound) share the flag editor's State and paint in the marker lane.
+// they name. The MAGNIFICATION LEVEL editor uses MagnificationLevelText
+// (2026-09-15, with the magnification level markers column's authoring): the
+// one digit that IS a magnification level marker, judged at its commit by
+// marker_magnification.h, on the M column's flag alone. THERE ARE SEVEN KINDS
+// AND THREE OF THEM ARE
+// DIALOG EDITORS; the four top-strip kinds (FlagPayload, MeasureText,
+// IterBound, MagnificationLevelText) share the flag editor's State and paint in
+// the marker lane.
 // The MeasureText kind was architect-blessed 2026-08-19 and IterBound arrived on
 // 2026-09-05, when every cell became a mini flag with its own editor; TWO
 // KINDS RETIRED WHOLE on 2026-08-28 (architect, R22/R23: "we're not allowing
@@ -259,6 +276,7 @@ enum class Kind {
     CommitTitle,
     MeasureText,
     IterBound,
+    MagnificationLevelText,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,

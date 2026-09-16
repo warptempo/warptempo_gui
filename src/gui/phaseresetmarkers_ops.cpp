@@ -452,7 +452,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // declaration.
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, merge,
-                                committed_f, target_render);
+                                committed_f, &target_render);
     return std::nullopt;
 }
 

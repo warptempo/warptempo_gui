@@ -504,6 +504,26 @@ struct DragState {
     // commit when no motion occurred (DragState is reset wholesale there).
     std::vector<GuiWarpMarker>      pre_drag_snapshot;
     std::vector<GuiPhaseResetMarker> pre_drag_phase_reset_snapshot;
+    std::vector<GuiMagnificationLevelMarker>
+        pre_drag_magnification_level_snapshot;
+    // THE COMMIT-ROUNDED PROPOSAL, written by every motion beside
+    // moveable_times[0] and read by ONE consumer: the waveform gain profile's
+    // DRAG SLOT while a MAGNIFICATION LEVEL drag stands
+    // (waveform_gain_profile_drag_cached, warp_frame_map_view.h), so the
+    // picture's magnified sections follow the hand rather than the release
+    // (architect 2026-09-15). It is the free `moveable_times` double put
+    // through the COMMIT'S OWN conversion (committed_frame_for_proposal,
+    // marker_drag.cpp), so the profile the motion shows is the profile the
+    // release would leave. Seeded from original_times at begin_drag.
+    int64_t             proposed_authored_frame = 0;
+    // THE DEFERRED GAIN PREVIEW'S DEBT (architect 2026-09-15): set by a motion
+    // whose gain hash MOVED while the synchronous kick was withheld — the
+    // displayed plate's geometry having been off the live geometry at the
+    // press, where rendering would publish the live geometry under a hand aimed
+    // at the older one (the reasoning is at apply_drag_motion's tail). Its ONE
+    // reader is commit_drag, which repays it with a synchronous rebuild in the
+    // release's own frame.
+    bool                gain_preview_deferred = false;
     // NO CANCEL CAPTURES (the selection snapshot, the grab playhead and the
     // pre-drag region all deleted 2026-07-29): POINTER GESTURES HAVE NO CANCEL —
     // Esc mid-drag is a consumed no-op, release commits, and undo is the mitigation
@@ -527,9 +547,9 @@ struct DragState {
     // net-change test compares the COMMITTED frame against original_times[0], which
     // is the true "did anything move" question; the grabbed marker's identity is
     // dragging_markers[0], the only slot there is.)
-    // Which list this drag operates on. The motion / commit
-    // handlers dispatch on this so a drag started in phase reset view
-    // mutates the phase reset list.
+    // Which list this drag operates on — 'W', 'P' or, since 2026-09-15, 'M'.
+    // The motion / commit handlers dispatch on this so a drag started in one
+    // column mutates that column's list.
     char                   drag_mode = 'W';
 };
 
@@ -5203,6 +5223,12 @@ struct AppState {
     // generation. Mutable: refreshed from the const plate-input and overview
     // paths.
     mutable WaveformGainProfileCache waveform_gain_profile_cache;
+    // THE SECOND SLOT, the DRAG's (architect 2026-09-15): the profile a
+    // MAGNIFICATION LEVEL drag's live proposal would produce, keyed on that
+    // proposal beside the store generation, so the picture's magnified sections
+    // follow the hand while the store stays untouched until the release. Its
+    // contract is at waveform_gain_profile_drag_cached.
+    mutable WaveformGainProfileCache waveform_gain_profile_drag_cache;
 
     // MEMOIZED VALUE SOURCE — the answer value_source_marker last gave, with
     // the three inputs it read to give it (codex round A, 2026-09-01: the Copy
@@ -5901,8 +5927,9 @@ struct AppState {
     // THE AUTHORITATIVE MEMBERSHIP of the THREE DIALOG-HOSTED editors (the
     // settings editor, the commit-title editor and the bpm bracket editor;
     // the top-strip flag
-    // editor is deliberately not one of them in EITHER of its non-bracket
-    // kinds — FlagPayload, MeasureText or IterBound, all of
+    // editor is deliberately not one of them in ANY of its non-bracket
+    // kinds — FlagPayload, MeasureText, IterBound or MagnificationLevelText
+    // (2026-09-15), all four of
     // which paint in the top strip; the `h` view's load editor and the Open project editor were the
     // fifth and sixth until 2026-08-28, when both became the field-less
     // PICKER, which is a modal owner and not an editor — AppState::Picker).
@@ -7630,7 +7657,8 @@ struct AppState {
     UndoHistory history;
 
     // True if any authoring-class file has changes since the last save.
-    // app.dirty = warp_dirty || phase_reset_dirty || settings_dirty,
+    // app.dirty = warp_dirty || phase_reset_dirty ||
+    // magnification_level_dirty || settings_dirty,
     // recomputed after every persistent push/undo/redo by walking
     // saved_distance against each persistence-affecting entry's op_mode.
     // Drives both the unsaved-work dialog and the dirty-dot.
@@ -7649,17 +7677,20 @@ struct AppState {
     // gesture-owned, excluded from undo/redo history, and render-affecting but
     // deliberately treated as transient view state.
     //
-    // THE MAGNIFICATION LEVEL MARKERS HAVE NO FLAG OF THEIR OWN, and need
-    // none (2026-09-15): the three flags are the COLUMN OF THE ACT an entry
-    // records (its op_mode), not a diff of what it changed, and nothing reads
-    // them apart from their OR. Every road that changes the magnification
-    // level store pushes an entry — the three loads in place, through
-    // push_undo_both, file under the live W/P column — and a restore crosses
-    // one, so an M change lights `dirty` through that entry's flag and a save
-    // clears it with the rest. The column's own flag arrives with the first
-    // producer that files an entry under it.
+    // THE MAGNIFICATION LEVEL MARKERS TOOK A FLAG OF THEIR OWN ON 2026-09-15,
+    // WITH THEIR FIRST PRODUCER: the flags are the COLUMN OF THE ACT an entry
+    // records (its op_mode), not a diff of what it changed, and the column had
+    // no entry of its own until it gained its authoring — its store moved only
+    // through the three loads in place, which file under the LIVE column, so
+    // an M change lit `dirty` through that entry's flag and the `else` arm of
+    // recompute_dirty's walk folded an 'M' tag in with 'W'. With op_mode 'M' a
+    // real producer's tag, that fold would have called a level edit a warp
+    // change; the fourth flag is what keeps the walk honest. Nothing reads any
+    // of the four apart from their OR (the save writes all four sidecars
+    // unconditionally), so the flag's whole job is to name its own column.
     bool        warp_dirty           = false;
     bool        phase_reset_dirty    = false;
+    bool        magnification_level_dirty = false;
     bool        settings_dirty       = false;
     bool        dirty                = false;
 
@@ -9818,38 +9849,23 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // re-open that question — it admits no gesture that moves a marker.) The rest
 // of the positional family stays home-view-only through this predicate, and
 // the flag DRAG through the value-drag posture's claim on T+W.
-// THE THIRD COLUMN ANSWERS NO (architect 2026-09-15): the magnification level
-// markers column carries no positional authoring gesture — no drop, no flag
-// drag, no nudge, no empty-lane create — so every reader of this predicate
-// refuses there, the keyboard readers carding kMagnificationLevelNotEditableCard
-// (their own forks) and the pointer readers silent. The arms are spelled per
-// column so warp is never the else-branch.
+// THE THIRD COLUMN ANSWERS YES (architect 2026-09-15, when the column gained
+// its authoring): the magnification level markers column exists in TARGET VIEW
+// ALONE — the S switch lands it on W and the column writer refuses 'M' off
+// target, the two writers holding that invariant between them — so target IS
+// its home and the whole positional family is legal there: the Ctrl+Shift+S
+// drop and bare `s`, the flag's horizontal drag, the empty-lane create and the
+// Left/Right nudge. There is nothing for an audio-view term to say on this
+// column that the column's own existence does not already say. The arms are
+// spelled per column so warp is never the else-branch.
 inline bool active_column_authoring_allowed(const AppState& app) {
     switch (app.active_markers_view) {
         case 'W': return app.active_audio_view == 'S';
         case 'P': return true;
-        case 'M': return false;
+        case 'M': return true;
     }
     return false;
 }
-
-// THE MAGNIFICATION LEVEL MARKERS COLUMN'S ONE AUTHORING REFUSAL (architect
-// 2026-09-15): the column is visible and navigable — its flags select, land,
-// walk, march and centre as a phase reset's do — and authors nothing yet. ONE
-// SENTENCE, raised by every bound key whose act would author on the active
-// column while it stands and that has no sentence of its own which already
-// names the column: bare `s` (and its button's plain lift), bare Left/Right
-// with a selection, Ctrl+D, Delete, Ctrl+N, Return, and the `h` view's bare
-// `v`. The faces grey on the predicates those arms read
-// (active_column_authoring_allowed, marker_selection_verb_actionable,
-// inherit_toggle_actionable, flag_editor_open_actionable), so a button's lift
-// never reaches it except the drop's twin-rule plain lift. Every other author
-// on the column refuses on its OWN existing sentence (the Up/Down step's
-// "Select a warp marker", `/`'s "Measures are set on warp markers", Ctrl+B's
-// column refusal, the three propagate chords', the value pair's "no resolved
-// value"), and every pointer road is silent.
-inline constexpr const char* kMagnificationLevelNotEditableCard =
-    "Magnification level markers are not editable";
 
 // THE SELECTION'S TWO STANDING FACTS, each named ONCE (architect 2026-08-30,
 // the truthful-buttons ruling: "Any time a button would be a no-op, grey it"
@@ -10650,12 +10666,13 @@ inline bool horizontal_arrow_step_lock_admits(const AppState& app) {
 // NOT MIRRORED, because unreachable: the stale-index belt inside each op
 // (every member past the store) and the disable's "nothing changed" — belts
 // against an invariant the selection layer keeps.
-// THE MAGNIFICATION LEVEL COLUMN IS THE ONE COLUMN TERM (architect
-// 2026-09-15): its markers select but author nothing yet, so Delete and Ctrl+D
-// refuse there — carding kMagnificationLevelNotEditableCard — and the two
-// buttons grey.
+// IT HAS NO COLUMN TERM AGAIN (architect 2026-09-15, hours after the third
+// column's arrival put one in): Delete and Ctrl+D act on ALL THREE columns now
+// — each column's own body behind the one dispatch fork — so the predicate is
+// the selection atom under a name that says whose refusal it is, exactly as it
+// was for the first two.
 inline bool marker_selection_verb_actionable(const AppState& app) {
-    return app.active_markers_view != 'M' && marker_selection_standing(app);
+    return marker_selection_standing(app);
 }
 
 // THE INHERIT TOGGLE'S REFUSAL, composed (architect 2026-08-30): Ctrl+N is
@@ -10711,10 +10728,14 @@ inline bool marker_measure_edit_actionable(const AppState& app) {
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
-    // The payload editor is the WARP column's alone: a phase reset authors no
-    // payload line and a magnification level marker authors nothing yet
-    // (kMagnificationLevelNotEditableCard), so both other columns answer no.
-    case MarkerCell::Payload: return app.active_markers_view == 'W';
+    // THE PAYLOAD AXIS OPENS TWO DIFFERENT EDITORS, one per column that has
+    // one: the WARP column's canonical-line editor, and — since 2026-09-15 —
+    // the MAGNIFICATION LEVEL column's one-digit LEVEL editor, which is that
+    // column's whole payload. A phase reset authors no payload line at all
+    // (its flag carries a display-only token), so the P column alone answers
+    // no. Which of the two Return opens is the dispatch's own fork, on this
+    // same column bit.
+    case MarkerCell::Payload: return app.active_markers_view != 'P';
     case MarkerCell::Lower:
     case MarkerCell::Upper:   return true;
     case MarkerCell::Measure: return marker_measure_edit_actionable(app);
@@ -11567,6 +11588,69 @@ inline bool measure_step_direction_actionable(const AppState& a,
     return measure_step_landing(start, delta) != start;
 }
 
+// -- THE VALUE STEP'S MAGNIFICATION LEVEL AXIS (architect 2026-09-15) --------
+//
+// The third column's arm of bare Up/Down, and the value step's third body
+// (GuiMagnificationLevelMarkersOps::adjust_magnification_level_step). Its
+// owners have the tempo and measure axes' readers: the act, the Up / Down face
+// (redesign_button_enabled) and the plain WHEEL over an M flag
+// (run_flag_cell_wheel, input_pointer.cpp). THE VALUE DRAG IS NOT ONE OF THEM —
+// value_drag_posture answers NO on this column (the plain flag drag is the
+// HORIZONTAL move here, and multi-axis dragging is refused product-wide).
+//
+// ITS SHAPE: the magnification level column alone, SINGLETON AND GROUP (each
+// member steps by the same delta and each clamps on its own — the cluster's
+// header argues why group rigidity has nothing to protect on a picture
+// setting), both locks refusing (the digit is serialized content and the step
+// pushes an undo entry — authoring_locked), a silent wall asked ahead of the
+// coalesce stamp, and nothing past the write but the undo entry, the dirty bit,
+// the damage and the picture's own gain kick: no re-warp, no render, no
+// re-land, the playhead unmoved.
+
+// THE STABLE-STATE REFUSALS: the M column, a standing selection and a valid
+// focus — the tempo step's own three terms in this column's, read by the act
+// and by the face. The LOCK is not a term here, the measure axis's rule: the
+// act asks authoring_locked on its own so it can card the lock's sentence
+// rather than this one.
+inline bool magnification_level_step_actionable(const AppState& a) {
+    return a.active_markers_view == 'M' &&
+           marker_selection_standing(a) && marker_focus_standing(a);
+}
+
+// WHERE ONE LEVEL STEP LANDS — THE ONE LANDING OWNER, shared by the key and the
+// wheel: the constructive clamp into the level bracket [0,
+// kMarkerMagnificationMax] (marker_magnification.h, the range's one owner —
+// no number is restated here). The act's loop commits exactly this and the
+// directional face below compares it against the value each marker holds.
+inline int64_t magnification_level_step_landing(int64_t start, int64_t delta) {
+    return std::clamp<int64_t>(start + delta, 0, kMarkerMagnificationMax);
+}
+
+// WOULD A LEVEL STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
+// Up / Down face on this column, asked past the predicate above. THE GROUP ARM
+// IS AN ANY, NOT AN ALL, and that follows from the act rather than being
+// chosen: each member clamps on its own, so the press acts iff ANY member would
+// move, and the pair greys only when EVERY selected marker rests on the wall
+// the press aims at. A singleton is that same question over one member.
+// MAGNITUDE-INVARIANT for the tempo step's reason: a positive delta's clamped
+// landing equals the start iff the start IS the max, whatever the delta, so the
+// bare ±1 the face hands this speaks for all three rungs of the ladder (the
+// twin rule, resolved by proof rather than by a second call). A stale index is
+// skipped as a belt; an empty live set answers false.
+inline bool magnification_level_step_direction_actionable(const AppState& a,
+                                                          int64_t delta) {
+    const std::vector<GuiMagnificationLevelMarker>& mv =
+        a.magnificationlevelmarkers.markers();
+    const int n = static_cast<int>(mv.size());
+    for (const int idx : a.selected_markers) {
+        if (idx < 0 || idx >= n) continue;   // belt
+        const int64_t start =
+            static_cast<int64_t>(mv[static_cast<std::size_t>(idx)].level);
+        if (magnification_level_step_landing(start, delta) != start) return true;
+    }
+    return false;
+}
+
 // IS THE FLAG'S PLAIN DRAG THE VALUE DRAG HERE — the gesture's POSTURE, a
 // pure function of WHERE YOU ARE (architect 2026-09-13: "get rid of that icon,
 // reclaim that real estate on the tablet, and simply automate it"). From
@@ -11621,9 +11705,13 @@ inline bool value_drag_posture(const AppState& a) {
     switch (a.active_markers_view) {
         case 'W': return true;
         case 'P': return a.iteration_mode_enabled;
-        // THE MAGNIFICATION LEVEL COLUMN ARMS NO FLAG DRAG AT ALL (architect
-        // 2026-09-15): no value drag here, and the crossing refuses the
-        // horizontal drag on this column too (input_pointer.cpp).
+        // THE MAGNIFICATION LEVEL COLUMN'S FLAG DRAG IS THE HORIZONTAL MOVE
+        // (architect 2026-09-15: "horizontal move only"). The column authors in
+        // target view, so without this arm the W answer's reasoning would pull
+        // it into the value drag; the level is stepped by the arrows and the
+        // wheel instead, and WE NEVER ALLOW MULTI-AXIS DRAGGING, so the one
+        // drag this flag offers is the positional one the crossing begins
+        // (input_pointer.cpp).
         case 'M': return false;
     }
     return false;
@@ -12124,6 +12212,23 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
     return true;
 }
 
+// THE MAGNIFICATION LEVEL COLUMN'S ROW COMPARATOR (2026-09-15, with the
+// column's authoring): its three serialized fields, the phase comparator's
+// shape in this column's terms. The column carries no session-only field at
+// all (GuiMagnificationLevelMarker), so there is nothing here to leave out.
+// ONE READER, the restore's touched-set reconstruction
+// (apply_post_restore_rules_magnification_level, undo.cpp); the WHOLE-LIST
+// face lives at the store's own header beside its serializer
+// (magnification_level_rows_equal, magnificationlevelmarkers.h), where the
+// net-zero pop already read it.
+inline bool magnification_level_row_fields_differ(
+        const GuiMagnificationLevelMarker& a,
+        const GuiMagnificationLevelMarker& b) {
+    return a.time_frame != b.time_frame
+        || a.level      != b.level
+        || a.disabled   != b.disabled;
+}
+
 // THE TOUCHED SET A RESTORE OF `entry` WOULD PRODUCE, in `after` coordinates —
 // `after` being the entry's own snapshot for the column, the state a restore of
 // it writes back, and `before` the store that is live now. PURE: it reads two
@@ -12368,18 +12473,22 @@ inline bool undo_restore_within_viewport(const AppState& a,
     if (entry.op_mode == 'S') return true;
     if (entry.op_mode != a.active_markers_view) return false;
 
-    // THE MAGNIFICATION LEVEL COLUMN'S ENTRY (op_mode 'M', the recipe load in
-    // place filed from T+M) carries no touched hints and restores no marker
-    // visual: the column is display-only in the undo domain's terms, so the
-    // restore moves the camera exactly as a settings-only one does — not at
-    // all past the tags compared above.
-    if (entry.op_mode == 'M') return true;
-    const bool phase_reset = (entry.op_mode == 'P');
+    // ONE ARM PER COLUMN, the magnification level column's since 2026-09-15
+    // (it answered TRUE outright while its only entry was the recipe load in
+    // place, which names no touched row and restores no marker visual; with
+    // the column authoring, an 'M' entry moves flags exactly as the other two
+    // columns' do and is measured exactly as theirs are).
+    const char column = entry.op_mode;
     const std::set<int> touched =
-        phase_reset
+        column == 'P'
             ? restore_touched_indices(entry, a.phaseresetmarkers.markers(),
                                       entry.phase_reset_snapshot,
                                       phase_reset_row_fields_differ)
+        : column == 'M'
+            ? restore_touched_indices(
+                  entry, a.magnificationlevelmarkers.markers(),
+                  entry.magnification_level_snapshot,
+                  magnification_level_row_fields_differ)
             : restore_touched_indices(entry, a.warpmarkers.markers(),
                                       entry.snapshot, warp_row_fields_differ);
     if (touched.empty()) return true;
@@ -12393,9 +12502,10 @@ inline bool undo_restore_within_viewport(const AppState& a,
     bool    have = false;
     for (const int idx : touched) {
         const std::size_t at = static_cast<std::size_t>(idx);
-        const int64_t src_f = phase_reset
-            ? entry.phase_reset_snapshot[at].time_frame
-            : entry.snapshot[at].time_frame;
+        const int64_t src_f =
+            column == 'P' ? entry.phase_reset_snapshot[at].time_frame
+          : column == 'M' ? entry.magnification_level_snapshot[at].time_frame
+                          : entry.snapshot[at].time_frame;
         const int64_t pos = clamp_frame_to_domain(
             source_frame_to_domain(restored, src_f),
             restored.domain_total_frames);
@@ -14458,6 +14568,21 @@ inline bool redesign_button_enabled(const AppState& a,
                     return false;
                 break;
             }
+            // AND THE PAYLOAD AXIS FORKS ON THE COLUMN since 2026-09-15: on
+            // the MAGNIFICATION LEVEL column the same chord steps the LEVEL
+            // DIGIT, so the pair reads that axis's own two owners (the stable
+            // refusals and the directional wall, app_state.h's level-step
+            // block) exactly as it reads the tempo step's below. The cell is
+            // the payload by construction there — an M flag has no other box
+            // — so this arm stands inside the payload branch rather than
+            // beside it. (The read-only bit and the iteration lock were both
+            // asked above and need no restating.)
+            if (a.active_markers_view == 'M') {
+                if (!magnification_level_step_actionable(a)) return false;
+                if (!magnification_level_step_direction_actionable(a, delta))
+                    return false;
+                break;
+            }
             if (!tempo_cent_step_actionable(a)) return false;
             // AND THE DIRECTIONAL HALF since 2026-08-31 (architect, R3): the
             // singleton's bracket end and the group's whole refusal, and since
@@ -16325,6 +16450,16 @@ inline RedesignTooltipText redesign_button_tooltip(
                                   ? nullptr
                                   : redesign_button_tooltip(b).line2};
             }
+            // AND THE PAYLOAD AXIS NAMES ITS COLUMN'S FIELD (2026-09-15): on
+            // the MAGNIFICATION LEVEL column the pair steps the LEVEL DIGIT, so
+            // the hint says which, the measure axis's shape exactly. The ladder
+            // line STAYS — the step has no kind refusal on that column (every
+            // magnification level marker carries a level of its own), so all
+            // three rungs are live wherever the face is.
+            if (a.active_markers_view == 'M') {
+                return {up ? "Level Up (Up)" : "Level Down (Down)",
+                        redesign_button_tooltip(b).line2};
+            }
             if (tempo_cent_step_kind_refusal(a, audio))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
@@ -16336,7 +16471,14 @@ inline RedesignTooltipText redesign_button_tooltip(
         // line, the button admitting no modifier.
         case RedesignButton::IconMarkerEditFlag:
             switch (a.addressed_cell) {
-            case MarkerCell::Payload: break;
+            // THE PAYLOAD AXIS NAMES ITS COLUMN'S EDITOR (2026-09-15): on the
+            // MAGNIFICATION LEVEL column Return opens the one-digit LEVEL
+            // editor, so the name says so; the table's "Edit Flag" stands on
+            // the warp column, whose payload IS the flag's line.
+            case MarkerCell::Payload:
+                if (a.active_markers_view == 'M')
+                    return {"Edit Level (Return)", nullptr};
+                break;
             case MarkerCell::Lower:
                 return {"Edit Lower Bound (Return)", nullptr};
             case MarkerCell::Upper:

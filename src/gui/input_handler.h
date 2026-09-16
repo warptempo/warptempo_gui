@@ -21,6 +21,7 @@
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
+#include "magnificationlevelmarkers_ops.h"
 #include "phaseresetmarkers_ops.h"
 #include "marker_drag.h"
 #include "value_drag.h"
@@ -840,6 +841,12 @@ struct GuiInputHandler {
     Undo&                    undo;
     GuiWarpMarkersOps&       warpops;
     GuiPhaseResetMarkersOps& phase_resets;
+    // THE THIRD COLUMN'S AUTHORING CLUSTER (2026-09-15). Its readers are the
+    // same dispatch arms its two siblings' are, each forking on the live
+    // column: the drop (bare `s` and Ctrl+Shift+S's crossing), Delete, Ctrl+D,
+    // the Left/Right nudge and the Up/Down level step (which the plain wheel
+    // over an M flag reaches too).
+    GuiMagnificationLevelMarkersOps& magnification_levels;
     MarkerDragOps&           marker_drag;
     // THE VALUE DRAG (2026-09-10), the marker drag's sibling — and OWNED HERE
     // rather than passed in, which is the one place it parts from its
@@ -998,6 +1005,7 @@ struct GuiInputHandler {
                     Undo&                    undo_,
                     GuiWarpMarkersOps&       warpops_,
                     GuiPhaseResetMarkersOps& phase_resets_,
+                    GuiMagnificationLevelMarkersOps& magnification_levels_,
                     MarkerDragOps&           marker_drag_,
                     GuiFlagEditor&           flag_editor_,
                     GuiRendersDir&           renders_dir_,
@@ -1025,6 +1033,7 @@ struct GuiInputHandler {
           undo(undo_),
           warpops(warpops_),
           phase_resets(phase_resets_),
+          magnification_levels(magnification_levels_),
           marker_drag(marker_drag_),
           // Built from the CONSTRUCTOR'S OWN PARAMETERS, never from the
           // members beside it: a reference member initialised from another
@@ -2359,8 +2368,8 @@ struct GuiInputHandler {
     // its kinds (unlike modal_dialog_editor_active, which names the three
     // DIALOG-hosted surfaces — those first two plus the flag editor's
     // BpmBracket kind — and omits
-    // the FlagPayload, MeasureText and IterBound kinds,
-    // all of which paint in the marker lane). The platform's
+    // the FlagPayload, MeasureText, IterBound and MagnificationLevelText
+    // kinds, all of which paint in the marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -2880,10 +2889,12 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. ALL FOUR kinds now take route_modal_editor_key: the bpm
+    // close routing. ALL FIVE kinds this editor state carries take
+    // route_modal_editor_key: the bpm
     // bracket editor as ever, the FlagPayload flag editor since it became
-    // keyboard-modal, the MeasureText measure editor since 2026-08-19 and the
-    // IterBound editor since 2026-09-05 — they differ only in their commit/cancel bodies and in which area
+    // keyboard-modal, the MeasureText measure editor since 2026-08-19, the
+    // IterBound editor since 2026-09-05 and the MagnificationLevelText level
+    // editor since 2026-09-15 — they differ only in their commit/cancel bodies and in which area
     // they repaint. There is no longer a tail that cancels an edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
@@ -3953,6 +3964,27 @@ private:
     // long press synthesize this very chord (redesign_button_shift_admits),
     // so glass reaches the act with no keyboard and there is no second road.
     void drop_phase_reset_in_target_view();
+    // CTRL+SHIFT+S: DROP A MAGNIFICATION LEVEL MARKER FROM ANY VIEW (architect
+    // 2026-09-15) — Shift+S's shape on the third column, and its every clause
+    // for the same reasons. It switches to T, then to M, and then runs the
+    // column's ONE drop body (drop_magnification_level_at_playhead), so a
+    // refused target entry stops the whole press; from the M column it REFUSES
+    // WHOLE as already crossed, bare `s` being the in-column drop there exactly
+    // as it is in the P column.
+    //
+    // THERE IS NO LEAD-IN TO CARRY: the phase chord's kN/2 is an engine
+    // geometry fact, and a magnification level is a picture boundary at the
+    // frame the playhead stands on — so the act is the crossing plus a plain
+    // drop, with no arm of its own.
+    //
+    // KEYBOARD-ONLY, and deliberately (architect's brief, 2026-09-15): the
+    // roster admits a SHIFT press on a button (redesign_button_shift_admits)
+    // and a CTRL press on one (redesign_button_ctrl_admits), and there is no
+    // ctrl-shift admission in the product. Rather than invent a third axis for
+    // one chord, the Drop button keeps its two roads — the plain lift's bare
+    // `s`, which drops on whichever column is live, and the shifted press's
+    // Shift+S — and this crossing stays the keyboard's.
+    void drop_magnification_level_in_target_view();
 
     // Apply a new GUI scale (percent), running the shared live sequence:
     // assign app.gui_scale, push it to the renderer

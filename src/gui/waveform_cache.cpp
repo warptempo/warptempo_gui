@@ -747,6 +747,19 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     maybe_rebuild_flag_cache();
 }
 
+bool GuiPaintHandler::displayed_plate_geometry_is_live() const {
+    if (!wf_cache.fp_rendered) return false;
+    const WaveformRenderInputs in = compute_waveform_render_inputs();
+    if (!in.valid) return false;
+    return wf_cache.fp_vp_start            == in.vp_start &&
+           wf_cache.fp_vp_end              == in.vp_end &&
+           wf_cache.fp_area_w              == in.area_w &&
+           wf_cache.fp_area_h              == in.area_h &&
+           wf_cache.fp_inset_px            == in.inset_px &&
+           wf_cache.fp_target              == in.is_target &&
+           wf_cache.fp_warp_frame_map_hash == in.warp_frame_map_hash;
+}
+
 bool GuiPaintHandler::displayed_plate_gain_is_stale() const {
     if (!wf_cache.fp_rendered) return false;
     return wf_cache.fp_gain_profile_hash !=
@@ -1319,9 +1332,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else if (mv == 'M') {
         // THE MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-15): its
         // flags paint while it is the active column and at no other time, the
-        // other two columns' rule. The level digit on the green box, no measure,
-        // no cells, no drag overlay and no suppression (the painter's
-        // declaration, render.h); red is the column's coincidence set alone.
+        // other two columns' rule. The level digit on the green box, no measure
+        // and no cells (the painter's declaration, render.h); red is the
+        // column's coincidence set alone. IT TAKES A DRAG OVERLAY AND A
+        // SUPPRESSION since the column gained its authoring the same day — the
+        // flag's horizontal drag and the one-digit LEVEL EDITOR, which stands
+        // in for the payload box exactly as the warp column's canonical-line
+        // editor does.
         const std::set<int>& ml_red =
             magnification_level_red_flag_set_cached(app).red;
         render_magnification_level_flags(
@@ -1333,7 +1350,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.last_selected_marker,
             &app.flag_hit_rects,
             &app.marker_stems,
-            tmap_arg);
+            tmap_arg,
+            drag_overlay,
+            suppressed);
     } else if (mv == 'P') {
         const std::set<int>& pr_red =
             phase_reset_red_flag_set_cached(app).red;

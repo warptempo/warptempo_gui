@@ -79,45 +79,53 @@ bool entry_restores_live_marker_stores(const AppState& app,
 
 void Undo::recompute_dirty() {
     const auto& h = app.history;
+    // THE FOUR FLAGS ARE SET AND CLEARED AS ONE, so the three arms below and
+    // the per-entry walk each name all four (the flags' contract is at
+    // AppState::warp_dirty; the magnification level column took its own on
+    // 2026-09-15, when op_mode 'M' gained real producers and the walk's old
+    // `else` would have called a level edit a warp change).
+    const auto clear_all = [&] {
+        app.warp_dirty                = false;
+        app.phase_reset_dirty         = false;
+        app.magnification_level_dirty = false;
+        app.settings_dirty            = false;
+    };
+    // ONE ARM PER op_mode, exhaustive over the four tags an entry can carry.
+    const auto light = [&](char m) {
+        switch (m) {
+            case 'P': app.phase_reset_dirty         = true; break;
+            case 'M': app.magnification_level_dirty = true; break;
+            case 'S': app.settings_dirty            = true; break;
+            default:  app.warp_dirty                = true; break;   // 'W'
+        }
+    };
     if (!h.saved_valid) {
-        app.warp_dirty        = true;
-        app.phase_reset_dirty = true;
-        app.settings_dirty    = true;
+        app.warp_dirty                = true;
+        app.phase_reset_dirty         = true;
+        app.magnification_level_dirty = true;
+        app.settings_dirty            = true;
     } else if (h.saved_distance == 0) {
-        app.warp_dirty        = false;
-        app.phase_reset_dirty = false;
-        app.settings_dirty    = false;
+        clear_all();
     } else if (h.saved_distance < 0) {
         // Saved is `n` undos behind the current cursor. The last n
         // entries of undo_stack moved us from saved baseline to current.
-        app.warp_dirty        = false;
-        app.phase_reset_dirty = false;
-        app.settings_dirty    = false;
+        clear_all();
         const int n  = -h.saved_distance;
         const int us = static_cast<int>(h.undo_stack.size());
-        for (int i = std::max(0, us - n); i < us; ++i) {
-            const char m = h.undo_stack[i].op_mode;
-            if      (m == 'P') app.phase_reset_dirty = true;
-            else if (m == 'S') app.settings_dirty    = true;
-            else               app.warp_dirty        = true;   // 'W' or 'M'
-        }
+        for (int i = std::max(0, us - n); i < us; ++i)
+            light(h.undo_stack[i].op_mode);
     } else {
         // Saved is `n` redos ahead. The top n entries of redo_stack
         // would, if redone, take us back to the saved state.
-        app.warp_dirty        = false;
-        app.phase_reset_dirty = false;
-        app.settings_dirty    = false;
+        clear_all();
         const int n  = h.saved_distance;
         const int rs = static_cast<int>(h.redo_stack.size());
-        for (int i = std::max(0, rs - n); i < rs; ++i) {
-            const char m = h.redo_stack[i].op_mode;
-            if      (m == 'P') app.phase_reset_dirty = true;
-            else if (m == 'S') app.settings_dirty    = true;
-            else               app.warp_dirty        = true;   // 'W' or 'M'
-        }
+        for (int i = std::max(0, rs - n); i < rs; ++i)
+            light(h.redo_stack[i].op_mode);
     }
     const bool was_dirty = app.dirty;
-    app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
+    app.dirty = app.warp_dirty || app.phase_reset_dirty ||
+                app.magnification_level_dirty || app.settings_dirty;
     // THE DIRTY MARK HAS ONE SURFACE AND ONE DERIVE-OWNER. This is where
     // app.dirty is derived, so every mutation, save and undo/redo transition
     // passes through here.
@@ -143,7 +151,7 @@ void Undo::recompute_dirty() {
     if (app.dirty != was_dirty) viewport.invalidate_status_cell_area();
 }
 
-// THE FOUR PUSH HELPERS ALL STRIP THE SESSION-ONLY ITERATION BRACKET from
+// THE PUSH HELPERS ALL STRIP THE SESSION-ONLY ITERATION BRACKET from
 // both snapshots they build (architect 2026-09-10: "They just don't go in the
 // undo stack at all; they're considered transient by design"). It is done HERE
 // rather than at the callers so it is one statement over every producer that
@@ -182,6 +190,26 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
+    e.tab                = app.active_tab_view;
+    e.audio_view         = app.active_audio_view;
+    e.touched_snapshot   = std::move(touched_snapshot);
+    e.touched_live       = std::move(touched_live);
+    app.history.push(std::move(e));
+    last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
+}
+
+void Undo::push_undo_magnification_level(
+        std::vector<GuiMagnificationLevelMarker> pre_state,
+        std::vector<int> touched_snapshot,
+        std::vector<int> touched_live) {
+    UndoEntry e;
+    e.snapshot           = app.warpmarkers.markers();
+    e.phase_reset_snapshot = app.phaseresetmarkers.markers();
+    e.magnification_level_snapshot = std::move(pre_state);
+    strip_iter_fields(e.snapshot);
+    strip_iter_fields(e.phase_reset_snapshot);
+    e.settings           = capture_current_settings(app);
+    e.op_mode            = 'M';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
@@ -250,8 +278,9 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // magnitude would need a fourth stamp field to buy nothing.
     //
     // EVERY CHANGE OF THE UNDO-STACK TOP CLEARS THE STAMP — the four push
-    // helpers (push_undo_warp / push_undo_phase_reset / push_undo_both /
-    // push_settings_undo) and restore_history_entry, the shared do_undo/do_redo
+    // helpers (push_undo_warp / push_undo_phase_reset /
+    // push_undo_magnification_level / push_undo_both / push_settings_undo) and
+    // restore_history_entry, the shared do_undo/do_redo
     // core, one line each — so a valid stamp can never coexist with a foreign stack
     // top, and that is what lets BOTH arms assume the top of the undo stack is the
     // burst's own entry (refresh_coalesced_touched_live's precondition). AND SO
@@ -686,6 +715,17 @@ void Undo::apply_post_restore_rules_phase_reset(
         phase_reset_row_fields_differ);
 }
 
+void Undo::apply_post_restore_rules_magnification_level(
+        const UndoEntry& entry,
+        const std::vector<GuiMagnificationLevelMarker>& before) {
+    // The third column's applier, the two siblings' body over its own row
+    // comparator (magnification_level_row_fields_differ, app_state.h).
+    apply_post_restore_rules_impl(
+        selection, entry, before,
+        app.magnificationlevelmarkers.markers(),
+        magnification_level_row_fields_differ);
+}
+
 // True when do_undo / do_redo would actually act — the authoritative guard for
 // both, run on the source stack. Two ways a step is a silent no-op:
 //   - empty source stack;
@@ -757,6 +797,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.touched_live        = entry.touched_snapshot;
     std::vector<GuiWarpMarker>       before_w = counter.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = counter.phase_reset_snapshot;
+    std::vector<GuiMagnificationLevelMarker> before_m =
+        counter.magnification_level_snapshot;
 
     to.push_back(std::move(counter));
     // No kCap trim here: each restore moves one entry between the stacks (`from`
@@ -904,11 +946,17 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         active_views.switch_active_markers_view_to(entry.op_mode);
     }
 
-    // Settings-only entries carry no marker or focus post-restore work, and
-    // neither does an 'M' entry: its one producer is the recipe load in place
-    // filed from T+M, which carries no touched hints and leaves no selection
-    // (the load clears it), so there is nothing to re-select — the selection
-    // stays as the column write left it, empty.
+    // Settings-only entries carry no marker or focus post-restore work. THE
+    // 'M' ARM IS THE OTHER TWO COLUMNS' (architect 2026-09-15, when the column
+    // gained its own authoring and so its own entries): a drop, a drag, a
+    // nudge, a delete, a disable toggle, a level step and the level editor's
+    // commit all file under 'M' now, each with the identity hints its twin on
+    // the other columns carries, so the restore re-selects the touched set
+    // exactly as a 'W' or 'P' restore does. (Until that day the column's one
+    // producer was the recipe load in place, which names no touched row at
+    // all and takes the empty set's own clear — which this arm still gives
+    // it, restore_touched_indices answering empty for a hint-less entry whose
+    // column did not move.)
     if (entry.op_mode == 'P') {
         apply_post_restore_rules_phase_reset(entry, before_t);
         selection.sanitize_selection_after_restore(
@@ -918,7 +966,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.warpmarkers.markers().size()));
     } else if (entry.op_mode == 'M') {
-        selection.clear_selection();
+        apply_post_restore_rules_magnification_level(entry, before_m);
+        selection.sanitize_selection_after_restore(
+            static_cast<int>(app.magnificationlevelmarkers.markers().size()));
     }
 
     // THE 'S' ARM CLEARS THE SELECTION (architect 2026-07-29): a

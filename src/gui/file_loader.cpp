@@ -449,14 +449,15 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // Fresh file = fresh history. Both stacks cleared; the loaded state
     // is the saved baseline (signed_distance = 0, valid).
     app.history.reset();
-    app.dirty              = false;
-    app.warp_dirty         = false;
-    app.phase_reset_dirty    = false;
-    app.settings_dirty     = false;
+    app.dirty                     = false;
+    app.warp_dirty                = false;
+    app.phase_reset_dirty         = false;
+    app.magnification_level_dirty = false;
+    app.settings_dirty            = false;
     // The load is the ONE dirty transition that does not go through
-    // Undo::recompute_dirty (it assigns the four flags outright); that tail is
+    // Undo::recompute_dirty (it assigns the five flags outright); that tail is
     // the other transition site, and those two are the whole inventory, since
-    // the four flags above have no other writer in the tree.
+    // the five flags above have no other writer in the tree.
     // ROW 8'S `*` — the mark's ONE surface since 2026-09-09, the window
     // title's own asterisk having been deleted as a duplicate signal — NEEDS
     // NO DAMAGE CALL HERE, unlike at that tail: the mark is painted from

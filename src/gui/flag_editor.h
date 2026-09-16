@@ -13,9 +13,10 @@
 
 struct GuiTargetRender;
 
-// Flag-editor cluster. Covers the marker lane's three editors — the flag's
-// canonical-line editor and the measure editor (the warp column's alone) and
-// the iteration bound editor (both columns') — the
+// Flag-editor cluster. Covers the marker lane's FOUR editors — the flag's
+// canonical-line editor and the measure editor (the warp column's alone), the
+// iteration bound editor (the warp and phase-reset columns') and the
+// magnification level editor (the third column's, 2026-09-15) — the
 // BPM dialog editor, and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 struct GuiFlagEditor {
@@ -111,6 +112,31 @@ struct GuiFlagEditor {
     // the field actually changed; the editor closes on
     // every path except the refusal.
     void commit_measure_edit();
+    // THE MAGNIFICATION LEVEL EDITOR'S ONE ENTRY (the eighth text_editor Kind,
+    // architect 2026-09-15), on the MAGNIFICATION LEVEL column alone and in
+    // target view, the only view that column exists in. It is that column's
+    // PAYLOAD editor — a magnification level marker's whole authored value is
+    // its one digit — so it opens on the payload axis exactly as the warp
+    // column's canonical-line editor does, off bare Return and off the flag's
+    // double-click. The callers' gate is flag_editor_open_actionable's payload
+    // arm (app_state.h); a call with another column active is a silent
+    // defensive no-op.
+    //
+    // The mechanics are enter_measure_edit's over the third store: the focus
+    // repaired, the marker single-selected and landed, the seed the marker's
+    // own level digit fully selected. Keyboard-modal, pointer/wheel-transparent,
+    // no playback stop — the top-strip family's recorded exemption. Read-only
+    // refuses at the callers, as its two siblings' opens do.
+    void enter_magnification_level_edit(int idx);
+    // Commit the open level session. THE LEVEL IS REQUIRED — a magnification
+    // level marker with no level is not a state the grammar can spell
+    // (magnificationlevelmarkers_parse.h) — so unlike the measure's commit
+    // there is NO EMPTY-CLEARS ARM: an EMPTY buffer and an out-of-grammar one
+    // are the same refusal, the editor left standing, red, with a card saying
+    // which rule the token broke. One undo entry when the digit actually
+    // changed, and the PICTURE's own gain kick with it (the profile this column
+    // feeds moves); the editor closes on every path except the refusal.
+    void commit_magnification_level_edit();
     void enter_bpm_edit(int idx);
     // Returns true iff the pending buffer parsed and committed (editor
     // closed). False on parse failure (editor stays open, red, and a card

@@ -54,6 +54,22 @@ WaveformGainProfile build_waveform_gain_profile(
     return p;
 }
 
+// The contract is at the declaration. The store is frame-ascending, so the walk
+// simply keeps the last enabled level at or before `frame` — which is the
+// builder's "each level holds to the next", its "a disabled marker is
+// invisible" and its "the last of equal frames wins" all at once.
+uint8_t magnification_level_in_force(
+        const std::vector<GuiMagnificationLevelMarker>& markers,
+        int64_t frame) {
+    uint8_t level = 0;
+    for (const GuiMagnificationLevelMarker& m : markers) {
+        if (m.time_frame > frame) break;
+        if (m.disabled) continue;
+        level = m.level;
+    }
+    return level;
+}
+
 bool GuiMagnificationLevelMarkers::save(const std::string& path) const {
     return save(path, markers());
 }

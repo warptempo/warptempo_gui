@@ -1958,10 +1958,6 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                  app.pending_marker_press.cell)
                    ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
     }
-    // A pending press on the magnification level column promises no drag —
-    // the crossing begins none there — so it wears the Arrow.
-    if (app.pending_marker_press.active && app.active_markers_view == 'M')
-        return GuiCursorKind::Arrow;
     if (app.drag.active || app.pending_marker_press.active)
         return GuiCursorKind::TrimResize;
     // (THE REGION EDITOR'S OWN LIVE ARM STOOD HERE FROM 2026-08-15 TO
@@ -2273,11 +2269,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                          hit_test_flag_cell(app, audio, x, y))
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
-            // A MAGNIFICATION LEVEL FLAG arms no drag of either axis
-            // (architect 2026-09-15), so its box wears the Arrow; the `h`
-            // view's diff flags keep the one shape below on every column.
-            if (app.active_markers_view == 'M' && !app.history_mode.active)
-                return GuiCursorKind::Arrow;
+            // A MAGNIFICATION LEVEL FLAG promises the HORIZONTAL move
+            // (architect 2026-09-15), so its box wears the same TrimResize the
+            // other two columns' positional flags do — the cursor promises the
+            // gesture, and on this column the plain drag is that one.
             return GuiCursorKind::TrimResize;
         }
         // The rest of the strip: the button rows (claimed far above the
@@ -4125,10 +4120,16 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
     const int64_t delta = (up ? +1 : -1) * static_cast<int64_t>(std::max(count, 1));
     switch (cell) {
     case MarkerCell::Payload:
-        // A phase reset's payload is a POSITION with no value to step, and a
-        // magnification level marker authors nothing yet (architect
-        // 2026-09-15): on both the select was the whole act. The tempo step
-        // is the warp column's alone.
+        // A phase reset's payload is a POSITION with no value to step: there
+        // the select was the whole act. THE OTHER TWO COLUMNS EACH STEP THEIR
+        // OWN PAYLOAD VALUE — the warp column's tempo, and since 2026-09-15 the
+        // magnification level column's LEVEL DIGIT — through that column's own
+        // step body, the same one bare Up/Down runs.
+        if (app.active_markers_view == 'M') {
+            (void)magnification_levels.adjust_magnification_level_step(
+                delta, /*synthesized_repeat=*/false);
+            return;
+        }
         if (app.active_markers_view != 'W') return;
         (void)warpops.adjust_tempo_cents(delta, /*synthesized_repeat=*/false);
         return;
@@ -4395,10 +4396,16 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
          dc_at_press.cell == MarkerCell::Upper)) {
         switch (dc_at_press.cell) {
         case MarkerCell::Payload:
-            // The payload editor is the WARP column's alone: a phase reset
-            // authors no payload line and a magnification level marker
-            // authors nothing yet (architect 2026-09-15), so both other
-            // columns fall through to the pending arm, silent.
+            // THE PAYLOAD AXIS OPENS ONE EDITOR PER COLUMN THAT HAS ONE: the
+            // WARP column's canonical-line editor, and since 2026-09-15 the
+            // MAGNIFICATION LEVEL column's one-digit LEVEL editor, which is
+            // that column's whole payload. A phase reset authors no payload
+            // line at all, so the P column alone falls through to the pending
+            // arm, silent. (The bare-Return arm makes the same fork.)
+            if (app.active_markers_view == 'M') {
+                flag_editor.enter_magnification_level_edit(hit);
+                return;
+            }
             if (app.active_markers_view == 'W') {
                 flag_editor.enter_top_flag_edit(hit);
                 return;
@@ -7078,8 +7085,9 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // nothing after the create).
     // CREATE the marker, SELECT it, LAND
     // the playhead on it (the architect's words, eighth glass ruling) — the
-    // bare-`s` drop equivalent, and like bare `s` it is the AUGMENTED drop in
-    // both columns — the copy-previous owner in W, the lead-in reset in P.
+    // bare-`s` drop equivalent, and like bare `s` it is the AUGMENTED drop on
+    // every column — the copy-previous owner in W, the lead-in reset in P, and
+    // since 2026-09-15 the level-in-force copy in M.
     // The select and the land are the DROP'S OWN acts (drop_marker /
     // drop_phase_reset_at_position single-select what they create and re-seat
     // the playhead), so one body serves the key and the click with no
@@ -7110,11 +7118,13 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // active_column_authoring_allowed admits W only in source view (warp
     // drops legal there alone), P in EITHER audio view (architect
     // 2026-08-30 — the drop body's own fork seeds with the lead-in in target
-    // view and exactly at the playhead in source view) and M in neither
-    // (2026-09-15), so the view dispatch below is W or P and needs no extra
-    // audio-view guard.
+    // view and exactly at the playhead in source view) and M wherever it
+    // exists, which is target view alone (2026-09-15), so the view dispatch
+    // below needs no extra audio-view guard on any column.
     if (app.active_markers_view == 'P')
         phase_resets.drop_phase_reset_lead_in_at_playhead();
+    else if (app.active_markers_view == 'M')
+        magnification_levels.drop_magnification_level_at_playhead();
     else
         warpops.drop_copy_previous_at_playhead();
 }
@@ -10589,15 +10599,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 value_drag.apply_motion(mouse_y);
             return;
         }
-        // THE MAGNIFICATION LEVEL COLUMN ARMS NO FLAG DRAG (architect
-        // 2026-09-15): its flags select and land at the press and move
-        // nothing yet, so the crossing begins no gesture there — silent, the
-        // pointer's non-event (value_drag_posture answers false on the column
-        // above, and this is the horizontal drag's half).
-        if (app.active_markers_view == 'M') return;
-        // No home-view test: T+W is the posture's and T+M is refused above, so
-        // only S+W, S+P and T+P with grid iterations dark reach here, all of
-        // them authoring views.
+        // No home-view test: T+W is the posture's, so S+W, S+P, T+P with grid
+        // iterations dark and — since 2026-09-15 — T+M reach here, all of them
+        // authoring views. THE MAGNIFICATION LEVEL COLUMN'S FLAG DRAG IS THIS
+        // ONE (architect 2026-09-15: "horizontal move only"): the value drag's
+        // posture answers no there, so the plain drag is the positional gesture
+        // and it begins here like the other two columns'.
         if (authoring_locked(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta

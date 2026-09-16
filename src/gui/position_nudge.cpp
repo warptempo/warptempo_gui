@@ -11,13 +11,15 @@
 #include <cstdint>
 #include <vector>
 
-// The type-free flesh shared by the two position nudges
-// (GuiWarpMarkersOps::nudge_selected_markers and
-// GuiPhaseResetMarkersOps::nudge_selected_phase_resets). The full doctrine
+// The type-free flesh shared by the THREE position nudges
+// (GuiWarpMarkersOps::nudge_selected_markers,
+// GuiPhaseResetMarkersOps::nudge_selected_phase_resets and, since 2026-09-15,
+// GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels). The
+// full doctrine
 // (horizontal movement is a focus act; the group-verb doctrine it instances) and
 // the step-by-step ordering rationale live at the declarations in
 // position_nudge.h. THE WALL-REGIME MIDDLE IS SHARED FLESH TOO since
-// 2026-08-31 — position_nudge_landing below, one owner for both columns, the
+// 2026-08-31 — position_nudge_landing below, one owner for every column, the
 // twins' two verbatim copies collapsed into it when the Left / Right buttons'
 // face needed the landing as a const owner to compare against. What stays in
 // each twin is its own STORE read and its post-clamp identity no-op; the stop
@@ -182,7 +184,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, bool merged, int64_t committed_focused_frame,
-    GuiTargetRender& target_render) {
+    GuiTargetRender* target_render) {
     // (a) settle the burst: re-stamp this press's kind for the next coalesce
     // test, or — on a MERGED press whose mutation returned the stores to the
     // burst entry's own snapshot — POP that entry, the byte-equal pop
@@ -227,6 +229,9 @@ void finish_position_nudge(
     // land both go through a movement owner, which owns the hide (the rule at
     // clear_region_highlight, input_handler.h). Groups are never moved (the
     // doctrine at the declarations), so there is no extent to maintain here.
-    // (h) view-independent target preview.
-    target_render.trigger();
+    // (h) view-independent target preview — ON THE TWO COLUMNS THAT REACH ONE.
+    // The pointer is null exactly on the magnification level column, whose
+    // positions are display-only (the rule and why it is a pointer are at the
+    // declaration).
+    if (target_render) target_render->trigger();
 }

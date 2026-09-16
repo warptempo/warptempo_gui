@@ -205,6 +205,11 @@ struct WaveformGainProfileCache {
     long long           markers_gen = -1;
     WaveformGainProfile profile;
     uint64_t            hash        = 0;
+    // THE DRAG SLOT'S TWO EXTRA KEY FIELDS (waveform_gain_profile_drag_cached,
+    // below) — the dragged marker's store index and its commit-rounded
+    // proposal. The resting slot neither writes nor reads them.
+    int                 dragged_marker = -1;
+    int64_t             dragged_frame  = 0;
 };
 
 // THE PROFILE, memoized per MAGNIFICATION LEVEL MARKER STORE GENERATION
@@ -216,6 +221,24 @@ struct WaveformGainProfileCache {
 // all assign through the store's mutators — so no road needs a call of its
 // own to re-key it. Its ONE reader is effective_waveform_gain_profile below.
 const WaveformGainProfileCache& waveform_gain_profile_cached(
+    const AppState& app);
+
+// THE GAIN PROFILE WHILE A MAGNIFICATION LEVEL MARKER IS DRAGGED (architect
+// 2026-09-15: the magnified sections follow the drag, not the release). A
+// marker drag leaves the live store untouched until its commit (DragState), so
+// the resting slot above cannot see the hand. This SECOND SLOT builds the
+// profile from a COPY of the magnification level store with the dragged marker
+// (DragState::dragging_markers[0]) at DragState::proposed_authored_frame — the
+// proposal converted by the commit's own conversion — re-sorted by
+// reorder_markers_by_time exactly as commit_drag re-sorts, so every motion
+// shows the picture the release would leave. Keyed (store generation, dragged
+// index, proposed frame), so the plate inputs, the overview bar cache and the
+// gain kick's hash share ONE build per distinct proposal. A proposal still at
+// the marker's stored frame answers the resting slot itself (same store, same
+// profile). Its one reader is effective_waveform_gain_profile, and only while
+// a MAGNIFICATION-LEVEL-column drag stands (DragState::drag_mode 'M') — the
+// other two columns' drags move no gain boundary at all.
+const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
 // THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE (architect
@@ -232,7 +255,10 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 // rightly the same picture). READERS: the plate's render inputs
 // (compute_waveform_render_inputs), the overview lane's bar cache
 // (maybe_rebuild_overview_bar_cache) and the gain kick's hash
-// (Viewport::waveform_gain_hash).
+// (Viewport::waveform_gain_hash). While a MAGNIFICATION-LEVEL-column marker
+// drag stands at the working zoom or finer the live answer is the DRAG SLOT's
+// (waveform_gain_profile_drag_cached, above), so the picture shows the store as
+// the release would leave it.
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app);
 

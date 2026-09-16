@@ -129,8 +129,9 @@ struct PositionNudgePrologue {
                            // active store by marker_nudge_actionable
 };
 
-// The shared guard prologue of the two position nudges, and the site that makes
-// the gesture a FOCUS ACT. Order is IDENTICAL in both twins and preserved
+// The shared guard prologue of the THREE position nudges (the magnification
+// level column's joined 2026-09-15), and the site that makes
+// the gesture a FOCUS ACT. Order is IDENTICAL in every twin and preserved
 // exactly: (1) THE WHOLE REFUSAL SET, asked as ONE predicate —
 // marker_nudge_actionable (app_state.h), which is also the Left / Right
 // buttons' marker-lane face arm, and whose terms are this prologue's own seven
@@ -274,10 +275,11 @@ int64_t stepped_anchor_frame(
 // TWINS reach it past those guards, so the arm is the FACE's alone in practice
 // — the waveform lane's landing owner (playhead_pixel_step_landing) treats its
 // degenerate grid the same way.
-// THREE READERS: both nudge twins, whose committed frame this IS
+// FOUR READERS: the THREE nudge twins, whose committed frame this IS
 // (GuiWarpMarkersOps::nudge_selected_markers,
-// GuiPhaseResetMarkersOps::nudge_selected_phase_resets — each still owns its
-// own store read and its post-clamp identity no-op), and
+// GuiPhaseResetMarkersOps::nudge_selected_phase_resets and
+// GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels — each
+// still owns its own store read and its post-clamp identity no-op), and
 // marker_nudge_actionable (app_state.h), the Left / Right buttons' marker-lane
 // wall term, which compares this landing against the resting frame.
 //
@@ -339,7 +341,19 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     input_handler.h).
 //     There is no overlay-preserving arm any more: the extent re-derive died
 //     with the group nudge.
-// (h) target_render.trigger.
+// (h) target_render->trigger(), IFF THE COLUMN REACHES A RENDER INPUT — the
+//     pointer is REQUIRED and may be NULL, which is the magnification level
+//     column's answer (architect 2026-09-15). Warp and phase reset positions
+//     are both engine inputs, so their twins pass their own GuiTargetRender and
+//     a nudge there dirties the preview; a MAGNIFICATION LEVEL marker is
+//     display-only — no sample, no engine input, no render fingerprint field
+//     reads it — so its twin passes nullptr and this tail dispatches nothing,
+//     the picture's own synchronous gain kick standing in its place at that
+//     twin's tail (GuiMagnificationLevelMarkersOps' header states the rule for
+//     the whole cluster). A POINTER RATHER THAN A FLAG because the third
+//     cluster holds no GuiTargetRender at all: the absence of the member is
+//     what enforces "no act on this column may trigger a preview", and a
+//     reference parameter would have forced it to hold one.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
 // warp's SOURCE home view, where the source waveform pixels do not depend on the
@@ -390,4 +404,4 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, bool merged, int64_t committed_focused_frame,
-    GuiTargetRender& target_render);
+    GuiTargetRender* target_render);

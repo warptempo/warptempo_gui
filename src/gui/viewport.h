@@ -259,6 +259,23 @@ struct Viewport {
         return displayed_plate_gain_is_stale_ &&
                displayed_plate_gain_is_stale_();
     }
+    // displayed_plate_geometry_is_live: true when a plate IS displayed and its
+    // published fingerprint's GEOMETRY — viewport, area, inset, domain and warp
+    // map hash — is what the live state would render under. ONE READER,
+    // MarkerDragOps::apply_drag_motion, which uses it to decide whether a
+    // magnification level drag's motion may render the new gain SYNCHRONOUSLY
+    // under the drag's displayed-basis freeze: where the geometry already
+    // differs (a job in flight at the aimed press that the freeze dropped), a
+    // render would publish the LIVE geometry under a hand aimed at the older
+    // one, so the motion records the debt instead and the release repays it.
+    // Wired in main.cpp to GuiPaintHandler::displayed_plate_geometry_is_live;
+    // FALSE UNWIRED, which is the conservative answer — the sections then wait
+    // for the release rather than rendering under an unknown basis.
+    std::function<bool()> displayed_plate_geometry_is_live_;
+    bool displayed_plate_geometry_is_live() const {
+        return displayed_plate_geometry_is_live_ &&
+               displayed_plate_geometry_is_live_();
+    }
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
     // synchronous plate rebuild's tail and the tick run, with no plate render.

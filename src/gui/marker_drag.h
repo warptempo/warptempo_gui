@@ -19,13 +19,24 @@ struct GuiTargetRender;
 // drag is the VERTICAL one (ValueDragOps, value_drag.{h,cpp}) and this one
 // does not begin at all, on any flag — "we never allow multi-axis
 // dragging; flags move up and down or not at all" (architect 2026-09-10).
-// Shared by the warp and phase reset views and
+// Shared by ALL THREE COLUMNS since 2026-09-15 — the magnification level
+// markers column's flag drag is this one too ("horizontal move only", the
+// value drag's posture answering no there) — and
 // dispatched on app.active_markers_view (begin) and app.drag.drag_mode
 // (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
 // the doctrine is at the head of position_nudge.h). It
 // lives in its own translation unit because it is the one cross-kind
 // gesture: the per-kind authoring and selection-shift operations stay in
-// GuiWarpMarkersOps and GuiPhaseResetMarkersOps. Under the frozen-coord
+// GuiWarpMarkersOps, GuiPhaseResetMarkersOps and
+// GuiMagnificationLevelMarkersOps.
+//
+// ITS ONE PER-COLUMN ASYMMETRY IS THE PICTURE (2026-09-15): a magnification
+// level marker is a section boundary of the waveform's gain profile, so an M
+// drag's MOTION writes DragState::proposed_authored_frame for the profile's
+// drag slot and kicks a synchronous plate render when a boundary moved, and its
+// COMMIT triggers no preview at all (the column reaches no render input). The
+// other two columns write that field too — one write is cheaper than a fork —
+// and nothing reads it for them. Under the frozen-coord
 // regime, motion writes app.drag.moveable_times only — the live per-list
 // stores stay untouched until commit_drag does the write-back.
 //

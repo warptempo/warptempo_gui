@@ -48,6 +48,7 @@
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
+#include "magnificationlevelmarkers_ops.h"
 #include "phaseresetmarkers_ops.h"
 #include "prompt.h"
 #include "undo.h"
@@ -1406,6 +1407,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
                                          playback_lifecycle, target_render);
+    // THE THIRD COLUMN'S AUTHORING CLUSTER (2026-09-15). IT TAKES NO
+    // GuiTargetRender, and the absence is the enforcement rather than an
+    // omission: a magnification level is display-only, so no act on that column
+    // may dispatch a preview, and with no member to reach there is nothing in
+    // the cluster that could (the rule is at its header).
+    GuiMagnificationLevelMarkersOps magnification_levels(
+        app, audio, viewport, selection, undo, playback_lifecycle);
     GuiWarpMarkersOps warpops(app, audio, viewport, selection, undo,
                               playback_lifecycle, target_render);
     MarkerDragOps marker_drag(app, audio, viewport, undo, target_render);
@@ -1450,7 +1458,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
-                                  warpops, phase_resets, marker_drag,
+                                  warpops, phase_resets, magnification_levels,
+                                  marker_drag,
                                   flag_editor,
                                   renders_dir, active_views, ab_audition,
                                   render_player, notifications,
@@ -1539,6 +1548,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&]() { return paint_handler.displayed_plate_gain_is_stale(); };
     viewport.refresh_flag_cache_ =
         [&]() { paint_handler.maybe_rebuild_flag_cache(); };
+    // And the MOTION's own seam, the magnification level drag's live gain
+    // preview (the contract at Viewport::displayed_plate_geometry_is_live).
+    viewport.displayed_plate_geometry_is_live_ =
+        [&]() { return paint_handler.displayed_plate_geometry_is_live(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the

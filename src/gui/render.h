@@ -3214,7 +3214,7 @@ struct MarkerStem {
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
 // open marker-lane editor is standing in for it. THE ONE GRAPHIC MODEL, stated
-// once here and applied to all three editors (architect 2026-09-05, on the
+// once here and applied to all FOUR editors (architect 2026-09-05, on the
 // tablet: "it just feels odd to have one nonvariant field in the middle ... the
 // two editors on the opposite ends behaving one way and the bounds one in the
 // middle behaving in a different way makes the whole thing seem hacked
@@ -3234,8 +3234,14 @@ struct MarkerStem {
 // indices this replaced applied to the two kinds they covered.
 //
 // ONE BOX AT MOST, which is why this is an index and a cell rather than a set:
-// the three editors are ONE text_editor::State, so no two can stand together.
+// the four editors are ONE text_editor::State, so no two can stand together.
 // `marker_index` -1, the resting value, suppresses nothing on any column.
+// THE MAGNIFICATION LEVEL EDITOR (2026-09-15) NAMES Payload like the warp
+// column's flag editor, that column's flag having exactly one box — so its
+// field takes the marker's whole column and nothing rides, which the comparison
+// above already gives it with no arm of its own; WHICH COLUMN the index belongs
+// to is the live view's, and each painter drops a suppression naming a box its
+// own column does not have.
 struct SuppressedBox {
     int        marker_index = -1;
     MarkerCell cell         = MarkerCell::Payload;
@@ -3247,7 +3253,9 @@ struct SuppressedBox {
 // editor's own painter, which takes `cell` as the box its field stands in for.
 // So the pass that skips, the cache that keys and the painter that draws
 // cannot disagree about which box is being edited. Kind FlagPayload answers
-// Payload, MeasureText answers Measure, IterBound answers the session's own
+// Payload, MagnificationLevelText answers Payload too (2026-09-15 — an M flag
+// has exactly one box and that editor stands in for it), MeasureText answers
+// Measure, IterBound answers the session's own
 // side (iter_bound_editor_side, app_state.h); every other kind, and no editor
 // at all, answer the resting value.
 SuppressedBox suppressed_flag_box(const AppState& app);
@@ -3616,12 +3624,22 @@ void render_phase_reset_flags(cairo_t* cr,
 // identical box, class ladder and publication contract render_flags documents
 // above, in the column's green (FlagColumnFace::MagnificationLevel,
 // render.cpp). The LABEL is the marker's level digit
-// (format_marker_magnification). NO MEASURE BOX, NO BOUND CELLS, NO DRAG
-// OVERLAY AND NO SUPPRESSION — the column carries no measure, grid iterations
-// never lights on it, and no flag drag or marker-lane editor arms there — so
-// the signature takes none of those inputs, and the focus's addressed cell is
-// the payload by construction. Red is `red_set` alone, the coincidence set
+// (format_marker_magnification). NO MEASURE BOX AND NO BOUND CELLS — the column
+// carries no measure and grid iterations never lights on it — so the signature
+// takes neither, and the focus's addressed cell is the PAYLOAD by construction:
+// an M flag has exactly one box, so there is no other cell to address.
+// Red is `red_set` alone, the coincidence set
 // (magnification_level_red_flag_set_cached, warp_frame_map_view.h).
+//
+// IT TAKES A DRAG OVERLAY AND A SUPPRESSION since the column gained its
+// authoring (the same day): the flag's plain drag is the HORIZONTAL MOVE here
+// (value_drag_posture answers no on this column), so a dragged flag paints at
+// its proposal like the other two columns'; and the one-digit LEVEL EDITOR
+// stands in for the payload box, so the pass drops that box while the field
+// paints in its place (SuppressedBox and the one graphic model, above). A
+// suppression naming a CELL or the MEASURE is dropped here, those editors being
+// the other columns' by their own open gates — the mirror of render_flags'
+// own fork, each painter owning its column's asymmetry.
 void render_magnification_level_flags(
     cairo_t* cr,
     GuiRect top_strip_area,
@@ -3636,7 +3654,9 @@ void render_magnification_level_flags(
     int focus_marker,
     std::vector<FlagHitRect>* out_hit_rects = nullptr,
     std::vector<MarkerStem>* out_stems = nullptr,
-    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
+    const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
+    const DragOverlay* drag_overlay = nullptr,
+    SuppressedBox suppressed = SuppressedBox{});
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the

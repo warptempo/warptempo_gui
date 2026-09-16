@@ -628,8 +628,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
             return bare && history_view;
         // The value pair: copy, and the jump to where the value came from.
         case GuiKeys::J: return bare || sh;
-        // Drop a warp marker / drop a phase reset from the warp column / save.
-        case GuiKeys::S: return bare || sh || cl;
+        // Drop on the live column / drop a phase reset from any view / save /
+        // drop a magnification level marker from any view (Ctrl+Shift+S,
+        // 2026-09-15 — the letter's fourth chord, the third column's crossing
+        // in Shift+S's shape).
+        case GuiKeys::S: return bare || sh || cl || cs;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
         // The three phase-reset propagate chords (the W/P flip's bare `p` was
@@ -959,6 +962,28 @@ inline bool is_sync_external_key(GuiKey key, GuiInputState mods) {
 // content, exactly as bare `s` is) — and the same one-owner reason.
 inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && !mods.ctrl && mods.shift && !mods.alt;
+}
+
+// True for the chord that DROPS A MAGNIFICATION LEVEL MARKER FROM ANY VIEW
+// (architect 2026-09-15): CTRL+SHIFT+S exactly — no alt. It is Shift+S's shape
+// on the third column, and it took the letter's one remaining free decoration:
+// bare `s` is the live column's own drop, Shift+S the phase-reset crossing and
+// Ctrl+S the save, so ctrl-and-shift was what was left, and it was the strict
+// rule's consumed no-op until this date.
+//
+// IT IS THE COLUMN'S IN-COLUMN DROP WITH THE VIEW TRIP IN FRONT, not a second
+// act: from anywhere else the difference is exactly the two view chokepoints it
+// runs first, and then the same one drop body (the act is
+// GuiInputHandler::drop_magnification_level_in_target_view, input_handler.cpp).
+// IN THE M COLUMN THE CHORD REFUSES WHOLE, the phase chord's own rule: the
+// command IS the crossing, so with the column already standing there is nothing
+// to cross, and bare `s` is the drop there.
+// The same two readers as its sibling — on_key's dispatch arm and the
+// read-only allowlist (read_only_key_blocked, which DROPS the chord: a
+// magnification level marker is authored content, exactly as bare `s`'s subject
+// is) — and the same one-owner reason.
+inline bool is_magnification_level_drop_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::S && mods.ctrl && mods.shift && !mods.alt;
 }
 
 // True for the chord that opens and closes the AV sync stats panel (architect

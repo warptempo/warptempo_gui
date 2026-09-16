@@ -1662,13 +1662,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!flag_editor_open_actionable(app)) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  app.active_markers_view == 'M'
-                                     ? kMagnificationLevelNotEditableCard
+                                     ? "Select a magnification level marker to "
+                                       "edit its level"
                                      : "Select a warp marker to edit its line");
             return;
         }
         const int focus = app.last_selected_marker;
         switch (app.addressed_cell) {
         case MarkerCell::Payload:
+            // THE PAYLOAD AXIS OPENS ONE EDITOR PER COLUMN THAT HAS ONE, and
+            // since 2026-09-15 the MAGNIFICATION LEVEL column has one: the
+            // one-digit LEVEL editor, which is that column's whole payload. The
+            // fork is the predicate's own (flag_editor_open_actionable admits
+            // both columns on this axis and refuses P, which authors no payload
+            // line at all).
+            if (app.active_markers_view == 'M') {
+                flag_editor.enter_magnification_level_edit(focus);
+                return;
+            }
             flag_editor.enter_top_flag_edit(focus);
             return;
         case MarkerCell::Lower:
@@ -1950,6 +1961,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             drop_phase_reset_in_target_view();
             return;
         }
+        // CTRL+SHIFT+S DROPS A MAGNIFICATION LEVEL MARKER FROM ANY VIEW
+        // (architect 2026-09-15) — Shift+S's shape on the third column, and it
+        // sits here for the same reason its sibling does: it needs no
+        // permission from the home-view gate below, because it GOES to the
+        // column's home view first and then drops there. Ctrl-and-shift-exact
+        // through the shared predicate, so this arm and the read-only
+        // allowlist cannot drift; the act's own body carries every other
+        // refusal. KEYBOARD-ONLY — the roster has no ctrl-shift button road
+        // and none was invented for it (the record is at the act's
+        // declaration).
+        if (is_magnification_level_drop_key(key, mods)) {
+            drop_magnification_level_in_target_view();
+            return;
+        }
         // THE BARE DROP, and the home-view gate lives INSIDE its arm since
         // 2026-08-30 rather than above it: the gate is the ACT'S refusal, so
         // it must not swallow a spelling that never meant to drop — an
@@ -1971,15 +1996,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             if (!active_column_authoring_allowed(app)) {
                 notifications.notify(
                     AppState::NotificationClass::Normal,
-                    app.active_markers_view == 'M'
-                        ? kMagnificationLevelNotEditableCard
-                        : "Markers are placed in source view");
+                    "Markers are placed in source view");
                 return;
             }
-            // Past the gate the column is W (in source view) or P: the
-            // predicate answers no on M.
+            // Past the gate the column is W (in source view), P, or — since
+            // 2026-09-15 — M, whose own in-column drop this is exactly as bare
+            // `s` is the phase column's: the CROSSING chord for each of those
+            // two columns (Shift+S, Ctrl+Shift+S) refuses in-column and leaves
+            // the drop to this key.
             if (app.active_markers_view == 'P')
                 phase_resets.drop_phase_reset_lead_in_at_playhead();
+            else if (app.active_markers_view == 'M')
+                magnification_levels.drop_magnification_level_at_playhead();
             else
                 warpops.drop_copy_previous_at_playhead();
             return;
@@ -2013,7 +2041,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             const char* card = "Select a marker to convert";
             switch (app.active_markers_view) {
                 case 'P': card = "Phase resets carry no tempo to inherit"; break;
-                case 'M': card = kMagnificationLevelNotEditableCard;      break;
+                // The third column's own sentence, its sibling's in its terms:
+                // a magnification level marker carries a LEVEL and no tempo, so
+                // there is nothing on it to inherit or collapse.
+                case 'M':
+                    card = "Magnification level markers carry no tempo to "
+                           "inherit";
+                    break;
                 case 'W': break;
             }
             notifications.notify(AppState::NotificationClass::Normal, card);
@@ -2049,9 +2083,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!marker_selection_verb_actionable(app)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                app.active_markers_view == 'M'
-                    ? kMagnificationLevelNotEditableCard
-                    : "Select a marker to enable or disable");
+                "Select a marker to enable or disable");
             return;
         }
         // THE SELECTION IS SPENT, ON BOTH COLUMNS (architect 2026-09-12): the
@@ -2060,10 +2092,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // rule — and neither op spells the lamp (selection_consumed,
         // app_state.h).
         selection_consumed(app);
-        // Past the refusal the column is W or P (the predicate answers no on
-        // M).
+        // ONE ARM PER COLUMN since 2026-09-15: a disabled magnification level
+        // marker is invisible to the waveform's gain profile exactly as a
+        // disabled reset is invisible to the render, so the toggle means the
+        // same thing on all three.
         if (app.active_markers_view == 'P') {
             phase_resets.toggle_phase_reset_disabled();
+            return;
+        }
+        if (app.active_markers_view == 'M') {
+            magnification_levels.toggle_magnification_level_disabled();
             return;
         }
         warpops.toggle_disabled();
@@ -2122,19 +2160,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!marker_selection_verb_actionable(app)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                app.active_markers_view == 'M'
-                    ? kMagnificationLevelNotEditableCard
-                    : "Select a marker to delete");
+                "Select a marker to delete");
             return;
         }
         // THE SELECTION IS SPENT, ON BOTH COLUMNS (architect 2026-09-12), the
         // Ctrl+D arm's twin above: past the carded refusal, ahead of the column
         // fork, and spelled at neither op (selection_consumed, app_state.h).
         selection_consumed(app);
-        // Past the refusal the column is W or P (the predicate answers no on
-        // M).
+        // ONE ARM PER COLUMN since 2026-09-15, the Ctrl+D arm's twin.
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
+            return;
+        }
+        if (app.active_markers_view == 'M') {
+            magnification_levels.delete_selected_magnification_levels();
             return;
         }
         warpops.delete_selected_marker();
@@ -2202,6 +2241,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                               arrow_step_magnitude(mods);
         switch (app.addressed_cell) {
         case MarkerCell::Payload:
+            // AND THE PAYLOAD AXIS FORKS ON THE COLUMN since 2026-09-15: on
+            // the MAGNIFICATION LEVEL column the same chord at the same
+            // magnitude steps the LEVEL DIGIT through that column's own step
+            // body, whose refusal this arm cards exactly as it cards the tempo
+            // step's. It is the payload axis on both — an M flag has no other
+            // box — so the fork is here rather than a case of its own.
+            if (app.active_markers_view == 'M') {
+                card_op_refusal(
+                    notifications,
+                    magnification_levels.adjust_magnification_level_step(
+                        delta, mods.synthesized_repeat));
+                return;
+            }
             card_op_refusal(notifications,
                             warpops.adjust_tempo_cents(
                                 delta, mods.synthesized_repeat));
@@ -2432,9 +2484,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!active_column_authoring_allowed(app)) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                app.active_markers_view == 'M'
-                    ? kMagnificationLevelNotEditableCard
-                    : "Markers are moved in source view");
+                "Markers are moved in source view");
             return;
         }
         // The twins' reason channel, raised here where a press is known to
@@ -2443,7 +2493,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // gate's card, and the wall went silent on 2026-08-31 — and the arm
         // stays because the channel is the cluster's contract, not this
         // gesture's private arrangement.
-        // Past the gate the column is W (in source view) or P.
+        // Past the gate the column is W (in source view), P or M — one twin
+        // per column since 2026-09-15, each the same body over its own store.
+        if (app.active_markers_view == 'M') {
+            card_op_refusal(
+                notifications,
+                magnification_levels.nudge_selected_magnification_levels(
+                    step_columns, rpt));
+            return;
+        }
         card_op_refusal(notifications,
                         app.active_markers_view == 'P'
                             ? phase_resets.nudge_selected_phase_resets(
@@ -4189,6 +4247,38 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     // act asked for T+P and got there, which is honest even when the reset
     // could not be placed.
     phase_resets.drop_phase_reset_lead_in_at_playhead();
+    viewport.kick_waveform_sync();
+}
+
+// CTRL+SHIFT+S — the third column's crossing, its sibling's body over its own
+// two chokepoints and its own drop. The contract is at the declaration; every
+// clause here is drop_phase_reset_in_target_view's, and the ONE difference is
+// that the drop it ends in takes NO LEAD-IN (a magnification level is a picture
+// boundary at the playhead's own frame, not a synthesis event seeded ahead of
+// one).
+void GuiInputHandler::drop_magnification_level_in_target_view() {
+    // The blank/loading guard near the top of on_key already covers this; the
+    // helper is defensive for the sibling's reason.
+    if (app.loading || audio.total_frames() <= 0) return;
+    // ALREADY CROSSED, NOTHING TO DO — the phase chord's own rule: this chord
+    // IS the crossing, so with the M column standing there is nothing to cross
+    // and bare `s` is the drop there.
+    if (app.active_markers_view == 'M') {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "Already in magnification level view");
+        return;
+    }
+    switch_active_audio_view_to('T');
+    if (app.active_audio_view != 'T') return;   // entry refused
+    active_views.switch_active_markers_view_to('M');
+    // The drop's own refusals — no sample rate, a frame past the EOF wall —
+    // are its, silent, and leave the view where these two switches put it.
+    magnification_levels.drop_magnification_level_at_playhead();
+    // THE KICK IS LAST, the sibling's own reason: the column swap moves a
+    // flag-cache FINGERPRINT field, so this is what lands the plate, the column
+    // and the new selection's flag in one frame. (The drop's own gain kick
+    // renders nothing — its marker copies the level already in force — so this
+    // is the only render of the press.)
     viewport.kick_waveform_sync();
 }
 

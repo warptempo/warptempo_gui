@@ -9,6 +9,10 @@
 #include "file_loader.h"     // source_load_dry_run (the Open project picker's act)
 #include "folder_overlay.h"  // the player's and the picker's key routers (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
+#include "magnificationlevelmarkers.h"  // format_magnificationlevelmarkers_text
+                                        // (the revert act's third column)
+#include "marker_magnification.h"  // parse_marker_magnification (that column's
+                                   // one level reader)
 #include "marker_store_validate.h"  // first_past_eof_wall_defect (the three
                                     // promote roads' shared wall guard)
 #include "project_model.h"   // resolve_project / enumerate_project_names
@@ -3425,18 +3429,13 @@ void GuiInputHandler::run_history_revert() {
 
     // THE COLUMN, hoisted above the wall guard below because both read it:
     // the active one by construction (the lane paints only that half of a
-    // delta), so the store is chosen once for the whole act. THE
-    // MAGNIFICATION LEVEL COLUMN REFUSES WHOLE (architect 2026-09-15): its
-    // diff flags show and select, and reverting them authors that column,
-    // which nothing does yet — so `phase` below is the phase-reset / warp
-    // choice alone and never sees an M flag. (The Revert face stays lit on a
-    // standing subject there; the key's card is the answer.)
-    if (app.active_markers_view == 'M') {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kMagnificationLevelNotEditableCard);
-        return;
-    }
-    const bool phase = (app.active_markers_view == 'P');
+    // delta), so the store is chosen once for the whole act. ALL THREE COLUMNS
+    // REVERT since 2026-09-15 (the magnification level column refused whole
+    // for the hours between its arrival and its authoring, and the Revert face
+    // stayed lit while the key carded — the recorded residue, closed here).
+    const char column = app.active_markers_view;
+    const bool phase = (column == 'P');
+    const bool level = (column == 'M');
 
     // THE PAST-EOF WALL, ahead of everything (2026-08-29): the flags' THEN
     // side is a commit's sidecar text, authored against whatever audio stood
@@ -3456,6 +3455,7 @@ void GuiInputHandler::run_history_revert() {
     {
         std::vector<GuiWarpMarker>       restored_warp;
         std::vector<GuiPhaseResetMarker> restored_phase;
+        std::vector<GuiMagnificationLevelMarker> restored_level;
         for (int idx : subject) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
             if (!f.removed) continue;   // an added flag DELETES; it lands none
@@ -3463,14 +3463,18 @@ void GuiInputHandler::run_history_revert() {
                 GuiPhaseResetMarker nm;
                 nm.time_frame = f.time_frame;
                 restored_phase.push_back(nm);
+            } else if (level) {
+                GuiMagnificationLevelMarker nm;
+                nm.time_frame = f.time_frame;
+                restored_level.push_back(nm);
             } else {
                 GuiWarpMarker nm;
                 nm.time_frame = f.time_frame;
                 restored_warp.push_back(nm);
             }
         }
-        if (auto defect =
-                in_place_load_wall_defect(restored_warp, restored_phase, {})) {
+        if (auto defect = in_place_load_wall_defect(
+                restored_warp, restored_phase, restored_level)) {
             // AN APPENDED REASON IS LOWERCASE (the rule and its one owner
             // lowercase_initial are at notifications.h): the wall defect is a
             // sentence at its frozen producer because two consumers use it
@@ -3489,10 +3493,14 @@ void GuiInputHandler::run_history_revert() {
     // tail, after the last write, so a subject that changed nothing leaves no
     // entry behind.
     std::vector<GuiWarpMarker>       warp_pre =
-        phase ? std::vector<GuiWarpMarker>{} : app.warpmarkers.markers();
+        (phase || level) ? std::vector<GuiWarpMarker>{}
+                         : app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_pre =
         phase ? app.phaseresetmarkers.markers()
               : std::vector<GuiPhaseResetMarker>{};
+    std::vector<GuiMagnificationLevelMarker> level_pre =
+        level ? app.magnificationlevelmarkers.markers()
+              : std::vector<GuiMagnificationLevelMarker>{};
 
     // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
     // OLD map still stands — the subject of the target-view re-land at the
@@ -3515,6 +3523,7 @@ void GuiInputHandler::run_history_revert() {
     // vector's worth of allocation on a keypress and is discarded.
     GuiWarpMarkers       proposed_warp  = app.warpmarkers;
     GuiPhaseResetMarkers proposed_phase = app.phaseresetmarkers;
+    GuiMagnificationLevelMarkers proposed_level = app.magnificationlevelmarkers;
 
     bool changed = false;
 
@@ -3592,6 +3601,65 @@ void GuiInputHandler::run_history_revert() {
                 if (m) *m = nm;
             } else {
                 proposed_phase.insert_marker(nm);
+                ++sk;
+            }
+            changed = true;
+            continue;
+        }
+
+        if (level) {
+            // THE MAGNIFICATION LEVEL ARM, the phase arm's shape over the third
+            // store: its line is the frame, the disable bit and the LEVEL
+            // DIGIT, and the digit travels on the flag as `then_token` (the
+            // payload past the '|', history_diff.h), so this column needs no
+            // trip through a line parser either — the token IS the level, and
+            // the grammar's own reader judges it.
+            const auto& mv = proposed_level.markers();
+            int&       sk  = skip[f.time_frame];
+            const int  at  = next_occupant(mv, f.time_frame, sk);
+            if (!f.removed) {
+                if (at >= 0) {
+                    proposed_level.remove_marker(at);
+                    changed = true;
+                }
+                continue;
+            }
+            GuiMagnificationLevelMarker nm;
+            nm.time_frame = f.time_frame;
+            nm.disabled   = f.then_disabled;
+            {
+                // THE LEVEL, through the grammar's ONE reader
+                // (parse_marker_magnification, marker_magnification.h). A token
+                // it refuses is UNREACHABLE BY CONSTRUCTION — every walk member
+                // is strict-load clean, so the digit was sliced out of a line
+                // this very grammar accepted — and is stated loudly rather than
+                // recovered from, the warp arm's own rule: one stderr line,
+                // then on to the next flag.
+                uint8_t     parsed = 0;
+                std::string level_err;
+                if (!parse_marker_magnification(f.then_token, parsed,
+                                                level_err)) {
+                    std::fprintf(stderr,
+                        "warptempo_gui: Revert skipped a magnification level "
+                        "the grammar refused: '%s'\n", f.then_token.c_str());
+                    continue;
+                }
+                nm.level = parsed;
+            }
+            if (at >= 0) {
+                ++sk;
+                // IDENTICAL IS NOT A CHANGE — the occupant's canonical line
+                // against the then side's, through the ONE serializer, which is
+                // the line vocabulary the delta itself is computed in.
+                const auto& live = mv[static_cast<std::size_t>(at)];
+                if (format_magnificationlevelmarkers_text({live}) ==
+                    format_magnificationlevelmarkers_text({nm})) {
+                    continue;
+                }
+                GuiMagnificationLevelMarker* m = proposed_level.marker_mut(at);
+                if (m) *m = nm;
+            } else {
+                proposed_level.insert_marker(nm);
                 ++sk;
             }
             changed = true;
@@ -3686,9 +3754,10 @@ void GuiInputHandler::run_history_revert() {
     // by construction — the loader refuses one and the column's only other
     // producer gates it, so the live store carried none.
     //
-    // THE PHASE COLUMN IS CARVED OUT BY ITS GRAMMAR: phase resets carry no
-    // labels at all, so there is nothing to collide and no check to run.
-    if (!phase) {
+    // THE OTHER TWO COLUMNS ARE CARVED OUT BY THEIR GRAMMARS: neither phase
+    // resets nor magnification level markers carry labels at all, so there is
+    // nothing to collide and no check to run.
+    if (!phase && !level) {
         const auto& pv = proposed_warp.markers();
         for (int i = 0; i < static_cast<int>(pv.size()); ++i) {
             const std::string& def = pv[static_cast<std::size_t>(i)].label_def;
@@ -3736,9 +3805,16 @@ void GuiInputHandler::run_history_revert() {
         // resting invariant needs no reorder pass here. markers_mut() is what
         // bumps the generation, which is what the map memo and the flag cache
         // read.
+        // THE PICTURE'S BEFORE-HASH, captured ahead of the install for the
+        // magnification level arm (the cluster's rule; a no-op on the other
+        // two, whose stores move no gain profile).
+        const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
         if (phase) {
             app.phaseresetmarkers.markers_mut() =
                 std::move(proposed_phase.markers_mut());
+        } else if (level) {
+            app.magnificationlevelmarkers.markers_mut() =
+                std::move(proposed_level.markers_mut());
         } else {
             app.warpmarkers.markers_mut() =
                 std::move(proposed_warp.markers_mut());
@@ -3747,8 +3823,10 @@ void GuiInputHandler::run_history_revert() {
         // load-in-place's own line, and the deletes'): it is a set of STORE
         // indices, and this act inserts and removes under them.
         selection.clear_selection();
-        if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
-        else       undo.push_undo_warp(std::move(warp_pre));
+        if (phase)      undo.push_undo_phase_reset(std::move(phase_pre));
+        else if (level) undo.push_undo_magnification_level(
+                            std::move(level_pre));
+        else            undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
         // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
         // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
@@ -3763,12 +3841,23 @@ void GuiInputHandler::run_history_revert() {
         // No kick of its own: the map is memoized on the warp store's
         // generation, so the forward translation below already reads the
         // rewritten map, and the close below invalidates the window whole.
-        if (!phase && app.active_audio_view == 'T') {
+        if (!phase && !level && app.active_audio_view == 'T') {
             viewport.reseat_playhead_to(
                 source_frame_to_active_domain(app, audio,
                                               playhead_source_frame));
         }
-        target_render.trigger();
+        // AND THE MAGNIFICATION LEVEL ARM TRIGGERS NOTHING: its column is
+        // display-only — no sample, no engine input, no render fingerprint
+        // field reads a level — so a level revert owes the PREVIEW nothing.
+        // WHAT IT OWES IS THE PICTURE, and it pays it the way every writer of
+        // that store does (the rule is at GuiMagnificationLevelMarkersOps'
+        // header): the gain hash captured before the install above, handed to
+        // the kick here, so the reverted levels land in this press's own frame
+        // rather than a tick later on the async backstop.
+        if (level)
+            viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
+        else
+            target_render.trigger();
     }
 
     // THEN THE VIEW CLOSES, and the order is the whole reasoning: this act has
@@ -8750,6 +8839,22 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
             [this] { flag_editor.commit_iter_bound_edit(); },
+            [this] { flag_editor.exit_top_flag_edit_no_commit(); },
+            [this] { viewport.invalidate_top_strip(); });
+    }
+    if (app.top_flag_editor.kind ==
+        text_editor::Kind::MagnificationLevelText) {
+        // The MAGNIFICATION LEVEL editor: the measure editor's route exactly —
+        // the same modal route, the same top-strip repaint, and no waveform
+        // edge, its red reaching no stem (the flash is gated on
+        // Kind::FlagPayload at paint_marker_stems) and its whole surface being
+        // the box in the strip. (The COMMIT's own gain kick is a separate
+        // matter and is the commit's, not this route's: a refusal renders
+        // nothing.)
+        return route_modal_editor_key(
+            app.top_flag_editor, key, mods,
+            /*autocomplete=*/nullptr,
+            [this] { flag_editor.commit_magnification_level_edit(); },
             [this] { flag_editor.exit_top_flag_edit_no_commit(); },
             [this] { viewport.invalidate_top_strip(); });
     }

@@ -149,6 +149,10 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp
+    # THE THIRD COLUMN'S AUTHORING CLUSTER (2026-09-15): the magnification
+    # level markers' drop, delete, disable, nudge and level step, in their own
+    # translation unit beside the two siblings'.
+    src/gui/magnificationlevelmarkers_ops.cpp
     src/gui/phase_reset_propagate.cpp
     src/gui/prompt.cpp
     src/gui/warpmarkers_ops.cpp
