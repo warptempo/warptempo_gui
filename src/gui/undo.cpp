@@ -47,8 +47,10 @@ namespace {
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the four coalescing kinds (GestureKind, undo.h, re-grepped: both position
-// nudges, the tempo cent step and the measure step)
+// the six coalescing kinds (GestureKind, undo.h, re-grepped 2026-09-16: the
+// THREE position nudges — warp, phase reset and magnification level — and the
+// three value steps, the tempo cent step, the measure step and the
+// magnification level step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
 // verdicted on. There are three of them, re-grepped at this writing

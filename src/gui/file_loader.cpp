@@ -316,7 +316,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // begins, so re-seeding it to 100 here would throw away the live value the
     // whole file exists to carry.)
     // Companion files: discover the four paths (kSidecarExtensions,
-    // settings_io.h), and write the four templates for a NEW project alone.
+    // sidecar_set.h), and write the four templates for a NEW project alone.
     // Companion file convention is <source_dir>/<source_basename>.<ext>
     // (sibling, basename-prefixed), not the legacy hidden `./.warpmarkers`
     // form.

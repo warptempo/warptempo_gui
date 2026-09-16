@@ -10,6 +10,8 @@
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
 #include "map_output.h"                 // write_frame_map_pair
 #include "marker_store_validate.h"      // first_past_eof_wall_defect
+#include "sidecar_set.h"                // kSidecarExtensions,
+                                        // sidecar_set_presence_core
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
 #include "locale_check.h"
@@ -101,19 +103,48 @@ int main(int argc, char** argv) {
         (parent / (stem + ".magnificationlevelmarkers")).string();
     const std::string set_path = (parent / (stem + ".settings")).string();
 
+    // --- THE REQUIRED-SIDECAR PREFLIGHT, AHEAD OF EVERY STRICT READER
+    // (architect approval 2026-09-16): the set rule is ONE OWNER both products
+    // compile, sidecar_set_presence_core (sidecar_set.h), and it answers
+    // BEFORE anything is parsed, so a PARTIAL set is refused as the missing
+    // member it is rather than by whichever reader happened to run first
+    // wearing that reader's cannot-open words. The GUI's road composes the same
+    // two verdicts into its card's clauses (sidecar_set_presence,
+    // settings_io.h); the sentences below are the terminal's own spelling of
+    // them, full-path, in this file's usual shape.
+    //
+    // NONE IS A REFUSAL HERE, and that is this product's whole delta from the
+    // GUI's fork: the core's `None` means a folder carrying no sidecar at all,
+    // which the GUI treats as a NEW PROJECT and answers by WRITING the four
+    // templates. THIS BINARY AUTHORS NOTHING — it is the insurance render, it
+    // creates no authoring state — so a set the GUI would create from nothing
+    // is simply four missing files, named the way a partial set's first
+    // missing member is. Not a divergence in the loadability verdict, which is
+    // stated for FILES THAT EXIST just below. ---
+    {
+        auto presence = sidecar_set_presence_core(parent, stem);
+        if (!presence) {
+            const SidecarSetDefect& d = presence.error();
+            if (d.kind == SidecarSetDefect::Kind::Missing) {
+                std::fprintf(stderr, "warptempo_cli: Missing '%s'\n",
+                             d.path.string().c_str());
+            } else {
+                std::fprintf(stderr, "warptempo_cli: Cannot read '%s': %s\n",
+                             d.path.string().c_str(), d.reason.c_str());
+            }
+            return 1;
+        }
+        if (*presence == SidecarSetPresence::None) {
+            std::fprintf(stderr, "warptempo_cli: Missing '%s'\n",
+                         sidecar_path(parent, stem, 0).string().c_str());
+            return 1;
+        }
+    }
+
     // --- settings: required, like the three marker sidecars below. The strict
     // whole-file reader refuses an unopenable file with its own could-not-open
     // diagnostic, which surfaces verbatim through the print below.
     // title and the applied trim come from it. ---
-    //
-    // "REQUIRED" IS BOTH PRODUCTS' WORD FOR A SET THAT EXISTS (architect
-    // approval 2026-09-15): the GUI refuses a folder carrying some sidecars
-    // and not all four, and writes the four templates only for a folder
-    // carrying none — a new project's first open — so a set the GUI would
-    // create from nothing is a refusal here. That is the insurance render's
-    // own shape (it authors nothing and creates no authoring state), not a
-    // divergence in the loadability verdict, which is stated for FILES THAT
-    // EXIST just below.
     //
     // Sidecar check order here is settings -> markers -> resets ->
     // magnification level markers -> probe,
@@ -121,7 +152,9 @@ int main(int argc, char** argv) {
     // file set with multiple defects the two products therefore report a
     // DIFFERENT first error; the loadability verdict is identical (a set is
     // loadable in both products or neither), only the message order diverges.
-    // Accepted.
+    // Accepted. THE PREFLIGHT ABOVE IS NOT PART OF THAT DIVERGENCE: it runs
+    // first on both products and answers the same question about the same four
+    // names.
     EngineSettings es;
     SettingsFile   sf;
     SettingsTrim   trim;

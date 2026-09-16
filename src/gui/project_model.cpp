@@ -10,7 +10,7 @@
 namespace {
 
 // A sidecar extension is one of the product's four (kSidecarExtensions,
-// settings_io.h — the one list), read by the walk below.
+// sidecar_set.h — the one list), read by the walk below.
 bool is_sidecar_extension(const std::string& ext) {
     for (const char* e : kSidecarExtensions) {
         if (ext == e) return true;

@@ -21,7 +21,7 @@
 // THE SOURCE IS DEFINED BY THE SIDECAR, AND BY NOTHING ELSE. A folder that
 // carries any of the four sidecars — `<stem>.warpmarkers`,
 // `<stem>.phaseresetmarkers`, `<stem>.magnificationlevelmarkers`,
-// `<stem>.settings` (kSidecarExtensions, settings_io.h) — names its source by
+// `<stem>.settings` (kSidecarExtensions, sidecar_set.h) — names its source by
 // that stem, and `<stem>.wav` must exist; whether it carries ALL FOUR is the
 // loaders' question (sidecar_set_presence, settings_io.h), not this model's. A folder with NO sidecar at all is a NEW
 // project iff it holds EXACTLY ONE `.wav`: that wav is the source, and the

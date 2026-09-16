@@ -775,7 +775,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
 // lane, and — since
-// 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
+// 2026-09-10 — THE VIEW BAR'S FOUR SELECTORS (four since T+M joined the bar on
+// 2026-09-15), the column
 // quartet's other three chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14), ADD TO SELECTION, its fourth, and BPM ITERATIONS,
 // which left delta (b) that evening. (THE TOGGLE MARKER COLUMN AND TOGGLE
@@ -797,10 +798,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // edit there.
 //
 // TWO ROSTER MEMBERS THE GATE EATS HAVE NO SENTENCE TO CARRY, and they answer
-// it differently. THE VIEW BAR'S three selectors ARE in the membership since
+// it differently. THE VIEW BAR'S four selectors ARE in the membership since
 // 2026-09-10, so their PRESS dies at arm_redesign_press's disabled line as a
 // standing overlay's does, and their FACE followed the same day (architect, at
-// his mockup: the two dead UNSELECTED labels at kRedesignDisabledMix over the
+// his mockup: the three dead UNSELECTED labels at kRedesignDisabledMix over the
 // bar's ground, the selected one full — the view bar's painter,
 // paint_handler.cpp). The row still carries no tooltip, so this gate's card is
 // the only thing that SPEAKS (the account is at their arm in
@@ -3508,8 +3509,10 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 // in the ITERATIVE reading, whose delta is between two commits and blind to
 // the live store — comes out byte-identical and installs nothing, pushes no
 // undo entry whose restore would do nothing and re-triggers no render; and an
-// order-only change on a coincident run (which the magnification level column
-// hears, the last enabled row being the gain) reads as the change it is.
+// order-only change on a coincident run reads as the change it is — the
+// sidecar text differs, which is the whole test here, whether or not any
+// surface HEARS or SHOWS the difference (no column does since 2026-09-16: W, P
+// and M all collapse a coincident run to a neutral value).
 //
 // THE COLUMN IS THE ACTIVE ONE BY CONSTRUCTION: the lane paints only the active
 // column's half of a delta (rebuild_history_diff_flags), so every ordinal in the
@@ -5260,11 +5263,15 @@ void GuiInputHandler::apply_recipe_in_place(
 // declaration.
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
-// four sidecars (.settings, .warpmarkers, .phaseresetmarkers,
-// .magnificationlevelmarkers) must read and validate — all four REQUIRED, a
-// missing one refusing through its strict loader's own cannot-open words. On ANY failure — the running-batch self-guard, a missing wav, or a
-// malformed / unreadable sidecar — return false with NO state mutation, so a
-// failure leaves authoring untouched.
+// four sidecars (.warpmarkers, .phaseresetmarkers,
+// .magnificationlevelmarkers, .settings) must read and validate — all four
+// REQUIRED, and a MISSING one is caught by the set rule's own preflight
+// (sidecar_set_presence_core, sidecar_set.h) ahead of every reader since
+// 2026-09-16, so an absence is named as an absence rather than wearing the
+// first strict loader's cannot-open words. On ANY failure — the running-batch
+// self-guard, a missing wav, an incomplete recipe, or a malformed / unreadable
+// sidecar — return false with NO state mutation, so a failure leaves authoring
+// untouched.
 //
 // THE ACT OWNS ITS REFUSALS, on BOTH surfaces (architect 2026-08-30, taking
 // the caller's useless "Load refused" out): every arm names its cause once
@@ -5324,6 +5331,40 @@ bool GuiInputHandler::load_render_entry_in_place(
         return refuse("the wav for '" + render_entry_id(e) +
                           "' is missing or is not a regular file",
                       e.wav_path);
+    }
+
+    // THE REQUIRED-SIDECAR PREFLIGHT, AHEAD OF EVERY STRICT READER (architect
+    // 2026-09-16): the cell's recipe is the SAME FOUR-FILE SET a project source
+    // carries, so it asks the set rule's one owner
+    // (sidecar_set_presence_core, sidecar_set.h) before it opens anything — a
+    // partial cell is then refused as the MISSING MEMBER it is, named on the
+    // card, instead of by whichever strict reader ran first wearing that
+    // reader's cannot-open words. NONE REFUSES HERE TOO, and for the CLI's
+    // reason: `None` is the GUI source load's new-project fork, which answers
+    // by WRITING four templates, and this act authors nothing at all — a cell
+    // with no sidecars is four missing files. The refusal keeps this body's own
+    // shape: `refuse` puts the full path on stderr and the card names the file
+    // the folder-and-file way, lowercase, single-quoted.
+    {
+        auto presence = sidecar_set_presence_core(e.batch_folder, e.basename);
+        if (!presence) {
+            const SidecarSetDefect& d = presence.error();
+            if (d.kind == SidecarSetDefect::Kind::Missing) {
+                return refuse("the recipe file '" + shown_project_path(d.path) +
+                                  "' is missing",
+                              d.path);
+            }
+            return refuse("cannot read '" + shown_project_path(d.path) +
+                              "': " + d.reason,
+                          d.path);
+        }
+        if (*presence == SidecarSetPresence::None) {
+            const std::filesystem::path first =
+                sidecar_path(e.batch_folder, e.basename, 0);
+            return refuse("the recipe file '" + shown_project_path(first) +
+                              "' is missing",
+                          first);
+        }
     }
 
     // THE STRICT LOADERS' REFUSALS NAME THE CELL'S FILE ONCE (the four-tier

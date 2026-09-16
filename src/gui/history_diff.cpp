@@ -94,7 +94,7 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 constexpr const char* kBranchRef = "HEAD";
 
 // The sidecars a source carries are the product's one list,
-// kSidecarExtensions (settings_io.h), whose ORDER indexes this module's
+// kSidecarExtensions (sidecar_set.h), whose ORDER indexes this module's
 // per-sidecar arrays. A directory matches if it holds ANY of them under the
 // source's base name — the architect's checkpoints are complete sets, but a
 // partial one should still be FOUND rather than silently missed: the match

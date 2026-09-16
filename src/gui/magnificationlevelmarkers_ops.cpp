@@ -54,9 +54,10 @@ void GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position(
     // THE PICTURE'S BEFORE-HASH, captured ahead of the store write (the
     // cluster's rule at its header). A drop copies the level already in force,
     // so the profile is normally unmoved and the kick at the tail renders
-    // nothing — but a drop LANDING ON AN EXISTING MARKER'S FRAME can move it
-    // (the builder's "the last enabled row of equal frames wins"), and that is
-    // exactly the case the hash catches without a rule of its own.
+    // nothing — but a drop LANDING ON AN EXISTING ENABLED MARKER'S FRAME can
+    // move it (the run then holds two enabled rows and COLLAPSES TO THE NEUTRAL
+    // LEVEL 0, magnificationlevelmarkers.h), and that is exactly the case the
+    // hash catches without a rule of its own.
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     std::vector<GuiMagnificationLevelMarker> pre_state =
         app.magnificationlevelmarkers.markers();

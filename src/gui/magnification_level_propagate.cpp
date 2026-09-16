@@ -216,9 +216,10 @@ void MagnificationLevelPropagate::paste_apply() {
     // possibly outside the cleared window (a frame nudged past its block's
     // edge), possibly coinciding exactly with surviving pre-existing markers
     // or with each other (a strongly shrunken block, or the zero clamp).
-    // Coincident markers are legal in the store (the gain profile's builder
-    // takes the last enabled row of an equal-frame group,
-    // magnificationlevelmarkers.h) and insert_marker keeps the list sorted.
+    // Coincident markers are legal in the store (a run of 2+ ENABLED rows at
+    // one frame reads as the neutral level 0, magnificationlevelmarkers.h —
+    // so the ORDER an insert gives an equal-frame run cannot move the picture)
+    // and insert_marker keeps the list sorted.
     // Track the exact final index of every marker this paste materializes so
     // the landing can select precisely them: a later insert at index k shifts
     // every earlier recorded index >= k by one, so adjust as we go rather than
@@ -333,18 +334,19 @@ void MagnificationLevelPropagate::paste_state_apply() {
     // first delta; the sibling buckets by the anchor on both sides for the
     // same reason — the CAPTURE decided membership by it, so the state paste
     // must bucket by the same quantity or the two acts disagree about which
-    // block a marker belongs to). Capture produces block-ordered,
-    // within-block-frame-ordered placements, so a flat concatenation is
-    // already frame-ordered; sort defensively.
+    // block a marker belongs to). THE CONCATENATION IS ALREADY FRAME-ORDERED
+    // AND IS LEFT ALONE: capture walks the named blocks along the timeline, so
+    // the blocks are frame-ascending and disjoint, and each block's placements
+    // come out frame-ordered within it. The defensive std::sort that used to
+    // stand here was deleted 2026-09-16 — it could only ever permute EQUAL
+    // frames (std::sort is not stable), which is the one thing it must not do:
+    // the pairing below walks this list against the destination indices
+    // positionally, so a tie reshuffle would hand a coincident run's states to
+    // the wrong rows.
     std::vector<const MagnificationLevelClipboardPlacement*> all_placements;
     for (const auto& cb : clip_blocks)
         for (const auto& p : cb.placements)
             all_placements.push_back(&p);
-    std::sort(all_placements.begin(), all_placements.end(),
-        [](const MagnificationLevelClipboardPlacement* a,
-           const MagnificationLevelClipboardPlacement* b) {
-            return a->source_frame < b->source_frame;
-        });
 
     // Snapshot pre-state up front; a single undo entry is committed only if at
     // least one field actually changes.

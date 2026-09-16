@@ -337,9 +337,13 @@ struct GuiHistoryPhaseResetChange {
 struct GuiHistoryMagnificationLevelEntry {
     int64_t frame    = 0;
     int     ordinal  = 0;   // the row within the frame's run (the contract at
-                            // GuiHistoryWarpEntry::ordinal) — the one column
-                            // where the run's order is VISIBLE at rest, the
-                            // last enabled row's level being the gain
+                            // GuiHistoryWarpEntry::ordinal) — carried here for
+                            // the same reason as on the other two columns: it
+                            // is what makes a revert reproduce the checkpoint's
+                            // sidecar BYTE FOR BYTE. The picture itself is
+                            // order-blind since 2026-09-16 (a coincident run of
+                            // 2+ enabled rows collapses to the neutral level 0,
+                            // magnificationlevelmarkers.h)
     uint8_t level    = 0;
     bool    disabled = false;
 };

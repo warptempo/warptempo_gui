@@ -2984,24 +2984,25 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
-// WHICH BUTTONS ARE ROW 1'S — the menu row's anchors plus the view bar's three,
+// WHICH BUTTONS ARE ROW 1'S — the menu row's anchors plus the view bar's four,
 // named beside the roster because that is where a reader meets the membership.
-// The enum's order IS the painted order, so the five happen to be contiguous at
-// its head; this says ROW rather than "index < 5" anyway, because the row is
+// The enum's order IS the painted order, so the seven happen to be contiguous at
+// its head; this says ROW rather than "index < 7" anyway, because the row is
 // the fact and the contiguity is an accident of how the roster is written.
 //
 // ITS ONE CONSUMER IS THE DROPDOWN CLOSE RULE (on_motion's open-dropdown branch,
 // input_pointer.cpp): while a menu is up, a pointer inside a row-1 button that is
 // not a dropdown anchor CLOSES it, because only one button in that row is lit at
 // a time. WHAT THAT LEAVES, re-derived from the two predicates rather than
-// inherited (re-greped 2026-09-10 against the switch below and
-// redesign_button_is_menu_anchor): row 1 is SIX buttons and THREE of them are
-// anchors, so the close rule covers THE VIEW BAR'S THREE alone — the same three
-// it covered while Navigation was a third anchor, since EDIT became one
-// (2026-08-20), while ITERATIONS was a fourth (2026-08-27 to 2026-09-04) and
-// while HELP was one (2026-09-03 to its deletion 2026-09-09, which is what put
-// the count back to six and three). It was "Quit or the view bar's three"
-// while the Quit button
+// inherited (re-greped 2026-09-16 against the switch below and
+// redesign_button_is_menu_anchor): row 1 is SEVEN buttons and THREE of them are
+// anchors, so the close rule covers THE VIEW BAR'S FOUR alone — the same
+// selectors it covered when they were three, since EDIT became an anchor
+// (2026-08-20), while ITERATIONS was a fourth anchor (2026-08-27 to
+// 2026-09-04), while HELP was one (2026-09-03 to its deletion 2026-09-09, which
+// put the count at six and three) and since T+M became the bar's fourth
+// selector (2026-09-15, which put it at seven and three). It was "Quit or the
+// view bar's three" while the Quit button
 // existed; the Navigation anchor's 2026-08-15 deletion moved this membership
 // not at all and neither Edit's arrival nor the Iterations anchor's arrival and
 // departure moved it either, an anchor JOINING
@@ -11402,7 +11403,7 @@ inline bool any_tab_read_only(const AppState& a) {
 //     The tab switch left this list for one afternoon on 2026-09-10, as a
 //     per-tab member, and came back to it that evening: under the piece-wide
 //     exclusion there is no locked tab to switch into.
-//   * THE VIEW BAR'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
+//   * THE VIEW BAR'S FOUR SELECTORS ARE MEMBERS SINCE 2026-09-10 (architect,
 //     that morning) and they are the membership's one SILENT entry, in both
 //     of the ways a member usually speaks. NO SENTENCE, still: the row carries
 //     no tooltip in any state (the row-1 exclusion at the constant table), so
@@ -11413,10 +11414,10 @@ inline bool any_tab_read_only(const AppState& a) {
 //     box and the metrics are untouched — while the painter dims a DEAD
 //     UNSELECTED selector's label by kRedesignDisabledMix over the bar's
 //     ground, the icon row's own disabled ink through the one mix_color owner.
-//     THE SELECTED VIEW KEEPS ITS FULL INK: all three go dead together, and
+//     THE SELECTED VIEW KEEPS ITS FULL INK: all four go dead together, and
 //     the one that reports where you stand is telling the truth. So membership
 //     buys them the dead press, the stopped hover outline (the face composes
-//     the enabled term) and now two dimmed labels; the bar's unfocused ground
+//     the enabled term) and now three dimmed labels; the bar's unfocused ground
 //     is still NOT that face, since it keeps every label legible and says the
 //     window is inactive, which under a lit lamp on a focused window is a lie.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {

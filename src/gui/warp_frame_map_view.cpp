@@ -254,7 +254,9 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // The magnification level column's red set — the contract is at the
 // declaration (warp_frame_map_view.h). The phase-reset body's run walk over
 // the third store: the store is time-sorted, so a coincident group is a run of
-// adjacent equal frames.
+// adjacent equal frames. Participation-blind, so the cue is WIDER than the
+// picture's collapse (which counts enabled members alone), the warp cue's own
+// relation to warp_coincident_collapse_members.
 const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
     const AppState& app) {
     MagnificationLevelRedFlagCache& c = app.magnification_level_red_flag_cache;

@@ -57,9 +57,17 @@ inline bool magnification_level_rows_equal(
 //     the picture returns to unmagnified;
 //   * a DISABLED marker is invisible: the level in force walks straight past
 //     it;
-//   * ON EQUAL FRAMES THE LAST ENABLED MARKER IN STORE ORDER WINS — the
-//     store keeps equal frames in insertion order and a breakpoint names one
-//     level per frame, so the later row replaces the earlier one's;
+//   * COINCIDENT LEVELS COLLAPSE TO THE NEUTRAL LEVEL 0 (architect 2026-09-16):
+//     a run of 2+ ENABLED markers at one exact frame contributes level 0 at
+//     that frame, holding to the next enabled marker's frame — the WARP
+//     column's rule on this axis, where a run of 2+ effectively enabled tempo
+//     markers collapses to a neutral 1.00 owner
+//     (warp_coincident_collapse_members, warp_frame_map_build.h). The run's
+//     tally counts ENABLED members alone; a run with exactly one enabled member
+//     contributes that member's level, a run with none contributes nothing.
+//     STORE ORDER IS THEREFORE INVISIBLE TO THE PICTURE, as it is invisible to
+//     the render on W and P — an equal-frame insert or a paste that reorders a
+//     coincident run cannot move the gain;
 //   * a breakpoint exists only where the level CHANGES, so level 0 everywhere
 //     is the empty profile (hash 0).
 // Pure; memoized per store generation by waveform_gain_profile_cached
@@ -68,20 +76,21 @@ WaveformGainProfile build_waveform_gain_profile(
     const std::vector<GuiMagnificationLevelMarker>& markers);
 
 // THE LEVEL IN FORCE AT A SOURCE FRAME — the step function above READ AT ONE
-// POINT, and the same three rules stated once for both readers (architect
-// 2026-09-15): level 0 before the first enabled marker, each enabled marker's
-// level holding from its own frame forward, a DISABLED marker invisible, and
-// the LAST enabled row of a coincident group winning. Its one caller is THE
-// DROP (GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position),
+// POINT, under the SAME rules (architect 2026-09-15; the coincident collapse
+// 2026-09-16): level 0 before the first enabled marker, each enabled marker's
+// level holding from its own frame forward, a DISABLED marker invisible, and a
+// coincident run of 2+ enabled markers reading as the neutral level 0. Its one
+// caller is THE DROP
+// (GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position),
 // whose new marker copies the level already in force at the playhead, so a drop
 // changes the picture nowhere until its level is stepped or edited.
 //
 // A SEPARATE BODY RATHER THAN A PROBE OF THE BUILT PROFILE: the drop asks about
 // ONE frame on a store it is about to mutate, and the profile is memoized per
 // store generation for the PICTURE's sake; asking this directly costs one walk
-// and keeps the drop free of the cache's keying. The rules are the builder's
-// and are restated in code at neither site — both walk the same store the same
-// way, and this declaration is where the agreement is written down.
+// and keeps the drop free of the cache's keying. The rule ITSELF is shared, not
+// merely agreed: both bodies call the one run walk in the .cpp
+// (for_each_magnification_level_run), so neither can drift from the other.
 // `markers` is the store in its resting (frame-ascending) order.
 uint8_t magnification_level_in_force(
     const std::vector<GuiMagnificationLevelMarker>& markers, int64_t frame);

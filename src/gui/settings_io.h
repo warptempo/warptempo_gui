@@ -4,6 +4,8 @@
 #include "settings_file.h"
 #include "device_config.h"   // format_gui_scale_percent (the recall)
 #include "failure.h"
+#include "sidecar_set.h"     // the sidecar list and the required-file core,
+                             // parser-domain since 2026-09-16
 
 #include <cstddef>
 #include <cstdint>
@@ -24,52 +26,38 @@ struct AppState;
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Returns false on any I/O
 // failure, removing the partial `.tmp` first. Shared by the four sidecar
-// writers (kSidecarExtensions below).
+// writers (kSidecarExtensions, sidecar_set.h).
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data);
 
-// SIDECAR PRESENCE IS ONE PREDICATE (the ONE owner). "Present" is EXISTS —
-// not "is a regular file": the load skips its template creation for anything
-// standing at a sidecar's name and then hands that name to the strict reader,
-// so a directory or a socket wearing `<stem>.settings` is a PARSE FAILURE and
-// not an absence, and the answer has to be the same on both roads that ask
-// (the real load and source_load_dry_run's pre-flight, file_loader.h, both
-// through sidecar_set_presence below, and create_if_missing's own belt) or
-// the dry-run would approve a reopen the load then refuses. A stat that FAILS
-// is neither present nor absent: it answers with the system's own words, never a silent "absent" — as the TWO CLAUSES
-// of a GuiFailure (failure.h), the full path on the diagnostic for the
-// stderr line and the file named the basename rule's way (the project folder
-// and the file, shown_project_path) on the display, because the dry run
-// hands that clause to a notification card (messaging.md).
+// SIDECAR PRESENCE IS ONE PREDICATE and it lives at the PARSER
+// (sidecar_exists, sidecar_set.h — with kSidecarExtensions, kSidecarCount,
+// SidecarSetPresence and the all-or-nothing core, all moved there 2026-09-16
+// so the CLI and the render-entry load compile the same preflight). "Present"
+// is EXISTS, for the reason stated there. What lives HERE is the GUI's
+// GuiFailure-composing wrapper of each: a stat that fails answers with the
+// system's own words, never a silent "absent" — as the TWO CLAUSES of a
+// GuiFailure (failure.h), the full path on the diagnostic for the stderr line
+// and the file named the basename rule's way (the project folder and the file,
+// shown_project_path) on the display, because the dry run hands that clause to
+// a notification card (messaging.md). Its own caller is create_if_missing's
+// belt; the set walk below no longer goes through it (it calls the core
+// directly and composes the same two clauses from the core's defect).
 std::expected<bool, GuiFailure> sidecar_present(
     const std::filesystem::path& p);
 
-// THE PROJECT'S SIDECAR SET — the four files a source carries beside it,
-// `<stem><extension>`, as the product writes them (architect 2026-09-15, the
-// magnification level markers column making the set four). THE ONE LIST: the
-// project model's source rule (resolve_project), the required-file rule
-// below, and the GitHub recheck's per-commit sidecar match, pathspecs and
-// checkpoint paths (history_diff.cpp) all read it, and its ORDER is the order
-// the recheck indexes its per-sidecar arrays by (warp markers, phase reset
-// markers, magnification level markers, settings).
-inline constexpr const char* kSidecarExtensions[] = {
-    ".warpmarkers", ".phaseresetmarkers", ".magnificationlevelmarkers",
-    ".settings",
-};
-inline constexpr std::size_t kSidecarCount = std::size(kSidecarExtensions);
-
-// THE REQUIRED-FILE RULE, ONE OWNER (architect 2026-09-15: "we never support
-// legacy — strictly migrate to the new and require manual update"): a
-// source's sidecar set is ALL OR NOTHING. `None` — no sidecar present at all —
-// is a NEW project, whose load writes the four templates; `All` is an
-// existing one, whose load reads all four strictly; SOME AND NOT ALL is a
-// refusal naming the first missing file in kSidecarExtensions order
-// ("Missing '<file>'"), and nothing is written. Presence is sidecar_present's
-// (EXISTS), and a stat that fails answers with its refusal. Read by BOTH
-// roads that must agree — the real load (GuiFileLoader::load_file, where a
-// refusal is fatal) and its strict preview (source_load_dry_run, where it is
-// the picker's and Revert's card).
-enum class SidecarSetPresence { None, All };
+// THE REQUIRED-FILE RULE'S GUI FACE — sidecar_set_presence_core (sidecar_set.h,
+// where the rule itself is stated) with its defect composed into a GuiFailure:
+// SOME AND NOT ALL is "Missing '<file>'" naming the first absent member in
+// kSidecarExtensions order, an unreadable name is "Cannot read '<file>':
+// <words>", and nothing is written in either case. Read by BOTH GUI roads that
+// must agree — the real load (GuiFileLoader::load_file, where `None` means a
+// NEW project and writes the four templates, and a refusal is fatal) and its
+// strict preview (source_load_dry_run, where the refusal is the picker's and
+// Revert's card). THE OTHER TWO ROADS ASK THE CORE DIRECTLY, each composing
+// its own surface's sentence: the CLI (cli_main.cpp) and the render player's
+// load in place (load_render_entry_in_place, input_key_dispatch.cpp), neither
+// of which authors a template, so `None` refuses there.
 std::expected<SidecarSetPresence, GuiFailure> sidecar_set_presence(
     const std::filesystem::path& parent, const std::string& stem);
 

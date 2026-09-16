@@ -180,12 +180,15 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // made visible): a run of 2+ magnification level markers sharing one exact
 // frame reddens every member, WHATEVER THEIR DISABLED BITS — the other two
 // columns' participation-blind coincidence (3). It is this column's WHOLE red
-// cue: the column is no render input, so there is no normalization for a
-// second term to name (the gain profile's "last of equal frames wins" is the
-// picture's rule for such a run, not a repair of it). No `collapsed` subset,
-// the phase-reset set's reason: `red`'s one reader is the magnification level
-// flag pass, a painter. Keyed on the magnification level store generation
-// alone; the committed-store rule of the two siblings.
+// cue, and it is WIDER THAN THE COLLAPSE IT CUES, exactly as the warp cue is
+// wider than the warp collapse: the picture's own rule
+// (build_waveform_gain_profile, magnificationlevelmarkers.h) collapses a run to
+// the neutral LEVEL 0 counting ENABLED members alone, while this set reddens a
+// run of 2+ ROWS whether or not two of them are enabled. No `collapsed`
+// subset, the phase-reset set's reason: `red`'s one reader is the
+// magnification level flag pass, a painter, and no act or face on this column
+// asks whether the picture collapses a run. Keyed on the magnification level
+// store generation alone; the committed-store rule of the two siblings.
 struct MagnificationLevelRedFlagCache {
     bool      valid       = false;
     long long markers_gen = -1;

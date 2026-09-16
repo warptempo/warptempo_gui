@@ -238,7 +238,7 @@ namespace {
 // second term from 2026-09-02 and the architect took it out with the ruling
 // that left the File anchor live under the band ("the title bar is still the
 // regular one — the window has focus"). What that term was landed for — the
-// view bar's three reading as disabled under a modal — moved to the bar's own
+// view bar's four reading as disabled under a modal — moved to the bar's own
 // verdict, view_bar_focused, which is the only surface that needed it; the
 // owner carries both rulings and the successions between them. (GAP 1's band
 // took this shade from paint_menu_row while it opened above the row,
@@ -1560,7 +1560,7 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (the right
+    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W / T+M (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
     // Navigation anchor deleted from between them 2026-08-15, Edit arriving
     // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and

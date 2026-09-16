@@ -203,9 +203,8 @@ bool atomic_write_string_to_path(const std::string& path,
 
 std::expected<bool, GuiFailure> sidecar_present(
         const std::filesystem::path& p) {
-    std::error_code ec;
-    const bool here = std::filesystem::exists(p, ec);
-    if (ec) {
+    auto here = sidecar_exists(p);   // the EXISTS owner, sidecar_set.h
+    if (!here) {
         // THE TWO CLAUSES (GuiFailure, failure.h — 2026-09-02, the four-tier
         // review's R-11): the display is one of the Open project picker's
         // card lines by way of source_load_dry_run, so it names the project
@@ -215,33 +214,27 @@ std::expected<bool, GuiFailure> sidecar_present(
         // print — the picker's line and create_if_missing's below. (Until
         // that day one shown sentence served both surfaces, the folder name
         // being read as diagnosis enough; the universal rule puts the full
-        // path on the terminal.)
+        // path on the terminal.) The core hands its words PATH-FREE, which is
+        // exactly what makes this composition the wrapper's own.
         return std::unexpected(path_failure("Cannot read ", p,
                                             shown_project_path(p),
-                                            ": " + ec.message()));
+                                            ": " + here.error()));
     }
-    return here;
+    return *here;
 }
 
+// The rule and the verdicts are the core's (sidecar_set_presence_core,
+// sidecar_set.h); this body is the GUI's two-clause composition of its defect
+// and nothing else.
 std::expected<SidecarSetPresence, GuiFailure> sidecar_set_presence(
         const std::filesystem::path& parent, const std::string& stem) {
-    std::size_t                          present = 0;
-    std::optional<std::filesystem::path> first_missing;
-    for (const char* ext : kSidecarExtensions) {
-        const std::filesystem::path p = parent / (stem + ext);
-        auto here = sidecar_present(p);
-        if (!here) return std::unexpected(std::move(here.error()));
-        if (*here) {
-            ++present;
-        } else if (!first_missing) {
-            first_missing = p;
-        }
-    }
-    if (present == 0) return SidecarSetPresence::None;
-    if (present == kSidecarCount) return SidecarSetPresence::All;
-    return std::unexpected(path_failure("Missing ", *first_missing,
-                                        shown_project_path(*first_missing),
-                                        ""));
+    auto presence = sidecar_set_presence_core(parent, stem);
+    if (presence) return *presence;
+    const SidecarSetDefect& d = presence.error();
+    return std::unexpected(path_failure(
+        d.kind == SidecarSetDefect::Kind::Missing ? "Missing " : "Cannot read ",
+        d.path, shown_project_path(d.path),
+        d.reason.empty() ? std::string{} : ": " + d.reason));
 }
 
 bool create_if_missing(const std::filesystem::path& p,
