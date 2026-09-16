@@ -1499,7 +1499,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // pointer set).
     phase_reset_propagate.input = &input_handler;
     // And its sibling's, for the same chokepoint and the same reason, its
-    // tail landing in T+M.
+    // tail landing in S+M (source view, the column's home since 2026-09-16).
     magnification_level_propagate.input = &input_handler;
     // And Undo's, for the same chokepoint: a restore puts the reader back in the
     // authoring view the entry recorded, and the S/T axis of it is the input

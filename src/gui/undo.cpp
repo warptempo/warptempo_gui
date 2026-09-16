@@ -931,15 +931,17 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // Gated off 'S' because op_mode is that entry kind's MARKER rather than a
     // column: a settings-only entry carries no authoring column to return to.
     //
-    // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15: the
-    // magnification level markers column is target view only, and the column
-    // writer refuses 'M' outside it). Its audio tag is 'T' by construction —
-    // no entry can be filed from S+M — so the target entry below runs ahead
-    // of the column write rather than after it, the selection cleared first
-    // so the flip has no focus to re-express (the column switch would clear
-    // it one line later anyway). A refused target entry leaves the column
-    // writer refusing too, and the restore goes on in the view it has, the
-    // audio restore's own best-effort rule.
+    // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15; the
+    // column's home flipped 2026-09-16: the magnification level markers
+    // column is source view only, and the column writer refuses 'M' outside
+    // it). Its audio tag is 'S' by construction — no entry can be filed from
+    // T+M — so the audio restore below runs ahead of the column write rather
+    // than after it, landing source first so the writer admits 'M', the
+    // selection cleared first so the flip has no focus to re-express (the
+    // column switch would clear it one line later anyway). Leaving target
+    // never refuses, so on this road the column write always lands; the
+    // shape is kept as the audio restore's own best-effort rule, which goes
+    // on in the view it has whenever a switch refuses.
     if (entry.op_mode == 'M') {
         selection.clear_selection();
         if (input) input->switch_active_audio_view_to(entry.audio_view);

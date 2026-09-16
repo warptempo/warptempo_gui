@@ -22,7 +22,7 @@
 // over the third store, with this family's deltas stated once at the header:
 // the FRAME IS THE ANCHOR (no conversion in front of any window or fraction),
 // the STATE IS THE LEVEL AND THE DISABLED BIT, no GuiTargetRender, and the
-// landing in T+M. The shared owners (the guard, the block, the window, the
+// landing in S+M. The shared owners (the guard, the block, the window, the
 // destination walk, the nothing-matched sentence) live in propagate_blocks.h;
 // the comments below carry only what is this column's, and point at the
 // sibling for every clause they take verbatim.
@@ -302,10 +302,10 @@ void MagnificationLevelPropagate::paste_apply() {
                              std::move(stop_message));
     }
 
-    // Land in T+M with exactly the newly pasted markers selected, so the
+    // Land in S+M with exactly the newly pasted markers selected, so the
     // paste can be inspected by eye. The set names the final post-insert
     // indices (the insert-time adjustment above).
-    land_paste_in_target_view(
+    land_paste_in_source_view(
         std::set<int>(created_indices.begin(), created_indices.end()));
 }
 
@@ -475,21 +475,27 @@ void MagnificationLevelPropagate::paste_state_apply() {
     // State paste creates no markers (it rewrites fields on existing ones), so
     // there is no selection to set and the tail leaves none: the column swap
     // it runs clears the selection, and nothing restores one.
-    land_paste_in_target_view({});
+    land_paste_in_source_view({});
 }
 
 // The sibling's tail (PhaseResetPropagate::land_paste_in_target_view, whose
 // head comment argues the ORDER — audio-view switch first, then the column
 // writer, then the selection set with its land, then the SYNCHRONOUS rebuild
 // last — and why the rebuild is needed in both entry contexts) over the M
-// column. It is also drop_magnification_level_in_target_view's shape
-// (input_handler.cpp), the column's own crossing. THE KICK IS THE PICTURE'S
-// REPAINT here as well as the flag cache's: the store this paste wrote re-keys
-// the gain profile by generation, and this unconditional rebuild is what reads
-// it (the header's rule).
-void MagnificationLevelPropagate::land_paste_in_target_view(
+// column, INTO SOURCE VIEW (architect 2026-09-16, the column's home; target
+// for its first day): the audio switch names 'S', which never refuses, and
+// the column writer then admits 'M'. It is also
+// drop_magnification_level_in_source_view's shape (input_handler.cpp), the
+// column's own crossing. THE KICK IS THE PICTURE'S REPAINT here as well as
+// the flag cache's: the store this paste wrote re-keys the gain profile by
+// generation, and this unconditional rebuild is what reads it (the header's
+// rule). The two entry contexts are the sibling's with the letters swapped —
+// from target view the audio switch kicks before the column swap and this
+// tail's kick is the harmless second; from source view the audio switch is
+// the chokepoint's own no-op and this is the paste's only rebuild.
+void MagnificationLevelPropagate::land_paste_in_source_view(
         const std::set<int>& created) {
-    if (input) input->switch_active_audio_view_to('T');
+    if (input) input->switch_active_audio_view_to('S');
     active_views.switch_active_markers_view_to('M');
     if (!created.empty()) {
         // FIRST created marker as the focus — a PROGRAMMATIC group selection,

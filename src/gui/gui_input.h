@@ -663,8 +663,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The render pair: the dispatch and the archival one.
         case GuiKeys::R: return ca || cas;
 
-        // The zoom-out and the four absolute view selectors (T+M, bare 4,
-        // joined 2026-09-15 with the magnification level markers column).
+        // The zoom-out and the four absolute view selectors (the magnification
+        // level markers column's joined 2026-09-15; the digits took the
+        // workflow's order 2026-09-16 — S+M, S+W, T+P, T+W).
         case GuiKeys::Digit0: case GuiKeys::Digit1:
         case GuiKeys::Digit2: case GuiKeys::Digit3:
         case GuiKeys::Digit4:
@@ -729,10 +730,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
-static_assert(chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
+static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 4 is the T+M view selector; digits 5..9 are unbound");
+              "bare 1 is the S+M view selector and bare 4 the T+W one; "
+              "digits 5..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "
               "arms (the notification stack's clear), and its top-level "
@@ -978,7 +981,7 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // IT IS THE COLUMN'S IN-COLUMN DROP WITH THE VIEW TRIP IN FRONT, not a second
 // act: from anywhere else the difference is exactly the two view chokepoints it
 // runs first, and then the same one drop body (the act is
-// GuiInputHandler::drop_magnification_level_in_target_view, input_handler.cpp).
+// GuiInputHandler::drop_magnification_level_in_source_view, input_handler.cpp).
 // IN THE M COLUMN THE CHORD REFUSES WHOLE, the phase chord's own rule: the
 // command IS the crossing, so with the column already standing there is nothing
 // to cross, and bare `s` is the drop there.

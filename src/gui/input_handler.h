@@ -523,9 +523,10 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //     `i`'s own, the undo restore's tag and the two propagate pastes' audio
 //     half), below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P/M writer, below
-//     its same-mode and not-in-target refusals (bare 1/2/3/4 and the settings
-//     key through select_active_markers_view, the S/T writer's landing of T+M
-//     on W, the propagate paste, which reaches this helper direct, and
+//     its same-mode and M-outside-source refusals (bare 1/2/3/4 and the
+//     settings key through select_active_markers_view, the S/T writer's
+//     landing of S+M on W, the two propagate pastes, which reach this helper
+//     direct, and
 //     Undo's column restore, which reached it 2026-08-28 when the hand-kept copy
 //     of this body in restore_history_entry was deleted for it).
 //   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (Ctrl+Tab, the
@@ -1084,7 +1085,8 @@ struct GuiInputHandler {
     // chokepoint in its set-to spelling (switch_active_audio_view_to); the
     // friendship lets it reach that private method through its back-pointer.
     friend struct PhaseResetPropagate;
-    // And its sibling's, the same tail landing in T+M (2026-09-15).
+    // And its sibling's, the same tail landing in S+M (source view, the
+    // column's home since 2026-09-16) through the same chokepoint.
     friend struct MagnificationLevelPropagate;
     // AND THE UNDO RESTORE, for the same private method (2026-08-28): an undo
     // entry records the S/T view beside the tab and the column, and the restore
@@ -3924,15 +3926,17 @@ private:
     // commit — and it is one line over the set-to
     // form, so both spellings own the same translation, the same target-view
     // entry gate, the same flag-editor teardown and the same history-focus
-    // clear — AND THE SAME S-NEVER-PAIRS-WITH-M LANDING (architect 2026-09-15):
-    // leaving target view while the magnification level markers column stands
-    // lands the column on W first, through its writer, the column writer's own
-    // refusal of 'M' outside target view being the invariant's other half.
+    // clear — AND THE SAME T-NEVER-PAIRS-WITH-M LANDING (architect 2026-09-16,
+    // mirroring the S-never-pairs-with-M landing of 2026-09-15): entering
+    // target view while the magnification level markers column stands lands
+    // the column on W first, through its writer and PAST the target entry's
+    // refusal (a refused entry moves no column), the column writer's own
+    // refusal of 'M' outside source view being the invariant's other half.
     // The SET-TO form exists for the callers that name a view rather than
     // an axis: the bare 1/2/3/4 absolute selectors (and the settings editor's
-    // typed `active_markers_view=M`, which crosses to target through it), the
-    // phase-reset and magnification level propagates'
-    // land-in-target tails, and — both since 2026-08-28 —
+    // typed `active_markers_view=M`, which crosses to source through it), the
+    // phase-reset propagate's land-in-target tail and the magnification level
+    // propagate's land-in-source tail, and — both since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, drop_phase_reset_in_target_view,
@@ -3977,11 +3981,12 @@ private:
     void drop_phase_reset_in_target_view();
     // CTRL+SHIFT+S: DROP A MAGNIFICATION LEVEL MARKER FROM ANY VIEW (architect
     // 2026-09-15) — Shift+S's shape on the third column, and its every clause
-    // for the same reasons. It switches to T, then to M, and then runs the
-    // column's ONE drop body (drop_magnification_level_at_playhead), so a
-    // refused target entry stops the whole press; from the M column it REFUSES
-    // WHOLE as already crossed, bare `s` being the in-column drop there exactly
-    // as it is in the P column.
+    // for the same reasons. It switches to S (the column's home since
+    // 2026-09-16; T until then), then to M, and then runs the column's ONE
+    // drop body (drop_magnification_level_at_playhead); leaving target never
+    // refuses, so the trip always lands, the sibling's read-back kept for the
+    // shape alone; from the M column it REFUSES WHOLE as already crossed, bare
+    // `s` being the in-column drop there exactly as it is in the P column.
     //
     // THERE IS NO LEAD-IN TO CARRY: the phase chord's kN/2 is an engine
     // geometry fact, and a magnification level is a picture boundary at the
@@ -3995,7 +4000,7 @@ private:
     // one chord, the Drop button keeps its two roads — the plain lift's bare
     // `s`, which drops on whichever column is live, and the shifted press's
     // Shift+S — and this crossing stays the keyboard's.
-    void drop_magnification_level_in_target_view();
+    void drop_magnification_level_in_source_view();
 
     // Apply a new GUI scale (percent), running the shared live sequence:
     // assign app.gui_scale, push it to the renderer

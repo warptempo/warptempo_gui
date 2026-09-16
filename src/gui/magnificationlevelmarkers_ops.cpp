@@ -42,7 +42,7 @@ const char* magnification_level_lock_refusal(const AppState& app) {
 // split are at the declaration (app_state.h, the level-step block). The tempo
 // pair's bodies over this column's cache (tempo_cent_step_kind_refusal_for /
 // tempo_cent_step_kind_refusal, warpmarkers_ops.cpp), less the terms this
-// column has no producer for: no view fork (the column exists in target view
+// column has no producer for: no view fork (the column exists in source view
 // alone), no label-ref arm (no marker here names another), and no enabled
 // test of its own — the cache's `collapsed` subset already holds the ENABLED
 // members alone (magnification_level_red_flag_set_cached,
@@ -135,10 +135,12 @@ void GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position(
 // FORK (architect 2026-09-15): the phase column's kN/2 exists because the
 // engine is window-centred and a reset must be seeded that far ahead of the
 // point it protects; a magnification level is a PICTURE BOUNDARY and the frame
-// the playhead stands on IS the boundary wanted. The column is target-view only
-// (active_column_authoring_allowed's 'M' arm), so the cursor is always a mapped
-// domain value and the inverse is always asked; it is asked unconditionally
-// anyway, being the identity in source view for two compares.
+// the playhead stands on IS the boundary wanted. The column is source-view only
+// (active_column_authoring_allowed's 'M' arm, architect 2026-09-16), so the
+// cursor IS the source frame and the inverse below is the identity; it is
+// asked UNCONDITIONALLY anyway — two compares, and the drop body then cannot
+// drift from its siblings' shape (the phase column's drop asks the same
+// conversion in the view where it is a real map).
 void GuiMagnificationLevelMarkersOps::drop_magnification_level_at_playhead() {
     if (audio.sample_rate() <= 0) return;
     const int64_t src_frame =
@@ -254,8 +256,9 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // headroom clamp and the walls-win belt are all argued there). The
     // anchoring basis is the DISPLAYED map, so the moved marker travels exactly
     // the commanded pixel column against WHAT IS PAINTED; this column authors
-    // in TARGET view alone, a mapped (non-identity) domain, exactly as the
-    // phase-reset twin's home is.
+    // in SOURCE view alone (architect 2026-09-16), where that basis is the
+    // identity — the warp twin's home — while the phase-reset twin's home is
+    // a real map; the shared owner asks the displayed basis either way.
     int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step_columns);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP, the twins' rule verbatim: a press

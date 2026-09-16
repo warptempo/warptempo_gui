@@ -51,7 +51,7 @@ struct GuiInputHandler;
 //     absence of the member is the enforcement. It takes the audio itself
 //     instead, for the song end and the sample rate. WHAT IT OWES THE PICTURE
 //     it pays through the LANDING: every run that wrote a block ends in
-//     land_paste_in_target_view, whose kick_waveform_sync is the UNCONDITIONAL
+//     land_paste_in_source_view, whose kick_waveform_sync is the UNCONDITIONAL
 //     synchronous rebuild — the store's generation re-keys the gain profile
 //     (waveform_gain_profile_cached, warp_frame_map_view.h), so that rebuild
 //     reads the new gain with no gain-change kick of its own, exactly as the
@@ -59,8 +59,12 @@ struct GuiInputHandler;
 //     Viewport::kick_waveform_sync). A run that wrote nothing changed no
 //     store and owes nothing.
 //
-//   * IT LANDS IN T+M, the column's only view (active_column_authoring_allowed's
-//     'M' arm), where the sibling lands in T+P.
+//   * IT LANDS IN S+M, the column's only view (active_column_authoring_allowed's
+//     'M' arm; source view since 2026-09-16, target for the column's first
+//     day), where the sibling lands in T+P — the same tail with the audio
+//     letter swapped, and its membership walk was in source frames all along
+//     (walk_named_blocks over the warp store's authored frames, no map in
+//     front of it).
 //
 // Everything else — the run rule, the section bucketing and its guard, the
 // lockstep walk, the stop reports, the produced-nothing stillness, the
@@ -153,6 +157,6 @@ struct MagnificationLevelPropagate {
     // already exist). ONLY A PASTE THAT WROTE A BLOCK REACHES IT, and a paste
     // that PAIRED blocks and left the store byte-equal STILL LANDS — the
     // sibling's two rulings, stated in full at
-    // PhaseResetPropagate::land_paste_in_target_view.
-    void land_paste_in_target_view(const std::set<int>& created);
+    // PhaseResetPropagate::land_paste_in_target_view, into source view.
+    void land_paste_in_source_view(const std::set<int>& created);
 };

@@ -345,9 +345,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
         // THE BODY BARE `t` USED TO CALL (no editor-state guard); it flips
         // S<->T. Bare `t` itself was deleted with its view lamp 2026-09-15;
-        // the digit selectors reach this same body now. A typed `S` from T+M
-        // lands the column on W inside that body (its S-never-pairs-with-M
-        // owner), with no coincidence auto-select — a typed audio view is no
+        // the digit selectors reach this same body now. A typed `T` from S+M
+        // lands the column on W inside that body (its T-never-pairs-with-M
+        // owner, past the target entry's refusal — a refused entry moves no
+        // column), with no coincidence auto-select — a typed audio view is no
         // column entry.
         input->handle_active_audio_view_toggle();
         applied(); return true;
@@ -383,15 +384,17 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             return true;
         }
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
-        // THE TYPED `M` CROSSES TO TARGET FIRST (architect 2026-09-15: the
-        // magnification level markers column is target view only) — bare 4's
-        // shape exactly, the audio switch before the column entry and a
-        // refused target entry stopping the commit with nothing moved. The
-        // refusal is the tripwire class and says its own stderr line, so the
-        // commit reports unchanged rather than applied.
+        // THE TYPED `M` CROSSES TO SOURCE FIRST (architect 2026-09-16: the
+        // magnification level markers column is source view only; it crossed
+        // to target for its first day) — bare 1's shape exactly, the audio
+        // switch before the column entry. LEAVING TARGET NEVER REFUSES, so
+        // the read-back can never fire here; it is kept for the shape the
+        // sibling roads share (a refused switch changes nothing and is read
+        // off the state), and a commit that did somehow find the view
+        // unchanged would report unchanged rather than applied.
         if (gv.c == 'M') {
-            input->switch_active_audio_view_to('T');
-            if (app.active_audio_view != 'T') { unchanged(); return true; }
+            input->switch_active_audio_view_to('S');
+            if (app.active_audio_view != 'S') { unchanged(); return true; }
         }
         // The absolute column entry bare 1/2/3/4 take
         // (GuiActiveViews::select_active_markers_view).

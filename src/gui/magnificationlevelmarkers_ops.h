@@ -42,11 +42,16 @@ class GuiAudio;
 //     (Viewport::displayed_plate_gain_is_stale, the M drag release's rule)
 //     and renders only a plate that is still stale.
 //
-//   * THE COLUMN AUTHORS IN TARGET VIEW, the only view it exists in
-//     (active_column_authoring_allowed's 'M' arm, app_state.h). Its positions
-//     are authored SOURCE frames like every other column's, so the nudge's
-//     painted-column step runs against a mapped domain exactly as the
-//     phase-reset twin's does in its own target home.
+//   * THE COLUMN AUTHORS IN SOURCE VIEW, the only view it exists in
+//     (active_column_authoring_allowed's 'M' arm, app_state.h; architect
+//     2026-09-16 — a magnification level is a placement instrument for the
+//     warp markers and belongs beside their own authoring view; the column
+//     lived in target view for its first day). Its positions are authored
+//     SOURCE frames like every other column's, so in its home the displayed
+//     map is the identity and the cursor IS the source frame; every body
+//     still asks the domain conversions unconditionally, as the warp
+//     cluster does in the same home — cheap, and the bodies keep their
+//     twins' shape rather than growing a view fork.
 //
 // Damage and viewport mutation are reached through viewport;
 // stop_playback_if_playing through playback_lifecycle.
@@ -85,7 +90,7 @@ struct GuiMagnificationLevelMarkersOps {
     // edited. Coincident drops are legal, as they are on both other columns.
     void drop_magnification_level_at_position(double time_frame);
     // The drop at the playhead — the column's one create body, reached by bare
-    // `s` in T+M and by Ctrl+Shift+S's crossing. NO LEAD-IN OF ANY KIND: the
+    // `s` in S+M and by Ctrl+Shift+S's crossing. NO LEAD-IN OF ANY KIND: the
     // frame IS the anchor (a level is a picture boundary, not a synthesis
     // event), so unlike the phase column's drop this takes no audio-view fork
     // and subtracts nothing — the playhead's own instant, inverse-mapped to a

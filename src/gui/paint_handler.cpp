@@ -449,7 +449,9 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
 // Color" bar, the one row the redesign had left out) reborn as the four
-// ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, T+M, which are bare 1/2/3/4.
+// ABSOLUTE VIEW SELECTORS: S+M, S+W, T+P, T+W, which are bare 1/2/3/4 (the
+// digits' order is the workflow's, architect 2026-09-16, and the bar reads in
+// it left to right).
 //
 // THE FLOAT'S ROOM, re-measured 2026-09-09 when the HELP ANCHOR was deleted
 // (and 2026-09-04 for the ITERATIONS one): the LEFT float is 173 authored px
@@ -542,14 +544,19 @@ struct ViewBarButtonDef {
     RedesignButton id;
     const char*    label;
 };
+// THE TABLE'S ORDER IS THE PAINT ORDER AND THE DIGITS' ORDER: the walk below
+// lays the buttons left to right as listed, and each is its digit's button
+// (kToolbarChords, input_pointer.cpp, keeps the same row order).
 constexpr ViewBarButtonDef kViewBarButtons[] = {
+    // The magnification level markers column (architect 2026-09-15), source
+    // view only and FIRST since 2026-09-16 (magnification first, then the
+    // warp markers, then the phase resets, then T+W for fine tuning — the
+    // workflow's order; it was T+M at the bar's right end for its first day)
+    // — spelled as its siblings are, audio letter then column letter.
+    {RedesignButton::ViewSM, "S+M"},
     {RedesignButton::ViewSW, "S+W"},
     {RedesignButton::ViewTP, "T+P"},
     {RedesignButton::ViewTW, "T+W"},
-    // The magnification level markers column (architect 2026-09-15), target
-    // view only — spelled as its siblings are, audio letter then column
-    // letter.
-    {RedesignButton::ViewTM, "T+M"},
 };
 constexpr int kViewBarButtonCount =
     static_cast<int>(std::size(kViewBarButtons));
@@ -1560,7 +1567,7 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W / T+M (the right
+    // "Settings", and the RIGHT one, the view bar's S+M / S+W / T+P / T+W (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
     // Navigation anchor deleted from between them 2026-08-15, Edit arriving
     // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and

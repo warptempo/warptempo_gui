@@ -415,9 +415,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+W / T+P / T+W / T+M —
-    // the fourth joined 2026-09-15 with the magnification level markers
-    // column, a switch like the other three). They are
+    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+M / S+W / T+P / T+W —
+    // the magnification level selector joined 2026-09-15, a switch like the
+    // other three, and the digits took the workflow's order 2026-09-16). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no
@@ -655,7 +655,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // toggles, were deleted whole with their view lamps that day, so the column
 // switch's only remaining road is the digits below — see the S/T paragraph's
 // retirement note further down): THE COLUMN SWITCH's three chords — the
-// ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3, which run the `t` and `p` handler
+// ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3 / 4 (four since the magnification
+// level selector joined 2026-09-15), which run the `t` and `p` handler
 // BODIES (unchanged; only their bare keys are gone) and so carry the column
 // with them (architect 2026-09-10: the mode is lit for the column you are IN,
 // which is also what retired the stamped column that stood beside the mode
@@ -776,8 +777,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
 // lane, and — since
-// 2026-09-10 — THE VIEW BAR'S FOUR SELECTORS (four since T+M joined the bar on
-// 2026-09-15), the column
+// 2026-09-10 — THE VIEW BAR'S FOUR SELECTORS (four since the magnification
+// level selector joined the bar on 2026-09-15), the column
 // quartet's other three chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14), ADD TO SELECTION, its fourth, and BPM ITERATIONS,
 // which left delta (b) that evening. (THE TOGGLE MARKER COLUMN AND TOGGLE
@@ -5164,7 +5165,7 @@ void GuiInputHandler::apply_recipe_in_place(
     // settings, which push_undo_both captures from `app` — so it must run
     // BEFORE the incoming block is applied below. It files under the LIVE tab
     // and the LIVE column — W, P or M, the last since 2026-09-15 (the restore
-    // takes an 'M' entry's target view ahead of its column, undo.cpp) — which
+    // takes an 'M' entry's source view ahead of its column, undo.cpp) — which
     // are the only ones this act touches now that it performs no tab or column
     // switch at all.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
@@ -7670,9 +7671,15 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // (architect 2026-09-15): the column has no bracket for a cell to show
         // (marker_paints_iter_cells' 'M' arm), so the ON edge refuses there
         // with its own card and the Grid Iterations face greys on the same
-        // column (redesign_button_enabled's IconIter arm). The OFF edge never
-        // meets it: under a lit lamp the column cannot become M, the lock
-        // refusing every column switch.
+        // column (redesign_button_enabled's IconIter arm). THE REFUSAL STANDS
+        // AHEAD OF THE CROSSING BELOW (architect 2026-09-16, "refuses M as
+        // today"): the column is source view only now, so a press on it would
+        // otherwise cross to target — landing the column on W on the way —
+        // and light on T+W; refusing first means the press says why rather
+        // than silently changing both axes. The OFF edge never meets it: under
+        // a lit lamp the column cannot become M, by two rules — the lock
+        // refuses every column switch, and the lamp is target-view only where
+        // the column is source-view only.
         if (!app.iteration_mode_enabled && app.active_markers_view == 'M') {
             notifications.notify(
                 AppState::NotificationClass::Normal,

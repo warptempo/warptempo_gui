@@ -114,7 +114,8 @@ struct GuiFlagEditor {
     void commit_measure_edit();
     // THE MAGNIFICATION LEVEL EDITOR'S ONE ENTRY (the eighth text_editor Kind,
     // architect 2026-09-15), on the MAGNIFICATION LEVEL column alone and in
-    // target view, the only view that column exists in. It is that column's
+    // source view, the only view that column exists in (2026-09-16; target
+    // for its first day). It is that column's
     // PAYLOAD editor — a magnification level marker's whole authored value is
     // its one digit — so it opens on the payload axis exactly as the warp
     // column's canonical-line editor does, off bare Return and off the flag's

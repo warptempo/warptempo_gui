@@ -591,8 +591,9 @@ void MarkerDragOps::commit_drag() {
     // generation-keyed display cache — the shared Tab placement basis
     // (post-commit truth). A warp marker drag authors in the source home view
     // (home-view binding, architect 2026-07-22), where that call is identity, so
-    // the playhead lands on the committed frame directly; a phase reset drag in
-    // its target home maps through the post-commit map.
+    // the playhead lands on the committed frame directly, and a magnification
+    // level drag in its source home (2026-09-16) the same; a phase reset drag
+    // in its target home maps through the post-commit map.
     if (land_playhead) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));

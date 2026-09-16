@@ -174,7 +174,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
     // press's own committed act, not a prelude to the step.
     if (a.selected_markers.size() >= 2) return true;
     // The active column's store through its one selector (app_state.h). ALL
-    // THREE COLUMNS ASK: the magnification level column authors in T+M
+    // THREE COLUMNS ASK: the magnification level column authors in S+M
     // (active_column_authoring_allowed's 'M' arm is unconditional), and the
     // selector answers each column's own frame.
     const int64_t orig = active_marker_time_frame(a, f);

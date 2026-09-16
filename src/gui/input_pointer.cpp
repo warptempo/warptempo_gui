@@ -163,16 +163,18 @@ struct ToolbarChord {
 // the prompt all read exactly as before. Everything else on rows 1, 3 and 4 and
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
-    // Row 1's RIGHT FLOAT — the view bar (2026-08-02; T+M 2026-09-15). Bare
-    // 1/2/3/4, the ABSOLUTE view selectors: S+W, T+P, T+W, T+M. Everything
+    // Row 1's RIGHT FLOAT — the view bar (2026-08-02; the magnification level
+    // selector 2026-09-15, S+M and FIRST since 2026-09-16). Bare 1/2/3/4, the
+    // ABSOLUTE view selectors: S+M, S+W, T+P, T+W — THE ROW ORDER HERE IS THE
+    // BAR'S (kViewBarButtons, paint_handler.cpp). Everything
     // the digits own arrives by construction through on_key's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
-    {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
-    {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
-    {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
-    {RedesignButton::ViewTM,     GuiKeys::Digit4, false, false, false, true, true}, // bare 4
+    {RedesignButton::ViewSM,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
+    {RedesignButton::ViewSW,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
+    {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
+    {RedesignButton::ViewTW,     GuiKeys::Digit4, false, false, false, true, true}, // bare 4
     // The toolbar four — icon-row members since the 2026-08-12 relayout
     // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
     // only the face and the band changed hands).
@@ -1158,7 +1160,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSW/ViewTP/ViewTW/ViewTM (bare
+//   LIVE — the view bar's ViewSM/ViewSW/ViewTP/ViewTW (bare
 //   1/2/3/4, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
@@ -7119,8 +7121,9 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // drops legal there alone), P in EITHER audio view (architect
     // 2026-08-30 — the drop body's own fork seeds with the lead-in in target
     // view and exactly at the playhead in source view) and M wherever it
-    // exists, which is target view alone (2026-09-15), so the view dispatch
-    // below needs no extra audio-view guard on any column.
+    // exists, which is source view alone (2026-09-16; target view alone for
+    // its first day), so the view dispatch below needs no extra audio-view
+    // guard on any column.
     if (app.active_markers_view == 'P')
         phase_resets.drop_phase_reset_lead_in_at_playhead();
     else if (app.active_markers_view == 'M')
@@ -10600,7 +10603,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             return;
         }
         // No home-view test: T+W is the posture's, so S+W, S+P, T+P with grid
-        // iterations dark and — since 2026-09-15 — T+M reach here, all of them
+        // iterations dark and — since 2026-09-15 — the magnification level
+        // column (S+M since 2026-09-16, its only view) reach here, all of them
         // authoring views. THE MAGNIFICATION LEVEL COLUMN'S FLAG DRAG IS THIS
         // ONE (architect 2026-09-15: "horizontal move only"): the value drag's
         // posture answers no there, so the plain drag is the positional gesture

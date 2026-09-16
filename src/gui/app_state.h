@@ -265,10 +265,12 @@ struct UndoEntry {
     // The third marker column's pre-mutation snapshot (architect 2026-09-15),
     // carried on EVERY entry and restored on every undo/redo with the other
     // two, exactly as the phase-reset snapshot is. op_mode 'M' names this
-    // column as a VIEW TAG since 2026-09-15 (the column visible): its store
-    // changes only through the loads in place, which file under the live
-    // column (push_undo_both), so an 'M' entry is a load filed from T+M and
-    // carries no touched hints.
+    // column as a VIEW TAG since 2026-09-15 (the column visible): the
+    // column's own authoring files under it exactly as W's and P's file
+    // under theirs, each with its identity hints, and the loads in place file
+    // under the live column (push_undo_both) with none. An 'M' entry is filed
+    // from S+M — the column's one view since 2026-09-16 (T+M for its first
+    // day) — so its audio tag is 'S' by construction.
     std::vector<GuiMagnificationLevelMarker> magnification_level_snapshot;
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
@@ -2055,10 +2057,12 @@ struct TrimBarPressSeed {
 // the stash harmlessly.
 enum class RedesignButton {
     // Row 1, the menu row: the LEFT-FLOATING anchors, then the four of the
-    // RIGHT-FLOATING view bar (2026-08-02; the fourth, T+M, joined 2026-09-15
-    // with the magnification level markers column) in their painted order —
-    // the absolute view selectors S+W / T+P / T+W / T+M, which are bare
-    // 1/2/3/4.
+    // RIGHT-FLOATING view bar (2026-08-02; the fourth joined 2026-09-15 with
+    // the magnification level markers column, as T+M at the bar's right end,
+    // and became S+M at its LEFT end 2026-09-16 when the column's home moved
+    // to source view and the digits took the workflow's order) in their
+    // painted order — the absolute view selectors S+M / S+W / T+P / T+W,
+    // which are bare 1/2/3/4.
     //
     // SETTINGS PAINTS LAST IN THE LEFT FLOAT (architect 2026-08-03, moving it
     // behind the NAVIGATION anchor that then sat between it and File). The float
@@ -2133,7 +2137,7 @@ enum class RedesignButton {
     // (is_av_sync_stats_key, toggle_av_sync_stats, redesign_button_shift_
     // admits). kHelpPopupItems, DropdownMenu::Help and every arm that named
     // the anchor went with it.)
-    File, Edit, Settings, ViewSW, ViewTP, ViewTW, ViewTM,
+    File, Edit, Settings, ViewSM, ViewSW, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -2955,7 +2959,8 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-15, at
-// the view bar's fourth button, T+M): SEVEN in row 1 (the three menu anchors
+// the view bar's fourth button — T+M then, S+M since 2026-09-16, a rename
+// and a reorder that moved no count): SEVEN in row 1 (the three menu anchors
 // and the view bar's four), two in row 3, TWENTY in row 4 and SEVENTEEN in
 // the bottom row — 46. Of those, FORTY-THREE carry a chord in
 // kToolbarChords
@@ -3000,8 +3005,9 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // selectors it covered when they were three, since EDIT became an anchor
 // (2026-08-20), while ITERATIONS was a fourth anchor (2026-08-27 to
 // 2026-09-04), while HELP was one (2026-09-03 to its deletion 2026-09-09, which
-// put the count at six and three) and since T+M became the bar's fourth
-// selector (2026-09-15, which put it at seven and three). It was "Quit or the
+// put the count at six and three) and since the magnification level selector
+// (T+M then, S+M since 2026-09-16) became the bar's fourth (2026-09-15, which
+// put it at seven and three). It was "Quit or the
 // view bar's three" while the Quit button
 // existed; the Navigation anchor's 2026-08-15 deletion moved this membership
 // not at all and neither Edit's arrival nor the Iterations anchor's arrival and
@@ -3022,10 +3028,10 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
-        case RedesignButton::ViewTM:
             return true;
         case RedesignButton::TabA:
         case RedesignButton::TabB:
@@ -5200,11 +5206,12 @@ struct AppState {
     // 2026-09-15): 'W' = warp markers, 'P' = phase reset markers, 'M' =
     // magnification level markers. Selected absolutely by bare 1/2/3/4 and the
     // view bar. Determines which marker collection is visible / edited /
-    // hit-tested and which colour set its flags wear. 'M' PAIRS WITH TARGET
-    // VIEW ALONE: GuiActiveViews::switch_active_markers_view_to refuses 'M'
-    // outside target view, and GuiInputHandler::switch_active_audio_view_to
-    // lands the column on 'W' before it leaves for source view — the two
-    // writers holding the one invariant between them. Every binary W/P fork
+    // hit-tested and which colour set its flags wear. 'M' PAIRS WITH SOURCE
+    // VIEW ALONE (architect 2026-09-16; target view alone for its first day):
+    // GuiActiveViews::switch_active_markers_view_to refuses 'M' outside
+    // source view, and GuiInputHandler::switch_active_audio_view_to lands the
+    // column on 'W' before it leaves for target view — the two writers holding
+    // the one invariant between them. Every binary W/P fork
     // over this field names its M answer at its own site (a `== 'P' ? phase :
     // warp` fork would otherwise route M to warp silently).
     char active_markers_view = 'W';
@@ -9912,14 +9919,17 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // of the positional family stays home-view-only through this predicate, and
 // the flag DRAG through the value-drag posture's claim on T+W.
 // THE THIRD COLUMN ANSWERS YES (architect 2026-09-15, when the column gained
-// its authoring): the magnification level markers column exists in TARGET VIEW
-// ALONE — the S switch lands it on W and the column writer refuses 'M' off
-// target, the two writers holding that invariant between them — so target IS
-// its home and the whole positional family is legal there: the Ctrl+Shift+S
-// drop and bare `s`, the flag's horizontal drag, the empty-lane create and the
-// Left/Right nudge. There is nothing for an audio-view term to say on this
-// column that the column's own existence does not already say. The arms are
-// spelled per column so warp is never the else-branch.
+// its authoring): the magnification level markers column exists in SOURCE VIEW
+// ALONE (architect 2026-09-16 — magnification is a placement instrument for
+// the warp markers and belongs beside their own authoring view; it was target
+// view alone for its first day) — the T switch lands it on W and the column
+// writer refuses 'M' off source, the two writers holding that invariant
+// between them — so source IS its home and the whole positional family is
+// legal there: the Ctrl+Shift+S drop and bare `s`, the flag's horizontal drag,
+// the empty-lane create and the Left/Right nudge. There is nothing for an
+// audio-view term to say on this column that the column's own existence does
+// not already say. The arms are spelled per column so warp is never the
+// else-branch.
 inline bool active_column_authoring_allowed(const AppState& app) {
     switch (app.active_markers_view) {
         case 'W': return app.active_audio_view == 'S';
@@ -9986,8 +9996,8 @@ inline bool center_command_lands_on_focus(const AppState& a) {
 // form is always live), and since 2026-09-01 the button's tooltip
 // (redesign_button_tooltip's stateful overload), whose shift line drops
 // exactly where this refuses.
-// M ANSWERS YES: Shift+S from T+M crosses to the phase-reset column exactly
-// as it does from T+W (the column switch lands the drop's view).
+// M ANSWERS YES: Shift+S from S+M crosses to T first (the audio switch landing
+// the column on W on its way) and then to P, exactly as it does from S+W.
 inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
     return a.active_markers_view != 'P';
 }
@@ -11498,7 +11508,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // is not this predicate's: bare `i` refuses while BPM iterations
         // stands, at that button's own arm.)
         case RedesignButton::IconBpm:
-        // THE VIEW BAR'S FOUR (architect 2026-09-10; T+M joined 2026-09-15):
+        // THE VIEW BAR'S FOUR (architect 2026-09-10; the magnification level
+        // selector joined 2026-09-15, S+M and bare 1 since 2026-09-16):
         // bare 1/2/3/4 run the audio-view and column switches, so the delta
         // blocks all four unconditionally
         // — iteration_lock_key_blocked's first test is a flat chord list
@@ -11510,10 +11521,10 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // has no disabled paint and the bar's unfocused ground is not one —
         // and the hover outline is the one thing that follows the grey; the
         // account of what a reader sees is at their enabled arm below.
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
-        case RedesignButton::ViewTM:
         // (WALK BOTH TABS WAS A MEMBER from 2026-09-10 until its deletion on
         // 2026-09-14: the march is refused under the lock for a reason of
         // SHAPE — its own tab switch clears the selection and re-seats the
@@ -11713,7 +11724,7 @@ inline int64_t magnification_level_step_landing(int64_t start, int64_t delta) {
 // press is refused on the marker's KIND rather than let land on nothing. A
 // DISABLED member of such a run steps, as on W: the picture never counted it,
 // so it is no member of the collapse. NO VIEW TERM — the column exists in
-// target view alone — and no other term: every magnification level marker
+// source view alone — and no other term: every magnification level marker
 // carries a level of its own (no pass, no label ref, no offset form), so the
 // collapse is the whole of this column's kind. Defined in
 // magnificationlevelmarkers_ops.cpp beside the cluster it refuses for.
@@ -11844,8 +11855,10 @@ inline bool magnification_level_step_direction_actionable(const AppState& a,
 //     where the hop cells are the drag's targets and the lock refuses the
 //     horizontal move anyway; dark, NO, so the horizontal phase-reset drag
 //     stays available in T+P, where that column authors;
-//   * SOURCE VIEW, EITHER COLUMN — NO: the warp column authors positions
-//     there, and grid iterations cannot be lit in source view at all (bare
+//   * SOURCE VIEW, EVERY COLUMN — NO: the warp column and, since 2026-09-16,
+//     the magnification level column author positions there (the M arm below
+//     states the column's own answer), and grid iterations cannot be lit in
+//     source view at all (bare
 //     `i` crosses to target first and the lock refuses the way back — the
 //     invariant is at AppState::iteration_mode_enabled), so no S-view cell
 //     exists for the posture to reach;
@@ -11883,11 +11896,14 @@ inline bool value_drag_posture(const AppState& a) {
         case 'P': return a.iteration_mode_enabled;
         // THE MAGNIFICATION LEVEL COLUMN'S FLAG DRAG IS THE HORIZONTAL MOVE
         // (architect 2026-09-15: "horizontal move only"). The column authors in
-        // target view, so without this arm the W answer's reasoning would pull
-        // it into the value drag; the level is stepped by the arrows and the
-        // wheel instead, and WE NEVER ALLOW MULTI-AXIS DRAGGING, so the one
-        // drag this flag offers is the positional one the crossing begins
-        // (input_pointer.cpp).
+        // SOURCE view since 2026-09-16, where the audio-view test above already
+        // answers no for every column, so this arm is never reached with the
+        // invariant holding (T+M is no state); it is KEPT because the arms are
+        // spelled per column — warp is never the else-branch, and the column's
+        // own answer is stated where a reader looks for it: the level is
+        // stepped by the arrows and the wheel instead, and WE NEVER ALLOW
+        // MULTI-AXIS DRAGGING, so the one drag this flag offers is the
+        // positional one the crossing begins (input_pointer.cpp).
         case 'M': return false;
     }
     return false;
@@ -14321,8 +14337,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // `t` were each read-only-legal, a column or S/T switch authoring
         // nothing. The architect deleted both buttons whole that day; the
         // view bar's four below carry the same delta on for the digits.)
-        // THE VIEW BAR'S FOUR TAKE THAT SAME DELTA (architect 2026-09-10; T+M
-        // joined 2026-09-15),
+        // THE VIEW BAR'S FOUR TAKE THAT SAME DELTA (architect 2026-09-10; the
+        // magnification level selector joined 2026-09-15),
         // and they left the never-grey group above for it: bare 1/2/3/4 COMPOSE
         // the column chokepoint, so they are the four chords the column
         // quartet blocks (iteration_lock_key_blocked's first test), and a
@@ -14372,10 +14388,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // never meet on this row. THE CROPS NAMED "disabled" ARE THE UNFOCUSED
         // WINDOW and never this bit (architect 2026-08-02; the record and the
         // arithmetic are at kRedesignViewBarBg, render.h).
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
-        case RedesignButton::ViewTM:
             return !iteration_lock_greys(a, b);
         // GRID ITERATIONS READS THE LOCK AND NOTHING ELSE, because the `i`
         // arm has nothing else left to mirror (2026-09-09): the lamp is
@@ -14421,8 +14437,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // AND GRID ITERATIONS NEVER LIGHTS ON THE MAGNIFICATION LEVEL COLUMN
         // (architect 2026-09-15): bare `i` refuses there with its card, and
         // the lamp greys on the same column. Under a lit lamp the column
-        // cannot be M (the lock refuses the switch), so the term never greys
-        // the off edge.
+        // cannot be M — by two rules since 2026-09-16: the lock refuses the
+        // switch, and the lamp is target-view only where the column is
+        // source-view only — so the term never greys the off edge.
         case RedesignButton::IconIter:
             return !any_tab_read_only(a) && a.active_markers_view != 'M';
         // (PLAY RENDERS LEFT THIS ARM 2026-08-28: bare `l` opens the in-app
@@ -15173,16 +15190,17 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // combination is deliberately keyless, so the bar has no button to give
         // it and all four read false there. That is the honest face, not a gap
         // — an unlit bar says "you are in the combination none of these
-        // selects". (S+M has no button either because it is no state at all:
-        // the magnification level markers column is target view only.)
+        // selects". (T+M has no button either because it is no state at all:
+        // the magnification level markers column is source view only since
+        // 2026-09-16.)
+        case RedesignButton::ViewSM:     return a.active_audio_view   == 'S' &&
+                                                a.active_markers_view == 'M';
         case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
                                                 a.active_markers_view == 'W';
         case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'P';
         case RedesignButton::ViewTW:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'W';
-        case RedesignButton::ViewTM:     return a.active_audio_view   == 'T' &&
-                                                a.active_markers_view == 'M';
         case RedesignButton::TabA:       return a.active_tab_view     == 'A';
         case RedesignButton::TabB:       return a.active_tab_view     == 'B';
         // (THE TWO VIEW LAMPS LIT AWAY FROM HOME here from 2026-09-04 to
@@ -15793,10 +15811,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
-        case RedesignButton::ViewTW:
-        case RedesignButton::ViewTM:     return {nullptr, nullptr};
+        case RedesignButton::ViewTW:     return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
