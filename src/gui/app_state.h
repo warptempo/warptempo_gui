@@ -8504,7 +8504,7 @@ inline bool folder_overlay_stands(const AppState& a) {
 // which is the surface that actually needed it.
 //
 // THE `h` HISTORY VIEW WAS NEVER IN IT: a MODE is not a MODAL. The view keeps
-// the keyboard, its own allowlist including the view bar's 1/2/3, so its
+// the keyboard, its own allowlist including the view bar's 1/2/3/4, so its
 // header stays focused and its bar stays blue.
 //
 // DAMAGE: the activation hook damages the top strip (and the standing modal
@@ -8518,19 +8518,20 @@ inline bool chrome_focused(const AppState& a) {
 // header's verdict AND no folder overlay standing — and this is the one place
 // the second term lives (its readers are paint_menu_row's `bar_focused` local,
 // which hands it to the bar's background and to view_bar_face, so the div and
-// its three buttons cannot part).
+// its four buttons cannot part).
 //
 // THE SECOND TERM IS KDENLIVE'S LOOK UNDER A MODAL (architect 2026-09-02, on
 // the view bar he had just been given its unfocused face: "top right 1/2/3
 // buttons — those look right when window loses focus but when media player/
 // picker is open they don't have the disabled background for the nonselected
 // buttons — if that was deliberate, they should have the disabled bg as that
-// is what kdenlive does with a modal"), and it was THE ONLY WAY THOSE THREE
-// GREY until 2026-09-10: the crops named "disabled" are the unfocused window
+// is what kdenlive does with a modal"), and it was THE ONLY WAY THOSE BUTTONS
+// GREY until 2026-09-10 (there were three of them then): the crops named "disabled" are the unfocused window
 // (render.h's view-bar block), so the ground swap was all that showed
 // redesign_button_enabled's first arm had killed them. THE ROW HAS A DISABLED
-// FACE OF ITS OWN SINCE THAT DAY — the two DEAD UNSELECTED labels at
-// kRedesignDisabledMix, the view bar's painter — and it reads the ENABLED bit,
+// FACE OF ITS OWN SINCE THAT DAY — the DEAD UNSELECTED labels at
+// kRedesignDisabledMix, the view bar's painter (three of them since the fourth
+// selector landed 2026-09-15, four in S+P, which no button names) — and it reads the ENABLED bit,
 // so under the band the dimmed ink and this ground are the two halves of one
 // face rather than two cues; this term is unchanged by it.
 //
@@ -10939,8 +10940,8 @@ inline const ViewState& active_view_state(const AppState& a) {
 // as any other authoring chord.) WHAT
 // IT TAKES AWAY IS THE COLUMN SWITCH AND THE PAIRED MARCH (architect
 // 2026-09-10): the mode is lit for the column you are in, so the
-// absolute view selectors 1/2/3 — which compose the W/P handler body (bare
-// `p` itself deleted with its view lamp 2026-09-15) — refuse while the
+// absolute view selectors 1/2/3/4 — which compose the column handler body
+// (bare `p` itself deleted with its view lamp 2026-09-15) — refuse while the
 // lamp stands;
 // and Ctrl+Shift+Tab refuses with them, its own tab switch clearing the
 // selection so that its second step could never walk the bound cells honestly
@@ -13586,7 +13587,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // available in history mode. Leave that for the player, the picker and
     // the AV stats"). So the answer here is the ANCHOR OWNER'S,
     // menu_anchor_dead_in_mode, which File alone survives; every other
-    // button on the row and off it — the view bar's 1/2/3 included, whose
+    // button on the row and off it — the view bar's 1/2/3/4 included, whose
     // grey shows through view_bar_focused's ground swap — is dead. The
     // anchors' OPEN reads that same owner at toggle_dropdown's guard, and the
     // veil consumes every press but a live anchor's
@@ -14014,11 +14015,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // NO READ-ONLY TERM, the column lamp's reading of the gate exactly:
         // the digits are navigation, on read_only_key_blocked's allowlist, so
-        // a locked tab with the lamp dark leaves all three live — and with it
+        // a locked tab with the lamp dark leaves all four live — and with it
         // lit there is no locked tab to be standing on, the two locks being
         // mutually exclusive. AND THE `h` VIEW NEVER REACHES
-        // THIS ARM: its 1/2/3 are on the mode's allowlist, so the derived
-        // partition above answers LIVE for all three and the two modes' greys
+        // THIS ARM: its 1/2/3/4 are on the mode's allowlist, so the derived
+        // partition above answers LIVE for all four and the two modes' greys
         // never meet on this row. THE CROPS NAMED "disabled" ARE THE UNFOCUSED
         // WINDOW and never this bit (architect 2026-08-02; the record and the
         // arithmetic are at kRedesignViewBarBg, render.h).

@@ -1600,8 +1600,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // deleted it — the keys had all grown buttons of their own.)
     //
     // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
-    // div, five faces from its own crops, and three chord buttons that are bare
-    // 1/2/3. Its layout, its box model and its face rule are at kViewBarButtons
+    // div, five faces from its own crops, and four chord buttons that are bare
+    // 1/2/3/4. Its layout, its box model and its face rule are at kViewBarButtons
     // and view_bar_face above; its colors at kRedesignViewBarBg (render.h).
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
@@ -1977,27 +1977,27 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // a focused window is untrue).
             //
             // THE SELECTED VIEW KEEPS ITS FULL INK even while it is dead: the
-            // three go dead TOGETHER under the lock (iteration_lock_greys,
+            // four go dead TOGETHER under the lock (iteration_lock_greys,
             // app_state.h — the whole quartet's chords), and dimming the one
             // that reports WHERE YOU STAND would dim a true statement. So the
             // face reads the selected bit beside the enabled one, and what
-            // greys is the two selectors the press can no longer reach.
-            // face.selected is redesign_button_selected, the live S/T x W/P
-            // combination (at most one of the three, none in S+P), so an S+P
-            // combination greys all three — the honest reading, none of them
+            // greys is the three selectors the press can no longer reach.
+            // face.selected is redesign_button_selected, the live audio-view x
+            // column combination (at most one of the four, none in S+P), so an
+            // S+P combination greys all four — the honest reading, none of them
             // being where you stand.
             //
             // IT READS THE ENABLED BIT AND NOT THE LOCK, which is the roster's
             // own rule (a face arm never restates an act's condition) and
             // costs a second membership list nowhere. THE FOLDER OVERLAY IS
             // ITS OTHER PRODUCER, redesign_button_enabled's first arm having
-            // killed these three under the player, the picker and the stats
+            // killed these four under the player, the picker and the stats
             // panel since long before the lock: there the dimmed labels join
             // the BAR'S UNFOCUSED GROUND (view_bar_focused's modal term), the
             // two halves of one disabled face rather than a doubled cue — it
             // was that ground alone that showed the state until 2026-09-10.
-            // THE `h` VIEW REACHES NEITHER: its 1/2/3 are on the mode's
-            // allowlist, so all three answer enabled there.
+            // THE `h` VIEW REACHES NEITHER: its 1/2/3/4 are on the mode's
+            // allowlist, so all four answer enabled there.
             const double keep = (face.enabled || face.selected)
                                     ? 1.0 : kRedesignDisabledMix;
             // Toward the BAR'S ground, which is what a dead selector sits on:

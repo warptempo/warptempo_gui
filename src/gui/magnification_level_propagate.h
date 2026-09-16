@@ -64,7 +64,16 @@ struct GuiInputHandler;
 //     day), where the sibling lands in T+P — the same tail with the audio
 //     letter swapped, and its membership walk was in source frames all along
 //     (walk_named_blocks over the warp store's authored frames, no map in
-//     front of it).
+//     front of it). AND THE AUDIO HALF OF THAT LANDING RUNS AHEAD OF THE UNDO
+//     PUSH (architect 2026-09-16): both chords are admitted from T+W as well
+//     as S+W — their gates test the W column alone — and the push captures the
+//     live audio view, so an entry filed before the crossing would be tagged
+//     'T' beside op_mode 'M', the pair that cannot exist, and its restore
+//     would rest the user in T+W (undo.cpp's 'M' arm carries the two
+//     guarantees that make the tag honest). Each paste body therefore crosses
+//     with switch_active_audio_view_to('S') inside its own store-changed arm —
+//     the landing's switch is then a no-op — at the cost of a second picture
+//     rebuild on the T+W road.
 //
 // Everything else — the run rule, the section bucketing and its guard, the
 // lockstep walk, the stop reports, the produced-nothing stillness, the
@@ -90,7 +99,7 @@ struct MagnificationLevelPropagate {
     // The two pastes' "Stopped at …" reports are notification cards; this is
     // the one push chokepoint they reach.
     GuiNotifications&     notifications;
-    // THE SELECTION CHOKEPOINT, held for one line: the target-view landing
+    // THE SELECTION CHOKEPOINT, held for one line: the source-view landing
     // REPLACES the membership with the set the paste created, and a replace
     // must run through a Selection mutator or the shift anchor outlives it
     // (Selection::replace_selection carries the whole reasoning).
@@ -100,7 +109,7 @@ struct MagnificationLevelPropagate {
     // constructed (the input handler holds this propagate by reference, so the
     // dependency is a pointer set after construction, the sibling's own
     // shape). Reaches switch_active_audio_view_to so a completed paste can
-    // land in target view through the SAME chokepoint the digit selectors use.
+    // land in source view through the SAME chokepoint the digit selectors use.
     GuiInputHandler*      input = nullptr;
 
     MagnificationLevelPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
@@ -150,8 +159,10 @@ struct MagnificationLevelPropagate {
     // silent.
     void paste_state_apply();
 
-    // Shared end-of-paste tail: land the completed paste in TARGET view with
-    // the M column active and the newly created markers selected. `created` is
+    // Shared end-of-paste tail: land the completed paste in SOURCE view with
+    // the M column active and the newly created markers selected (the column's
+    // home since 2026-09-16; its audio half has already run inside the push
+    // arm, so the switch here is a no-op on every road that pushed). `created` is
     // the exact post-insert index set of the markers this paste materialized
     // (empty for the state-only tail, which rewrites fields on markers that
     // already exist). ONLY A PASTE THAT WROTE A BLOCK REACHES IT, and a paste

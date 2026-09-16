@@ -189,7 +189,10 @@ struct SettingsFile {
     // Every canonical key is required, so the reader always assigns these
     // fields; the member initializers below are construction-state only.
     char   active_audio_view       = 'S';   // S | T
-    char   active_markers_view     = 'W';   // W | P | M (M with T alone)
+    char   active_markers_view     = 'W';   // W | P | M (M with S alone,
+                                            // architect approval 2026-09-16 —
+                                            // the same grant as the validator's
+                                            // flip; it read T until then)
     char   active_tab_view         = 'A';   // A | B
     // (NINE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with

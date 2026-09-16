@@ -934,8 +934,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15; the
     // column's home flipped 2026-09-16: the magnification level markers
     // column is source view only, and the column writer refuses 'M' outside
-    // it). Its audio tag is 'S' by construction — no entry can be filed from
-    // T+M — so the audio restore below runs ahead of the column write rather
+    // it). Its audio tag is 'S' by construction, ON TWO GUARANTEES: an 'M'
+    // entry filed by a producer that authors IN the column can only be filed
+    // from S+M, because the column writer refuses 'M' outside source view
+    // (GuiActiveViews::switch_active_markers_view_to) and the audio writer
+    // lands the column on W before it leaves for target; and the two
+    // MAGNIFICATION LEVEL PASTES, which their W-column gates admit from T+W
+    // as well as S+W, CROSS TO SOURCE VIEW AHEAD OF THEIR PUSH for exactly
+    // this reason (magnification_level_propagate.cpp, both arms, architect
+    // 2026-09-16) — the push captures the audio view live, so the crossing is
+    // what makes the tag honest. So the audio restore below runs ahead of the column write rather
     // than after it, landing source first so the writer admits 'M', the
     // selection cleared first so the flip has no focus to re-express (the
     // column switch would clear it one line later anyway). Leaving target

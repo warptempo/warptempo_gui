@@ -325,7 +325,8 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // standing — much as row 1 swaps its ground, and the swap is the same kind of
 // thing, a PAINT-ONLY variant of the whole surface. The MODAL term is this
 // bar's alone since 2026-09-03 evening (architect 2026-09-02: under the render
-// player or the picker the resting 1/2/3 "should have the disabled bg as that
+// player or the picker the resting 1/2/3 (a fourth selector since 2026-09-15)
+// "should have the disabled bg as that
 // is what kdenlive does with a modal"; the header carried the term with it
 // from that evening until the File anchor went live under the band, when the
 // header went back to the activation flag and this bar kept the modal half).
@@ -353,7 +354,7 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // no longer can, in either direction: the icon row greys for two MODES since
 // 2026-08-15 — the `h` view and the read-only lock — and this row greys for the
 // ITERATION lock since 2026-09-10. The view bar is untouched by the icon row's
-// two, its 1/2/3 being navigation.)
+// two, its 1/2/3/4 being navigation.)
 //
 // kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
 // #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is

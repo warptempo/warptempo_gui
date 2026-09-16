@@ -86,7 +86,11 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.trim_begin_frame    = app.trim.begin_frame;
     s.trim_end_frame      = app.trim.end_frame;
     // Session prefs the per-entry .settings writer needs, captured live at
-    // dispatch so the file carries the session's real values.
+    // dispatch so the file carries the session's real values. The column is
+    // taken VERBATIM, 'M' included: the entry's file is an
+    // active_audio_view=T state and target never pairs with M, so the landing
+    // on W belongs to the writer, the one owner (render_pipeline.cpp, where the
+    // 'T' is stamped).
     s.active_markers_view = app.active_markers_view;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is

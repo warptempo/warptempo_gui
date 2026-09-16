@@ -485,14 +485,35 @@ RenderOutcome do_render(const RenderRequest& req,
                 // the persisted zoom vocabulary [kMinZoom, kMaxZoom]), so the file
                 // strict-parses under
                 // read_settings_file — same writer, same canonical key order
-                // as a source save — with no validation added here.
+                // as a source save — with no validation added here. THAT HOLDS
+                // FOR THE CROSS-KEY PAIR TOO since the column is landed below.
                 const std::filesystem::path st_path =
                     sidecar_path(bf, req.batch_basename, kSidecarSettings);
                 existed = existed_before(st_path);
+
+                // THE ENTRY'S AUDIO VIEW IS TARGET BY CONSTRUCTION — the render
+                // is a target-domain artefact and the two positions above were
+                // captured on the target axis — and TARGET NEVER PAIRS WITH THE
+                // MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-16), so
+                // a dispatch from S+M would otherwise write the one pair
+                // read_settings_file refuses: the app's own entry would fail
+                // the player's Load in place and the CLI's read. The column is
+                // therefore LANDED ON W here, which is not a second rule but
+                // THE AUDIO SWITCH'S OWN LANDING (GuiInputHandler::
+                // switch_active_audio_view_to, input_handler.cpp: naming 'T'
+                // from S+M lands the column on W through the column writer)
+                // applied to the FILE the way that switch applies it to the
+                // live state. The live state is untouched — the dispatch leaves
+                // the user standing in S+M — because the landing belongs to the
+                // written pair alone.
+                const char entry_markers_view =
+                    req.authoring.active_markers_view == 'M'
+                        ? 'W'
+                        : req.authoring.active_markers_view;
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,
                     /*active_audio_view=*/'T',
-                    req.authoring.active_markers_view,
+                    entry_markers_view,
                     req.authoring.active_tab};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {

@@ -274,6 +274,29 @@ void MagnificationLevelPropagate::paste_apply() {
     // the produced-nothing path that keeps the view still).
     const bool store_changed = !magnification_level_rows_equal(out, pre_state);
     if (store_changed) {
+        // THE CROSSING TO SOURCE VIEW RUNS AHEAD OF THE PUSH (architect
+        // 2026-09-16). The chord is admitted from S+W AND T+W — its gate tests
+        // the W column alone (input_key_dispatch.cpp) — while the landing below
+        // leaves the user in S+M, and push_undo_magnification_level captures
+        // `app.active_audio_view` LIVE at the push. Pushed from T+W the entry
+        // would therefore be tagged 'T' beside op_mode 'M', the one pair that
+        // cannot exist: the restore takes the audio tag first, lands the column
+        // on W crossing into target, and then has its 'M' column write refused,
+        // resting the user in T+W with M's touched-index selection applied
+        // against W. Crossing HERE — the same call the landing makes, so the
+        // landing's own switch is then a no-op, and leaving target never
+        // refuses — makes the tag 'S' by construction, so an undo of a paste
+        // made from T+W returns to S+M, the view the paste left the user in:
+        // no restore synthesizes a view the user was never in.
+        //
+        // INSIDE THE ARM, not above it: a paste that produced nothing keeps the
+        // view still (the header's rule), and that includes the audio axis.
+        //
+        // THE ACCEPTED COST is that a paste from T+W rebuilds the picture twice
+        // — this crossing's own translation and kick, then the landing's
+        // unconditional rebuild — which is the price of the tag being honest.
+        if (input) input->switch_active_audio_view_to('S');
+
         // THE IDENTITY HINT ON THE LIVE SIDE (the contract and the producer
         // enumeration are at restore_touched_indices, app_state.h), the
         // sibling's hint for the sibling's reason: created_indices names every
@@ -446,6 +469,14 @@ void MagnificationLevelPropagate::paste_state_apply() {
     // — a run that wrote none keeping the view still (the sibling's ruling
     // and its two halves, at PhaseResetPropagate::paste_state_apply).
     if (any_change) {
+        // THE CROSSING TO SOURCE VIEW RUNS AHEAD OF THE PUSH, the sibling
+        // arm's line for the sibling arm's reason (the full argument is at
+        // paste_apply's own `store_changed` arm, architect 2026-09-16): this
+        // chord is admitted from T+W too, the push captures the audio view
+        // LIVE, and a 'T' tag beside op_mode 'M' is the pair that cannot
+        // exist. Inside the arm, so a run that wrote nothing keeps the view
+        // still; a no-op from S+W; the landing's own switch is then a no-op.
+        if (input) input->switch_active_audio_view_to('S');
         undo.push_undo_magnification_level(std::move(pre_state));
         undo.recompute_dirty();
         viewport.invalidate_waveform_area();

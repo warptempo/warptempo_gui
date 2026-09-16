@@ -89,7 +89,7 @@ struct ToolbarChord {
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
-    // user just clicked). THE TAB PAIR AND THE VIEW BAR'S THREE are the flag's
+    // user just clicked). THE TAB PAIR AND THE VIEW BAR'S FOUR are the flag's
     // users; the view lamps, the walk lamp, follow, read-only, history and
     // Cumulative are TOGGLES and press through in both directions, which is why
     // this is a flag and not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP
@@ -100,9 +100,9 @@ struct ToolbarChord {
     // GENERIC throughout — keyed on the flag plus the lamp, with no id list
     // anywhere.)
     //
-    // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
+    // THE VIEW BAR'S FOUR ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
-    // ABSOLUTE selectors 1/2/3, which are IDEMPOTENT — on_key's own handler
+    // ABSOLUTE selectors 1/2/3/4, which are IDEMPOTENT — on_key's own handler
     // already makes a press on the current combination a no-op, so dispatching
     // would be harmless rather than wrong. The flag is set anyway, and for the
     // FACE: the crops give a selected face and a click face and nothing that is
@@ -7641,10 +7641,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // button whose act it consumes across all the rows
         // (history_mode_disables_button, above) — row 4's history group
         // aside, which carries resting greys of its own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
-        // the VIEW BAR'S THREE answer false while grid iterations stands
+        // the VIEW BAR'S FOUR answer false while grid iterations stands
         // (iteration_lock_greys, app_state.h), so the press dies here — and
         // that row DOES have a disabled paint since the architect's mockup the
-        // same day, the two DEAD UNSELECTED selectors' labels at
+        // same day, the DEAD UNSELECTED selectors' labels at
         // kRedesignDisabledMix over the bar's ground (the view bar's painter,
         // paint_handler.cpp; the selected one keeps its full ink). The row
         // still carries no tooltip, so the KEY's card carries the sentence
@@ -8898,7 +8898,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // marker lane below the whole top strip's button rows.
     //
     // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's bare
-    // 1/2/3 drop at the keyboard-modal gate as consumed nothings — the modality
+    // 1/2/3/4 drop at the keyboard-modal gate as consumed nothings — the modality
     // ruling working as intended — and ending an edit there would be a behavior
     // change nobody asked for. (Quit needed nothing here while it was a button,
     // its Ctrl+Q being one of the three chords that gate admits; since
