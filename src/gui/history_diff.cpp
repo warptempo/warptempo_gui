@@ -757,9 +757,17 @@ std::string trim_trailing_ws(std::string s) {
     return s;
 }
 
+// THE DIFF REPORTS LINE POSITIONS, NOT LINE TEXT (2026-09-16, Sol round 16's
+// P1): each side stays split, and `added` / `removed` are indices into
+// `now_lines` / `then_lines`, in file order. The text is one subscript away;
+// the POSITION is what a line's ordinal within its frame's run is derived
+// from (run_ordinals below), which is the identity a diff flag carries into
+// the revert (the contract at GuiHistoryWarpEntry::ordinal, history_diff.h).
 struct LineDiff {
-    std::vector<std::string> added;    // on `now` only
-    std::vector<std::string> removed;  // on `then` only
+    std::vector<std::string> then_lines;
+    std::vector<std::string> now_lines;
+    std::vector<std::size_t> added;    // indices into now_lines: on `now` only
+    std::vector<std::size_t> removed;  // indices into then_lines: on `then` only
     bool                     degraded = false;
 };
 
@@ -769,8 +777,10 @@ struct LineDiff {
 // small on the ordinary case (one edited line in a long sorted file).
 LineDiff diff_lines(const std::string& then_text, const std::string& now_text) {
     LineDiff out;
-    const std::vector<std::string> a = split_lines(then_text);
-    const std::vector<std::string> b = split_lines(now_text);
+    out.then_lines = split_lines(then_text);
+    out.now_lines  = split_lines(now_text);
+    const std::vector<std::string>& a = out.then_lines;
+    const std::vector<std::string>& b = out.now_lines;
 
     std::size_t lo = 0;
     while (lo < a.size() && lo < b.size() && a[lo] == b[lo]) ++lo;
@@ -788,8 +798,8 @@ LineDiff diff_lines(const std::string& then_text, const std::string& now_text) {
         (n + 1) * (m + 1) > kMaxDiffCells) {
         // Degrade to whole-file-replaced over the un-peeled middle.
         out.degraded = true;
-        for (std::size_t i = lo; i < a_hi; ++i) out.removed.push_back(a[i]);
-        for (std::size_t j = lo; j < b_hi; ++j) out.added.push_back(b[j]);
+        for (std::size_t i = lo; i < a_hi; ++i) out.removed.push_back(i);
+        for (std::size_t j = lo; j < b_hi; ++j) out.added.push_back(j);
         return out;
     }
 
@@ -817,15 +827,35 @@ LineDiff diff_lines(const std::string& then_text, const std::string& now_text) {
             --i;
             --j;
         } else if (j > 0 && (i == 0 || dp[at(i, j - 1)] >= dp[at(i - 1, j)])) {
-            out.added.push_back(b[lo + j - 1]);
+            out.added.push_back(lo + j - 1);
             --j;
         } else {
-            out.removed.push_back(a[lo + i - 1]);
+            out.removed.push_back(lo + i - 1);
             --i;
         }
     }
     std::reverse(out.added.begin(), out.added.end());
     std::reverse(out.removed.begin(), out.removed.end());
+    return out;
+}
+
+// EACH LINE'S ORDINAL WITHIN ITS FRAME'S RUN on its own side (2026-09-16) —
+// the identity the revert addresses by; the contract is at
+// GuiHistoryWarpEntry::ordinal, history_diff.h. Both sides are loader-clean,
+// so their frames are non-decreasing and an equal-frame run is contiguous:
+// the ordinal is the count of lines at the same frame directly above. `frame_of`
+// answers a line's frame or nothing; a line it refuses (unreachable — the
+// extractors' own defensive arm) closes the run on both sides of it.
+template <typename FrameOf>
+std::vector<int> run_ordinals(const std::vector<std::string>& lines,
+                              FrameOf                          frame_of) {
+    std::vector<int>       out(lines.size(), 0);
+    std::optional<int64_t> prev;
+    for (std::size_t i = 0; i < lines.size(); ++i) {
+        const std::optional<int64_t> frame = frame_of(lines[i]);
+        out[i] = (frame && prev && *frame == *prev) ? out[i - 1] + 1 : 0;
+        prev   = frame;
+    }
     return out;
 }
 
@@ -962,10 +992,18 @@ bool extract_magnification_level_entry(
 }
 
 // Pair a removal and an addition sharing one frame into a change, leaving the
-// unpaired remainder in place. Coincident markers are legal on both columns,
+// unpaired remainder in place. Coincident markers are legal on every column,
 // so the pairing is positional per frame — the first unclaimed addition at
 // that frame — and any surplus on either side stays a plain add or remove.
-// File order survives: neither surviving list is re-sorted.
+// File order survives: neither surviving list is re-sorted. THE PAIRING IS
+// THE LANE'S, NOT THE REVERT'S (2026-09-16): which removal a double flag shows
+// beside which addition is decided here, while WHICH ROW each half names is
+// the entry's own ordinal, which `make_change` carries through onto the
+// change as its then and now ordinals — so a pair whose halves sit at
+// different ordinals of one run (`[100|4, 100|1]` against `[100|1, 100|3]`
+// pairs then-0 with now-1) still reverts to the checkpoint's own rows.
+// (The propagate family's state paste pairs by its own block walk in
+// magnification_level_propagate.cpp and never reaches this function.)
 template <typename Entry, typename Change, typename Make>
 void pair_changes_by_frame(std::vector<Entry>&  removed,
                            std::vector<Entry>&  added,
@@ -2729,41 +2767,96 @@ GuiHistoryCommitDelta compute_commit_delta(
         const auto it = side.find(line);
         return (it != side.end()) ? it->second : local;
     };
-    for (const std::string& line : warp_diff.added) {
+
+    // EVERY ENTRY CARRIES ITS ROW WITHIN ITS FRAME'S RUN (2026-09-16): each
+    // side's ordinals are taken once over the side's whole line list through
+    // run_ordinals, keyed by the diff's own line positions, and each entry
+    // reads its own side's — an added line the now side's, a removed line the
+    // then side's. The frame comes off the column's own extractor, so the run
+    // is closed exactly where the entry loop below would refuse the line.
+    const auto warp_frame_of =
+        [](const std::string& line) -> std::optional<int64_t> {
+            GuiHistoryWarpEntry e;
+            if (!extract_warp_entry(line, e)) return std::nullopt;
+            return e.frame;
+        };
+    const auto phase_reset_frame_of =
+        [](const std::string& line) -> std::optional<int64_t> {
+            GuiHistoryPhaseResetEntry e;
+            if (!extract_phase_reset_entry(line, e)) return std::nullopt;
+            return e.frame;
+        };
+    const auto magnification_level_frame_of =
+        [](const std::string& line) -> std::optional<int64_t> {
+            GuiHistoryMagnificationLevelEntry e;
+            if (!extract_magnification_level_entry(line, e))
+                return std::nullopt;
+            return e.frame;
+        };
+    const std::vector<int> then_warp_ordinal =
+        run_ordinals(warp_diff.then_lines, warp_frame_of);
+    const std::vector<int> now_warp_ordinal =
+        run_ordinals(warp_diff.now_lines, warp_frame_of);
+    const std::vector<int> then_phase_reset_ordinal =
+        run_ordinals(phase_reset_diff.then_lines, phase_reset_frame_of);
+    const std::vector<int> now_phase_reset_ordinal =
+        run_ordinals(phase_reset_diff.now_lines, phase_reset_frame_of);
+    const std::vector<int> then_magnification_level_ordinal = run_ordinals(
+        magnification_level_diff.then_lines, magnification_level_frame_of);
+    const std::vector<int> now_magnification_level_ordinal = run_ordinals(
+        magnification_level_diff.now_lines, magnification_level_frame_of);
+
+    for (const std::size_t j : warp_diff.added) {
+        const std::string&  line = warp_diff.now_lines[j];
         GuiHistoryWarpEntry e;
         if (extract_warp_entry(line, e)) {
+            e.ordinal = now_warp_ordinal[j];
             e.effective_disabled =
                 effective_of(now_warp_effective, line, e.disabled);
             d.warp_added.push_back(std::move(e));
         }
     }
-    for (const std::string& line : warp_diff.removed) {
+    for (const std::size_t i : warp_diff.removed) {
+        const std::string&  line = warp_diff.then_lines[i];
         GuiHistoryWarpEntry e;
         if (extract_warp_entry(line, e)) {
+            e.ordinal = then_warp_ordinal[i];
             e.effective_disabled =
                 effective_of(then_warp_effective, line, e.disabled);
             d.warp_removed.push_back(std::move(e));
         }
     }
-    for (const std::string& line : phase_reset_diff.added) {
+    for (const std::size_t j : phase_reset_diff.added) {
         GuiHistoryPhaseResetEntry e;
-        if (extract_phase_reset_entry(line, e)) d.phase_reset_added.push_back(e);
+        if (extract_phase_reset_entry(phase_reset_diff.now_lines[j], e)) {
+            e.ordinal = now_phase_reset_ordinal[j];
+            d.phase_reset_added.push_back(e);
+        }
     }
-    for (const std::string& line : phase_reset_diff.removed) {
+    for (const std::size_t i : phase_reset_diff.removed) {
         GuiHistoryPhaseResetEntry e;
-        if (extract_phase_reset_entry(line, e)) d.phase_reset_removed.push_back(e);
+        if (extract_phase_reset_entry(phase_reset_diff.then_lines[i], e)) {
+            e.ordinal = then_phase_reset_ordinal[i];
+            d.phase_reset_removed.push_back(e);
+        }
     }
     // THE MAGNIFICATION LEVEL COLUMN (2026-09-15), the phase-reset loops'
     // shape: no cascade, the local bit is the effective verdict.
-    for (const std::string& line : magnification_level_diff.added) {
+    for (const std::size_t j : magnification_level_diff.added) {
         GuiHistoryMagnificationLevelEntry e;
-        if (extract_magnification_level_entry(line, e))
+        if (extract_magnification_level_entry(
+                magnification_level_diff.now_lines[j], e)) {
+            e.ordinal = now_magnification_level_ordinal[j];
             d.magnification_level_added.push_back(e);
+        }
     }
-    for (const std::string& line : magnification_level_diff.removed) {
+    for (const std::size_t i : magnification_level_diff.removed) {
         GuiHistoryMagnificationLevelEntry e;
-        if (extract_magnification_level_entry(line, e))
+        if (extract_magnification_level_entry(
+                magnification_level_diff.then_lines[i], e)) {
+            e.ordinal = then_magnification_level_ordinal[i];
             d.magnification_level_removed.push_back(e);
+        }
     }
 
     pair_changes_by_frame(
@@ -2771,6 +2864,8 @@ GuiHistoryCommitDelta compute_commit_delta(
         [](const GuiHistoryWarpEntry& r, const GuiHistoryWarpEntry& a) {
             GuiHistoryWarpChange c;
             c.frame            = r.frame;
+            c.then_ordinal     = r.ordinal;
+            c.now_ordinal      = a.ordinal;
             c.then_tempo_token = r.tempo_token;
             c.now_tempo_token  = a.tempo_token;
             c.then_disabled    = r.disabled;
@@ -2785,6 +2880,8 @@ GuiHistoryCommitDelta compute_commit_delta(
            const GuiHistoryPhaseResetEntry& a) {
             GuiHistoryPhaseResetChange c;
             c.frame         = r.frame;
+            c.then_ordinal  = r.ordinal;
+            c.now_ordinal   = a.ordinal;
             c.then_disabled = r.disabled;
             c.now_disabled  = a.disabled;
             return c;
@@ -2798,6 +2895,8 @@ GuiHistoryCommitDelta compute_commit_delta(
            const GuiHistoryMagnificationLevelEntry& a) {
             GuiHistoryMagnificationLevelChange c;
             c.frame         = r.frame;
+            c.then_ordinal  = r.ordinal;
+            c.now_ordinal   = a.ordinal;
             c.then_level    = r.level;
             c.now_level     = a.level;
             c.then_disabled = r.disabled;

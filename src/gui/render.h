@@ -3683,6 +3683,17 @@ void render_magnification_level_flags(
 // column; a magnification level line's payload past its '|' is the one-digit
 // level, so its `then_token` is that digit (2026-09-15).
 //
+// EACH HALF NAMES ITS OWN ROW (2026-09-16, Sol round 16's P1): `then_ordinal`
+// is the removed line's row within its frame's run on the then side,
+// `now_ordinal` the added line's on the now side — each meaningful exactly
+// when its half's bool is set, both copied off the delta entry the label is
+// built from (the contract is at GuiHistoryWarpEntry::ordinal,
+// history_diff.h). IDENTITY IS DATA, NOT A FACE: the painter reads neither,
+// the hit rects and the walk are unchanged, and the revert is their one
+// reader — it deletes the exact now-side row and re-seats the then line at
+// its then-side ordinal, so a flag on the second of two coincident rows
+// reverts that row and not the run's first.
+//
 // THE LANE'S DISABLED AXIS IS EFFECTIVE, PER COMMIT SIDE (architect
 // 2026-08-22, deepened the same day it landed: the axis shipped reading each
 // line's LOCAL '#' bit, which dropped the label cascade — a label ref with no
@@ -3708,6 +3719,8 @@ struct HistoryDiffFlag {
     std::string removed_text;
     std::string added_text;
     std::string then_token;
+    int         then_ordinal = 0;   // the removed half's row within its run
+    int         now_ordinal  = 0;   // the added half's row within its run
     bool        then_disabled = false;           // verbatim local: the revert's
     bool        then_effective_disabled = false; // the removed half's paint
     bool        now_effective_disabled  = false; // the added half's paint

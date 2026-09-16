@@ -895,6 +895,11 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // A WARP token is rest-of-line and already carries its comment;
     // phase resets carry no measure (PhaseResetMarker), so the phase fills
     // pass no token at all.
+    //
+    // EACH HALF'S ORDINAL RIDES ALONG TOO (2026-09-16): a changed pair copies
+    // both sides', a removed flag its then side's, an added flag its now
+    // side's — off the same delta entry, so the row the flag shows is the row
+    // the revert addresses (the contract is at HistoryDiffFlag, render.h).
     if (app.active_markers_view == 'M') {
         // THE MAGNIFICATION LEVEL COLUMN (architect 2026-09-15): the
         // phase-reset arm's shape with the LEVEL DIGIT as the token — the
@@ -915,6 +920,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
                 "[+]", c.now_disabled,
                 format_marker_magnification(c.now_level));
             f.then_token              = format_marker_magnification(c.then_level);
+            f.then_ordinal            = c.then_ordinal;
+            f.now_ordinal             = c.now_ordinal;
             f.then_disabled           = c.then_disabled;
             f.then_effective_disabled = c.then_disabled;
             f.now_effective_disabled  = c.now_disabled;
@@ -928,6 +935,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed_text = history_diff_label(
                 "[-]", e.disabled, format_marker_magnification(e.level));
             f.then_token              = format_marker_magnification(e.level);
+            f.then_ordinal            = e.ordinal;
             f.then_disabled           = e.disabled;
             f.then_effective_disabled = e.disabled;
             out.push_back(std::move(f));
@@ -939,6 +947,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.added      = true;
             f.added_text = history_diff_label(
                 "[+]", e.disabled, format_marker_magnification(e.level));
+            f.now_ordinal            = e.ordinal;
             f.now_effective_disabled = e.disabled;
             out.push_back(std::move(f));
         }
@@ -952,6 +961,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
                 history_diff_label("[-]", c.then_disabled);
             f.added_text =
                 history_diff_label("[+]", c.now_disabled);
+            f.then_ordinal            = c.then_ordinal;
+            f.now_ordinal             = c.now_ordinal;
             f.then_disabled           = c.then_disabled;
             f.then_effective_disabled = c.then_disabled;
             f.now_effective_disabled  = c.now_disabled;
@@ -963,6 +974,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed      = true;
             f.removed_text =
                 history_diff_label("[-]", e.disabled);
+            f.then_ordinal            = e.ordinal;
             f.then_disabled           = e.disabled;
             f.then_effective_disabled = e.disabled;
             out.push_back(std::move(f));
@@ -973,6 +985,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.added      = true;
             f.added_text =
                 history_diff_label("[+]", e.disabled);
+            f.now_ordinal            = e.ordinal;
             f.now_effective_disabled = e.disabled;
             out.push_back(std::move(f));
         }
@@ -988,6 +1001,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.added_text =
                 history_diff_label("[+]", c.now_disabled, c.now_tempo_token);
             f.then_token    = c.then_tempo_token;
+            f.then_ordinal            = c.then_ordinal;
+            f.now_ordinal             = c.now_ordinal;
             f.then_disabled           = c.then_disabled;
             f.then_effective_disabled = c.then_effective_disabled;
             f.now_effective_disabled  = c.now_effective_disabled;
@@ -1000,6 +1015,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.removed_text =
                 history_diff_label("[-]", e.disabled, e.tempo_token);
             f.then_token    = e.tempo_token;
+            f.then_ordinal            = e.ordinal;
             f.then_disabled           = e.disabled;
             f.then_effective_disabled = e.effective_disabled;
             out.push_back(std::move(f));
@@ -1009,6 +1025,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
             f.time_frame = e.frame;
             f.added      = true;
             f.added_text = history_diff_label("[+]", e.disabled, e.tempo_token);
+            f.now_ordinal            = e.ordinal;
             f.now_effective_disabled = e.effective_disabled;
             out.push_back(std::move(f));
         }

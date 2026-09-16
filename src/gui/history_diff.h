@@ -246,6 +246,28 @@ enum class GuiHistoryWalkSource {
 // measure (PhaseResetMarker).
 struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
+    // THE LINE'S ORDINAL WITHIN ITS FRAME'S RUN, ON ITS OWN SIDE (2026-09-16,
+    // Sol round 16's P1): the count of lines at this same frame directly above
+    // it in the side's file — 0 for the first line at a frame, so 0 for every
+    // line whose frame is its own. Coincident markers are legal on every
+    // column (the ruling at insert_marker, marker_store.h) and a loader-clean
+    // sidecar is non-decreasing by frame, so (frame, ordinal) names ONE row
+    // of one side, and it is THE IDENTITY A DIFF FLAG CARRIES INTO THE REVERT
+    // (HistoryDiffFlag::then_ordinal / now_ordinal, render.h): an added
+    // line's ordinal is the now-side row the inverse deletes, a removed
+    // line's the then-side row the inverse puts it back at. The frame alone
+    // was the address until then, and on an equal-frame run it reached the
+    // run's FIRST pre-act row whichever row the flag showed — a `4 → 3` flag
+    // on the second of two coincident rows reverted the first. THE ORDINAL IS
+    // WITHIN THE RUN, NOT A FULL-SIDE ROW INDEX, deliberately: the act is
+    // blind to the reading (github-recheck.md), so a flag's now side is the
+    // live store only in the cumulative reading and at the newest index; a
+    // full-side index would name nothing on the live store anywhere else,
+    // while (frame, ordinal) stays an address on any store's own run. The
+    // phase-reset and magnification level entries carry the same field under
+    // this contract; the three change types carry both sides' as
+    // `then_ordinal` / `now_ordinal`.
+    int         ordinal  = 0;
     std::string tempo_token;
     bool        disabled = false;
     // THE CASCADE VERDICT, RESOLVED WITHIN THIS ENTRY'S OWN SIDE (architect
@@ -264,6 +286,11 @@ struct GuiHistoryWarpEntry {
 // paints. Both the payload and the disable prefix can differ.
 struct GuiHistoryWarpChange {
     int64_t     frame = 0;
+    // Each half's row within the frame's run on its own side (the contract at
+    // GuiHistoryWarpEntry::ordinal): the pairing is positional per frame
+    // (pair_changes_by_frame), so the two may differ.
+    int         then_ordinal = 0;
+    int         now_ordinal  = 0;
     std::string then_tempo_token;
     std::string now_tempo_token;
     bool        then_disabled = false;
@@ -284,6 +311,8 @@ struct GuiHistoryWarpChange {
 // has no twin on this column (2026-08-22).
 struct GuiHistoryPhaseResetEntry {
     int64_t     frame    = 0;
+    int         ordinal  = 0;   // the row within the frame's run (the contract
+                                // at GuiHistoryWarpEntry::ordinal)
     bool        disabled = false;
 };
 
@@ -294,6 +323,8 @@ struct GuiHistoryPhaseResetEntry {
 // reading as an unrelated remove and add.
 struct GuiHistoryPhaseResetChange {
     int64_t frame         = 0;
+    int     then_ordinal  = 0;   // each half's row within the frame's run on
+    int     now_ordinal   = 0;   // its own side (GuiHistoryWarpEntry::ordinal)
     bool    then_disabled = false;
     bool    now_disabled  = false;
 };
@@ -305,6 +336,10 @@ struct GuiHistoryPhaseResetChange {
 // effective verdict, the phase-reset entry's rule.
 struct GuiHistoryMagnificationLevelEntry {
     int64_t frame    = 0;
+    int     ordinal  = 0;   // the row within the frame's run (the contract at
+                            // GuiHistoryWarpEntry::ordinal) — the one column
+                            // where the run's order is VISIBLE at rest, the
+                            // last enabled row's level being the gain
     uint8_t level    = 0;
     bool    disabled = false;
 };
@@ -314,6 +349,8 @@ struct GuiHistoryMagnificationLevelEntry {
 // paired as the phase-reset column pairs its disable toggle.
 struct GuiHistoryMagnificationLevelChange {
     int64_t frame         = 0;
+    int     then_ordinal  = 0;   // each half's row within the frame's run on
+    int     now_ordinal   = 0;   // its own side (GuiHistoryWarpEntry::ordinal)
     uint8_t then_level    = 0;
     uint8_t now_level     = 0;
     bool    then_disabled = false;

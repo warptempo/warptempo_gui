@@ -51,7 +51,6 @@
 #include <optional>
 #include <string>
 #include <system_error>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -3334,6 +3333,114 @@ void GuiInputHandler::on_history_checkpoint_complete(
     }
 }
 
+namespace {
+
+// THE REVERT'S ONE APPLY BODY (2026-09-16, Sol round 16's P1), generic over
+// the three marker stores — they are one template, GuiMarkerStore — so the
+// column arms in run_history_revert differ only in how a then line becomes a
+// marker, which `restore` answers: the marker, or nothing after its own
+// stderr line for the unreachable refused line. It writes the PROPOSED copy
+// only; the install is the act's.
+//
+// EVERY FLAG NAMES ITS OWN ROW — (frame, ordinal within the frame's run),
+// HistoryDiffFlag::then_ordinal / now_ordinal, render.h; the contract at
+// GuiHistoryWarpEntry::ordinal, history_diff.h — and the two passes address
+// by those identities so that no earlier edit can shift a later target:
+//   1. DELETIONS. Every flag with an ADDED half (an added-only flag, a changed
+//      pair) names the now-side row (frame, now_ordinal). Each resolves
+//      against the store AS IT STOOD WHEN THE ACT BEGAN — the run's first
+//      index by lower_bound plus the ordinal, present iff that index still
+//      carries the frame (an absent row — the live run shorter than the
+//      flag's now side, reachable in the iterative reading — is nothing to
+//      delete, never a refusal). The resolved indices are erased in
+//      DESCENDING order, so each erase shifts only rows above it, which
+//      nothing left to erase names.
+//   2. RESTORES. Every flag with a REMOVED half puts its then line back at
+//      (frame, then_ordinal) within the frame's run as it stands after the
+//      deletions — the run's first index plus min(then_ordinal, run length) —
+//      applied in ASCENDING (frame, then_ordinal). Ascending is what makes a
+//      whole-delta revert reproduce the checkpoint's run byte for byte: after
+//      the deletions the run holds exactly the lines both sides shared, in
+//      order, and seating the removed lines from the lowest then-ordinal up
+//      finds every slot below each one already filled by the line the
+//      checkpoint had there. The min clamps a PARTIAL revert — a subset of a
+//      run's flags — to the end of the run the live store actually has,
+//      which is as much of the checkpoint's order as that subset can name.
+// Frames are disjoint runs, so the order across frames is immaterial; a seat
+// inside a run keeps the store ascending by construction and nothing is
+// re-sorted. A restored marker is FRESH, the load's own shape: the
+// session-only scratch on a warp marker is at its defaults exactly as a load
+// delivers it (the at-most-one-bpm-owner invariant survives trivially — this
+// never sets the bit).
+template <typename GuiM, typename Restore>
+void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
+                                 const std::vector<HistoryDiffFlag>& flags,
+                                 const std::vector<int>&             subject,
+                                 Restore                             restore) {
+    std::vector<GuiM>& mv = proposed.markers_mut();
+    const auto run_begin = [&mv](int64_t frame) {
+        return std::lower_bound(
+            mv.begin(), mv.end(), frame,
+            [](const GuiM& m, int64_t t) { return m.time_frame < t; });
+    };
+    const auto run_end = [&mv](int64_t frame) {
+        return std::upper_bound(
+            mv.begin(), mv.end(), frame,
+            [](int64_t t, const GuiM& m) { return t < m.time_frame; });
+    };
+
+    // Pass 1: the now-side rows, every one resolved against the pre-act store
+    // before the first erase, then erased from the highest index down. Two
+    // flags cannot name one row (each added line has its own now ordinal);
+    // the unique is the defensive floor under that.
+    std::vector<std::size_t> doomed;
+    for (int idx : subject) {
+        const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
+        if (!f.added) continue;
+        const std::size_t at =
+            static_cast<std::size_t>(run_begin(f.time_frame) - mv.begin()) +
+            static_cast<std::size_t>(f.now_ordinal);
+        if (at < mv.size() && mv[at].time_frame == f.time_frame) {
+            doomed.push_back(at);
+        }
+    }
+    std::sort(doomed.begin(), doomed.end(),
+              [](std::size_t a, std::size_t b) { return a > b; });
+    doomed.erase(std::unique(doomed.begin(), doomed.end()), doomed.end());
+    for (const std::size_t at : doomed) {
+        mv.erase(mv.begin() + static_cast<std::ptrdiff_t>(at));
+    }
+
+    // Pass 2: the then lines, seated from the lowest ordinal up.
+    struct Restored {
+        int64_t frame;
+        int     ordinal;
+        GuiM    marker;
+    };
+    std::vector<Restored> restores;
+    for (int idx : subject) {
+        const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
+        if (!f.removed) continue;
+        std::optional<GuiM> nm = restore(f);
+        if (!nm) continue;
+        restores.push_back({f.time_frame, f.then_ordinal, std::move(*nm)});
+    }
+    std::stable_sort(restores.begin(), restores.end(),
+                     [](const Restored& a, const Restored& b) {
+                         return (a.frame != b.frame) ? a.frame < b.frame
+                                                     : a.ordinal < b.ordinal;
+                     });
+    for (Restored& r : restores) {
+        const auto           begin = run_begin(r.frame);
+        const std::ptrdiff_t len   = run_end(r.frame) - begin;
+        const std::ptrdiff_t seat =
+            std::min<std::ptrdiff_t>(static_cast<std::ptrdiff_t>(r.ordinal), len);
+        mv.insert(begin + seat, std::move(r.marker));
+    }
+}
+
+}  // namespace
+
 // -- THE REVERT ACT --------------------------------------------------------
 //
 // BARE `v`, THE HISTORY VIEW'S THIRD MUTATOR (architect 2026-08-05 on Ctrl+H,
@@ -3370,33 +3477,39 @@ void GuiInputHandler::on_history_checkpoint_complete(
 // normalizations) all load and render. The check and the distinction are stated
 // once, at the check itself below.
 //
-// THE PER-CLASS INVERSE, read off the flag's own two bits:
+// THE PER-CLASS INVERSE, read off the flag's own two bits, EACH HALF NAMING
+// ITS OWN ROW (2026-09-16, Sol round 16's P1 — the identity is (frame,
+// ordinal within the frame's run), HistoryDiffFlag::then_ordinal /
+// now_ordinal, render.h; the contract at GuiHistoryWarpEntry::ordinal,
+// history_diff.h):
 //   * ADDED ONLY (`[+]`, the newer side has this line and the older did not) →
-//     DELETE the live marker at that exact frame. None there is NOTHING
+//     DELETE the live row at (frame, now_ordinal). None there is NOTHING
 //     HAPPENING for that flag — never a refusal, never a diagnostic.
 //   * REMOVED ONLY (`[-]`, the older side had it and the newer dropped it) →
-//     PUT THE THEN SIDE BACK at its frame, replacing a live occupant there or
-//     inserting fresh when there is none.
-//   * CHANGED (the double flag) → SET the live marker at that frame to the THEN
-//     side. Which is the SAME primitive as the removed arm — insert-or-replace —
-//     so the two share one body and the distinction never reaches the code.
+//     PUT THE THEN SIDE BACK at (frame, then_ordinal) within the live run.
+//   * CHANGED (the double flag) → BOTH: delete the now row, put the then line
+//     back at its own ordinal. It is not an in-place write, because the two
+//     halves may sit at different ordinals of one run, and only the two
+//     inverses composed put the then line where the checkpoint had it.
 //
-// ONE FLAG IS ONE LINE, AND COINCIDENT LINES ARE LEGAL, so BOTH arms walk
-// coincidence rather than always answering with the first marker at the frame: a
-// subject carrying two flags at one frame must reach two DIFFERENT markers, or
-// two restores collapse into one (the second replacing what the first inserted)
-// and a delete eats a marker this very act put back. The rule is one sentence
-// for both arms — every arm consumes the NEXT PRE-ACT OCCUPANT at its frame, and
-// a marker this act inserted is never anyone's target — carried by one per-frame
-// skip counter (`skip` below, whose declaration owns the arithmetic).
+// ONE FLAG IS ONE LINE, AND COINCIDENT LINES ARE LEGAL, which is what the
+// ordinal is for: the frame alone reached a run's FIRST pre-act row whichever
+// row the flag showed, so a `4 → 3` flag on the second of two coincident rows
+// replaced the first (`100|1, 100|4` against `100|1, 100|3` reverted to
+// `100|4, 100|3` — the visible gain unchanged and an untouched row rewritten)
+// and reverting a `[+]3` beside a common `1` deleted the `1`. The one apply
+// body, apply_history_revert_column above, resolves every subject against the
+// PRE-ACT store and states the order that keeps the identities valid.
 //
-// A WRITE THAT CHANGES NOTHING IS NOT A CHANGE: the replace arm compares the
-// occupant's CANONICAL LINE against the then side's and does nothing when they
-// are equal, so `changed` means "the state differed" rather than "a store call
-// happened". That case is reachable — the ITERATIVE reading's delta is between
-// two commits and blind to the live store, so a flag can name a change the live
-// state already carries — and it is exactly the case that must not push an undo
-// entry whose restore does nothing (nor re-trigger the target render).
+// A WRITE THAT CHANGES NOTHING IS NOT A CHANGE: `changed` is the proposed
+// column's canonical text against the pre-act's through the column's ONE
+// serializer — "the state differed", never "a store call happened". A subject
+// whose every flag names a change the live state already carries — reachable
+// in the ITERATIVE reading, whose delta is between two commits and blind to
+// the live store — comes out byte-identical and installs nothing, pushes no
+// undo entry whose restore would do nothing and re-triggers no render; and an
+// order-only change on a coincident run (which the magnification level column
+// hears, the last enabled row being the gain) reads as the change it is.
 //
 // THE COLUMN IS THE ACTIVE ONE BY CONSTRUCTION: the lane paints only the active
 // column's half of a delta (rebuild_history_diff_flags), so every ordinal in the
@@ -3511,7 +3624,7 @@ void GuiInputHandler::run_history_revert() {
     // OLD map still stands — the subject of the target-view re-land at the
     // tail (architect 2026-09-02, the four-tier review's R-17d), the delete's
     // own two lines in the warp family's shape (the contract at the head of
-    // warpmarkers_ops.cpp). A WARP revert inserts, replaces and removes warp
+    // warpmarkers_ops.cpp). A WARP revert removes and re-inserts warp
     // markers wholesale, which re-warps the target domain under a resting
     // cursor; the act clears the selection below, so it keeps no focus whose
     // image could be the subject and the cursor's own instant is what has to
@@ -3521,125 +3634,52 @@ void GuiInputHandler::run_history_revert() {
         active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
 
     // THE PROPOSED STORE, BUILT WHOLE BEFORE ANYTHING IS INSTALLED (2026-09-06).
-    // The loop below writes THESE copies and the live stores are untouched until
-    // the install at the tail, which is what lets the grammar check between the
-    // two judge the finished state and refuse the act with nothing to undo. Both
-    // columns are copied and the act writes exactly one; the other copy is one
-    // vector's worth of allocation on a keypress and is discarded.
+    // The apply below writes THESE copies and the live stores are untouched
+    // until the install at the tail, which is what lets the grammar check
+    // between the two judge the finished state and refuse the act with nothing
+    // to undo — and, since 2026-09-16, what lets every flag resolve against the
+    // PRE-ACT rows (apply_history_revert_column). All three columns are copied
+    // and the act writes exactly one; the other copies are two vectors' worth
+    // of allocation on a keypress and are discarded.
     GuiWarpMarkers       proposed_warp  = app.warpmarkers;
     GuiPhaseResetMarkers proposed_phase = app.phaseresetmarkers;
     GuiMagnificationLevelMarkers proposed_level = app.magnificationlevelmarkers;
 
-    bool changed = false;
-
-    // THE ACT'S COINCIDENCE MEMORY, one counter per frame: how many markers at
-    // that frame the act must SKIP to reach the next PRE-ACT occupant. The store
-    // keeps a frame's markers contiguous and ascending, so the group is a run and
-    // the skip is an offset into it. Each arm's contribution follows from what it
-    // does to that run:
-    //   * INSERT lands at the group's FRONT (insert_marker's lower_bound), ahead
-    //     of every pre-act occupant → +1, so the markers this act restores are
-    //     never a later arm's target.
-    //   * REPLACE writes over the occupant it consumed, which stays where it is →
-    //     +1, so the next flag at that frame takes the NEXT occupant.
-    //   * DELETE erases its occupant and the rest of the run slides down into the
-    //     same index → +0.
-    // A no-op replace (the identical-line case) still consumes its occupant: one
-    // flag is one line, and the line is spoken for whether or not a byte moved.
-    std::unordered_map<int64_t, int> skip;
-    // The store index of the next pre-act occupant at `frame`, or -1 when the run
-    // is exhausted (which is "insert fresh" for a restore and "nothing happens"
-    // for a delete). Generic over the two marker types — the two columns' stores
-    // are one template and this walk is the same walk in both.
-    auto next_occupant = [](const auto& mv, int64_t frame, int skip_count) {
-        const int count = static_cast<int>(mv.size());
-        int i = 0;
-        while (i < count &&
-               mv[static_cast<std::size_t>(i)].time_frame < frame) {
-            ++i;
-        }
-        i += skip_count;
-        if (i < count &&
-            mv[static_cast<std::size_t>(i)].time_frame == frame) {
-            return i;
-        }
-        return -1;
-    };
-
-    for (int idx : subject) {
-        const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
-        if (phase) {
-            const auto& mv = proposed_phase.markers();
-            int&       sk  = skip[f.time_frame];
-            const int  at  = next_occupant(mv, f.time_frame, sk);
-            if (!f.removed) {
-                // Added only: delete the occupant. ONE flag takes ONE marker
-                // away, and the one it takes is the next PRE-ACT occupant at the
-                // frame — a second coincident added flag in the same subject
-                // takes the one after it, and neither can take a marker a
-                // removed flag in the same subject just restored.
-                if (at >= 0) {
-                    proposed_phase.remove_marker(at);
-                    changed = true;
-                }
-                continue;
-            }
-            GuiPhaseResetMarker nm;
-            nm.time_frame = f.time_frame;
-            nm.disabled   = f.then_disabled;
-            if (at >= 0) {
-                ++sk;
-                // IDENTICAL IS NOT A CHANGE — the canonical line the occupant
-                // would save as against the then side's, through the ONE
-                // serializer, which is the same line vocabulary the delta itself
-                // is computed in (history_diff.h). The frames are equal by
-                // construction, so for this column the compare is the disable
-                // bit and the measure; it is spelled as the line anyway,
-                // symmetrically with the warp arm below, whose payload has no
-                // such shortcut.
-                const auto& live = mv[static_cast<std::size_t>(at)];
-                if (format_phaseresetmarkers_text({live}) ==
-                    format_phaseresetmarkers_text({nm})) {
-                    continue;
-                }
-                GuiPhaseResetMarker* m = proposed_phase.marker_mut(at);
-                if (m) *m = nm;
-            } else {
-                proposed_phase.insert_marker(nm);
-                ++sk;
-            }
-            changed = true;
-            continue;
-        }
-
-        if (level) {
-            // THE MAGNIFICATION LEVEL ARM, the phase arm's shape over the third
-            // store: its line is the frame, the disable bit and the LEVEL
-            // DIGIT, and the digit travels on the flag as `then_token` (the
-            // payload past the '|', history_diff.h), so this column needs no
-            // trip through a line parser either — the token IS the level, and
-            // the grammar's own reader judges it.
-            const auto& mv = proposed_level.markers();
-            int&       sk  = skip[f.time_frame];
-            const int  at  = next_occupant(mv, f.time_frame, sk);
-            if (!f.removed) {
-                if (at >= 0) {
-                    proposed_level.remove_marker(at);
-                    changed = true;
-                }
-                continue;
-            }
-            GuiMagnificationLevelMarker nm;
-            nm.time_frame = f.time_frame;
-            nm.disabled   = f.then_disabled;
-            {
+    // THE APPLY, one body for the three columns (apply_history_revert_column
+    // above owns the identity and the order); each arm supplies only how its
+    // then line becomes a marker.
+    if (phase) {
+        // The phase reset column needs no trip through a parser: frame and
+        // the disable bit ARE its line, and both travel typed on the flag.
+        apply_history_revert_column(
+            proposed_phase, flags, subject,
+            [](const HistoryDiffFlag& f) -> std::optional<GuiPhaseResetMarker> {
+                GuiPhaseResetMarker nm;
+                nm.time_frame = f.time_frame;
+                nm.disabled   = f.then_disabled;
+                return nm;
+            });
+    } else if (level) {
+        // THE MAGNIFICATION LEVEL ARM, the phase arm's shape over the third
+        // store: its line is the frame, the disable bit and the LEVEL DIGIT,
+        // and the digit travels on the flag as `then_token` (the payload past
+        // the '|', history_diff.h), so this column needs no line parser
+        // either — the token IS the level, and the grammar's own reader
+        // judges it.
+        apply_history_revert_column(
+            proposed_level, flags, subject,
+            [](const HistoryDiffFlag& f)
+                -> std::optional<GuiMagnificationLevelMarker> {
+                GuiMagnificationLevelMarker nm;
+                nm.time_frame = f.time_frame;
+                nm.disabled   = f.then_disabled;
                 // THE LEVEL, through the grammar's ONE reader
-                // (parse_marker_magnification, marker_magnification.h). A token
-                // it refuses is UNREACHABLE BY CONSTRUCTION — every walk member
-                // is strict-load clean, so the digit was sliced out of a line
-                // this very grammar accepted — and is stated loudly rather than
-                // recovered from, the warp arm's own rule: one stderr line,
-                // then on to the next flag.
+                // (parse_marker_magnification, marker_magnification.h). A
+                // token it refuses is UNREACHABLE BY CONSTRUCTION — every walk
+                // member is strict-load clean, so the digit was sliced out of
+                // a line this very grammar accepted — and is stated loudly
+                // rather than recovered from, the warp arm's own rule: one
+                // stderr line, then on to the next flag.
                 uint8_t     parsed = 0;
                 std::string level_err;
                 if (!parse_marker_magnification(f.then_token, parsed,
@@ -3647,94 +3687,67 @@ void GuiInputHandler::run_history_revert() {
                     std::fprintf(stderr,
                         "warptempo_gui: Revert skipped a magnification level "
                         "the grammar refused: '%s'\n", f.then_token.c_str());
-                    continue;
+                    return std::nullopt;
                 }
                 nm.level = parsed;
-            }
-            if (at >= 0) {
-                ++sk;
-                // IDENTICAL IS NOT A CHANGE — the occupant's canonical line
-                // against the then side's, through the ONE serializer, which is
-                // the line vocabulary the delta itself is computed in.
-                const auto& live = mv[static_cast<std::size_t>(at)];
-                if (format_magnificationlevelmarkers_text({live}) ==
-                    format_magnificationlevelmarkers_text({nm})) {
-                    continue;
+                return nm;
+            });
+    } else {
+        apply_history_revert_column(
+            proposed_warp, flags, subject,
+            [](const HistoryDiffFlag& f) -> std::optional<GuiWarpMarker> {
+                // The sidecar line this flag's then side came off, rebuilt:
+                // the disable prefix, the canonical frame spelling
+                // (format_authored_frame, the one serializer), the '|' and the
+                // verbatim payload token. The token is rest-of-line, so a
+                // ` //<measure>` comment is already inside it and the rebuilt
+                // line is the sidecar's line byte for byte — which is why the
+                // parse accepts comments here; refusing them would fire the
+                // "unreachable" arm below on every commented marker.
+                std::string line;
+                if (f.then_disabled) line += '#';
+                line += format_authored_frame(f.time_frame);
+                line += '|';
+                line += f.then_token;
+                auto parsed = warpmarkers_internal::parse_single_canonical_line(
+                    line, /*accept_comment=*/true);
+                if (!parsed) {
+                    // UNREACHABLE BY CONSTRUCTION and stated loudly rather
+                    // than recovered from: every walk member is strict-load
+                    // clean, so the token was sliced out of a line this very
+                    // parser accepted and the frame re-spells canonically.
+                    // One line, then on to the next flag — there is nothing
+                    // to repair and nothing partial to undo.
+                    std::fprintf(stderr,
+                        "warptempo_gui: Revert skipped a warp line the parser "
+                        "refused: '%s'\n", line.c_str());
+                    return std::nullopt;
                 }
-                GuiMagnificationLevelMarker* m = proposed_level.marker_mut(at);
-                if (m) *m = nm;
-            } else {
-                proposed_level.insert_marker(nm);
-                ++sk;
-            }
-            changed = true;
-            continue;
-        }
-
-        const auto& mv = proposed_warp.markers();
-        int&       sk  = skip[f.time_frame];
-        const int  at  = next_occupant(mv, f.time_frame, sk);
-        if (!f.removed) {
-            if (at >= 0) {
-                proposed_warp.remove_marker(at);
-                changed = true;
-            }
-            continue;
-        }
-        // The sidecar line this flag's then side came off, rebuilt: the disable
-        // prefix, the canonical frame spelling (format_authored_frame, the one
-        // serializer), the '|' and the verbatim payload token. The token is
-        // rest-of-line, so a ` //<measure>` comment is already
-        // inside it and the rebuilt line is the sidecar's line byte for byte —
-        // which is why the parse accepts comments here; refusing them would
-        // fire the "unreachable" arm below on every commented marker.
-        std::string line;
-        if (f.then_disabled) line += '#';
-        line += format_authored_frame(f.time_frame);
-        line += '|';
-        line += f.then_token;
-        auto parsed = warpmarkers_internal::parse_single_canonical_line(
-            line, /*accept_comment=*/true);
-        if (!parsed) {
-            // UNREACHABLE BY CONSTRUCTION and stated loudly rather than
-            // recovered from: every walk member is strict-load clean, so the
-            // token was sliced out of a line this very parser accepted and the
-            // frame re-spells canonically. One line, then on to the next flag —
-            // there is nothing to repair and nothing partial to undo.
-            std::fprintf(stderr,
-                "warptempo_gui: Revert skipped a warp line the parser refused: "
-                "'%s'\n", line.c_str());
-            continue;
-        }
-        // A FRESH GuiWarpMarker, not a patch of the occupant: the then side is a
-        // different marker, so it arrives with the session-only iteration and
-        // bpm scratch at its defaults exactly as a load would deliver it. (The
-        // at-most-one-bpm-owner invariant survives trivially — this never sets
-        // the bit.)
-        GuiWarpMarker nm;
-        static_cast<WarpMarker&>(nm) = *parsed;
-        if (at >= 0) {
-            ++sk;
-            // IDENTICAL IS NOT A CHANGE, the phase arm's rule in the column that
-            // needs it: the occupant's canonical line against the then side's,
-            // both through format_warpmarkers_text, so the compare reads exactly
-            // the eight serialized fields — the measure included, which is
-            // content — and IGNORES the session-only
-            // iter/bpm scratch — which is also why a no-op replace leaves that scratch
-            // standing instead of resetting it to a fresh marker's defaults.
-            const auto& live = mv[static_cast<std::size_t>(at)];
-            if (format_warpmarkers_text({live}) ==
-                format_warpmarkers_text({nm})) {
-                continue;
-            }
-            GuiWarpMarker* m = proposed_warp.marker_mut(at);
-            if (m) *m = nm;
-        } else {
-            proposed_warp.insert_marker(std::move(nm));
-            ++sk;
-        }
-        changed = true;
+                // A FRESH GuiWarpMarker, not a patch of any occupant: the
+                // then side is a different marker, so it arrives with the
+                // session-only iteration and bpm scratch at its defaults
+                // exactly as a load would deliver it.
+                GuiWarpMarker nm;
+                static_cast<WarpMarker&>(nm) = *parsed;
+                return nm;
+            });
     }
+
+    // `changed` IS "THE STATE DIFFERED": the proposed column's canonical text
+    // against the pre-act's through the column's ONE serializer — the line
+    // vocabulary the delta itself is computed in (history_diff.h) — which
+    // reads exactly the serialized fields, order included, and ignores the
+    // session-only scratch. A subject that found the live state already
+    // carrying its then side comes out byte-identical, and the four effects
+    // below stay off.
+    const bool changed =
+        phase ? format_phaseresetmarkers_text(proposed_phase.markers()) !=
+                    format_phaseresetmarkers_text(phase_pre)
+        : level ? format_magnificationlevelmarkers_text(
+                      proposed_level.markers()) !=
+                      format_magnificationlevelmarkers_text(level_pre)
+                : format_warpmarkers_text(proposed_warp.markers()) !=
+                      format_warpmarkers_text(warp_pre);
 
     // THE GRAMMAR'S OWN UNIQUENESS RULE, ASKED ONCE ON THE PROPOSED STORE AND
     // REFUSING THE WHOLE ACT (architect 2026-09-06, on Astra's P1). A label
@@ -3804,10 +3817,10 @@ void GuiInputHandler::run_history_revert() {
     // not wait — its own comment says why.)
     if (changed) {
         // THE INSTALL, the act's one live write: the proposed column moves into
-        // the store whole. THE ORDER IS ASCENDING BY CONSTRUCTION — the insert
-        // arm placed by lower_bound, the replace arm wrote a marker at the
-        // occupant's own frame and the delete arm removed one — so the store's
-        // resting invariant needs no reorder pass here. markers_mut() is what
+        // the store whole. THE ORDER IS ASCENDING BY CONSTRUCTION — the apply
+        // body erased rows and seated restores INSIDE their frame's run
+        // (apply_history_revert_column) — so the store's resting invariant
+        // needs no reorder pass here. markers_mut() is what
         // bumps the generation, which is what the map memo and the flag cache
         // read.
         // THE PICTURE'S BEFORE-HASH, captured ahead of the install for the
