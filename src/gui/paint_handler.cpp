@@ -4735,7 +4735,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- THE RULER LANE (top lane 5, row 5 of the redesign) ---------------------
+// -- THE RULER LANE (top lane 4, row 5 of the redesign) ---------------------
 //
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes KDENLIVE'S LOOK and
 // REAPER'S GEOMETRY MODEL (architect 2026-08-01).

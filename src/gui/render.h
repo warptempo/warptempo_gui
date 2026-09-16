@@ -2983,7 +2983,7 @@ inline int trim_endcap_grab_px() {
 // pixel-bound integer fills, no stroke and no antialiasing anywhere in this
 // lane — so a surface is named by its four constants and nothing else.
 // The lane band is the `trim_bar` PARAMETER — the caller passes
-// top_trim_row_area(app) (top-strip lane 4), the same accessor
+// top_trim_row_area(app) (top-strip lane 3), the same accessor
 // hit_test_trim_endcap's y-gate and route_trim_bar_press' bridge y-gate read, so
 // paint and hit take the band from ONE owner and cannot drift; nothing in here
 // re-derives the lane's y from the row heights above it. `trim_bar` gives the

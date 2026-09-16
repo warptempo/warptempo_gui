@@ -755,7 +755,7 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 5): the timestamp ladder and its ticks. Reads the
+    // THE RULER LANE (top lane 4): the timestamp ladder and its ticks. Reads the
     // DISPLAYED plate basis, so it re-derives on every pan/zoom along with the
     // strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);

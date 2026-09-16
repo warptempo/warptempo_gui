@@ -6057,9 +6057,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // a plain waveform press over a stem column falls through to the
             // waveform block below and is the placement press there).
             //
-            // The TRIM BAR (top_trim_row_area, lane 4) is trim's lane and is
+            // The TRIM BAR (top_trim_row_area, lane 3) is trim's lane and is
             // claimed BEFORE the marker single-select. Row 5's three lanes —
-            // the trim bar, the ruler (lane 5) and the marker lane (lane 6) —
+            // the trim bar, the ruler (lane 4) and the marker lane (lane 5) —
             // are disjoint y-bands, so
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN click consumes the span-framing
