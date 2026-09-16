@@ -322,7 +322,7 @@ void GuiRenderPlayer::open_row(int index) {
 // shows, and a push per keystroke over a binder is not free. The two wrappers
 // are the whole pointer-and-keyboard road here: the router's Up / Down, the
 // row lift's first half (folder_overlay_highlight_row's player arm) and THE
-// CAR'S OWN Previous / Next WHILE IDLE, which compose this body rather than
+// CAR'S OWN Previous / Next AT REST, which compose this body rather than
 // walking a listing of their own and so reach the head unit's title through
 // this very push. The third writer is
 // rebuild_rows, which pushes in its own body, while play_wav's seat writes
@@ -331,6 +331,7 @@ void GuiRenderPlayer::move_highlight(int delta) {
     if (folder_overlay::move_highlight(app, delta)) {
         damage_band();
         damage_row();
+        abandon_paused_resume_if_band_left_item();
         if (app.render_player.transport != Transport::Live)
             publish_media_state();
     }
@@ -340,9 +341,26 @@ void GuiRenderPlayer::set_highlight(int index) {
     if (folder_overlay::set_highlight(app, index)) {
         damage_band();
         damage_row();
+        abandon_paused_resume_if_band_left_item();
         if (app.render_player.transport != Transport::Live)
             publish_media_state();
     }
+}
+
+// THE ABANDON: the contract is at the declaration. Silent unless a paused
+// item is actually resting there, and a highlight ON NO ROW counts as left
+// exactly as a highlight on a FOLDER row does — neither can be the item's own
+// Wav row.
+void GuiRenderPlayer::abandon_paused_resume_if_band_left_item() {
+    AppState::RenderPlayer& rp = app.render_player;
+    if (rp.transport != Transport::Paused || rp.resume_frame == 0) return;
+    const AppState::FolderOverlay& ov = app.folder_overlay;
+    if (ov.highlight_row >= 0 &&
+        ov.highlight_row < static_cast<int>(ov.rows.size()) &&
+        ov.rows[static_cast<size_t>(ov.highlight_row)].path == rp.item)
+        return;
+    rp.resume_frame = 0;
+    damage_row();
 }
 
 void GuiRenderPlayer::scroll_rows(int rows) {
@@ -997,18 +1015,15 @@ bool render_player_home_takes_previous(const AppState& a,
 // (architect 2026-09-12, from the car, restoring the act after the day on
 // which it walked the band and went up: "the car is a separate interface" —
 // going up is the Up button, Backspace and the car's own Previous).
-// Returns false only when the previous-track arm's load refused (play_wav has
-// carded it and left the item and transport as they were); the seek arm's own
-// refusals are not reported, an idle rest already being at frame 0.
-bool GuiRenderPlayer::home() {
+void GuiRenderPlayer::home() {
     if (render_player_home_takes_previous(app, playback, audio)) {
         const AppState::RenderPlayer& rp = app.render_player;
         const std::vector<Row> folder = rp.item_folder;
         const int i = rp.item_index - 1;
-        return play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+        play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+        return;
     }
     seek_to(0);
-    return true;
 }
 
 // THE RIGHT SKIP'S ACT — bare End and the NextTrack button's plain press
@@ -1055,37 +1070,21 @@ void GuiRenderPlayer::car_toggle() {
     play_button_act();
 }
 
-// THE WHEEL'S REWIND, THREE TRANSPORT CLASSES (architect 2026-09-15, narrowing
-// the 2026-09-12 "at rest walks the band" ruling: a PAUSED transport is not
-// AT REST for this button, it is a LIVE one waiting to resume). IDLE alone
-// walks the band: a row above steps to it, and the FIRST row leaves the
-// folder instead — the one direction of travel that does, because a listener
-// knows which file starts a folder and never how many it holds, so this exit
-// is always deliberate.
-//
-// LIVE AND PAUSED SHARE ONE BODY, the live arm's own file step with the
-// up-a-folder exit ahead of it: inside the previous-track window at the
-// folder's FIRST FILE one more press back is out of the folder (`up()`,
-// unloading the item — nothing to play, so the body returns there); elsewhere
-// it is home() — the previous-track window's file, or the item's own start.
-// A PAUSED transport THEN PLAYS: home()'s seek arm leaves a paused transport
-// paused at its new point (seek_to's own rule), so the transport is asked
-// again and, where it is still not LIVE, transport_toggle_act resumes it from
-// that point; the previous-file arm already played through play_wav, so this
-// second check is a no-op on that road and the only one it starts is the
-// seek's. A REFUSED PREVIOUS-FILE LOAD ENDS THE PRESS (home()'s own false):
-// the failure has carded one file, and starting the item it left behind would
-// make the same press play another.
+// THE WHEEL'S REWIND. AT REST THE BAND IS THE PLAYLIST: a row above steps to
+// it, and the FIRST row leaves the folder instead — the one direction of
+// travel that does, because a listener knows which file starts a folder and
+// never how many it holds, so this exit is always deliberate. WHILE LIVE it is
+// the left skip's act with that same exit ahead of it: inside the
+// previous-track window at the folder's FIRST FILE one more press back is out
+// of the folder, exactly as it is at the band's first row.
 //
 // THE UP WALL IS ASKED because the alternative is the restart: at the ROOT
 // there is nothing above, so up() would return in silence and the press would
 // do nothing at all, and a press inside the window there is the restart it has
-// always been. render_player_home_takes_previous and
-// render_player_inside_previous_window are POSITION-based
-// (render_player_position, which reads resume_frame off LIVE) and answer
-// truthfully on a paused transport exactly as they do on a live one.
+// always been. Where the exit does not apply the body IS home(), so the file
+// step and the reseek have one owner and cannot drift from the tablet's.
 void GuiRenderPlayer::car_previous() {
-    if (app.render_player.transport == Transport::Idle) {
+    if (app.render_player.transport != Transport::Live) {
         if (folder_overlay::walk_origin_row(app) > 0) move_highlight(-1);
         else                                          up();
         return;
@@ -1096,25 +1095,15 @@ void GuiRenderPlayer::car_previous() {
         up();
         return;
     }
-    if (!home()) return;
-    if (app.render_player.transport != Transport::Live) {
-        transport_toggle_act();
-    }
+    home();
 }
 
-// THE WHEEL'S FAST-FORWARD, THREE TRANSPORT CLASSES (architect 2026-09-15,
-// the same narrowing as Previous's). IDLE walks the band one row down, the
-// listing's last row a silent wall (move_highlight's own clamp), never an
-// exit and never a wrap — the asymmetry with Previous is deliberate, only
-// leaving a folder is ever a known, intended act. LIVE AND PAUSED SHARE ONE
-// BODY, next_track(): it plays the next wav in any transport state
-// (render_player_next_track_actionable reads no transport term), so a paused
-// press resumes into the next track exactly as a live one advances into it;
-// at the folder's last wav it is next_track's own silent wall and a paused
-// transport STAYS PAUSED — no resume, no fallback, the wall being the whole
-// answer.
+// THE WHEEL'S FAST-FORWARD — Rewind's mirror image with ONE difference, and it
+// is the ruling's own: this act NEVER LEAVES A FOLDER. At rest, one row down
+// and no further, the listing's last row a silent wall (move_highlight's own
+// clamp), never an exit and never a wrap; while live it is the next track.
 void GuiRenderPlayer::car_next() {
-    if (app.render_player.transport == Transport::Idle) {
+    if (app.render_player.transport != Transport::Live) {
         move_highlight(+1);
         return;
     }
