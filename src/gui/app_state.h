@@ -7694,6 +7694,23 @@ struct AppState {
     // gesture-owned, excluded from undo/redo history, and render-affecting but
     // deliberately treated as transient view state.
     //
+    // WHY A DISPLAY-ONLY COLUMN IS IN THIS QUESTION AT ALL (architect
+    // 2026-09-16, the flag's own reason rather than the walk's): a magnification
+    // level reaches no render input — no sample, no engine field, no fingerprint
+    // term (magnificationlevelmarkers_ops.h's header) — so it sits on the same
+    // side of the render as the zoom and the camera, which are NOT dirty and
+    // never have been. What separates it is that it is AUTHORED and DELIBERATE:
+    // its markers are dropped, moved, stepped and edited one act at a time, each
+    // act pushing an undo entry, and they are SERIALIZED into a sidecar of their
+    // own — so losing them to an unprompted quit is losing work, which is
+    // exactly what the dirty mark exists to prevent. The viewport keys are the
+    // opposite kind of thing: incidental state a gesture leaves behind, silently
+    // persisted on Ctrl+S and dropped without complaint on a quit (the GUI-kind
+    // paragraph above). THE TEST IS NOT "DOES IT CHANGE THE RENDER", IT IS "WAS
+    // IT AUTHORED" — and the trim is the deliberate exception in the other
+    // direction, render-affecting and gesture-owned and still transient, which
+    // the paragraph above records.
+    //
     // THE MAGNIFICATION LEVEL MARKERS TOOK A FLAG OF THEIR OWN ON 2026-09-15,
     // WITH THEIR FIRST PRODUCER: the flags are the COLUMN OF THE ACT an entry
     // records (its op_mode), not a diff of what it changed, and the column had
@@ -11628,14 +11645,13 @@ inline bool measure_step_direction_actionable(const AppState& a,
 // value_drag_posture answers NO on this column (the plain flag drag is the
 // HORIZONTAL move here, and multi-axis dragging is refused product-wide).
 //
-// ITS SHAPE: the magnification level column alone, SINGLETON AND GROUP (each
-// member steps by the same delta and each clamps on its own — the cluster's
-// header argues why group rigidity has nothing to protect on a picture
-// setting), both locks refusing (the digit is serialized content and the step
-// pushes an undo entry — authoring_locked), a silent wall asked ahead of the
-// coalesce stamp, and nothing past the write but the undo entry, the dirty bit,
-// the damage and the picture's own gain kick: no re-warp, no render, no
-// re-land, the playhead unmoved.
+// ITS SHAPE: the magnification level column alone, SINGLETON AND GROUP with the
+// TEMPO STEP'S TWO ARMS (architect 2026-09-16) — the singleton's clamp silent,
+// the group ALL-OR-NOTHING and carded — both locks refusing (the digit is
+// serialized content and the step pushes an undo entry — authoring_locked), the
+// wall asked ahead of the coalesce stamp, and nothing past the write but the
+// undo entry, the dirty bit, the damage and the picture's own gain kick: no
+// re-warp, no render, no re-land, the playhead unmoved.
 
 // THE STABLE-STATE REFUSALS: the M column, a standing selection and a valid
 // focus — the tempo step's own three terms in this column's, read by the act
@@ -11656,19 +11672,71 @@ inline int64_t magnification_level_step_landing(int64_t start, int64_t delta) {
     return std::clamp<int64_t>(start + delta, 0, kMarkerMagnificationMax);
 }
 
+// THE GROUP STEP'S WALL SCAN on this column, its own const owner (architect
+// 2026-09-16): true when EVERY selected marker could take a step of `delta` —
+// none landing outside the level bracket under the WHOLE step — and false when
+// one could not. IT IS THE TEMPO GROUP'S ALL (tempo_cent_step_group_actionable),
+// not the per-member clamp this axis shipped with on 2026-09-15: a group press
+// is ONE act on the selection, so it moves the selection it was aimed at or it
+// moves nothing, and a press that quietly left some members standing would pool
+// them against the rest — exactly what GROUP RIGIDITY refuses. The levels of a
+// selection are read against each other as its tempos are: a section two steps
+// brighter than its neighbour stays two steps brighter across the press.
+// A DISABLED MEMBER IS A MEMBER, this column's rule at every act: the disable
+// bit says what the PICTURE reads, not what the arrows may author, so a disabled
+// marker counts toward the wall and steps with the rest. NO KIND TERM EXISTS
+// HERE — every magnification level marker carries a level of its own, with no
+// pass, no label ref and no offset form to refuse on — so the bracket is the
+// whole of what a member can wall on, and this scan is the whole verdict.
+// THE MAGNITUDE MATTERS, as it does on the tempo scan: the arm adds RAW, so the
+// ten-step chord walls a selection the bare press would move. THE TWIN RULE IS
+// ANSWERED BY MONOTONICITY — a longer step in the same direction walls a
+// SUPERSET — so the bare step the face hands this is the widest admitted answer
+// and the pair greys exactly when no admitted variant would act. A stale index
+// is skipped as a belt; an empty live set answers true (the empty selection is
+// the stable-state refusal's, magnification_level_step_actionable).
+inline bool magnification_level_step_group_actionable(const AppState& a,
+                                                      int64_t delta) {
+    const std::vector<GuiMagnificationLevelMarker>& mv =
+        a.magnificationlevelmarkers.markers();
+    const int n = static_cast<int>(mv.size());
+    for (const int idx : a.selected_markers) {
+        if (idx < 0 || idx >= n) continue;   // belt
+        const int64_t start =
+            static_cast<int64_t>(mv[static_cast<std::size_t>(idx)].level);
+        if (magnification_level_step_landing(start, delta) != start + delta)
+            return false;
+    }
+    return true;
+}
+
 // WOULD A LEVEL STEP THIS WAY CHANGE ANYTHING — the DIRECTIONAL half of the
-// Up / Down face on this column, asked past the predicate above. THE GROUP ARM
-// IS AN ANY, NOT AN ALL, and that follows from the act rather than being
-// chosen: each member clamps on its own, so the press acts iff ANY member would
-// move, and the pair greys only when EVERY selected marker rests on the wall
-// the press aims at. A singleton is that same question over one member.
-// MAGNITUDE-INVARIANT for the tempo step's reason: a positive delta's clamped
-// landing equals the start iff the start IS the max, whatever the delta, so the
-// bare ±1 the face hands this speaks for all three rungs of the ladder (the
-// twin rule, resolved by proof rather than by a second call). A stale index is
-// skipped as a belt; an empty live set answers false.
+// Up / Down face on this column, asked past the stable-state predicate above,
+// and it FORKS EXACTLY WHERE THE ACT FORKS, the tempo pair's shape (architect
+// 2026-09-16, retiring the ANY this face answered on 2026-09-15):
+//   * a 2+ selection takes the GROUP scan above — the SAME whole-press refusal
+//     the act runs, and the DELIBERATE PAIRING is the tempo group's: the pair
+//     greys AND the key cards ("One of the selected markers cannot take this
+//     magnification level change"), a group edit not being the one-dimensional
+//     already-at-its-state refusal that goes silent, its effect having been
+//     every selected flag's digit;
+//   * a singleton compares magnification_level_step_landing against the level
+//     the marker already holds — Up greys at kMarkerMagnificationMax, Down at 0
+//     — and that refusal is SILENT at the key, the tempo singleton's own clamp,
+//     so there the grey is the whole cue.
+// THE SINGLETON ARM READS THE SELECTED MEMBER, not the focus, because the act's
+// loop does: the two cannot answer about different markers that way. It is the
+// old ANY over a set of one, and a stale index is skipped as a belt, so an empty
+// live set answers false.
+// MAGNITUDE-INVARIANT AT THE SINGLETON for the tempo step's reason: a positive
+// delta's clamped landing equals the start iff the start IS the max, whatever
+// the delta, so the bare ±1 the face hands this speaks for all three rungs of
+// the ladder; the group arm answers the same question by monotonicity instead
+// (at its own scan).
 inline bool magnification_level_step_direction_actionable(const AppState& a,
                                                           int64_t delta) {
+    if (a.selected_markers.size() >= 2)
+        return magnification_level_step_group_actionable(a, delta);
     const std::vector<GuiMagnificationLevelMarker>& mv =
         a.magnificationlevelmarkers.markers();
     const int n = static_cast<int>(mv.size());

@@ -101,21 +101,22 @@ struct GuiMagnificationLevelMarkersOps {
     // M flag) stepping the LEVEL DIGIT by `delta` through the same arrow
     // ladder, clamped into [0, kMarkerMagnificationMax] silently.
     //
-    // SINGLETON AND GROUP, and the group arm is NOT the tempo step's
-    // all-or-nothing scan (architect 2026-09-15): every selected marker steps
-    // by the same delta and EACH CLAMPS ON ITS OWN, so a selection holding a
-    // marker at 4 and one at 2 takes an Up press with the first standing still
-    // and the second moving. A level is a per-section picture setting rather
-    // than a value whose group relationships must survive the press, so GROUP
-    // RIGIDITY — the tempo group's reason for refusing whole — has nothing to
-    // protect here. A DISABLED MARKER STEPS, as it does under the tempo step
-    // and the value drag.
+    // SINGLETON AND GROUP, AND THE GROUP ARM IS THE TEMPO STEP'S
+    // ALL-OR-NOTHING SCAN (architect 2026-09-16, retiring the per-member clamp
+    // this body shipped with on 2026-09-15): a selection holding a marker at
+    // the bracket's end refuses the WHOLE press toward that end, before any
+    // level changes, and says so on a card — one press is one act on the
+    // selection, and stepping some members while others stand would pool them
+    // against each other, which is exactly what GROUP RIGIDITY refuses. A
+    // singleton keeps the silent clamp, the tempo singleton's own. A DISABLED
+    // MARKER STEPS, as it does under the tempo step and the value drag.
     //
     // ONE UNDO ENTRY PER BURST under GestureKind::MagnificationLevelStep, the
-    // hybrid's rules; the WALL is silent and asked ahead of the coalesce stamp
-    // through the pair's own directional face
-    // (magnification_level_step_direction_actionable, app_state.h), and the
-    // press SPENDS THE SELECTION on every accepted branch (selection_consumed).
+    // hybrid's rules; BOTH WALLS ARE ASKED AHEAD OF THE COALESCE STAMP through
+    // the pair's own owners (magnification_level_step_group_actionable and the
+    // directional face that reads it, app_state.h), and the press SPENDS THE
+    // SELECTION on every accepted branch (selection_consumed) — a refusing exit
+    // spends nothing.
     // Both locks refuse — the level is serialized content and the step pushes.
     // No re-warp, no re-land, no render and no playback stop (the value step's
     // class, the keyboard stop rule at stop_playback_if_playing).

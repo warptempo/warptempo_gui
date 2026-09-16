@@ -272,27 +272,45 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
 // The contract is at the declaration. It mirrors the measure step clause for
 // clause — the leading refusal block the face reads, the lock asked HERE
 // (because the plain wheel over an M flag reaches this body past no keyboard
-// gate of its own), the wall asked through the directional face AHEAD OF THE
-// COALESCE STAMP and silent, the write, one undo entry per burst, the
-// byte-equal pop through record_gesture and the dirty re-derive — with TWO
-// differences that are this column's: the step is SINGLETON AND GROUP with a
-// per-member clamp (the header argues it, and there is no collapse to the focus
-// here for that reason), and the tail owes the PICTURE a gain kick where the
-// measure step owes nothing at all.
+// gate of its own), the wall asked AHEAD OF THE COALESCE STAMP through the
+// pair's own face, the write, one undo entry per burst, the byte-equal pop
+// through record_gesture and the dirty re-derive — with TWO differences that
+// are this column's: the step is SINGLETON AND GROUP, forking exactly as the
+// TEMPO step forks (architect 2026-09-16 — the singleton's clamp silent, the
+// group all-or-nothing and carded; there is no collapse to the focus, a value
+// step never being a movement), and the tail owes the PICTURE a gain kick where
+// the measure step owes nothing at all.
 GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
         int64_t delta, bool synthesized_repeat) {
     if (!magnification_level_step_actionable(app))
         return "Select a magnification level marker to change its level";
     if (const char* refusal = magnification_level_lock_refusal(app))
         return refusal;
-    // THE WALL, silent and ahead of the stamp: Down with every selected marker
-    // at 0, Up with every one at the maximum. An accepted step that lands where
-    // it stands, so it spends the selection as the tempo step's wall does
-    // (selection_consumed, app_state.h). NO KIND REFUSAL EXISTS ON THIS COLUMN:
-    // every magnification level marker carries a level of its own — there is no
-    // pass, no label ref and no offset form to refuse on — so the wall is the
-    // whole of what the directional face answers.
-    if (!magnification_level_step_direction_actionable(app, delta)) {
+    // THE WALL, ahead of the stamp and FORKING WHERE THE TEMPO STEP FORKS
+    // (architect 2026-09-16). NO KIND REFUSAL EXISTS ON THIS COLUMN: every
+    // magnification level marker carries a level of its own — no pass, no label
+    // ref, no offset form to refuse on — so the level bracket is the whole of
+    // what either arm answers.
+    //
+    // THE GROUP ARM IS THE TEMPO GROUP'S ALL, replacing the per-member clamp of
+    // 2026-09-15: ANY member that cannot take the WHOLE step refuses the WHOLE
+    // press, before any level changes, and IT SAYS SO — a group step would have
+    // moved every selected flag's digit, so it is not the one-dimensional
+    // already-at-its-state refusal that goes silent, and the sentence names the
+    // group rather than the member for the tempo card's reason (what the press
+    // needs to know is that the group could not move as a group). The refusal
+    // SPENDS NOTHING, the branch-local rule at selection_consumed.
+    if (app.selected_markers.size() >= 2) {
+        if (!magnification_level_step_group_actionable(app, delta))
+            return "One of the selected markers cannot take this magnification "
+                   "level change";
+    } else if (!magnification_level_step_direction_actionable(app, delta)) {
+        // THE SINGLETON'S CLAMP IS SILENT, the tempo singleton's verbatim: Down
+        // with the marker at 0, Up with it at the maximum is an accepted step
+        // that lands where it stands — a benign one-dimensional refusal already
+        // at its state, the flag's own digit being the one place to glance — so
+        // it spends the selection and says nothing (selection_consumed,
+        // app_state.h).
         selection_consumed(app);
         return std::nullopt;
     }
@@ -311,13 +329,19 @@ GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
         // arrows may author.
         const int64_t landed = magnification_level_step_landing(
             static_cast<int64_t>(m.level), delta);
-        if (landed == static_cast<int64_t>(m.level)) continue;   // its own wall
+        // A BELT SINCE 2026-09-16, not a branch: the group scan passed means
+        // every member takes the WHOLE step, and the singleton arm's face
+        // refused a member resting on its wall, so nothing that reaches this
+        // loop clamps. It was the per-member wall while the group arm was an
+        // ANY.
+        if (landed == static_cast<int64_t>(m.level)) continue;
         m.level = static_cast<uint8_t>(landed);
         changed = true;
     }
-    // Unreachable past the directional face above (which answers true exactly
-    // when some member moves); kept as the family's no-change belt is, and
-    // silent (GuiOpRefusal's contract).
+    // Unreachable past the two arms above (the group scan answers true only
+    // when every member moves, the singleton face only when the one member
+    // does); kept as the family's no-change belt is, and silent (GuiOpRefusal's
+    // contract).
     if (!changed) return std::nullopt;
     // THE ACCEPTED PATH SPENDS THE SELECTION, past the belt, so nothing reaches
     // this line but a step that moved a level (selection_consumed, app_state.h,
