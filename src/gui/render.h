@@ -591,23 +591,32 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // the surface the selected tab opens into, one fact seen again rather than a
 // fourth copy of the number.
 
-// THE TRIM LANE is 9 rows of exactly THREE surfaces — ground, bar, endcap — and
-// each carries its own 2-row BOTTOM BEVEL: row 7 a lighter shade, row 8 a
-// darker one. The bevel is NOT a derivable rule (the three measured pairs fit
-// neither a constant delta nor a constant mix toward white/black), so it ships
-// as six sampled constants, one pair per surface. A FOURTH surface would have
-// no pair and would force the question then, which is the point of spelling
-// them out rather than inventing a formula from three samples.
+// THE TRIM LANE IS FLIPPED TO KDENLIVE'S OWN ORIENTATION (architect 2026-09-16,
+// undoing his original inversion of it): the lane is now 10 rows of exactly
+// THREE surfaces — ground, bar, endcap — and each carries its own 2-row TOP
+// BEVEL, row 0 a darker shade then row 1 a lighter one, followed by the 7-row
+// face and, since the same ruling, a shared 1px BOTTOM BORDER (row 9,
+// kTrimLaneBottomBorder below) under all three surfaces and the midpoint tile
+// alike — the one row none of the three surfaces owns on its own. The bevel
+// pair is NOT a derivable rule (the three measured pairs fit neither a
+// constant delta nor a constant mix toward white/black), so it ships as six
+// sampled constants, one pair per surface, unchanged by the flip — only their
+// ROW ORDER moved, from the lane's bottom to its top. A FOURTH bevelled
+// surface would have no pair and would force the question then, which is the
+// point of spelling them out rather than inventing a formula from three
+// samples.
 inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
 inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
 // THE MIDPOINT MARK NEEDS NO COLOUR OF ITS OWN (architect 2026-08-01, second
 // pass — he overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled
-// the crop implemented VERBATIM): the 9x9 crop is exactly a LANE-HEIGHT TILE
-// built from the two surfaces this block already declares — face rows 0..6 in
-// kTrimLaneEndcap #97b4c4 with a 5x5 kTrimLaneBar #2f6888 square inset at cols
-// 2..6 / rows 2..6, over the endcaps' own #9dbbcb / #94b0c0 bevel pair. On our
-// dark bar that reads as a LIGHT SQUARE RING with a dark centre, which is the
-// mark he approved in the mockup.
+// the crop implemented VERBATIM; re-flipped with the rest of the lane on
+// 2026-09-16): the 9x9 crop is exactly a LANE-HEIGHT TILE built from the two
+// surfaces this block already declares — bevel rows 0..1 on top, then face
+// rows 2..8 in kTrimLaneEndcap #97b4c4 with a 5x5 kTrimLaneBar #2f6888 square
+// inset at cols 2..6 flush under the bevel (rows 2..6), the endcaps' own
+// #9dbbcb / #94b0c0 bevel pair over its top two rows. On our dark bar that
+// reads as a LIGHT SQUARE RING with a dark centre, which is the mark he
+// approved in the mockup.
 //
 // The former kTrimMiddle constant (a lone #97b4c4 fill for a 5x5 square) is
 // DELETED with the deviation it recorded — that deviation reasoned about which
@@ -620,6 +629,13 @@ inline constexpr GuiColor kTrimBarBevelHi    = hex(0x3B7696);
 inline constexpr GuiColor kTrimBarBevelLo    = hex(0x286180);
 inline constexpr GuiColor kTrimCapBevelHi    = hex(0x9DBBCB);
 inline constexpr GuiColor kTrimCapBevelLo    = hex(0x94B0C0);
+// THE LANE'S BOTTOM BORDER (architect 2026-09-16, the new crop
+// row_5_lane_1_trim_bottomborder.png, a 1px row under the WHOLE lane width —
+// ground, bar, endcaps and the midpoint tile alike, the one row no single
+// surface owns). The value coincides with kTrimGroundBevelLo's #131516, this
+// same lane's own darker ground-bevel shade — two samples that agree, not one
+// fact referenced twice, the hard-coded rule.
+inline constexpr GuiColor kTrimLaneBottomBorder = hex(0x131516);
 
 // THE RULER LANE's two inks. The label size is the redesign's ordinary 12pt:
 // the composite's label band measures 12 ink rows and ~84px for its label, which
@@ -1820,13 +1836,17 @@ inline int scrub_handle_box_px() {
 }
 
 // ROW 5's THREE LANES, measured off row_5_full.png (the composite is the
-// authority): trim y0..8, ruler y9..36, marker y37..56, and the waveform starts
-// at 57 — so the marker lane's bottom edge IS the waveform top, with no gap.
-// These replace the four legacy lanes (trim chip / marker text / flag /
-// triangle) and, like every redesigned row, ride gui_scale_factor() rather than
-// the monospace font's axis. (The trim lane ADDITIONALLY scales by its own
-// factor below, so the crop's y-map holds for the ruler and marker lanes while
-// the trim lane is taller than its measured 9 rows now.)
+// authority, PRE-DATING the 2026-09-16 flip to kdenlive's own orientation —
+// the trim lane's row count grew by the flip's added bottom border, so the
+// composite's own y-map is one lane out of date and the figures below carry
+// the correction): trim y0..9, ruler y10..37, marker y38..57, and the
+// waveform starts at 58 — so the marker lane's bottom edge IS the waveform
+// top, with no gap. These replace the four legacy lanes (trim chip / marker
+// text / flag / triangle) and, like every redesigned row, ride
+// gui_scale_factor() rather than the monospace font's axis. (The trim lane
+// ADDITIONALLY scales by its own factor below, so the crop's y-map holds for
+// the ruler and marker lanes while the trim lane is taller than its measured
+// 10 rows now.)
 //
 // THE TRIM BAR'S OWN SCALE FACTOR — a RULED RETUNABLE, back at 100 (architect
 // 2026-08-12, the seventh glass ruling). The 150 experiment lived one commit,
@@ -1836,10 +1856,10 @@ inline int scrub_handle_box_px() {
 // big". The bar needs no big finger target any more: the common act is
 // HIGHLIGHTING to set trim, which lives on the WAVEFORM now (the SWEEP writes
 // the window in one stroke, and the trim region overlay carries the bar's own
-// bound and bridge drags on a surface hundreds of pixels tall), so the 9 px
+// bound and bridge drags on a surface hundreds of pixels tall), so the 10 px
 // bar's own gestures are the rare case. The
 // machinery stays because the factor is the lane's one retune knob: it
-// COMPOSES with gui_scale inside trim_lane_h_px (the crop-measured 9 is still
+// COMPOSES with gui_scale inside trim_lane_h_px (the crop-measured 10 is still
 // the authored value; the factor multiplies it before the one scaled_px
 // conversion), and it reaches every consumer through the LANE RECT alone —
 // top_trim_row_area's height is this accessor, and the endcap rects
@@ -1850,7 +1870,13 @@ inline int scrub_handle_box_px() {
 // (the endcap's 2px, the bevel pair, the midpoint tile's 9) keep their own
 // crop metrics regardless of the factor.
 inline constexpr int kTrimBarScalePercent = 100;
-inline constexpr int kTrimLaneHeightPx   = 9;
+// 10 SINCE THE 2026-09-16 FLIP (was 9): the crop's own 1px bottom border row
+// is counted IN the lane, not appended after it, because every hit-geometry
+// reader below (the endcap rects, the bridge's y-gate, the framing
+// double-click band) reads this ONE lane rect whole rather than the face
+// alone — so the border row is part of the lane for the pointer exactly as it
+// is for paint, and no second, shorter rect had to be invented for it.
+inline constexpr int kTrimLaneHeightPx   = 10;
 inline constexpr int kRulerLaneHeightPx  = 28;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
@@ -1890,16 +1916,18 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 170
-// (menu 30 + icon 47 + tab 36 + trim 9 + ruler 28 + marker 20)
+// produces by construction. At 100% scale, with the top lanes summing 171
+// (menu 30 + icon 47 + tab 36 + trim 10 + ruler 28 + marker 20)
 // and the bottom row 47 (the icon row's height since 2026-08-14): the
-// 1920x1080 monitor's leftover is 863, so the
-// waveform CLAMPS at the default 500 and the two gaps take 120 (top) + 243
+// 1920x1080 monitor's leftover is 862, so the
+// waveform CLAMPS at the default 500 and the two gaps take 119 (top) + 243
 // (bottom); a
-// 1024x600 SHORT WINDOW's leftover is 383, UNCLAMPED, and the centering is
+// 1024x600 SHORT WINDOW's leftover is 382, UNCLAMPED, and the centering is
 // infeasible there so both gaps floor at 0 and the waveform keeps the whole
-// 383. The full stacks and their derivation are main.cpp's vertical block,
-// the one owner; these figures are its, re-derived 2026-09-16.
+// 382. The full stacks and their derivation are main.cpp's vertical block,
+// the one owner; these figures are its, re-derived 2026-09-16 twice the same
+// day — the overview lane's deletion first, then the trim lane's flip to
+// kdenlive's own orientation adding its 1px bottom border.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
@@ -2236,27 +2264,44 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     return flag + 2.0 * cell;
 }
 
-// THE TRIM LANE's bevel band: the bottom TWO rows, a lighter then a darker
-// shade of whatever surface owns the column. Rides gui_scale like every
-// authored length; deliberately NOT kTrimBarScalePercent — the lane's interior
-// metrics keep their crop values whatever the factor reads (at the resting 100
-// the two axes coincide; the rule at the factor's own comment).
+// THE TRIM LANE's bevel band: since the 2026-09-16 flip to kdenlive's own
+// orientation, the TOP two rows — a darker shade then a lighter one — of
+// whatever surface owns the column (was the bottom two, darker last; the
+// crop's own two shades are unchanged, only their row order moved). Rides
+// gui_scale like every authored length; deliberately NOT kTrimBarScalePercent
+// — the lane's interior metrics keep their crop values whatever the factor
+// reads (at the resting 100 the two axes coincide; the rule at the factor's
+// own comment).
 inline int trim_bevel_h_px() {
     return scaled_px(2.0, 2);
+}
+// THE LANE'S BOTTOM BORDER, 1px at 100% (row_5_lane_1_trim_bottomborder.png is
+// a 1px row spanning the lane's whole width) — the new crop the 2026-09-16
+// flip added. Rides gui_scale like the bevel, NOT kTrimBarScalePercent, for
+// the same reason: it is an interior metric of the lane's own crop, not the
+// factor's business.
+inline int trim_lane_border_h_px() {
+    return scaled_px(1.0, 1);
 }
 // The endcap's own width, 2px at 100% (row_5_lane_1_trim_endcap.png is 2x9).
 inline constexpr int kTrimEndcapWidthPx = 2;
 inline int trim_endcap_w_px() {
     return scaled_px(kTrimEndcapWidthPx, 1);
 }
-// THE MIDPOINT MARK IS THE 9x9 CROP, so its lengths are the crop's own: a TILE
-// 9 columns wide at 100% (its height is the lane's, which is what 9 rows means
-// here — the lane also rides kTrimBarScalePercent, resting at 100 since the
-// seventh glass ruling, so tile and crop square coincide again), an
-// INNER square 5x5, and the crop's 2px INSET placing that square at
-// cols 2..6 / rows 2..6. Plus the CLEARANCE the visibility rule demands on each
-// side of the whole tile. All the widths ride gui_scale alone, like every
-// interior length in this lane.
+// THE MIDPOINT MARK IS THE 9x9 CROP (now 9x10 with the flip's added border
+// row, which the tile receives from the ONE shared border fill that runs the
+// whole lane's width after every surface paints — the tile's own `surface`
+// call still paints only its bevel+face rows, exactly as the endcaps' does),
+// so its lengths are the crop's own: a TILE 9 columns wide at 100% (its height
+// is the lane's, which is what 10 rows means here — the lane also rides
+// kTrimBarScalePercent, resting at 100 since the seventh glass ruling, so tile
+// and crop square coincide again), an INNER square 5x5, and the crop's 2px
+// INSET placing that square at cols 2..6, flush under the bevel (rows 2..6
+// since the flip; was rows 2..6 flush ON the bevel from the bottom — the
+// numbers read the same because the square always sits two rows in from
+// whichever edge carries the bevel). Plus the CLEARANCE the visibility rule
+// demands on each side of the whole tile. All the widths ride gui_scale
+// alone, like every interior length in this lane.
 //
 // THE INNER SQUARE HAS NO LENGTH OF ITS OWN ANY MORE (codex round 3,
 // 2026-08-10). It WAS a third constant, kTrimMiddleInnerPx = 5, read through a
@@ -2928,7 +2973,7 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 //
 // 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY IS THE
 // REASON IT CAME BACK UP: the waveform overlay's bound bands exist precisely
-// because the 9 px trim bar is unusable with a fingertip, so 5 per side
+// because the 10 px trim bar is unusable with a fingertip, so 5 per side
 // reproduced ON THE FINGER'S OWN SURFACE the very problem that surface was
 // built to solve — while 15 was more than the THIN trim lane wants. 10 is the
 // value that serves both. The walk: 4 from row 5's landing, chosen to

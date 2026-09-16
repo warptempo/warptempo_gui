@@ -71,7 +71,7 @@
 //   * the ENDCAP / BRIDGE drag, AT ITS RELEASE ONLY (commit_trim_drag): the
 //     motion arm deliberately parks nothing, a per-frame playhead chase being
 //     a cursor fighting the gesture that is moving it. SINCE 2026-08-18 THIS
-//     DRAG HAS TWO SURFACES — the 9 px bar's endcaps and bridge, and the
+//     DRAG HAS TWO SURFACES — the 10 px bar's endcaps and bridge, and the
 //     waveform overlay's bounds and interior — and they are the same drag armed
 //     from two places, so the release rule covers both with nothing added;
 //   * THE SWEEP (write_trim_from_sweep, below — the shift+drag former and the
@@ -624,7 +624,7 @@ void GuiInputHandler::handle_toggle_trim_region() {
 // authored_frame_at_column arms.
 //
 // THE COLUMN IS A WAVEFORM COLUMN whatever surface the press came from: `rel` is
-// measured off waveform_area's x and clamped to its width for the 9 px bar's
+// measured off waveform_area's x and clamped to its width for the 10 px bar's
 // endcaps and bridge exactly as for the waveform overlay's, the bar standing
 // directly over the waveform's own span. So the basis is the WAVEFORM-width
 // painter q — the grid actually drawn, the same input the click placement takes
@@ -1419,7 +1419,7 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     app.pending_trim_drag.press_y  = press_y;
     // WHICH SURFACE ARMED IT (2026-08-18): the waveform overlay's presses set
     // this so their motionless lift falls to the waveform's ordinary click act;
-    // the 9 px bar's leave it false and keep the consumed nothing. The field's
+    // the 10 px bar's leave it false and keep the consumed nothing. The field's
     // contract is at PendingTrimDrag, app_state.h.
     app.pending_trim_drag.waveform_click_act = waveform_click_act;
     // Five fields, no captures: the pre-gesture selection + region this used to

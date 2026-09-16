@@ -307,7 +307,7 @@ struct UndoEntry {
 };
 
 // THE REGION IS THE TRIM (architect 2026-08-18, uniting two loose ends into one
-// state): the trim bar is 9 px — right for a mouse, unusable with a fingertip —
+// state): the trim bar is 10 px — right for a mouse, unusable with a fingertip —
 // so trim gained a SECOND, LARGE surface on the waveform, summoned when needed
 // and dismissed after. There is no "set trim from region" any more, because
 // SETTING THE REGION IS SETTING THE TRIM. One state, two painted surfaces: the
@@ -365,7 +365,7 @@ struct UndoEntry {
 // inventory, the no-framing rule and the `h` carve-out) — its ONE caller, at
 // the write since 2026-08-21 rather than at the arm, since the overlay derives
 // from the RESTING trim and a press-time raise could only show the window the
-// stroke was replacing (the 9 px band's three press claims had left that
+// stroke was replacing (the 10 px band's three press claims had left that
 // inventory on 2026-08-20, a lane touched by a pointer being its own display of
 // the trim while the big surface exists for glass).
 // HIDDEN by that same toggle, by the FILE LOAD (which resets this struct in
@@ -7576,7 +7576,7 @@ struct AppState {
     // Mirrored to/from the active tab's ViewState slot at the tab-swap
     // boundary in active_views.cpp (same pattern as viewport/zoom/playhead).
     // Trim is a band authored purely by the ENDCAP / BRIDGE pointer drags — on
-    // the 9 px bar and, since 2026-08-18, on the waveform OVERLAY that is this
+    // the 10 px bar and, since 2026-08-18, on the waveform OVERLAY that is this
     // same window painted a second time — the ctrl / ctrl+shift bound-set
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
     // pair in one stroke under no width rule at all; it replaced the
@@ -10715,7 +10715,7 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
 // nobody (architect 2026-08-18: the region IS the trim; the model is at
 // RegionState). It answers whatever the trim bounds say THIS FRAME, so a tempo
 // change in target view, an undo that restores a map, a pan or a zoom all
-// re-derive it with nothing to invalidate, and the overlay and the 9 px bar
+// re-derive it with nothing to invalidate, and the overlay and the 10 px bar
 // cannot drift because they are the same two numbers.
 //
 // THE BOUNDS ARE SOURCE FRAMES AND THE OVERLAY IS PAINTED IN THE ACTIVE DISPLAY

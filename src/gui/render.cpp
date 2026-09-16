@@ -620,38 +620,47 @@ void render_trim_flags(cairo_t* cr,
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
-    // The lane is the crop's 9 rows times kTrimBarScalePercent (back at 100
-    // since the seventh glass ruling, 2026-08-12, so 9 at 100% scale —
-    // render.h carries the one-commit 150 experiment's record): the bevel pair
-    // keeps its crop height whatever the factor, so any extra rows land in the
-    // face band.
-    const int bevel_h  = std::min(trim_bevel_h_px(), lane_h);
-    const int face_h   = lane_h - bevel_h;  // the crop's rows 0..6, grown
-    const int hi_h     = bevel_h / 2;       // next row: the lighter shade
-    const int lo_h     = bevel_h - hi_h;    // last row: the darker one
+    // The lane is the crop's 10 rows times kTrimBarScalePercent (back at 100
+    // since the seventh glass ruling, 2026-08-12, so 10 at 100% scale — one
+    // more than the 9 the crop measured before the 2026-09-16 flip to
+    // kdenlive's own orientation added its shared bottom border row;
+    // render.h carries the one-commit 150 experiment's record): the border
+    // and the bevel pair keep their crop heights whatever the factor, so any
+    // extra rows land in the face band alone.
+    const int border_h = std::min(trim_lane_border_h_px(), lane_h);
+    const int body_h   = lane_h - border_h;  // the crop's rows 0..8: bevel + face
+    const int bevel_h  = std::min(trim_bevel_h_px(), body_h);
+    const int face_h   = body_h - bevel_h;   // the crop's rows 2..8, grown
+    const int hi_h     = bevel_h / 2;        // the row against the face: the lighter shade
+    const int lo_h     = bevel_h - hi_h;     // the lane's outer row: the darker one
 
     cairo_save(cr);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
-    // ONE PAINTER FOR A SURFACE'S WHOLE COLUMN RUN: the face rows, then the two
-    // bevel rows, all pixel-bound integer fills (crisp by construction, no
-    // stroke, no antialiasing anywhere in this lane).
+    // ONE PAINTER FOR A SURFACE'S WHOLE COLUMN RUN: the two bevel rows at the
+    // lane's TOP — darker then lighter, kdenlive's own orientation since the
+    // 2026-09-16 flip (this file painted them at the bottom, lighter then
+    // darker, before that day) — then the face rows below them, all
+    // pixel-bound integer fills (crisp by construction, no stroke, no
+    // antialiasing anywhere in this lane). The shared bottom border is NOT
+    // this lambda's: it is one fill across the whole lane, painted once after
+    // every surface below has had its turn (below).
     auto surface = [&](int x0, int w, GuiColor face, GuiColor hi, GuiColor lo) {
         if (w <= 0) return;
-        cairo_set_source_rgb(cr, face.r, face.g, face.b);
-        cairo_rectangle(cr, x0, lane_y, w, face_h);
-        cairo_fill(cr);
-        if (hi_h > 0) {
-            cairo_set_source_rgb(cr, hi.r, hi.g, hi.b);
-            cairo_rectangle(cr, x0, lane_y + face_h, w, hi_h);
-            cairo_fill(cr);
-        }
         if (lo_h > 0) {
             cairo_set_source_rgb(cr, lo.r, lo.g, lo.b);
-            cairo_rectangle(cr, x0, lane_y + face_h + hi_h, w, lo_h);
+            cairo_rectangle(cr, x0, lane_y, w, lo_h);
             cairo_fill(cr);
         }
+        if (hi_h > 0) {
+            cairo_set_source_rgb(cr, hi.r, hi.g, hi.b);
+            cairo_rectangle(cr, x0, lane_y + lo_h, w, hi_h);
+            cairo_fill(cr);
+        }
+        cairo_set_source_rgb(cr, face.r, face.g, face.b);
+        cairo_rectangle(cr, x0, lane_y + lo_h + hi_h, w, face_h);
+        cairo_fill(cr);
     };
 
     // GROUND everywhere first, then the window's BAR over it, then the endcaps
@@ -691,14 +700,18 @@ void render_trim_flags(cairo_t* cr,
 
     // THE MIDPOINT MARK IS THE CROP, BLITTED VERBATIM (architect 2026-08-01, who
     // overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled it
-    // implemented exactly). The 9x9 crop is a LANE-HEIGHT TILE, and every pixel
-    // of it is already one of this lane's own surfaces:
+    // implemented exactly; RE-FLIPPED with the rest of the lane on 2026-09-16,
+    // to kdenlive's own orientation — the crop file itself is the old one
+    // flipped vertically, verified pixel for pixel). The 9x9 crop (the shared
+    // bottom border row is the LANE's, painted once below for every surface
+    // including this one, never the tile's own) is a LANE-HEIGHT TILE, and
+    // every pixel of it is already one of this lane's own surfaces:
     //
-    //   rows 0..6  #97b4c4  kTrimLaneEndcap    the tile's face
+    //   row 0      #94b0c0  kTrimCapBevelLo    the endcap bevel pair, verbatim,
+    //   row 1      #9dbbcb  kTrimCapBevelHi    now at the tile's TOP
+    //   rows 2..8  #97b4c4  kTrimLaneEndcap    the tile's face
     //   cols 2..6 } #2f6888 kTrimLaneBar       the inner square, inset 2px,
-    //   rows 2..6 }                            flush on the face's bottom row
-    //   row 7      #9dbbcb  kTrimCapBevelHi    the endcap bevel pair, verbatim
-    //   row 8      #94b0c0  kTrimCapBevelLo
+    //   rows 2..6 }                            flush UNDER the bevel
     //
     // So the tile is EXACTLY AN ENDCAP-COLOURED COLUMN RUN with a bar-coloured
     // square punched into it, and it paints through the SAME `surface` lambda
@@ -735,9 +748,10 @@ void render_trim_flags(cairo_t* cr,
     // matters more than it did, the tile's face being the endcaps' own colour
     // and merging with a cap it touched. Below the threshold it simply does not
     // paint: no shrink, no clamp of the TILE. (The INNER SQUARE's height is a
-    // separate matter — it IS clamped, to keep the tile's top rim from
-    // collapsing at small scales; that rule and its reasoning live at the paint
-    // site below.)
+    // separate matter — it IS clamped, to keep the tile's BOTTOM rim (the TOP
+    // rim before the 2026-09-16 flip moved the square to hang under the bevel
+    // instead of on it) from collapsing at small scales; that rule and its
+    // reasoning live at the paint site below.)
     {
         const int tile  = trim_middle_size_px();
         const int inset = trim_middle_inset_px();
@@ -773,29 +787,34 @@ void render_trim_flags(cairo_t* cr,
             // the midpoint, which is what rows 0..8 of the crop are.
             surface(lane_x + x_lo, tile, kTrimLaneEndcap,
                     kTrimCapBevelHi, kTrimCapBevelLo);
-            // The inner square, at the crop's own offsets. It hangs from the
-            // FACE's bottom edge — crop rows 2..6 of a 0..6 face, flush on the
-            // bevel — which is the relationship that scales with the lane, and
-            // it insets from the tile's left by the crop's 2px.
+            // The inner square, at the crop's own offsets. It hangs FLUSH
+            // UNDER the bevel since the 2026-09-16 flip — crop rows 2..6 of a
+            // 2..8 face, immediately below the bevel pair — which is the
+            // relationship that scales with the lane, and it insets from the
+            // tile's left by the crop's 2px.
             //
-            // THE TOP RIM IS CLAMPED INTO EXISTENCE (codex round 1, 2026-08-10,
-            // with the gui_scale floor 100->50). The top rim is the one length
-            // here that is NOT handed over by the partition — the square hangs
-            // flush on the bevel, so the rim is whatever face_h - inner_h
-            // leaves, and face_h is the LANE's arithmetic while inner_h is the
-            // TILE's. Nothing holds the two apart: wherever the derived width
-            // reaches face_h the difference is 0, the square starts on the
-            // face's own top row, and the endcap-coloured rim of the ruled
-            // silhouette vanishes with no metric having gone to zero.
+            // THE BOTTOM RIM IS CLAMPED INTO EXISTENCE (codex round 1,
+            // 2026-08-10, with the gui_scale floor 100->50; the rim this
+            // clamp protects moved from the top to the bottom with the
+            // 2026-09-16 flip — the reasoning and the arithmetic are
+            // untouched, only which edge of the face the square hangs from).
+            // The bottom rim is the one length here that is NOT handed over
+            // by the partition — the square hangs flush under the bevel, so
+            // the rim is whatever face_h - inner_h leaves, and face_h is the
+            // LANE's arithmetic while inner_h is the TILE's. Nothing holds
+            // the two apart: wherever the derived width reaches face_h the
+            // difference is 0, the square runs to the face's own bottom row,
+            // and the endcap-coloured rim of the ruled silhouette vanishes
+            // with no metric having gone to zero.
             //
             // SO THE HEIGHT GIVES WAY AND THE RIM DOES NOT: inner_h caps the
-            // square's height at face_h - 1, keeping one face row above it —
+            // square's height at face_h - 1, keeping one face row below it —
             // the accepted trade where it binds, the rim being the
             // load-bearing silhouette feature where the squareness is not.
             // THE WIDTH IS UNTOUCHED BY
             // THE CLAMP: it is the partition's own remainder above, so the two
             // side rims stay exactly `inset` even where the height gives way,
-            // and the square still hangs FLUSH ON THE BEVEL.
+            // and the square still hangs FLUSH UNDER THE BEVEL.
             //
             // A FLOOR, NOT A RESHAPE: at 100% and above the clamp never binds
             // (5 against face_h 7 at 100%, 10 against 14 at 200%, 20 against 28
@@ -813,7 +832,7 @@ void render_trim_flags(cairo_t* cr,
             // spelling — deriving the height as face_h - inset, the vertical
             // mirror of the width's derivation — produces the IDENTICAL value
             // at all 351 legal scales, and this one needs no extra guard (a min
-            // is bounded where a subtraction is not). Either way the top rim
+            // is bounded where a subtraction is not). Either way the bottom rim
             // comes out exactly `inset` at every scale in [50, 350], so the
             // crop's vertical relationship is now a consequence of the
             // partition rather than a coincidence of two roundings.
@@ -822,10 +841,24 @@ void render_trim_flags(cairo_t* cr,
                 cairo_set_source_rgb(cr, kTrimLaneBar.r, kTrimLaneBar.g,
                                      kTrimLaneBar.b);
                 cairo_rectangle(cr, lane_x + x_lo + inset,
-                                lane_y + face_h - inner_h, inner_w, inner_h);
+                                lane_y + bevel_h, inner_w, inner_h);
                 cairo_fill(cr);
             }
         }
+    }
+
+    // THE SHARED BOTTOM BORDER (architect 2026-09-16, the flip's new crop
+    // row_5_lane_1_trim_bottomborder.png): ONE fill across the WHOLE lane
+    // width, painted LAST so it sits over every surface above it — the
+    // ground, the bar, the endcaps and the midpoint tile alike, none of which
+    // owns this row on its own. The clip at the top of this function already
+    // bounds it to the lane, so the rectangle below can run the full width
+    // with no further clamping.
+    if (border_h > 0) {
+        cairo_set_source_rgb(cr, kTrimLaneBottomBorder.r,
+                             kTrimLaneBottomBorder.g, kTrimLaneBottomBorder.b);
+        cairo_rectangle(cr, lane_x, lane_y + body_h, lane_w, border_h);
+        cairo_fill(cr);
     }
 
     cairo_restore(cr);

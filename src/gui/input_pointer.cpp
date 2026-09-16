@@ -1849,7 +1849,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // edge shape — never re-derived from the pointer's position: dragging a
     // bound is exactly the act of taking the pointer off the band, and the cue
     // must not flicker through the band map's answers on the way.
-    // IT SERVES BOTH TRIM SURFACES since 2026-08-18: the 9 px bar's endcaps and
+    // IT SERVES BOTH TRIM SURFACES since 2026-08-18: the 10 px bar's endcaps and
     // bridge, and the waveform OVERLAY'S bounds and interior, which arm these
     // very drags (the region became the trim). The overlay's own live-cue arm —
     // a separate record with a separate kind from 2026-08-15 — is deleted with
@@ -2700,7 +2700,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // whole vocabulary is precise, thin and absolute has nothing a nav gesture
     // could mean, so THE WAVEFORM'S OWN THIRD-FINGER RULE APPLIES WHERE THE
     // SURFACE IS SMALL: on a large surface a second contact carries a distinct
-    // meaning worth admitting, on a 9 px bar it carries nothing the lane's
+    // meaning worth admitting, on a 10 px bar it carries nothing the lane's
     // own motions do not already do better. That is a difference in KIND, not an
     // exception to the two-finger model.
     // THE REFUSAL IS WHAT THE BIT IS FOR: without it a gesture begun on the bar
@@ -2969,7 +2969,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // PRESS, and the overlay's move / bound drags — the trim bridge and endcap
     // drags since 2026-08-18 — live on the pointer. Answering false here lets
     // the finger resolve to the pointer translation and reach them, which is
-    // the whole point of the large surface on glass: the 9 px bar is what a
+    // the whole point of the large surface on glass: the 10 px bar is what a
     // fingertip cannot hit. The flag box carve-out's exact shape, one level up.
     // ONE SPELLING OF "INSIDE THE OVERLAY": this asks the same owner the
     // mouse press claim and the cursor map ask, so the three cannot disagree
@@ -6112,7 +6112,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // record (architect 2026-08-20, partly reversing his own
                 // 2026-08-19 "touching the trim shows the trim"): "touching the
                 // tiny lane means I'm on the laptop, and the region exists
-                // mostly for the touchscreen." A 9 px band under a POINTER is
+                // mostly for the touchscreen." A 10 px band under a POINTER is
                 // already its own display of the trim window, and the big
                 // waveform surface exists for glass, where that lane is
                 // unusable. So all three of the band's press claims — this
@@ -6357,7 +6357,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // a resting pair being ordered by construction — and the
                 // INSIDE is the BRIDGE (pair) drag. Nothing is re-derived
                 // here: this arms the SAME pending an endcap or bridge press
-                // on the 9 px bar arms, so the threshold crossing,
+                // on the 10 px bar arms, so the threshold crossing,
                 // begin_trim_drag's anchor capture, the partner clamp, the
                 // first-accepted-change deselect and stop, the release
                 // column-snap and the shared commit tail are all the drag's

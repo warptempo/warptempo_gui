@@ -661,7 +661,7 @@ struct GuiPaintHandler {
     // ALREADY ORDERED, so this maps them to columns with the plain viewport
     // transform and walks no warp map. NOTHING IS STORED and there is no
     // endpoint pair to normalize — do not reintroduce either; the overlay cannot
-    // drift from the 9 px bar because both read the one trim.
+    // drift from the 10 px bar because both read the one trim.
     // THREE consumers, and the last is why this is PUBLIC: paint_region_ground
     // and paint_region_ink draw the overlay's two halves from it — the ground
     // and the ink cannot disagree about where it is — and

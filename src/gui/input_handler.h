@@ -304,7 +304,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // trim now, so there is nothing left to discard.
 //
 // WHAT THE OVERLAY IS, so the rule below reads as one thing: THE TRIM, painted a
-// second time (architect 2026-08-18). The 9 px bar is right for a mouse and
+// second time (architect 2026-08-18). The 10 px bar is right for a mouse and
 // unusable with a fingertip, so trim gained a large waveform surface — one
 // state, two painted surfaces, the span DERIVED from the trim every frame and
 // stored nowhere (the model is at RegionState, app_state.h). It is not a
@@ -463,7 +463,7 @@ void clear_region_highlight(AppState& app, Viewport& viewport);
 // THE TRIM BAR'S THREE PRESSES LEFT THIS INVENTORY ON 2026-08-20 (architect,
 // partly reversing his own 2026-08-19 "touching the trim shows the trim"):
 // "touching the tiny lane means I'm on the laptop, and the region exists mostly
-// for the touchscreen." The 9 px band under a POINTER is already its own
+// for the touchscreen." The 10 px band under a POINTER is already its own
 // display of the trim window; the big surface exists for GLASS, where that lane
 // is unusable. So the plain endcap/bridge/bare-band press and the two
 // Ctrl / Ctrl+Shift bound-set presses raise nothing at all now, and a laptop
@@ -3568,7 +3568,7 @@ private:
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
     // only once on_motion crosses drag_moved_threshold_px() from the press. TWO
-    // SURFACES ARM IT since 2026-08-18 (the region IS the trim): the 9 px bar's
+    // SURFACES ARM IT since 2026-08-18 (the region IS the trim): the 10 px bar's
     // endcaps and bridge, and the waveform OVERLAY's bounds and interior, which
     // pass `waveform_click_act` so that a motionless lift there falls to the
     // waveform's ordinary click act instead of the bar's consumed nothing (the
