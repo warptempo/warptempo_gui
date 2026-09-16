@@ -122,16 +122,24 @@ struct Viewport {
     //    the WARP MARKER DRAG's COMMIT (MarkerDragOps::commit_drag), which
     //    calls this function direct when the displayed plate's gain
     //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
-    //    release's plate lands in its own frame. No writer of a level calls
-    //    kick_waveform_sync_if_gain_changed at present: the magnification
-    //    level markers store (the profile's one source,
-    //    waveform_gain_profile_cached, warp_frame_map_view.h) changes only on
-    //    roads that already run the UNCONDITIONAL synchronous rebuild after
-    //    their store write — the source load's first plate, the three loads
-    //    in place (GuiInputHandler::apply_recipe_in_place's tail) and the
-    //    undo/redo restore (Undo::restore_history_entry's tail) — and the
-    //    store's generation re-keys the profile, so each of those rebuilds
-    //    reads the new gain with no gain-change kick of its own.
+    //    release's plate lands in its own frame. THE LEVEL WRITERS THAT CARRY
+    //    A GAIN-CHANGE KICK OF THEIR OWN call kick_waveform_sync_if_gain_changed
+    //    (re-grepped 2026-09-15): the authoring cluster's five bodies
+    //    (magnificationlevelmarkers_ops.cpp — the drop, the delete, the
+    //    disable toggle, the nudge and the level step), the level editor's
+    //    commit (GuiFlagEditor::commit_magnification_level_edit), the `h`
+    //    revert's level arm (run_history_revert) and the M drag's release
+    //    (MarkerDragOps::commit_drag). THE OTHER LEVEL WRITERS TAKE NO KICK
+    //    OF THEIR OWN because they already run the UNCONDITIONAL synchronous
+    //    rebuild after their store write — the source load's first plate, the
+    //    three loads in place (GuiInputHandler::apply_recipe_in_place's
+    //    tail), the undo/redo restore (Undo::restore_history_entry's tail)
+    //    and, since 2026-09-15, THE MAGNIFICATION LEVEL PROPAGATE'S TWO
+    //    PASTES, whose every store-writing run ends in
+    //    land_paste_in_target_view's kick — and the store's generation
+    //    re-keys the profile (waveform_gain_profile_cached,
+    //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
+    //    with no gain-change kick of its own.
     //    (The gain gate's other input, the zoom — magnification applies only
     //    at the working zoom or finer, effective_waveform_gain_profile — changes with a
     //    zoom write, whose applier's own synchronous kick carries it; the one

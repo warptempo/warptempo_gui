@@ -154,6 +154,11 @@ set(WARPTEMPO_GUI_SOURCES
     # translation unit beside the two siblings'.
     src/gui/magnificationlevelmarkers_ops.cpp
     src/gui/phase_reset_propagate.cpp
+    # THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15): the phase reset
+    # propagate's three acts over the third column, in its own translation
+    # unit beside its sibling's; the shared walk is header-only
+    # (propagate_blocks.h).
+    src/gui/magnification_level_propagate.cpp
     src/gui/prompt.cpp
     src/gui/warpmarkers_ops.cpp
     src/gui/position_nudge.cpp

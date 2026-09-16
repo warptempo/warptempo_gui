@@ -106,10 +106,19 @@ void GuiPrompt::activate_response(char k) {
     // See open_unsaved above.
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
+        // ONE PROMPT BODY, TWO SUBJECTS (2026-09-15): the question was raised
+        // by one of the two propagate families' open_paste_confirmation, which
+        // tagged the pending paste with its column (AppState::
+        // pending_paste_column) — the load confirmation's own shape, the fork
+        // living at the answer. The prompt closes first either way, so the act
+        // runs on the ordinary modal state.
         if (k == 'y') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            phase_reset_propagate.paste_apply();
+            if (app.pending_paste_column == 'M')
+                magnification_level_propagate.paste_apply();
+            else
+                phase_reset_propagate.paste_apply();
             return;
         }
         if (k == '\x1b') {

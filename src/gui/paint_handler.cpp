@@ -1290,7 +1290,11 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 //
 //   File       "Synchronize to External Storage" | "Ctrl+Q"   -> content
 //   Settings   "Projects Repository" (no column)              -> estimate FLOOR
-//   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P" -> 374   content
+//   Edit       "Paste Magnification Level State" | "Ctrl+Alt+Shift+M"
+//                                                            -> content
+//              (unmeasured; the row joined 2026-09-15 and is wider than
+//              "Paste Phase Reset State" | "Ctrl+Alt+Shift+P", whose 374
+//              already won over the floor)
 //   (Help      "AV Sync Stats" | "Shift+L"                    -> FLOOR, 2026-09-03..09)
 //
 // EVERY FIGURE HERE WAS MEASURED ON THE SENTENCE-CASE SPELLING these labels

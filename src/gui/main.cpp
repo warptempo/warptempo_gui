@@ -1436,10 +1436,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                               target_render, active_views,
                                               playback_lifecycle,
                                               notifications, selection);
+    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the phase family's
+    // sibling over the third column. IT TAKES NO GuiTargetRender, the
+    // authoring cluster's rule above (a level is display-only, so no act on
+    // that column may dispatch a preview); it takes the audio itself instead,
+    // for the song end and the sample rate.
+    MagnificationLevelPropagate magnification_level_propagate(
+        app, viewport, undo, audio, active_views, playback_lifecycle,
+        notifications, selection);
     GuiSaveOps save_ops(app, undo, active_views, notifications);
     GuiPrompt prompt(app, gui, viewport,
-                     phase_reset_propagate, save_ops, playback_lifecycle,
-                     render_player);
+                     phase_reset_propagate, magnification_level_propagate,
+                     save_ops, playback_lifecycle, render_player);
     GuiSettingsEditor settings_editor(app, audio, viewport, selection,
                                       active_views, undo,
                                       target_render, playback_lifecycle,
@@ -1464,6 +1472,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   renders_dir, active_views, ab_audition,
                                   render_player, notifications,
                                   phase_reset_propagate,
+                                  magnification_level_propagate,
                                   async_renderer,
                                   history_commit_worker,
                                   history_prefetch,
@@ -1489,6 +1498,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // input handler holds by reference — the cycle is resolved with this
     // pointer set).
     phase_reset_propagate.input = &input_handler;
+    // And its sibling's, for the same chokepoint and the same reason, its
+    // tail landing in T+M.
+    magnification_level_propagate.input = &input_handler;
     // And Undo's, for the same chokepoint: a restore puts the reader back in the
     // authoring view the entry recorded, and the S/T axis of it is the input
     // handler's (the other two are GuiActiveViews', which Undo holds outright).

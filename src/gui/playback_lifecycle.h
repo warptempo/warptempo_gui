@@ -170,7 +170,9 @@ struct GuiPlaybackLifecycle {
     // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.
     // TWO MODAL OPENS ARE NOT CALLERS, and each is a recorded exception rather
     // than a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
-    // (PhaseResetPropagate::open_paste_confirmation) and stops through
+    // (PhaseResetPropagate::open_paste_confirmation and, since 2026-09-15,
+    // MagnificationLevelPropagate::open_paste_confirmation — one prompt body,
+    // two openers) and stops through
     // stop_playback_if_playing directly, which is mechanically this same stop;
     // and the render player's LOAD_IN_PLACE_CONFIRM prompt
     // (GuiInputHandler::render_player_load_in_place) PAUSES the player's own

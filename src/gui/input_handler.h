@@ -21,6 +21,7 @@
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
+#include "magnification_level_propagate.h"
 #include "magnificationlevelmarkers_ops.h"
 #include "phaseresetmarkers_ops.h"
 #include "marker_drag.h"
@@ -876,6 +877,10 @@ struct GuiInputHandler {
     // hover; the tick is main.cpp's.
     GuiNotifications&        notifications;
     PhaseResetPropagate&     phase_reset_propagate;
+    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the phase family's
+    // sibling: its three readers here are the Ctrl+M-family arms in
+    // handle_mode_keys.
+    MagnificationLevelPropagate& magnification_level_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
     // run_history_commit, which dispatches the captured job onto it; the
@@ -1014,6 +1019,7 @@ struct GuiInputHandler {
                     GuiRenderPlayer&         render_player_,
                     GuiNotifications&        notifications_,
                     PhaseResetPropagate&     phase_reset_propagate_,
+                    MagnificationLevelPropagate& magnification_level_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
                     GuiHistoryPrefetch&      history_prefetch_,
@@ -1046,6 +1052,7 @@ struct GuiInputHandler {
           render_player(render_player_),
           notifications(notifications_),
           phase_reset_propagate(phase_reset_propagate_),
+          magnification_level_propagate(magnification_level_propagate_),
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),
           history_prefetch(history_prefetch_),
@@ -1076,6 +1083,8 @@ struct GuiInputHandler {
     // chokepoint in its set-to spelling (switch_active_audio_view_to); the
     // friendship lets it reach that private method through its back-pointer.
     friend struct PhaseResetPropagate;
+    // And its sibling's, the same tail landing in T+M (2026-09-15).
+    friend struct MagnificationLevelPropagate;
     // AND THE UNDO RESTORE, for the same private method (2026-08-28): an undo
     // entry records the S/T view beside the tab and the column, and the restore
     // hands each axis to its own owner — the other two live on GuiActiveViews,
@@ -2804,11 +2813,12 @@ private:
     // preconditions and its own refusals are stated at the definition.
     void run_iteration_sweep_render();
 
-    // P / I / M / K / L letter-key handlers: Ctrl+P-family phase-reset
-    // clipboard ops, `p` view toggle, `i` iteration mode, `m` bpm mode, `k`
-    // ADD TO SELECTION (the sticky ctrl, 2026-08-18) and `l` listen-to-renders
-    // launcher. Returns true if key+mods matched one (on_key then returns),
-    // false otherwise.
+    // P / M / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
+    // clipboard ops, the Ctrl+M-family magnification level clipboard ops
+    // (2026-09-15, the same three shapes), `i` iteration mode, `k` ADD TO
+    // SELECTION (the sticky ctrl, 2026-08-18) and `l` / Shift+L, the folder
+    // overlay's two openers. Returns true if key+mods matched one (on_key then
+    // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
 
     // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /

@@ -5,6 +5,7 @@
 #include "input_handler.h"
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
+#include "propagate_blocks.h"
 #include "target_render.h"
 #include "time_format.h"
 #include "warp_frame_map_view.h"
@@ -21,28 +22,22 @@
 
 namespace {
 
-// Boundary guard for near-end bucketing. The CONSTANT stays a seconds
-// value (an authoring tolerance — the largest the user ever nudges a
-// destination phase reset off its true section boundary, ~2-10 ms
-// typically, never more than ~92 ms — deliberately NOT tied to the engine
-// N/window size, so a render-setting change cannot shift which section a
-// marker counts toward); each use converts it once to frames
-// (guard * sample_rate) because block extents and reset positions are
-// whole int64 source frames, widened into the double guard-window
-// arithmetic. A phase reset whose ANCHOR falls within the guard before a
-// section end (or before a section start) counts toward the next chronological
-// labeled section by shifting every block's membership window backward by
-// this amount. Shared membership window across all three propagate
-// actions: copy_from_selection, paste_apply, and paste_state_apply.
+// (THE BOUNDARY GUARD, THE BLOCK TYPE, THE MEMBERSHIP WINDOW, THE DESTINATION
+// WALK AND THE NOTHING-MATCHED SENTENCE LEFT THIS FILE on 2026-09-15, when the
+// magnification level propagate became their second reader: they are the
+// family's shared owners in propagate_blocks.h, factored where the two
+// families' spelling was mechanically identical. WHAT STAYS HERE IS THE
+// ANCHOR — the block below and the three loops that ask the window OF IT —
+// because that is the one thing the sibling does not have.)
 //
 // THE WINDOW IS ASKED OF THE ANCHOR, NOT OF THE RESET (architect 2026-09-11,
 // the block below): a reset aimed at a marker has its anchor ON that marker,
 // so the drop's own lead-in no longer needs the guard to be bucketed with the
 // section it was dropped into — which is why the constant can stay an
-// authoring tolerance. What it still covers is the hand nudge: a reset the
-// user moved a little off a boundary by eye, whose anchor lands just short of
-// the marker it belongs to.
-constexpr double kPhaseResetBoundaryGuardSeconds = 0.100;
+// authoring tolerance (kPropagateBoundaryGuardSeconds, propagate_blocks.h).
+// What it still covers is the hand nudge: a reset the user moved a little off
+// a boundary by eye, whose anchor lands just short of the marker it belongs
+// to.
 
 // -- THE ANCHOR: WHERE A RESET WAS AIMED ------------------------------------
 //
@@ -153,81 +148,14 @@ double phase_reset_frame_for_anchor(
         tgt - static_cast<double>(kPhaseResetLeadInSamples), map);
 }
 
-// THE TWO PASTES' SHARED "NOTHING HAPPENED" SENTENCE (architect 2026-08-30,
-// the strictness ruling; kept 2026-08-31 when the switch under it left). Its
-// two readers are paste_apply's matched==0 arm (where the destination produced
-// no owned block) and paste_state_apply's pair_count==0 arm. A CLEAN PARTIAL
-// WALK is not this: it pasted what it had, and a success says nothing.
-//
-// THE SENTENCE OUTLIVED ITS ORIGINAL ARGUMENT AND STANDS ON ITS OWN. It was
-// raised because both pastes ended on the ALWAYS-SWITCH to target view — a
-// change of scene that looks exactly like a paste, so a run that paired no
-// block had to deny it in words. On 2026-08-31 the architect removed the
-// switch from every produced-nothing path instead (the misleading half of the
-// success rule: a success cards when what shows would mislead, which is why
-// that switch retires rather than the card). The card is KEPT because a paste
-// that wrote nothing shows nothing at all now — the view stays exactly where
-// it stood — and the words need no scene change to make sense.
-constexpr const char* kNothingMatched = "Nothing matched, so nothing was pasted";
-
-// One named block resolved from a warp-marker walk. `label` is the
-// owning marker's label name (empty markers don't produce entries);
-// `start` is the owning marker's own absolute source frame and `end` is its
-// section's extent under the EFFECTIVE-PARTICIPATION rule stated at
-// section_end_index (warpmarkers.h) — the next marker that participates in
-// the render,
-// else the song end. A disabled marker sitting in between is not a boundary
-// and does not close the block.
-struct DestBlock {
-    std::string label;
-    int64_t     start;
-    int64_t     end;
-};
-
 // (THE SECTION RULE'S EXTENT EXPRESSION LEFT THIS FILE on 2026-08-24, when the
 // BPM sweep became its second reader: `section_end_frame` and the
 // index-returning walk it is built on, `section_end_index`, live in
 // warpmarkers.h beside `effective_disabled`, where the rule and its reasoning
-// are stated in full. Both propagate walks below — the copy's selected-run loop
-// and walk_named_blocks — still call it, and still call the SAME one, which is
-// what the paste's lockstep match depends on: the destination blocks must be
-// measured exactly as the clipboard's were.)
-
-// Walk the warp marker list across [from_idx, to_idx_exclusive),
-// returning the named blocks in order. A block's extent is section_end_frame
-// (warpmarkers.h): its owning marker's time to the next EFFECTIVELY-ENABLED
-// marker's
-// time, or to the SONG END (song_end_frame, source frames) when no enabled
-// marker follows — so the store-final enabled marker owns the section running
-// to the song end, and so does a marker trailed only by disabled ones (section
-// rule, architect 2026-07-23). Markers without a label name, and
-// EFFECTIVELY-DISABLED labeled markers, contribute no block: the copy filters
-// effective-disabled selected markers out of the clipboard, so this destination
-// walk must filter them identically or a disabled labeled marker opens a
-// lockstep gap. Ownership and EXTENT are filtered the same way — a disabled
-// marker neither owns a block nor ends one, so no span is left ownerless
-// between two enabled markers.
-std::vector<DestBlock> walk_named_blocks(
-    const std::vector<GuiWarpMarker>& mv,
-    int from_idx, int to_idx_exclusive, int64_t song_end_frame) {
-    std::vector<DestBlock> out;
-    const int n = static_cast<int>(mv.size());
-    if (from_idx < 0)        from_idx = 0;
-    if (to_idx_exclusive > n) to_idx_exclusive = n;
-    for (int i = from_idx; i < to_idx_exclusive; ++i) {
-        // The propagate family's ONE membership predicate
-        // (warp_marker_propagates, phase_reset_clipboard.h): labeled AND
-        // effectively enabled. An effective-disabled labeled marker is not a
-        // block owner, and not a boundary either — section_end_frame walks
-        // past it (warpmarkers.h states the rule).
-        if (!warp_marker_propagates(mv, i)) continue;
-        const std::string& name = warp_marker_label_name(mv[i]);
-        const int64_t start = mv[i].time_frame;
-        const int64_t end   = section_end_frame(mv, i, song_end_frame);
-        out.push_back(DestBlock{name, start, end});
-    }
-    return out;
-}
+// are stated in full. Both propagate walks — the copy's selected-run loop
+// below and walk_named_blocks, propagate_blocks.h — still call it, and still
+// call the SAME one, which is what the paste's lockstep match depends on: the
+// destination blocks must be measured exactly as the clipboard's were.)
 
 }  // namespace
 
@@ -289,7 +217,7 @@ void PhaseResetPropagate::copy_from_selection() {
     // stays the paste-destination walk, and section_end_frame is the shared
     // extent both take. std::set is ascending, so the blocks
     // come out in time order.
-    std::vector<DestBlock> src_blocks;
+    std::vector<PropagateBlock> src_blocks;
     for (int i : app.selected_markers) {
         if (i < 0 || i >= n) continue;
         // The same membership the destination walk takes, through the one
@@ -302,7 +230,7 @@ void PhaseResetPropagate::copy_from_selection() {
         const std::string& name = warp_marker_label_name(mv[i]);
         const int64_t start = mv[i].time_frame;
         const int64_t end   = section_end_frame(mv, i, song_end_frame);
-        src_blocks.push_back(DestBlock{name, start, end});
+        src_blocks.push_back(PropagateBlock{name, start, end});
     }
 
     std::vector<ClipboardBlock> clipboard_blocks;
@@ -320,30 +248,18 @@ void PhaseResetPropagate::copy_from_selection() {
         // The seconds-domain guard constant, converted once to frames —
         // block extents are whole int64 source frames widened into the double
         // window math, which the anchors are already in.
-        const double guard = kPhaseResetBoundaryGuardSeconds *
+        const double guard = kPropagateBoundaryGuardSeconds *
             static_cast<double>(target_render.audio.sample_rate());
         // Membership window shifts back by the guard, and the window is asked
         // of each reset's ANCHOR (the anchor block above): a reset AIMED at
         // this block's owning marker has its anchor on the marker and is
         // captured here by construction, while the guard still catches an
-        // anchor a hand nudge left just short of the boundary.
-        // Song-end block (its extent ends at the song end): keep the shifted
-        // LOWER bound (an anchor a hand nudge left just short of the final
-        // marker still belongs to it) but use the UNSHIFTED upper bound. The end guard exists to reassign the
-        // tail to the NEXT section's owner; at song end there is no next owner,
-        // so the guard would orphan the tail instead — the final block owns its
-        // section through the last frame. The capture follows the SOURCE
-        // block's own extent (a clipboard block captured at song end may later
-        // paste onto a non-final destination and vice versa; each side's window
-        // follows its own extent). Detected by extent-end == song_end_frame,
-        // exact and unique: an interior block ends at the next EFFECTIVELY-
-        // ENABLED marker's time (section_end_frame's rule), and that is still
-        // some marker's authored time, which walls at total-1 < total =
-        // song_end_frame.
-        const double lo = b.start - guard;
-        const double hi = (b.end == song_end_frame)
-                              ? static_cast<double>(b.end)
-                              : std::max(lo, b.end - guard);
+        // anchor a hand nudge left just short of the boundary. The song-end
+        // block's UNSHIFTED upper bound and the each-side-follows-its-own-
+        // extent rule are the window owner's (propagate_membership_window,
+        // propagate_blocks.h); the capture follows the SOURCE block's extent.
+        const auto [lo, hi] =
+            propagate_membership_window(b.start, b.end, guard, song_end_frame);
         for (const auto& t : tv) {
             const double anchor = phase_reset_anchor_frame(t.time_frame, map);
             if (anchor < lo)  continue;
@@ -376,6 +292,12 @@ void PhaseResetPropagate::open_paste_confirmation() {
     if (anchor < 0 || anchor >= n) return;
 
     app.pending_paste_anchor   = anchor;
+    // THE SUBJECT TAG (2026-09-15): one PASTE_CONFIRM prompt body serves this
+    // family and the magnification level propagate, and its `y` forks on this
+    // (GuiPrompt::activate_response); each opener is the one writer of which
+    // family is pending, so a cancelled paste of the other family leaves no
+    // stale tag under this question.
+    app.pending_paste_column   = 'P';
     // A modal surface is opening: stop playback. Space is swallowed while
     // the prompt is up, so playback cannot restart until it closes.
     playback_lifecycle.stop_playback_if_playing();
@@ -418,7 +340,7 @@ void PhaseResetPropagate::paste_apply() {
     selection_consumed(app);
 
     const int64_t song_end_frame = target_render.audio.total_frames();
-    std::vector<DestBlock> dest_blocks =
+    std::vector<PropagateBlock> dest_blocks =
         walk_named_blocks(mv, anchor, n, song_end_frame);
 
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
@@ -501,7 +423,7 @@ void PhaseResetPropagate::paste_apply() {
     // replaces in a block is the reset AIMED at that block, and a destination
     // reset dropped on the destination marker is exactly that even where its
     // own frame sits further back than the guard.
-    const double guard = kPhaseResetBoundaryGuardSeconds *
+    const double guard = kPropagateBoundaryGuardSeconds *
         static_cast<double>(target_render.audio.sample_rate());
     // The live target-view map, as at the capture (the anchor block above). The
     // reference is good for the whole body: the cache is keyed on the WARP
@@ -510,16 +432,12 @@ void PhaseResetPropagate::paste_apply() {
     const std::vector<WarpFrameMapSegment>& map =
         live_warp_frame_map(app, target_render.audio);
     for (size_t i = 0; i < matched; ++i) {
-        // Song-end destination block: keep the shifted lower bound but use the
-        // UNSHIFTED upper bound — the end guard reassigns the tail to the next
-        // section's owner, and at song end there is no next owner, so the guard
-        // would orphan the final 100 ms instead. The clear window follows the
-        // DESTINATION block's own extent (a non-final destination paired with a
-        // song-end clipboard block still shifts; each side follows its own).
-        const double lo = dest_blocks[i].start - guard;
-        const double hi = (dest_blocks[i].end == song_end_frame)
-                              ? static_cast<double>(dest_blocks[i].end)
-                              : std::max(lo, dest_blocks[i].end - guard);
+        // The clear window follows the DESTINATION block's own extent (a
+        // non-final destination paired with a song-end clipboard block still
+        // shifts; each side follows its own), the song-end rule being the
+        // window owner's (propagate_membership_window).
+        const auto [lo, hi] = propagate_membership_window(
+            dest_blocks[i].start, dest_blocks[i].end, guard, song_end_frame);
         out.erase(std::remove_if(out.begin(), out.end(),
             [lo, hi, &map](const GuiPhaseResetMarker& m) {
                 const double anchor =
@@ -676,14 +594,14 @@ void PhaseResetPropagate::paste_state_apply() {
     selection_consumed(app);
 
     const int64_t song_end_frame = target_render.audio.total_frames();
-    const std::vector<DestBlock> dest_blocks =
+    const std::vector<PropagateBlock> dest_blocks =
         walk_named_blocks(mv, anchor, n, song_end_frame);
     const auto& clip_blocks = app.phase_reset_clipboard.blocks();
 
     // Boundary guard: the seconds-domain authoring tolerance converted
     // once to frames (phase reset time_frame lives in source frames on
     // both sides).
-    const double n_guard = kPhaseResetBoundaryGuardSeconds *
+    const double n_guard = kPropagateBoundaryGuardSeconds *
         static_cast<double>(target_render.audio.sample_rate());
     // The live target-view map, for the destination side's anchors (the
     // clipboard's were captured with the placements). Same reference lifetime
@@ -754,25 +672,16 @@ void PhaseResetPropagate::paste_state_apply() {
         // marker of this block (anchored within N before its end) migrates out
         // into the next interval. If the next interval is unlabeled or
         // past the compared range, the marker falls off — symmetrically
-        // on both sides. Clamp hi >= lo so a pathologically tiny block
-        // produces an empty window (count 0), not an inverted one.
-        // Song-end block: the UPPER bound is UNSHIFTED — the end guard
-        // reassigns the tail to the next section's owner, and at song end
-        // there is no next owner, so the guard would orphan the final 100 ms.
-        // Each side follows its OWN extent: the clipboard block and the
-        // destination block need not both be song-end (a song-end capture may
-        // pair with a non-final destination and vice versa), so dst_hi tests
-        // the destination extent and src_hi the source extent independently.
-        const double dst_lo = dest_blocks[i].start - n_guard;
-        const double dst_hi =
-            (dest_blocks[i].end == song_end_frame)
-                ? static_cast<double>(dest_blocks[i].end)
-                : std::max(dst_lo, dest_blocks[i].end - n_guard);
-        const double src_lo = clip_blocks[i].source_start_frame - n_guard;
-        const double src_hi =
-            (clip_blocks[i].source_end_frame == song_end_frame)
-                ? static_cast<double>(clip_blocks[i].source_end_frame)
-                : std::max(src_lo, clip_blocks[i].source_end_frame - n_guard);
+        // on both sides. The empty-not-inverted clamp, the song-end block's
+        // UNSHIFTED upper bound and the each-side-follows-its-OWN-extent rule
+        // (dst_hi tests the destination extent and src_hi the source extent
+        // independently) are the window owner's (propagate_membership_window,
+        // propagate_blocks.h).
+        const auto [dst_lo, dst_hi] = propagate_membership_window(
+            dest_blocks[i].start, dest_blocks[i].end, n_guard, song_end_frame);
+        const auto [src_lo, src_hi] = propagate_membership_window(
+            clip_blocks[i].source_start_frame, clip_blocks[i].source_end_frame,
+            n_guard, song_end_frame);
 
         // Windowed clipboard placements (migration applied). Globally
         // bucketed by anchor so a near-end placement originally

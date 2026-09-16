@@ -11,6 +11,7 @@
 #include "settings_file.h"
 #include "text_editor.h"
 #include "phase_reset_clipboard.h"
+#include "magnification_level_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "magnificationlevelmarkers.h"
 #include "warp_frame_map_view.h"
@@ -3582,11 +3583,13 @@ inline constexpr CommandPopupItem kFilePopupItems[] = {
 inline constexpr int kFilePopupItemCount =
     static_cast<int>(std::size(kFilePopupItems));
 
-// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE THREE PROPAGATE
-// COMMANDS, the PHASE RESET family's, in the family's own order: copy, then
-// paste, then the variant paste. One category, no separator.
+// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE PROPAGATE COMMANDS,
+// the PHASE RESET family's three and, since 2026-09-15, the MAGNIFICATION
+// LEVEL family's three, each family in its own order: copy, then paste, then
+// the variant paste. One category, no separator; THE ITEM IS ITS CHORD on all
+// six.
 //
-// THIS MENU IS THE THREE COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
+// THIS MENU IS THE SIX COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
 // deleted from the icon row in the same ruling, so nothing here duplicates a
 // button: the no-second-road doctrine is SATISFIED rather than amended, which
 // is the zoom group's history run in reverse (there, four BUTTONS took the
@@ -3606,14 +3609,16 @@ inline constexpr int kFilePopupItemCount =
 // from this ruling, eight while the Iterations menu's two rows stood
 // (2026-08-27 to 2026-09-04), nine while File's third row and the Help
 // menu's one both stood (2026-09-03..09), eight from the Help menu's
-// deletion and six since the measure rows' (2026-09-14), and its metrics and layout term are unchanged throughout. The
+// deletion, seven from the measure rows' (2026-09-14; File's four rows and
+// this menu's three) and TEN since the magnification level rows' joined
+// (2026-09-15), and its metrics and layout term are unchanged throughout. The
 // spelling convention is the crop's: modifiers spelled out with `+`, and a
-// non-letter key written as itself (`/`).
+// non-letter key written as itself (`\`).
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — wrong mode, wrong selection, an empty
 // clipboard, a locked tab — still dispatches, and its own arm answers exactly
-// as the key does, which for all three of these is a notification card naming
+// as the key does, which for all six of these is a notification card naming
 // the rule it failed (2026-08-30, the strictness ruling; they were silent
 // no-ops before it). So there is nothing here that could lie the way the
 // deleted Navigation menu's one ruled exception could — the row acts, and the
@@ -3624,6 +3629,14 @@ inline constexpr CommandPopupItem kEditPopupItems[] = {
     {"Paste Phase Resets",     "Ctrl+Alt+P",       GuiKeys::P,
      true,  false, true,  false},
     {"Paste Phase Reset State", "Ctrl+Alt+Shift+P", GuiKeys::P,
+     true,  true,  true,  false},
+    // THE MAGNIFICATION LEVEL FAMILY (architect 2026-09-15), the phase-reset
+    // three's exact shape on the letter M, in the same noun pattern.
+    {"Copy Magnification Levels",       "Ctrl+M",           GuiKeys::M,
+     true,  false, false, false},
+    {"Paste Magnification Levels",      "Ctrl+Alt+M",       GuiKeys::M,
+     true,  false, true,  false},
+    {"Paste Magnification Level State", "Ctrl+Alt+Shift+M", GuiKeys::M,
      true,  true,  true,  false},
 };
 inline constexpr int kEditPopupItemCount =
@@ -4009,6 +4022,10 @@ inline int drag_moved_threshold_px() {
 // GuiPrompt, where the opener stood.
 enum class DialogTrigger {
     CLOSE_WINDOW,
+    // THE PROPAGATE PASTE CONFIRMATION — ONE PROMPT BODY, TWO SUBJECTS since
+    // 2026-09-15: the phase reset paste's question and the magnification level
+    // paste's, raised by each family's open_paste_confirmation and answered by
+    // one `y` arm that forks on AppState::pending_paste_column.
     PASTE_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
@@ -8100,7 +8117,20 @@ struct AppState {
     // is the destination warp-marker index captured when the paste
     // confirmation prompt opens; consumed by the prompt response.
     PhaseResetClipboard phase_reset_clipboard;
+    // THE MAGNIFICATION LEVEL PROPAGATE'S OWN SLOT (W-mode Ctrl+M /
+    // Ctrl+Alt+M; architect 2026-09-15): a second clipboard beside the first,
+    // so a copy of one column never overwrites the other's — the family's
+    // shared shape over this column's placement
+    // (magnification_level_clipboard.h).
+    MagnificationLevelClipboard magnification_level_clipboard;
     int                pending_paste_anchor = -1;
+    // WHICH FAMILY THE PENDING PASTE IS ('P' the phase reset propagate, 'M'
+    // the magnification level propagate): ONE PASTE_CONFIRM prompt body
+    // serves both, and its `y` forks on this tag (GuiPrompt::activate_response)
+    // — the load confirmation's one-body-two-subjects shape. Written by each
+    // family's open_paste_confirmation, the two producers; meaningful only
+    // while pending_paste_anchor is seated.
+    char               pending_paste_column = 'P';
 
     // (THERE IS NO TEXT CLIPBOARD FIELD HERE — 2026-08-02. The session-only
     // `text_clipboard` string is DELETED with the system clipboard's arrival:
@@ -12065,10 +12095,12 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     Ctrl+N, at their dispatch arms past the carded refusal and ahead of the
 //     column fork (input_handler.cpp) — the co-equal-axes rule says a delete is
 //     a delete in either column;
-//   * THE CLIPBOARD COPY, Ctrl+P, past its three gates;
-//   * THE TWO PROPAGATE PASTES — the phase paste's confirmed act
-//     (PhaseResetPropagate::paste_apply) and the state paste
-//     (paste_state_apply), each past its own last refusal;
+//   * THE TWO CLIPBOARD COPIES, Ctrl+P and (2026-09-15) Ctrl+M, each past
+//     its three gates;
+//   * THE FOUR PROPAGATE PASTES — each family's confirmed placement paste
+//     (PhaseResetPropagate::paste_apply,
+//     MagnificationLevelPropagate::paste_apply) and its state paste
+//     (paste_state_apply on both), each past its own last refusal;
 //   * BARE `m` (GuiFlagEditor::enter_bpm_mode, at the flag flip past its five
 //     bails);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -12276,10 +12308,11 @@ inline bool magnification_level_row_fields_differ(
 //           there — and takes the removal arm), the two deletes
 //           (delete_selected_marker, delete_selected_phase_reset) hint their
 //           deleted rows on the SNAPSHOT side (their live side is empty for the
-//           same reason), and the phase-reset propagate paste
-//           (PhaseResetPropagate::paste_apply) hints its materialized rows on
-//           the LIVE side. Shift+S's lead-in drop and the `s` drop are not
-//           separate producers: every drop road funnels through the two drop
+//           same reason), and the two propagate placement pastes
+//           (PhaseResetPropagate::paste_apply and, since 2026-09-15,
+//           MagnificationLevelPropagate::paste_apply) hint their materialized
+//           rows on the LIVE side. Shift+S's lead-in drop and the `s` drop are
+//           not separate producers: every drop road funnels through the drop
 //           bodies named.
 //   * A GROWN COLUMN: the after-rows whose time_frame no before-row can be
 //     spent on, one match per row.

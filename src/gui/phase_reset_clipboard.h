@@ -1,5 +1,6 @@
 #pragma once
 
+#include "propagate_clipboard.h"
 #include "warpmarkers.h"
 
 #include <cstdint>
@@ -12,7 +13,10 @@
 // inside them. Paste walks a destination anchor's named-block sequence
 // in lockstep with the clipboard, materializing phase resets at the
 // destination's actual durations. Single-slot, in-memory only — never
-// persisted to any sidecar, cleared on app exit.
+// persisted to any sidecar, cleared on app exit. THE BLOCK AND THE SLOT ARE
+// THE FAMILY'S SHARED SHAPE since 2026-09-15 (propagate_clipboard.h, the
+// magnification level propagate's clipboard being the other instantiation);
+// what this header owns is the PLACEMENT, the one thing that differs.
 
 // `anchor_source_frame`, `source_start_frame` and `source_end_frame` carry
 // absolute source-domain geometry so paste_state_apply can apply a
@@ -50,25 +54,8 @@ struct ClipboardPlacement {
     bool    disabled            = false;
 };
 
-struct ClipboardBlock {
-    std::string                     label_name;
-    int64_t                         source_start_frame = 0;  // absolute source frames
-    int64_t                         source_end_frame   = 0;  // absolute source frames
-    std::vector<ClipboardPlacement> placements;
-};
-
-class PhaseResetClipboard {
-public:
-    void set(std::vector<ClipboardBlock> blocks) {
-        blocks_ = std::move(blocks);
-    }
-    void clear()                                      { blocks_.clear(); }
-    bool empty() const                                { return blocks_.empty(); }
-    const std::vector<ClipboardBlock>& blocks() const { return blocks_; }
-
-private:
-    std::vector<ClipboardBlock> blocks_;
-};
+using ClipboardBlock      = PropagateClipboardBlock<ClipboardPlacement>;
+using PhaseResetClipboard = PropagateClipboard<ClipboardBlock>;
 
 // ---------------------------------------------------------------------------
 // THE PROPAGATE'S TWO WARP-MARKER ACCESSORS. They live in this header beside
