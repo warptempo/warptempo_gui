@@ -3,6 +3,7 @@
 #include "directory_walk.h"         // the one non-throwing listing walk
 #include "render_cache.h"           // kFingerprintSidecarExtension
 #include "render_output_naming.h"   // render_output_directory / _stem
+#include "sidecar_set.h"            // sidecar_path + its named indices
 
 #include <algorithm>
 #include <cstddef>
@@ -152,7 +153,7 @@ GuiRendersDir::enumerate_render_entries() {
 // them.
 std::filesystem::path GuiRendersDir::settings_path(
         const AppState::RenderEntry& e) {
-    return e.batch_folder / (e.basename + ".settings");
+    return sidecar_path(e.batch_folder, e.basename, kSidecarSettings);
 }
 
 // THE DELIVERABLE FOLDER'S PRUNE. The whole contract — the definition it

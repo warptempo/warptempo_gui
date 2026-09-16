@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstddef>
 #include <expected>
 #include <filesystem>
 #include <iterator>
 #include <optional>
 #include <string>
+#include <string_view>
 
 // THE PROJECT'S SIDECAR SET AND ITS REQUIRED-FILE PREFLIGHT — the parser-domain
 // core BOTH PRODUCTS COMPILE (architect approval 2026-09-16, the frozen-touch
@@ -34,8 +36,33 @@ inline constexpr const char* kSidecarExtensions[] = {
 };
 inline constexpr std::size_t kSidecarCount = std::size(kSidecarExtensions);
 
-// The set's i-th path beside `parent`/`stem`. One composition, so no road
-// spells a sidecar name by hand.
+// WHICH SIDECAR, NAMED ONCE (architect approval 2026-09-16): the four indices
+// into the list above are the ONE SPELLING OF "WHICH SIDECAR" everywhere. A
+// caller names the member and this header names the file, so the extension
+// strings live in this header alone — the composer below, the recheck's
+// per-sidecar arrays and every load, save and batch-cell path all go through
+// an index. The static_asserts pin each name to its string, so reordering the
+// list without reordering these fails the build rather than silently swapping
+// two columns' files.
+inline constexpr std::size_t kSidecarWarp               = 0;
+inline constexpr std::size_t kSidecarPhaseReset         = 1;
+inline constexpr std::size_t kSidecarMagnificationLevel = 2;
+inline constexpr std::size_t kSidecarSettings           = 3;
+
+static_assert(kSidecarCount == 4);
+static_assert(std::string_view(kSidecarExtensions[kSidecarWarp]) ==
+              ".warpmarkers");
+static_assert(std::string_view(kSidecarExtensions[kSidecarPhaseReset]) ==
+              ".phaseresetmarkers");
+static_assert(
+    std::string_view(kSidecarExtensions[kSidecarMagnificationLevel]) ==
+    ".magnificationlevelmarkers");
+static_assert(std::string_view(kSidecarExtensions[kSidecarSettings]) ==
+              ".settings");
+
+// The set's i-th path beside `parent`/`stem`, `i` named by the constants
+// above. THE ONE COMPOSITION, so no road spells a sidecar name by hand
+// (architect approval 2026-09-16).
 inline std::filesystem::path sidecar_path(const std::filesystem::path& parent,
                                           const std::string&           stem,
                                           std::size_t                  i) {

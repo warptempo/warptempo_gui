@@ -22,8 +22,10 @@ struct PhaseResetMarker {
     // RECORDED ASYMMETRY: phase resets carry no measure (architect
     // 2026-09-14, architect approval 2026-09-14 for this frozen touch); the
     // measure is the warp column's alone (WarpMarker::measure,
-    // warpmarkers_parse.h). Magnification is a field of no marker on either
-    // column (architect approval 2026-09-15).
+    // warpmarkers_parse.h). A magnification level is a field of neither this
+    // column nor the warp one: the magnification level markers column carries
+    // it as its own payload (MagnificationLevelMarker::level,
+    // magnificationlevelmarkers_parse.h) (architect approval 2026-09-16).
 };
 
 // Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on

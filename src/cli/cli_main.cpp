@@ -10,7 +10,7 @@
 #include "phase_reset_frame_map_build.h"  // build_phase_reset_source_frames
 #include "map_output.h"                 // write_frame_map_pair
 #include "marker_store_validate.h"      // first_past_eof_wall_defect
-#include "sidecar_set.h"                // kSidecarExtensions,
+#include "sidecar_set.h"                // sidecar_path + its named indices,
                                         // sidecar_set_presence_core
 #include "engine/engine.h"              // EngineParams, run_warptempo_engine
 #include "engine/engine_geometry.h"     // kN, kRs
@@ -97,11 +97,17 @@ int main(int argc, char** argv) {
     std::filesystem::path parent = src.parent_path();
     if (parent.empty()) parent = std::filesystem::path(".");
     const std::string stem     = src.stem().string();
-    const std::string wm_path  = (parent / (stem + ".warpmarkers")).string();
-    const std::string pr_path  = (parent / (stem + ".phaseresetmarkers")).string();
+    // The four paths through the one composer (sidecar_path, sidecar_set.h),
+    // named by its indices: the extension strings live in that header alone
+    // (architect approval 2026-09-16).
+    const std::string wm_path  =
+        sidecar_path(parent, stem, kSidecarWarp).string();
+    const std::string pr_path  =
+        sidecar_path(parent, stem, kSidecarPhaseReset).string();
     const std::string ml_path  =
-        (parent / (stem + ".magnificationlevelmarkers")).string();
-    const std::string set_path = (parent / (stem + ".settings")).string();
+        sidecar_path(parent, stem, kSidecarMagnificationLevel).string();
+    const std::string set_path =
+        sidecar_path(parent, stem, kSidecarSettings).string();
 
     // --- THE REQUIRED-SIDECAR PREFLIGHT, AHEAD OF EVERY STRICT READER
     // (architect approval 2026-09-16): the set rule is ONE OWNER both products

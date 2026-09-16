@@ -124,11 +124,14 @@ std::optional<GuiFailure> source_load_dry_run(
     std::filesystem::path parent = source.parent_path();
     if (parent.empty()) parent = std::filesystem::path(".");
     const std::string stem = source.stem().string();
-    const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
-    const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
-    const std::filesystem::path ml_path  =
-        parent / (stem + ".magnificationlevelmarkers");
-    const std::filesystem::path set_path = parent / (stem + ".settings");
+    const std::filesystem::path wm_path =
+        sidecar_path(parent, stem, kSidecarWarp);
+    const std::filesystem::path tm_path =
+        sidecar_path(parent, stem, kSidecarPhaseReset);
+    const std::filesystem::path ml_path =
+        sidecar_path(parent, stem, kSidecarMagnificationLevel);
+    const std::filesystem::path set_path =
+        sidecar_path(parent, stem, kSidecarSettings);
 
     // THE REQUIRED-FILE RULE FIRST, through the load's own owner
     // (sidecar_set_presence, settings_io.h — all four sidecars or none): a
@@ -324,11 +327,14 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     std::filesystem::path parent = apath.parent_path();
     if (parent.empty()) parent = std::filesystem::path(".");
     const std::string stem = apath.stem().string();
-    const std::filesystem::path wm_path  = parent / (stem + ".warpmarkers");
-    const std::filesystem::path tm_path  = parent / (stem + ".phaseresetmarkers");
-    const std::filesystem::path ml_path  =
-        parent / (stem + ".magnificationlevelmarkers");
-    const std::filesystem::path set_path = parent / (stem + ".settings");
+    const std::filesystem::path wm_path =
+        sidecar_path(parent, stem, kSidecarWarp);
+    const std::filesystem::path tm_path =
+        sidecar_path(parent, stem, kSidecarPhaseReset);
+    const std::filesystem::path ml_path =
+        sidecar_path(parent, stem, kSidecarMagnificationLevel);
+    const std::filesystem::path set_path =
+        sidecar_path(parent, stem, kSidecarSettings);
     app.warpmarkers_path      = wm_path.string();
     app.phaseresetmarkers_path = tm_path.string();
     app.magnificationlevelmarkers_path = ml_path.string();

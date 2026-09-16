@@ -73,10 +73,10 @@ static void remove_failed_batch_cell(const std::string& batch_folder,
         wav,
         std::filesystem::path(render_staging_path(wav.string())),
         std::filesystem::path(fingerprint_sidecar_path(wav.string())),
-        folder / (batch_basename + ".warpmarkers"),
-        folder / (batch_basename + ".phaseresetmarkers"),
-        folder / (batch_basename + ".magnificationlevelmarkers"),
-        folder / (batch_basename + ".settings"),
+        sidecar_path(folder, batch_basename, kSidecarWarp),
+        sidecar_path(folder, batch_basename, kSidecarPhaseReset),
+        sidecar_path(folder, batch_basename, kSidecarMagnificationLevel),
+        sidecar_path(folder, batch_basename, kSidecarSettings),
     });
 }
 

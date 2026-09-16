@@ -386,7 +386,7 @@ RenderOutcome do_render(const RenderRequest& req,
             // stores copied beside the batch render, whole-frame positions
             // as integer text — the same serialization Ctrl+S writes.
             const std::filesystem::path wm_path =
-                bf / (req.batch_basename + ".warpmarkers");
+                sidecar_path(bf, req.batch_basename, kSidecarWarp);
             bool existed = existed_before(wm_path);
             if (!GuiWarpMarkers::save(wm_path.string(), req.warp_markers)) {
                 note_failure(wm_path);
@@ -395,7 +395,7 @@ RenderOutcome do_render(const RenderRequest& req,
             note_created(wm_path, existed);
 
             const std::filesystem::path tm_path =
-                bf / (req.batch_basename + ".phaseresetmarkers");
+                sidecar_path(bf, req.batch_basename, kSidecarPhaseReset);
             existed = existed_before(tm_path);
             if (!GuiPhaseResetMarkers::save(tm_path.string(),
                                             req.phase_resets)) {
@@ -409,7 +409,8 @@ RenderOutcome do_render(const RenderRequest& req,
             // the render as the other three do. Display-only — the render
             // above read nothing of it.
             const std::filesystem::path ml_path =
-                bf / (req.batch_basename + ".magnificationlevelmarkers");
+                sidecar_path(bf, req.batch_basename,
+                             kSidecarMagnificationLevel);
             existed = existed_before(ml_path);
             if (!GuiMagnificationLevelMarkers::save(
                     ml_path.string(), req.magnification_level_markers)) {
@@ -486,7 +487,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 // read_settings_file — same writer, same canonical key order
                 // as a source save — with no validation added here.
                 const std::filesystem::path st_path =
-                    bf / (req.batch_basename + ".settings");
+                    sidecar_path(bf, req.batch_basename, kSidecarSettings);
                 existed = existed_before(st_path);
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,

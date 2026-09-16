@@ -5405,7 +5405,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     {
         GuiWarpMarkers m;
         const std::filesystem::path wm =
-            e.batch_folder / (e.basename + ".warpmarkers");
+            sidecar_path(e.batch_folder, e.basename, kSidecarWarp);
         auto r = m.load(wm.string(), &load_reason);
         if (!r) {
             return refuse("invalid warp markers in '" +
@@ -5418,7 +5418,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     {
         GuiPhaseResetMarkers t;
         const std::filesystem::path tm =
-            e.batch_folder / (e.basename + ".phaseresetmarkers");
+            sidecar_path(e.batch_folder, e.basename, kSidecarPhaseReset);
         auto r = t.load(tm.string(), &load_reason);
         if (!r) {
             return refuse("invalid phase reset markers in '" +
@@ -5432,7 +5432,8 @@ bool GuiInputHandler::load_render_entry_in_place(
     {
         GuiMagnificationLevelMarkers ml;
         const std::filesystem::path mlp =
-            e.batch_folder / (e.basename + ".magnificationlevelmarkers");
+            sidecar_path(e.batch_folder, e.basename,
+                         kSidecarMagnificationLevel);
         auto r = ml.load(mlp.string(), &load_reason);
         if (!r) {
             return refuse("invalid magnification level markers in '" +

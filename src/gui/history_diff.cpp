@@ -1777,13 +1777,15 @@ bool read_commit_sidecars(const std::string&        repo_root,
                       ".*' in more than one directory, so which piece it "
                       "names has no answer");
     }
-    // kSidecarExtensions order; the four named slots below and the blob
-    // array after them are that list spelled out, so its size is pinned here.
+    // kSidecarExtensions order, through its named indices (sidecar_set.h):
+    // the four named slots below and the blob array after them are that list
+    // spelled out, so its size is pinned here.
     static_assert(kSidecarCount == 4);
-    out.warpmarkers.path               = paths.path[0];
-    out.phaseresetmarkers.path         = paths.path[1];
-    out.magnificationlevelmarkers.path = paths.path[2];
-    out.settings.path                  = paths.path[3];
+    out.warpmarkers.path               = paths.path[kSidecarWarp];
+    out.phaseresetmarkers.path         = paths.path[kSidecarPhaseReset];
+    out.magnificationlevelmarkers.path =
+        paths.path[kSidecarMagnificationLevel];
+    out.settings.path                  = paths.path[kSidecarSettings];
 
     // THE BYTES, AND THE PROOF THEY ARE ALL OF THEM. A `show` that could not run
     // hands back an empty string, and an empty sidecar is a perfectly VALID whole
@@ -1874,11 +1876,14 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
         return refuse("commit " + snap.sha + " carries no '" + base_name +
                       ext + "'");
     };
-    if (snap.warpmarkers.path.empty())       return missing(".warpmarkers");
-    if (snap.phaseresetmarkers.path.empty()) return missing(".phaseresetmarkers");
+    if (snap.warpmarkers.path.empty())
+        return missing(kSidecarExtensions[kSidecarWarp]);
+    if (snap.phaseresetmarkers.path.empty())
+        return missing(kSidecarExtensions[kSidecarPhaseReset]);
     if (snap.magnificationlevelmarkers.path.empty())
-        return missing(".magnificationlevelmarkers");
-    if (snap.settings.path.empty())          return missing(".settings");
+        return missing(kSidecarExtensions[kSidecarMagnificationLevel]);
+    if (snap.settings.path.empty())
+        return missing(kSidecarExtensions[kSidecarSettings]);
 
     // THE COMMITTED BYTES REACH THE LOADERS THROUGH A SCRATCH DIRECTORY,
     // because all four whole-file entry points take a PATH and open the file
@@ -1939,11 +1944,15 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     };
     std::filesystem::path settings_file, warp_file, phase_reset_file,
                           magnification_level_file;
-    if (!stage(snap.settings, ".settings", settings_file))       return false;
-    if (!stage(snap.warpmarkers, ".warpmarkers", warp_file))     return false;
-    if (!stage(snap.phaseresetmarkers, ".phaseresetmarkers",
+    if (!stage(snap.settings, kSidecarExtensions[kSidecarSettings],
+               settings_file))                                   return false;
+    if (!stage(snap.warpmarkers, kSidecarExtensions[kSidecarWarp],
+               warp_file))                                       return false;
+    if (!stage(snap.phaseresetmarkers,
+               kSidecarExtensions[kSidecarPhaseReset],
                phase_reset_file))                                return false;
-    if (!stage(snap.magnificationlevelmarkers, ".magnificationlevelmarkers",
+    if (!stage(snap.magnificationlevelmarkers,
+               kSidecarExtensions[kSidecarMagnificationLevel],
                magnification_level_file))                        return false;
 
     // The four STRICT WHOLE-FILE LOADERS are the judges, in the render-entry

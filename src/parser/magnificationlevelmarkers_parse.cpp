@@ -96,10 +96,16 @@ parse_magnificationlevelmarkers_file(
         MagnificationLevelMarker m = *parsed;
         // Load rejects only DECREASING times, the phase-reset column's rule:
         // the GUI always saves its time-sorted store, so a decreasing file is
-        // a hand edit or corruption, while equal frames load (the GUI's
-        // waveform gain profile lets the last in store order win). The
-        // past-EOF wall is the orchestrators' (first_past_eof_wall_defect):
-        // this parser has no audio duration.
+        // a hand edit or corruption, while equal frames load. A frame run of
+        // 2+ ENABLED markers reads as the NEUTRAL LEVEL 0 — the warp column's
+        // coincident rule on this axis, where a run of 2+ enabled tempo
+        // markers collapses to a neutral 1.00 — so store order among equal
+        // frames is invisible to the picture, exactly as it is invisible to
+        // the render on the two render columns (the rule's one owner is
+        // for_each_magnification_level_run, magnificationlevelmarkers.cpp)
+        // (architect approval 2026-09-16). The past-EOF wall is the
+        // orchestrators' (first_past_eof_wall_defect): this parser has no
+        // audio duration.
         if (last_time >= 0 && m.time_frame < last_time)
             return fail(line_number,
                 "time decreasing: " + format_authored_frame(m.time_frame));
