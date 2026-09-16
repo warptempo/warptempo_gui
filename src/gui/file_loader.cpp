@@ -421,7 +421,6 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     app.pending_click = PendingClickAct{};
     app.trim_drag = TrimDragState{};
     app.scroll_drag = ScrollDragState{};
-    app.overview_drag = OverviewDragState{};
     app.double_click = DoubleClickCandidate{};
     app.trim_bar_press = TrimBarPressSeed{};
     // Belt-and-braces: dissolve the shift-range-select anchor on load (the

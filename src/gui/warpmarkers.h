@@ -266,9 +266,9 @@ inline int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
 // [0, kMarkerMagnificationMax] (marker_magnification.h, the ONE range owner);
 // waveform_magnification_gain (render.h) is what a level means.
 //
-// Source frames because marker time_frames are source frames: every waveform
+// Source frames because marker time_frames are source frames: the waveform
 // picture already holds each column's source span (the plate maps target-view
-// columns through the warp map; the overview lane is source-domain), so the
+// columns through the warp map), so the
 // profile needs no view fork anywhere.
 struct WaveformGainBreakpoint {
     int64_t source_frame = 0;
@@ -278,8 +278,8 @@ struct WaveformGainProfile {
     std::vector<WaveformGainBreakpoint> breakpoints;
 };
 
-// The profile's identity for the picture caches (the plate fingerprint and
-// the overview bar cache's key): FNV-1a over every breakpoint. 0 for the
+// The profile's identity for the picture cache (the plate fingerprint):
+// FNV-1a over every breakpoint. 0 for the
 // empty profile.
 uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile);
 

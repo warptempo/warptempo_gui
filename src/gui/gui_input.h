@@ -1087,7 +1087,7 @@ struct GuiTouchNavFrame {
     // zoom-only gesture and the pan-only one.
     bool   two_finger = false;
     // THE FIRST FINGER'S DOWN POINT LAY ON A THIN LANE (2026-08-15) — the
-    // OVERVIEW STRIP or the TRIM BAR, the class the GUI's
+    // TRIM BAR, the class the GUI's
     // touch_point_on_thin_lane answers (its declaration owns what makes a lane a
     // member). Captured ONCE, at the `Idle` down that opened this contact stream
     // (the platform's touch_down_on_thin_lane_), and CONSTANT for the stream's
@@ -1096,7 +1096,7 @@ struct GuiTouchNavFrame {
     //   * apply_touch_nav_update drops EVERY nav frame carrying it — two
     //     fingers and one alike — because a gesture begun on a thin lane must do
     //     nothing at all rather than fall through to the waveform's pinch and
-    //     zoom the view from a strip the user was touching for another reason.
+    //     zoom the view from a lane the user was touching for another reason.
     //   * the PLATFORM's own second-finger fork reads its copy: a second finger
     //     landing during a live translation on such a lane is ignored outright,
     //     so the first finger's drag continues instead of being torn down for a

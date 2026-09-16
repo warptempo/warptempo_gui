@@ -94,7 +94,7 @@
 // re-anchors once at its end), the centring jump, follow's page and the
 // on-edge of the follow toggle, the map-change re-land
 // (reseat_playhead_to), the resize whose level moved, and the pointer ends
-// (the nav drag's and the overview drag's release and force-end, the touch
+// (the nav drag's release and force-end, the touch
 // hard end). Grep `resync_predictor` and re-count; never inherit this number.
 // EVERY RESYNC ANCHORS ON THE AUDIO THREAD'S CYCLE STAMP — (the read cursor,
 // the instant that cursor's frame enters the output port) — and not on the

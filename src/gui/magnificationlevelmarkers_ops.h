@@ -29,7 +29,7 @@ class GuiAudio;
 //   * THE PICTURE IS WHAT IT OWES INSTEAD. Every write here moves the WAVEFORM
 //     GAIN PROFILE (build_waveform_gain_profile, magnificationlevelmarkers.h),
 //     which is memoized on this store's generation and keys the plate
-//     fingerprint and the overview bar cache by FIELD. So each body captures
+//     fingerprint by FIELD. So each body captures
 //     Viewport::waveform_gain_hash() BEFORE its store write and hands it to
 //     kick_waveform_sync_if_gain_changed AFTER, and the new gain lands in the
 //     frame its edit does rather than a tick late on the async backstop. A

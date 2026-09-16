@@ -133,20 +133,9 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 // flags as well as waveform. Playhead-only moves keep using the narrow
 // column invalidation below.
 //
-// THE OVERVIEW LANE IS INSIDE THIS ONE RECT since the relayout's commit B
-// (2026-08-12): the lane moved from the bottom strip into the CENTERED BLOCK
-// (top lane 3), and this damage spans the window top through the waveform's
-// bottom, so the lane's viewport BOX — which mirrors the viewport/zoom every
-// caller here just moved — and its playhead TICK — which mirrors the cursor
-// every discrete playhead write behind this shape just landed — are both
-// covered by construction. THE DEDICATED RIDER IS DELETED WITH THE MOVE: it was
-// a SECOND rect that skipped the unified bottom row between the waveform and
-// the lane (to keep pan/zoom frames from paying that row's HarfBuzz label
-// shaping), and both the rect and the skip are producer-less now — nothing sits
-// between them. Its two inline copies at waveform_cache.cpp's publish sites
-// went the same way, each site's note pointing here. The per-frame SCANNER
-// sites still do NOT come through here: their overview tick damage is its own
-// narrow column pair (the cadence rule at playhead_pixel_x, app_state.h).
+// ONE RECT, from the window top through the waveform's bottom: every lane
+// whose content mirrors the viewport, the zoom or the cursor is inside it by
+// construction, so no caller here owes a second rect.
 void Viewport::invalidate_waveform_area() {
     const GuiRect a = waveform_area(app);
     const int y0 = 0;
@@ -531,14 +520,12 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: ALL THREE callers —
+    // `level_changed` reports a real move, not a request: BOTH callers —
     // the nav drag's zoom phase (apply_nav_zoom_at,
-    // which joined 2026-08-14 with the live-ctrl model; the deleted strip
-    // drag's own body was the fourth until 2026-08-15), the two-finger
+    // which joined 2026-08-14 with the live-ctrl model) and the two-finger
     // touch-nav body
     // (apply_touch_nav_update, which joined 2026-08-11 driving this same
-    // chokepoint per touch frame) and the overview lane's edge drags
-    // (apply_overview_drag_at's edge arm, since the lane rework 2026-08-12) —
+    // chokepoint per touch frame) —
     // pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
     // below, so the pre-assignment compare cannot read a wall-saturated no-op as

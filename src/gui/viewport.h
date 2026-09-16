@@ -150,8 +150,8 @@ struct Viewport {
     //    zoom write, whose applier's own synchronous kick carries it; the one
     //    zoom write with no applier, the resize's clamp, runs the same
     //    before/after test itself at GuiPaintHandler::on_resize.)
-    //    A gain change dirties the plate fingerprint and the overview bar
-    //    cache BY FIELD — the tick's async backstop would repaint it a frame
+    //    A gain change dirties the plate fingerprint
+    //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and a level write takes the kick so the
     //    new gain lands in the frame its edit does. A gain-only change is a
     //    plate CONTENT change with no geometry behind it, so the reclamp below
@@ -324,20 +324,14 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // THREE callers since the overview lane's dual-axis strip drag was deleted
-    // (2026-08-15; it was the original caller, and there were four between the
-    // nav drag's zoom phase joining on 2026-08-14 and that deletion):
+    // TWO callers (re-greped 2026-09-16):
     // the nav drag's zoom phase apply_nav_zoom_at
-    // (pure zoom about the seated pivot — the viewport arrives unpanned), the
-    // two-finger touch-nav body
+    // (pure zoom about the seated pivot — the viewport arrives unpanned) and
+    // the two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the content under the previous finger centroid, placed at
-    // the current one), and the overview lane's EDGE drags
-    // (apply_overview_drag_at's edge arm — the anchor is the FIXED opposite
-    // viewport bound at its own window column, 0 or area.w, so a dragged box
-    // edge zooms about the far edge; that arm is how the lane reaches a zoom AT
-    // ALL, the box's span being the lane's whole zoom vocabulary now). All
-    // three pre-clamp the level; this
+    // the current one). Both
+    // pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan
     // (level unchanged) the placement reproduces the caller's post-pan viewport

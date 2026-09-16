@@ -1402,8 +1402,8 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
             // THE THIN-LANE ANSWER rides beside it, same query shape, same one
             // asking, same lifecycle (both cleared in forget_touch_state). It
             // forks NO deadline and NO resolution here, so a finger landing on
-            // the overview strip or the trim bar resolves exactly as it would
-            // otherwise (neither lane is pan surface, so that is the plain
+            // the trim bar resolves exactly as it would
+            // otherwise (the lane is not pan surface, so that is the plain
             // pointer translation); what it decides comes later, at the two
             // doors that refuse with it — the second-finger fork in the Pointer
             // arm below, and the GUI's own refusal on every nav frame it is
@@ -1504,20 +1504,20 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
             // A SECOND finger during a live translation FORKS ON THE MOVED
             // LATCH (the sixth glass ruling, 2026-08-12 — the one piece of
             // the timer-free model kept when the window returned):
-            //   * MOVED (a live drag — marker, region, trim, the overview
-            //     lane's box and bound drags): IGNORED whole — recorded (the
+            //   * MOVED (a live drag — marker, region, trim): IGNORED whole —
+            //     recorded (the
             //     count above), not routed: mid-gesture finger-count changes do
             //     not mutate a committed gesture (the any-end-commits family;
             //     the architect's explicit mid-drag ruling).
-            //   * ON A THIN LANE (the overview strip or the trim bar,
+            //   * ON A THIN LANE (the trim bar,
             //     touch_down_on_thin_lane_): IGNORED WHETHER THE FIRST FINGER
             //     HAS MOVED OR NOT, so the first finger's drag simply continues
             //     — architect 2026-08-15: "get rid of all two-finger gestures on
-            //     the overview strip and on the trim bar; once one finger is
+            //     ... the trim bar; once one finger is
             //     down, the second finger is completely ignored, which is what
             //     we do with three-finger gestures on the waveform — which makes
-            //     sense, because the waveform is large and the overview and trim
-            //     are small". THIS IS THE FIRST DOOR AND THE REASON IT EXISTS:
+            //     sense, because the waveform is large and ... trim [is]
+            //     small". THIS IS THE FIRST DOOR AND THE REASON IT EXISTS:
             //     without it a MOTIONLESS finger on such a lane would take the
             //     upgrade below, tearing down a live and perfectly correct
             //     pointer translation to start a gesture the GUI's own refusal
@@ -2261,8 +2261,7 @@ void GuiInputCore::begin_capture_seed() {
     // freeze immediately after this call when it crosses into a zoom phase, and
     // at every ctrl edge after that (contract at set_notional_x_frozen) — and
     // it is the freeze's ONE client, that drag being the process's one
-    // capturing gesture since the overview lane's dual-axis strip drag was
-    // deleted (2026-08-15).
+    // capturing gesture.
     notional_x_frozen_ = false;
 }
 

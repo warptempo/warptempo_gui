@@ -572,8 +572,8 @@ void commit_observation(GuiPlaybackState& state, const Observation& o) {
 
 int64_t playback_cursor(GuiPlaybackState& state) {
     // THIS FLOOR IS THE ROUNDING RULE'S DECLARED EXCEPTION ON A SAMPLE INDEX,
-    // and it is declared here the way the overview lane declares its own
-    // (app_state.cpp): the digest classes a sample index as a POINT on the
+    // and it is declared here, at the site that takes it: the digest classes a
+    // sample index as a POINT on the
     // sample grid, taking nearbyint, and every other site in the tree does —
     // but a PLAY POSITION is a CELL. Frame n covers the whole interval a
     // fractional position lands in until n + 1 begins, which is exactly what

@@ -663,9 +663,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // click (scroll_drag — one state for the pending, the pan and the ctrl
     // zoom phase since 2026-08-14; the dual-axis STRIP drag was a member here
     // until its deletion, 2026-08-15),
-    // the overview lane's box drag (overview_drag — the box pan and the two
-    // edge drags; an OUTSIDE press is the pan here too, its teleport having
-    // already run at the press, so a force-end costs it nothing),
     // (THE STANDING REGION'S OWN EDITOR was an entry of its own from
     // 2026-08-15 until 2026-08-18: `region_edit_drag`, the move and the two
     // bound drags. Its state is DELETED — those drags ARE the trim drags named
@@ -697,7 +694,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
     if (app.drag.active || app.value_drag.active || app.trim_drag.active ||
         app.region_drag.active ||
-        app.scroll_drag.active || app.overview_drag.active ||
+        app.scroll_drag.active ||
         app.pending_marker_press.active || app.pending_click.active() ||
         app.pending_trim_drag.active) {
         // The ONE hatch left, modifier-exact (a modified Ctrl+Q has no binding
@@ -3284,7 +3281,7 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 
 void GuiInputHandler::run_span_framing_command() {
     // The trim-bar double-click ZOOMS TO A SPAN, its own route beside the bare
-    // `0` overview (run_overview_command) and `c`'s marker-jump working zoom.
+    // `0` full zoom out (run_overview_command) and `c`'s marker-jump working zoom.
     // It only ever FRAMES a span,
     // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
     // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
@@ -3350,7 +3347,7 @@ void GuiInputHandler::run_span_framing_command() {
 //
 // THE STEPPED PAN: the samples_visible / kViewportLeadDivisor stride through
 // the scroll_viewport funnel, which is what carries the follow suppression,
-// over the waveform, the overview lane and the top strip alike (every context
+// over the waveform and the top strip alike (every context
 // id, one route; the two bools below say only "a wheel-live surface"). up =
 // earlier, down = later. HISTORY OF THE SPELLING: plain from 2026-08-12 (the
 // eighth glass ruling moved the pan onto the bare form), on ALT from
@@ -3402,10 +3399,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // chords: panning while an edit is open changes no state the edit
     // owns and discards nothing, so there is nothing for modality to protect.
     //
-    // The wheel routes by area — the waveform, the top strip, and the
-    // OVERVIEW STRIP (2026-08-12: the lane is a navigation surface, so its
-    // wheel is live like the areas above it) — plus the ONE
-    // row-wise carve-out below, the redesigned rows' inert band. ALL THREE
+    // The wheel routes by area — the waveform and the top strip — plus the ONE
+    // row-wise carve-out below, the redesigned rows' inert band. BOTH
     // take the same one route since 2026-08-12, and the wheel's one arm rides
     // it (the plain stepped pan, every modifier refused inside handle_wheel and
     // never here), so the context ids
@@ -3510,19 +3505,6 @@ int GuiInputHandler::wheel_context(int x, int y) const {
         }
     }
 
-    // THE OVERVIEW STRIP (context 3): a navigation surface, so the wheel is
-    // live there. TESTED BEFORE THE AREAS since the relayout's
-    // commit B: the lane is a TOP-STRIP lane now (it was disjoint from both
-    // areas while it sat in the bottom strip, and this clause followed them),
-    // so the top-strip test below would otherwise answer 2 over it first. Both
-    // ids take the same one route, so the ordering costs nothing but the id's
-    // honesty — and the id is what the platform attributes sub-detent remainder
-    // to. A positive context here also admits the touch nav's per-frame frames
-    // over the lane, which is the same navigation-class answer — and is exactly
-    // why apply_touch_nav_update carries its OWN thin-lane refusal: this
-    // predicate is the WHEEL's routing owner and the wheel stays live here, so
-    // the nav gesture's refusal could not be folded into it.
-    if (rect_contains(top_overview_row_area(app), x, y)) return 3;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     const bool inside_waveform = rect_contains(area, x, y);
@@ -3614,16 +3596,15 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
         run_flag_cell_wheel(dir, count, x, y);
         return;
     }
-    // ctx: 1 waveform, 2 the top strip, 3 the overview strip. All three take
+    // ctx: 1 waveform, 2 the top strip. Both take
     // the same one-arm vocabulary — plain = the stepped pan, every modified
-    // wheel a swallowed no-op (architect approval 2026-09-14). The
-    // overview rides the waveform's slot: handle_wheel only asks "am I on a
-    // wheel-live navigation surface", and the lane is one. THE CONTEXT ANSWER
+    // wheel a swallowed no-op (architect approval 2026-09-14). THE CONTEXT
+    // ANSWER
     // IS MODIFIER-INDEPENDENT by construction (wheel_context takes only x/y and
     // reads no modifier state), so a modifier cannot change WHERE the wheel is
     // live, only whether it acts there.
     handle_wheel(dir, count, mods.ctrl, mods.shift, mods.alt,
-                 ctx == 1 || ctx == 3, ctx == 2);
+                 ctx == 1, ctx == 2);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(

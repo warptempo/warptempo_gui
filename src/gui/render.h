@@ -478,7 +478,7 @@ inline constexpr double   kRedesignViewBarFrameMix     = 0.20;
 // row, not outside"). The strip stack allocates 30 authored px of CONTENT
 // plus the row's own 6px MARGIN-BOTTOM and nothing else — the lane sits
 // under the ICON ROW's own border-bottom with gap 1 between, and the margin
-// holds the base line off the overview strip's black top edge below (the
+// holds the base line off the lane below (the
 // tab-row metric block further down this file, and kdenlive-redesign.md's
 // closing section) — and the last `kTabBorderPx` rows of that CONTENT are
 // the line.
@@ -599,12 +599,6 @@ inline constexpr GuiColor kRedesignSelectedFill = hex(0x3C3F41);
 // them out rather than inventing a formula from three samples.
 inline constexpr GuiColor kTrimLaneBar       = hex(0x2F6888);
 inline constexpr GuiColor kTrimLaneEndcap    = hex(0x97B4C4);
-// The body colour gained a second reader on 2026-09-04, deliberately rather
-// than a second colour: the overview strip's trim line (paint_overview_strip's
-// layer 3) paints the trim's whole-song span in kTrimLaneBar, so the two
-// surfaces that depict the trim wear one shade and read as the same object at
-// two scales. The endcap shade stays the endcaps' alone — the overview line is
-// pointer-inert and has no handles to distinguish.
 // THE MIDPOINT MARK NEEDS NO COLOUR OF ITS OWN (architect 2026-08-01, second
 // pass — he overlaid row_5_lane_1_trim_middle.png on the running GUI and ruled
 // the crop implemented VERBATIM): the 9x9 crop is exactly a LANE-HEIGHT TILE
@@ -643,19 +637,6 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 inline constexpr GuiColor kPlayheadHead     = hex(0x8E8F91);
 inline constexpr GuiColor kPlayheadHeadTick = hex(0xB7B7B7);
 inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
-
-// THE OVERVIEW STRIP'S VIEWPORT-BOX OUTLINE (the lane rework, 2026-08-12 —
-// the architect ordered "increase contrast on the outline" when the box grew
-// grab handles; he retunes by recompile if this pick is off). The box wore
-// kRedesignLine #535659 (the chrome-line class) from the lane's landing, and
-// at 24px lane height over kWaveformCanvas #12312b that read too quiet for a
-// surface the pointer now grabs. THE DERIVATION: #c2c2c2 is kRulerLabel's own
-// value — the navigation strip's one bright structural grey, the brightest
-// grey the strip already carries below the paper white — spelled as its own
-// constant by the hard-coded rule (two facts that agree, not one referenced
-// twice). Deliberately GREY and deliberately BELOW kPlayheadStem's #fcfcfc:
-// the lane's one WHITE vertical stays the playhead tick's.
-inline constexpr GuiColor kOverviewBoxLine  = hex(0xC2C2C2);
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
 // selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a
@@ -1035,21 +1016,6 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // Since the aliasing deletion the plate's alpha is BINARY, so an ink pixel is
 // fully opaque and a gap is fully transparent: this colour shows through the
 // gaps and blends with nothing.
-//
-// IT GAINED A SECOND READER ON 2026-09-04 (architect), deliberately rather than
-// a second colour: the OVERVIEW STRIP recolors the trim's own columns in this
-// same ground while the overlay stands (paint_overview_strip's layer 1,
-// paint_handler.cpp), so the overlay has a second surface and the whole-song
-// lane says where the trim window sits — which is what let the show half stop
-// framing the same day. The relationship carries over intact at that scale: the
-// lane's cached bar surface is cleared to TRANSPARENT and carries binary-alpha
-// ink alone, so this fill lands under the bars, shows through their gaps and
-// blends with nothing there either. THE LANE TAKES THE WHOLE PAIR, not the
-// ground alone: kWaveformRegionInk below lifts the lane's bars over the same
-// span in a second pass after the blit, so the highlight is ONE CONSTRUCTION
-// AT TWO SCALES and the strip reads as a lit region rather than as a lit
-// background behind unlit bars — the same correction the waveform's own
-// ground-only pass took on 2026-08-18.
 inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63)
 
 // THE HIGHLIGHT'S OTHER HALF — THE SAME LIFT APPLIED TO THE INK (architect
@@ -1069,15 +1035,6 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63
 // untouched — still showing the kWaveformRegionCanvas ground the first pass
 // laid down. A translucent wash painted over the plate is the retired form the
 // opaque recolor model rejects, and this is not it.
-//
-// IT GAINED A SECOND READER ON 2026-09-04 alongside its ground sibling: the
-// OVERVIEW STRIP lifts the lane's bars over the trim's own columns in this same
-// colour (paint_overview_strip's layer 2 region half, paint_handler.cpp),
-// masked through the CACHED BAR SURFACE's own binary alpha exactly as this pass
-// masks through the plate's — that surface is cleared to transparent and
-// written by the same aliased renderer, so the mechanism carries over whole.
-// The lane takes the PAIR because half of it was the 2026-08-18 defect again:
-// the ground recolor alone lit the background behind unlit bars.
 //
 // THE ARCHITECT'S TUNING KNOB, explicitly — both halves of it: each lift is a
 // derivation and not a measurement, so this constant and kWaveformRegionCanvas
@@ -1623,7 +1580,7 @@ inline int menu_row_h_px() {
 // kdenlive-redesign.md.)
 
 // Authored pixel geometry of the TAB ROW — the top strip's lane 2 since
-// 2026-09-09, under the icon row and directly ON the overview strip (row 3 of
+// 2026-09-09, under the icon row and directly ON the trim bar (row 3 of
 // the redesign: the "A" / "B" Breeze tabs; it was lane 1, under the menu row,
 // from the 2026-08-12 relayout until the 2026-09-09 one — kdenlive-redesign.md's
 // closing section). Measured at 100% gui_scale off
@@ -1640,8 +1597,8 @@ inline int menu_row_h_px() {
 // row at each edge from 2026-08-13 until then (32 at 100%; kTabRowBorderPx /
 // tab_row_border_h_px are retired with the relayout): the top line had landed
 // to stop the row bleeding into the menu row above it, and the menu row is no
-// longer above it — the row sits under the icon row's own border-bottom and
-// ON the overview strip, so the two lines the lane owned had nothing left to
+// longer above it — the row sits under the icon row's own border-bottom, so
+// the two lines the lane owned had nothing left to
 // separate. THE BOTTOM ONE CAME BACK INSIDE (architect 2026-09-09, his second
 // look): the CONTENT's LAST ROW is the base line, which costs the lane no
 // height at all, the line living in the 30 rather than beside it. The
@@ -1652,16 +1609,17 @@ inline int menu_row_h_px() {
 //
 // AND THE LANE CARRIES A 6px MARGIN-BOTTOM (architect 2026-09-09, from
 // PCManFM-Qt: "PCManFM-Qt has six pixels of margin below the tab row; with
-// the icons moved up, the tab row abuts the overview strip and the selected
-// tab has a black bar running under it that looks odd"). It is the row's ONE
+// the icons moved up, the tab row abuts the lane below it and the selected
+// tab has a black bar running under it that looks odd"). IT IS THIS ROW'S OWN
+// BOTTOM PAD, holding the tabs off the TRIM BAR below. It is the row's ONE
 // term outside its content, so
 //
 //     tab_row_h_px() = tab_row_content_h_px() + tab_row_margin_bottom_h_px()
 //
 // — 36 at 100%, 82 at the tablet's 225% (68 content + 14, since 6 x 2.25 =
 // 13.5 rounds up to the even 14). It is INSIDE the lane and OUTSIDE the
-// content, which puts it under the base line and above the overview strip's
-// black top edge, and PAINT_TAB_ROW FILLS IT WITH THE SAME GROUND IT FILLS
+// content, which puts it under the base line and above the next lane's first
+// pixel, and PAINT_TAB_ROW FILLS IT WITH THE SAME GROUND IT FILLS
 // GAP 1 AND THE LANE WITH — one rectangle of kRedesignContentGround from the
 // gap's top to the LANE's foot — so the margin is the row's ground extended
 // six rows below the base line, not a band of its own. It is pointer-inert
@@ -1918,30 +1876,29 @@ inline int marker_lane_h_px() {
 // one above the UNIFIED BOTTOM ROW, sized so THE WAVEFORM'S VERTICAL MIDPOINT
 // IS THE WINDOW'S ("the labwc titlebar above and the panel below offset each
 // other" — his own reasoning, so the centering is within the app surface with
-// no titlebar arithmetic). The stack is MENU ROW / gap 1 / THE CENTERED BLOCK
-// (tab, icon, OVERVIEW STRIP, trim, ruler, markers, then the WAVEFORM with its
+// no titlebar arithmetic). The stack is MENU ROW / ICON ROW / gap 1 / THE
+// CENTERED BLOCK
+// (tab, trim, ruler, markers, then the WAVEFORM with its
 // own thick bottom border as the block's bottom edge) / gap 2 / THE UNIFIED
 // BOTTOM ROW at the window foot. (The ruling's first hours put the whole
 // flexible space between the icon row and the trim lane; the row unification
-// later that day moved it to the window's foot, under the bottom row and then
-// under the overview strip, and commit B split it in two around the block.)
+// later that day moved it to the window's foot, under the bottom row, and
+// commit B split it in two around the block.)
 //
 // THE VALUE IS 550 -> 500 AT COMMIT B (the same dictation). The architect's
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 193
-// (menu 31 + tab 32 + icon 47 + overview 26 + trim 9 + ruler 28 + marker 20 —
-// the overview lane and the tab row each grew a border row 2026-08-13, and
-// the menu lane went 35 -> 31 on 2026-08-21)
+// produces by construction. At 100% scale, with the top lanes summing 170
+// (menu 30 + icon 47 + tab 36 + trim 9 + ruler 28 + marker 20)
 // and the bottom row 47 (the icon row's height since 2026-08-14): the
-// 1920x1080 monitor's leftover is 840, so the
-// waveform CLAMPS at the default 500 and the two gaps take 97 (top) + 243
+// 1920x1080 monitor's leftover is 863, so the
+// waveform CLAMPS at the default 500 and the two gaps take 120 (top) + 243
 // (bottom); a
-// 1024x600 SHORT WINDOW's leftover is 360, UNCLAMPED, and the centering is
+// 1024x600 SHORT WINDOW's leftover is 383, UNCLAMPED, and the centering is
 // infeasible there so both gaps floor at 0 and the waveform keeps the whole
-// 360. The full stacks and their derivation are main.cpp's vertical block,
-// the one owner; these figures are its, re-derived 2026-08-29.
+// 383. The full stacks and their derivation are main.cpp's vertical block,
+// the one owner; these figures are its, re-derived 2026-09-16.
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
@@ -1959,78 +1916,9 @@ inline int marker_lane_h_px() {
 void set_max_waveform_height_px(int authored_px);
 int  waveform_max_h_px();
 
-// THE OVERVIEW STRIP'S HEIGHT — ONE FIXED TINY LANE (architect-ratified
-// 2026-08-12, his pick from the offered fillers: "the whole song overview
-// strip, yes, that's the best one... that's perfect"; the Ableton model per
-// his own reference, ableton.png in the redesign folder — "a Zoom strip right
-// underneath the transport buttons... it draws a box around the area that you
-// currently view"). The lane shows the WHOLE PIECE as min/max bars with the
-// viewport box and the playhead tick; every gesture on it is PLAIN and acts on
-// the BOX — the pan, the endcap bound drags and the teleport (the dual-axis
-// ctrl strip drag was deleted 2026-08-15; OverviewDragState carries the
-// vocabulary).
-//
-// ITS HOME IS THE CENTERED BLOCK, between the ICON ROW and the TRIM BAR (the
-// relayout's commit B, the same day: top lane 3). It landed under the unified
-// bottom row for the afternoon and moved up with the restack — the whole
-// interactive block is one cluster and the strip is part of it.
-//
-// ONE CONSTANT, ONE HEIGHT ON BOTH HOSTS (architect, live at commit B: "always
-// the same height, very tiny height in both the laptop and the touch screen").
-// THE PAIR IT SUPERSEDES LIVED ONE DAY: kOverviewMaxHeightPx = 96 /
-// kOverviewMinHeightPx = 24 with the lane's height = clamp(the leftover past
-// the waveform clamp, min, max), the minimum reserved AHEAD of the waveform's
-// natural height so the Pi kept a 24px sliver ("the touchpad could do with a
-// very tiny one now that the bottom two rows are combined") — the clamp, the
-// reserve arithmetic and the blank-foot remainder are all DELETED
-// producer-less, and the waveform's natural height is the plain leftover the
-// two flex gaps share (the waveform-max block above). The surviving 24 is that
-// pair's own minimum, the sliver the Pi already read well.
-//
-// THE CSS BOX MODEL, as every bordered lane takes it (rows 3, 4 and the bottom
-// row): 24 is CONTENT and the 1px borders sit OUTSIDE it. THE LANE CARRIES TWO
-// OF THEM, ONE AT EACH EDGE, so the LANE the strip stack allocates is 26 at
-// 100%. THE TOP LINE JOINED 2026-08-13 (architect: the lane "gains an
-// almost-black top border, the same colour as the bottom one"), SUPERSEDING
-// commit B's single bottom line — the lane GREW by that row rather than eating
-// one of its own 24, which is what "gains" says and what keeps the miniature
-// waveform exactly as tall as it has been. It is deliberately ADJACENT to the
-// ICON ROW'S OWN border-bottom, two 1px lines at that seam: the architect's
-// ask, the lane reading as its own framed object rather than as ground the
-// icon row happens to end above. Commit B's reasoning for the single line (a
-// top line would double the icon row's) is the superseded half; the bottom
-// line facing the trim bar's bare ground is unchanged. Both SCALED lengths
-// riding gui_scale like every authored height, the border PER EDGE.
-inline constexpr int kOverviewHeightPx = 24;
-inline constexpr int kOverviewBorderPx = 1;    // per edge: top and bottom
-inline int overview_lane_border_h_px() {
-    return scaled_px(kOverviewBorderPx, 1);
-}
-inline int overview_lane_content_h_px() {
-    return scaled_px(kOverviewHeightPx, 5);
-}
-inline int overview_lane_h_px() {
-    return overview_lane_content_h_px() + 2 * overview_lane_border_h_px();
-}
-// The overview lane's CONTENT band — the lane less its TWO border rows
-// (above), the band the bars, the viewport box and the cached blit live in.
-// SYMMETRIC since the top border landed, which makes it the same SHAPE as the
-// waveform's own waveform_content_rect — but not the same function: that one
-// takes the waveform area's own thicker chrome (waveform_border_px), and the
-// two lanes' borders are separately authored. The TICK deliberately reads the
-// whole LANE instead, crossing both borders like every 1px position vertical in
-// the product. A degenerate lane (too short to carry both rows) passes through
-// unshrunk rather than inverting, waveform_content_rect's own shape.
-inline GuiRect overview_content_rect(GuiRect lane) {
-    const int b = overview_lane_border_h_px();
-    if (lane.h <= 2 * b) return lane;
-    return GuiRect{lane.x, lane.y + b, lane.w, lane.h - 2 * b};
-}
-
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
-// strip's ONLY lane since the relayout's commit B moved the overview strip up
-// into the centered block): the transport three on the left with the monospace
+// strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
 // clock behind their separator (left-anchored since 2026-08-18, centred in the
 // lane before it), and the four marker verbs with ADD TO SELECTION behind them
 // + separator + marker-walk two + separator + four cardinal
@@ -2787,9 +2675,9 @@ struct WaveformBasis {
 // sustain.
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME (architect approval 2026-09-14), on
-// EVERY waveform picture — this plate and the overview lane's bars, both of
-// which take the same profile (effective_waveform_gain_profile,
-// warp_frame_map_view.h, built from the magnification level markers column).
+// the waveform picture — this plate, which takes the profile
+// effective_waveform_gain_profile (warp_frame_map_view.h) builds from the
+// magnification level markers column.
 // A COLUMN TAKES THE LEVEL OF THE
 // SECTION CONTAINING ITS FIRST SOURCE FRAME s0 — the cell rule (CLAUDE.md
 // Rounding): the column's span [s0, s1) is a cell, and the section that contains
@@ -2801,7 +2689,7 @@ struct WaveformBasis {
 // construction.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
-// function is audio: the plate and the overview strip are pixels, playback
+// function is audio: the plate is pixels, playback
 // reads the sample buffer at its own level, and no render input is derived from
 // this parameter anywhere.
 //
@@ -3026,40 +2914,36 @@ double displayed_trim_ms(int64_t frame,
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
 // Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
-// caps are 2px, so this makes the target 2 + 2*10 = 22px. THREE CONSUMERS read
-// it (re-grepped 2026-08-19): the TRIM BAR's endcaps (hit_test_trim_endcap),
-// the OVERVIEW BOX's edge handles (hit_test_overview_endcap, the trim model
-// reused verbatim on the box outline) and — since the region became the trim —
+// caps are 2px, so this makes the target 2 + 2*10 = 22px. TWO CONSUMERS read
+// it (re-grepped 2026-09-16): the TRIM BAR's endcaps (hit_test_trim_endcap)
+// and — since the region became the trim —
 // the WAVEFORM OVERLAY's two bounds (region_manipulation_hit,
-// input_pointer.cpp), so a retune moves all three surfaces together. THAT
-// IS BY CONSTRUCTION AND NOT COINCIDENCE: all three are THE SAME GESTURE ON THE
+// input_pointer.cpp), so a retune moves both surfaces together. THAT
+// IS BY CONSTRUCTION AND NOT COINCIDENCE: both are THE SAME GESTURE ON THE
 // SAME SHAPE — a 1-2px vertical edge dragged absolutely along
 // x to move one bound while the other holds — so whatever tolerance a fingertip
-// needs on one of them it needs on the others, and a second constant here would
+// needs on one of them it needs on the other, and a second constant here would
 // only be a way for them to drift apart.
 //
-// 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE THIRD CONSUMER IS THE
+// 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY IS THE
 // REASON IT CAME BACK UP: the waveform overlay's bound bands exist precisely
 // because the 9 px trim bar is unusable with a fingertip, so 5 per side
 // reproduced ON THE FINGER'S OWN SURFACE the very problem that surface was
-// built to solve — while 15 was more than the two THIN lanes want. 10 is the
-// value that serves all three. The walk: 4 from row 5's landing, chosen to
+// built to solve — while 15 was more than the THIN trim lane wants. 10 is the
+// value that serves both. The walk: 4 from row 5's landing, chosen to
 // reproduce the retired square chip's width; 10 on 2026-08-14 (architect:
 // "endcaps are very useful and currently too small", leaning 6 to 10 and ruling
 // 10 — THE TOUCH PANEL IS THE REASON, a fingertip being nothing like a 10px
 // target); 15 on 2026-08-15, once both lanes had been driven on glass; 5 on
 // 2026-08-18, narrowing that after driving the unified region/trim.
 //
-// A NARROWER BAND GIVES BACK EXACTLY WHAT A WIDER ONE TOOK, and on the overview
-// lane that is a COHERENT PAIR rather than a trade: less of the lane resolves as
-// an edge, so more of it resolves as an OUTSIDE press — which teleports the box
-// and then arms its pan (2026-08-18) — and smaller bounds therefore mean more
-// pan. The waveform overlay's answer moves the same way: a narrower band leaves
+// A NARROWER BAND GIVES BACK EXACTLY WHAT A WIDER ONE TOOK: on the waveform
+// overlay a narrower band leaves
 // more of the span as its MOVE zone. Widening spends exactly that, which is
 // what the fingertip is being paid.
 //
 // WHAT THE BAND'S WIDTH DECIDES, checked against every neighbour the endcap
-// claim can overlap, because that claim OUTRANKS everything else in these lanes
+// claim can overlap, because that claim OUTRANKS everything else in the lane
 // (the per-grab figures are re-derived from the rules below, not carried):
 //   * THE TRIM BRIDGE is reachable only where the gap survives both inflated
 //     caps, which is a window wider than 3 + 2*grab columns on screen — so the
@@ -3077,14 +2961,6 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 //     coincident or near-coincident pair gives is the same at 10 as at 5 or 15,
 //     just nearer the column. A pair exactly one column apart is the one
 //     unreachable End, and it is unreachable at every grab.
-//   * THE OVERVIEW BOX'S TWO EDGES against each other are likewise unaffected:
-//     that test arbitrates NEAREST EDGE (Begin on the tie), which is
-//     grab-independent, so both edges stay reachable at any box width and the
-//     grab only sets their outer reach. What the width does decide is the box's
-//     INTERIOR: the box-follows-pointer pan needs a column more than grab from
-//     both edges, so a box drawn narrower than 2 + 2*grab + 1 px (23 at 10,
-//     against 13 at 5, 33 at 15 and 11 at 4) is all edge handle. The
-//     click-teleport outside the box faces the same ring, 10px now.
 inline constexpr int kTrimEndcapGrabPx = 10;
 inline int trim_endcap_grab_px() {
     return scaled_px(kTrimEndcapGrabPx, 0);

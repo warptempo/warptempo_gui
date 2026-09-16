@@ -528,10 +528,8 @@ void GuiInputHandler::handle_trim_maximize() {
 // ruling, and the framing is deleted on his two reasons: a user should not be
 // walked through zoom levels to look at a window, and the short trim is mostly
 // a tablet act, where the picture jumping under the finger is a distraction.
-// WHAT REPLACED IT IS A PICTURE, NOT A MOVE — the overview strip paints the
-// trim's whole-song place on every frame, its 1px line always and, while this
-// overlay stands, the same region recolor across the trim's own columns
-// (paint_overview_strip, paint_handler.cpp) — so the question the framing
+// WHAT REPLACED IT IS A PICTURE, NOT A MOVE — the trim bar shows where the
+// window is on every frame — so the question the framing
 // answered is answered with the viewport left where it stands. THE FRAMING ACT
 // STILL EXISTS AND HAS ITS OWN GESTURE: the trim bar's double-click zooms to
 // the trim window (run_span_framing_command, input_handler.cpp), which is where
@@ -551,8 +549,8 @@ void GuiInputHandler::handle_trim_maximize() {
 // existence, so every press changes what is painted and the toggle can never
 // stick holding a state the user cannot leave. THE OFFSCREEN CASE IS ANSWERED
 // BY THE PICTURE RATHER THAN BY THE CAMERA since 2026-09-04, when the framing
-// left this act: the trim bar and the overview strip both show where the window
-// is at all times, and the trim bar's double-click is the gesture that brings
+// left this act: the trim bar shows where the window
+// is at all times, and its double-click is the gesture that brings
 // the camera to it. What the lamp promises is what it reads — the overlay is
 // being painted — and it never promised the viewport.
 //
@@ -611,9 +609,7 @@ void GuiInputHandler::handle_toggle_trim_region() {
     // WHOSE RESULT IS ON SCREEN SAYS NOTHING. The overlay going up over the
     // whole song, its two bounds at the song edges, IS the confirmation, on
     // both roads alike (bare `[` and the Show trim region button's plain
-    // lift). THE OVERVIEW LANE STAYS QUIET IN THAT ONE CASE and deliberately:
-    // its region recolor reports nothing at a full window, the whole song being
-    // nothing to point at, so the confirmation there is the waveform's alone.
+    // lift).
     viewport.invalidate_waveform_area();
 }
 

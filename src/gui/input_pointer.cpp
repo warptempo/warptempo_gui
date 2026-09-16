@@ -853,8 +853,8 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // router and the cursor map both ask it: a point is in the lanes iff it is in
 // the top strip AND in either lane's y-band. The FLAG BOXES carve themselves
 // out at each consumer (a flag hit is claimed first, lane vocabulary), and the
-// TRIM BAR and the OVERVIEW STRIP are disjoint y-bands that never answer true
-// here (the strip has its own claim and its own cue). Deliberately NOT the
+// TRIM BAR is a disjoint y-band that never answers true
+// here (it has its own claim and its own cue). Deliberately NOT the
 // flexible GAP 1 band above the menu row — that ground is the row's own
 // chrome, not surface, and stays inert (the gap sat between the icon row and
 // the trim lane for the seventh ruling's first hours, at the window's foot
@@ -884,8 +884,8 @@ bool point_in_nav_lanes(const AppState& app, int x, int y) {
 // seating nothing (the gutter is 0 px at 1920/2560/3840, so it only matters
 // off-deployment). The FLAG BOXES carve out through the painter's published
 // rects — a flag is lane vocabulary (select / range / toggle / drag), never the
-// surface. THE TRIM BAR and THE OVERVIEW STRIP are disjoint y-bands that never
-// answer true here, and neither does the flexible GAP band: that ground is
+// surface. THE TRIM BAR is a disjoint y-band that never
+// answers true here, and neither does the flexible GAP band: that ground is
 // chrome, not surface.
 //
 // FIVE READERS, re-derived by grep 2026-08-13 and every one of them a
@@ -1797,7 +1797,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // cursor in flag editor becomes the pointer during drag-to-highlight — it
     // should remain the i-beam — that's what other editors do"), on the
     // live-gesture exception's own rule and in the same member shape as the
-    // trim, overview and marker drags below: the thing being dragged is the
+    // trim and marker drags below: the thing being dragged is the
     // thing the cursor names — a text selection — so the Text the field wears
     // at rest stays TRUE for the whole gesture, read from the drag's OWN
     // RECORD and never re-derived from the pointer's position. Position is
@@ -1896,31 +1896,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         return is_begin ? GuiCursorKind::TrimBoundBegin
                         : GuiCursorKind::TrimBoundEnd;
     }
-    // THE OVERVIEW BOX'S LIVE DRAGS KEEP THEIR CUE on the trim rule (the thing
-    // dragged is the thing the cursor names, read from the drag's own record —
-    // the lane rework, 2026-08-12), AND THE BOX PAN JOINED THEM 2026-08-13
-    // (architect): the pan drags the box exactly as an edge drag drags an edge,
-    // so its TrimResize stays true for the whole gesture and dropping to the
-    // Arrow mid-slide was the odd one out. The gesture keeps no cursor of any
-    // other kind — the pan is capture-free, so there is a visible cursor to
-    // keep. (The record only ever holds a real drag: an OUTSIDE press arms
-    // this same Pan after running its teleport at the press, so it needs no
-    // kind of its own, and the Pending kind that carried the 2026-08-15 lift
-    // deferral — with its Arrow arm — is deleted.)
-    if (app.overview_drag.active) {
-        switch (app.overview_drag.kind) {
-            case OverviewDragKind::Pan:
-                return GuiCursorKind::TrimResize;
-            case OverviewDragKind::EdgeBegin:
-                return GuiCursorKind::TrimBoundBegin;
-            case OverviewDragKind::EdgeEnd:
-                return GuiCursorKind::TrimBoundEnd;
-        }
-    }
     // THE MARKER REPOSITION DRAG KEEPS ITS CUE TOO (architect 2026-08-14: "it
-    // should remain left/right arrows during the drag, like trim and overview
-    // drag currently do"), on the same rule and in the same member shape as the
-    // two above: the thing being dragged IS the thing the cursor names, so the
+    // should remain left/right arrows during the drag, like trim ... drag
+    // currently do"), on the same rule and in the same member shape as the
+    // one above: the thing being dragged IS the thing the cursor names, so the
     // ew-resize the flag box wears at rest stays TRUE for the whole gesture,
     // and falling to the uniform Arrow the moment the marker started moving was
     // the odd one out. The drag has exactly ONE shape — a marker slides side to
@@ -2052,13 +2031,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // 2026-08-15, its crossing then handing over to a single-bound drag on that
     // bound (set_trim_bound_at_click_then_arm_drag) — boundary extension by
     // another route, so it takes the BEGIN cap's own cue rather than the
-    // Arrow; over the OVERVIEW LANE it names NOTHING since 2026-08-15 — the
-    // lane's Zoom magnifier went with the dual-axis strip drag the redesign
-    // deleted, and ctrl binds nothing there now, so the lane falls to the
-    // Arrow this arm returns off the navigation surface (the map's standing
-    // rule: a point arming nothing shows the Arrow, cue and gesture agreeing
-    // by construction — the same answer shift already gives on this lane. No
-    // wheel zooms there or anywhere since 2026-09-14, every modified wheel a
+    // Arrow (no
+    // wheel zooms anywhere since 2026-09-14, every modified wheel a
     // swallowed no-op (GuiInputHandler::on_wheel), and the map answers what a
     // PRESS would do in any case, no wheel being cued anywhere);
     // over the
@@ -2097,57 +2071,15 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // view identically, its own shift former being the same gesture.
     if (mods.ctrl || mods.alt || mods.shift) return GuiCursorKind::Arrow;
 
-    // PLAIN-EXACT from here, AND PLAIN IS NOW THE LANE'S WHOLE VOCABULARY (the
-    // lane rework, 2026-08-12; the redesign of 2026-08-15, which deleted the
-    // ctrl strip drag the Zoom magnifier this clause once wore had moved to):
-    // the BOX ENDCAPS wear the trim
-    // endcaps' own pair — TrimBoundBegin on the outline's left edge,
-    // TrimBoundEnd on its right, through the shared hit test, since a plain
-    // press there extends ONE viewport bound exactly as a trim cap extends
-    // one trim bound — and EVERYWHERE ELSE ON THE LANE IT IS TrimResize
-    // ("left/right arrows like on plain trim hover", the architect's words),
-    // because everywhere else the plain drag is the same one: the
-    // box-follows-pointer pan, an x-only move-the-whole-span gesture, the trim
-    // bridge's own shape. THE CUE NAMES THE DRAG, NOT THE CLICK, which is the
-    // marker flag box's own rule (it wears TrimResize while its plain press
-    // also runs a click act) — so the outside point wears it too, its press
-    // teleporting and then arming that pan (2026-08-18).
-    // THE BAND-WIDE ANSWER IS BACK AND ITS PREMISE IS NEW: it was true until
-    // 2026-08-15 because an outside press extended the nearer BOUND, went to
-    // the Arrow at codex round 19 under the map's standing rule that a point
-    // arming nothing shows the Arrow, and returns now because the outside
-    // point arms the PAN. Keeping the Arrow would also have made the cue
-    // CHANGE at the drag's crossing — the live-drag arm above answers
-    // TrimResize for a Pan — which is exactly the mid-slide flip the architect
-    // closed on 2026-08-13.
-    // The inside/outside question no longer reaches the cue at all, so the box
-    // span is not asked here; degenerate geometry (no box) is the same answer,
-    // its press being an outside press that teleports and pans like any other.
-    // Ctrl/shift/alt/mixed presses on the lane bind nothing,
-    // so they fell to the Arrow above; the `h` view keeps these cues — every
-    // lane gesture is the mode's admitted navigation class. IT MUST STAY
-    // ABOVE THE `inside_top` FALL-THROUGH below: the lane is a TOP-STRIP lane
-    // since the relayout's commit B, so the strip's own Arrow would otherwise
-    // take it.
-    {
-        const GuiRect ov = top_overview_row_area(app);
-        if (rect_contains(ov, x, y)) {
-            switch (hit_test_overview_endcap(app, audio, x, y)) {
-                case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
-                case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
-                case TrimHit::None:  break;
-            }
-            return GuiCursorKind::TrimResize;
-        }
-    }
+    // PLAIN-EXACT from here.
+    //
     // A STANDING REGION'S OWN ZONES OUTRANK THE PAN, because inside them the
     // plain drag IS the region's editor rather than the pan (2026-08-15; the
     // press claim asks the same owner in the same order, so cue and gesture
     // agree by construction). INSIDE the span the drag is a horizontal slide of
-    // the whole span, so the TRIM BRIDGE's cue is the honest one — the same
-    // shape the overview box's interior takes for the same reason; ON A BOUND
-    // it is the matching edge arrow, as the trim endcaps and the box edges
-    // already do. It sits UNDER the modifier arms by their own rank (ctrl there
+    // the whole span, so the TRIM BRIDGE's cue is the honest one; ON A BOUND
+    // it is the matching edge arrow, as the trim endcaps already do. It sits
+    // UNDER the modifier arms by their own rank (ctrl there
     // is the zoom drag and shift the region former, both of which bypass this
     // entirely) and ABOVE the Pan below.
     switch (region_manipulation_hit(x, y)) {
@@ -2367,8 +2299,7 @@ double GuiInputHandler::nav_notional_col() const {
 // TELL THE CAPTURED POINTER ITS WRAP SPAN — the waveform's bounds, between
 // which the hidden cursor folds EDGE TO EDGE when its travel would carry it
 // past one. ONE OWNER, fired immediately after the begin at the ONE capture
-// site left (the nav drag's threshold crossing; the overview lane's arm was the
-// second until 2026-08-15), so no two sites can
+// site left (the nav drag's threshold crossing), so no two sites can
 // hand the platform different spans; the platform holds them for the capture's
 // life and knows nothing about a waveform (contract at
 // GuiPlatform::set_capture_wrap_span).
@@ -2619,229 +2550,6 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
-// --- The overview lane's own gestures (the lane rework, 2026-08-12; the
-// box-is-the-subject redesign, 2026-08-15) ----------------------------------
-//
-// Contract at OverviewDragState (app_state.h). Two bodies: the TELEPORT and
-// the ONE motion apply, forking on the drag's kind. The ends
-// live in on_button_release, on_motion's button-lost arm and the force-end
-// finalizer — absolute-position drags (the trim endcap model), so there is no
-// capture to tear down and no stem to erase.
-
-// THE CLICK-TELEPORT: center the viewport on the pressed column's whole-song
-// position, zoom level UNCHANGED — a pure viewport move of the pan class (no
-// playhead, no region, no selection touch; a chasing play stops chasing
-// through scroll_viewport's funnel exactly as at any pan — the producer
-// inventory at follow_engaged, app_state.h). IT RUNS AT THE PRESS since
-// 2026-08-17 (CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN: an outside
-// press can only mean the teleport, so there is nothing for a lift to
-// disambiguate; the two-day lift deferral of 2026-08-15 — and the Pending kind
-// that carried it — are deleted). The touch consequence that
-// moved it to the lift is answered by the DISAMBIGUATION WINDOW rather than by
-// deferral: the synthesized press is delivered only when the window resolves
-// to ONE finger, and a pair landing inside the window goes straight to Nav
-// with no press ever delivered, so a fast two-finger landing cannot fire this.
-// ONE caller: the press router's outside-the-box arm, which hands
-// it THE PRESS column — the point the user aimed at — and then FALLS THROUGH
-// into the box pan's arm, so the teleport is the head of a gesture rather than
-// the whole of one (2026-08-18). THE CENTERING ARITHMETIC is
-// center_viewport_on_playhead's own
-// over the lane's mapping: position = overview_anchor_sample_at_x at the
-// lane-clamped column (the song walls by construction), start =
-// nearbyint(position) − samples_visible/2, the delta handed to
-// scroll_viewport (continuous=false — a discrete jump, one predictor
-// resync), which clamps through clamp_viewport_start (grid snap + walls)
-// and takes the synchronous full-render route.
-void GuiInputHandler::run_overview_teleport(int x) {
-    const GuiRect lane = top_overview_row_area(app);
-    if (lane.w <= 0) return;
-    const int cx = std::clamp(x, lane.x, lane.x + lane.w - 1);
-    const double pos = overview_anchor_sample_at_x(app, audio, cx);
-    const int64_t new_start =
-        static_cast<int64_t>(std::nearbyint(pos)) -
-        samples_visible(app, audio) / 2;
-    viewport.scroll_viewport(new_start - app.viewport_start_sample,
-                             /*continuous=*/false);
-}
-
-// THE EDGE DRAG'S SEAT — the kind and the FIXED (opposite) viewport bound,
-// written onto the already-armed record. ONE owner, ONE caller: the press
-// claim's ENDCAP hit. It had a second — the Pending outside press's threshold
-// crossing, which picked the bound nearer the press column — and that gesture
-// is DELETED (2026-08-15, the architect: "we can remove that, because the
-// threshold for the bounds is fine, the ten pixels on either side works, it's a
-// large enough threshold"), so a bound is dragged by its own grab band and
-// nowhere else. It stays a body because it is the one place an edge drag's kind
-// and its fixed partner are decided together. The fixed bound is the box's END
-// edge for a grabbed BEGIN edge and its BEGIN edge for a grabbed END edge, both
-// in the ACTIVE domain — it is the per-event zoom's anchor, held for the drag's
-// life.
-//
-// IT IS THE PAINTED EDGE, NOT THE RAW VIEWPORT BOUND (2026-08-15, codex round
-// 22): the seat reads overview_box_edge_samples, the same owner the painter's
-// box span reads, because at the RIGHT WALL the two disagree — the ruled grid
-// rest may legitimately put viewport_end_sample up to one waveform pixel past
-// the song end (<1 px of inert past-EOF padding, max_viewport_start_grid) and
-// the box is drawn from the clamped value. Seating the raw end fixed the
-// drag's span and its anchor to an INVISIBLE endpoint: the whole span was
-// biased long by the overshoot, so the level was a hair too low, and the
-// downstream wall clamp could settle the grabbed edge a painted column left of
-// the finger while the opposite edge stayed at EOF. The gesture's contract is
-// that the grabbed edge tracks the finger and the one the user can see holds
-// still, so both halves must be measured in painted terms.
-//
-// Returns false on degenerate geometry (no waveform width, no spp — the owner's
-// own refusal), where the caller drops the arm and the press is the band's
-// consumed nothing.
-bool GuiInputHandler::seat_overview_edge_drag(bool grabbed_begin) {
-    int64_t box_begin = 0;
-    int64_t box_end   = 0;
-    if (!overview_box_edge_samples(app, audio, &box_begin, &box_end))
-        return false;
-    app.overview_drag.kind = grabbed_begin ? OverviewDragKind::EdgeBegin
-                                           : OverviewDragKind::EdgeEnd;
-    app.overview_drag.fixed_edge_sample =
-        static_cast<double>(grabbed_begin ? box_end : box_begin);
-    return true;
-}
-
-// THE ONE MOTION APPLY, forking on the drag's kind. X ONLY, STRUCTURALLY:
-// mouse_y is not even a parameter — the pan has no zoom axis to leak into
-// ("no cross axis allowance for up/down", the architect's ruling: the pan
-// has no zoom axis at all) and the edge drags'
-// level is a pure function of the pointer COLUMN. The column clamps into the
-// lane first (the song walls by construction), then maps through
-// overview_anchor_sample_at_x per event, so every frame is domain-correct in
-// target view — the END edge reading the column's FAR boundary, which is what
-// makes the inverse agree with the box painter at BOTH walls (the invariant and
-// its derivation are at the mapping call below).
-void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
-    const GuiRect lane = top_overview_row_area(app);
-    if (lane.w <= 0) return;
-    const int cx = std::clamp(x, lane.x, lane.x + lane.w - 1);
-    // THE RIGHT EDGE READS THE COLUMN'S FAR BOUNDARY, AND THAT IS WHAT MAKES
-    // THE INVERSE AGREE WITH THE PAINTER AT BOTH WALLS (codex round 21). The
-    // invariant: overview_box_span's span is HALF-OPEN [x0, x1) over a CELL
-    // lane (the class is declared above overview_samples_per_pixel,
-    // app_state.cpp — both box edges took a nearest-point rounding until
-    // 2026-09-02), so a viewport BEGIN at song position p paints at the column
-    // CONTAINING p, floor(p/spp), and a viewport END at p paints its visible
-    // edge at the column containing the last visible frame, floor((p − 1)/spp).
-    // The inverse of the first is column·spp — the bin's own origin, which is
-    // why the left edge has never been wrong and why the inverse relation is
-    // the proof rather than the convention. THE ROUND TRIP IS INVERSE UP TO THE
-    // ORIGIN'S WHOLE-FRAME QUANTIZATION, NOT EXACT (weakened after codex round
-    // 2 and bounded after round 3, 2026-09-02, which found the one-column figure
-    // too small): the generally fractional origin becomes a whole SOURCE frame
-    // under banker's rounding wherever a consumer needs one — inside
-    // overview_anchor_sample_at_x in TARGET view, which must hand back a whole
-    // active-domain frame, and at the teleport's and the pan's own nearbyint in
-    // source view — and that snap can cross the bin's lower or upper boundary,
-    // so the returned coordinate's own rounded inverse lands within
-    // ceil(1/(2*spp)) COLUMNS of the column asked for, IN EITHER DIRECTION, plus
-    // in target view one whole ACTIVE frame's worth of the map's slope. That is
-    // ONE COLUMN at spp >= 1 — every real source, a ~1000 px lane against a
-    // piece minutes long, where a column is thousands of frames — and a source
-    // SHORTER THAN THE LANE is the only producer of a multi-column miss, which
-    // is ACCEPTED (the worked cases are at that function, app_state.cpp): the
-    // gesture's own outcome is a viewport the user is watching, and no road
-    // changes for it. THE PAN IS UNAFFECTED BY CANCELLATION (its grab
-    // offset is measured through this same reading), and the box painter's own
-    // target-view end takes the ACTIVE-domain last frame since the same day
-    // (overview_box_span), so what remains here is the quantization slack
-    // above, not a disagreement in the derivation. The inverse of
-    // the second is (column + 1)·spp — the first frame PAST the bin, so the
-    // last frame inside the span is one below it and falls in that same bin,
-    // which is the edge the painter draws — and asking the ONE mapping at
-    // cx + 1 IS that inverse: the far boundary of column cx is the near
-    // boundary of
-    // cx + 1. Reading it at cx instead treated the last pixel as the ORIGIN of
-    // the final bin while the painter treats it as the END wall, so a right edge
-    // dragged fully right topped out at total − spp — one overview column short
-    // of the song end — and pulling an already-full edge outward asked for that
-    // shorter span and zoomed IN by a bin. The one-bin bias was there at every
-    // column, not only at the wall; the wall is just where it could not be
-    // absorbed. cx + 1 leaves the lane by design at the right wall, which is the
-    // point — the function is a pure scale, not a hit test, and lane.w·spp is
-    // exactly the song end. THE OTHER TWO CONSUMERS DELIBERATELY DO NOT MOVE:
-    // the box PAN and the click-TELEPORT ask "what song position is under this
-    // pixel", whose answer is the bin's origin (the pan's grab offset is taken
-    // from the same reading, so it is exact by cancellation, and the teleport
-    // must not be made to overshoot the end).
-    const bool far_boundary =
-        app.overview_drag.kind == OverviewDragKind::EdgeEnd;
-    const double pos =
-        overview_anchor_sample_at_x(app, audio, far_boundary ? cx + 1 : cx);
-
-    if (app.overview_drag.kind == OverviewDragKind::Pan) {
-        // THE BOX-FOLLOWS-POINTER PAN: center the viewport on (pointer's
-        // whole-song position − grab offset) — ABSOLUTE placement per event,
-        // so the box tracks the pointer with no accumulated drift and a
-        // wall-saturated event is a plain no-op inside scroll_viewport's
-        // changed guard. continuous=true defers the predictor resync to the
-        // drag's end (the grab-pan's own contract); the terminating event
-        // re-anchors it here, its release/button-lost/force-end callers all
-        // passing final.
-        const int64_t new_start =
-            static_cast<int64_t>(
-                std::nearbyint(pos - app.overview_drag.grab_offset)) -
-            samples_visible(app, audio) / 2;
-        viewport.scroll_viewport(new_start - app.viewport_start_sample,
-                                 /*continuous=*/true);
-        if (final_event && playback.is_playing()) playback.resync_predictor();
-        return;
-    }
-
-    // THE EDGE DRAG: the dragged edge's whole-song position follows the
-    // pointer column, the OPPOSITE bound stays fixed — a zoom anchored at
-    // the far edge. The span between the fixed bound and the pointer maps to
-    // a LEVEL by the fit formula (effective_max_zoom_level's own equation
-    // solved for an arbitrary span: level = 1 + log2(span·1000/(kZoomBaseMsPerPx·sr·w))),
-    // pre-clamped into [kMinZoom, effective ceiling] exactly as both other
-    // apply_strip_drag_zoom callers pre-clamp. THE kMinZoom FLOOR IS THE
-    // CANNOT-CROSS CLAMP: a pointer on or past the partner asks for a span
-    // at or below zero, the min-span floor rests it at the max-zoom minimum
-    // span flush against the fixed bound — the trim drag's inclusive
-    // clamp-at-the-partner convention re-expressed in level space. Applied
-    // through Viewport::apply_strip_drag_zoom with the FIXED bound as the
-    // anchor at its own window column (area.w for a dragged LEFT edge whose
-    // fixed partner is the viewport END, 0 for a dragged RIGHT edge whose
-    // partner is the START), so that bound stays put — TO THE VIEWPORT'S OWN
-    // LATTICE SNAP, and not bit-exactly (recorded 2026-09-02): the anchored
-    // arithmetic pins the fixed bound before clamp_viewport_start snaps the
-    // start onto the fitted level's own frame grid, and that snap moves BOTH
-    // bounds by up to half a column, so the "fixed" outline can flicker by a
-    // pixel across events at a box spanning most of the song. Pre-existing,
-    // sub-pixel at ordinary box widths, and the second slack term beside the
-    // level fit's own. Every event takes the chokepoint's level clamp,
-    // viewport clamp, synchronous full rebuild and either-axis follow
-    // suppression.
-    // THIS ARITHMETIC LIVES HERE AGAIN (2026-08-15): it was hoisted into a
-    // shared span application for one commit, to be shared with the lane's
-    // two-finger bounds gesture, and that gesture is deleted — a helper whose
-    // whole justification was its second caller goes back where its one caller
-    // is.
-    const GuiRect area = waveform_area(app);
-    const int     sr   = audio.sample_rate();
-    const int64_t total = live_total_frames(app, audio);
-    if (area.w <= 0 || sr <= 0 || total <= 0) return;
-    const bool begin = app.overview_drag.kind == OverviewDragKind::EdgeBegin;
-    const double fixed = app.overview_drag.fixed_edge_sample;
-    double span = begin ? fixed - pos : pos - fixed;
-    const double min_span = samples_per_pixel_at(kMinZoom, sr) *
-                            static_cast<double>(area.w);
-    if (span < min_span) span = min_span;
-    double level = 1.0 + std::log2(
-        span * 1000.0 /
-        (kZoomBaseMsPerPx * static_cast<double>(sr) * static_cast<double>(area.w)));
-    const double max_l = effective_max_zoom_level(area.w, total, sr);
-    if (level < kMinZoom) level = kMinZoom;
-    if (level > max_l)    level = max_l;
-    viewport.apply_strip_drag_zoom(level, fixed,
-                                   begin ? static_cast<double>(area.w) : 0.0,
-                                   final_event);
-}
-
 // THE TRIM REGION OVERLAY'S HIT TEST — the ONE spelling of "inside the shown
 // overlay", read by the plain waveform press claim, the cursor map and the
 // touch pan zone (the three-consumer contract is at the declaration,
@@ -2857,12 +2565,12 @@ void GuiInputHandler::apply_overview_drag_at(int x, bool final_event) {
 // verdict straight onto that bound's own endcap drag.
 //
 // THE GRAB BAND IS trim_endcap_grab_px() PER SIDE, THE SAME 10 px ON PURPOSE:
-// the trim endcaps and the overview box edges already take it, and this is the
-// SAME GESTURE ON THE SAME SHAPE — a third member of that family, so it takes
+// the trim endcaps already take it, and this is the
+// SAME GESTURE ON THE SAME SHAPE — a second member of that family, so it takes
 // the family's constant rather than a number of its own.
 //
-// OVERLAP RESOLVES NEARER-BOUND-WINS WITH TIES TO THE LO BOUND — the shape of
-// hit_test_overview_endcap, which is itself the trim sort's tie-break over two
+// OVERLAP RESOLVES NEARER-BOUND-WINS WITH TIES TO THE LO BOUND — the trim
+// sort's own tie-break over two
 // fixed candidates. It is what keeps BOTH bounds reachable down to a 1 px span,
 // and there is deliberately no second rule for it.
 //
@@ -2983,19 +2691,19 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     if (onscreen_keyboard::stands(app, gui) &&
         rect_contains(onscreen_keyboard::surface_rect(app), f.x, f.y))
         return;
-    // AND THE THIN LANES TAKE NO NAV GESTURE AT ALL — the OVERVIEW STRIP and
-    // the TRIM BAR (architect 2026-08-15, from the rig: "get rid of all
-    // two-finger gestures on the overview strip and on the trim bar; once one
+    // AND THE THIN LANE TAKES NO NAV GESTURE AT ALL — the TRIM BAR
+    // (architect 2026-08-15, from the rig: "get rid of all
+    // two-finger gestures on ... the trim bar; once one
     // finger is down, the second finger is completely ignored, which is what we
     // do with three-finger gestures on the waveform — which makes sense, because
-    // the waveform is large and the overview and trim are small"). A lane whose
+    // the waveform is large and ... trim [is] small"). A lane whose
     // whole vocabulary is precise, thin and absolute has nothing a nav gesture
     // could mean, so THE WAVEFORM'S OWN THIRD-FINGER RULE APPLIES WHERE THE
     // SURFACE IS SMALL: on a large surface a second contact carries a distinct
-    // meaning worth admitting, on a 26 px strip it carries nothing the strip's
+    // meaning worth admitting, on a 9 px bar it carries nothing the lane's
     // own motions do not already do better. That is a difference in KIND, not an
     // exception to the two-finger model.
-    // THE REFUSAL IS WHAT THE BIT IS FOR: without it a gesture begun on a strip
+    // THE REFUSAL IS WHAT THE BIT IS FOR: without it a gesture begun on the bar
     // would fall THROUGH to the waveform's pinch below and zoom the view from a
     // lane the user was touching for another reason — a thin lane's positive
     // wheel context admits these frames, so nothing above stops them.
@@ -3334,19 +3042,17 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     return point_on_nav_surface(app, audio, x, y);
 }
 
-// The thin-lane query's body (contract at the declaration): the two member
-// lanes' own rects and nothing else — the same rectangles their press routers,
-// their cursor arms and their wheel contexts read, so there is one answer to
-// "is this the overview strip" and one to "is this the trim bar", and this
-// query is not a second spelling of either.
+// The thin-lane query's body (contract at the declaration): the member lane's
+// own rect and nothing else — the same rectangle its press router,
+// its cursor arms and its wheel context read, so there is one answer to
+// "is this the trim bar", and this
+// query is not a second spelling of it.
 //
 // WHAT MAKES A LANE A MEMBER, so the next one joins on a rule rather than a
-// hunch: it is THIN (~26 px, a band a fingertip covers whole), and its whole
-// vocabulary is its OWN precise, ABSOLUTE drags — a bound or an edge follows the
-// finger to a column, one bound moving while its partner holds. Two members
-// today, and they are the same shape twice over: THE OVERVIEW STRIP
-// (top_overview_row_area — the box's two edge handles, the box pan, the
-// click-teleport) and THE TRIM BAR (top_trim_row_area — the two endcaps, the
+// hunch: it is THIN (a band a fingertip covers whole), and its whole
+// vocabulary is its OWN precise, ABSOLUTE drags — a bound follows the
+// finger to a column, one bound moving while its partner holds. ONE member
+// today: THE TRIM BAR (top_trim_row_area — the two endcaps, the
 // bridge, the framing double-click). On a surface like that a second contact has
 // nothing to mean: everything a nav gesture could offer, the lane's own motions
 // already do better and more precisely. The WAVEFORM is deliberately not a
@@ -3359,8 +3065,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
 // carrying it, and the platform's second-finger fork ignores the second contact
 // outright.
 bool GuiInputHandler::touch_point_on_thin_lane(int x, int y) const {
-    return rect_contains(top_overview_row_area(app), x, y) ||
-           rect_contains(top_trim_row_area(app), x, y);
+    return rect_contains(top_trim_row_area(app), x, y);
 }
 
 // --- The touch region former (the hold on the pan zone) --------------------
@@ -5849,9 +5554,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // all, and ABOVE it lies GAP 2's blank window ground — outside every band
     // here and falling through to the tail's consumed nothing, as window ground
     // by the vertical rule (main.cpp).
-    // (The OVERVIEW STRIP sat under this lane for the afternoon it landed and
-    // is a top-strip lane now; its own claim is further down, past the gesture
-    // guards — the endcap / teleport-pan / ctrl-zoom vocabulary.)
     {
         const GuiRect bottom_row = bottom_row_area(app);
         if (rect_contains(bottom_row, x, y)) {
@@ -5892,112 +5594,6 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // over the same state. Consumed instead, the trim guard's own shape; the
     // gesture ends by its own hooks or the button-lost motion arm.
     if (app.region_drag.active) return;
-
-    // THE OVERVIEW STRIP'S CLAIM — the whole lane (the lane rework,
-    // 2026-08-12, SUPERSEDING the landing's plain-press strip-drag claim;
-    // REDESIGNED 2026-08-15 so that THE BOX IS THE SUBJECT of every gesture
-    // here and the zoom follows from the box's span — OverviewDragState,
-    // app_state.h, owns the vocabulary's contract). THREE PLAIN arms and one
-    // refusal:
-    //   * PLAIN left press on a BOX ENDCAP — the outline's left/right edge,
-    //     hit_test_overview_endcap, the claim that OUTRANKS everything else
-    //     on the lane — arms the EDGE DRAG, the FIXED opposite
-    //     viewport bound captured now (dragging the LEFT edge holds the
-    //     viewport END, the RIGHT edge its START).
-    //   * PLAIN left press INSIDE the box arms the BOX PAN with the grab-point
-    //     offset preserved; a motionless release there is a consumed nothing
-    //     (the lane's v1 rule standing).
-    //   * PLAIN left press OUTSIDE the box TELEPORTS AT THE PRESS AND THEN
-    //     ARMS THE SAME BOX PAN (2026-08-18 — "overview teleport should
-    //     transition into drag immediately if finger/pointer drags"): the
-    //     teleport centers the box on the press column, and the pointer that
-    //     keeps moving keeps panning from there, so the outside press falls
-    //     THROUGH into the inside-box arm below rather than seating a second
-    //     copy of it. A motionless release is then the pan's own consumed
-    //     nothing. (The act still runs AT THE PRESS — content acts the moment
-    //     its identity is certain, 2026-08-17 — because acting and arming a
-    //     drag are not the deferred-click case; the reasoning is at the
-    //     contract, OverviewDragState.)
-    //   * EVERY OTHER press — ctrl, shift, alt, mixed, non-left — is a consumed
-    //     nothing, the band-claim family's shape. CTRL is on that list since
-    //     2026-08-15: it carried the dual-axis strip drag until the redesign
-    //     deleted that gesture, and it binds nothing on this lane now (the
-    //     cursor map's ctrl arm dropped the lane's Zoom with it).
-    //
-    // DELIBERATELY ABOVE THE `h` MODE'S GATE: every arm here is the mode's
-    // own admitted navigation class (pure viewport moves — no playhead, no
-    // region, no selection), and the lane behaves identically in and out of
-    // the view (the box reads the mode's viewport by construction), so
-    // claiming here keeps ONE body with no mode arm — the
-    // band-claims-above-the-gate precedent, its "already covered" reasoning
-    // met by the gestures being coverage-free navigation rather than chords.
-    //
-    // AND DELIBERATELY ABOVE THE TOP-STRIP BRANCH, which the lane joined at the
-    // relayout's commit B: this claim's rect is the lane's own, so it wins the
-    // band before the strip's flag / trim / nav-lane walk and its empty-spot
-    // return can see it — the same position the claim held when the lane was a
-    // bottom-strip surface, now load-bearing rather than incidental.
-    {
-        const GuiRect ov = top_overview_row_area(app);
-        if (rect_contains(ov, x, y)) {
-            if (button != GuiMouseButton::Left) return;
-            if (ctrl || shift || alt) return;
-            const TrimHit cap = hit_test_overview_endcap(app, audio, x, y);
-            if (cap != TrimHit::None) {
-                app.overview_drag = OverviewDragState{};
-                app.overview_drag.active  = true;
-                app.overview_drag.press_x = x;
-                app.overview_drag.press_y = y;
-                // The kind and its FIXED partner through the one seater, whose
-                // only caller this is; degenerate geometry seats nothing and
-                // the press is the band's consumed nothing.
-                if (!seat_overview_edge_drag(cap == TrimHit::Begin))
-                    app.overview_drag = OverviewDragState{};
-                return;
-            }
-            // Inside-the-box test off the painter's own span (one owner —
-            // overview_box_span; no box on degenerate geometry means every
-            // press is an outside press, which is the right degenerate arm).
-            int bx0 = 0;
-            int bx1 = 0;
-            const bool have_box = overview_box_span(app, audio, &bx0, &bx1);
-            const bool inside_box =
-                have_box && x >= ov.x + bx0 && x < ov.x + bx1;
-            // THE TELEPORT, AT THIS PRESS, AND THEN THE FALL-THROUGH: an
-            // outside press centers the box on the press column — the point
-            // the user aimed at — and then arms the pan below on exactly the
-            // terms an inside press does, so a pointer or finger that keeps
-            // moving keeps panning. No `return` and no second seat: after the
-            // teleport the press column IS inside the box, which is what makes
-            // the one arm below correct for both entries.
-            if (!inside_box) run_overview_teleport(x);
-            app.overview_drag = OverviewDragState{};
-            app.overview_drag.active  = true;
-            app.overview_drag.kind    = OverviewDragKind::Pan;
-            app.overview_drag.press_x = x;
-            app.overview_drag.press_y = y;
-            // The grab-point offset: pointer's whole-song position minus
-            // the viewport center, both in the active domain, so the
-            // grabbed spot under the box stays under the pointer. READ AFTER
-            // THE TELEPORT, deliberately: for an outside press the teleport
-            // has already moved the viewport, so this measures the box where
-            // it now IS. The result is near zero by construction (the teleport
-            // centered on this very column) but NOT exactly zero — the
-            // centering rounds the position, halves an integer span and then
-            // takes clamp_viewport_start's grid snap and wall clamp, so what
-            // rests here is that residue, and at a WALL, where the teleport
-            // saturated, it is the whole leftover. Measuring it instead of
-            // assuming zero is what keeps the first motion event from jumping
-            // the box.
-            const double pos =
-                overview_anchor_sample_at_x(app, audio, x);
-            const double center =
-                static_cast<double>(app.viewport_start_sample) +
-                static_cast<double>(samples_visible(app, audio)) / 2.0;
-            app.overview_drag.grab_offset = pos - center;
-            return;
-        }
-    }
 
     // THE `h` HISTORY MODE's pointer gate — the sibling of the on_key allowlist,
     // and the second and last of the mode's two gates.
@@ -6694,9 +6290,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // the band was between the icon row and the trim lane when the
                 // seventh ruling opened it, at the window's foot in between,
                 // and between the menu row and the centered block from the
-                // relayout's commit B until that day). A box under the point is a marker hit and never
-                // reaches this branch, and the OVERVIEW STRIP's lane was
-                // claimed far above.
+                // relayout's commit B until that day). A box under the point
+                // is a marker hit and never reaches this branch.
                 return;
             }
             return;
@@ -7404,25 +6999,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
-    if (app.overview_drag.active) {
-        // The overview lane's box drag (contract at OverviewDragState). A
-        // MOVED drag runs its final apply — the edge drag's terminating
-        // apply_strip_drag_zoom (the one rebuild + predictor resync), the
-        // pan's one deferred resync — and drops any double-click candidate,
-        // the moved-drag rule.
-        // A MOTIONLESS release completes NOTHING, the lane's v1 consumed
-        // nothing — every act this lane owes has already run at its press (the
-        // outside press's teleport since 2026-08-17, and the pan it arms after
-        // it since 2026-08-18 commits per motion event), so no act is owed to
-        // any lift here. No capture to end, no stem to erase, and the lane
-        // seeds no double-click candidate of its own.
-        if (app.overview_drag.moved) {
-            apply_overview_drag_at(x, /*final_event=*/true);
-            app.double_click = DoubleClickCandidate{};
-        }
-        app.overview_drag = OverviewDragState{};
-        return;
-    }
     // (No scrub branch of its own: since 2026-08-13 the scrub has no drag
     // state — it rides ScrollDragState like every other act on the navigation
     // surface, and the branch above runs it, at the LOWER half's motionless
@@ -7543,13 +7119,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // The gestures are mutually exclusive in practice, so this reads as a chain of
 // no-ops around the one that is live.
 // ITS MEMBERSHIP IS any_pointer_gesture_active's, EXACTLY (re-grepped
-// 2026-09-10): the two lists must agree, because a caller's whole promise is
+// 2026-09-16): the two lists must agree, because a caller's whole promise is
 // that what follows lands on a gesture-free state, and that predicate is what
-// "gesture-free" means to the keyboard, the wheel and the cursor. THE TWELVE,
+// "gesture-free" means to the keyboard, the wheel and the cursor. THE ELEVEN,
 // in this body's order: the editor text drag, the marker reposition drag, THE
 // VALUE DRAG (2026-09-10, the flag's vertical one), the
-// trim drag, the sweep (region_drag), the nav drag (scroll_drag), the overview
-// drag, the three pendings (marker press, trim, deferred click) and THE RENDER
+// trim drag, the sweep (region_drag), the nav drag (scroll_drag),
+// the three pendings (marker press, trim, deferred click) and THE RENDER
 // PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
 // marker drag, which joined this body 2026-08-28 through their own hard-end
 // clears. WHAT EACH LEAVES DIFFERS AND EACH ARM SAYS SO: the drags COMMIT what
@@ -7618,21 +7194,6 @@ void GuiInputHandler::finalize_active_drags() {
         }
         app.scroll_drag = ScrollDragState{};
         if (zooming) viewport.invalidate_waveform_area();
-    }
-    if (app.overview_drag.active) {
-        // The overview box drag applied its motion continuously (absolute
-        // per-event placement through the clamp chokepoints), so ending is
-        // just ending: a MOVED drag owes one predictor re-anchor — the pan's
-        // per-event resyncs were deferred (continuous scroll) and the edge
-        // drag's mid-gesture applies skipped them the same way — and nothing
-        // else: no capture, no stem, no act. An UNMOVED press merely
-        // DISARMS and commits nothing — a force-end is not a click, and the
-        // outside press's own teleport already ran at the press, so nothing is
-        // lost here. (No pending phase can be in flight: the record holds a
-        // real drag or nothing, the two-day Pending teleport being deleted.)
-        if (app.overview_drag.moved && playback.is_playing())
-            playback.resync_predictor();
-        app.overview_drag = OverviewDragState{};
     }
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
     // no release here (the button is still held), and a force-end is not a
@@ -9009,7 +8570,7 @@ bool GuiInputHandler::handle_history_mode_press(
     //
     // THE WAY TO SEE A WHOLE DELTA is to zoom out and come back: bare `0` is on
     // the mode's allowlist and the delta's flags are laid across the whole
-    // piece, so the overview shows all of it — the product's own navigation
+    // piece, so a full zoom out shows all of it — the product's own navigation
     // rather than a gesture that meant something different in one mode.
     {
         const GuiRect trim_bar = top_trim_row_area(app);
@@ -9226,7 +8787,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // a CHORD, dispatched through on_key exactly as a redesigned button's is, so
     // the mode answers PER ITEM at the same two gates a key meets, and File's
     // Ctrl+Q is on the allowlist. (Navigation's seven rows were answered the
-    // same way — the allowlist admitted zoom in / out / overview,
+    // same way — the allowlist admitted zoom in / out / full zoom out,
     // history_mode_owns_key claimed center-on-focus and the two marker steps as
     // re-expressions over the diff flags — with the one row whose chord then
     // meant something ELSE in here, "Walk both tabs", greying at the item
@@ -10242,38 +9803,6 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         recompute_redesign_button_hover();
         return;
     }
-    // The overview lane's box drag — the box pan or an edge drag, one motion
-    // body for both (apply_overview_drag_at, X ONLY; contract at
-    // OverviewDragState,
-    // app_state.h). Absolute-position placement per event through the family's
-    // clamp chokepoints, no capture and no stem. A lost button ends like
-    // release: a MOVED drag runs the final apply (the edge drag's final
-    // apply_strip_drag_zoom, the pan's one deferred predictor resync); an
-    // UNMOVED press just disarms and COMMITS NOTHING — a force-end is not a
-    // click, the outside press's teleport having already run at its press.
-    // (This state only ever holds a real drag: an outside press arms the same
-    // Pan, and the Pending phase that deferred the teleport is deleted.)
-    if (app.overview_drag.active) {
-        if (!mods.primary_button_held) {     // button lost -> end like release
-            if (app.overview_drag.moved)
-                apply_overview_drag_at(mouse_x, /*final_event=*/true);
-            app.overview_drag = OverviewDragState{};
-            return;
-        }
-        // Sub-threshold: still a click (the generic press-becomes-drag gate).
-        // Nothing has been applied, so nothing happens here either; the
-        // crossing's first apply is absolute, so it folds the whole
-        // press->crossing travel by construction.
-        if (!app.overview_drag.moved &&
-            std::max(std::abs(mouse_x - app.overview_drag.press_x),
-                     std::abs(mouse_y - app.overview_drag.press_y)) <
-                drag_moved_threshold_px()) {
-            return;
-        }
-        app.overview_drag.moved = true;
-        apply_overview_drag_at(mouse_x, /*final_event=*/false);
-        return;
-    }
     // THE ONE NAV DRAG: the pending click, and past the threshold the
     // grab-pan — or, while ctrl is held, the zoom (the live-ctrl model,
     // contract at ScrollDragState, app_state.h). The viewport snaps to whole
@@ -10337,7 +9866,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             begin_strip_pointer_capture(sd.zooming ? GuiCursorKind::Zoom
                                                    : GuiCursorKind::Pan);
             // AND THE CAPTURED POINTER IS TOLD ITS WRAP SPAN, immediately
-            // after the begin exactly as the overview lane's arm does it: the
+            // after the begin: the
             // hidden cursor folds to the waveform's opposite bound instead of
             // pinning at the one it reached, uniformly for every capture
             // whatever the gesture or the mode (contract at

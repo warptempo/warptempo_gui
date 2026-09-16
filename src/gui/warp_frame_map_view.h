@@ -219,8 +219,8 @@ const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
 
 // THE WAVEFORM GAIN PROFILE with its hash — the shape every waveform picture
 // takes (warpmarkers.h carries the profile's step-function contract). The
-// HASH alone keys both picture caches (the plate fingerprint and the overview
-// bar cache), so a gain-only change re-renders through the fingerprint
+// HASH alone keys the picture cache (the plate fingerprint), so a gain-only
+// change re-renders through the fingerprint
 // without touching the displayed basis.
 struct WaveformGainProfileCache {
     bool                valid       = false;
@@ -254,7 +254,7 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 // proposal converted by the commit's own conversion — re-sorted by
 // reorder_markers_by_time exactly as commit_drag re-sorts, so every motion
 // shows the picture the release would leave. Keyed (store generation, dragged
-// index, proposed frame), so the plate inputs, the overview bar cache and the
+// index, proposed frame), so the plate inputs and the
 // gain kick's hash share ONE build per distinct proposal. A proposal still at
 // the marker's stored frame answers the resting slot itself (same store, same
 // profile). Its one reader is effective_waveform_gain_profile, and only while
@@ -274,10 +274,11 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
 // the picture caches' existing hash keys re-render on every zoom write that
 // crosses the working level with no per-caller code (a live store with no
 // enabled level above 0 is hash 0 as well, and there the two answers are
-// rightly the same picture). READERS: the plate's render inputs
-// (compute_waveform_render_inputs), the overview lane's bar cache
-// (maybe_rebuild_overview_bar_cache) and the gain kick's hash
-// (Viewport::waveform_gain_hash). While a MAGNIFICATION-LEVEL-column marker
+// rightly the same picture). READERS (re-greped 2026-09-16): the plate's render
+// inputs (compute_waveform_render_inputs), the plate FINGERPRINT's own gain
+// field and the gain kick's hash
+// (Viewport::waveform_gain_hash, which the resize's before/after test reads
+// too). While a MAGNIFICATION-LEVEL-column marker
 // drag stands at the working zoom or finer the live answer is the DRAG SLOT's
 // (waveform_gain_profile_drag_cached, above), so the picture shows the store as
 // the release would leave it.

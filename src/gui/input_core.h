@@ -79,7 +79,7 @@
 // flag box whose cell the VALUE DRAG can step wherever the view arms it
 // (value_drag_posture, app_state.h, since 2026-09-13) — the
 // tempo on an owning flag, a bound on a purple cell — and kept for the whole
-// gesture by the live-drag rule the marker, trim and overview drags already
+// gesture by the live-drag rule the marker and trim drags already
 // take. It is the second kind with an ALT NAME (`size_ver`), the same
 // two-conventional-spellings shape the I-beam has; Breeze ships a third
 // (`sb_v_double_arrow`) as a symlink of the same image, so two lookups reach
@@ -515,7 +515,7 @@ public:
     // from PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
     // update, end, the pan-zone query, and the REGION trio
     // begin/update/end, the dead trim-move members' exact pattern reborn for
-    // the region former — SEVEN since 2026-08-15, when the OVERVIEW-LANE
+    // the region former — SEVEN since 2026-08-15, when the THIN-LANE
     // query joined beside the pan-zone one, and ELEVEN since 2026-09-05,
     // when the EDITOR-FIELD query and the CARET-DRAG trio joined for the
     // third ruled divergence; touch.md carries the arc). ONE
@@ -601,8 +601,8 @@ public:
     //     drag. Null — or answering false — means no pan surface: the plain
     //     phase-1 translation everywhere.
     //   * thin_lane(x, y): THE THIN-LANE QUERY — does this point lie on a lane
-    //     too small and too precise to hold a nav gesture (the overview strip or
-    //     the trim bar; the class's membership rule is the GUI's, at
+    //     too small and too precise to hold a nav gesture (the trim bar; the
+    //     class's membership rule is the GUI's, at
     //     touch_point_on_thin_lane)? The pan_zone query's exact shape (asked
     //     ONCE, at the FIRST finger's down, captured beside the down point,
     //     surface geometry only, null or false meaning "not there"), and THE
@@ -829,8 +829,7 @@ public:
     // begin_pointer_capture so every capture opens unfrozen, and cleared again
     // at release_pointer_lock. The nav drag re-asserts it at its threshold
     // crossing and at every ctrl edge, and it is the only gesture that ever
-    // does — the overview lane's dual-axis strip drag was the other capturing
-    // gesture and was deleted whole on 2026-08-15.
+    // does — no other gesture captures the pointer.
     //
     // A FROZEN PHASE CAN NEVER WRAP, which is the freeze's own consequence
     // rather than a second rule: the wrap (set_capture_wrap_span below) rides
@@ -1052,12 +1051,8 @@ private:
     //     THERE IS NO NOTIONAL Y, and that is a decision rather than an
     //     omission: the restore's y is frozen at the press row and no gesture
     //     reads a vertical position here — since the 2026-08-14 rotation the
-    //     nav drag discards dy in BOTH phases, and the overview lane's strip
-    //     drag, which still zooms on dy, consumes it as a per-event DELTA off
-    //     the ledger. So nothing would read a notional y. (It would cost that
-    //     zoom no travel — a notional position is a SECOND quantity beside the
-    //     ledger, exactly as the x one is — so the reason is the missing reader
-    //     and nothing else.) THE FROZEN
+    //     nav drag discards dy in BOTH phases. So nothing would read a
+    //     notional y. THE FROZEN
     //     RESTORE Y IS NOT THE X DEFECT'S OTHER HALF, which is why the
     //     2026-08-14 lateral freeze below did not grow a y twin: the x defect
     //     was an ACCUMULATOR silently diverging from the pointer and feeding
@@ -1395,12 +1390,11 @@ private:
     //     glass ruling, 2026-08-12 — the one piece of the timer-free model
     //     kept):
     //       - MOVED (a live drag — a marker drag, a trim endcap or bridge
-    //         drag, the standing region's editor, the overview box and its
-    //         bound drags): IGNORED
+    //         drag, the standing region's editor): IGNORED
     //         whole — recorded (the point count), not routed: mid-gesture
     //         finger-count changes do not mutate a committed gesture (the
     //         any-end-commits family; the architect's explicit mid-drag
-    //         ruling). A THIN LANE (the overview strip or the trim bar) is
+    //         ruling). A THIN LANE (the trim bar) is
     //         ignored on the same line whether moved or not — the first door
     //         of the two-fingers-do-nothing-there ruling, at the site.
     //       - MOTIONLESS (a hold, off those lanes): THE UPGRADE — the
@@ -1610,7 +1604,7 @@ private:
     // the slop crossing (the phone model's pan vs the pointer) and the
     // expiry (the region hold vs the pointer unlock).
     bool       touch_down_in_pan_zone_   = false;
-    // The down point's THIN-LANE answer — the overview strip or the trim bar,
+    // The down point's THIN-LANE answer — the trim bar,
     // the class the GUI's touch_point_on_thin_lane owns — captured ONCE beside
     // the pan-zone one at the first finger's down (the thin_lane query at
     // set_touch_nav_hooks) and cleared with it in forget_touch_state — the two
