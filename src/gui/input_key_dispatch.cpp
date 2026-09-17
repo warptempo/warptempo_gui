@@ -21,6 +21,7 @@
                                    // deliverable folder)
 #include "renders_dir.h"     // project_batch_root (the sync act's batch root)
 #include "history_diff.h"
+#include "history_folder.h"  // the `'` act's folder-road gate and its member
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
 #include "phase_reset_propagate.h"  // format_domain_timestamp (the family's one register)
 #include "magnification_level_propagate.h"
@@ -1174,6 +1175,11 @@ void GuiInputHandler::republish_history_lane_now() {
 // (history_remote_walk_available, app_state.h). SO THE ENTRY RAISES NO CARD —
 // init() has already put its one line on stderr naming the reason, and the lit
 // local lamp beside a greyed Save is the cue that this visit has no git.
+//
+// THE TABLET OPENS ON THE FOLDER ROAD WHERE THE PROJECT CARRIES AN EXPORT
+// (2026-09-17): the commit walk reads `<project>/history/` and bootstraps with
+// no git at all (history_folder.h), so this fallback is now for a project with
+// NEITHER a folder nor a clone.
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
     // prefetch store now, and a store describing another source, another
@@ -1380,6 +1386,9 @@ void GuiInputHandler::kick_history_prefetch() {
 // the loaded source (2026-08-11: there is no compiled-in root to read against any
 // more) and one for the tip itself — which is still the whole of what an ordinary
 // entry pays in git, against the log plus a strict load per candidate it used to.
+// ON THE FOLDER ROAD IT IS A DIRECTORY LISTING and no git at all, the newest
+// exported member's folder name being that walk's tip (read_history_walk_tip
+// owns both spellings).
 void GuiInputHandler::kick_history_prefetch_if_stale() {
     const bool same_subject =
         history_prefetch.subject_source_path() == app.source_audio_path &&
@@ -1388,7 +1397,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
         if (history_prefetch.running()) return;
         if (!history_prefetch.tip_sha().empty() &&
             history_prefetch.tip_sha() ==
-                read_history_branch_tip_sha(app.source_audio_path)) {
+                read_history_walk_tip(app.source_audio_path)) {
             return;
         }
     }
@@ -2942,6 +2951,18 @@ void GuiInputHandler::open_history_commit_editor() {
             AppState::NotificationClass::Normal,
             std::string(kHistoryUnavailable) + ": " +
                 app.history_mode.session.unavailable_reason().display);
+        return;
+    }
+    // AND A WALK THERE IS NOTHING TO COMMIT INTO, the same premise on its
+    // other road (architect 2026-09-17): a visit reading an EXPORTED history
+    // folder has a bootstrapped walk and no clone — an export is a derivation
+    // of a history kept elsewhere (history_folder.h) — so the act refuses with
+    // the fact stated. A CARD, not a silence: the fact is the FOLDER'S, not a
+    // state the view is showing, so nothing on screen says it. Save greys on
+    // the same predicate, composed once at history_checkpoint_actionable.
+    if (!history_checkpoint_road_available(app)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kHistoryFolderNoCheckpoint);
         return;
     }
     if (app.history_checkpoint_in_flight) {
@@ -5574,37 +5595,39 @@ bool GuiInputHandler::load_render_entry_in_place(
 // -- Load-in-place from a COMMIT (the `'` editor in the `h` history mode) --
 //
 // WHAT IT IS: the same act load_render_entry_in_place performs, with the committed
-// history as its source instead of a render entry. `sha` is the full SHA the
-// prefetch store holds for the VIEWED member — the one caller
-// (confirm_load_in_place) hands it a walk member
-// and nothing else; the typed spelling, and with it the "short SHA pasted out
-// of GitHub's web UI" use case, retired with the load prompt's field
-// (architect R23). ONE STATE IN, ONE STATE OUT: the four sidecars THAT
-// commit carried become the live session, in memory, and the disk is never
-// touched — not the corpus, not the working sidecars, not tmp/.
+// history as its source instead of a render entry. `member` is the VIEWED
+// member's INDEX in the commit walk — the one caller (confirm_load_in_place)
+// hands it the index it parked and nothing else; the typed spelling, and with
+// it the "short SHA pasted out of GitHub's web UI" use case, retired with the
+// load prompt's field (architect R23). ONE STATE IN, ONE STATE OUT: the four
+// sidecars THAT checkpoint carried become the live session, in memory, and the
+// disk is never touched — not the corpus, not the export, not the working
+// sidecars, not tmp/.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the validate-before-mutate
 // contract load_render_entry_in_place states and this path mirrors: ONE call,
-// load_commit_sidecars_strict (history_diff.h), which is the resolution, the
-// missing-sidecar refusals, the scratch staging and the four STRICT
-// WHOLE-FILE LOADERS in one predicate — the same predicate that is WALK
-// MEMBERSHIP since 2026-08-04, so a walk member's own SHA passes by
-// construction and every refusal arm (an unresolvable spelling, a partial
-// checkpoint, an ambiguous per-commit path resolution, a sidecar the loaders
-// refuse) can fire only on a change in the clone between the scan and the
-// act. That strictness is the point rather than a side effect — exactly the
-// parse-gating the architect ruled, and the reason no second, looser grammar
-// is written anywhere on this path. A refusal is one stderr line naming its
-// cause with the committed path and the SHA (first error only — the gate's own
-// contract) AND a notification card carrying the same sentence
-// (2026-08-29; stderr alone until then, the view's own status line having
-// outranked the transient tier a refusal would have written).
+// THE GATE OF THE ROAD THIS VISIT BOUND TO — load_commit_sidecars_strict
+// (history_diff.h) for a clone, load_history_folder_member_strict
+// (history_folder.h) for an exported history folder — each being the address
+// resolution, the missing-sidecar refusals and the four STRICT WHOLE-FILE
+// LOADERS in one predicate, and each being WALK MEMBERSHIP on its own road
+// (2026-08-04 for the first, 2026-09-17 for the second). So a walk member
+// passes by construction and every refusal arm (an unresolvable spelling, a
+// partial checkpoint, an ambiguous per-commit path resolution, a member folder
+// that has moved, a sidecar the loaders refuse) can fire only on a change
+// under the walk between the scan and the act. That strictness is the point
+// rather than a side effect — exactly the parse-gating the architect ruled,
+// and the reason no second, looser grammar is written anywhere on this path. A
+// refusal is one stderr line naming its cause with the file it is about (first
+// error only — the gates' own contract) AND a notification card carrying the
+// same sentence (2026-08-29; stderr alone until then, the view's own status
+// line having outranked the transient tier a refusal would have written).
 //
-// THE WAV IS NOT COMPARED, and there is nothing to compare it to: the corpus
-// stores the four sidecars and no audio at all, so the LOADED SOURCE IS THE
-// SOURCE — this loads a recipe in place for the file already open, exactly as
-// the mode's
-// diff measures a commit against the session for that same file. The render-entry
+// THE WAV IS NOT COMPARED, and there is nothing to compare it to: a checkpoint
+// is four sidecars and no audio at all, on either road, so the LOADED SOURCE IS
+// THE SOURCE — this loads a recipe in place for the file already open, exactly
+// as the mode's
+// diff measures a checkpoint against the session for that same file. The render-entry
 // load-in-place's wav-existence check has no counterpart here.
 //
 // NO RUNNING-RENDER GUARD, deliberately. load_render_entry_in_place's self-guard
@@ -5635,33 +5658,61 @@ bool GuiInputHandler::load_render_entry_in_place(
 // replaces the very state the frozen now side was measured against, so leaving
 // the mode standing would leave every flag in the lane describing a session that
 // no longer exists.
-bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
+bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
     // The mode is the route's precondition, not a courtesy: the sidecar base
     // name comes from the session (init() owns that derivation), and the close
     // below is part of the act.
     if (!app.history_mode.active) return false;
     const std::string base_name =
         app.history_mode.session.sidecar_base_name();
-    // THE CLONE IS THE SESSION'S OWN, derived from the loaded source at init
-    // (history_diff.h): the `'` act reads the same repository the lane was
-    // built from, on the same one derivation.
-    const std::string repo_root = app.history_mode.session.repo_root();
 
-    // THE WHOLE VALIDATION IS THE ONE SHARED GATE, and the SHA is all it
-    // takes now: the session's matched directory was a parameter here until
-    // 2026-08-09, when the folder a commit is about became the folder that
-    // COMMIT TOUCHED rather than a tie the session could break. So a commit
-    // touching this base name in two directories refuses instead of resolving to
-    // whichever one this session happens to sit in, and one touching it nowhere
-    // — an ordinary non-piece commit, a merge, a read that did not answer —
-    // refuses too. Nothing is settled by a guess any more, which is the point.
+    // THE MEMBER'S ADDRESS IS READ HERE, INSIDE THE ACT AND AHEAD OF THE CLOSE
+    // (2026-09-17): the close drops the session these accessors read, so the
+    // caller hands over an INDEX and the two spellings of an address are
+    // resolved at the one place that knows the road.
+    //
+    // THE GIT ROAD'S address is the store's full SHA and the clone is the
+    // session's own, derived from the loaded source at init (history_diff.h),
+    // so the `'` act reads the same repository the lane was built from. The
+    // SHA is all the gate takes: the session's matched directory was a
+    // parameter until 2026-08-09, when the folder a commit is about became the
+    // folder that COMMIT TOUCHED rather than a tie the session could break —
+    // so a commit touching this base name in two directories refuses instead
+    // of resolving to whichever one this session happens to sit in, and one
+    // touching it nowhere refuses too.
+    //
+    // THE FOLDER ROAD'S address is the member FOLDER, and its gate is that
+    // road's own twin of the same one predicate (load_history_folder_member_-
+    // strict, history_folder.h): the four files sit under their real names, so
+    // there is no spelling to resolve and no staging. `seq` is the listing's
+    // order term and the load never reads it, so this builds the member with a
+    // zero rather than asking the session for a parsed triple.
+    //
+    // VALIDATE BEFORE MUTATE ON BOTH: the strict load runs AGAIN here, at the
+    // act, because the clone or the folder may have changed since the scan
+    // gated this member — the refusal is whole, one stderr line and one card,
+    // with nothing touched and the view standing.
     GuiHistoryCommitLoad loaded;
     GuiFailure           failure;
-    if (!load_commit_sidecars_strict(repo_root, sha, base_name, loaded,
-                                     failure)) {
+    bool                 gated = false;
+    if (app.history_mode.session.road() == GuiHistoryWalkRoad::Folder) {
+        GuiHistoryFolderMember entry;
+        entry.path = app.history_mode.session.member_folder_at(member);
+        entry.sha7 = app.history_mode.session.sha_at(member);
+        gated = load_history_folder_member_strict(entry, base_name, loaded,
+                                                  failure);
+    } else {
+        gated = load_commit_sidecars_strict(
+            app.history_mode.session.repo_root(),
+            app.history_mode.session.sha_at(member), base_name, loaded,
+            failure);
+    }
+    if (!gated) {
         // The two clauses of the one refusal (GuiFailure, failure.h): the
-        // line keeps every path in full, the card names the committed
-        // sidecar by its repo-relative name and a folder by its own.
+        // line keeps every path in full, the card names the sidecar the way
+        // its road names one — a committed blob by its repo-relative path, an
+        // exported file by `history/<seq>_<sha7>/<file>` — and a folder by its
+        // own name.
         std::fprintf(stderr, "warptempo_gui: Load in place refused: %s\n",
                      failure.diagnostic.c_str());
         notifications.notify(AppState::NotificationClass::Normal,
@@ -5677,10 +5728,10 @@ bool GuiInputHandler::load_history_commit_in_place(const std::string& sha) {
 
     // THE PAST-EOF WALL, the sibling's own line and for its reason: a
     // checkpoint's sidecars are state authored against whatever audio stood
-    // when it was committed, and load_commit_sidecars_strict reads them
-    // against no audio at all (in_place_load_wall_defect carries the whole
-    // reasoning). The refusal is WHOLE and names its cause on stderr and on a
-    // notification card like every other arm here.
+    // when it was committed, and the gate above — whichever road's — reads
+    // them against no audio at all (in_place_load_wall_defect carries the
+    // whole reasoning). The refusal is WHOLE and names its cause on stderr and
+    // on a notification card like every other arm here.
     if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets,
                                                 src_magnification_levels)) {
         // Appended, so lowercase through the one owner (notifications.h).
@@ -8606,18 +8657,19 @@ void GuiInputHandler::confirm_load_in_place() {
         if (!app.history_mode.active) return;
         if (member >= app.history_mode.walk_count()) return;
         // THE FORK ON THE WALK SOURCE, and the one site of it: the Remote tab
-        // loads the store's SHA at that index through
+        // loads the commit walk's member at that INDEX through
         // load_history_commit_in_place, the Local tab the member's number
-        // through load_history_local_entry_in_place. The SHA is COPIED out of
-        // the store before the act, which closes the mode and drops the
-        // session a reference would point into. Each act owns every refusal on
-        // its own route and names it on stderr AND on a notification card
-        // (2026-08-29; stderr alone until then, the view's own line having
-        // outranked the transient tier), so nothing is said here.
-        const std::string sha = app.history_mode.session.sha_at(member);
+        // through load_history_local_entry_in_place. The index is all that
+        // crosses since 2026-09-17 — the commit walk has two roads and two
+        // spellings of a member's address, so the act reads the member's
+        // address inside itself, ahead of the close that drops the session.
+        // Each act owns every refusal on its own route and names it on stderr
+        // AND on a notification card (2026-08-29; stderr alone until then, the
+        // view's own line having outranked the transient tier), so nothing is
+        // said here.
         (void)(app.history_mode.source == GuiHistoryWalkSource::Local
                    ? load_history_local_entry_in_place(member + 1)
-                   : load_history_commit_in_place(sha));
+                   : load_history_commit_in_place(member));
     }
 }
 

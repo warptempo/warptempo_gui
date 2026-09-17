@@ -12278,20 +12278,41 @@ inline bool history_revert_actionable(const AppState& a) {
 // A run that succeeds under a standing visit does not change it — the next `h`
 // bootstraps afresh.
 //
-// FIVE READERS, re-greped on this name and paired act-to-face so no glyph can
-// disagree with its key: the WALK LAMP'S ACT (GuiInputHandler::set_history_-
-// delta, which refuses a switch toward the remote walk and cards the reason)
-// and its FACE (redesign_button_enabled's HistoryWalk arm); the CHECKPOINT ACT
-// (open_history_commit_editor, which cards the same sentence) and Save's face,
-// composed one predicate down at history_checkpoint_actionable; and the
-// FAILED-SCAN ARRIVAL (on_history_prefetch_ready), which is the odd one out —
-// it does not refuse an act but CARVES A FALLBACK VISIT OUT of the closer that
-// ends a visit whose remote premise failed, such a visit never having had that
-// premise. The reason itself is the session's own
+// IT IS TRUE ON THE FOLDER ROAD (architect 2026-09-17): an exported history
+// folder IS a bootstrapped commit walk — it has members, it walks, it loads in
+// place — so the lamp toggles it and `g` reaches it exactly as a clone's walk.
+// What that road cannot do is take a CHECKPOINT, and that is its own term, one
+// predicate down (history_checkpoint_road_available), never this one.
+//
+// FOUR READERS, re-greped on this name 2026-09-17 and paired act-to-face so
+// no glyph can disagree with its key: the WALK LAMP'S ACT
+// (GuiInputHandler::set_history_delta, which refuses a switch toward the
+// remote walk and cards the reason) and its FACE (redesign_button_enabled's
+// HistoryWalk arm); the CHECKPOINT ACT (open_history_commit_editor, which
+// cards this fact as its OUTERMOST premise, directly above its road arm); and
+// the FAILED-SCAN ARRIVAL (on_history_prefetch_ready), which is the odd one
+// out — it does not refuse an act but CARVES A FALLBACK VISIT OUT of the
+// closer that ends a visit whose remote premise failed, such a visit never
+// having had that premise. IT WAS FIVE UNTIL 2026-09-17: SAVE'S FACE read it
+// through history_checkpoint_actionable and now reads the ROAD predicate
+// below instead, which IMPLIES this one — so the face answers both terms in
+// one read and the act's two arms stay paired with it. The
+// reason itself is the session's own
 // (history_mode.session.unavailable_reason(), whose display clause the cards
 // carry and whose kHistoryUnavailable prefix is the one composer).
 inline bool history_remote_walk_available(const AppState& a) {
     return a.history_mode.session.available();
+}
+
+// CAN THIS WALK TAKE A CHECKPOINT? — the commit walk bootstrapped AND on the
+// git road (GuiHistoryDiff::takes_checkpoint). An exported history folder is
+// walked exactly as the clone's history is, but it is a derivation, not a
+// clone: there is nothing to commit into (architect 2026-09-17, ruling at
+// history_folder.h). TWO READERS, paired act-to-face: the CHECKPOINT ACT's
+// road arm (open_history_commit_editor, which cards kHistoryFolderNoCheckpoint)
+// and Save's face through history_checkpoint_actionable.
+inline bool history_checkpoint_road_available(const AppState& a) {
+    return a.history_mode.session.takes_checkpoint();
 }
 
 // WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own session terms
@@ -12299,9 +12320,12 @@ inline bool history_remote_walk_available(const AppState& a) {
 // delta, measured once per visit) and no checkpoint already publishing (single
 // in flight, a bit that OUTLIVES the view, which is why this takes the whole
 // AppState rather than the mode struct) — AND, since 2026-09-04, A REMOTE WALK
-// TO COMMIT INTO, the act's outermost premise: a visit standing on the local
-// fallback has no clone this program could ask about, so the button greys and
-// the chord cards the bootstrap's own reason.
+// ON THE GIT ROAD TO COMMIT INTO, the act's outermost premise: a visit standing
+// on the local fallback has no clone this program could ask about, and one
+// standing on an EXPORTED HISTORY FOLDER (2026-09-17) has a walk but no clone
+// either — an export is a derivation — so the button greys and the chord cards
+// whichever of the two reasons applies. ONE TERM covers both, the road
+// predicate above implying availability.
 //
 // IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
 // admitted into the `h` view's vocabulary only while both held from 2026-08-08
@@ -12319,7 +12343,7 @@ inline bool history_remote_walk_available(const AppState& a) {
 // happening; it went on 2026-09-12, when a tooltip stopped reporting a state.
 inline bool history_checkpoint_actionable(const AppState& a) {
     return a.history_mode.active &&
-           history_remote_walk_available(a) &&
+           history_checkpoint_road_available(a) &&
            !a.history_mode.head_delta_empty &&
            !a.history_checkpoint_in_flight;
 }

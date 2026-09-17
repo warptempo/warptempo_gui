@@ -3354,20 +3354,23 @@ private:
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
-    // source — apply the four sidecars commit `sha` carried (the full SHA
-    // the prefetch store holds for the VIEWED member — the one caller,
-    // confirm_load_in_place, hands it a store member; the typed spelling
-    // retired with the load prompt's field) as the new
-    // authoring baseline, in memory, with the disk untouched.
-    // Validate-before-mutate like its sibling: the resolve, the four-sidecar
+    // source — apply the four sidecars the commit walk's member at `member`
+    // carries as the new authoring baseline, in memory, with the disk
+    // untouched. `member` is the VIEWED index (the one caller,
+    // confirm_load_in_place, hands it the index it parked; the typed spelling
+    // retired with the load prompt's field), and the ACT reads that member's
+    // ADDRESS — a commit SHA on the git road, a member FOLDER on the exported
+    // one (history_folder.h) — because the two roads spell it differently and
+    // the close inside the act drops the session that holds either.
+    // Validate-before-mutate like its sibling: the address, the four-sidecar
     // presence and all four STRICT whole-file parses run before any store is
     // written, each failure returning false with one stderr line naming the
-    // cause, the committed path and the SHA. No wav is compared (the corpus
-    // stores no audio — the loaded source is the source), no tmp/ wipe and so
+    // cause and the file. No wav is compared (neither a commit nor an export
+    // carries audio — the loaded source is the source), no tmp/ wipe and so
     // no running-render guard, and the mode itself closes as part of the act.
     // Gated on the mode standing: the sidecar base name is the session's.
     // Full behaviour paragraph at the definition.
-    bool load_history_commit_in_place(const std::string& sha);
+    bool load_history_commit_in_place(std::size_t member);
 
     // load_history_local_entry_in_place: the same act with A STATE OF THIS
     // SESSION'S OWN UNDO/REDO TIMELINE as its source (architect 2026-08-08) —

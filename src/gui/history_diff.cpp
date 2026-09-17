@@ -4,6 +4,8 @@
 #include "device_config.h"   // shown_project_path (the card's name for a file)
 #include "frame_format.h"
 #include "marker_magnification.h"   // parse_marker_magnification, the level digit
+// The commit walk's second road — the exported history folder, git-free.
+#include "history_folder.h"
 #include "history_prefetch.h"
 #include "phaseresetmarkers.h"
 #include "settings_io.h"
@@ -2211,11 +2213,61 @@ GuiHistoryWalkHeader resolve_history_walk_header(
         h.ok = false;
         h.read_failed = read_failed;
         h.unavailable_reason = std::move(why);
+        h.road = GuiHistoryWalkRoad::Git;
+        h.history_folder.clear();
         h.repo_root.clear();
         h.base_name.clear();
         h.project_directory.clear();
         return h;
     };
+
+    // THE SIDECAR BASE NAME IS THE SOURCE'S OWN STEM on both roads — the one
+    // derivation rule the loader uses when it builds <base>.warpmarkers and
+    // its three siblings beside the WAV (file_loader.cpp's companion-file
+    // block). The corpus and the export both name their files by exactly that,
+    // so mirroring the rule is what makes the filename match work on names
+    // full of periods and commas.
+    //
+    // IT IS DERIVED HERE, ABOVE THE FORK, because the Folder road needs it too
+    // and its own refusal is the same sentence either way.
+    auto base_name_of_source = [&]() {
+        return std::filesystem::path(source_audio_path).stem().string();
+    };
+    auto no_base_name = [&]() {
+        const std::filesystem::path given(source_audio_path);
+        return unavailable(path_failure("the source path has no base name: ",
+                                        given, shown_project_path(given), ""));
+    };
+
+    // THE EMPTY SOURCE STILL REFUSES FIRST, AND THROUGH THE SAME ARM it always
+    // did: history_folder_of_source answers EMPTY for it (there is no parent
+    // folder to look in), so the press falls to the clone derivation below and
+    // gets `no source is loaded` in resolve_repo_root_for_source's own words.
+    // No second producer of that sentence.
+    //
+    // THE FOLDER OUTRANKS GIT, AND THERE IS NO BACKEND TERM IN IT (architect
+    // 2026-09-17): a project carrying an exported history is walked from that
+    // export on every backend, the laptop included — the laptop simply never
+    // has one, its exporter writing to scratch and pushing. The whole decision
+    // is whether `<the source's parent>/history` is a directory
+    // (history_folder_of_source, the one place the filesystem is asked), and
+    // it is asked AHEAD of the clone derivation so a folder the user put there
+    // is never second-guessed by a clone that happens to exist around it.
+    //
+    // THE PROJECTS-HOME GUARD IS GIT'S OWN AND IS NOT ASKED HERE. It answers
+    // WHICH REPOSITORY the clone on this disk is, because the clone is only
+    // the transport for a history kept elsewhere; an export IS the history,
+    // sitting inside the project it describes, so there is no second
+    // repository for it to be confused with.
+    const std::string folder = history_folder_of_source(source_audio_path);
+    if (!folder.empty()) {
+        h.road           = GuiHistoryWalkRoad::Folder;
+        h.history_folder = folder;
+        h.base_name      = base_name_of_source();
+        if (h.base_name.empty()) return no_base_name();
+        h.ok = true;
+        return h;
+    }
 
     // THE CLONE FIRST, because every question below it is asked of a repository
     // and there is no repository until this answers (architect 2026-08-11,
@@ -2253,18 +2305,10 @@ GuiHistoryWalkHeader resolve_history_walk_header(
         return unavailable(std::move(guard_reason));
     }
 
-    // The sidecar base name is the source's own stem — the single derivation
-    // rule the loader uses when it builds <base>.warpmarkers and its two
-    // siblings beside the WAV (file_loader.cpp's companion-file block). The
-    // corpus names its files by exactly that, so mirroring the rule is what
-    // makes the filename match work on names full of periods and commas.
-    h.base_name = std::filesystem::path(source_audio_path).stem().string();
-    if (h.base_name.empty()) {
-        const std::filesystem::path given(source_audio_path);
-        return unavailable(path_failure("the source path has no base name: ",
-                                        given, shown_project_path(given),
-                                        ""));
-    }
+    // The sidecar base name, through the one derivation above — the rule and
+    // its refusal are the same on both roads.
+    h.base_name = base_name_of_source();
+    if (h.base_name.empty()) return no_base_name();
 
     // THE SOURCE'S FOLDER IS THE PROJECT DIRECTORY, AND THAT IS THE WHOLE RULE
     // (architect 2026-08-09). A piece lives in its own folder under the clone's
@@ -2311,7 +2355,29 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     return h;
 }
 
-std::string read_history_branch_tip_sha(const std::string& source_audio_path) {
+std::string read_history_walk_tip(const std::string& source_audio_path) {
+    // THE ROAD IS ASKED HERE TOO, and by the same one owner the resolver asks
+    // (history_folder_of_source): the staleness key has to describe the walk
+    // the entry is about to bind to, so a project carrying an export is keyed
+    // on THAT and never on a clone's branch tip.
+    //
+    // THE FOLDER ROAD'S TIP IS THE NEWEST MEMBER'S FOLDER NAME, read through
+    // the one listing owner rather than a second walk of the directory — so a
+    // non-member entry is reported in the listing's own words here as well.
+    // An unlistable folder and one holding no member both answer the empty
+    // string, which is the same "could not be read" every caller already
+    // treats as stale.
+    const std::string folder = history_folder_of_source(source_audio_path);
+    if (!folder.empty()) {
+        std::vector<GuiHistoryFolderMember> members;
+        GuiFailure                          why;
+        if (!list_history_folder_members(folder, members, why) ||
+            members.empty()) {
+            return std::string();
+        }
+        return std::filesystem::path(members.front().path).filename().string();
+    }
+
     // IT DERIVES THE ROOT ITSELF, both its callers asking before any header
     // exists (the declaration owns why). A derivation that refuses answers the
     // same empty string an unreadable tip does, which is what every caller
@@ -2342,6 +2408,11 @@ void scan_history_walk(
         resolve_history_walk_header(source_audio_path, projects_repo);
     const std::string repo_root   = header.repo_root;
     const std::string base_name   = header.base_name;
+    // Copied out beside the base name, and for the same reason: the header is
+    // MOVED into on_header below, so everything this body still needs is taken
+    // first.
+    const std::string        history_folder = header.history_folder;
+    const GuiHistoryWalkRoad road           = header.road;
     const bool        ok          = header.ok;
     const bool        read_failed = header.read_failed;
     const GuiFailure  header_why  = header.unavailable_reason;
@@ -2370,6 +2441,17 @@ void scan_history_walk(
             result.unavailable_reason = header_why;
         }
         on_done(std::move(result));
+        return;
+    }
+
+    // THE ROAD FORKS HERE AND NOWHERE ELSE IN THIS BODY (architect
+    // 2026-09-17). Past the header the two walks answer the same three
+    // callbacks over the same member type, so the folder road is its own body
+    // in its own file (scan_history_folder_walk, history_folder.h) and
+    // everything below this line is git's, unchanged.
+    if (road == GuiHistoryWalkRoad::Folder) {
+        scan_history_folder_walk(history_folder, base_name, abandoned,
+                                 on_member, on_done);
         return;
     }
 
@@ -2567,6 +2649,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
                           const GuiHistoryPrefetch& prefetch) {
     available_ = false;
     unavailable_reason_ = GuiFailure{};
+    road_ = GuiHistoryWalkRoad::Git;
     repo_root_.clear();
     base_name_.clear();
     project_directory_.clear();
@@ -2589,6 +2672,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // the local walk's, not the commit walk's).
     auto unavailable = [this](GuiFailure why) {
         unavailable_reason_ = std::move(why);
+        road_ = GuiHistoryWalkRoad::Git;
         repo_root_.clear();
         base_name_.clear();
         project_directory_.clear();
@@ -2620,6 +2704,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
         if (!prefetch.header().ok) {
             return unavailable(prefetch.header().unavailable_reason);
         }
+        road_              = prefetch.header().road;
         repo_root_         = prefetch.header().repo_root;
         base_name_         = prefetch.header().base_name;
         project_directory_ = prefetch.header().project_directory;
@@ -2628,6 +2713,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
             resolve_history_walk_header(app.source_audio_path,
                                         app.projects_repo);
         if (!h.ok) return unavailable(h.unavailable_reason);
+        road_              = h.road;
         repo_root_         = h.repo_root;
         base_name_         = h.base_name;
         project_directory_ = h.project_directory;
@@ -2699,6 +2785,13 @@ const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     const std::deque<GuiHistoryCommitSidecars>& m = members();
     if (index >= m.size()) return kNone;
     return m[index].sha;
+}
+
+const std::string& GuiHistoryDiff::member_folder_at(std::size_t index) const {
+    static const std::string kNone;
+    const std::deque<GuiHistoryCommitSidecars>& m = members();
+    if (index >= m.size()) return kNone;
+    return m[index].folder;
 }
 
 // THE TYPED LINE DIFF OF ONE PAIR OF SIDES (the contract is at the

@@ -190,6 +190,12 @@ set(WARPTEMPO_GUI_SOURCES
     # runs that file's one mutating git route off the GUI thread.
     src/gui/history_commit_worker.cpp
     src/gui/history_prefetch.cpp
+    # GUI-ONLY like the two above: the commit walk's SECOND ROAD, the exported
+    # history folder a project may carry (architect 2026-09-17). It runs no git
+    # at all — it is a directory listing and four file reads per member — and
+    # it is what gives the tablet, which has no git binary, the committed
+    # history. warptempo_cli reads no history of any kind.
+    src/gui/history_folder.cpp
     src/gui/settings_editor.cpp
     src/gui/active_views.cpp
     src/gui/ab_audition.cpp

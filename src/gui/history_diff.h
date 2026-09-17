@@ -43,6 +43,18 @@ class GuiHistoryPrefetch;
 // to the press that opens the view.
 inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 
+// THE EXPORTED HISTORY TAKES NO CHECKPOINT (architect 2026-09-17). The commit
+// walk has a second road — a `history/` folder the laptop exported into the
+// project, walked with no git at all (history_folder.h owns the format and the
+// ruling) — and a derivation is not a clone: there is nothing to commit into.
+// ONE READER, the CHECKPOINT ACT (open_history_commit_editor), which cards it
+// where its remote-walk arm cards kHistoryUnavailable; the Save-and-Commit
+// face greys on the SAME predicate one composition away
+// (history_checkpoint_road_available, app_state.h), so the key says the reason
+// and the grey is the button's message.
+inline constexpr const char* kHistoryFolderNoCheckpoint =
+    "An exported history takes no checkpoint";
+
 // THE GITHUB RECHECK'S DIFF MODEL — no UI, no keys, no paint.
 //
 // The architect commits his working checkpoints of a piece into an
@@ -74,6 +86,17 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // refuse the load-in-place anyway, and a foreign copy of a sidecar name
 // elsewhere in the
 // tree can no longer make the match ambiguous.)
+//
+// THE COMMIT WALK HAS A SECOND ROAD SINCE 2026-09-17, and every paragraph
+// above describes the GIT one. If the source's parent folder carries a
+// `history/` directory, the walk reads THAT — one folder per exported
+// checkpoint, the four sidecars inside it under their real names — and runs no
+// git at all: the match, the pathspecs, the per-commit tree resolution and the
+// branch are all git's own questions and none of them is asked there. The
+// format, the fork and the reason the tablet needs it live in history_folder.h;
+// what this module keeps is the WALK — the same members, the same strict load
+// gate, the same deltas, the same `'` act — with GuiHistoryWalkRoad naming
+// which half of this file a given session is using.
 //
 // THE BRANCH IS THE LOCAL ONE, `HEAD`, not `origin/main` — because this module
 // WRITES checkpoints now (the commit act below) and a checkpoint whose push
@@ -147,7 +170,10 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // stays answerable by reading the call sites rather than by trusting a runtime
 // guard. Both entry points use an argv exec with no shell anywhere (the
 // committed directory names carry spaces, so shell quoting would be a hazard
-// rather than a convenience).
+// rather than a convenience). THE FOLDER ROAD RUNS NO GIT AT ALL, so this list
+// is unchanged by it: it lists a directory and reads four files per member,
+// and the one mutating route stays the commit act — which that road refuses
+// outright (kHistoryFolderNoCheckpoint above).
 
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
 // against two different "other sides", and the view offers both.
@@ -505,8 +531,15 @@ struct GuiHistorySidecarBlob {
 
 // One commit's four sidecars, read whole.
 struct GuiHistoryCommitSidecars {
-    // The full 40-char SHA git resolved the caller's spelling to.
+    // The full 40-char SHA git resolved the caller's spelling to — and, ON THE
+    // FOLDER ROAD, the member's seven-character sha7, which is the whole name
+    // an export carries (history_folder.h).
     std::string sha;
+    // THE FOLDER ROAD'S MEMBER ADDRESS, the member folder's absolute path;
+    // EMPTY on the git road, where `sha` IS the address. ONE READER: the `'`
+    // act (GuiInputHandler::load_history_commit_in_place) through
+    // GuiHistoryDiff::member_folder_at.
+    std::string folder;
     GuiHistorySidecarBlob warpmarkers;
     GuiHistorySidecarBlob phaseresetmarkers;
     GuiHistorySidecarBlob magnificationlevelmarkers;
@@ -614,6 +647,12 @@ struct GuiHistoryCommitLoad {
 // `repo_root` is the clone to read in — the session's own derived root
 // (GuiHistoryWalkHeader::repo_root), which the scan carries into its per-candidate
 // gating and GuiHistoryDiff::repo_root() hands to the `'` act.
+//
+// IT IS THE GIT ROAD'S GATE. Its twin over an exported history folder is
+// load_history_folder_member_strict (history_folder.h): the same four strict
+// loaders and the same first-error verdict over FILES under their real names,
+// so that road needs no staging — and the two are what make walk membership
+// one idea on both roads.
 bool load_commit_sidecars_strict(const std::string&    repo_root,
                                  const std::string&    spelling,
                                  const std::string&    base_name,
@@ -626,7 +665,21 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
 // inline and what the prefetch worker now does off-thread. It lives HERE, in
 // the module that owns every git call, so the worker file owns only threading:
 // the read/write fence stays "which function a call site names", and the
-// prefetch names none of the mutating one.
+// prefetch names none of the mutating one. (The two entry points below —
+// resolve_history_walk_header and scan_history_walk — serve BOTH roads since
+// 2026-09-17 and hand the folder one off to history_folder.h; everything
+// between them that names git is the git road's.)
+
+// WHICH BACKEND OF THE COMMIT WALK A HEADER DESCRIBES (architect 2026-09-17).
+// Git is the clone the source sits in, read through subprocesses, and every
+// paragraph at the head of this file is about it. Folder is an EXPORTED
+// history a project carries — `<project>/history/<seq>_<sha7>/` — read with no
+// git at all; its format, its generator and the ruling that a derivation takes
+// no checkpoint live in history_folder.h.
+enum class GuiHistoryWalkRoad {
+    Git,
+    Folder,
+};
 
 // WHERE THE PIECE LIVES, or why it cannot be found — the walk's cheap half: the
 // CLONE the source is in, the projects-home guard, the source's base-name
@@ -634,6 +687,11 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
 // the root derivation's one `rev-parse --show-toplevel` and the guard's two
 // `remote get-url` reads. `unavailable_reason` carries the one line the mode
 // prints when it refuses, in the exact shape it always had.
+//
+// THAT IS THE GIT ROAD'S HALF, and it is asked SECOND: the resolver looks for
+// an exported history folder first, and a project that has one gets a Folder
+// header with the base name filled, no git run and none of the fields below
+// consulted (`road` owns the fork; history_folder.h owns the road).
 //
 // `repo_root` IS DERIVED FROM THE SOURCE (architect 2026-08-11, superseding the
 // compiled-in absolute path): the clone containing the loaded file, canonical and
@@ -659,7 +717,23 @@ struct GuiHistoryWalkHeader {
     bool        ok = false;
     bool        read_failed = false;
     GuiFailure  unavailable_reason;
+    // WHICH ROAD THIS HEADER DESCRIBES, and the whole fork: the resolver asks
+    // for an exported folder BEFORE it derives a clone, so a project carrying
+    // one is walked from it on every backend (history_folder.h).
+    GuiHistoryWalkRoad road = GuiHistoryWalkRoad::Git;
+    // The exported history folder, absolute — set on the Folder road and EMPTY
+    // on the Git one.
+    std::string history_folder;
+    // WHICH CLONE AND WHERE THE PIECE LIVES — the GIT ROAD'S two answers, and
+    // EMPTY on the Folder road, where neither question is asked. Their one
+    // consumer is the CHECKPOINT ACT (the commit worker's job, and the title's
+    // default off the directory's leaf), and the checkpoint never runs on that
+    // road — an export is a derivation, not a clone
+    // (kHistoryFolderNoCheckpoint above).
     std::string repo_root;
+    // THE SIDECAR BASE NAME IS BOTH ROADS', derived the one way from the
+    // source's own stem: it is what names the four files inside a member,
+    // wherever the member is read from.
     std::string base_name;
     std::string project_directory;
 };
@@ -679,10 +753,10 @@ struct GuiHistoryWalkHeader {
 // project folder outside every clone; with `read_failed` true it is a read that
 // did not answer, git having never run or named something that is not a
 // directory. The definition site owns the mapping. `reason` is the one line
-// the caller prints. TWO CALLERS (re-derived by grep 2026-08-11):
+// the caller prints. TWO CALLERS (re-derived by grep 2026-09-17):
 // resolve_history_walk_header below, which makes the refusal the header's own,
-// and read_history_branch_tip_sha, whose own two callers ask before any header
-// exists. Nothing else — every other consumer takes the root that came out of one
+// and read_history_walk_tip's GIT ARM, whose own two callers ask before any
+// header exists. Nothing else — every other consumer takes the root that came out of one
 // of those, which is what keeps this derivation the one owner.
 struct GuiHistoryRepoRoot {
     bool        ok          = false;
@@ -704,17 +778,23 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
 GuiHistoryWalkHeader resolve_history_walk_header(
     const std::string& source_audio_path, const std::string& projects_repo);
 
-// THE WALKED BRANCH'S TIP, full SHA, empty when it cannot be read. It is the
-// prefetch store's STALENESS key: a run describes the repository as of one tip,
-// and an entry that finds the tip moved kicks a fresh run rather than trusting
-// the old one.
+// THE WALK'S STALENESS WITNESS, ON EITHER ROAD, empty when it cannot be read.
+// A run describes the history as of one tip, and an entry that finds the tip
+// moved kicks a fresh run rather than trusting the old one.
 //
-// IT TAKES THE SOURCE, NOT A ROOT, and derives the clone itself — both its
-// callers (the prefetch worker before a run, the `h` entry's staleness test) ask
-// before any header exists, so there is no root in hand for them to pass. A
-// derivation that refuses answers the empty string, which is the same "could not
-// be read" the tip read itself answers with, and the caller treats them alike.
-std::string read_history_branch_tip_sha(const std::string& source_audio_path);
+// ON THE GIT ROAD it is the walked branch's tip, full SHA. ON THE FOLDER ROAD
+// it is THE NEWEST MEMBER'S FOLDER NAME (`<seq>_<sha7>`), which moves exactly
+// when the export grows, or the empty string when the folder lists no member
+// at all — an empty tip re-scans at every `h`, which over a listing of nothing
+// costs nothing and keys on nothing.
+//
+// IT TAKES THE SOURCE, NOT A ROOT, and derives the clone (or finds the folder)
+// itself — both its callers (the prefetch worker before a run, the `h` entry's
+// staleness test) ask before any header exists, so there is no root in hand for
+// them to pass. A derivation that refuses answers the empty string, which is the
+// same "could not be read" the tip read itself answers with, and the caller
+// treats them alike.
+std::string read_history_walk_tip(const std::string& source_audio_path);
 
 // HOW A SCAN RUN ENDED — the DONE callback's whole payload, and the header's own
 // ok-plus-reason shape reused because the question is the same one: did this
@@ -747,7 +827,11 @@ std::string read_history_branch_tip_sha(const std::string& source_audio_path);
 // name; or the number of lines did not EQUAL the count. Every one of them is two
 // reads of one history disagreeing, or one read that never answered — never a
 // history that is empty. (A source simply NOT IN A CLONE is not on this list: it
-// is an ordinary header refusal, an answer rather than the absence of one.) (A per-CANDIDATE failure is not on
+// is an ordinary header refusal, an answer rather than the absence of one.)
+// THE FOLDER ROAD ADDS EXACTLY ONE ARM to this list and has no other: THE
+// EXPORTED HISTORY FOLDER COULD NOT BE LISTED (list_history_folder_members,
+// history_folder.h) — the same shape, a read that did not answer, while an
+// empty folder is the ruled empty walk. (A per-CANDIDATE failure is not on
 // this list and never ends the run: it hides that commit on the counted line's
 // terms, the walk's own load gate doing what it always did.) A failed run is a
 // terminal matter under the sanctioned-use ruling: the mode refuses entry with
@@ -881,8 +965,32 @@ public:
     // covers is a run failing WHILE THE VIEW STANDS.
     bool walk_finished_empty() const;
 
-    // Full 40-char SHA, newest first. Empty for an out-of-range index.
+    // Full 40-char SHA, newest first — the member's sha7 on the folder road,
+    // where that is the whole name an export carries. Empty for an
+    // out-of-range index.
     const std::string& sha_at(std::size_t index) const;
+
+    // WHICH ROAD THIS VISIT BOUND TO, the header's own answer kept for the
+    // visit (history_folder.h owns what the Folder road is). Its readers are
+    // the `'` act, which loads a member by its address, and takes_checkpoint
+    // below.
+    GuiHistoryWalkRoad road() const { return road_; }
+
+    // THE FOLDER ROAD'S MEMBER ADDRESS at an index — the member folder's
+    // absolute path, sha_at's shape and empty out of range. Empty on the git
+    // road too, where the SHA is the address. ONE READER, the `'` act
+    // (GuiInputHandler::load_history_commit_in_place).
+    const std::string& member_folder_at(std::size_t index) const;
+
+    // CAN THIS WALK TAKE A CHECKPOINT? — the commit walk bootstrapped AND on
+    // the git road. An exported history folder is walked exactly as the
+    // clone's history is, but it is a derivation, not a clone: there is
+    // nothing to commit into (architect 2026-09-17, the ruling at
+    // history_folder.h). The GUI spells it history_checkpoint_road_available
+    // (app_state.h), which carries the reader inventory.
+    bool takes_checkpoint() const {
+        return available_ && road_ == GuiHistoryWalkRoad::Git;
+    }
 
     // The commit's delta IN ONE OF THE TWO READINGS (GuiHistoryCompare above),
     // computed on first call and cached per (index, compare) — the two answers
@@ -921,6 +1029,11 @@ public:
     // never compiled in). It is what the view's two mutating routes take: the `'`
     // load-in-place hands it to load_commit_sidecars_strict, and Save and commit
     // carries it onto the checkpoint worker.
+    //
+    // ON THE FOLDER ROAD the clone and the directory are EMPTY and the base
+    // name alone is filled (the header's own fields say why): the `'` act
+    // takes the member's folder instead, and the checkpoint act does not run
+    // there at all.
     const std::string& repo_root() const { return repo_root_; }
     const std::string& sidecar_base_name() const { return base_name_; }
     const std::string& project_directory() const { return project_directory_; }
@@ -951,6 +1064,13 @@ private:
 
     bool              available_ = false;
     GuiFailure        unavailable_reason_;
+    // WHICH ROAD THIS VISIT BOUND TO — the header's own answer, kept for the
+    // visit's whole life beside the three strings below and cleared with them,
+    // and read by road() and takes_checkpoint. THE FOLDER ITSELF IS NOT KEPT:
+    // a member's address is the member's own
+    // (GuiHistoryCommitSidecars::folder, which member_folder_at hands the `'`
+    // act), so the session has nothing left to ask the folder for.
+    GuiHistoryWalkRoad road_ = GuiHistoryWalkRoad::Git;
     std::string       repo_root_;
     std::string       base_name_;
     std::string       project_directory_;
