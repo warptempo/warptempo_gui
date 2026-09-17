@@ -1,40 +1,28 @@
 #include "car_transport.h"
 
-#include "input_handler.h"   // run_playhead_end_jump, modal_dialog_editor_active
-#include "time_format.h"     // format_timestamp (the row-8 clock's spelling)
+#include "input_handler.h"   // run_undo_redo_without_key, modal_dialog_editor_active
 
 #include <cstdint>
 #include <string>
 #include <utility>
 
-// The title: the tab letter is the axis char itself, which the tab row
-// paints as its one-character label (kTabs, paint_handler.cpp), and the
-// views take the one speller the view bar paints with.
-std::string car_transport_title(const AppState& app) {
-    std::string s = "Tab ";
-    s += app.active_tab_view;
-    s += ", ";
-    s += view_pair_label(app.active_audio_view, app.active_markers_view);
+// The title (the formula, his example and the spelling at the declaration).
+std::string car_transport_undo_position_line(const UndoHistory& history) {
+    const int64_t u = static_cast<int64_t>(history.undo_stack.size());
+    const int64_t r = static_cast<int64_t>(history.redo_stack.size());
+    if (!history.saved_valid)
+        return "?, " + std::to_string(u) + ", ?";
+    const int64_t d      = history.saved_distance;
+    const int64_t before = -(u + d);
+    const int64_t middle = -d;
+    const int64_t after  = r - d;
+    // to_string spells a negative with its minus and a zero bare, which is
+    // the first's and the middle's whole spelling; the third takes a `+`.
+    std::string s = std::to_string(before) + ", " + std::to_string(middle) +
+                    ", ";
+    if (after > 0) s += '+';
+    s += std::to_string(after);
     return s;
-}
-
-// The artist: the bare Home and End landings, each a frame in the active
-// domain, spelled as the row-8 clock spells a position (frame / rate through
-// format_timestamp). Inside the `h` view the landing owner answers the
-// piece's ends — the car is dropped there, and the line stays truthful to
-// what Home and End would do.
-std::string car_transport_artist(const AppState& app, const GuiAudio& audio) {
-    const int64_t rate = audio.sample_rate();
-    if (rate <= 0) return {};
-    const double sr = static_cast<double>(rate);
-    const int64_t begin =
-        playhead_skip_landing_frame(app, audio, /*forward=*/false,
-                                    /*whole_piece=*/false);
-    const int64_t end =
-        playhead_skip_landing_frame(app, audio, /*forward=*/true,
-                                    /*whole_piece=*/false);
-    return format_timestamp(static_cast<double>(begin) / sr) + " - " +
-           format_timestamp(static_cast<double>(end) / sr);
 }
 
 // THE GATE (the terms and their reasons are at the head of car_transport.h).
@@ -104,14 +92,12 @@ void GuiCarTransport::car_toggle() {
 
 void GuiCarTransport::car_previous() {
     if (!admits()) return;
-    input_handler.run_playhead_end_jump(/*forward=*/false,
-                                        /*whole_piece=*/false);
+    input_handler.run_undo_redo_without_key(/*redo=*/false);
 }
 
 void GuiCarTransport::car_next() {
     if (!admits()) return;
-    input_handler.run_playhead_end_jump(/*forward=*/true,
-                                        /*whole_piece=*/false);
+    input_handler.run_undo_redo_without_key(/*redo=*/true);
 }
 
 // THE DERIVED STATE (the three lines and the clock at the head comment).
@@ -125,8 +111,9 @@ GuiMediaState GuiCarTransport::derive() const {
     // alone (as the player's is).
     st.playing        = transport_session_live(app);
     st.album          = app.project_name;
-    st.title          = car_transport_title(app);
-    st.artist         = car_transport_artist(app, audio);
+    st.title          = car_transport_undo_position_line(app.history);
+    st.artist         = view_pair_label(app.active_audio_view,
+                                        app.active_markers_view);
     st.duration_ms    = -1;
     st.position_ms    = 0;
     const int64_t rate = audio.sample_rate();

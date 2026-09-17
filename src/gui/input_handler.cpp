@@ -38,7 +38,9 @@
 // day), which outrank that gate and so ask its
 // question themselves rather than letting the band's row press or the scrub's
 // marker drag swallow a key in silence. One literal, so a retune moves all
-// five.
+// five. (The car's undo / redo road, run_undo_redo_without_key, raises it too
+// — twice, asking the first two gates' own verdicts for a chord that never
+// passes through on_key; it is no sixth gate.)
 //
 // THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last three speak for every
 // chord (the unbound-keys ruling, chord_is_bound in gui_input.h): the two
@@ -49,6 +51,10 @@
 // vocabulary is not what the inventory knows, so those three ask nothing and
 // answer every swallowed key.
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
+
+// THE NO-AUDIO GATE'S SENTENCE (on_key's loading gate), shared with the car's
+// undo / redo road, which asks the same gate (run_undo_redo_without_key).
+constexpr const char* kNoAudioLoadedCard = "No audio is loaded yet";
 
 // THE REASON CHANNEL'S ONE READER IN THIS TU (architect 2026-08-30): the
 // authoring ops compose their own refusal sentences and RETURN them
@@ -407,7 +413,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // then honored (the app quits on completion). This gate's Ctrl+Q admission
     // is for a close queued before/around load, which still yields that
     // deferred quit; an urgent abort is pkill / the compositor's force-close.
-    if (app.loading || audio.total_frames() <= 0) {
+    if (no_audio_to_dispatch_on()) {
         if (ctrl && !shift && !alt && key == GuiKeys::Q) {
             prompt.request_close(GuiCloseTarget::Exit);
             return;
@@ -429,7 +435,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the six readers one shape.
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "No audio is loaded yet");
+                                 kNoAudioLoadedCard);
         return;
     }
 
@@ -566,10 +572,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // `,`, `.` and the two shifted spellings), so the editor consumes them
         // as typed characters above this line and none of them ever reaches it.
         if (chord_is_bound(key, mods, app.history_mode.active))
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Close the editor first: " + spell_chord(key, mods) +
-                    " is ignored while it is open");
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 modal_editor_swallow_card(key, mods));
         return;
     }
 
@@ -692,11 +696,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // playback between a lower-half press and the release that auditions. The
     // tempo drag and its pending were entries until
     // 2026-07-29, when the whole tempo drag was deleted — see marker_drag.h.)
-    if (app.drag.active || app.value_drag.active || app.trim_drag.active ||
-        app.region_drag.active ||
-        app.scroll_drag.active ||
-        app.pending_marker_press.active || app.pending_click.active() ||
-        app.pending_trim_drag.active) {
+    if (keyboard_owned_by_pointer_gesture()) {
         // The ONE hatch left, modifier-exact (a modified Ctrl+Q has no binding
         // anywhere): end the gestures as their release would, then run the close
         // flow. Bare Esc takes the swallow below with every other key.
@@ -1002,11 +1002,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // delta (a)'s own. Both the carve-out and that predicate are gone with the
     // state they described — as is the per-tab switch refusal that stood
     // between the two rulings for one afternoon of the same day.
-    const bool read_only_says_no =
-        active_view_state(app).read_only && read_only_key_blocked(key, mods);
-    const bool iteration_says_no =
-        app.iteration_mode_enabled && iteration_lock_key_blocked(key, mods);
-    if (read_only_says_no || iteration_says_no) {
+    if (authoring_lock_refuses_chord(key, mods)) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
         // 2026-08-30): "<chord> is not available on a read-only tab", said
         // for a chord this product BINDS and for no other. The sentence is
@@ -1096,12 +1092,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // lock — the allowlist admits them so their own arm can say
         // kIterationLockUndoCard / kIterationLockRedoCard, which name the act
         // a user pressing undo is asking about.)
-        if (chord_is_bound(key, mods, app.history_mode.active))
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 read_only_says_no
-                                     ? read_only_chord_card(
-                                           spell_chord(key, mods))
-                                     : std::string(kIterationLockCard));
+        // THE VERDICT AND THE CARD ARE authoring_lock_refuses_chord's (defined
+        // below on_key), the one body this gate and the car's undo / redo road
+        // (run_undo_redo_without_key) both ask.
         return;
     }
 
@@ -1740,83 +1733,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // rolled back for that collision (selection-model.md), and an alt-carrying
     // shape is again a plain no-op under strict modifier validation.
     if (ctrl && !alt && key == GuiKeys::Z) {
-        // THE ITERATION LOCK REFUSES FIRST (architect 2026-09-10: "They just
-        // don't go in the undo stack at all; they're considered transient by
-        // design" — so while the lamp is lit the history is frozen whole, both
-        // stacks and both tabs, exactly as the `h` view freezes the local
-        // walk's). It is ranked ahead of the two terms below because the lock
-        // is the OUTERMOST STATE, a mode entered on purpose, and because those
-        // two would otherwise answer a full stack with the other tab's
-        // sentence — a wrong cause. The pair NAMES THE ACT rather than saying
-        // "turn off grid iterations first" like every other site under this
-        // lock: a user who just pressed Ctrl+Z is asking about undo. Both
-        // buttons grey on the same fact (history_step_actionable's third term),
-        // so no lift reaches this line; the sentence is THIS KEY'S alone since
-        // 2026-09-12, when the refusal-reason tooltip lines went — the greyed
-        // pair names its own act and nothing more.
-        // The chord IS admitted by iteration_lock_key_blocked precisely so
-        // this arm can speak.
-        if (app.iteration_mode_enabled) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 shift ? kIterationLockRedoCard
-                                       : kIterationLockUndoCard);
-            return;
-        }
-        // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30). The
-        // authoritative test is history_step_actionable (app_state.h), the
-        // one predicate do_undo / do_redo run and the Undo / Redo buttons
-        // grey on; asked here it can also NAME what it refused, forked on
-        // its own two terms — an empty stack (nothing recorded in that
-        // direction) and a top entry whose TARGET tab is locked, which is
-        // the cross-tab case the active tab's own lock cannot explain (the
-        // keyboard gate above already answers a locked ACTIVE tab). ONE CARD
-        // PER PRESS: the ops' own guard is the belt behind this and stays
-        // silent, and both buttons grey on the same predicate, so neither a
-        // lift nor a held button's fire reaches this line.
-        const std::vector<UndoEntry>& stack =
-            shift ? app.history.redo_stack : app.history.undo_stack;
-        if (!history_step_actionable(app, stack)) {
-            // A HELD Ctrl+Z THAT RUNS OUT OF HISTORY STOPS SILENTLY (architect
-            // 2026-09-13): a SYNTHESIZED REPEAT meeting the empty stack is a
-            // benign one-dimensional refusal already at its state — the hold
-            // walked the history to its end, and the restores it just ran are
-            // the screen's answer. A DELIBERATE press keeps the card, the
-            // counter-class rule (messaging.md) standing for it. The other
-            // tab's lock below is not a wall the hold ran into but a reason,
-            // so it cards on a repeat too, once per burst through
-            // HeldRepeatDispatchScope. The held BUTTON never reaches this
-            // line: its face greys on the same predicate and its burst rests
-            // there (tick_chrome_press_repeat).
-            if (stack.empty() && mods.synthesized_repeat) return;
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                stack.empty()
-                    ? (shift ? "There is nothing to redo"
-                             : "There is nothing to undo")
-                    : "That step belongs to the other tab, which is "
-                      "read-only");
-            return;
-        }
-        // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S REFUSAL (architect 2026-09-04),
-        // ranked behind the two terms above because emptiness and the other
-        // tab's lock are the older answers and one press owes one card. With
-        // the lamp lit, a step whose restore would carry the camera off the
-        // picture on screen is a CONSUMED NO-OP: nothing is popped, nothing is
-        // pushed, and both stacks are byte-identical afterwards — the ops are
-        // never reached. The verdict is the one owner both buttons grey on
-        // (undo_step_permitted_by_viewport_lamp, app_state.h), vacuous while
-        // the lamp is dark. A HELD Ctrl+Z CARDS ONCE PER BURST with nothing
-        // added here: on_key's HeldRepeatDispatchScope is the one seam, and a
-        // synthesized repeat MOVES this card to the top of the stack rather
-        // than adding one.
-        if (!undo_step_permitted_by_viewport_lamp(app, audio, stack)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 shift ? kRedoOutsideViewCard
-                                       : kUndoOutsideViewCard);
-            return;
-        }
-        if (shift) undo.do_redo();
-        else       undo.do_undo();
+        run_undo_redo_command(/*redo=*/shift, mods.synthesized_repeat);
         return;
     }
 
@@ -2541,6 +2458,177 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // catch-alls, the folder overlay's modified row press and the pointer's
     // modified press on the waveform and the top strip; all six retired
     // together that evening.
+}
+
+// THE HEAD GATES' SHARED HALVES — each a verdict or a sentence on_key's own
+// gate asks, hoisted so the car's undo / redo road (run_undo_redo_without_key,
+// below) asks the same question rather than a second copy of it. The gates'
+// rulings and their rankings stay stated at their sites in on_key.
+bool GuiInputHandler::no_audio_to_dispatch_on() const {
+    return app.loading || audio.total_frames() <= 0;
+}
+
+bool GuiInputHandler::keyboard_owned_by_pointer_gesture() const {
+    return app.drag.active || app.value_drag.active || app.trim_drag.active ||
+           app.region_drag.active ||
+           app.scroll_drag.active ||
+           app.pending_marker_press.active || app.pending_click.active() ||
+           app.pending_trim_drag.active;
+}
+
+std::string GuiInputHandler::modal_editor_swallow_card(GuiKey key,
+                                                       GuiInputState mods) {
+    return "Close the editor first: " + spell_chord(key, mods) +
+           " is ignored while it is open";
+}
+
+// THE AUTHORING LOCK'S KEYBOARD VERDICT AND ITS CARD (the ruling, the
+// mutual exclusion that makes the fork an either/or, and the card's two
+// sentences are stated at the gate in on_key): true when the lock drops the
+// chord, the card raised for a bound chord alone.
+bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
+                                                   GuiInputState mods) {
+    const bool read_only_says_no =
+        active_view_state(app).read_only && read_only_key_blocked(key, mods);
+    const bool iteration_says_no =
+        app.iteration_mode_enabled && iteration_lock_key_blocked(key, mods);
+    if (!read_only_says_no && !iteration_says_no) return false;
+    if (chord_is_bound(key, mods, app.history_mode.active))
+        notifications.notify(AppState::NotificationClass::Normal,
+                             read_only_says_no
+                                 ? read_only_chord_card(spell_chord(key, mods))
+                                 : std::string(kIterationLockCard));
+    return true;
+}
+
+// THE UNDO / REDO COMMAND — Ctrl+Z's and Ctrl+Shift+Z's arm (on_key), whose
+// caller has already passed every head gate; `synthesized_repeat` is the
+// key's own repeat bit. The Undo / Redo roster buttons reach it through their
+// chord on on_key, so the gates above hold for them unchanged.
+void GuiInputHandler::run_undo_redo_command(bool redo,
+                                            bool synthesized_repeat) {
+    // THE ITERATION LOCK REFUSES FIRST (architect 2026-09-10: "They just
+    // don't go in the undo stack at all; they're considered transient by
+    // design" — so while the lamp is lit the history is frozen whole, both
+    // stacks and both tabs, exactly as the `h` view freezes the local
+    // walk's). It is ranked ahead of the two terms below because the lock
+    // is the OUTERMOST STATE, a mode entered on purpose, and because those
+    // two would otherwise answer a full stack with the other tab's
+    // sentence — a wrong cause. The pair NAMES THE ACT rather than saying
+    // "turn off grid iterations first" like every other site under this
+    // lock: a user who just pressed Ctrl+Z is asking about undo. Both
+    // buttons grey on the same fact (history_step_actionable's third term),
+    // so no lift reaches this line; the sentence is THIS KEY'S alone since
+    // 2026-09-12, when the refusal-reason tooltip lines went — the greyed
+    // pair names its own act and nothing more.
+    // The chord IS admitted by iteration_lock_key_blocked precisely so
+    // this arm can speak.
+    if (app.iteration_mode_enabled) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             redo ? kIterationLockRedoCard
+                                  : kIterationLockUndoCard);
+        return;
+    }
+    // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30). The
+    // authoritative test is history_step_actionable (app_state.h), the
+    // one predicate do_undo / do_redo run and the Undo / Redo buttons
+    // grey on; asked here it can also NAME what it refused, forked on
+    // its own two terms — an empty stack (nothing recorded in that
+    // direction) and a top entry whose TARGET tab is locked, which is
+    // the cross-tab case the active tab's own lock cannot explain (the
+    // keyboard gate ahead of this body already answers a locked ACTIVE tab). ONE CARD
+    // PER PRESS: the ops' own guard is the belt behind this and stays
+    // silent, and both buttons grey on the same predicate, so neither a
+    // lift nor a held button's fire reaches this line.
+    const std::vector<UndoEntry>& stack =
+        redo ? app.history.redo_stack : app.history.undo_stack;
+    if (!history_step_actionable(app, stack)) {
+        // A HELD Ctrl+Z THAT RUNS OUT OF HISTORY STOPS SILENTLY (architect
+        // 2026-09-13): a SYNTHESIZED REPEAT meeting the empty stack is a
+        // benign one-dimensional refusal already at its state — the hold
+        // walked the history to its end, and the restores it just ran are
+        // the screen's answer. A DELIBERATE press keeps the card, the
+        // counter-class rule (messaging.md) standing for it. The other
+        // tab's lock below is not a wall the hold ran into but a reason,
+        // so it cards on a repeat too, once per burst through
+        // HeldRepeatDispatchScope. The held BUTTON never reaches this
+        // line: its face greys on the same predicate and its burst rests
+        // there (tick_chrome_press_repeat).
+        if (stack.empty() && synthesized_repeat) return;
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            stack.empty()
+                ? (redo ? "There is nothing to redo"
+                        : "There is nothing to undo")
+                : "That step belongs to the other tab, which is "
+                  "read-only");
+        return;
+    }
+    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S REFUSAL (architect 2026-09-04),
+    // ranked behind the two terms above because emptiness and the other
+    // tab's lock are the older answers and one press owes one card. With
+    // the lamp lit, a step whose restore would carry the camera off the
+    // picture on screen is a CONSUMED NO-OP: nothing is popped, nothing is
+    // pushed, and both stacks are byte-identical afterwards — the ops are
+    // never reached. The verdict is the one owner both buttons grey on
+    // (undo_step_permitted_by_viewport_lamp, app_state.h), vacuous while
+    // the lamp is dark. A HELD Ctrl+Z CARDS ONCE PER BURST with nothing
+    // added here: on_key's HeldRepeatDispatchScope is the one seam, and a
+    // synthesized repeat MOVES this card to the top of the stack rather
+    // than adding one.
+    if (!undo_step_permitted_by_viewport_lamp(app, audio, stack)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             redo ? kRedoOutsideViewCard
+                                  : kUndoOutsideViewCard);
+        return;
+    }
+    if (redo) undo.do_redo();
+    else      undo.do_undo();
+}
+
+// THE CAR'S UNDO / REDO (architect 2026-09-17: the head unit's Previous and
+// Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z WHOLE). A
+// deliberate press of the chord that never passes through on_key, so it asks
+// the HEAD GATES on_key asks ahead of the arm, in on_key's order and through
+// the same verdicts and sentences: no audio loaded, an editor text-selection
+// drag or a pointer gesture owning the keyboard (kKeysDuringDrag), an open
+// keyboard-modal editor swallowing the chord (the flag, bound and level
+// editors reach here; the car drops the dialog editors itself), and the
+// authoring lock (a read-only tab cards the chord; the iteration lock admits
+// it so the command's own arm names undo). The routers ranked above those
+// gates — the prompt, the three folder-overlay contents, the dialog editors —
+// and the `h` view's gate are the CALLER'S to drop (GuiCarTransport::admits),
+// and chord_is_bound answers true for both chords, which the helpers ask
+// anyway. Then the command itself, as a deliberate press (no repeat).
+void GuiInputHandler::run_undo_redo_without_key(bool redo) {
+    const GuiKey key = GuiKeys::Z;
+    GuiInputState mods{};
+    mods.ctrl  = true;
+    mods.shift = redo;
+    const auto card_bound = [&](std::string sentence) {
+        if (chord_is_bound(key, mods, app.history_mode.active))
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 std::move(sentence));
+    };
+    if (no_audio_to_dispatch_on()) {
+        card_bound(kNoAudioLoadedCard);
+        return;
+    }
+    if (app.editor_text_drag.active) {
+        card_bound(kKeysDuringDrag);
+        return;
+    }
+    if (keyboard_modal_editor_active() &&
+        modal_editor_key_blocked(key, mods)) {
+        card_bound(modal_editor_swallow_card(key, mods));
+        return;
+    }
+    if (keyboard_owned_by_pointer_gesture()) {
+        card_bound(kKeysDuringDrag);
+        return;
+    }
+    if (authoring_lock_refuses_chord(key, mods)) return;
+    run_undo_redo_command(redo, /*synthesized_repeat=*/false);
 }
 
 // THE ADDRESSED-CELL WRITE AND ITS DAMAGE, spelled once for the walk: the

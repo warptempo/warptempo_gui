@@ -21,7 +21,7 @@
 // render_player.h — the vocabulary described in the rest of this paragraph),
 // and with it closed every command is the PROJECT TRANSPORT'S
 // (GuiCarTransport::on_media_command, car_transport.h — play/pause looping the
-// trim, Previous and Next landing Home and End). THE CAR'S VOCABULARY IS
+// trim from its begin, Previous and Next undo and redo). THE CAR'S VOCABULARY IS
 // THE CAR'S AND NOT THE TABLET'S KEYS: the wheel and the console carry rewind,
 // play/pause and fast-forward, the outer two arriving as Previous and Next, so
 // the one button is a TOGGLE between the item and silence and the outer two
@@ -139,9 +139,10 @@ struct GuiMediaState {
     // listed by the player, mirrored by Synchronize and played by the
     // auto-advance.
     //
-    // WITH THE PLAYER CLOSED: THE TAB AND THE VIEW — "Tab A, T+W", the active
-    // tab's letter and the active views through the one speller
-    // view_pair_label, composed by car_transport_title (car_transport.h).
+    // WITH THE PLAYER CLOSED: THE UNDO POSITION AROUND THE SAVE — three
+    // numbers, "-2, 0, +2" (entries before the save, the live position
+    // relative to it, entries after it), composed by
+    // car_transport_undo_position_line (car_transport.h, the formula there).
     std::string title;
     // THE FOLDER THE NAME LIVES IN, bare: the PLAYING ITEM'S OWN folder while
     // it sounds — the band may have walked somewhere else, and the sounding
@@ -151,9 +152,9 @@ struct GuiMediaState {
     // spelling this carries. Never empty, for the title's reason and since the
     // same day.
     //
-    // WITH THE PLAYER CLOSED: THE TRIM SPAN — the two times Home and End would
-    // land on, each spelled as the row-8 clock spells a position, composed by
-    // car_transport_artist. THE CONSOLE'S BOTTOM LINE.
+    // WITH THE PLAYER CLOSED: THE VIEW ALONE — "T+W", the active views through
+    // the one speller view_pair_label (GuiCarTransport::derive). THE CONSOLE'S
+    // BOTTOM LINE.
     std::string artist;
     // The project's name, always and in EVERY arm of BOTH owners — the
     // console's DIM TOP LINE, above the title, and the one string that does

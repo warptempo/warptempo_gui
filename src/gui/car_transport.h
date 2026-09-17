@@ -20,15 +20,17 @@ struct GuiInputHandler;
 // FORKS ON THE PLAYER'S MODE BIT — the one partition of the head unit between
 // its two owners: with the player standing every command is the player's
 // (GuiRenderPlayer::on_media_command, render-player.md's car section), and
-// with it closed every command is THIS cluster's. His spec: the buttons act on
-// the GUI's own transport "like the transport keys" — PLAY / PAUSE /
-// PLAYPAUSE are the play transport, PREVIOUS is the playhead to the TRIM
-// START (Home's landing), NEXT is the playhead to the TRIM END (End's
-// landing) — under the same dummy-track trick as the player (the session says
-// PLAYING always, its clock always in motion), with ONE DIFFERENCE from the
-// GUI's own transport: A PLAY ISSUED FROM THE CONSOLE LOOPS THE TRIM FOREVER,
-// in every view, "even if it's played from the last frame of the trim, as it
-// would be after the user presses Next". PAUSE IS THE GUI'S STOP: the
+// with it closed every command is THIS cluster's. The console's Bluetooth
+// face is exactly three buttons — rewind (Previous), play/pause, fast-forward
+// (Next) — and his spec for them: PLAY / PAUSE / PLAYPAUSE are the play
+// transport, PREVIOUS IS UNDO and NEXT IS REDO (Ctrl+Z and Ctrl+Shift+Z
+// whole, 2026-09-17 — the console steps the piece's history and reads the
+// position back off its own display) — under the same dummy-track trick as
+// the player (the session says PLAYING always, its clock always in motion),
+// with ONE DIFFERENCE from the GUI's own transport: A PLAY ISSUED FROM THE
+// CONSOLE LOOPS THE TRIM FOREVER, in every view, ALWAYS FROM THE TRIM'S BEGIN
+// (the resting playhead is no term of it; a restart is the button itself —
+// pause, then play). PAUSE IS THE GUI'S STOP: the
 // console's pause runs the one stop body exactly as Space's stop does — no
 // pause semantics, no resume point — because the transport is to be as close
 // to the GUI's as the car allows, and with the trim narrowed to what he is
@@ -49,17 +51,15 @@ struct GuiInputHandler;
 // run_project; last_pushed_ starts empty). On Wayland the platform's push is
 // a no-op and the hook never fires, so nothing here has an effect there.
 //
-// THE THREE LINES, with the player closed: the ALBUM is the project's name
-// (his ruling — the project stays on the console's dim top line), the TITLE
-// is THE TAB AND THE VIEW ("Tab A, T+W" — car_transport_title, the tab
-// letter as the tab row spells it and the views as the view bar spells them
-// through the one speller view_pair_label), and the ARTIST is THE TRIM SPAN
-// — the two times Home and End would land on, spelled as the row-8 clock
-// spells a position ("00:12.000 - 00:47.500", car_transport_artist; with a
-// full trim window it reads from zero to the piece's end). The title's and
-// the artist's spellings are the planner's choice, to be ruled on by the
-// architect on his console; each is one composer, so a respelling is one
-// edit. The DURATION is unknown (-1: the console counts up with no end to
+// THE THREE LINES, with the player closed (architect 2026-09-17): the ALBUM
+// (the console's dim top line) is the project's name, the ARTIST is THE VIEW
+// ALONE ("T+W" — view_pair_label, the view bar's one speller; no tab letter,
+// no trim span), and the TITLE, the big line, is THE UNDO POSITION AROUND THE
+// SAVE as three numbers ("-2, 0, +2" — car_transport_undo_position_line, the
+// formula and the spelling at its declaration), so a Previous or Next reads
+// back on the console as the middle number moving. The title's spelling is
+// the planner's proposal, to be ruled on by the architect on his console; it
+// is one composer, so a respelling is one edit. The DURATION is unknown (-1: the console counts up with no end to
 // run into, the silence track's shape) and the POSITION is the loop clock
 // while a transport session is live — the cursor less the trim's begin — and
 // 0 at rest.
@@ -68,8 +68,8 @@ struct GuiInputHandler;
 // a deliberate departure from the player's shape: the player pushes at the
 // edges where its display changes, an inventory it can keep because its
 // axes are its own few writers; the transport's strings are functions of
-// axes written at MANY chokepoints — the tab switch, the audio view, the
-// column, the trim (every writer of the pair), the play and stop edges, the
+// axes written at MANY chokepoints — the audio view, the column, every push,
+// pop, restore, save and load of the history, the play and stop edges, the
 // loop wrap — so an edge inventory here would be the very drift the roster's
 // faces avoid by repainting through main.cpp's per-tick comparator with no
 // call at any mutator. So tick() derives the state every tick and pushes
@@ -90,29 +90,43 @@ struct GuiInputHandler;
 // editor stops no playback and the car is not a key) and under a pointer
 // drag (the player's own rule: the drag swallow is the key road's, and a
 // direct act never enters it). A read-only tab and the iteration lock are
-// LEGAL, as Space and Home / End are.
+// LEGAL for the play, as Space is. PREVIOUS AND NEXT ASK MORE, BECAUSE THEY ARE
+// Ctrl+Z AND Ctrl+Shift+Z WHOLE: past admits() they meet the key's own head
+// gates (GuiInputHandler::run_undo_redo_without_key — under a flag editor or a
+// pointer drag the chord is swallowed with the key's card, a read-only tab
+// cards the chord, the iteration lock cards undo's own sentence) and then
+// the command's own refusals and cards (the empty stack, the other tab's
+// lock, the restrict-undo lamp).
 //
 // THE INPUT HANDLER IS AN ACT OWNER'S BACK-POINTER, NOT THE DELETED KEY ROAD:
-// Previous and Next compose GuiInputHandler::run_playhead_end_jump exactly
-// as the bare Home and End keys compose it — no key is pressed, no modal ring
-// is touched, no dispatch runs — so the head unit's skips stop a live
-// session (the car's loop included), clear the selection, land at the trim's
-// bound and refuse silently where the form would change nothing (the act's
-// own rule); the next car Play launches from where they landed, and after
-// Next — the trim's LAST frame — that launch finds fewer than two frames to
-// the loop's end and starts at the trim's begin (car_toggle_playback's rule),
-// so Next-then-Play is "from the top", his stated intent.
+// Previous and Next call GuiInputHandler::run_undo_redo_without_key, the
+// one body Ctrl+Z's arm shares — no key is pressed, no modal ring is touched,
+// no dispatch runs — as a DELIBERATE press (a synthesized repeat's silent
+// empty-stack wall is the held key's alone; the wheel does not repeat). A
+// restore stops a live session exactly as the key's does (the restore body's
+// own stop), the car's loop included.
 
-// THE TITLE'S ONE COMPOSER: "Tab <letter>, <audio>+<column>" — the active
-// tab's letter (the tab row's own spelling, whose label is the letter itself;
-// kTabs, paint_handler.cpp) and the active views through view_pair_label.
-std::string car_transport_title(const AppState& app);
-
-// THE ARTIST'S ONE COMPOSER: "<begin> - <end>", the two times Home and End
-// would land on (playhead_skip_landing_frame's bare pair, so the string and
-// the skips agree by construction), each spelled by format_timestamp at the
-// project source's rate — the row-8 clock's own spelling of a position.
-std::string car_transport_artist(const AppState& app, const GuiAudio& audio);
+// THE TITLE'S ONE COMPOSER: THE UNDO POSITION AROUND THE SAVE. With
+// U = undo_stack.size(), R = redo_stack.size() and d = saved_distance (the
+// saved state is d steps from the live one: 0 at the save, negative when the
+// save lies |d| undos back, positive when it lies d redos ahead — every
+// push, pop, restore and eviction moves it with the stacks, UndoHistory):
+//   first  = -(U + d)   the entries standing BEFORE the save (<= 0)
+//   middle = -d         the live position relative to the save
+//   third  = R - d      the entries standing AFTER the save (>= 0)
+// The first and third are invariant under undo and redo (each moves U or R
+// and d together), so a Previous / Next moves the middle alone. HIS EXAMPLE:
+// open, drop two, save, drop two -> "-2, 2, +2"; undo twice -> "-2, 0, +2".
+// SPELLING: ", "-separated; the first with its minus when nonzero, the third
+// with a `+` when nonzero, the middle signed only when negative, a zero bare
+// "0" everywhere — an empty history reads "0, 0, 0". WITH NO SAVE IN REACH
+// (saved_valid false: a push that orphaned a save lying on the redo side, the
+// cap's eviction of the state it named, or a coalesced burst's net-zero pop
+// at the save) the line is
+// "?, <U>, ?" — the middle counted from the oldest reachable state, so it
+// still moves under Previous / Next, and the two `?` say there is no save to
+// measure against.
+std::string car_transport_undo_position_line(const UndoHistory& history);
 
 struct GuiCarTransport {
     AppState&              app;
@@ -124,7 +138,7 @@ struct GuiCarTransport {
     // Read for Space's own target-view gate (preview_ready), asked ahead of
     // the launch as on_key asks it ahead of toggle_playback.
     const GuiTargetRender& target_render;
-    // The Home / End act body's owner (the head comment: a back-pointer onto
+    // The undo / redo act body's owner (the head comment: a back-pointer onto
     // an act, never a key road).
     GuiInputHandler&       input_handler;
 
@@ -154,16 +168,11 @@ struct GuiCarTransport {
     //     (GuiPlaybackLifecycle::car_toggle_playback — the stop arm the one
     //     stop body, the play arm the loop of the trim), behind Space's own
     //     target-view readiness gate.
-    //   Previous -> car_previous(): run_playhead_end_jump(false, false), HOME
-    //     WHOLE — it stops a live session (the car's loop included; his model
-    //     is "the transport keys": Previous / Next MOVE the playhead and the
-    //     next Play launches from it), clears the selection, lands at the
-    //     trim's start, and refuses silently where the form would change
-    //     nothing.
-    //   Next -> car_next(): run_playhead_end_jump(true, false), END WHOLE,
-    //     landing on the trim's LAST frame — so the next car Play, finding
-    //     fewer than two frames to the loop's end, starts at the trim's begin:
-    //     Next-then-Play plays from the top.
+    //   Previous -> car_previous(): run_undo_redo_without_key(false), UNDO
+    //     WHOLE — Ctrl+Z's head gates, refusals and cards, then the restore
+    //     (which stops a live session, the car's loop included).
+    //   Next -> car_next(): run_undo_redo_without_key(true), REDO WHOLE,
+    //     Ctrl+Shift+Z's.
     //   Stop -> the one stop body (stop_playback_if_playing): pause IS stop by
     //     ruling, and a console with a Stop button gets the same act.
     //   FocusLost / FocusLostTransient -> the one stop body iff a transport

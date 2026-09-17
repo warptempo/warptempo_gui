@@ -1011,8 +1011,8 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   sounding, of the highlighted row, and DURATION ONLY FOR A VALUE ABOVE 0 — a
   −1 puts no duration key at all, which is Android's "unknown". **WITH THE
   PLAYER CLOSED THE SAME THREE FIELDS CARRY THE PROJECT TRANSPORT'S OWN LINES**
-  (architect 2026-09-17): ALBUM stays the project's name, TITLE is the TAB AND
-  THE VIEW (`Tab A, T+W`) and ARTIST is the TRIM SPAN, with the duration
+  (architect 2026-09-17): ALBUM stays the project's name, TITLE is THE UNDO
+  POSITION AROUND THE SAVE (`-2, 0, +2`) and ARTIST is THE VIEW (`T+W`), with the duration
   always unknown — render-player.md's *The car with the player closed* owns
   that half. And the
   `PlaybackState`

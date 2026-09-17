@@ -10695,16 +10695,12 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // arithmetic instead of hand-spelling it three times. `forward` selects End
 // over Home. Defined in viewport.cpp beside the navigation range it reads.
 //
-// THREE READERS as re-greped 2026-09-17: the shared jump body
-// run_playhead_end_jump
-// (input_key_dispatch.cpp), which every Home / End route funnels through;
-// playhead_end_jump_actionable (below), the jump acts' one "would this form
-// change anything" owner, through which the two SKIP buttons' FACE and the
-// acts' own no-op refusals read this compare rather than reading it bare; and
-// car_transport_artist (car_transport.cpp), which SPELLS the bare pair as the
-// head unit's bottom line — the trim span the console shows and the two
-// landings its Previous and Next reach, agreeing by construction because they
-// are the same answer.
+// TWO READERS as re-greped 2026-09-17: the shared jump body
+// run_playhead_end_jump (input_key_dispatch.cpp), which every Home / End route
+// funnels through, and playhead_end_jump_actionable (below), the jump acts' one
+// "would this form change anything" owner, through which the two SKIP buttons'
+// FACE and the acts' own no-op refusals read this compare rather than reading
+// it bare.
 // THE FACE READER IS THE ONE THIS WAS HOISTED FOR, and its shape moved three
 // times: the buttons read the bare compare for one revision of 2026-08-15
 // and the architect ruled that half out the same day — a Home / End press is
@@ -14600,8 +14596,8 @@ inline bool redesign_button_enabled(const AppState& a,
 // THE VIEW PAIR'S ONE SPELLING (2026-09-17): "<audio>+<column>" — `S+M`,
 // `T+W` — the label the view bar's four buttons paint (kViewBarButtons,
 // paint_handler.cpp, each entry naming its two letters and composing here)
-// and the title the car transport publishes for the active views
-// (car_transport_title, car_transport.cpp). One composer, so a respelling is
+// and the artist line the car transport publishes for the active views
+// (GuiCarTransport::derive, car_transport.cpp). One composer, so a respelling is
 // one edit; the letters are the two axes' own (`active_audio_view`,
 // `active_markers_view`).
 inline std::string view_pair_label(char audio, char column) {

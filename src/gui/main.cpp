@@ -1473,7 +1473,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   paint_handler);
     // THE HEAD UNIT'S SECOND OWNER (2026-09-17), per project like the player:
     // the cluster that drives the project's own transport while the render
-    // player is closed. After the input handler, whose Home / End act body it
+    // player is closed. After the input handler, whose undo / redo act body it
     // composes for the console's Previous and Next (the contract at
     // car_transport.h; the hook below is the one partition between the two
     // owners).
@@ -1786,8 +1786,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // BETWEEN ITS TWO OWNERS (architect 2026-09-17): with the render player
     // standing every command is the PLAYER'S — its folder, its item, its
     // Repeat One — and with it closed every command is the PROJECT
-    // TRANSPORT'S, the car's play looping the trim and its skips landing
-    // Home and End (GuiCarTransport::on_media_command). The player's own
+    // TRANSPORT'S, the car's play looping the trim and its skips undoing and
+    // redoing (GuiCarTransport::on_media_command). The player's own
     // `!rp.active` belt stays inside its body: this fork is the partition,
     // that guard is the player's own statement about the state it needs.
     //

@@ -2818,12 +2818,7 @@ private:
     // modified forms never arrive here at all.
     void handle_plain_bare_keys(GuiKey key);
 
-public:
-    // THE Home / End JUMP, one body for every route that spells it — PUBLIC
-    // since 2026-09-17 because the car transport composes it as the keys do
-    // (GuiCarTransport::car_previous / car_next: the head unit's Previous
-    // and Next with the render player closed are Home and End whole, an act
-    // owner's back-pointer and not a key road). A form
+    // THE Home / End JUMP, one body for every route that spells it. A form
     // that would change NOTHING — no live transport to stop, no selection to
     // clear, no shown overlay to hide, a landing the cursor already rests on
     // (playhead_end_jump_actionable, the acts' one owner) — refuses at the
@@ -2836,15 +2831,12 @@ public:
     // landing owner for the piece's own ends instead of the trim bounds, which
     // is what the CTRL forms and the skip buttons' modified arm pass
     // (playhead_skip_landing_frame, app_state.h, states the two arms).
-    // SIX CALLERS (re-grepped 2026-09-17): the bare Home and End arms, their
-    // two CTRL arms, and the car transport's Previous and Next (the bare
-    // pair's form, `whole_piece` false). The
+    // FOUR CALLERS: the bare Home and End arms and their two CTRL arms. The
     // `h` history view's own pair is NOT one of them — it clears the MODE's
     // diff-flag focus where these clear the live selection, so it spells its
     // own body and shares only the landing owner, which its mode bit already
     // sends down the whole-piece arm.
     void run_playhead_end_jump(bool forward, bool whole_piece);
-private:
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
     // the commit-title editor, the bpm bracket editor, and (architect
@@ -4004,6 +3996,38 @@ private:
     // itself. A same-value write is a no-op here as well as at the editor's
     // own unchanged() gate one step earlier.
     void set_tab_read_only(char tab_view, bool value);
+
+    // THE UNDO / REDO COMMAND, ONE BODY (factored out of on_key's Ctrl+Z arm
+    // 2026-09-17): the iteration lock's pair of cards, the empty-stack and
+    // other-tab-read-only refusals (history_step_actionable), the
+    // restrict-undo lamp's refusal, then Undo::do_undo / do_redo. The caller
+    // has passed on_key's head gates; `synthesized_repeat` is a held key's
+    // repeat bit (a held Ctrl+Z meeting the empty stack stops silently).
+    // TWO CALLERS: the Ctrl+Z arm, and run_undo_redo_without_key below.
+    //
+    // THE CAR'S ROAD ONTO IT (architect 2026-09-17 — the head unit's Previous
+    // and Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z
+    // WHOLE, GuiCarTransport::on_media_command): a deliberate press that asks
+    // on_key's head gates first through the same verdicts and sentences
+    // on_key asks (no audio loaded, a drag owning the keyboard, a
+    // keyboard-modal editor swallowing the chord, the authoring lock — a
+    // read-only tab cards the chord), the routers and the `h` view's gate
+    // ranked above them being the caller's to drop. The gates' statement and
+    // order are at the definition.
+public:
+    void run_undo_redo_command(bool redo, bool synthesized_repeat);
+    void run_undo_redo_without_key(bool redo);
+private:
+
+    // on_key's head-gate halves, hoisted for the car's road above (each gate's
+    // ruling stays at its site in on_key): the no-audio verdict, the
+    // pointer-gesture drag gate's membership (the editor text drag has its own
+    // gate ahead of it), the keyboard-modal editor gate's sentence, and the
+    // authoring lock's verdict-and-card (true = the lock dropped the chord).
+    bool no_audio_to_dispatch_on() const;
+    bool keyboard_owned_by_pointer_gesture() const;
+    std::string modal_editor_swallow_card(GuiKey key, GuiInputState mods);
+    bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods);
 
     // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE SETTER (architect 2026-09-04) —
     // set_tab_read_only's shape with ONE road: bare `z`, which the

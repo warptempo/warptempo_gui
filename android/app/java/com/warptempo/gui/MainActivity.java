@@ -131,8 +131,8 @@ import java.nio.charset.StandardCharsets;
  * THE CONSOLE'S THREE LINES, the project as the album on both sides of the
  * fork below, and beneath it either the render player's picture (the folder as
  * the artist and the bare name of the playing or highlighted file as the
- * title) or the main window's (the trim span as the artist and the tab and
- * view as the title)
+ * title) or the main window's (the view as the artist and the undo position
+ * around the save as the title)
  * (architect 2026-09-12: the Accord lays the album line above the title, dim,
  * and the artist line below it, so the dim top line takes the project, the
  * least important of the three). IT WAS ACTIVE ONLY WHILE THE RENDER PLAYER

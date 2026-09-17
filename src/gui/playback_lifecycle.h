@@ -251,15 +251,12 @@ struct GuiPlaybackLifecycle {
     // transport is to be as close to the GUI's as the car allows and, with
     // the trim narrowed to what he is working on, he goes back to the
     // beginning anyway. PLAY ARM: the window is the ACTIVE DOMAIN'S TRIM,
-    // Viewport::trim_range — the navigation range Home and End land on (in
-    // target view the trim mapped through the live map, the full window
-    // normalized to the whole domain) — and THE PLAY LOOPS IT FOREVER, in
-    // every view (his one difference from the GUI's transport): the start is
-    // the resting playhead iff at least two frames remain before the loop's
-    // end (`begin <= playhead && playhead <= end - 2`, the launch body's own
-    // remainder rule), ELSE THE TRIM'S BEGIN — "even if it's played from the
-    // last frame of the trim, as it would be after the user presses Next", a
-    // play from the top. NO LEAD-IN OFFSET: the phase-reset overlay's N/2 is
+    // Viewport::trim_range — the navigation range (in target view the trim
+    // mapped through the live map, the full window normalized to the whole
+    // domain) — and THE PLAY LOOPS IT FOREVER, in every view (his one
+    // difference from the GUI's transport), STARTING AT THE TRIM'S BEGIN
+    // ALWAYS (architect 2026-09-17): the resting playhead is no term of it,
+    // and a restart is the button itself — pause, then play. NO LEAD-IN OFFSET: the phase-reset overlay's N/2 is
     // Space's authoring aid, and the car's play takes none. The gates are
     // toggle_playback's own — the defensive chase clear, the device reopen
     // (carding a failed one) — ahead of the user-launch clear (owner (2) at
@@ -276,9 +273,10 @@ struct GuiPlaybackLifecycle {
     // stops (Space, Home / End, a marker touch, a modal open, the S/T flip)
     // or relaunches (the placement click's reseek_keeping_alive, which calls
     // play() once-through; a scrub) ends it, and every GUI launch plays once
-    // as it always has. The head unit's Previous / Next are Home / End whole
-    // (GuiCarTransport), so they stop the loop as the keys would and the
-    // next car Play launches from where they landed.
+    // as it always has. The head unit's Previous / Next are Undo / Redo whole
+    // (GuiCarTransport), so a restore stops the loop exactly as Ctrl+Z does
+    // (the restore body's own stop) and the next car Play starts at the
+    // trim's begin again.
     void car_toggle_playback();
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.

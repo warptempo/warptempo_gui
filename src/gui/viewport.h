@@ -33,8 +33,9 @@ struct Viewport {
     // song's end in source view, the bound preview buffer's in target); ONE
     // PLAYBACK CONSUMER since 2026-09-17 — the car's loop window
     // (GuiPlaybackLifecycle::car_toggle_playback), which loops exactly the
-    // range Home and End land on, so the head unit's three buttons agree on
-    // one window by construction.
+    // range Home and End land on, always from its begin. The head unit's
+    // Previous and Next are undo and redo, so the car shares this range with
+    // Home and End by reading the same owner, not by composing their acts.
     std::pair<int64_t, int64_t> trim_range() const;
     int64_t                     trim_begin_sample() const;
     int64_t                     trim_end_sample() const;

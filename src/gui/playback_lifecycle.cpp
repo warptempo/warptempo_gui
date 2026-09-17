@@ -409,25 +409,20 @@ void GuiPlaybackLifecycle::car_toggle_playback() {
         return;
     }
     // THE LOOP WINDOW IS THE ACTIVE DOMAIN'S TRIM — Viewport::trim_range, the
-    // navigation range Home and End land on, so the car's play and its two
-    // skips agree on the window by construction. Clamped into the bound
-    // buffer's own domain as a belt: in source view the buffer is the song
-    // and the clamp is an identity; in target view the buffer IS the trim
-    // window (the preview covers it and nothing else), so the mapped trim
-    // and the buffer's domain agree to the rounding of one map read, and the
-    // clamp holds the window inside what can be played.
+    // navigation range, the one owner of the window the car loops. Clamped
+    // into the bound buffer's own domain as a belt: in source view the buffer
+    // is the song and the clamp is an identity; in target view the buffer IS
+    // the trim window (the preview covers it and nothing else), so the mapped
+    // trim and the buffer's domain agree to the rounding of one map read, and
+    // the clamp holds the window inside what can be played.
     auto [begin, end] = viewport.trim_range();
     if (begin < playback.domain_begin()) begin = playback.domain_begin();
     if (end > playback.domain_end())     end   = playback.domain_end();
-    // THE START: the resting playhead when at least two frames remain before
-    // the loop's end (the launch body's two-frame remainder rule, asked here
-    // so the fork can answer with the trim's begin instead of a refusal),
-    // else THE TRIM'S BEGIN — "even if it's played from the last frame of
-    // the trim, as it would be after the user presses Next": Next-then-Play
-    // plays from the top. NO LEAD-IN OFFSET (the declaration).
-    const int64_t playhead = app.playhead_cursor_sample;
-    const int64_t start =
-        (begin <= playhead && playhead <= end - 2) ? playhead : begin;
+    // THE START IS THE TRIM'S BEGIN, ALWAYS (architect 2026-09-17): the
+    // resting playhead is no term of the car's play — the console's three
+    // buttons place no playhead (Previous and Next are undo and redo), so a
+    // restart is the play button itself: pause, then play, from the top. NO
+    // LEAD-IN OFFSET (the declaration).
     // THE USER-LAUNCH CLEAR, owner (2) at GuiAuditionSequence: this entry is
     // the second road into the launch body that is not the act's, and it
     // clears ahead of the delegation, refused or not, exactly as
@@ -436,9 +431,9 @@ void GuiPlaybackLifecycle::car_toggle_playback() {
     // alone, as the view-end entry's clear does.)
     clear_audition_sequence(app);
     // A trim under two frames refuses inside the body — playback_launch_
-    // playable on `start` — and the publish's own loop belt refuses the same
+    // playable on the begin — and the publish's own loop belt refuses the same
     // window one layer down; both silent, the benign one-dimensional class.
-    if (!launch_playback_window(start, end, begin)) return;
+    if (!launch_playback_window(begin, end, begin)) return;
     // THE LAMP IS SPENT: the car's play is the next project-audio launch.
     spend_follow_lamp();
 }
