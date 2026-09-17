@@ -1344,14 +1344,14 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else if (mv == 'M') {
         // THE MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-15): its
         // flags paint while it is the active column and at no other time, the
-        // other two columns' rule. The level digit on the BLUE box (green
-        // until the 2026-09-16 hue swap; render.h's palette block) and no
-        // cells (the painter's declaration, render.h); red is the
-        // column's coincidence set alone. IT TAKES A DRAG OVERLAY AND A
-        // SUPPRESSION since the column gained its authoring the same day — the
-        // flag's horizontal drag and the one-digit LEVEL EDITOR, which stands
-        // in for the payload box exactly as the warp column's canonical-line
-        // editor does.
+        // other two columns' rule. The level digit on the ORANGE box (green
+        // until the 2026-09-16 hue swap, blue for that one day; render.h's
+        // palette block) and no cells (the painter's declaration, render.h);
+        // red is the column's coincidence set alone. IT TAKES A DRAG OVERLAY
+        // AND A SUPPRESSION since the column gained its authoring the same
+        // day — the flag's horizontal drag and the one-digit LEVEL EDITOR,
+        // which stands in for the payload box exactly as the warp column's
+        // canonical-line editor does.
         const std::set<int>& ml_red =
             magnification_level_red_flag_set_cached(app).red;
         render_magnification_level_flags(

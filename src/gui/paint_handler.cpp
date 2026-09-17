@@ -5653,9 +5653,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // a colour of their own (kPhaseResetFlagFill, render.h) and this ring moved
     // with them. THE RING WEARS THE COLUMN'S FILL, WHATEVER THAT IS — it reads
     // the same constant the stems resolve to rather than a copy of its value,
-    // so the two cannot drift, which is why the 2026-09-16 hue swap (the
-    // column went from Breeze blue to its own orange) reached this surface with
-    // no edit here at all.
+    // so the two cannot drift, which is why BOTH hue trades reached this
+    // surface with no edit here at all — the column went from Breeze blue to
+    // an orange 2026-09-16 and back to the blue 2026-09-17.
     cairo_set_source_rgb(cr, kPhaseResetFlagFill.r, kPhaseResetFlagFill.g,
                          kPhaseResetFlagFill.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the

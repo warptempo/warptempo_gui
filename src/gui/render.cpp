@@ -1103,21 +1103,22 @@ struct FlagFace {
 // WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
-// defaulted bool). The phase-reset flag box paints in the column's ORANGE
-// (all four sampled off the architect's own crops —
-// kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag box and
-// EVERY BOUND CELL ON EITHER COLUMN stay on kMarkerFlagFill's purple — a
-// bound cell's call site always passes `Warp` explicitly, with its own
+// defaulted bool). The phase-reset flag box paints in the column's BLUE —
+// Breeze's highlight #3daee9 sampled, the other three RECORDED DERIVATIONS
+// off it (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
+// box and EVERY BOUND CELL ON EITHER COLUMN stay on kMarkerFlagFill's purple
+// — a bound cell's call site always passes `Warp` explicitly, with its own
 // comment there, "the flag's own class" being a warp-only phrase now that
 // the class has two flag boxes. THE THIRD FACE, MagnificationLevel (architect
-// 2026-09-15), is the magnification level markers column's BLUE — Breeze's
-// highlight #3daee9 sampled, the other three RECORDED DERIVATIONS off it
+// 2026-09-15), is the magnification level markers column's ORANGE — all four
+// sampled off the architect's own crops
 // (kMarkerMagnificationFill/Edge/FillSel/EdgeSel, render.h) — on its flag box
 // and its stem; that column paints no bound cell, so the
-// face reaches nothing else. THE ORANGE AND THE BLUE SWAPPED COLUMNS
-// 2026-09-16 (architect; the reasons are recorded at the two palette blocks:
-// the magnification green was the history view's added green outright, and
-// the phase-reset column, the commoner of the two, takes the quieter hue).
+// face reaches nothing else. THE BLUE AND THE ORANGE TRADED COLUMNS
+// 2026-09-16 AND TRADED BACK 2026-09-17 (architect; the record is at the two
+// palette blocks: the magnification GREEN was the history view's added green
+// outright, which is why that column wears the orange now rather than its old
+// green, and the blue is back on the resets because he preferred it there).
 enum class FlagColumnFace { Warp, PhaseReset, MagnificationLevel };
 
 // The default and selected pair of one column's flag box — the one place the
@@ -1341,7 +1342,7 @@ void render_flag_boxes_impl(
     // WHICH COLUMN'S FLAG BOX THIS IS, REQUIRED rather than defaulted (the
     // naming-symmetry ruling: warp is never the unmarked default) — render_flags
     // passes `FlagColumnFace::Warp`, render_phase_reset_flags passes
-    // `FlagColumnFace::PhaseReset` (the phase-reset orange,
+    // `FlagColumnFace::PhaseReset` (the phase-reset blue,
     // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the ONE
     // resting flag-box face below and nowhere else — the bound cells pass
     // `FlagColumnFace::Warp` explicitly at their own call, "fine for now"
@@ -1574,7 +1575,7 @@ void render_flag_boxes_impl(
             // the same ladder, so a cell reads as another payload of the same
             // flag and not as a second surface (a bound is tempo, and wears
             // tempo's colour, purple on either column — a bound cell never
-            // reads as the phase-reset flag's own orange). Each cell resolves
+            // reads as the phase-reset flag's own blue). Each cell resolves
             // its own face, because the selected pair is
             // the addressed cell's alone (above). The seam is the flag's own
             // left-border column laid on each cell's left edge. No budget and
@@ -1592,7 +1593,7 @@ void render_flag_boxes_impl(
                         baseline, crun,
                         // ALWAYS `Warp`, ON EITHER COLUMN'S CELLS (architect
                         // 2026-09-15, "fine for now"): a bound cell never wears the phase-reset
-                        // flag's orange, regardless of which store `mv`/`pmv`
+                        // flag's blue, regardless of which store `mv`/`pmv`
                         // this pass is painting.
                         resolve_flag_face(dis, red, cell_selected(which),
                                           FlagColumnFace::Warp));
@@ -1797,10 +1798,10 @@ void render_phase_reset_flags(cairo_t* cr,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
-        // token (render.h owns it and what it reads). It is longer than the
-        // nine-glyph budget, so the shared cap below truncates it like any
-        // other label — the one label in the product that does so by
-        // construction rather than by user text.
+        // token (render.h owns it and what it reads). It fits the nine-glyph
+        // budget since 2026-09-17, when the two words it used to be gave way
+        // to `reset`, so the shared cap below leaves it whole — no label in
+        // the product truncates by construction any more.
         [&](int) { return std::string(kPhaseResetLaneToken); },
         // No label_ref cascade on this column — the bool is the whole verdict.
         [&](int i) { return phase_resets[i].disabled; },
@@ -2594,10 +2595,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // warp-column surface by its own open gates, so the only field this ever
     // reaches on the phase-reset column is a BOUND field, and a bound field
     // stays on the purple pair, "fine for now"
-    // (architect 2026-09-15) — never the phase-reset flag's orange. THE
+    // (architect 2026-09-15) — never the phase-reset flag's blue. THE
     // MAGNIFICATION LEVEL FIELD IS THE EXCEPTION and takes its own column's
-    // BLUE, because it IS that flag unrolled: the open editor must read as the
-    // same flag, only wider, which is the whole surface's promise.
+    // ORANGE, because it IS that flag unrolled: the open editor must read as
+    // the same flag, only wider, which is the whole surface's promise.
     FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell),
                                       level_kind
                                           ? FlagColumnFace::MagnificationLevel
