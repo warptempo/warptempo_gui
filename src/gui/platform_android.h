@@ -49,11 +49,16 @@
 // STORED-HOOK SHAPE set_on_close itself carried on THIS side until BACK became
 // its producer here (2026-08-29), leaving the car's hook the seam's one example
 // of it — and publish_media_state, the push back up into that
-// session's metadata and playback state, whose Wayland body is empty. The
+// session's metadata and playback state, whose Wayland body is empty; that
+// pair has TWO consumers since 2026-09-17, the render player while it stands
+// and the car transport while it is closed, forked at main.cpp's hook on the
+// player's mode bit. The
 // NINE
-// consumers (re-greped 2026-09-02: main.cpp, viewport.cpp, paint_handler.h,
-// prompt.h, file_loader.h, undo.cpp, input_handler.h, onscreen_keyboard.h,
-// render_player.h) include platform.h and compile against either backend
+// consumers (re-greped 2026-09-17: main.cpp, viewport.cpp, paint_handler.h,
+// prompt.h, file_loader.h, input_handler.h, onscreen_keyboard.h,
+// render_player.h, car_transport.h — undo.cpp dropped out of the list and
+// car_transport.h joined it, so the count is unchanged and the membership is
+// not) include platform.h and compile against either backend
 // unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
 // it is stated ONCE at its owner and pointed at from here: the input doors and
 // the capture/cursor policy belong to GuiInputCore (input_core.h), and the
@@ -397,6 +402,12 @@ public:
     // MainActivity.mediaState, from the glue thread attached to the VM once at
     // init(). The whole mechanism — the queue, the wake, the attach, the
     // method lookup and the three drop rules — is stated at the definitions.
+    // THE SESSION STANDS FOR THE APP'S LIFE (architect 2026-09-17): the push
+    // carries `session_active` true from the first tick of the first project
+    // onward — the render player's close stopped pushing an inactive state
+    // that day, and the car transport's tick publishes the project's own
+    // transport whenever the player is closed — so the sliver's
+    // setActive(false) is reached only by the activity's onDestroy.
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
     void publish_media_state(const GuiMediaState& state);
 

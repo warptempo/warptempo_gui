@@ -41,6 +41,7 @@
 #include "ab_audition.h"
 #include "folder_overlay.h"
 #include "render_player.h"
+#include "car_transport.h"
 #include "save_ops.h"
 #include "selection.h"
 #include "settings_editor.h"
@@ -1469,6 +1470,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   playback_lifecycle, save_ops, prompt,
                                   settings_editor, target_render,
                                   paint_handler);
+    // THE HEAD UNIT'S SECOND OWNER (2026-09-17), per project like the player:
+    // the cluster that drives the project's own transport while the render
+    // player is closed. After the input handler, whose Home / End act body it
+    // composes for the console's Previous and Next (the contract at
+    // car_transport.h; the hook below is the one partition between the two
+    // owners).
+    GuiCarTransport car_transport(app, audio, gui, playback,
+                                  playback_lifecycle, viewport, target_render,
+                                  input_handler);
     // Back-wire the settings editor to the input handler (constructed after the
     // editor, which the input handler holds by reference — the cycle is
     // resolved with a pointer set here). The editor reaches
@@ -1766,16 +1776,30 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.on_key_release(key);
     });
 
-    // THE CAR'S BUTTONS (design §3): each command the platform drained is the
-    // render player's to ACT ON DIRECTLY — the car is its own interface and
-    // nothing here is a key (the contract at
-    // GuiRenderPlayer::on_media_command). Installed per project like every
-    // other handler, and — unlike them — CLEARED at the session tail, so a
-    // button pressed between two projects is dropped by the platform's null
-    // test rather than delivered against a dead set (the hook captures this
-    // session's player).
+    // THE CAR'S BUTTONS: each command the platform drained is ACTED ON
+    // DIRECTLY — the car is its own interface and nothing here is a key, no
+    // chord is synthesized and no modal ring is touched (the contract at
+    // GuiRenderPlayer::on_media_command and at car_transport.h).
+    //
+    // THE FORK ON THE PLAYER'S MODE BIT IS THE ONE PARTITION OF THE HEAD UNIT
+    // BETWEEN ITS TWO OWNERS (architect 2026-09-17): with the render player
+    // standing every command is the PLAYER'S — its folder, its item, its
+    // Repeat One — and with it closed every command is the PROJECT
+    // TRANSPORT'S, the car's play looping the trim and its skips landing
+    // Home and End (GuiCarTransport::on_media_command). The player's own
+    // `!rp.active` belt stays inside its body: this fork is the partition,
+    // that guard is the player's own statement about the state it needs.
+    //
+    // Installed per project like every other handler, and — unlike them —
+    // CLEARED at the session tail, so a button pressed between two projects
+    // is dropped by the platform's null test rather than delivered against a
+    // dead set (the hook captures this session's two owners).
     gui.set_on_media_command([&](GuiMediaCommand cmd) {
-        render_player.on_media_command(cmd);
+        if (app.render_player.active) {
+            render_player.on_media_command(cmd);
+        } else {
+            car_transport.on_media_command(cmd);
+        }
     });
 
     gui.set_on_close([&]() {
@@ -2734,6 +2758,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // is the first thing asked about it.
         input_handler.refresh_stats_panel_rows();
 
+        // THE CAR TRANSPORT'S PUBLISHER (2026-09-17), and it runs EVERY TICK
+        // whether or not the player stands — which is why it sits above the
+        // fork below and not beside the transport work at the foot of this
+        // body. Its contract is at GuiCarTransport::tick: with the player
+        // active it remembers the hand-over and returns (the player owns the
+        // head unit's wire then, publishing at its own edges), and with the
+        // player closed it derives the console's three lines from the tab,
+        // the views and the trim and pushes only what changed — the roster's
+        // own per-tick comparator pattern, for the reason stated there.
+        car_transport.tick();
+
         // THE RENDER PLAYER'S TICK (2026-08-28), forked at the head: while
         // the mode stands the engine plays the player's item, not the
         // project's audio — the scanner never runs, the audition sequence
@@ -2781,6 +2816,31 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         if (!app.playhead_scanner_active && !ma_playing) return;
 
         if (ma_playing) {
+            // THE LOOP WRAP, CONSUMED ONCE, AHEAD OF THE HEARTBEAT
+            // (2026-09-17). The car's play of the trim is the one looping
+            // session in the product (the launch is
+            // GuiPlaybackLifecycle::car_toggle_playback's), and its wrap is a
+            // RESYNC EVENT OF THE AUDIO
+            // THREAD'S rather than of the user's — the one such class
+            // (playback.h's design note, whose class list was re-counted
+            // that day): the render body moved the read position back by the
+            // window's length, so the free-running predictor, which has no
+            // backward jump to follow, sits clamped at the mirror's end until
+            // this line re-anchors it on the cycle stamp, whose cursor has
+            // already wrapped. THE DAMAGE IS FULL-AREA, the rare-discrete-
+            // event shape and the launch's own: the line does not step, it
+            // JUMPS from the trim's end back to its start, so there is no
+            // narrow column pair to damage and a wrap costs one full waveform
+            // repaint per lap. consume_loop_wrap is a count difference and
+            // THIS IS ITS ONE CONSUMER, so the note below — which bumps the
+            // publisher's epoch, re-starting the console's clock at the lap —
+            // must ride the same branch.
+            if (playback.consume_loop_wrap()) {
+                playback.resync_predictor();
+                viewport.invalidate_waveform_area();
+                viewport.invalidate_clock_area();
+                car_transport.note_loop_wrap();
+            }
             // Heartbeat: invalidate the scanner column at the current
             // model position so the paint cycle keeps running. The
             // pre-paint hook reads the predictor at paint time and adds
@@ -2960,11 +3020,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         if (app.render_player.active) return;
         if (!playback.is_playing()) return;
 
-        // (The loop-wrap predictor resync that stood here is GONE with all
-        // audition looping, architect 2026-07-30: the read position only ever
-        // advances now, so there is no backward cursor jump for the free-running
-        // predictor to miss and no wrap counter to poll. Every session plays its
-        // window once and takes the natural-end teardown.)
+        // (The loop-wrap predictor resync that stood HERE, in the pre-paint,
+        // went with all audition looping on 2026-07-30. The wrap is back
+        // since 2026-09-17 as the car's loop of the trim, and its resync
+        // lives in the TICK's playing branch — consume_loop_wrap, above —
+        // not in the pre-paint: every GUI session still plays its window
+        // once, and the one looping session is re-anchored where the other
+        // discrete events are, at tick cadence, never per paint.)
 
         // Read the predictor at paint time. The predictor is continuous
         // in wall time, so this gives the freshest possible position

@@ -156,8 +156,11 @@ struct GuiTargetRender {
     // audio to play right now": no update in flight or pending (the bound
     // buffer is stale by definition while one is) AND a populated target
     // buffer (no successful preview render yet in this session means the bind
-    // would play stale source-domain samples). THREE READERS: Space's play
-    // edge (input_handler.cpp, where Space-to-stop is honored first), the A/B
+    // would play stale source-domain samples). FOUR READERS as re-greped
+    // 2026-09-17: Space's play
+    // edge (input_handler.cpp, where Space-to-stop is honored first), THE
+    // CAR'S OWN PLAY (GuiCarTransport::car_toggle, which asks this in exactly
+    // Space's shape and for exactly Space's reason, ahead of the launch), the A/B
     // audition's press-time gate (GuiAbAudition, which asks it for BOTH tabs
     // before its first switch and again at every launch) and, since
     // 2026-08-30, the play/stop button's enabled face (redesign_button_enabled

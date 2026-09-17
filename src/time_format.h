@@ -15,12 +15,17 @@
 // PARSE helpers that used to live here, is_valid_timestamp_format and
 // parse_timestamp, had zero call sites in the GUI, parser, CLI and prepost, and
 // their std::regex dragged that library's headers into EVERY consumer of this
-// header. The inventory, derived from the compiler's own depend files rather
-// than by eye: THIRTEEN translation units include this header, all of them
-// DIRECTLY (no header re-exports it) — nine under src/gui, src/cli/cli_main.cpp,
-// and THREE under src/parser (marker_store_validate, warp_frame_map_build,
-// phase_reset_frame_map_build), the only FROZEN-directory consumers; because the
-// parser sources are compiled into both products, that is sixteen object
+// header. THE INVENTORY, RE-GREPED 2026-09-17 (it read "thirteen translation
+// units, nine under src/gui plus src/cli/cli_main.cpp" from 2026-07-30, and
+// the src/gui consumers were consolidated away under it): SEVEN translation
+// units include this header, all of them DIRECTLY (no header re-exports it) —
+// FOUR under src/gui (paint_handler, input_render_dispatch,
+// phase_reset_propagate and, since 2026-09-17, car_transport, which spells the
+// head unit's trim-span line) and THREE under src/parser
+// (marker_store_validate, warp_frame_map_build,
+// phase_reset_frame_map_build), the only FROZEN-directory consumers; the CLI's
+// own main no longer includes it at all. Because the
+// parser sources are compiled into both products, that is ten object
 // compilations. The helpers now live tool-locally in
 // tools/migrate_sidecar_to_frames.cpp, their only consumer and the sole
 // legacy-sidecar conversion route, beside the tool's other local mirrors. Do not

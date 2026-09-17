@@ -176,8 +176,10 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // and not a remembered place. ENTERING a folder names nothing to seat on and
 // stays memory-less either way (the arms are at rebuild_rows).
 //
-// NOTHING LOOPS, WITH ONE SANCTIONED EXCEPTION — REPEAT ONE (architect
-// 2026-08-28, R26): the player's lamp is a two-state toggle, off or repeat
+// NOTHING LOOPS, WITH TWO SANCTIONED EXCEPTIONS — this one, REPEAT ONE
+// (architect 2026-08-28, R26), and the car's loop of the trim on the PROJECT
+// transport with this player closed (GuiCarTransport, architect 2026-09-17,
+// which reaches no player audio): the player's lamp is a two-state toggle, off or repeat
 // the ONE item ("the user can just press play once the playlist finishes...
 // repeat one is much more useful", which is why there is no repeat-all), and
 // while it stands THE NATURAL END REPLAYS THE ITEM FROM ITS START through the
@@ -186,8 +188,8 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // deleted or republished in another shape while it played) leaves its own
 // words on a notification card and the transport resting on that item at its
 // start, never the folder's next wav. It is the
-// whole of the exception: nothing else in the product plays anything twice by
-// itself, and the state is session-only (LIT at every open since 2026-09-11
+// whole of the player's exception: nothing else in the product plays anything
+// twice by itself but the car's loop, and the state is session-only (LIT at every open since 2026-09-11
 // — the architect's default is repeat the one item, and he kept the button's
 // name and glyph rather than inverting the lamp into a "play through" — and
 // serialized nowhere; the open is its one reset, so it forgets at the close
@@ -294,9 +296,13 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // AND THE DISPLAY IS A DUMMY: the session says PLAYING with a running clock
 // whenever the player stands, because a console that hears the silent
 // Bluetooth link believes it is playing and overrides a PAUSED session —
-// publish_media_state is the ONE owner of what the head unit shows, called at
-// every edge where that changes, and its title rule is at that declaration.
-// The platform is held for exactly those two calls.
+// publish_media_state is the owner of what the head unit shows WHILE THIS
+// PLAYER STANDS, called at every edge where that changes, and its title rule
+// is at that declaration. It is ONE OF TWO OWNERS since 2026-09-17: with the
+// player closed the head unit belongs to GuiCarTransport, which drives the
+// project's own transport and publishes its three lines from a per-tick
+// comparator, and main.cpp's hook forks the commands between the two on this
+// player's mode bit. The platform is held for exactly those two calls.
 struct GuiRenderPlayer {
     AppState&             app;
     const GuiAudio&       audio;
@@ -613,12 +619,16 @@ struct GuiRenderPlayer {
     // Space on a ring-focused button is THAT BUTTON'S press (Close, and the
     // player would come down), and a direct act presses no button at all.
     //
-    // WITH THE MODE DOWN every command is DROPPED — the session is inactive
-    // then and the head unit's buttons reach nothing, so this is belt and
-    // braces against a command queued before the close drained — and so is
-    // every command while a PROMPT stands over the player (the load
-    // confirmation): the car's buttons are the player's acts, not a question's
-    // answer.
+    // WITH THE MODE DOWN every command is DROPPED HERE, and since 2026-09-17
+    // that is the BELT and not the partition: main.cpp's hook forks on the
+    // mode bit ahead of this body, so a command arriving with the player
+    // closed is the CAR TRANSPORT'S (GuiCarTransport::on_media_command, which
+    // drives the project's own transport), and this guard catches only a
+    // command queued before the close drained. It is the player's own
+    // statement about the state it needs — the same kind as the PROMPT guard
+    // beside it, which drops every command while a question stands over the
+    // player (the load confirmation): the car's buttons are the player's
+    // acts, not a question's answer.
     //
     // A CAR COMMAND ACTS UNDER A POINTER DRAG exactly as the modal row's own
     // button would, and that is deliberate: the keyboard's drag swallow
@@ -678,7 +688,10 @@ struct GuiRenderPlayer {
     // OVERRIDES a session that says PAUSED, so a paused state could never win.
     // So the session tells it what it already believes — `session_active` true
     // now MEANS the published state is PLAYING, the sliver's fork being
-    // "inactive -> STOPPED, else PLAYING" at speed 1.0 — and every console
+    // "inactive -> STOPPED, else PLAYING" at speed 1.0, a fork nothing in the
+    // running app takes the STOPPED side of any more (2026-09-17: the close's
+    // inactive push is gone and both owners publish `session_active` true) —
+    // and every console
     // press becomes a plain toggle against a display that never contradicts
     // the link. THE CLOCK RUNS ON, always, never ending, because a console
     // shown a stopped clock goes back to its own idle picture. `playing` stays
@@ -716,16 +729,21 @@ struct GuiRenderPlayer {
     //     at speed 1.0 over a real duration would run the console's clock
     //     into the track's end. The tablet's row is where a paused item's
     //     clock lives.
-    // Title and album are never empty while `session_active` is true — a row
-    // has a name, or with nothing to highlight the listed folder names itself
-    // into the title, and the project always has a name; the CLOSE's
-    // inactive push is the one empty pair and the one STOPPED state. THE
+    // Title and album are never empty on any push this body makes — a row has
+    // a name, or with nothing to highlight the listed folder names itself into
+    // the title, and the project always has a name — AND THERE IS NO EMPTY
+    // PAIR AND NO STOPPED STATE LEFT ANYWHERE (architect 2026-09-17): the
+    // close's inactive push, which carried both, is gone, the mode-down arm
+    // returns without pushing, and the session stands for the app's life with
+    // the car transport publishing while this player is closed. THE
     // SILENCE IS METADATA AND NEVER A FILE: a silent wav on disk would be
     // listed by the player, mirrored by Synchronize and played by the
     // auto-advance.
     //
-    // THE EDGE INVENTORY, re-derived by grep at each retell (NINE call sites
-    // across EIGHT functions — fourteen across nine while the head unit's four
+    // THE EDGE INVENTORY, re-derived by grep at each retell (EIGHT call sites
+    // across SEVEN functions since 2026-09-17, when close()'s inactive push
+    // was deleted — nine across eight before that, and fourteen across nine
+    // while the head unit's four
     // directional arms and the Play arm's act-side refusal each pushed a
     // re-publish, all five deleted 2026-09-12 with the gates that made them,
     // a constant PLAYING leaving no drifted display to correct):
@@ -746,8 +764,11 @@ struct GuiRenderPlayer {
     // ahead of it has since dropped; seek_to — both arms, so
     // the head unit's clock is re-seated where a seek moved the item (which is
     // also what publishes the car Stop's seek to the top, that command being a
-    // pause and then this seek);
-    // and close() — inactive. NO PER-TICK PUSH, the band's edges included: the
+    // pause and then this seek).
+    // CLOSE() IS NO LONGER ONE OF THEM: it pushed the session inactive until
+    // 2026-09-17 and now pushes nothing, the wire passing to
+    // GuiCarTransport::tick, which takes it back on its first tick after the
+    // close. NO PER-TICK PUSH HERE, the band's edges included: the
     // published position advances on the head unit's own clock from the last
     // push at speed 1.0. Duration and position are milliseconds at the project
     // source's rate (the item is at that rate by the decode's own equality).

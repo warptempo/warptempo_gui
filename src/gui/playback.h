@@ -58,12 +58,20 @@
 // apply_zoom_change helper, the resize zoom-out reclamp,
 // follow-mode off-to-on,
 // follow-scroll auto-shift, horizontal pan via scroll_viewport
-// (the plain-wheel stepped pan and PageUp/PageDown), and viewport recenter via
-// center_viewport_on_playhead (C key). There is no loop-wrap resync event any
-// more: LOOPING IS GONE (architect 2026-07-30, all audition looping removed),
-// so the read position only ever advances and the free-running predictor has no
-// backward jump to miss — playback runs [start, end) once and stops at the
-// natural end.
+// (the plain-wheel stepped pan and PageUp/PageDown), viewport recenter via
+// center_viewport_on_playhead (C key) — AND, SINCE 2026-09-17, THE LOOP WRAP.
+// Every GUI launch still runs [start, end) once and stops at the natural end
+// (architect 2026-07-30, all audition looping removed), so on those sessions
+// the read position only ever advances and the predictor has no backward
+// jump to miss. THE ONE LOOPING SESSION IS THE CAR'S — play_loop below, the
+// head unit's play of the trim with the render player closed (architect
+// 2026-09-17) — and its wrap IS a backward jump: the render body moves the
+// read position back by the window's length on the audio thread, and the
+// main thread learns of it through consume_loop_wrap on the run loop's tick,
+// which resyncs at once. Between the wrap and that tick the predictor sits
+// clamped at the mirror's end — up to one tick, accepted, the same class as
+// the launch lead below — and the resync then lands the line at the loop's
+// start plus the drift, the cycle stamp carrying the wrapped cursor.
 //
 // THE LINE IS THE RAW PREDICTOR AND IT LEADS THE SOUND (architect 2026-09-03,
 // after a blind comparison at his own rig against a fully compensated build).
@@ -87,15 +95,18 @@
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
 // (architect 2026-09-02, the truthfulness deep dive's item C; the periodic
-// cadence proposed there does NOT land). Every resync is an EVENT — FIFTEEN
-// call sites at this writing, in classes: the zooms (apply_zoom_change,
-// apply_strip_drag_zoom's final frame, apply_zoom_to_start), the DISCRETE
-// pan (scroll_viewport with continuous=false — a drag pans without one and
-// re-anchors once at its end), the centring jump, follow's page and the
-// on-edge of the follow toggle, the map-change re-land
-// (reseat_playhead_to), the resize whose level moved, and the pointer ends
-// (the nav drag's release and force-end, the touch
-// hard end). Grep `resync_predictor` and re-count; never inherit this number.
+// cadence proposed there does NOT land). Every resync is an EVENT — FOURTEEN
+// call sites at this writing (re-counted 2026-09-17), in classes: the zooms
+// (apply_zoom_change, apply_strip_drag_zoom's final frame,
+// apply_zoom_to_start), the DISCRETE pan (scroll_viewport with
+// continuous=false — a drag pans without one and re-anchors once at its
+// end), the centring jump, follow's page and the on-edge of the follow
+// toggle, the map-change re-land (reseat_playhead_to), the resize whose
+// level moved, the pointer ends (the nav drag's release and force-end, the
+// touch hard end), and — the one class whose event is the AUDIO THREAD'S
+// rather than the user's — THE LOOP WRAP (main.cpp's tick, on
+// consume_loop_wrap; 2026-09-17). Grep `resync_predictor` and re-count;
+// never inherit this number.
 // EVERY RESYNC ANCHORS ON THE AUDIO THREAD'S CYCLE STAMP — (the read cursor,
 // the instant that cursor's frame enters the output port) — and not on the
 // main thread's `now`, which sat anywhere inside the period before that fill
@@ -147,6 +158,15 @@
 // at every zoom and the snap masked by the user
 // motion at the resync site.
 
+// THE LOOP TARGET'S SENTINEL: a launch whose loop target is this plays its
+// window ONCE and takes the natural end (every GUI launch — play() forwards
+// it); any value >= 0 is the DOMAIN frame the render body wraps to when the
+// read position reaches the window's end (play_loop below: the car's loop of
+// the trim, architect 2026-09-17 — NOTHING LOOPS' second sanctioned exception
+// beside the render player's Repeat One). The engine keeps it in the command
+// packet's third word (playback_common.h).
+constexpr int64_t kPlaybackNoLoop = -1;
+
 class GuiPlayback {
 public:
     GuiPlayback();
@@ -165,9 +185,10 @@ public:
               int64_t total_frames, int64_t domain_offset);
 
     // Begin playback at `start_sample`, stopping when the cursor reaches or
-    // passes `end_sample` (exclusive). PLAYS THE WINDOW ONCE AND STOPS — there
-    // is no looping (architect 2026-07-30), so reaching the end is always the
-    // natural-end teardown.
+    // passes `end_sample` (exclusive). PLAYS THE WINDOW ONCE AND STOPS — no
+    // GUI launch loops (architect 2026-07-30), so reaching the end is always
+    // the natural-end teardown; this face forwards kPlaybackNoLoop and the
+    // looping face is play_loop below.
     // Both are DOMAIN coordinates of the bound buffer; the domain offset
     // is subtracted here, before the internal buffer-local clamps and
     // early-return checks. Safe to call while already playing, and safe
@@ -183,6 +204,35 @@ public:
     // word and the packet). No teardown happens here: the callback keeps
     // running and the new packet simply supersedes the old run's.
     void play(int64_t start_sample, int64_t end_sample);
+
+    // THE LOOPING LAUNCH (architect 2026-09-17, the car's play of the trim
+    // with the render player closed — NOTHING LOOPS' second sanctioned
+    // exception, beside the render player's Repeat One): plays [start_sample,
+    // end_sample) and then WRAPS TO `loop_begin` FOREVER, until stop() or a
+    // newer publish supersedes it. Every clause of play()'s contract holds —
+    // the same packet, the same generation, the same supersession — with one
+    // more word in the packet, the wrap target; the wrap itself is
+    // SAMPLE-ACCURATE ON THE AUDIO THREAD (the render body subtracts the
+    // window's length from the fractional read position and goes on filling
+    // the same block, so no sample is dropped or doubled and the increment's
+    // phase carries across the seam). All three are DOMAIN coordinates.
+    // REFUSED, with nothing written, where the loop would hold fewer than two
+    // frames or `start_sample` lies outside [loop_begin, end_sample) — the
+    // caller forms the window right (GuiPlaybackLifecycle::car_toggle_playback
+    // is the one caller) and the publish is the belt. The wrap is a RESYNC
+    // EVENT to the main thread, through consume_loop_wrap below.
+    void play_loop(int64_t start_sample, int64_t end_sample,
+                   int64_t loop_begin);
+
+    // HAS THE LOOP WRAPPED SINCE THE LAST CALL — main thread only, ONE
+    // CALLER: the run loop's tick (main.cpp's ma_playing branch), which
+    // answers a true with resync_predictor and full waveform-and-clock damage
+    // (the rare-discrete-event shape, the launch's own). A COUNT DIFFERENCE
+    // against a main-thread-private mirror of the audio thread's wrap
+    // counter, so a wrap per tick and ten per tick answer alike, and the
+    // mirror catches up whole at each call. Always false on a once-through
+    // session.
+    bool consume_loop_wrap();
 
     // Stop playback and block until any in-flight audio callback has exited,
     // normally within about two of the device's callback periods. BOTH BACKENDS
@@ -369,5 +419,13 @@ public:
     struct Impl;
 
 private:
+    // THE ONE LAUNCH ROAD BEHIND BOTH PUBLIC FACES (2026-09-17): play() and
+    // play_loop() differ in the packet's third word alone, so each backend
+    // keeps its device head-check, its publish and its post-publish race
+    // check in this one body and the two faces forward to it —
+    // kPlaybackNoLoop from play(), the caller's target from play_loop().
+    void launch_window(int64_t start_sample, int64_t end_sample,
+                       int64_t loop_begin);
+
     std::unique_ptr<Impl> impl_;
 };

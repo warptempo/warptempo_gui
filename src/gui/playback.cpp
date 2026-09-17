@@ -245,8 +245,26 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
 }
 
 void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
+    launch_window(start_sample, end_sample, kPlaybackNoLoop);
+}
+
+void GuiPlayback::play_loop(int64_t start_sample, int64_t end_sample,
+                            int64_t loop_begin) {
+    launch_window(start_sample, end_sample, loop_begin);
+}
+
+// The one launch road behind both faces (the contract at playback.h): on
+// this backend it is the client-active check and the publish, nothing else —
+// the JACK graph runs from init to shutdown and no play() touches it.
+void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
+                                int64_t loop_begin) {
     if (!impl_->client_active) return;
-    playback_publish_play(impl_->state, start_sample, end_sample);
+    playback_publish_play(impl_->state, start_sample, end_sample, loop_begin);
+}
+
+bool GuiPlayback::consume_loop_wrap() {
+    if (!impl_) return false;
+    return playback_consume_loop_wrap(impl_->state);
 }
 
 void GuiPlayback::resync_predictor() {

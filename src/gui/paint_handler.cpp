@@ -542,7 +542,11 @@ GuiRect view_bar_face_rect(const GuiRect& published, int margin) {
 
 struct ViewBarButtonDef {
     RedesignButton id;
-    const char*    label;
+    // THE TWO LETTERS, NOT THE LABEL: the painted word is composed from them
+    // by the one speller view_pair_label (app_state.h, 2026-09-17), which the
+    // car transport's title reads too, so "S+M" is spelled in one place.
+    char           audio;
+    char           column;
 };
 // THE TABLE'S ORDER IS THE PAINT ORDER AND THE DIGITS' ORDER: the walk below
 // lays the buttons left to right as listed, and each is its digit's button
@@ -553,10 +557,10 @@ constexpr ViewBarButtonDef kViewBarButtons[] = {
     // warp markers, then the phase resets, then T+W for fine tuning — the
     // workflow's order; it was T+M at the bar's right end for its first day)
     // — spelled as its siblings are, audio letter then column letter.
-    {RedesignButton::ViewSM, "S+M"},
-    {RedesignButton::ViewSW, "S+W"},
-    {RedesignButton::ViewTP, "T+P"},
-    {RedesignButton::ViewTW, "T+W"},
+    {RedesignButton::ViewSM, 'S', 'M'},
+    {RedesignButton::ViewSW, 'S', 'W'},
+    {RedesignButton::ViewTP, 'T', 'P'},
+    {RedesignButton::ViewTW, 'T', 'W'},
 };
 constexpr int kViewBarButtonCount =
     static_cast<int>(std::size(kViewBarButtons));
@@ -1789,7 +1793,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         int widths[kViewBarButtonCount];
         int div_w = 0;
         for (int i = 0; i < kViewBarButtonCount; ++i) {
-            runs[i] = text_shape::shape_text_run(font, kViewBarButtons[i].label);
+            runs[i] = text_shape::shape_text_run(
+                font, view_pair_label(kViewBarButtons[i].audio,
+                                      kViewBarButtons[i].column));
             widths[i] = 2 * (bord + bpad) +
                         static_cast<int>(std::nearbyint(runs[i].width_px));
             // Each button's own left and right margin — they do not collapse, so

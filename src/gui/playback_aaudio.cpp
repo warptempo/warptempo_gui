@@ -510,7 +510,8 @@ bool open_stream(GuiPlayback::Impl& impl) {
 // THE DEAD-STREAM REOPEN, ONE BODY FOR TWO CALLERS (the disconnect rule at the
 // error callback): a dead stream is closed and a dead or null one reopened
 // HERE, on the main thread, at the new device's own granted rate. Answers
-// whether a stream stands after it. Called at the head of play() — the
+// whether a stream stands after it. Called at the head of the one launch road
+// (launch_window, which play() and play_loop() both forward to) — the
 // render player's road, which reaches play() with no gate ahead of it — and
 // by ensure_device_available_for_play, the main window's three launch gates'
 // question (architect 2026-09-02): before it the gates READ the latch ahead
@@ -603,6 +604,24 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
 }
 
 void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
+    launch_window(start_sample, end_sample, kPlaybackNoLoop);
+}
+
+void GuiPlayback::play_loop(int64_t start_sample, int64_t end_sample,
+                            int64_t loop_begin) {
+    launch_window(start_sample, end_sample, loop_begin);
+}
+
+bool GuiPlayback::consume_loop_wrap() {
+    if (!impl_) return false;
+    return playback_consume_loop_wrap(impl_->state);
+}
+
+// The one launch road behind both faces (the contract at playback.h): the
+// head check, the publish and the post-publish race check below are written
+// once here, and the two faces differ in the packet's third word alone.
+void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
+                                int64_t loop_begin) {
     if (!impl_->device_ready) return;
 
     // THE HEAD CHECK: a dead stream closed and reopened (reopen_stream_if_dead,
@@ -621,7 +640,9 @@ void GuiPlayback::play(int64_t start_sample, int64_t end_sample) {
     // instant, nothing waiting on a seat — are predictor state the callback
     // never reads; a fill consumes only the packet its own generation
     // qualifies.
-    if (!playback_publish_play(impl_->state, start_sample, end_sample)) return;
+    if (!playback_publish_play(impl_->state, start_sample, end_sample,
+                               loop_begin))
+        return;
 
     // THE DISCONNECT OUTRANKS THE PUBLISH (2026-09-01). The dead check at the
     // head of this call and the publish just above are two steps, and the

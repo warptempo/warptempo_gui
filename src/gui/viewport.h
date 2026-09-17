@@ -27,10 +27,14 @@ struct Viewport {
           gui(gui_),
           playback(playback_) {}
 
-    // Trim helpers — THE NAVIGATION RANGE, and since 2026-08-05 nothing else:
-    // the trim bounds Home/End jump to and the load-time playhead rests at.
-    // PLAYBACK NO LONGER READS THIS (playback_lifecycle.cpp owns the split: the
-    // song's end in source view, the bound preview buffer's in target).
+    // Trim helpers — THE NAVIGATION RANGE: the trim bounds Home/End jump to
+    // and the load-time playhead rests at. THE GUI'S OWN PLAYBACK DOES NOT
+    // READ THIS since 2026-08-05 (playback_lifecycle.cpp owns the split: the
+    // song's end in source view, the bound preview buffer's in target); ONE
+    // PLAYBACK CONSUMER since 2026-09-17 — the car's loop window
+    // (GuiPlaybackLifecycle::car_toggle_playback), which loops exactly the
+    // range Home and End land on, so the head unit's three buttons agree on
+    // one window by construction.
     std::pair<int64_t, int64_t> trim_range() const;
     int64_t                     trim_begin_sample() const;
     int64_t                     trim_end_sample() const;

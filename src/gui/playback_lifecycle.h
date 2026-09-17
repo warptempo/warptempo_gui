@@ -240,6 +240,46 @@ struct GuiPlaybackLifecycle {
     // its first play to its last (the ruling and its face argument at the
     // definition).
     void toggle_playback(int64_t launch_offset = 0);
+
+    // THE CAR'S SPACE (architect 2026-09-17): the head unit's play/pause with
+    // the render player CLOSED, reached from GuiCarTransport::car_toggle and
+    // nowhere else. STOP ARM: exactly toggle_playback's — the same transport-
+    // live term (a live project play OR a standing A/B audition, a rest of the
+    // act stopping as a play does) through the one stop body, and PAUSE IS THE
+    // GUI'S STOP: no pause semantics, no resume point — the console's pause
+    // runs stop_playback_if_playing as Space's stop does, because the car's
+    // transport is to be as close to the GUI's as the car allows and, with
+    // the trim narrowed to what he is working on, he goes back to the
+    // beginning anyway. PLAY ARM: the window is the ACTIVE DOMAIN'S TRIM,
+    // Viewport::trim_range — the navigation range Home and End land on (in
+    // target view the trim mapped through the live map, the full window
+    // normalized to the whole domain) — and THE PLAY LOOPS IT FOREVER, in
+    // every view (his one difference from the GUI's transport): the start is
+    // the resting playhead iff at least two frames remain before the loop's
+    // end (`begin <= playhead && playhead <= end - 2`, the launch body's own
+    // remainder rule), ELSE THE TRIM'S BEGIN — "even if it's played from the
+    // last frame of the trim, as it would be after the user presses Next", a
+    // play from the top. NO LEAD-IN OFFSET: the phase-reset overlay's N/2 is
+    // Space's authoring aid, and the car's play takes none. The gates are
+    // toggle_playback's own — the defensive chase clear, the device reopen
+    // (carding a failed one) — ahead of the user-launch clear (owner (2) at
+    // GuiAuditionSequence: this is the second road into the launch body that
+    // is not the act's), the launch through launch_playback_window with the
+    // trim's begin as the loop target, and on success the follow lamp's spend
+    // (spend_follow_lamp — the car's play IS the next project-audio launch).
+    // A trim under two frames refuses in the body's own playable gate,
+    // silently (the benign one-dimensional class: the playhead and the grey
+    // say it). The target view's preview-readiness gate is the caller's,
+    // as it is on_key's for Space (GuiCarTransport::car_toggle).
+    //
+    // THE LOOP IS A PROPERTY OF THIS LAUNCH, NOT A LAMP: any GUI act that
+    // stops (Space, Home / End, a marker touch, a modal open, the S/T flip)
+    // or relaunches (the placement click's reseek_keeping_alive, which calls
+    // play() once-through; a scrub) ends it, and every GUI launch plays once
+    // as it always has. The head unit's Previous / Next are Home / End whole
+    // (GuiCarTransport), so they stop the loop as the keys would and the
+    // next car Play launches from where they landed.
+    void car_toggle_playback();
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
@@ -269,10 +309,12 @@ struct GuiPlaybackLifecycle {
     // paint domain — and play `span` frames, the session's end being
     // `start + span` clamped to the active view's own end (the song's in
     // source view, the bound preview buffer's in target) rather than that end
-    // itself. NOTHING LOOPS still — the rule has exactly ONE sanctioned
-    // exception since 2026-08-28, the render player's REPEAT ONE lamp
-    // (render_player.h), which is not this body's and reaches no project
-    // audio: this is a discrete play to ITS end, the
+    // itself. NOTHING LOOPS still — the rule has exactly TWO sanctioned
+    // exceptions, the render player's REPEAT ONE lamp (2026-08-28,
+    // render_player.h, which reaches no project audio) and the CAR'S LOOP OF
+    // THE TRIM (2026-09-17, car_toggle_playback above, which reaches this
+    // project's audio through a launch of its own) — and NEITHER IS THIS
+    // BODY'S: this is a discrete play to ITS end, the
     // natural-end teardown is its one terminal, and the resting cursor is
     // untouched exactly as under Space — the same launch body, the same
     // gates (playback_launch_playable, so a start at or past the domain end
@@ -342,18 +384,33 @@ private:
     // launch of the user's own transport is a fresh session, refused or not,
     // and this entry is the only road into the body that is not the act's.
     // IT IS ALSO WHERE THE FOLLOW LAMP IS SPENT (2026-09-11): its SUCCESS TAIL
-    // copies app.follow_armed into app.follow_engaged and puts the lamp out,
-    // which is exactly the two project-audio launch roads and not the
-    // audition's — that road enters the body directly.
+    // runs spend_follow_lamp below — app.follow_armed copied into
+    // app.follow_engaged and the lamp put out — which is exactly the
+    // project-audio launch roads and not the audition's (that road enters the
+    // body directly); since 2026-09-17 the car's launch spends it through the
+    // same tail from its own entry.
     bool launch_playback_from(int64_t launch_pos);
+    // THE FOLLOW LAMP'S SPEND, one body (2026-09-17, factored out of
+    // launch_playback_from's success tail when the car's launch became the
+    // third project-audio launch road): the lamp says "the next play
+    // follows", the caller's play IS that next play, so the arm becomes the
+    // chase and the lamp goes out. TWO CALLERS, each in its own success tail
+    // and nowhere ahead of a refusal: launch_playback_from (Space's play arm
+    // and the scrub) and car_toggle_playback (the head unit's play). The A/B
+    // audition's road passes neither. The lamp's writer inventory is at
+    // app.follow_armed, app_state.h.
+    void spend_follow_lamp();
     // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the
-    // definition): validate `start`, seed the scanner, and play [start, end).
-    // Every launch OF THE PROJECT'S WAVEFORM ends here — the view-end launch
-    // above and the bounded audition — so the gates, the scanner seed, the
-    // follow check and the launch damage are written once. It clears no
-    // sequence: the view-end entry has already cleared it for a user launch,
-    // and the bounded audition arrives with the act's phase already standing
-    // — the body itself reads no phase and branches by no act; the
+    // definition): validate `start`, seed the scanner, and play [start, end)
+    // — ONCE with `loop_begin` = kPlaybackNoLoop, or wrapping to `loop_begin`
+    // forever (the car's loop of the trim, 2026-09-17; the parameter is
+    // REQUIRED so every caller states which). Every launch OF THE PROJECT'S
+    // WAVEFORM ends here — the view-end launch above, the bounded audition
+    // and the car's play — so the gates, the scanner seed, the follow check
+    // and the launch damage are written once. It clears no sequence: the
+    // view-end entry and the car's entry have already cleared it for a user
+    // launch, and the bounded audition arrives with the act's phase already
+    // standing — the body itself reads no phase and branches by no act; the
     // distinction between a user launch and the act's own is structural
     // alone, carried by which entry reached it (the contract at the
     // definition).
@@ -366,5 +423,5 @@ private:
     // does not move, the scanner never runs, and the item's domain is the
     // buffer's own. The two share the ONE STOP BODY above, which carries the
     // player's fork.
-    bool launch_playback_window(int64_t start, int64_t end);
+    bool launch_playback_window(int64_t start, int64_t end, int64_t loop_begin);
 };

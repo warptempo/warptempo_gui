@@ -169,8 +169,11 @@ drag coordinates floor instead of truncating.
   PROOF ON BOTH BACKENDS — counting callback invocations, two after the
   flag is lowered, unbounded and hanging rather than weakening, with
   AAudio's escape on a dead or positively terminal stream (no callback
-  left to count) — and `stop()` touches neither device. NOTHING LOOPS
-  holds on both. AAUDIO'S `stop()` SAYS THE SESSION'S UNDERRUN COUNT
+  left to count) — and `stop()` touches neither device. NOTHING LOOPS AT THE
+  DEVICE holds on both: the car's loop of the trim (2026-09-17) is a wrap of
+  the READ POSITION inside the render body, so a looping session is one
+  session to the fence like any other and no backend's device is touched at a
+  lap. AAUDIO'S `stop()` SAYS THE SESSION'S UNDERRUN COUNT
   (architect 2026-09-02, the four-tier review's R-18(d)): at the tail of that
   fence, with the callback quiesced and the counter therefore still,
   `report_xrun_count` reads `AAudioStream_getXRunCount` and prints ONE stderr
@@ -954,9 +957,14 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   sink is null; an integer outside the kind table is refused at the entry;
   and with no hook installed (between two projects — main.cpp installs it per
   project and CLEARS it at the session tail, the one handler it clears) the
-  drained commands go nowhere. The consumer is
-  `GuiRenderPlayer::on_media_command` (render-player.md's territory), and
-  **EVERY COMMAND IS A DIRECT ACT ON THE PLAYER THERE** (architect 2026-09-12,
+  drained commands go nowhere. **THE CONSUMERS ARE TWO SINCE 2026-09-17, AND
+  THE HOOK ITSELF IS THE PARTITION**: main.cpp's installed lambda forks on the
+  render player's mode bit — `GuiRenderPlayer::on_media_command` while the
+  player stands, `GuiCarTransport::on_media_command` while it is closed, the
+  latter driving the project's own transport (render-player.md's *The car with
+  the player closed*). The player keeps its own `!rp.active` guard inside its
+  body as a belt. And
+  **EVERY COMMAND IS A DIRECT ACT ON EITHER OWNER** (architect 2026-09-12,
   from the car: *"the car is a separate interface"*) — NO KEY IS SYNTHESIZED
   and no dispatch is run. Each command pressed one of the player's own keys
   through `synthesize_key` until that day, press and release, under
@@ -972,9 +980,12 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   been mapped to — and became PAUSE AND THEN HOME on 2026-09-01, a direct act,
   when that key and its button retired; the mapping table is
   render-player.md's.)
-- **`publish_media_state`** — the push UP, from the ONE owner
-  `GuiRenderPlayer::publish_media_state` at every edge where the display
-  should change (its inventory is at that declaration) and never per tick.
+- **`publish_media_state`** — the push UP, from TWO owners since 2026-09-17,
+  exactly one of them live at a time: `GuiRenderPlayer::publish_media_state`
+  while the render player stands, at every edge where the display should
+  change (its inventory is at that declaration), and `GuiCarTransport::tick`
+  while the player is closed, which derives the state every tick and calls
+  only when a field changed. Never per tick either way.
   Wayland's body is empty. Android's runs on the glue thread, ATTACHED TO THE
   VM ONCE in `init()` (`AttachCurrentThread`, the env cached; detached in
   `shutdown()`, a thread exiting attached being a VM abort), and calls
@@ -998,37 +1009,58 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   one the listing is in — `tmp` at the root, the batch folder's bare name
   inside one), TITLE = the BARE NAME of the playing file or, with nothing
   sounding, of the highlighted row, and DURATION ONLY FOR A VALUE ABOVE 0 — a
-  −1 puts no duration key at all, which is Android's "unknown" — and the
+  −1 puts no duration key at all, which is Android's "unknown". **WITH THE
+  PLAYER CLOSED THE SAME THREE FIELDS CARRY THE PROJECT TRANSPORT'S OWN LINES**
+  (architect 2026-09-17): ALBUM stays the project's name, TITLE is the TAB AND
+  THE VIEW (`Tab A, T+W`) and ARTIST is the TRIM SPAN, with the duration
+  always unknown — render-player.md's *The car with the player closed* owns
+  that half. And the
   `PlaybackState`
   (with the position and every action declared). **THE DISPLAY IS A DUMMY: THE
-  STATE IS PLAYING WHENEVER THE PLAYER STANDS AND STOPPED EXACTLY AT THE
-  INACTIVE PUSH** (architect 2026-09-12, from the car): the sliver's fork is
-  `!active` → STOPPED, else PLAYING, and THE SPEED IS THE STATE'S OWN —
-  `active ? 1.0f : 0.0f` — so the console's clock runs on for as long as the
-  player stands, a controller extrapolating the position off that speed from
-  the moment of the push. A console reads the still-streaming Bluetooth link as
+  STATE IS PLAYING FOR AS LONG AS THE APP RUNS** (architect 2026-09-12, from
+  the car; widened 2026-09-17 with the session's lifetime): the sliver's fork
+  is `!active` → STOPPED, else PLAYING, and THE SPEED IS THE STATE'S OWN —
+  `active ? 1.0f : 0.0f` — so the console's clock runs on, a controller
+  extrapolating the position off that speed from
+  the moment of the push. The STOPPED side of that fork is unreachable while
+  the app runs: the inactive push was the render player's close, and the close
+  pushes nothing now. A console reads the still-streaming Bluetooth link as
   playing and OVERRIDES a session that says PAUSED, so its PAUSE stuck every
   time; telling it what it already believes makes its one button a plain
   toggle. The fork was `!active` → STOPPED, `playing` → PLAYING, else PAUSED
   until that day, and carried a second stopped arm on an empty title until that
   morning. `playing` is still passed and is READ HERE FOR THE AUDIO FOCUS
-  ALONE. With nothing sounding the native side sends a SILENCE TRACK naming the
+  ALONE. With nothing sounding under the player the native side sends a SILENCE
+  TRACK naming the
   highlighted row at position 0 with the duration unknown — title and album are
-  never empty while the session is active (the three-line rule is
+  never empty on any push either owner makes (the three-line rule is
   `GuiRenderPlayer::publish_media_state`'s, render-player.md's car section the
   behaviour). It calls
-  `setActive(active)` — THE SESSION IS ACTIVE ONLY WHILE THE RENDER PLAYER
-  STANDS (R7), created in `onCreate` on the UI thread so its callbacks land
-  there and released in `onDestroy` — and owns the AUDIO FOCUS machine:
+  `setActive(active)` — **THE SESSION IS ACTIVE FROM THE FIRST TICK OF THE
+  FIRST PROJECT UNTIL `onDestroy`** (architect 2026-09-17), created in
+  `onCreate` on the UI thread so its callbacks land there and released in
+  `onDestroy`, which is the one `setActive(false)` a running app reaches. It
+  was ACTIVE ONLY WHILE THE RENDER PLAYER STOOD (R7) until that day; the
+  close's inactive push is deleted, because the head unit's buttons now drive
+  the project's own transport whenever the player is closed and a session that
+  came and went between plays could not carry them. It also owns the AUDIO
+  FOCUS machine:
   `AudioFocusRequest` GAIN with the AAudio stream's own attributes
   (USAGE_MEDIA / CONTENT_TYPE_MUSIC), requested when a push says playing and
-  none is held, abandoned when a push says inactive, a refused request logged
+  none is held, abandoned when a push says inactive — an arm with no producer
+  while the app runs since the session's lifetime changed, so FOCUS ONCE
+  GRANTED IS HELD UNTIL `onDestroy` ABANDONS IT unless the system takes it
+  away (a permanent LOSS clears the hold in the listener and the next playing
+  push asks again), the accepted shape for a kiosk tablet — a refused request
+  logged
   and playback proceeding (the stream is already running). A LOSS is forwarded
-  down as `FocusLost` / `FocusLostTransient` and pauses the player — through
+  down as `FocusLost` / `FocusLostTransient` and STOPS WHATEVER IS SOUNDING:
+  with the player standing it pauses the item through
   its TRANSPORT DIRECTLY (`transport_toggle_act`, past the highlight fork, so
   an imposed interrupt can never start a walked-to row; render-player.md's car
-  section owns the table); it is
-  "Android's one imposed interrupt", and it always pauses. GAIN is forwarded and
+  section owns the table), and with the player closed it takes the project
+  transport's one stop body. It is
+  "Android's one imposed interrupt", and it always stops. GAIN is forwarded and
   does nothing — NOTHING RECOVERS BY ITSELF. Ducking stays the framework's
   default, so a navigation prompt ducks rather than pauses — and THE LISTENER
   HAS NO CAN_DUCK ARM, deleted 2026-09-02 under the four-tier review's R-18(e):
@@ -1043,7 +1075,7 @@ service, no background playback, no lock-screen transport — the tablet is a
 kiosk on a stand with the app in the foreground — so the manifest gains
 nothing (no `<service>`, no `FOREGROUND_SERVICE*` / `POST_NOTIFICATIONS`, no
 `res/`). Backgrounding (`APP_CMD_LOST_FOCUS`) does not deactivate the session;
-the player standing is the one condition.
+since 2026-09-17 nothing but `onDestroy` does.
 
 "NO BACKGROUND PLAYBACK" IS BUILD SCOPE, NOT BEHAVIOUR (recorded 2026-09-02,
 the four-tier review's R-18): it says this build ships no service to keep

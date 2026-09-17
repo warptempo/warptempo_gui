@@ -125,24 +125,37 @@ import java.nio.charset.StandardCharsets;
  * whichever app holds an ACTIVE MediaSession, and the head unit's display
  * reads that session's metadata and playback state. This class creates ONE
  * session in onCreate (on the UI thread, so its callbacks land there) and
- * releases it in onDestroy; it is ACTIVE ONLY WHILE THE RENDER PLAYER STANDS,
- * which the native side says through mediaState(...) -- the same push carrying
- * THE CONSOLE'S THREE LINES, the project as the album, the folder as the
- * artist and the bare name of the playing or highlighted file as the title
+ * releases it in onDestroy; it is ACTIVE FROM THE FIRST TICK OF THE FIRST
+ * PROJECT UNTIL THAT onDestroy (architect 2026-09-17), which the native side
+ * says through mediaState(...) -- the same push carrying
+ * THE CONSOLE'S THREE LINES, the project as the album on both sides of the
+ * fork below, and beneath it either the render player's picture (the folder as
+ * the artist and the bare name of the playing or highlighted file as the
+ * title) or the main window's (the trim span as the artist and the tab and
+ * view as the title)
  * (architect 2026-09-12: the Accord lays the album line above the title, dim,
  * and the artist line below it, so the dim top line takes the project, the
- * least important of the three). EACH CALLBACK IS ONE
+ * least important of the three). IT WAS ACTIVE ONLY WHILE THE RENDER PLAYER
+ * STOOD until 2026-09-17, the player's close pushing the one inactive state;
+ * that push is deleted, because the head unit's buttons now drive the
+ * project's own transport whenever the player is closed and a session that
+ * went away between plays could not carry them. EACH CALLBACK IS ONE
  * INTEGER DOWN through nativeMediaCommand -- the native side queues it, wakes
  * its own loop and ACTS ON IT DIRECTLY, THE CAR BEING AN INTERFACE OF ITS OWN
- * (architect 2026-09-12): the wheel's three buttons are the player's own three
- * acts -- a toggle between the item and silence, and a playlist walk with an
- * up-a-folder exit -- and no key is synthesized. (Each command pressed one of
+ * (architect 2026-09-12): the wheel's three buttons are three acts of the
+ * product's own, the native side forking them on whether the render player
+ * stands -- ITS toggle between the item and silence and its playlist walk
+ * with an up-a-folder exit, or, with it closed, the main window's play/pause
+ * (which loops the trim) and the playhead's jumps to the trim's two ends --
+ * and no key is synthesized either way. (Each command pressed one of
  * the player's keys until that day: Space, Home / End, Left / Right, and
  * Page Up / Page Down for the skips before 2026-08-31.) onMediaButtonEvent IS
  * OVERRIDDEN and the keycodes are mapped here, at once, rather than left to
  * the framework's default (the reasons are at the override). Audio focus is
  * REQUESTED when a push says playing and none is held and ABANDONED when a
- * push says inactive; a loss pauses the player through
+ * push says inactive or at onDestroy -- and since the session no longer goes
+ * inactive while the app runs, the abandon that happens in practice is
+ * onDestroy's; a loss pauses whatever is sounding through
  * the same command road ("Android's one imposed interrupt"), a refused
  * request is logged and playback proceeds (the AAudio stream is already
  * running; focus decides who else ducks, not whether we sound).
@@ -302,9 +315,13 @@ public class MainActivity extends NativeActivity {
         // THE MEDIA SESSION, PER PROCESS-LIFE OF THIS ACTIVITY: created here
         // on the UI thread so its callbacks are delivered on this thread's
         // Looper (the session takes the creating thread's), released in
-        // onDestroy. INACTIVE until the render player stands -- the native
-        // side's first push activates it -- so the head unit's buttons reach
-        // nothing while the waveform is being edited. The state is seeded
+        // onDestroy. INACTIVE until the native side's FIRST PUSH, which comes
+        // on the first tick of the first project and activates it for the
+        // app's life (architect 2026-09-17) -- it stayed inactive until the
+        // render player stood until that day, and the head unit's buttons
+        // reached nothing while the waveform was being edited, which is
+        // exactly what changed: they drive the main window's transport now.
+        // The state is seeded
         // STOPPED with the full action set so the framework's default
         // media-button routing has actions to dispatch against from the first
         // activation. SPEED 0: nothing is playing, and the speed a state
@@ -347,9 +364,12 @@ public class MainActivity extends NativeActivity {
     // onDestroy posts APP_CMD_DESTROY and JOINS the native loop's thread, so
     // by the time it returns no mediaState call can still be in flight and
     // the session may be taken down under the one lock with nothing racing
-    // it. Focus is abandoned with it -- the native side abandons it on the
-    // player's close, but a process ending with the player standing (the
-    // system destroying the activity) never reached that push.
+    // it. FOCUS IS ABANDONED HERE AND, IN PRACTICE, ONLY HERE (2026-09-17):
+    // the native side's inactive push was what released it at the render
+    // player's close, and that push is gone with the session's new lifetime
+    // (the session stands for the app's life), so this is the abandon a
+    // running app always reaches -- which is also why it was already written
+    // to cover a process ending with something still sounding.
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -368,10 +388,13 @@ public class MainActivity extends NativeActivity {
     }
 
     // THE ROAD UP (GuiPlatform::publish_media_state, src/gui/platform_android.cpp),
-    // called on the native loop's thread at every edge where what the head
+    // called on the native loop's thread whenever what the head
     // unit shows changes -- never per tick: a PLAYING state advances on the
     // head unit's own clock from `positionMs` at speed 1.0, which is what the
-    // (state, position, speed) triple means.
+    // (state, position, speed) triple means. THE NATIVE SIDE HAS TWO CALLERS
+    // (2026-09-17), one live at a time: the render player, which calls at the
+    // edges of its own display, and the project transport, which compares its
+    // derived state on every tick and calls only when a field changed.
     //
     // METADATA IS THE CONSOLE'S THREE LINES (architect 2026-09-12, from the
     // car): the Accord lays them out as ALBUM above the title, dim, and
@@ -379,30 +402,48 @@ public class MainActivity extends NativeActivity {
     // something different -- ALBUM the project's name, the dim top line
     // taking the LEAST important of the three; ARTIST the folder (the
     // playing item's own while it sounds, otherwise the one the listing is
-    // in), the console's bottom line; TITLE the bare name of the playing file
-    // or of the highlighted row. (The first try had it backwards: ARTIST
+    // in -- or, with the render player closed, THE TRIM SPAN of the piece
+    // being edited), the console's bottom line; TITLE the bare name of the
+    // playing file or of the highlighted row -- or, with the player closed,
+    // THE TAB AND THE VIEW. (The first try had it backwards: ARTIST
     // carried the project's name and ALBUM the folder, on the assumption that
     // ARTIST was the top line -- it is the bottom one, and the ruling above
     // swapped the two strings once the layout was seen on the console
     // itself.) DURATION is the item's length WHEN THERE IS ONE.
     //
-    // THE STATE IS A DUMMY AND SAYS PLAYING WHENEVER THE PLAYER STANDS
-    // (architect 2026-09-12, from the car): `active` is the whole fork --
+    // THE STATE IS A DUMMY AND SAYS PLAYING WHENEVER THE APP IS RUNNING
+    // (architect 2026-09-12, from the car, widened 2026-09-17 with the
+    // session's lifetime): `active` is the whole fork --
     // inactive is STOPPED, anything else is PLAYING at speed 1.0 -- because a
     // console reads the still-streaming Bluetooth link as playing and
     // OVERRIDES a session that says PAUSED, so its PAUSE stuck every time. The
     // session tells it what it already believes and its one button becomes a
     // plain toggle. `playing` is the TRUE transport bit and is read HERE FOR
     // THE AUDIO FOCUS ALONE. A DURATION OF 0 OR LESS PUTS NO DURATION KEY AT
-    // ALL, which is Android's "unknown": with nothing sounding the native side
+    // ALL, which is Android's "unknown": with nothing sounding under the
+    // render player the native side
     // sends a SILENCE TRACK naming the highlighted row at position 0 with the
     // duration unknown, so the console counts up from zero with no length to
-    // run into (the rule is at GuiRenderPlayer::publish_media_state).
-    // setActive follows the player's
-    // open and close. Every setter here is a binder call and is callable from
+    // run into (the rule is at GuiRenderPlayer::publish_media_state), and the
+    // PROJECT TRANSPORT sends the duration unknown always -- its clock is the
+    // loop's position inside the trim, re-sent at each lap
+    // (GuiCarTransport::derive).
+    // setActive FOLLOWS THE PUSH, and the push says active for the app's life
+    // (architect 2026-09-17): the render player's open and close are the wire
+    // changing owners on the native side, not the session coming and going, so
+    // the only setActive(false) a running app reaches is onDestroy's.
+    // Every setter here is a binder call and is callable from
     // any attached thread; the lock is against onDestroy's release on the UI
     // thread. Focus: requested when a push says playing and none is held;
-    // abandoned when a push says inactive.
+    // abandoned when a push says inactive -- AN ARM WITH NO PRODUCER WHILE THE
+    // APP RUNS since that day, kept because it is the honest pair to the
+    // request and because a future inactive push must still let go. SO FOCUS,
+    // ONCE GRANTED, IS HELD UNTIL onDestroy ABANDONS IT, unless the system
+    // takes it away first (AUDIOFOCUS_LOSS clears focusHeld in the listener
+    // below and the next playing push requests again). That is the accepted
+    // shape for a kiosk tablet on a stand with this app in the foreground:
+    // holding focus across the gaps between plays costs nothing here and
+    // keeps the head unit pointed at this session.
     public synchronized void mediaState(boolean active, boolean playing,
                                         String title, String artist,
                                         String album,
@@ -422,9 +463,10 @@ public class MainActivity extends NativeActivity {
                                  : PlaybackState.STATE_STOPPED;
         // THE SPEED IS THE RATE OF PLAYBACK, not a constant: a controller
         // EXTRAPOLATES the position from `positionMs` at this speed and the
-        // moment of this push. The clock is meant to run whenever the player
-        // stands -- that is the dummy display's other half -- so the speed is
-        // the state's own: 1.0 while active and 0.0 at the inactive push.
+        // moment of this push. The clock is meant to run whenever the app is
+        // running -- that is the dummy display's other half -- so the speed is
+        // the state's own: 1.0 while active and 0.0 at an inactive push, which
+        // no running app makes any more.
         final float speed = active ? 1.0f : 0.0f;
         session.setPlaybackState(new PlaybackState.Builder()
                 .setActions(SESSION_ACTIONS)
@@ -622,9 +664,14 @@ public class MainActivity extends NativeActivity {
     }
 
     // THE FOCUS MACHINE'S OTHER HALF: a permanent LOSS releases the hold (the
-    // system took it; the next playing push requests again), a transient loss
+    // system took it; the next playing push requests again -- and since
+    // 2026-09-17 this listener is the only thing that ever clears focusHeld
+    // while the app runs, the inactive push that used to abandon it having
+    // gone with the session's new lifetime), a transient loss
     // keeps it (GAIN returns it), and each is forwarded so the native side
-    // pauses; GAIN is forwarded and the native side does nothing with it --
+    // STOPS WHATEVER IS SOUNDING -- the render player's item, or the project's
+    // own transport with the player closed, the fork being the native side's;
+    // GAIN is forwarded and the native side does nothing with it --
     // NOTHING RECOVERS BY ITSELF, the user presses play.
     //
     // THERE IS NO CAN_DUCK ARM, and its absence is the policy (2026-09-02,

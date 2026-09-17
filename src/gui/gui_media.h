@@ -12,10 +12,16 @@
 // hook and never fires it, and its publish is a no-op. The laptop has no head
 // unit at all, so nothing on it produces one of these.
 //
-// A COMMAND IS THE CAR'S OWN ACT ON THE PLAYER (architect 2026-09-12, from the
-// car: "the car is a separate interface"). Every kind runs one of
-// GuiRenderPlayer's own bodies direct (on_media_command, render_player.h);
-// nothing is synthesized and nothing is dispatched. THE CAR'S VOCABULARY IS
+// A COMMAND IS THE CAR'S OWN ACT (architect 2026-09-12, from the car: "the car
+// is a separate interface"). Every kind runs one of the PRODUCT'S OWN BODIES
+// direct; nothing is synthesized and nothing is dispatched. THERE ARE TWO
+// OWNERS OF THESE COMMANDS AND OF THE STATE BELOW SINCE 2026-09-17, forked at
+// main.cpp's hook on the render player's mode bit: with the player standing
+// every command is the PLAYER'S (GuiRenderPlayer::on_media_command,
+// render_player.h — the vocabulary described in the rest of this paragraph),
+// and with it closed every command is the PROJECT TRANSPORT'S
+// (GuiCarTransport::on_media_command, car_transport.h — play/pause looping the
+// trim, Previous and Next landing Home and End). THE CAR'S VOCABULARY IS
 // THE CAR'S AND NOT THE TABLET'S KEYS: the wheel and the console carry rewind,
 // play/pause and fast-forward, the outer two arriving as Previous and Next, so
 // the one button is a TOGGLE between the item and silence and the outer two
@@ -73,23 +79,36 @@ static_assert(static_cast<int>(GuiMediaCommand::Kind::FocusGained) + 1 ==
                   kGuiMediaCommandKindCount,
               "the media command kind table and its count have drifted");
 
-// WHAT THE HEAD UNIT SHOWS — pushed by the ONE owner
-// GuiRenderPlayer::publish_media_state at every edge where it changes (the
-// inventory is at that function), never per tick: a playing state advances
-// on the head unit's own clock from the last push at speed 1.0, which is what
-// a media session's (state, position, speed) triple means.
+// WHAT THE HEAD UNIT SHOWS — pushed by TWO owners since 2026-09-17, exactly
+// one of which is live at a time: GuiRenderPlayer::publish_media_state while
+// the render player stands, AT EVERY EDGE where its display changes (the
+// inventory is at that function) and never per tick; and GuiCarTransport::tick
+// while the player is closed, which derives the state EVERY TICK and pushes
+// only what changed (a comparator rather than an edge inventory, the reason
+// at that declaration). Either way a playing state advances on the head unit's
+// own clock from the last push at speed 1.0, which is what a media session's
+// (state, position, speed) triple means.
 struct GuiMediaState {
-    // The session is active exactly while the render player stands (the
-    // design's R7); inactive is the close's push, after which the head unit's
-    // buttons reach nothing. SINCE 2026-09-12 IT ALSO SAYS WHAT THE STATE IS:
+    // TRUE FOR THE APP'S LIFE (architect 2026-09-17). On Android the session
+    // goes ACTIVE at the first tick of the first project and stays active
+    // until the activity's onDestroy releases it: both owners above publish
+    // this true, the player's close no longer pushes an inactive state, and
+    // the player's open is simply the wire changing hands. It said "active
+    // exactly while the render player stands" until that day, and inactive
+    // was the close's push, after which the head unit's buttons reached
+    // nothing — which is precisely what the car transport is there to answer.
+    // SINCE 2026-09-12 IT ALSO SAYS WHAT THE STATE IS:
     // the consuming side publishes PLAYING at speed 1.0 whenever this is true
     // and STOPPED when it is not, with no third answer, because a console
     // reads the still-streaming Bluetooth link as playing and OVERRIDES a
     // session that says PAUSED — so the session tells it what it already
     // believes and its one button becomes a plain toggle (the ruling and its
-    // reasons are at GuiRenderPlayer::publish_media_state).
+    // reasons are at GuiRenderPlayer::publish_media_state). THAT FORK IS
+    // UNCHANGED; nothing in the running app takes its STOPPED side any more.
     bool        session_active = false;
-    // THE TRUE TRANSPORT BIT — the player's item is sounding — and it is read
+    // THE TRUE TRANSPORT BIT — the player's item is sounding, or with the
+    // player closed the PROJECT'S transport is live (a play or a standing A/B
+    // audition, transport_session_live) — and it is read
     // on the consuming side FOR THE AUDIO FOCUS ALONE since 2026-09-12: the
     // published state is `session_active`'s above. It is the tablet's truth,
     // not the console's picture.
@@ -111,32 +130,50 @@ struct GuiMediaState {
     // the console's own button would start. That second arm is THE SILENCE
     // TRACK, what plays while the listener is at the top level walking
     // folders; with nothing to highlight at all the LISTED FOLDER names
-    // itself, the same word the artist carries. IT IS NEVER EMPTY WHILE
-    // `session_active` IS TRUE, and that is the point rather than a tidiness:
-    // a console handed a session with nothing in it goes back to its own idle
-    // picture. The title is empty exactly at the close's inactive push. THE
+    // itself, the same word the artist carries. IT IS NEVER EMPTY, and that is
+    // the point rather than a tidiness: a console handed a session with
+    // nothing in it goes back to its own idle picture. (It was empty at
+    // exactly one push, the close's inactive one, and that push is deleted —
+    // 2026-09-17.)  THE
     // SILENCE IS METADATA AND NEVER A FILE — a silent wav on disk would be
     // listed by the player, mirrored by Synchronize and played by the
     // auto-advance.
+    //
+    // WITH THE PLAYER CLOSED: THE TAB AND THE VIEW — "Tab A, T+W", the active
+    // tab's letter and the active views through the one speller
+    // view_pair_label, composed by car_transport_title (car_transport.h).
     std::string title;
     // THE FOLDER THE NAME LIVES IN, bare: the PLAYING ITEM'S OWN folder while
     // it sounds — the band may have walked somewhere else, and the sounding
     // item's home is the truth — and otherwise the folder the band is in,
     // `tmp` at the root and the batch folder's own name inside one. The
     // player has lived inside `tmp/` since 2026-09-01, so `render/` is not a
-    // spelling this carries. Never empty while `session_active` is true; the
-    // close's inactive push is the one empty artist, as it is the one empty
-    // title. THE CONSOLE'S BOTTOM LINE.
+    // spelling this carries. Never empty, for the title's reason and since the
+    // same day.
+    //
+    // WITH THE PLAYER CLOSED: THE TRIM SPAN — the two times Home and End would
+    // land on, each spelled as the row-8 clock spells a position, composed by
+    // car_transport_artist. THE CONSOLE'S BOTTOM LINE.
     std::string artist;
-    // The project's name, always — the console's DIM TOP LINE, above the
-    // title, and the one string that does not move while the player is
-    // walked.
+    // The project's name, always and in EVERY arm of BOTH owners — the
+    // console's DIM TOP LINE, above the title, and the one string that does
+    // not move while the player is walked or the project's views are switched.
     std::string album;
     // THE ITEM'S LENGTH IN MILLISECONDS, OR -1 FOR UNKNOWN — which is what the
-    // SILENCE TRACK sends, the consuming side putting no duration key at all
+    // SILENCE TRACK sends, and what the PROJECT TRANSPORT sends always, the
+    // consuming side putting no duration key at all
     // for a value of 0 or less (Android's "unknown"): the state says PLAYING
     // at speed 1.0, so a real duration would run the console's clock into a
-    // track end that never comes. The item's own arm carries its real length.
+    // track end that never comes. The player's item arm is the one arm that
+    // carries a real length.
     int64_t     duration_ms    = 0;
+    // MILLISECONDS INTO WHAT THE TITLE NAMES. The player's item arm carries
+    // the engine's cursor in the item and its silence track sends 0. WITH THE
+    // PLAYER CLOSED it is THE LOOP CLOCK — the cursor less the trim's begin —
+    // while the project's transport is live, and 0 at rest, and it is
+    // RE-PUSHED AT EVERY LOOP WRAP (GuiCarTransport::note_loop_wrap), so the
+    // console's clock re-starts at the trim's start on each lap: the one
+    // freedom the dummy display has, truthful while a loop plays and a
+    // running dummy at rest.
     int64_t     position_ms    = 0;
 };

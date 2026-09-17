@@ -50,6 +50,10 @@
 // interleaved lanes of one AAudio buffer.
 constexpr int kPlaybackOutputChannels = 2;
 
+// (THE LOOP TARGET'S SENTINEL, kPlaybackNoLoop, is declared in playback.h
+// beside the two launch faces that pass it — it is part of the contract, and
+// the lifecycle's callers name it.)
+
 // THE SESSION WORD'S LAYOUT (the field's comment, GuiPlaybackState::session):
 // bit 0 playing, the generation above it. The word is process-local — bind
 // resets it and nothing serializes it — so the layout is free to close up: a
@@ -290,27 +294,34 @@ struct GuiPlaybackState {
     std::atomic<int64_t>  stamp_ns{0};
     std::atomic<uint64_t> stamp_generation{0};
 
-    // THE COMMAND PACKET — (command_start, command_end) under `command_seq`:
-    // the window play() publishes for ONE generation, written by the main
-    // thread and consumed by the audio thread (2026-09-01, the third review's
-    // first finding — until that day the range was two independent atomics
-    // and the restart a compare-exchanged `pending_start`, and a fill gated
-    // on generation N could consume N+1's restart under N's end, or N's
-    // restart under N+1's end, rendering a block that belonged to neither and
-    // declaring a natural end at a window it was never published into).
+    // THE COMMAND PACKET — (command_start, command_end, command_loop_begin)
+    // under `command_seq`: the window play() or play_loop() publishes for ONE
+    // generation, written by the main thread and consumed by the audio thread
+    // (2026-09-01, the third review's first finding — until that day the
+    // range was two independent atomics and the restart a compare-exchanged
+    // `pending_start`, and a fill gated on generation N could consume N+1's
+    // restart under N's end, or N's restart under N+1's end, rendering a
+    // block that belonged to neither and declaring a natural end at a window
+    // it was never published into). THE THIRD WORD IS THE LOOP TARGET
+    // (2026-09-17): kPlaybackNoLoop for a once-through window — every GUI
+    // launch — or the buffer-local frame the render body wraps to at the
+    // window's end, which the publish has already clamped so that
+    // `loop_begin < end - 1` (a loop of fewer than two frames refuses at the
+    // publish, the launch body's own remainder rule, so the body can never
+    // spin on a degenerate window).
     // `command_seq` IS THE PACKET'S GENERATION: playback_command_seq(N) =
     // N << 1 while N's packet stands complete, with the low bit set while a
     // write is in progress. The publish is the ONE writer: seq = (N << 1) | 1
-    // (relaxed), a release fence, the two data stores (relaxed), seq = N << 1
-    // (release) — and THEN the session word (N, playing) with release. The
-    // fill is the ONE reader, and it reads ONCE, WITHOUT RETRY, and only
+    // (relaxed), a release fence, the THREE data stores (relaxed), seq =
+    // N << 1 (release) — and THEN the session word (N, playing) with release.
+    // The fill is the ONE reader, and it reads ONCE, WITHOUT RETRY, and only
     // while its `active_generation` below differs from the generation its
     // gate acquired: g1 = seq (acquire); accept only if g1 ==
-    // playback_command_seq(N); the two data loads (relaxed); an acquire
+    // playback_command_seq(N); the three data loads (relaxed); an acquire
     // fence; g2 = seq (relaxed); accept only if g2 == g1. On acceptance the
     // fill SEATS — `active_generation = N`, `active_end = end`,
-    // `fractional_cursor = start` — and on rejection it writes silence and
-    // returns without rendering.
+    // `active_loop_begin = loop_begin`, `fractional_cursor = start` — and on
+    // rejection it writes silence and returns without rendering.
     //
     // THE ORDERING, in three lines. (1) A fill gated on N acquired the
     // session word N's publish released AFTER its packet's even store, so it
@@ -331,19 +342,38 @@ struct GuiPlaybackState {
     std::atomic<uint64_t> command_seq{0};
     std::atomic<int64_t>  command_start{0};
     std::atomic<int64_t>  command_end{0};
+    std::atomic<int64_t>  command_loop_begin{kPlaybackNoLoop};
+
+    // THE WRAP COUNTER (2026-09-17): a monotonic count of loop wraps the
+    // render body has taken, ONE WRITER — the audio thread, a relaxed store
+    // of +1 at each wrap — and ONE READER, the main thread's
+    // playback_consume_loop_wrap, which compares it against its own private
+    // `loop_wraps_seen` below. It is a COUNT DIFFERENCE, not a flag: a wrap
+    // per tick and ten wraps per tick answer the same "at least one", and a
+    // main-thread compare tolerates any base, which is why rebind leaves it
+    // alone and only bind (no callback exists there) resets the pair. What
+    // the wrap means to the main thread is a RESYNC EVENT (playback.h's
+    // design note): the predictor sits clamped at the mirror's end until the
+    // tick that consumes the wrap re-anchors it on the cycle stamp, whose
+    // cursor has already wrapped.
+    std::atomic<int64_t>  loop_wraps{0};
+    int64_t               loop_wraps_seen = 0;   // main thread only
 
     // AUDIO-THREAD-PRIVATE STATE — written by the render body alone while a
     // callback can run, and by bind / rebind under their no-callback
     // conditions (bind before the device opens, rebind under stop()'s fence).
     //
-    // The generation the fill has seated and the window end it renders
-    // against, both taken from the packet at the seat. `active_end` is what
-    // the natural-end test and the fill-end clamp read — the fill's own copy,
-    // so a publish landing mid-fill cannot move the end a running block is
-    // rendered against; the main thread's `end_sample` is the published
-    // session's mirror (its comment) and is read by nothing here.
+    // The generation the fill has seated and the window it renders against,
+    // all taken from the packet at the seat. `active_end` is what the
+    // natural-end test, the wrap test and the fill-end clamp read — the
+    // fill's own copy, so a publish landing mid-fill cannot move the end a
+    // running block is rendered against; the main thread's `end_sample` is
+    // the published session's mirror (its comment) and is read by nothing
+    // here. `active_loop_begin` is the wrap target (kPlaybackNoLoop = none),
+    // the packet's third word, private for the same reason.
     uint64_t active_generation = 0;
     int64_t  active_end        = 0;
+    int64_t  active_loop_begin = kPlaybackNoLoop;
     // The fractional source cursor. Tracking the fractional position across
     // buffer boundaries is what prevents per-buffer floor() rounding from
     // compounding into audible drift between audio and visual playhead over
@@ -368,8 +398,11 @@ void playback_write_silence(float* const* channel_buffers, int channel_count,
                             int64_t stride, int64_t first, int64_t frames);
 
 // THE RENDER BODY. Copy `frame_count` output frames at the current output rate,
-// advancing the cursor. Stops early and fills the remainder with
-// silence if the cursor would pass the fill's window end. Writes the final
+// advancing the cursor. At the fill's window end it either WRAPS — a seated
+// loop target (`active_loop_begin` >= 0) subtracts the window's length from
+// the fractional position and goes on filling the same block, a wrap being no
+// terminal (2026-09-17) — or stops early and fills the remainder with silence
+// (a once-through window). Writes the final
 // source-cursor back to state.cursor before returning, with the cycle stamp
 // beside it; on natural end, also lowers the session word's playing bit — the
 // generation-qualified terminal (the field's comment), abandoned
@@ -408,15 +441,24 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
                                 int channels, const float* samples,
                                 int64_t total_frames, int64_t domain_offset);
 
-// play()'s portable half: translate the domain bounds to buffer-local, clamp,
-// publish the command packet (the window) under a fresh generation of the
-// session word, and anchor the predictor at (start, the publish instant).
-// Returns whether
+// play()'s and play_loop()'s portable half: translate the domain bounds to
+// buffer-local, clamp, publish the command packet (the window and its loop
+// target) under a fresh generation of the session word, and anchor the
+// predictor at (start, the publish instant). `loop_begin` is a DOMAIN
+// coordinate like the other two, or kPlaybackNoLoop for a once-through
+// window; a looping publish REFUSES when the loop would hold fewer than two
+// frames (`loop_begin >= end - 1` after the clamps) or when `start` lies
+// outside [loop_begin, end) — the caller forms the window right and this is
+// the belt. Returns whether
 // it published — false means the request was out of range and nothing was
 // written, so the backend must not start its device. The backend checks its
 // own device readiness BEFORE calling.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
-                           int64_t end_sample);
+                           int64_t end_sample, int64_t loop_begin);
+
+// THE WRAP'S ONE CONSUMER (contract at GuiPlayback::consume_loop_wrap): has
+// the render body wrapped at least once since the last call? Main thread only.
+bool   playback_consume_loop_wrap(GuiPlaybackState& state);
 
 void   playback_resync_predictor(GuiPlaybackState& state);
 bool   playback_is_playing(const GuiPlaybackState& state);

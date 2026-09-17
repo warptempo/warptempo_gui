@@ -13,7 +13,9 @@
 #include <cmath>
 
 // THE NAVIGATION RANGE (contract at the declaration): Home/End's jump bounds and
-// the load-time playhead, and since 2026-08-05 no playback consumer at all.
+// the load-time playhead; no GUI playback consumer since 2026-08-05, and ONE
+// playback consumer since 2026-09-17 — the car's loop window, which is this
+// range by ruling (the declaration).
 //
 // ITS BODY IS A FREE FUNCTION since 2026-08-15 and the member DELEGATES, so
 // there is still exactly ONE arithmetic: playhead_skip_landing_frame (below,

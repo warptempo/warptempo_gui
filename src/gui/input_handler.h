@@ -2818,7 +2818,12 @@ private:
     // modified forms never arrive here at all.
     void handle_plain_bare_keys(GuiKey key);
 
-    // THE Home / End JUMP, one body for every route that spells it. A form
+public:
+    // THE Home / End JUMP, one body for every route that spells it — PUBLIC
+    // since 2026-09-17 because the car transport composes it as the keys do
+    // (GuiCarTransport::car_previous / car_next: the head unit's Previous
+    // and Next with the render player closed are Home and End whole, an act
+    // owner's back-pointer and not a key road). A form
     // that would change NOTHING — no live transport to stop, no selection to
     // clear, no shown overlay to hide, a landing the cursor already rests on
     // (playhead_end_jump_actionable, the acts' one owner) — refuses at the
@@ -2831,12 +2836,15 @@ private:
     // landing owner for the piece's own ends instead of the trim bounds, which
     // is what the CTRL forms and the skip buttons' modified arm pass
     // (playhead_skip_landing_frame, app_state.h, states the two arms).
-    // FOUR CALLERS: the bare Home and End arms and their two CTRL arms. The
+    // SIX CALLERS (re-grepped 2026-09-17): the bare Home and End arms, their
+    // two CTRL arms, and the car transport's Previous and Next (the bare
+    // pair's form, `whole_piece` false). The
     // `h` history view's own pair is NOT one of them — it clears the MODE's
     // diff-flag focus where these clear the live selection, so it spells its
     // own body and shares only the landing owner, which its mode bit already
     // sends down the whole-piece arm.
     void run_playhead_end_jump(bool forward, bool whole_piece);
+private:
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
     // the commit-title editor, the bpm bracket editor, and (architect
@@ -4199,7 +4207,13 @@ private:
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
     // Ctrl+Q). It serves all six editor kinds, top strip included (the list is
     // text_editor::Kind).
+    // THE PREDICATE IS PUBLIC since 2026-09-17 for one outside reader, the
+    // car transport's gate (GuiCarTransport::admits: a head-unit button is
+    // dropped under a dialog editor, the tenth calling function); the key
+    // gate beside it stays private.
+public:
     bool modal_dialog_editor_active() const;
+private:
     bool modal_editor_key_blocked(GuiKey key, GuiInputState mods);
 
     // -- THE RENDER PLAYER'S INPUT HALF (2026-08-28) ------------------------

@@ -4351,22 +4351,25 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         stream ends the act exactly as a rest does, on a card carrying the
 //         launch gate's own sentence. That arm is a CALLER here, like
 //         Shift+Space's own stop edge, and not a fifth owner.
-//     (2) THE VIEW-END LAUNCH ENTRY, GuiPlaybackLifecycle::launch_playback_from,
-//         ahead of its delegation to the one launch body, refused or not
+//     (2) THE USER LAUNCH ENTRIES — GuiPlaybackLifecycle::launch_playback_from,
+//         the view-end entry, and since 2026-09-17 car_toggle_playback, the
+//         head unit's play with the render player closed — each ahead of its
+//         delegation to the one launch body, refused or not
 //         (2026-09-01; the launch body's own head from 2026-08-26 until then):
 //         every launch of the user's own transport begins a fresh session, so
 //         a scrub launched DURING ONE OF THE RESTS — or inside the sub-tick
 //         window between a play's natural end and the tick that observes it
 //         (bare Space takes the stop side there, reading `phase != Idle` as
 //         transport-live) — can never be mistaken for the act's own play at
-//         ITS natural end. EVERY NON-ACT LAUNCH PASSES THROUGH THIS ENTRY (its
-//         two callers are Space's play edge and the scrub launch, and the
-//         launch body's only other caller is launch_bounded_audition, the
+//         ITS natural end. EVERY NON-ACT LAUNCH PASSES THROUGH ONE OF THESE
+//         TWO ENTRIES (the view-end entry's two callers are Space's play edge
+//         and the scrub launch; the car's entry is the head unit's play; and
+//         the launch body's only other caller is launch_bounded_audition, the
 //         act's own), and the act's launch needs no clear because the act IS
 //         the standing phase, written by launch_phase before it calls the
 //         body DIRECTLY — the body itself reads no phase and forks by no act;
-//         the distinction is structural alone, this entry being the only
-//         road a non-act launch ever takes.
+//         the distinction is structural alone, these two entries being the
+//         only roads a non-act launch ever takes.
 //     (3) THE TARGET_RENDER CLEARS, three of them, because those bodies
 //         deactivate the scanner without the stop body and the tick's
 //         natural-end branch therefore never sees their session end: trigger()'s
@@ -4480,19 +4483,21 @@ struct AppState {
     // one stands (redesign_button_selected's IconFollow arm, which carries the
     // fork).
     //
-    // THE WRITER INVENTORY (re-greped 2026-09-11; this is the ONE
+    // THE WRITER INVENTORY (re-greped 2026-09-17; this is the ONE
     // authoritative copy — the sites carry a class statement plus a pointer
     // here).
-    // SET BY THE LAUNCH, which is the one-shot's whole mechanism:
-    // GuiPlaybackLifecycle::launch_playback_from's SUCCESS TAIL copies the
-    // armed lamp above into this field and puts the lamp out. Its two callers
-    // are the two project-audio launch roads — Space's play arm
-    // (toggle_playback) and the scrub's launch (scrub_launch_at) — and a
-    // REFUSED launch reaches no tail, so it consumes nothing and leaves the
-    // lamp lit for the next attempt. THE A/B AUDITION'S FOUR PLAYS NEVER PASS
-    // THAT ENTRY (launch_bounded_audition goes straight to the launch body),
-    // so the act neither spends the lamp nor chases: each of its bounded plays
-    // is framed by its own `c`.
+    // SET BY THE LAUNCH, which is the one-shot's whole mechanism: the one
+    // spend body GuiPlaybackLifecycle::spend_follow_lamp copies the armed
+    // lamp above into this field and puts the lamp out, from TWO SUCCESS
+    // TAILS — launch_playback_from's, whose two callers are Space's play arm
+    // (toggle_playback) and the scrub's launch (scrub_launch_at), and
+    // car_toggle_playback's, the head unit's play with the render player
+    // closed (2026-09-17) — the three project-audio launch roads; a REFUSED
+    // launch reaches no tail, so it consumes nothing and leaves the lamp lit
+    // for the next attempt. THE A/B AUDITION'S FOUR PLAYS PASS NEITHER TAIL
+    // (launch_bounded_audition goes straight to the launch body), so the act
+    // neither spends the lamp nor chases: each of its bounded plays is framed
+    // by its own `c`.
     // SET AND CLEARED BY THE IN-FLIGHT ARM of GuiPlaybackLifecycle::
     // toggle_follow, bare `f`'s (and its button's) other half: with a project
     // play in flight the press turns THIS bit on or off for that play and
@@ -8340,8 +8345,9 @@ struct AppState {
     //              slider, dead while stopped): a press on the track or on the
     //              handle then is a consumed no-op — no seek and no arm — and
     //              the painter still draws the handle at the resting point;
-    //   `repeat_one` THE ONE SANCTIONED EXCEPTION TO NOTHING LOOPS (architect
-    //              2026-08-28, R26): a two-state toggle — off, or repeat the
+    //   `repeat_one` ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
+    //              2026-08-28, R26; the other is the car's loop of the trim
+    //              on the project transport, 2026-09-17): a two-state toggle — off, or repeat the
     //              ONE item — with no repeat-all ("the user can just press
     //              play once the playlist finishes... repeat one is much more
     //              useful"). While it stands, the natural end replays the item
@@ -10660,11 +10666,16 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // arithmetic instead of hand-spelling it three times. `forward` selects End
 // over Home. Defined in viewport.cpp beside the navigation range it reads.
 //
-// TWO READERS SINCE 2026-08-30: the shared jump body run_playhead_end_jump
-// (input_key_dispatch.cpp), which every Home / End route funnels through, and
+// THREE READERS as re-greped 2026-09-17: the shared jump body
+// run_playhead_end_jump
+// (input_key_dispatch.cpp), which every Home / End route funnels through;
 // playhead_end_jump_actionable (below), the jump acts' one "would this form
 // change anything" owner, through which the two SKIP buttons' FACE and the
-// acts' own no-op refusals read this compare rather than reading it bare.
+// acts' own no-op refusals read this compare rather than reading it bare; and
+// car_transport_artist (car_transport.cpp), which SPELLS the bare pair as the
+// head unit's bottom line — the trim span the console shows and the two
+// landings its Previous and Next reach, agreeing by construction because they
+// are the same answer.
 // THE FACE READER IS THE ONE THIS WAS HOISTED FOR, and its shape moved three
 // times: the buttons read the bare compare for one revision of 2026-08-15
 // and the architect ruled that half out the same day — a Home / End press is
@@ -14549,6 +14560,21 @@ inline bool redesign_button_enabled(const AppState& a,
 // whose editor is a transient modal SESSION rather than a resting mode (it
 // cannot rest open, and `m` never reaches dispatch while it is up), so lighting
 // it would advertise a mode this product does not have.
+// THE VIEW PAIR'S ONE SPELLING (2026-09-17): "<audio>+<column>" — `S+M`,
+// `T+W` — the label the view bar's four buttons paint (kViewBarButtons,
+// paint_handler.cpp, each entry naming its two letters and composing here)
+// and the title the car transport publishes for the active views
+// (car_transport_title, car_transport.cpp). One composer, so a respelling is
+// one edit; the letters are the two axes' own (`active_audio_view`,
+// `active_markers_view`).
+inline std::string view_pair_label(char audio, char column) {
+    std::string s;
+    s += audio;
+    s += '+';
+    s += column;
+    return s;
+}
+
 inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     // (ROW 3'S TABS HAD A MODE OVERRIDE HERE from 2026-08-05 to 2026-08-18,
     // ranked above this switch: while the `h` view stood the row was the WALK

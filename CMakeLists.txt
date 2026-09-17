@@ -201,6 +201,13 @@ set(WARPTEMPO_GUI_SOURCES
     # output folders, on the one playback engine. GUI-ONLY like every
     # painting and playback concern; it calls the audio_io WAV reader.
     src/gui/render_player.cpp
+    # THE CAR TRANSPORT (2026-09-17): the head unit's SECOND owner — the
+    # cluster that drives the project's own transport while the render player
+    # is closed, and publishes the console's three lines from the tab, the
+    # views and the trim. GUI-only for the player's reason, and portable: the
+    # Wayland platform's media push is a no-op and its command hook never
+    # fires, so this file compiles into both arms and has an effect on one.
+    src/gui/car_transport.cpp
     src/gui/target_render.cpp
     src/gui/render_cache.cpp
     src/gui/paint_handler.cpp

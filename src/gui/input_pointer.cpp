@@ -1643,8 +1643,9 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // session and launches a fresh one from wherever it fell, re-capturing its
 // end_sample at that launch — so a scrub after a mid-session
 // trim edit auditions the NEW window instead of riding a stale capture. The
-// audition then plays ONCE to that end and stops; there is no looping anywhere
-// in the product.
+// audition then plays ONCE to that end and stops; no GUI launch loops (the
+// two sanctioned exceptions are the render player's Repeat One and the car's
+// loop of the trim, neither a road from here).
 // The old exact-same-frame skip is GONE with the relaunch it existed to
 // avoid: it kept an in-place audition uninterrupted, and the playing case now
 // always stops, so there is no in-place audition left to preserve — and it

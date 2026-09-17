@@ -1147,8 +1147,10 @@ void GuiRenderPlayer::on_natural_end() {
     // every live transport, and ahead of the two arms below, which play again
     // and take LIVE with them.
     rp.transport = Transport::Idle;
-    // REPEAT ONE, THE ONE SANCTIONED EXCEPTION TO NOTHING LOOPS (architect
-    // 2026-08-28, R26): the lamp replays THIS item from its start through the
+    // REPEAT ONE, ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
+    // 2026-08-28, R26; the other is the car's loop of the trim on the project
+    // transport, 2026-09-17, which reaches no player audio): the lamp
+    // replays THIS item from its start through the
     // player's own play road — the same road a user's Play takes, so the item
     // stays the transport's, the head unit is published at the edge as any
     // play publishes, and there is no second launch here. It outranks the
@@ -1469,21 +1471,27 @@ void GuiRenderPlayer::close() {
     // which IS the band's standing predicate answering false.
     app.folder_overlay = AppState::FolderOverlay{};
     viewport.invalidate_all();
-    // The head unit: the session goes INACTIVE with the mode, and the audio
-    // focus is abandoned on the consuming side (the inventory at the
-    // declaration). THIS IS THE ONE STOPPED PUSH, and what a console shows
-    // AFTER it — the architect's Accord holds a "Track 01" with live controls
-    // — is the console's own idle picture over a connected A2DP source, not
-    // this product's: the push calls setActive(false), so there is no session
-    // of ours left for it to read.
-    publish_media_state();
+    // THE CLOSE PUSHES NOTHING (architect 2026-09-17). It pushed the session
+    // INACTIVE until that day — the product's one STOPPED state — and with
+    // the car transport standing behind this player that push would hand the
+    // head unit back a dead session while the app went on running. THE
+    // SESSION IS THE APP'S FOR ITS LIFE now: the mode bit coming down here is
+    // simply the wire changing owners, and GuiCarTransport::tick takes it
+    // back on the FIRST TICK AFTER THIS CLOSE, its falling edge pushing the
+    // project transport's own three lines (up to one tick of the player's
+    // last picture on the console, accepted). No STOPPED state is pushed
+    // anywhere while the app runs; on Android the activity's onDestroy is
+    // what releases the session, and on Wayland the push is a no-op
+    // throughout.
 }
 
 // -- The car ---------------------------------------------------------------------
 
 void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     const AppState::RenderPlayer& rp = app.render_player;
-    if (!rp.active) return;       // the session is inactive; belt and braces
+    // Belt: the hook's fork on this very bit is the partition, so a command
+    // reaching here with the mode down was queued before the close drained.
+    if (!rp.active) return;
     if (app.prompt.active) return; // a question on the screen is answered there
 
     // EVERY COMMAND IS A DIRECT ACT ON THIS CLUSTER (architect 2026-09-12,
@@ -1608,6 +1616,8 @@ void GuiRenderPlayer::publish_media_state() {
     // it what it already believes and its one button becomes a plain toggle.
     // `playing` stays the TRUE transport bit and is read there for AUDIO FOCUS
     // ALONE. The rule and its reasons are at the declaration.
+    // Both read the mode bit, which is TRUE on every road that reaches this
+    // body (the belt below says why the arm is still here).
     st.session_active = rp.active;
     st.playing        = rp.active && rp.transport == Transport::Live;
     // THE ALBUM IS THE PROJECT'S NAME (architect 2026-09-12, from the car,
@@ -1615,12 +1625,21 @@ void GuiRenderPlayer::publish_media_state() {
     // title, dim, and the artist line BELOW it, so the dim top line takes the
     // project — the least important of the three names on the head unit.
     st.album          = app.project_name;
-    // THE CLOSE'S PUSH IS THE ONE EMPTY TITLE and the one STOPPED state; every
-    // arm below it names something.
-    if (!rp.active) {
-        gui.publish_media_state(st);
-        return;
-    }
+    // THE MODE-DOWN ARM PUSHES NOTHING AND IS THE BELT (architect
+    // 2026-09-17). It carried the product's ONE STOPPED state and its one
+    // empty title/album pair until that day, pushed by close(); the close now
+    // pushes nothing at all and the car transport's tick takes the wire back
+    // (the reasoning is at close()'s tail), so no road reaches this body with
+    // the mode down — re-grepped: the eight remaining call sites are
+    // rebuild_rows, move_highlight, set_highlight, play_wav, toggle_pause,
+    // seek_to (twice) and the stop body's player fork, and that fork is
+    // itself gated on the mode bit. The arm stays because the fault it
+    // guards is SILENT AND PERMANENT: a push with `session_active` false
+    // calls setActive(false) on the sliver's session, and nothing in this
+    // product would ever put it back — the car transport's comparator would
+    // see no change of its own to push, so the head unit would stay dead for
+    // the rest of the project's life. One branch against that.
+    if (!rp.active) return;
     if (rp.transport == Transport::Live && !rp.item.empty() && rp.frames > 0) {
         // THE ITEM, with the clock at the engine's own cursor
         // (render_player_position) and its own length. THE ARTIST IS THE

@@ -198,10 +198,13 @@ void playback_render_block(GuiPlaybackState& state,
         if (g1 == playback_command_seq(generation)) {
             const int64_t start = state.command_start.load(std::memory_order_relaxed);
             const int64_t end   = state.command_end.load(std::memory_order_relaxed);
+            const int64_t loop_begin =
+                state.command_loop_begin.load(std::memory_order_relaxed);
             std::atomic_thread_fence(std::memory_order_acquire);
             if (state.command_seq.load(std::memory_order_relaxed) == g1) {
                 state.active_generation = generation;
                 state.active_end        = end;
+                state.active_loop_begin = loop_begin;
                 state.fractional_cursor = static_cast<double>(start);
             }
         }
@@ -211,30 +214,68 @@ void playback_render_block(GuiPlaybackState& state,
             return;
         }
     }
-    // THE WINDOW END IS THE FILL'S OWN: consumed with the packet at the seat
-    // and kept private since, so a publish landing mid-fill cannot move it
-    // under the loop below.
-    const int64_t end = state.active_end;
+    // THE WINDOW IS THE FILL'S OWN: consumed with the packet at the seat and
+    // kept private since, so a publish landing mid-fill cannot move the end
+    // or the loop target under the loop below.
+    const int64_t end        = state.active_end;
+    const int64_t loop_begin = state.active_loop_begin;
 
     bool natural_end = false;
-    // Running fractional source position — monotonically advancing: with
-    // looping removed (architect 2026-07-30) there is no re-anchoring inside
-    // this loop, so the position is a plain drift-free accumulation of
-    // `increment` from the last buffer's carry.
+    // Running fractional source position. ON A ONCE-THROUGH WINDOW IT IS
+    // MONOTONIC — every GUI launch (architect 2026-07-30, looping removed
+    // from every audition): no re-anchoring inside this loop, a plain
+    // drift-free accumulation of `increment` from the last buffer's carry.
+    // ON A LOOPING WINDOW THE ONE RE-ANCHOR IS THE WRAP (2026-09-17, the
+    // car's loop of the trim): at the window's end the position is moved
+    // back by exactly the window's length, fractional part kept, so the
+    // increment's phase carries across the wrap and no sample is dropped or
+    // doubled — the accumulation stays drift-free across any number of laps.
     double pos = state.fractional_cursor;
 
     int64_t n = 0;
     for (; n < frame_count; ++n) {
-        const double  floor_pos = std::floor(pos);
-        const int64_t src_floor = static_cast<int64_t>(floor_pos);
-        // Reaching or passing the window end (or the buffer total) ends the
-        // session — the NATURAL END, the only terminal this fill has now that
-        // the loop-wrap arm is gone. Fill the remainder with silence and stop.
+        double        floor_pos = std::floor(pos);
+        int64_t       src_floor = static_cast<int64_t>(floor_pos);
+        // Reaching or passing the window end (or the buffer total) is either
+        // THE WRAP or THE NATURAL END, forked on the seated loop target FIRST.
+        // THE WRAP: `pos -= (end - loop_begin)` as a double, and the same
+        // block goes on filling from the wrapped position — a wrap is no
+        // terminal, so the natural-end arm below is unreachable while the
+        // window loops. It cannot spin: the publish refused any loop with
+        // `loop_begin >= end - 1`, so the window is at least two frames and
+        // every subtraction moves `pos` down by that much; the position had
+        // passed `end` by less than one increment, so ONE subtraction lands
+        // it in [loop_begin, end) at every rate ratio the two devices
+        // produce (the increment is at most ~1), and the do-while is the
+        // belt for an increment wider than a two-frame window (a 4x source
+        // rate on a 48 k stream), where it takes a second step and still
+        // lands inside the window. The `total` clamp stays as the natural
+        // end's — the wrap target is inside the buffer by the publish's
+        // clamps, and `end <= total`, so a wrapped position can never sit at
+        // or past `total` either. The count is a relaxed +1 for the main
+        // thread's consume (the field's comment, playback_common.h). THE CUT
+        // IS RAW: no crossfade, no ramp at the seam — the ruling that built
+        // the first loop stands ("clicks accepted"), the trim's ends being
+        // the user's own to place.
         if (src_floor >= end || src_floor >= total) {
-            natural_end = true;
-            playback_write_silence(channel_buffers, channel_count, stride,
-                                   n, frame_count - n);
-            break;
+            if (loop_begin >= 0) {
+                const double window = static_cast<double>(end - loop_begin);
+                do {
+                    pos -= window;
+                } while (pos >= static_cast<double>(end));
+                state.loop_wraps.store(
+                    state.loop_wraps.load(std::memory_order_relaxed) + 1,
+                    std::memory_order_relaxed);
+                floor_pos = std::floor(pos);
+                src_floor = static_cast<int64_t>(floor_pos);
+            } else {
+                // THE NATURAL END, the once-through window's one terminal.
+                // Fill the remainder with silence and stop.
+                natural_end = true;
+                playback_write_silence(channel_buffers, channel_count, stride,
+                                       n, frame_count - n);
+                break;
+            }
         }
 
         const int64_t src_ceil  = src_floor + 1;
@@ -242,6 +283,9 @@ void playback_render_block(GuiPlaybackState& state,
 
         const float* sp_floor = state.samples +
                                 static_cast<size_t>(src_floor) * src_channels;
+        // THE LAST-SAMPLE FALLBACK, on a looping window too: the frame before
+        // the wrap interpolates toward itself rather than toward the loop's
+        // first frame — the raw cut above, the same ruling, said once here.
         const bool ceil_ok = (src_ceil < end && src_ceil < total);
         const float* sp_ceil = ceil_ok
             ? state.samples + static_cast<size_t>(src_ceil) * src_channels
@@ -328,12 +372,19 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
     state.command_seq.store(0, std::memory_order_relaxed);
     state.command_start.store(0, std::memory_order_relaxed);
     state.command_end.store(0, std::memory_order_relaxed);
+    state.command_loop_begin.store(kPlaybackNoLoop, std::memory_order_relaxed);
     state.stamp_gen.store(0, std::memory_order_relaxed);
     state.stamp_cursor.store(0, std::memory_order_relaxed);
     state.stamp_ns.store(0, std::memory_order_relaxed);
     state.stamp_generation.store(0, std::memory_order_relaxed);
+    // THE WRAP COUNTER AND ITS MAIN-THREAD MIRROR reset together here, the
+    // one site with no callback to race (rebind leaves both: a count
+    // difference tolerates any base, the field's comment).
+    state.loop_wraps.store(0, std::memory_order_relaxed);
+    state.loop_wraps_seen   = 0;
     state.active_generation = 0;
     state.active_end        = 0;
+    state.active_loop_begin = kPlaybackNoLoop;
     state.fractional_cursor = 0.0;
     state.output_rate.store(0, std::memory_order_relaxed);
 
@@ -376,8 +427,8 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // one — "two continuous streams that we sort of happen to pick up here and
 // there — sometimes they match, sometimes they don't, and that's exactly
 // what they are". EVERY LAUNCH ROAD SHARES IT: bare Space, the waveform
-// scrub, the A/B audition's four bounded plays and the render player's own
-// launch all publish through this one body.
+// scrub, the A/B audition's four bounded plays, the car's loop of the trim
+// and the render player's own launch all publish through this one body.
 //
 // COMPENSATION WAS BUILT AND ROLLED BACK (2026-09-01/02, removed
 // 2026-09-03). The mechanism — the anchor moved onto the audio thread's
@@ -398,7 +449,7 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // not asked it to measure. The panel that is to offer them on demand is a
 // later arc and leaves no stub here.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
-                           int64_t end_sample) {
+                           int64_t end_sample, int64_t loop_begin) {
     if (!state.samples || state.total_frames <= 0) return false;
     // Domain -> buffer-local at the API boundary (playback.h head comment).
     // Everything below — the clamps, the early returns, the command packet
@@ -411,6 +462,21 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     if (start_sample >= state.total_frames) return false;
     if (end_sample > state.total_frames) end_sample = state.total_frames;
     if (end_sample <= start_sample) return false;
+    // THE LOOP TARGET (2026-09-17), translated and clamped like the other
+    // two, then REFUSED where the render body could not honour it: a loop of
+    // fewer than two frames (`loop_begin >= end - 1`, the launch body's own
+    // two-frame remainder rule — a one-frame loop is an impulse train and a
+    // zero-frame one would spin the fill) and a start outside [loop_begin,
+    // end) (the wrap subtracts the window's length, so a start ahead of the
+    // loop would wrap to somewhere the window never published). The caller
+    // forms the window right; this is the belt, and a refused publish
+    // writes nothing, exactly as the range refusals above.
+    if (loop_begin != kPlaybackNoLoop) {
+        loop_begin -= state.domain_offset;
+        if (loop_begin < 0) loop_begin = 0;
+        if (loop_begin >= end_sample - 1) return false;
+        if (start_sample < loop_begin) return false;
+    }
 
     // THE NEW SESSION'S GENERATION, read off the word as it stands — the
     // audio thread's only write to this word is its terminal exchange, which
@@ -422,21 +488,28 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 
     // THE COMMAND PACKET, written under its sequence word for exactly this
     // generation (the packet's ordering argument, playback_common.h): busy,
-    // a release fence, the window, complete. The main thread is the packet's
-    // one writer, so the busy store and the complete store are this block's
-    // alone; the fill that reads the complete store under the gate's own
-    // generation has the whole window.
+    // a release fence, the window — its THREE data stores, the loop target
+    // the third — complete. The main thread is the packet's one writer, so
+    // the busy store and the complete store are this block's alone; the fill
+    // that reads the complete store under the gate's own generation has the
+    // whole window.
     state.command_seq.store(playback_command_seq(generation) | 1u,
                             std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_release);
     state.command_start.store(start_sample, std::memory_order_relaxed);
     state.command_end.store(end_sample, std::memory_order_relaxed);
+    state.command_loop_begin.store(loop_begin, std::memory_order_relaxed);
     state.command_seq.store(playback_command_seq(generation),
                             std::memory_order_release);
 
     // THE MAIN THREAD'S MIRROR of the window (the fields' comment) and the
     // integer `cursor`, set here so the main thread sees a consistent
-    // snapshot immediately (before the next buffer runs).
+    // snapshot immediately (before the next buffer runs). THE MIRROR CARRIES
+    // NO LOOP TARGET: the predictor clamps at `end_sample` as on any window,
+    // and after a wrap it is the RESYNC — taken by the tick that consumes
+    // the wrap, anchoring on the cycle stamp whose cursor has wrapped — that
+    // puts the line back at the loop's start plus the drift (playback.h's
+    // design note; the wrap is a resync event).
     state.start_sample.store(start_sample, std::memory_order_relaxed);
     state.end_sample.store(end_sample, std::memory_order_relaxed);
     state.cursor.store(start_sample, std::memory_order_relaxed);
@@ -473,6 +546,19 @@ void playback_resync_predictor(GuiPlaybackState& state) {
     if (!stamp_is_sessions(s, state.session.load(std::memory_order_acquire)))
         return;
     store_anchor(state, stamp_anchor(s));
+}
+
+// THE WRAP'S CONSUMER: a count difference against the main thread's private
+// mirror, so however many wraps the audio thread took since the last call
+// the answer is one "yes" and the mirror catches up whole (the field's
+// comment, playback_common.h). Relaxed is enough — the caller's next act is
+// a resync, which reads the cycle stamp under its own seqlock, and nothing
+// here orders a buffer read.
+bool playback_consume_loop_wrap(GuiPlaybackState& state) {
+    const int64_t wraps = state.loop_wraps.load(std::memory_order_relaxed);
+    if (wraps == state.loop_wraps_seen) return false;
+    state.loop_wraps_seen = wraps;
+    return true;
 }
 
 bool playback_is_playing(const GuiPlaybackState& state) {
@@ -655,9 +741,14 @@ void playback_rebind_buffer(GuiPlaybackState& state, const float* samples,
     state.command_seq.store(0, std::memory_order_relaxed);
     state.command_start.store(0, std::memory_order_relaxed);
     state.command_end.store(0, std::memory_order_relaxed);
+    state.command_loop_begin.store(kPlaybackNoLoop, std::memory_order_relaxed);
     state.active_generation = 0;
     state.active_end        = 0;
+    state.active_loop_begin = kPlaybackNoLoop;
     state.fractional_cursor = 0.0;
+    // (The wrap counter and its mirror are NOT reset here — a main-thread
+    // count compare tolerates any base, and only bind, with no callback to
+    // race, zeroes the pair; the field's comment.)
     // The zeroed pair is the readers' "before the first anchor" state: nothing
     // has been published against this buffer, so the line rests at 0 until a
     // play() writes a real launch anchor. The session word is left alone —

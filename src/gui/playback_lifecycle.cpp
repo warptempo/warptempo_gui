@@ -361,7 +361,8 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // which entry a launch reached it through. The edge inventory is at
     // GuiAuditionSequence (app_state.h), owner (2).
     clear_audition_sequence(app);
-    if (!launch_playback_window(launch_pos, active_view_play_end()))
+    if (!launch_playback_window(launch_pos, active_view_play_end(),
+                                kPlaybackNoLoop))
         return false;
     // THE ONE-SHOT IS SPENT HERE, in the success tail (architect 2026-09-11):
     // the lamp says "the next play follows", this IS that next play, so the
@@ -370,10 +371,76 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // — and the A/B audition's plays enter the body directly, which is what
     // keeps the act from spending a lamp it does not use. A REFUSED launch
     // returned above and consumed nothing: the lamp stays lit for the press
-    // that does play.
+    // that does play. The spend is one body since 2026-09-17, shared with the
+    // car's launch (car_toggle_playback), the third project-audio road.
+    spend_follow_lamp();
+    return true;
+}
+
+// The follow lamp's spend (contract at the declaration): the two words the
+// launch tails write, in one place.
+void GuiPlaybackLifecycle::spend_follow_lamp() {
     app.follow_engaged = app.follow_armed;
     app.follow_armed   = false;
-    return true;
+}
+
+// THE CAR'S SPACE (contract and the ruling at the declaration; architect
+// 2026-09-17). The stop arm is toggle_playback's own fork verbatim — the
+// sub-tick disagreement between the scanner bit and the audio thread's flag
+// recorded there is this arm's too — and PAUSE IS STOP: the one stop body,
+// nothing remembered.
+void GuiPlaybackLifecycle::car_toggle_playback() {
+    if (playback.is_playing() ||
+        app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle) {
+        stop_playback_if_playing();
+        return;
+    }
+    // The play arm's prologue is toggle_playback's, in its order: the
+    // defensive chase clear ahead of every gate, then the device reopened at
+    // the press (carding a failed reopen; the launch body's belt then finds
+    // the stream this one opened, a no-op). The pre-sum end gate of
+    // toggle_playback's target arm has no counterpart here: there is no
+    // offset to add, so the start below is an already-formed frame and the
+    // launch body's own playable gate is the whole position verdict.
+    app.follow_engaged = false;
+    if (!playback.ensure_device_available_for_play()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kPlaybackDeviceUnavailableCard);
+        return;
+    }
+    // THE LOOP WINDOW IS THE ACTIVE DOMAIN'S TRIM — Viewport::trim_range, the
+    // navigation range Home and End land on, so the car's play and its two
+    // skips agree on the window by construction. Clamped into the bound
+    // buffer's own domain as a belt: in source view the buffer is the song
+    // and the clamp is an identity; in target view the buffer IS the trim
+    // window (the preview covers it and nothing else), so the mapped trim
+    // and the buffer's domain agree to the rounding of one map read, and the
+    // clamp holds the window inside what can be played.
+    auto [begin, end] = viewport.trim_range();
+    if (begin < playback.domain_begin()) begin = playback.domain_begin();
+    if (end > playback.domain_end())     end   = playback.domain_end();
+    // THE START: the resting playhead when at least two frames remain before
+    // the loop's end (the launch body's two-frame remainder rule, asked here
+    // so the fork can answer with the trim's begin instead of a refusal),
+    // else THE TRIM'S BEGIN — "even if it's played from the last frame of
+    // the trim, as it would be after the user presses Next": Next-then-Play
+    // plays from the top. NO LEAD-IN OFFSET (the declaration).
+    const int64_t playhead = app.playhead_cursor_sample;
+    const int64_t start =
+        (begin <= playhead && playhead <= end - 2) ? playhead : begin;
+    // THE USER-LAUNCH CLEAR, owner (2) at GuiAuditionSequence: this entry is
+    // the second road into the launch body that is not the act's, and it
+    // clears ahead of the delegation, refused or not, exactly as
+    // launch_playback_from does. (The stop arm above already ends a standing
+    // act — a rest is transport-live — so this reaches the sub-tick window
+    // alone, as the view-end entry's clear does.)
+    clear_audition_sequence(app);
+    // A trim under two frames refuses inside the body — playback_launch_
+    // playable on `start` — and the publish's own loop belt refuses the same
+    // window one layer down; both silent, the benign one-dimensional class.
+    if (!launch_playback_window(start, end, begin)) return;
+    // THE LAMP IS SPENT: the car's play is the next project-audio launch.
+    spend_follow_lamp();
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -404,20 +471,23 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     // NO SEQUENCE CLEAR ON THIS ROAD (2026-09-01): this entry is the A/B
     // audition's alone (one caller, GuiAbAudition::launch_phase), which
     // arrives with the phase it is launching ALREADY WRITTEN. The clear that
-    // every user launch takes is the
-    // view-end entry's (launch_playback_from), the one road into the body
-    // that is not the act's.
-    return launch_playback_window(start, end);
+    // every user launch takes is the two user entries' (launch_playback_from
+    // and, since 2026-09-17, car_toggle_playback), the roads into the body
+    // that are not the act's.
+    return launch_playback_window(start, end, kPlaybackNoLoop);
 }
 
 // THE ONE LAUNCH BODY: validate `start` — an ABSOLUTE position in the active
 // PAINT domain — against the active view's window, seed the scanner, and play
-// [start, end). Returns whether it launched; its two refusals — the dead
+// [start, end), once or looping to `loop_begin` (the parameter's contract at
+// the declaration). Returns whether it launched; its two refusals — the dead
 // device first, then the launch position — each say so on a notification card
 // (2026-08-30; the "nothing to audition" family, which said nothing until
-// then). Two callers: the view-end launch above
-// (Space's play edge and the scrub, `end` = the view's end) and the bounded
-// audition (`end` = start + span, clamped). This body never writes the
+// then). Three callers: the view-end launch above
+// (Space's play edge and the scrub, `end` = the view's end), the bounded
+// audition (`end` = start + span, clamped) and the car's launch
+// (car_toggle_playback, `end` = the trim's end and `loop_begin` its begin,
+// 2026-09-17). This body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
 // Callers run the defensive follow-override clear before delegating.
@@ -436,7 +506,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // extra multiplier on top would defeat it. That reasoning outlived the feature:
 // the key retired, so every view plays at the source's own rate and there is
 // nothing left to force.)
-bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
+bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
+                                                  int64_t loop_begin) {
     // THE A/B AUDITION IS NAMED BY ITS STATE HERE, NOT BY ITS ENTRY (architect
     // 2026-09-01): this body clears no sequence. A user launch arrives with
     // the sequence already Idle — the view-end entry launch_playback_from
@@ -457,14 +528,19 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // serves both, and follow_scroll_if_needed compares the scanner
     // against the full-domain viewport with no wrong-domain leak.
     //
-    // NO LOOPING (architect 2026-07-30, "looping behavior is not that useful.
-    // ok to remove all looping" — re-ruling the 2026-07-19 loop ruling dead).
-    // EVERY audition plays once from `start` to `end` and stops there. The launch
-    // verdict, the per-view loop starts, the audio-callback wrap, the wrap
-    // counter and its predictor resync are all gone with it; the natural-end
-    // teardown is what remains and is what every session now takes. `end` is
-    // the view's end for Space and the scrub and `start + kAuditionMs` for the
-    // bounded audition — a different end, the same once-to-its-end play.
+    // NO LOOPING ON ANY GUI ROAD (architect 2026-07-30, "looping behavior is
+    // not that useful. ok to remove all looping" — re-ruling the 2026-07-19
+    // loop ruling dead, and standing for every launch the GUI itself makes):
+    // EVERY audition plays once from `start` to `end` and stops there — the
+    // launch verdict and the per-view loop starts of 2026-07-19 stayed gone,
+    // and `end` is the view's end for Space and the scrub and `start +
+    // kAuditionMs` for the bounded audition, a different end, the same
+    // once-to-its-end play. THE ONE ROAD THAT PASSES A LOOP TARGET IS THE
+    // CAR'S (architect 2026-09-17, car_toggle_playback — the head unit's play
+    // with the render player closed loops the trim forever): `loop_begin`
+    // >= 0 takes the engine's looping face, whose audio-callback wrap, wrap
+    // counter and predictor resync are re-done inside today's packet engine
+    // (playback_common.h); kPlaybackNoLoop, every other caller, takes play().
     //
     // EVERY REFUSAL IS THE ONE PREDICATE (playback_launch_playable,
     // app_state.h — hoisted out of this body 2026-08-15 so the bottom row's
@@ -574,7 +650,11 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
     // deactivates the scanner), so no stale line can survive a relaunch.
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
-    playback.play(start, end);
+    if (loop_begin == kPlaybackNoLoop) {
+        playback.play(start, end);
+    } else {
+        playback.play_loop(start, end, loop_begin);
+    }
     return true;
 }
 
@@ -611,6 +691,10 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end) {
 // caller clears it too immediately AFTER this returns (having already run
 // move_playhead_to before), so the two agree by construction whichever arm
 // runs — an aiming click ends the chase either way.
+// AND IT ENDS THE CAR'S LOOP (2026-09-17): both arms call play(), the
+// once-through face, so a placement click under a looping car play reseeks
+// into a session that plays to the view's end and stops — the loop is a
+// property of the car's launch, not a lamp (car_toggle_playback).
 void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     // (NO A/B AUDITION CLEAR HERE: the act's clear is the MOVEMENT OWNER's, one
     // call up. This body's one caller — place_playhead_at_click_column,

@@ -517,9 +517,13 @@ public:
     // run on are the backend's — so the seam carries exactly two doors: a hook
     // the loop fires for each button the platform received, and a push the
     // GUI makes when what the display should show has changed. The
-    // vocabulary is gui_media.h's; the consumer is the render player alone
-    // (GuiRenderPlayer::on_media_command / publish_media_state), which holds
-    // the platform for exactly these two calls.
+    // vocabulary is gui_media.h's; THE CONSUMERS ARE TWO SINCE 2026-09-17,
+    // and main.cpp's hook forks the commands between them on the render
+    // player's mode bit: the PLAYER while it stands
+    // (GuiRenderPlayer::on_media_command / publish_media_state) and the
+    // PROJECT TRANSPORT while it is closed (GuiCarTransport::on_media_command
+    // / tick). Each holds the platform for exactly these two calls, and
+    // exactly one of them is the live publisher at any moment.
     //
     // THE HOOK IS FIRED ON THE LOOP'S OWN THREAD, one call per command, in
     // arrival order, from the same pass that dispatches the worker
@@ -541,9 +545,11 @@ public:
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
 
     // THE STATE PUSH: what the head unit should show now. Called from the loop
-    // thread only, at the edges its one owner inventories; never per tick
-    // (the consuming side advances a playing position on its own clock from
-    // the last push). ON THIS BACKEND IT IS A NO-OP BODY, which would be wrong
+    // thread only — at the edges the render player inventories while it
+    // stands, and, with it closed, from the car transport's per-tick
+    // comparator, which calls only when a field changed, so neither owner
+    // pushes per tick (the consuming side advances a playing position on its
+    // own clock from the last push). ON THIS BACKEND IT IS A NO-OP BODY, which would be wrong
     // for a producer on this platform and is exactly right for the one it
     // has, which is none. Android's body is the JNI call up into the Java
     // sliver, which builds the session's metadata and playback state from it,
