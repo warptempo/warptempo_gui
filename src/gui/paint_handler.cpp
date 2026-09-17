@@ -5612,7 +5612,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 
 // THE OVERLAY RING — the phase-reset overlay's WHOLE visual (architect
 // 2026-07-27): the band's 1px opaque border in the phase-reset stem's own
-// purple (2026-08-01) and nothing else,
+// colour (2026-08-01; the warp purple then, the column's own since it gained
+// a hue of its own — the ring reads the constant, see below) and nothing else,
 // painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
 // stems, so an opaque line crossing waveform ink is correct and intended, and
 // with no fill inside it the band now READS as the two edges of a span rather
@@ -5649,9 +5650,12 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // unread and, a day later, deleted with the whole tunable palette. IT WAS
     // kMarkerFlagFill (the warp purple) from 2026-08-01 to 2026-09-15, when the
     // architect moved the phase-reset column's default-class flag and stem to
-    // their own blue (kPhaseResetFlagFill, render.h) and this ring moved with
-    // them — it reads the same constant the stems resolve to rather than a
-    // copy of its value, so the two cannot drift.
+    // a colour of their own (kPhaseResetFlagFill, render.h) and this ring moved
+    // with them. THE RING WEARS THE COLUMN'S FILL, WHATEVER THAT IS — it reads
+    // the same constant the stems resolve to rather than a copy of its value,
+    // so the two cannot drift, which is why the 2026-09-16 hue swap (the
+    // column went from Breeze blue to its own orange) reached this surface with
+    // no edit here at all.
     cairo_set_source_rgb(cr, kPhaseResetFlagFill.r, kPhaseResetFlagFill.g,
                          kPhaseResetFlagFill.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
@@ -5793,8 +5797,12 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 
     // THE INVALID-COMMIT RED FLASH REACHES THE STEM (architect 2026-08-01): a
     // flashing flag and its stem read as one object, exactly as a coincident
-    // marker's red pair already does (#da4453 either way — the flash borrows the
-    // red CLASS, it does not invent a colour).
+    // marker's red class already does — the flash borrows that class's stem,
+    // kMarkerStemRed, it does not invent a colour, so #da4453 either way. The
+    // stem is the one surface the 2026-09-16 rest/selected split did not reach:
+    // the flag's flash moved onto the class's BRIGHT pair and the stem reads
+    // the CLASS alone on every column, selection-blind, so the one constant
+    // still answers both.
     //
     // IT IS A PAINT-TIME OVERRIDE, mirroring how the flash face itself is stored
     // and painted: render_flag_editor_box resolves the marker's ordinary face
@@ -6413,8 +6421,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   buffer in a DARK INSET FIELD (editor.png's look), then OK and Cancel. The
 //   field is the existing text_editor machinery — selection, caret,
 //   click-to-caret, byte-identical editing — and the red flash RECOLORS THE
-//   FIELD in the marker-flag red pair (the one invalid red, called not
-//   copied).
+//   FIELD in the marker-flag red class's BRIGHT pair (the one invalid red,
+//   which IS the bright red since that class gained a rest pair 2026-09-16 —
+//   called not copied).
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
@@ -7482,9 +7491,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // where the user is there to type.
         //
         // THE RED FLASH STILL RECOLORS THE FIELD — the editors' one invalid
-        // state paints the interior in the marker-flag red pair (fill under
-        // its 1px top edge, the flag anatomy's own order), so there is ONE
-        // invalid red in the product and no second box. THE TOP EDGE IS
+        // state paints the interior in the marker-flag red class's BRIGHT
+        // pair (fill under its 1px top edge, the flag anatomy's own order),
+        // so there is ONE invalid red in the product and no second box. IT IS
+        // THE `Sel` PAIR SINCE 2026-09-16, when the architect gave that class
+        // a calm REST pair for a resting coincident marker and left the bright
+        // one as the flash: the invalid red IS the bright red, called not
+        // copied, so the two cannot drift. THE TOP EDGE IS
         // CLIPPED TO THE ROUNDED INTERIOR (2026-08-13, when the box grew
         // corners): a straight 1px band across a rounded box would poke out
         // past both upper corners. Clipping it keeps the anatomy the flag
@@ -7493,7 +7506,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // differently on the two surfaces that share the red.
         const bool field_focused = app.modal_dialog_focus < 0;
         const GuiColor field_ground =
-            ed->red ? kMarkerFlagFillRed : kModalFieldGround;
+            ed->red ? kMarkerFlagFillRedSel : kModalFieldGround;
         const GuiColor field_line =
             (app.modal_dialog_field_hovered || field_focused)
                 ? kRedesignAccent : kModalFieldBorder;
@@ -7510,8 +7523,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 rad - static_cast<double>(fbord));
             cairo_clip(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            cairo_set_source_rgb(cr, kMarkerFlagEdgeRed.r,
-                                 kMarkerFlagEdgeRed.g, kMarkerFlagEdgeRed.b);
+            cairo_set_source_rgb(cr, kMarkerFlagEdgeRedSel.r,
+                                 kMarkerFlagEdgeRedSel.g,
+                                 kMarkerFlagEdgeRedSel.b);
             cairo_rectangle(cr, field_inner.x, field_inner.y,
                             field_inner.w, marker_flag_edge_h_px());
             cairo_fill(cr);

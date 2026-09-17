@@ -1297,10 +1297,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback OR that share their frame with another row of their own store,
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
-    // the hard-coded kMarkerFlagFillRed/kMarkerFlagEdgeRed
-    // pair with the kMarkerStemRed stem whatever their selection state
-    // (resolve_flag_face — a disabled red marker blends that same pair toward
-    // the lane ground and stays recognisably red).
+    // the hard-coded red class: kMarkerFlagFillRed/kMarkerFlagEdgeRed at rest
+    // and their Sel pair on a selected marker's addressed cell (architect
+    // 2026-09-16 — red takes the selection swap like every other class, the
+    // cue being the hue), with the kMarkerStemRed stem, which is the class's
+    // alone and selection-blind like every other stem (resolve_flag_face — a
+    // disabled red marker blends whichever of the two pairs it would have worn
+    // toward the lane ground and stays recognisably red).
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag
@@ -1341,7 +1344,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else if (mv == 'M') {
         // THE MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-15): its
         // flags paint while it is the active column and at no other time, the
-        // other two columns' rule. The level digit on the green box and no
+        // other two columns' rule. The level digit on the BLUE box (green
+        // until the 2026-09-16 hue swap; render.h's palette block) and no
         // cells (the painter's declaration, render.h); red is the
         // column's coincidence set alone. IT TAKES A DRAG OVERLAY AND A
         // SUPPRESSION since the column gained its authoring the same day — the

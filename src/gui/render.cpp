@@ -1073,7 +1073,10 @@ struct FlagFace {
 // default pair with selection swapping it for the bright one — and the DISABLED
 // arm runs that same red-then-selection ladder INSIDE ITSELF to pick the pair it
 // blends, so selection lifts a disabled marker exactly as it lifts a live one
-// (architect 2026-08-01) and red refuses the lift on both sides alike.
+// (architect 2026-08-01). RED IS ONE OF THE PAIRS since 2026-09-16 (architect):
+// it has a rest pair and a bright one and takes the lift on both sides like
+// every other class, the ladder's ORDER being what keeps the cue — a red
+// marker is red at either brightness.
 //
 // THE DISABLED FACE'S LABEL DIMS AGAINST THE FLAG, NOT AGAINST THE LANE. Every
 // SHAPE surface takes its fraction of itself over the lane ground, as ruled.
@@ -1100,17 +1103,21 @@ struct FlagFace {
 // WHICH COLUMN'S DEFAULT/SELECTED PAIR THIS FACE WEARS (architect 2026-09-15,
 // retold the same day on the naming-symmetry ruling: warp is never the
 // unmarked default, so this is a REQUIRED argument at every call, never a
-// defaulted bool). The phase-reset flag box paints in Breeze's highlight blue
-// (#3daee9 sampled, the other three RECORDED DERIVATIONS off it —
+// defaulted bool). The phase-reset flag box paints in the column's ORANGE
+// (all four sampled off the architect's own crops —
 // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag box and
 // EVERY BOUND CELL ON EITHER COLUMN stay on kMarkerFlagFill's purple — a
 // bound cell's call site always passes `Warp` explicitly, with its own
 // comment there, "the flag's own class" being a warp-only phrase now that
 // the class has two flag boxes. THE THIRD FACE, MagnificationLevel (architect
-// 2026-09-15), is the magnification level markers column's green
-// (kMarkerMagnificationFill/Edge/FillSel/EdgeSel, render.h) on its flag box
+// 2026-09-15), is the magnification level markers column's BLUE — Breeze's
+// highlight #3daee9 sampled, the other three RECORDED DERIVATIONS off it
+// (kMarkerMagnificationFill/Edge/FillSel/EdgeSel, render.h) — on its flag box
 // and its stem; that column paints no bound cell, so the
-// face reaches nothing else.
+// face reaches nothing else. THE ORANGE AND THE BLUE SWAPPED COLUMNS
+// 2026-09-16 (architect; the reasons are recorded at the two palette blocks:
+// the magnification green was the history view's added green outright, and
+// the phase-reset column, the commoner of the two, takes the quieter hue).
 enum class FlagColumnFace { Warp, PhaseReset, MagnificationLevel };
 
 // The default and selected pair of one column's flag box — the one place the
@@ -1159,15 +1166,18 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         // INSIDE the blend, so the face stays a 25%-of-itself-over-the-ground
         // colour and still reads switched off.
         //
-        // RED TAKES NO LIFT, selected or not, mirroring the live red class,
-        // which has no selected pair by ruling: a red marker's face is its
-        // normalization cue, and selection must not mask it on a disabled
-        // marker any more than on a live one.
+        // RED TAKES THE LIFT TOO since 2026-09-16 (architect), mirroring the
+        // live red class, which gained a rest pair and a selected pair that
+        // day: the cue is the HUE, which the swap never touches, so a selected
+        // disabled red marker is the disabled rendition of the BRIGHT red and
+        // reads red and switched off at once. The pair is chosen on the SAME
+        // `selected` bit the column pair below reads — one question, four
+        // classes.
         GuiColor base_fill;
         GuiColor base_edge;
         if (red) {
-            base_fill = kMarkerFlagFillRed;
-            base_edge = kMarkerFlagEdgeRed;
+            base_fill = selected ? kMarkerFlagFillRedSel : kMarkerFlagFillRed;
+            base_edge = selected ? kMarkerFlagEdgeRedSel : kMarkerFlagEdgeRed;
         } else {
             flag_column_pair(column_face, selected, base_fill, base_edge);
         }
@@ -1197,8 +1207,14 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         return f;
     }
     if (red) {
-        f.fill  = kMarkerFlagFillRed;
-        f.edge  = kMarkerFlagEdgeRed;
+        // THE REST PAIR AT REST, THE BRIGHT PAIR SELECTED (architect
+        // 2026-09-16): red joins the shape the three column pairs already
+        // have, read on this same `selected` bit — which, at the flag pass's
+        // own rule, is true for the marker's ADDRESSED CELL alone. The class
+        // ladder above is untouched, so the cue is never masked: a selected
+        // red marker is still red, only brighter.
+        f.fill  = selected ? kMarkerFlagFillRedSel : kMarkerFlagFillRed;
+        f.edge  = selected ? kMarkerFlagEdgeRedSel : kMarkerFlagEdgeRed;
         // FULL-STRENGTH BORDER on every LIVE class, red and selected included,
         // and that is the precise mirror of what fill and edge do rather than a
         // second rule: the live arms damp nothing, so the border they take is
@@ -1325,7 +1341,7 @@ void render_flag_boxes_impl(
     // WHICH COLUMN'S FLAG BOX THIS IS, REQUIRED rather than defaulted (the
     // naming-symmetry ruling: warp is never the unmarked default) — render_flags
     // passes `FlagColumnFace::Warp`, render_phase_reset_flags passes
-    // `FlagColumnFace::PhaseReset` (the phase-reset blue,
+    // `FlagColumnFace::PhaseReset` (the phase-reset orange,
     // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the ONE
     // resting flag-box face below and nowhere else — the bound cells pass
     // `FlagColumnFace::Warp` explicitly at their own call, "fine for now"
@@ -1430,7 +1446,9 @@ void render_flag_boxes_impl(
             // its own opaque PAIR and could not show a hue underneath. Disabled
             // is a BLEND of the marker's own class now, so "which class" is a
             // real question and the answer is the one it belongs to: a disabled
-            // red marker blends the RED pair and stays recognisably red.
+            // red marker blends the red class's own pair — the rest one or,
+            // on a selected marker's addressed cell, the bright one — and
+            // stays recognisably red.
             // Disabled still WINS — it decides the blend and the missing stem —
             // it just no longer erases the hue.
             const bool dis = disabled_of(i);
@@ -1556,7 +1574,7 @@ void render_flag_boxes_impl(
             // the same ladder, so a cell reads as another payload of the same
             // flag and not as a second surface (a bound is tempo, and wears
             // tempo's colour, purple on either column — a bound cell never
-            // reads as the phase-reset flag's own blue). Each cell resolves
+            // reads as the phase-reset flag's own orange). Each cell resolves
             // its own face, because the selected pair is
             // the addressed cell's alone (above). The seam is the flag's own
             // left-border column laid on each cell's left edge. No budget and
@@ -1574,7 +1592,7 @@ void render_flag_boxes_impl(
                         baseline, crun,
                         // ALWAYS `Warp`, ON EITHER COLUMN'S CELLS (architect
                         // 2026-09-15, "fine for now"): a bound cell never wears the phase-reset
-                        // flag's blue, regardless of which store `mv`/`pmv`
+                        // flag's orange, regardless of which store `mv`/`pmv`
                         // this pass is painting.
                         resolve_flag_face(dis, red, cell_selected(which),
                                           FlagColumnFace::Warp));
@@ -2535,8 +2553,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MARKER'S OWN FACE, through the one class ladder — so the open editor
     // is visibly the same flag, only wider. The red flash overrides the whole
-    // pair with this lane's own kMarkerFlagFillRed / kMarkerFlagEdgeRed, which
-    // is the ONE invalid red in the product: the three DIALOG editors flash this
+    // pair with this lane's own kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel —
+    // the red class's BRIGHT pair, which since 2026-09-16 is what "the one
+    // invalid red" names: that ruling gave the class a calm REST pair for a
+    // resting coincident marker and kept the bright one for the flash, so an
+    // invalid commit is as loud as it ever was and can never be mistaken for
+    // the marker's own resting class. The three DIALOG editors flash this
     // same pair (as this box's anatomy on the bottom strip from 2026-08-02, and
     // as the dialog FIELD's recolor since 2026-08-12), so there is no
     // second red to contrast against (see the declaration). It overrides the
@@ -2572,9 +2594,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // warp-column surface by its own open gates, so the only field this ever
     // reaches on the phase-reset column is a BOUND field, and a bound field
     // stays on the purple pair, "fine for now"
-    // (architect 2026-09-15) — never the phase-reset flag's blue. THE
+    // (architect 2026-09-15) — never the phase-reset flag's orange. THE
     // MAGNIFICATION LEVEL FIELD IS THE EXCEPTION and takes its own column's
-    // GREEN, because it IS that flag unrolled: the open editor must read as the
+    // BLUE, because it IS that flag unrolled: the open editor must read as the
     // same flag, only wider, which is the whole surface's promise.
     FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell),
                                       level_kind
@@ -2587,8 +2609,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // outside the fill on its left"; only which seam it marks differs.
     const int left_border_w = border_w;
     if (ed.red) {
-        face.fill  = kMarkerFlagFillRed;
-        face.edge  = kMarkerFlagEdgeRed;
+        face.fill  = kMarkerFlagFillRedSel;
+        face.edge  = kMarkerFlagEdgeRedSel;
         // THE FLASH TAKES THE UNDAMPED BORDER TOO, and for the same reason it
         // takes the undamped fill: the override replaces the resolved face
         // WHOLE with the live red class's, because a failed commit must read as

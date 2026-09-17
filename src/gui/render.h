@@ -688,13 +688,49 @@ inline constexpr GuiColor kMarkerFlagFill        = hex(0x9B59B6);
 inline constexpr GuiColor kMarkerFlagEdge        = hex(0x563165);
 inline constexpr GuiColor kMarkerFlagFillSel     = hex(0xC974ED);
 inline constexpr GuiColor kMarkerFlagEdgeSel     = hex(0x704083);
-inline constexpr GuiColor kMarkerFlagFillRed     = hex(0xFF6C7B);
-inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
+
+// THE RED CLASS HAS A REST PAIR AND A SELECTED PAIR, LIKE EVERY OTHER CLASS
+// (architect 2026-09-16). Until then red was ONE pair — the BRIGHT one below —
+// painted whether or not the marker was selected, on the reading that a
+// selection swap would mask the normalization cue. It does not: the class
+// ladder DISABLED > RED > default is untouched, so a red marker is red in both
+// pairs and only its BRIGHTNESS moves. So red joins the shape the purple, the
+// orange and the blue already have — the rest pair at rest, the bright pair on
+// the ADDRESSED CELL of a selected marker, read on the SAME `selected` bit
+// those pairs read (resolve_flag_face's third argument). No new predicate and
+// no new term: a selected red marker lifts exactly as a selected calm one
+// does, its other cells staying calm.
+//
+// PROVENANCE IS THE HISTORY VIEW'S OWN REMOVED LADDER: the dull pair is the
+// UNSELECTED removed crop's (row_5_lane_3_marker_red_unselected.png) and the
+// bright pair the SELECTED one's, which is the ladder the live class was a
+// mixture of before this ruling (the record is at kHistoryRemoved* below,
+// where the audit that mixture was queued for is closed). The four values are
+// SPELLED HERE as this class's own constants and the history view spells its
+// own: two facts that agree, not one fact referenced twice — the hard-coded
+// rule.
+//
+// THE BRIGHT PAIR IS ALSO THE PRODUCT'S ONE INVALID RED — the red flash a
+// refused commit paints, on the flag editor's unrolled box and on the dialog
+// field alike. Those two surfaces read kMarkerFlagFillRedSel /
+// kMarkerFlagEdgeRedSel, CALLED NOT COPIED (the phrase is this palette's, at
+// kModalFieldGround below): the invalid red IS the bright red by ruling, one
+// fact with one constant, so a retune of the bright pair moves the flash with
+// it and the two can never drift.
+inline constexpr GuiColor kMarkerFlagFillRed     = hex(0xDA4453);
+inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x79262E);
+inline constexpr GuiColor kMarkerFlagFillRedSel  = hex(0xFF6C7B);
+inline constexpr GuiColor kMarkerFlagEdgeRedSel  = hex(0x8E3C44);
 // The RED class's STEM is NOT its fill: #da4453 is the architect's own explicit
 // value for it, so the red stem is its own constant while the default and
 // selected classes both stem in kMarkerFlagFill (a selected marker keeps the
 // CALM stem — also his explicit rule, which is why the stem color is resolved
-// from the class ALONE and never from the selection bit).
+// from the class ALONE and never from the selection bit, red included: the
+// stem does not follow the flag's brightening). Since 2026-09-16 it EQUALS the
+// red class's rest fill, by coincidence of provenance rather than by
+// derivation — both are the unselected removed crop's fill, arrived at
+// separately — so it stays its own constant and a retune of one is not a
+// retune of the other.
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
 // THE SEAM COLUMN between a flag box and the cell to its right is a 1px
@@ -705,45 +741,68 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // cell's anatomy is the flag's — a 1px edge over the fill across the whole
 // box, no right border (the flag's own open right edge).
 
-// THE PHASE-RESET FLAG BOX'S PAIRS (architect 2026-09-15): the phase-reset
-// column's flag box — default and selected classes, and the disabled blend
-// of both — paints in Breeze's own selection blue, a pair that had been the
-// marker lane's since 2026-08-19 on a box the lane no longer has, freeing the
-// blue for a column that previously shared the warp flag's purple outright.
-// PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one
-// sampled value; the other three are RECORDED DERIVATIONS off it in the
-// relationships the marker crops showed between their own four — the edge a
-// darkened shade of the fill, the selected pair a lifted fill over a
-// mid-darkness edge. RED STAYS RED ON BOTH COLUMNS (kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed, resolve_flag_face's first arm, asked before the
+// THE PHASE-RESET FLAG BOX'S PAIRS — ORANGE SINCE 2026-09-16 (architect): the
+// phase-reset column's flag box — default and selected classes, and the
+// disabled blend of both — paints in an orange of his own choosing. It held
+// Breeze's selection blue from 2026-09-15, and THE TWO HUES SWAPPED COLUMNS
+// on his ruling, for two reasons he gave together: the MAGNIFICATION column's
+// green was the history view's ADDED green to the last byte (kHistoryAdded*
+// below — the same four values on two live surfaces), so a regular view's
+// flags read as a diff; and the PHASE-RESET column is the more common of the
+// two, so it takes the hue that is LESS GLARING at rest. The blue moved to
+// magnification (the block below) and this column took a colour of its own.
+// Red's own double duty — the error cue here and the history view's REMOVED
+// class there — is ACCEPTED and not swapped away from: an error on a regular
+// view is meant to be worked away, so the two never mean the same thing for
+// long.
+//
+// PROVENANCE: ALL FOUR ARE SAMPLED, none derived — from the architect's own
+// crops tmp/keep/screenshots/orange-unselected.png and
+// tmp/keep/screenshots/orange-selected.png (56x17 each, the red crop's own
+// dimensions), read the way every marker crop in this block is read: ROW 0 is
+// the 1px TOP EDGE, rows 1+ are the FILL, and the crops' own edge column
+// samples to kMarkerFlagBorder #131516 — one more agreeing sample.
+//   unselected  fill #f47750  edge #88422c
+//   selected    fill #ffac92  edge #8e5f51
+//
+// RED STAYS RED ON EVERY COLUMN (kMarkerFlagFillRed / kMarkerFlagEdgeRed and
+// their Sel pair, resolve_flag_face's first live arm, asked before the
 // column), and the phase-reset STEM mirrors the warp rule — it reads the
 // CLASS alone, so a selected default-class reset keeps this calm fill and
-// only the flag brightens. THE BOUND (hop) CELLS ON THIS COLUMN DO NOT TAKE
-// THIS PAIR: the architect kept them on the purple of the warp column's own
-// bound cells ("fine for now"), so every bound-cell call site into
+// only the flag brightens. THE PHASE-RESET LEAD-IN RING on the waveform wears
+// this column's fill too (paint_phase_reset_overlay_ring, paint_handler.cpp),
+// calling the constant rather than copying its value, so it followed the hue
+// across with no edit of its own. THE BOUND (hop) CELLS ON THIS COLUMN DO NOT
+// TAKE THIS PAIR: the architect kept them on the purple of the warp column's
+// own bound cells ("fine for now"), so every bound-cell call site into
 // resolve_flag_face passes `FlagColumnFace::Warp` EXPLICITLY — the argument
 // is required, never defaulted (warp is never the unmarked default), so a
 // bound cell's purple is a stated choice at its own call, not an omission
 // that happens to land on the warp pair.
-inline constexpr GuiColor kPhaseResetFlagFill    = hex(0x3DAEE9);
-inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x226181);
-inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0x73CFFF);
-inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x40738E);
+inline constexpr GuiColor kPhaseResetFlagFill    = hex(0xF47750);
+inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x88422C);
+inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0xFFAC92);
+inline constexpr GuiColor kPhaseResetFlagEdgeSel = hex(0x8E5F51);
 
-// THE MAGNIFICATION COLUMN'S GREEN (architect 2026-09-14): the flag pairs of
-// the display-only magnification markers. ALL FOUR ARE SAMPLED, none derived —
-// from the architect's kdenlive crops tmp/green-unselected.png and
-// tmp/green-selected.png (fill from the body rows, edge from row 0; the crops'
-// own left column samples to kMarkerFlagBorder). THEY ARE THE MAGNIFICATION
-// LEVEL MARKERS COLUMN'S FLAGS (architect 2026-09-15): the flag box in the
-// default and selected pairs, the default-class stem in the calm fill, and
-// the disabled blend of both through the one ladder
-// (FlagColumnFace::MagnificationLevel, resolve_flag_face, render.cpp); red
-// stays red there as on the other two columns.
-inline constexpr GuiColor kMarkerMagnificationFill    = hex(0x1ABC9C);
-inline constexpr GuiColor kMarkerMagnificationEdge    = hex(0x0E6857);
-inline constexpr GuiColor kMarkerMagnificationFillSel = hex(0x22F4CB);
-inline constexpr GuiColor kMarkerMagnificationEdgeSel = hex(0x138871);
+// THE MAGNIFICATION LEVEL COLUMN'S BLUE — SINCE 2026-09-16 (architect), when
+// the two columns' hues swapped (the reason is recorded at the phase-reset
+// block above: this column's GREEN was the history view's added green to the
+// last byte, so a regular view's flags read as a diff). These are the four
+// values that block held while the phase-reset column wore them, carried over
+// whole: the flag box in the default and selected pairs, the default-class
+// stem in the calm fill, and the disabled blend of both through the one
+// ladder (FlagColumnFace::MagnificationLevel, resolve_flag_face, render.cpp);
+// red stays red here as on the other two columns.
+//
+// PROVENANCE, CARRIED OVER WITH THE VALUES: #3daee9 is the Breeze highlight
+// blue, the palette's one sampled value; the other three are RECORDED
+// DERIVATIONS off it in the relationships the marker crops showed between
+// their own four — the edge a darkened shade of the fill, the selected pair a
+// lifted fill over a mid-darkness edge.
+inline constexpr GuiColor kMarkerMagnificationFill    = hex(0x3DAEE9);
+inline constexpr GuiColor kMarkerMagnificationEdge    = hex(0x226181);
+inline constexpr GuiColor kMarkerMagnificationFillSel = hex(0x73CFFF);
+inline constexpr GuiColor kMarkerMagnificationEdgeSel = hex(0x40738E);
 
 // THE MARKER LANE'S TEXT INK IS BLACK, IN EVERY CLASS AND EVERY STATE
 // (architect 2026-08-20, and it is a MEASUREMENT rather than a taste call: he
@@ -766,12 +825,15 @@ inline constexpr GuiColor kMarkerMagnificationEdgeSel = hex(0x138871);
 //
 // WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
 // replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
-// gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, red
-// 7.68 vs 2.64, the phase-reset blue 8.43 vs 2.41 (the case that prompted the
-// ruling: light ink on #3daee9 was illegible), selected phase-reset blue 12.1 vs
-// 1.66, the diff lane's green 8.72 vs 2.33 and its red 4.93 vs 4.11. So the
-// one class that does not gain does not lose either, which is what makes a
-// single ink honest across the ladder.
+// gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, the
+// red class 4.93 vs 4.15 at rest and 7.68 vs 2.66 selected, the MAGNIFICATION
+// LEVEL column's blue 8.43 vs 2.41 (the case that prompted the ruling, when
+// that blue was the phase-reset column's: light ink on #3daee9 was illegible)
+// and 12.1 vs 1.66 selected, the phase-reset ORANGE 7.60 vs 2.69 and 11.6 vs
+// 1.77 selected (2026-09-16's hue swap, both blocks above — it changed the
+// numbers and not the verdict), the diff lane's green 8.72 vs 2.33 and its red
+// 4.93 vs 4.11. So the one class that does not gain does not lose either,
+// which is what makes a single ink honest across the ladder.
 //
 // THE DISABLED FACE KEEPS ITS MECHANISM AND CHANGES DIRECTION. The label still
 // blends toward the surface it sits on, through the one mix_color owner at the
@@ -845,13 +907,23 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // second set of inks.
 //
 // THE RED PAIR IS SAMPLED AFRESH RATHER THAN REUSED, deliberately, even though
-// its values overlap the live red class's: kMarkerFlagFillRed / kMarkerFlagEdgeRed
-// above hold the SELECTED red crop's fill and edge while kMarkerStemRed holds
-// the UNSELECTED red crop's fill, so the live class's three constants are a
-// mixture of the two crops and cannot be re-read as a pair. Reconciling that is
-// a separately queued audit; these constants take the crops directly so this
-// mode's ladder is internally consistent whatever that audit concludes, and
-// nothing above is touched.
+// its values now coincide with the live red class's pair for pair: the two are
+// TWO FACTS THAT AGREE, each spelled at its own constant, which is this
+// palette's hard-coded rule — a retune of one is not a retune of the other.
+// THE AUDIT THIS PARAGRAPH QUEUED IS CLOSED (architect 2026-09-16): the live
+// class used to be a MIXTURE of the two red crops — kMarkerFlagFillRed /
+// kMarkerFlagEdgeRed held the SELECTED crop's pair and kMarkerStemRed the
+// UNSELECTED crop's fill, so three constants could not be re-read as a ladder
+// — and the live class now carries BOTH crops as its rest pair and its
+// selected pair, read on the selection bit exactly as this mode's focus swap
+// reads its own. The stem stays the unselected fill by its own explicit
+// ruling, which is what it always was.
+//
+// THE GREENS ARE THIS VIEW'S ALONE. They were the magnification level
+// column's four values too until 2026-09-16, when that column took the blue
+// (the hue swap, recorded at the two column blocks above) precisely so that a
+// live flag could never read as a diff flag. Nothing outside this mode paints
+// them now.
 inline constexpr GuiColor kHistoryAddedFill      = hex(0x1ABC9C);
 inline constexpr GuiColor kHistoryAddedEdge      = hex(0x0E6857);
 inline constexpr GuiColor kHistoryAddedFillSel   = hex(0x22F4CB);
@@ -939,11 +1011,16 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // 1.73 — so 0.75 buys nearly all of the reachable contrast while leaving the
 // label visibly inside the disabled face rather than painting it at full live
 // strength. On the brighter dimmed pairs it lands where the ruling asked: the
-// selected flag 1.80, the red flag 1.81. (THE PHASE-RESET FLAG BOX reads
-// ~1.90 against its own #274557 — a lighter blue fill whose ceiling is 2.10,
-// headroom the calm purple does not have — off the generic mix_color call
-// resolve_flag_face feeds it; no constant of its own, the fraction
-// unchanged.) ONE
+// selected flag 1.80, the red class 1.59 at rest and 1.81 selected (it gained
+// its rest pair 2026-09-16; the 1.81 is the bright pair the whole class used
+// to wear). (THE MAGNIFICATION LEVEL FLAG BOX reads ~1.90 against its own
+// #274557 — a lighter blue fill whose ceiling is 2.10, headroom the calm
+// purple does not have — and THE PHASE-RESET BOX ~1.81 against its own
+// #553830, the orange's ceiling being 2.00; both off the generic mix_color
+// call resolve_flag_face feeds them, no constant of their own and the
+// fraction unchanged. The blue was the phase-reset column's and the two hues
+// swapped 2026-09-16, which moved the numbers between the columns rather than
+// changing either.) ONE
 // fraction for both surfaces, glass retunes.
 inline constexpr double kMarkerDisabledLabelMix = 0.75;
 
@@ -1243,8 +1320,10 @@ inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 // grey AND the grey modal_popup.png measures on its own non-default buttons:
 // two facts that agree, so the existing constant ships and no kModal one
 // exists). The invalid red flash
-// recolors the FIELD in the marker-flag red pair (kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed — the one invalid red), called not copied.
+// recolors the FIELD in the marker-flag red class's BRIGHT pair
+// (kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel — the one invalid red, which
+// IS the bright red by the 2026-09-16 ruling that gave that class a rest pair
+// of its own), called not copied.
 inline constexpr GuiColor kModalFieldGround = hex(0x141618);
 inline constexpr GuiColor kModalFieldBorder = hex(0x4C4E51);
 
@@ -3175,12 +3254,19 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              selected disabled marker blends the SELECTED pair, fill and edge
 //              both, so it carries the same relative lift a live marker's
 //              selection gives — the disabled rendition of the selected face.
-//              RED STILL REFUSES THE LIFT, exactly as the live red class does
-//              (no selected pair by ruling, the normalization cue unmasked).
-//   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed; stem kMarkerStemRed;
-//              border kMarkerFlagBorder undamped, like every live class. RED
-//              STAYS RED ON ALL THREE COLUMNS — the column fork below never
-//              reaches this arm.
+//              RED TAKES THE LIFT TOO since 2026-09-16, exactly as the live
+//              red class does: the class ladder is untouched, so a disabled
+//              selected red marker is the disabled rendition of the BRIGHT
+//              red and still reads red and still reads switched off.
+//   Red:       kMarkerFlagFillRed / kMarkerFlagEdgeRed at rest, swapping to
+//              kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel on the addressed
+//              cell of a selected marker (architect 2026-09-16 — red joins
+//              the other classes' rest/selected shape, on the same `selected`
+//              bit, the cue being the HUE and never the brightness); stem
+//              kMarkerStemRed, the class's alone and selection-blind like
+//              every other stem; border kMarkerFlagBorder undamped, like every
+//              live class. RED STAYS RED ON ALL THREE COLUMNS — the column
+//              fork below never reaches this arm.
 //   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box (and on
 //              EVERY BOUND CELL, either column — the phase-reset column's own
 //              cells are its one exception to the fork below, architect
@@ -3412,8 +3498,11 @@ struct FlagEditorBox {
 // since no field buys a caret column, even the size only changes where the
 // resting label was capped, the field opening at the committed run's own width
 // and growing only with what is typed past it. An
-// invalid commit flashes the marker lane's OWN red pair — kMarkerFlagFillRed /
-// kMarkerFlagEdgeRed. The three DIALOG editors flash that same pair too
+// invalid commit flashes the marker lane's OWN red class, in its BRIGHT pair —
+// kMarkerFlagFillRedSel / kMarkerFlagEdgeRedSel, the invalid red being the
+// bright red by the 2026-09-16 ruling that gave that class a rest pair, so the
+// flash is as loud as it ever was and never the calm red a resting coincident
+// marker wears. The three DIALOG editors flash that same pair too
 // (since 2026-08-02, as the flag-anatomy box on the bottom strip; since
 // 2026-08-12 as the dialog FIELD's recolor, fill under the 1px top edge —
 // paint_modal_dialog), so there is one
@@ -3492,8 +3581,9 @@ void render_phase_reset_flags(cairo_t* cr,
 
 // The magnification level markers column's flags (architect 2026-09-15): the
 // identical box, class ladder and publication contract render_flags documents
-// above, in the column's green (FlagColumnFace::MagnificationLevel,
-// render.cpp). The LABEL is the marker's level digit
+// above, in the column's blue (FlagColumnFace::MagnificationLevel,
+// render.cpp; green until the 2026-09-16 hue swap, the palette block's two
+// column blocks). The LABEL is the marker's level digit
 // (format_marker_magnification). NO BOUND CELLS — grid iterations never
 // lights on this column — so the signature
 // takes none, and the focus's addressed cell is the PAYLOAD by construction:
