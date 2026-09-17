@@ -1242,6 +1242,20 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
     return f;
 }
 
+} // namespace
+
+// The phase-reset lead-in ring's colour (declaration in render.h): the ladder
+// above asked for a LIVE, UNSELECTED reset's stem, so the ring can never pick
+// a colour the stem would not — the class alone, as the stem reads it. It
+// stands outside the file's anonymous namespace so paint_handler.cpp reaches
+// it; the ladder it calls stays file-local.
+GuiColor phase_reset_stem_color(bool red) {
+    return resolve_flag_face(/*disabled=*/false, red, /*selected=*/false,
+                             FlagColumnFace::PhaseReset).stem;
+}
+
+namespace {
+
 // THE MARKER'S BOXES IN PAINTED ORDER, RANKED: the flag box, then the lower
 // bound cell, the upper bound cell. That is the one
 // left-to-right order this pass paints in, the editor's riding run re-paints

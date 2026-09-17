@@ -770,9 +770,9 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // column), and the phase-reset STEM mirrors the warp rule — it reads the
 // CLASS alone, so a selected default-class reset keeps this calm fill and
 // only the flag brightens. THE PHASE-RESET LEAD-IN RING on the waveform wears
-// this column's fill too (paint_phase_reset_overlay_ring, paint_handler.cpp),
-// calling the constant rather than copying its value, so it has followed the
-// hue across both swaps with no edit of its own. THE BOUND (hop) CELLS ON
+// the colour its reset's stem wears (paint_phase_reset_overlay_ring,
+// paint_handler.cpp, through phase_reset_stem_color — architect 2026-09-17):
+// this calm fill, or the stem red for a reset in the column's red set. THE BOUND (hop) CELLS ON
 // THIS COLUMN DO NOT TAKE THIS PAIR: the architect kept them on the purple of
 // the warp column's own bound cells ("fine for now"), so every bound-cell
 // call site into resolve_flag_face passes `FlagColumnFace::Warp` EXPLICITLY —
@@ -3589,6 +3589,15 @@ void render_phase_reset_flags(cairo_t* cr,
                             // being a warp-column surface by its own open
                             // gates, while the bound editor is both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
+
+// THE COLOUR A LIVE PHASE RESET'S STEM WEARS, for a surface that must wear it
+// too — the lead-in ring (paint_phase_reset_overlay_ring, paint_handler.cpp,
+// architect 2026-09-17). It asks the one class ladder (resolve_flag_face,
+// render.cpp) rather than restating it: kMarkerStemRed when `red` (the
+// column's red set, phase_reset_red_flag_set_cached), the column's calm fill
+// kPhaseResetFlagFill otherwise. Selection-blind, as the stem is; no disabled
+// arm, a disabled reset painting neither stem nor ring.
+GuiColor phase_reset_stem_color(bool red);
 
 // The magnification level markers column's flags (architect 2026-09-15): the
 // identical box, class ladder and publication contract render_flags documents

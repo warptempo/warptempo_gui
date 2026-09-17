@@ -5503,6 +5503,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // the seed grain's end, derived in the block below from the same frame
     // and the same map the paint sample reads.
     int64_t width_samples;
+    // The reset's CLASS, for the ring's colour: the column's RESTING red set
+    // keyed by store index, the set and the index the flag pass reads for
+    // this reset's stem — at rest and through a drag alike, the drag writing
+    // only its proposal, so the ring and the stem share one class throughout.
+    bool red_class = false;
     {
         if (app.active_audio_view != 'T') return out;
 
@@ -5514,6 +5519,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // overlay, reading its `disabled` bool directly (phase resets carry no
         // label cascade).
         if (marker.disabled) return out;
+        red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -5613,13 +5619,13 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.valid = true;
     out.x0    = x0;
     out.x1    = x1;
+    out.red   = red_class;
     return out;
 }
 
 // THE OVERLAY RING — the phase-reset overlay's WHOLE visual (architect
 // 2026-07-27): the band's 1px opaque border in the phase-reset stem's own
-// colour (2026-08-01; the warp purple then, the column's own since it gained
-// a hue of its own — the ring reads the constant, see below) and nothing else,
+// colour (see below) and nothing else,
 // painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
 // stems, so an opaque line crossing waveform ink is correct and intended, and
 // with no fill inside it the band now READS as the two edges of a span rather
@@ -5648,22 +5654,15 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE RING IS THE STEM'S COLOUR (architect 2026-08-01, retold 2026-09-15):
-    // the phase-reset class's own UNSELECTED fill — "they're one unit", the
-    // ring and the stem of the reset it annotates. Hard-coded per the
-    // redesign's colour ruling, superseding the tunable grey #7f8c8d this drew
-    // in, whose ONE paint site this was — which is what left its config key
-    // unread and, a day later, deleted with the whole tunable palette. IT WAS
-    // kMarkerFlagFill (the warp purple) from 2026-08-01 to 2026-09-15, when the
-    // architect moved the phase-reset column's default-class flag and stem to
-    // a colour of their own (kPhaseResetFlagFill, render.h) and this ring moved
-    // with them. THE RING WEARS THE COLUMN'S FILL, WHATEVER THAT IS — it reads
-    // the same constant the stems resolve to rather than a copy of its value,
-    // so the two cannot drift, which is why BOTH hue trades reached this
-    // surface with no edit here at all — the column went from Breeze blue to
-    // an orange 2026-09-16 and back to the blue 2026-09-17.
-    cairo_set_source_rgb(cr, kPhaseResetFlagFill.r, kPhaseResetFlagFill.g,
-                         kPhaseResetFlagFill.b);
+    // THE RING IS THE STEM'S COLOUR (architect 2026-08-01; the class rule
+    // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
+    // annotates. It wears what that stem wears, the CLASS alone and never the
+    // selection: the stem red when the reset is in the column's red set
+    // (band.red), the column's calm fill kPhaseResetFlagFill otherwise.
+    // phase_reset_stem_color asks the one class ladder for it rather than
+    // restating it, so ring and stem cannot drift.
+    const GuiColor ring = phase_reset_stem_color(band.red);
+    cairo_set_source_rgb(cr, ring.r, ring.g, ring.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the
     // bottom border's last), with the verticals spanning every row between them.
