@@ -386,7 +386,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
         // THE TYPED `M` CROSSES TO SOURCE FIRST (architect 2026-09-16: the
         // magnification level markers column is source view only; it crossed
-        // to target for its first day) — bare 1's shape exactly, the audio
+        // to target for its first day) — bare 2's shape exactly, the audio
         // switch before the column entry. LEAVING TARGET NEVER REFUSES, so
         // the read-back can never fire here; it is kept for the shape the
         // sibling roads share (a refused switch changes nothing and is read

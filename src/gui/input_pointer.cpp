@@ -164,15 +164,15 @@ struct ToolbarChord {
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
     // Row 1's RIGHT FLOAT — the view bar (2026-08-02; the magnification level
-    // selector 2026-09-15, S+M and FIRST since 2026-09-16). Bare 1/2/3/4, the
-    // ABSOLUTE view selectors: S+M, S+W, T+P, T+W — THE ROW ORDER HERE IS THE
+    // selector 2026-09-15, S+M and SECOND since 2026-09-17). Bare 1/2/3/4, the
+    // ABSOLUTE view selectors: S+W, S+M, T+P, T+W — THE ROW ORDER HERE IS THE
     // BAR'S (kViewBarButtons, paint_handler.cpp). Everything
     // the digits own arrives by construction through on_key's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
-    {RedesignButton::ViewSM,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
-    {RedesignButton::ViewSW,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
+    {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
+    {RedesignButton::ViewSM,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
     {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
     {RedesignButton::ViewTW,     GuiKeys::Digit4, false, false, false, true, true}, // bare 4
     // The toolbar four — icon-row members since the 2026-08-12 relayout
@@ -1142,7 +1142,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSM/ViewSW/ViewTP/ViewTW (bare
+//   LIVE — the view bar's ViewSW/ViewSM/ViewTP/ViewTW (bare
 //   1/2/3/4, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the

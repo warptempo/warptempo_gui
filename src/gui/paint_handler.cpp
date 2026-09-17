@@ -449,8 +449,8 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
 // Color" bar, the one row the redesign had left out) reborn as the four
-// ABSOLUTE VIEW SELECTORS: S+M, S+W, T+P, T+W, which are bare 1/2/3/4 (the
-// digits' order is the workflow's, architect 2026-09-16, and the bar reads in
+// ABSOLUTE VIEW SELECTORS: S+W, S+M, T+P, T+W, which are bare 1/2/3/4 (the
+// digits' order is the workflow's, architect 2026-09-17, and the bar reads in
 // it left to right).
 //
 // THE FLOAT'S ROOM, re-measured 2026-09-09 when the HELP ANCHOR was deleted
@@ -552,13 +552,12 @@ struct ViewBarButtonDef {
 // lays the buttons left to right as listed, and each is its digit's button
 // (kToolbarChords, input_pointer.cpp, keeps the same row order).
 constexpr ViewBarButtonDef kViewBarButtons[] = {
-    // The magnification level markers column (architect 2026-09-15), source
-    // view only and FIRST since 2026-09-16 (magnification first, then the
-    // warp markers, then the phase resets, then T+W for fine tuning — the
-    // workflow's order; it was T+M at the bar's right end for its first day)
-    // — spelled as its siblings are, audio letter then column letter.
-    {RedesignButton::ViewSM, 'S', 'M'},
+    // The warp markers first, then the magnification level markers column
+    // (architect 2026-09-15, source view only), then the phase resets, then
+    // T+W for fine tuning — the workflow's order (architect 2026-09-17) —
+    // each spelled audio letter then column letter.
     {RedesignButton::ViewSW, 'S', 'W'},
+    {RedesignButton::ViewSM, 'S', 'M'},
     {RedesignButton::ViewTP, 'T', 'P'},
     {RedesignButton::ViewTW, 'T', 'W'},
 };
@@ -1571,7 +1570,7 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+M / S+W / T+P / T+W (the right
+    // "Settings", and the RIGHT one, the view bar's S+W / S+M / T+P / T+W (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
     // Navigation anchor deleted from between them 2026-08-15, Edit arriving
     // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and

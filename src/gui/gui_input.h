@@ -666,7 +666,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 
         // The zoom-out and the four absolute view selectors (the magnification
         // level markers column's joined 2026-09-15; the digits took the
-        // workflow's order 2026-09-16 — S+M, S+W, T+P, T+W).
+        // workflow's order 2026-09-17 — S+W, S+M, T+P, T+W).
         case GuiKeys::Digit0: case GuiKeys::Digit1:
         case GuiKeys::Digit2: case GuiKeys::Digit3:
         case GuiKeys::Digit4:
@@ -733,7 +733,7 @@ static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 1 is the S+M view selector and bare 4 the T+W one; "
+              "bare 1 is the S+W view selector and bare 4 the T+W one; "
               "digits 5..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "

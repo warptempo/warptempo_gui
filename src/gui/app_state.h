@@ -1852,10 +1852,10 @@ enum class RedesignButton {
     // Row 1, the menu row: the LEFT-FLOATING anchors, then the four of the
     // RIGHT-FLOATING view bar (2026-08-02; the fourth joined 2026-09-15 with
     // the magnification level markers column, as T+M at the bar's right end,
-    // and became S+M at its LEFT end 2026-09-16 when the column's home moved
-    // to source view and the digits took the workflow's order) in their
-    // painted order — the absolute view selectors S+M / S+W / T+P / T+W,
-    // which are bare 1/2/3/4.
+    // and became S+M, the bar's second, when the column's home moved to
+    // source view and the digits took the workflow's order) in their painted
+    // order — the absolute view selectors S+W / S+M / T+P / T+W, which are
+    // bare 1/2/3/4 (architect 2026-09-17).
     //
     // SETTINGS PAINTS LAST IN THE LEFT FLOAT (architect 2026-08-03, moving it
     // behind the NAVIGATION anchor that then sat between it and File). The float
@@ -1930,7 +1930,7 @@ enum class RedesignButton {
     // (is_av_sync_stats_key, toggle_av_sync_stats, redesign_button_shift_
     // admits). kHelpPopupItems, DropdownMenu::Help and every arm that named
     // the anchor went with it.)
-    File, Edit, Settings, ViewSM, ViewSW, ViewTP, ViewTW,
+    File, Edit, Settings, ViewSW, ViewSM, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -2775,8 +2775,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
-        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
             return true;
@@ -11061,7 +11061,7 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // stands, at that button's own arm.)
         case RedesignButton::IconBpm:
         // THE VIEW BAR'S FOUR (architect 2026-09-10; the magnification level
-        // selector joined 2026-09-15, S+M and bare 1 since 2026-09-16):
+        // selector joined 2026-09-15, S+M and bare 2 since 2026-09-17):
         // bare 1/2/3/4 run the audio-view and column switches, so the delta
         // blocks all four unconditionally
         // — iteration_lock_key_blocked's first test is a flat chord list
@@ -11073,8 +11073,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // has no disabled paint and the bar's unfocused ground is not one —
         // and the hover outline is the one thing that follows the grey; the
         // account of what a reader sees is at their enabled arm below.
-        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
         // (WALK BOTH TABS WAS A MEMBER from 2026-09-10 until its deletion on
@@ -13788,8 +13788,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // never meet on this row. THE CROPS NAMED "disabled" ARE THE UNFOCUSED
         // WINDOW and never this bit (architect 2026-08-02; the record and the
         // arithmetic are at kRedesignViewBarBg, render.h).
-        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
             return !iteration_lock_greys(a, b);
@@ -14593,10 +14593,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // selects". (T+M has no button either because it is no state at all:
         // the magnification level markers column is source view only since
         // 2026-09-16.)
-        case RedesignButton::ViewSM:     return a.active_audio_view   == 'S' &&
-                                                a.active_markers_view == 'M';
         case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
                                                 a.active_markers_view == 'W';
+        case RedesignButton::ViewSM:     return a.active_audio_view   == 'S' &&
+                                                a.active_markers_view == 'M';
         case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'P';
         case RedesignButton::ViewTW:     return a.active_audio_view   == 'T' &&
@@ -15206,8 +15206,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
-        case RedesignButton::ViewSM:
         case RedesignButton::ViewSW:
+        case RedesignButton::ViewSM:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:     return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};

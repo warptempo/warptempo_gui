@@ -409,9 +409,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+M / S+W / T+P / T+W —
+    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+W / S+M / T+P / T+W —
     // the magnification level selector joined 2026-09-15, a switch like the
-    // other three, and the digits took the workflow's order 2026-09-16). They are
+    // other three, and the digits took the workflow's order 2026-09-17). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no

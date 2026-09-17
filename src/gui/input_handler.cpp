@@ -899,7 +899,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead
-    //   - 1/2/3/4 (no mods)      → the absolute view selectors (S+M / S+W /
+    //   - 1/2/3/4 (no mods)      → the absolute view selectors (S+W / S+M /
     //                              T+P / T+W), the ONE road onto both view
     //                              axes: each composes the S/T chokepoint
     //                              switch_active_audio_view_to with the column
@@ -1139,10 +1139,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // it stays, and bare 1/2/3/4 below are its only remaining keyboard road.)
 
     // BARE 1 / 2 / 3 / 4 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01;
-    // a fourth 2026-09-15; THE DIGITS ARE THE WORKFLOW ORDER since 2026-09-16):
-    // `1` is S+M, `2` is S+W, `3` is T+P, `4` is T+W — magnification first,
-    // then the warp markers, then the phase resets roughly ballpark, then T+W
-    // for fine tuning (architect 2026-09-16; the record is in
+    // a fourth 2026-09-15; THE DIGITS ARE THE WORKFLOW ORDER):
+    // `1` is S+W, `2` is S+M, `3` is T+P, `4` is T+W — the warp markers first,
+    // then magnification, then the phase resets roughly ballpark, then T+W
+    // for fine tuning (architect 2026-09-17; the record is in
     // tempo-and-home-view.md). They
     // name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
     // consumed no-op — that is the whole difference from the deleted `t` and
@@ -1186,7 +1186,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the state the handler writes rather than through a new return value —
     // one owner, no signature change.
     //
-    // BARE 1 IS S+M (architect 2026-09-16; it was bare 4 and T+M from
+    // BARE 2 IS S+M (architect 2026-09-17; it was bare 4 and T+M from
     // 2026-09-15), the magnification level markers column, which is SOURCE
     // VIEW ONLY: leaving target for it never refuses, and the same
     // audio-first order lands the column entry on a finished source view.
@@ -1206,7 +1206,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         !ctrl && !shift && !alt) {
         const char want_audio   =
             (key == GuiKeys::Digit1 || key == GuiKeys::Digit2) ? 'S' : 'T';
-        const char want_markers = (key == GuiKeys::Digit1) ? 'M'
+        const char want_markers = (key == GuiKeys::Digit2) ? 'M'
                                 : (key == GuiKeys::Digit3) ? 'P'
                                                            : 'W';
         const bool column_changes = (app.active_markers_view != want_markers);
