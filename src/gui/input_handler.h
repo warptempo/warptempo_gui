@@ -3374,11 +3374,12 @@ private:
 
     // load_history_local_entry_in_place: the same act with A STATE OF THIS
     // SESSION'S OWN UNDO/REDO TIMELINE as its source (architect 2026-08-08) —
-    // apply member `number`, its displayed NUMBER in [1, N] (the VIEWED
-    // member, handed over by confirm_load_in_place), as the new authoring
-    // baseline. Validate-before-mutate like both siblings: a zero,
-    // out-of-range or unreadable member is one stderr line and a false return
-    // with nothing touched. It restores exactly what an undo
+    // apply the walk member at index `member` (the VIEWED index, handed over
+    // by confirm_load_in_place in the same currency its commit sibling takes
+    // since 2026-09-17, so neither arm of the fork maps a number) as the new
+    // authoring baseline. Validate-before-mutate like both siblings: an index
+    // past the walk's member count, or one the walk cannot answer for, is one
+    // stderr line and a false return with nothing touched. It restores exactly what an undo
     // entry carries — the three marker columns and the engine block — which since
     // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well,
     // and since 2026-08-24 it writes them THROUGH the same body
@@ -3387,7 +3388,7 @@ private:
     // rather than as a rollback, writes no disk and
     // closes the mode as part of the act. Full behaviour paragraph at the
     // definition.
-    bool load_history_local_entry_in_place(std::size_t number);
+    bool load_history_local_entry_in_place(std::size_t member);
 
     // THE SWEEP'S TRIM WRITE (architect 2026-08-18 — the region IS the trim):
     // one ANCHOR and one MOVING end, both whole SOURCE frames already inside
@@ -4020,10 +4021,23 @@ private:
 public:
     void run_undo_redo_command(bool redo, bool synthesized_repeat);
     void run_undo_redo_without_key(bool redo);
+
+    // THE CAR'S PLAY ROAD (architect 2026-09-17 — each car button is its key,
+    // so the head unit's play meets what bare SPACE meets): BARE SPACE'S HEAD
+    // GATES, asked in on_key's order through the same verdicts and sentences,
+    // true when the press died at one (having carded whatever the key cards).
+    // It is the GATES ALONE and not the key whole — the play's ACT is the
+    // car's own loop of the trim, and Space's target-view readiness gate ranks
+    // below these — so the cluster keeps both and takes the gates from here.
+    // ONE CALLER, GuiCarTransport::car_toggle, which has dropped the routers
+    // and the `h` view first. The statement and the two gates it deliberately
+    // does not ask (the editor swallow's card, the authoring lock) are at the
+    // definition.
+    bool car_play_refused_by_key_gates();
 private:
 
-    // on_key's head-gate halves, hoisted for the car's road above (each gate's
-    // ruling stays at its site in on_key): the no-audio verdict, the
+    // on_key's head-gate halves, hoisted for the car's two roads above (each
+    // gate's ruling stays at its site in on_key): the no-audio verdict, the
     // pointer-gesture drag gate's membership (the editor text drag has its own
     // gate ahead of it), the keyboard-modal editor gate's sentence, and the
     // authoring lock's verdict-and-card (true = the lock dropped the chord).

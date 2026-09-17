@@ -139,10 +139,11 @@ struct GuiMediaState {
     // listed by the player, mirrored by Synchronize and played by the
     // auto-advance.
     //
-    // WITH THE PLAYER CLOSED: THE UNDO POSITION AROUND THE SAVE — three
-    // numbers, "-2, 0, +2" (entries before the save, the live position
-    // relative to it, entries after it), composed by
-    // car_transport_undo_position_line (car_transport.h, the formula there).
+    // WITH THE PLAYER CLOSED: WHERE THE SESSION STANDS, SPELLED AS A BATCH
+    // CELL'S BASENAME IS — "<index>_<distance>", "5_2" (the live state's
+    // number in the session walk's counting and its distance from the save),
+    // composed by car_transport_title_line (car_transport.h, the formula
+    // there).
     std::string title;
     // THE FOLDER THE NAME LIVES IN, bare: the PLAYING ITEM'S OWN folder while
     // it sounds — the band may have walked somewhere else, and the sounding

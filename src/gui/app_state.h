@@ -7291,18 +7291,46 @@ struct AppState {
             return source == GuiHistoryWalkSource::Local ? local_index : index;
         }
 
+        // A MEMBER'S DISPLAYED NUMBER, AND THE WALKS COUNT UPWARD FROM THE
+        // PIECE'S PAST (architect 2026-09-17: "it feels like the numbers count
+        // in reverse. If I drop two markers and hit `h` then `g`, I see 1/3; I
+        // would expect 3/3. Reverse the ordering — the first becomes last and
+        // the last becomes first — on both sides, git and session"). The
+        // OLDEST member reads 1 and the NEWEST reads N, on both walks, so the
+        // number grows the way the work did.
+        //
+        // THE INTERNAL INDEX IS UNTOUCHED BY IT: 0 is still the NEWEST member
+        // on both walks, `,` still steps older (index + 1) and `.` newer, and
+        // every wall, jump, cache and pairing reads the index it always did.
+        // What reverses is the DISPLAY's arithmetic alone — `N − member` — so
+        // the counting direction is ONE EXPRESSION here rather than an
+        // inversion of the walk.
+        //
+        // ZERO ON AN EMPTY WALK, the commit walk's `0/0` and the one case with
+        // no member to number (the local walk is never empty). THREE READERS,
+        // greped 2026-09-17: the walk line (history_walk_line,
+        // paint_handler.cpp), member_label's LOCAL arm below — so the corner
+        // and the `'` confirmation cannot number one member two ways — and the
+        // local load's own success line on stderr
+        // (load_history_local_entry_in_place, which reads it before the close
+        // that resets this struct).
+        std::size_t member_number(std::size_t member) const {
+            const std::size_t count = walk_count();
+            return count == 0 ? 0 : count - member;
+        }
+
         // A MEMBER'S USER-FACING SPELLING, the ONE OWNER for both walks
         // (2026-08-28, hoisted for the `'` load's own naming): on the LOCAL
-        // walk the member's displayed NUMBER — `index + 1`, the corner's own
-        // `n/N` arithmetic, the only name a local member has; on the COMMIT
-        // walk the seven-character SHA every user-facing line spells
-        // (short_sha, history_diff.h). The corner's SHA token reads it too, so
-        // the confirmation's question and the corner cannot spell one member
-        // two ways. Empty for an out-of-range commit index (sha_at's own
+        // walk the member's displayed NUMBER — member_number above, the
+        // corner's own `n/N` arithmetic, the only name a local member has; on
+        // the COMMIT walk the seven-character SHA every user-facing line
+        // spells (short_sha, history_diff.h). The corner's SHA token reads it
+        // too, so the confirmation's question and the corner cannot spell one
+        // member two ways. Empty for an out-of-range commit index (sha_at's own
         // answer), which is exactly the empty walk.
         std::string member_label(std::size_t member) const {
             if (source == GuiHistoryWalkSource::Local)
-                return std::to_string(member + 1);
+                return std::to_string(member_number(member));
             return short_sha(session.sha_at(member));
         }
 

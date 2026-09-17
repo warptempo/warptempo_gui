@@ -2544,9 +2544,14 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
 // strict-load clean, and kept as the least-surprising shape rather than a
 // refusal.
 //
-// THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads walk_index /
-// walk_count, so a Local tab counts the session's own timeline states with the
-// same two numbers in the same place. THE SHA IS THE COMMIT WALK'S ALONE, and
+// THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `n/N` reads the viewed
+// member's DISPLAYED NUMBER and the walk's count, so a Local tab counts the
+// session's own timeline states with the same two numbers in the same place.
+// THE COUNT RUNS UPWARD FROM THE PIECE'S PAST since 2026-09-17 — the oldest
+// member is 1 and the newest is N — and the arithmetic that turns the walk's
+// index into that number has ONE OWNER, HistoryMode::member_number
+// (app_state.h), which the `'` confirmation's own naming reads too. THE SHA IS
+// THE COMMIT WALK'S ALONE, and
 // deliberately named rather than routed through an accessor: an undo entry has
 // no commit, so the token simply does not appear on the Local tab — the
 // empty-sha test below is that fact rather than a second branch.
@@ -2565,9 +2570,10 @@ static std::string history_walk_line(AppState& app) {
     // mode stands: the one entry owner binds it before `active` goes up and its
     // member count is U + R + 1, so a session that has authored nothing reads
     // `1/1` — one state compared against itself. The zero arm therefore
-    // describes the commit side alone now, and stays one expression because the
-    // arithmetic below is the walk-agnostic one.
-    line += std::to_string(count == 0 ? 0 : app.history_mode.walk_index() + 1);
+    // describes the commit side alone now, and it lives inside member_number
+    // with the counting it belongs to rather than as a test of this line's own.
+    line += std::to_string(
+        app.history_mode.member_number(app.history_mode.walk_index()));
     line += '/';
     line += std::to_string(count);
     if (app.history_mode.source == GuiHistoryWalkSource::Commit) {

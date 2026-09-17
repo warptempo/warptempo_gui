@@ -5779,11 +5779,13 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 //
 // WHAT IT IS: the third of the load-in-place family (architect 2026-08-08,
 // superseding his own "the Local walk consumes `'`"), with A STATE OF THIS
-// SESSION'S OWN UNDO/REDO TIMELINE as its source. `number` is the highlighted
-// VIEWED member's displayed NUMBER — the corner's own `n/N` vocabulary, which
-// is the only name a local member has (the one caller,
-// confirm_load_in_place, hands it that member; the typed number retired
-// with the load prompt's field).
+// SESSION'S OWN UNDO/REDO TIMELINE as its source. `member` is the VIEWED
+// MEMBER'S INDEX in the local walk — what the one caller
+// (confirm_load_in_place) parked and hands over, the same currency its commit
+// sibling takes since 2026-09-17, so the fork passes ONE number and neither
+// arm maps it on the way (the typed number retired with the load prompt's
+// field, and the member's displayed NUMBER — member_number, app_state.h — is
+// now a naming of the index rather than a second address).
 //
 // IT IS NEVER A ROLLBACK. The member's state is applied ON TOP of the current
 // one as ONE NEW UNDO ENTRY, exactly as loading a commit is, so Ctrl+Z
@@ -5794,11 +5796,11 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 // already closed with the mode a few lines above.
 //
 // WHAT GATES, all of it BEFORE any store is touched — the family's
-// validate-before-mutate contract: the number must name a member in [1, N],
-// and the walk must hand back that member's state. Anything else is ONE
-// stderr line and a false return, the caller keeping the picker open. There is no grammar and nothing to
-// resolve: N is the walk's own member count, and the number is an index into
-// it.
+// validate-before-mutate contract: the index must name a member of the walk
+// (`member < entry_count()`), and the walk must hand back that member's state.
+// Anything else is ONE stderr line and a false return, the view standing.
+// There is no grammar and nothing to resolve: the bound is the walk's own
+// member count, and the index is a subscript into it.
 //
 // WHAT IS APPLIED: an undo entry carries the three MARKER COLUMNS and the
 // ENGINE BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
@@ -5829,7 +5831,7 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 // AND THE MODE CLOSES, at the first line past the last refusal, for the reason
 // both siblings state: this replaces the very state the frozen now side was
 // measured against.
-bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
+bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
     // The mode is the route's precondition — the walk lives on it, and the close
     // below is part of the act. The source test is the routing's own fact
     // restated defensively: confirm_load_in_place sends only Local-tab
@@ -5837,29 +5839,37 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t number) {
     if (!app.history_mode.active) return false;
     if (app.history_mode.source != GuiHistoryWalkSource::Local) return false;
 
-    // THE WHOLE VALIDATION: the number is a count position in [1, N].
-    const std::size_t count  = app.history_mode.local.entry_count();
-    const bool        in_range = number >= 1 && number <= count;
+    // THE WHOLE VALIDATION: the index names a member of the walk.
+    const std::size_t count = app.history_mode.local.entry_count();
 
     // THE WALK'S OWN ANSWER IS THE SECOND HALF OF THE GATE. It is empty only for
     // an UNBOUND walk or a stack shorter than its capture (the blank-lane state,
     // which a live Local tab cannot reach — the mode's entry binds the walk and
     // the allowlist refuses the chord on an empty one), so this is the
-    // unreachable arm stated rather than assumed, refusing in the same shape a
-    // bad number does.
+    // unreachable arm stated rather than assumed, refusing in the same shape an
+    // out-of-range index does.
     std::optional<GuiHistoryLocalWalk::MemberState> state;
-    if (in_range) state = app.history_mode.local.member_state(number - 1);
+    if (member < count) state = app.history_mode.local.member_state(member);
     if (!state) {
+        // THE MEMBER IS NAMED BY THE WALK, NOT BY A NUMBER THE USER TYPED:
+        // the typed road is gone, so an index past the end has no displayed
+        // number to quote and the refusal says what is true of it — the walk
+        // does not carry it.
         std::fprintf(stderr,
-            "warptempo_gui: Load in place refused: %zu is not a history entry "
-            "number (1..%zu)\n", number, count);
+            "warptempo_gui: Load in place refused: the local history walk has "
+            "no member at index %zu (%zu members)\n", member, count);
         notifications.notify(
             AppState::NotificationClass::Normal,
-            "Load in place refused: " + std::to_string(number) +
-                " is not a history entry number (1.." +
-                std::to_string(count) + ")");
+            "Load in place refused: that history entry is not in the walk");
         return false;
     }
+
+    // THE DISPLAYED NUMBER IS READ WHILE THE WALK STILL STANDS — the close
+    // below resets HistoryMode whole, and member_number counts against the
+    // walk's own member count — and it is used by the stderr line at the tail,
+    // which runs long after that close. One owner for the naming, here as
+    // everywhere (member_number, app_state.h).
+    const std::size_t number = app.history_mode.member_number(member);
 
     // COPIED BEFORE ANYTHING IS WRITTEN (see the header): the pointers name the
     // live stores themselves on the identity load, and the close below ends the
@@ -8658,17 +8668,20 @@ void GuiInputHandler::confirm_load_in_place() {
         if (member >= app.history_mode.walk_count()) return;
         // THE FORK ON THE WALK SOURCE, and the one site of it: the Remote tab
         // loads the commit walk's member at that INDEX through
-        // load_history_commit_in_place, the Local tab the member's number
-        // through load_history_local_entry_in_place. The index is all that
-        // crosses since 2026-09-17 — the commit walk has two roads and two
-        // spellings of a member's address, so the act reads the member's
-        // address inside itself, ahead of the close that drops the session.
+        // load_history_commit_in_place, the Local tab the local walk's member
+        // at the same index through load_history_local_entry_in_place. THE
+        // INDEX IS ALL THAT CROSSES, on both arms since 2026-09-17 — the
+        // commit walk has two roads and two spellings of a member's address,
+        // so that act reads the address inside itself, ahead of the close that
+        // drops the session, and the local arm stopped mapping the index onto
+        // a displayed number when the walks' counting reversed (the number is
+        // a naming of the index now, HistoryMode::member_number).
         // Each act owns every refusal on its own route and names it on stderr
         // AND on a notification card (2026-08-29; stderr alone until then, the
         // view's own line having outranked the transient tier), so nothing is
         // said here.
         (void)(app.history_mode.source == GuiHistoryWalkSource::Local
-                   ? load_history_local_entry_in_place(member + 1)
+                   ? load_history_local_entry_in_place(member)
                    : load_history_commit_in_place(member));
     }
 }

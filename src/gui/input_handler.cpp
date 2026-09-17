@@ -38,9 +38,11 @@
 // day), which outrank that gate and so ask its
 // question themselves rather than letting the band's row press or the scrub's
 // marker drag swallow a key in silence. One literal, so a retune moves all
-// five. (The car's undo / redo road, run_undo_redo_without_key, raises it too
-// — twice, asking the first two gates' own verdicts for a chord that never
-// passes through on_key; it is no sixth gate.)
+// five. (THE CAR'S TWO ROADS raise it too, re-greped 2026-09-17 — the undo /
+// redo road run_undo_redo_without_key and the play's gate
+// car_play_refused_by_key_gates, twice each, asking the first two gates' own
+// verdicts for a chord that never passes through on_key; neither is a sixth
+// gate.)
 //
 // THE FIRST TWO SPEAK ONLY FOR A BOUND CHORD and the last three speak for every
 // chord (the unbound-keys ruling, chord_is_bound in gui_input.h): the two
@@ -53,7 +55,8 @@
 constexpr const char* kKeysDuringDrag = "Keys are ignored during a drag";
 
 // THE NO-AUDIO GATE'S SENTENCE (on_key's loading gate), shared with the car's
-// undo / redo road, which asks the same gate (run_undo_redo_without_key).
+// two roads, which ask the same gate (run_undo_redo_without_key and
+// car_play_refused_by_key_gates).
 constexpr const char* kNoAudioLoadedCard = "No audio is loaded yet";
 
 // THE REASON CHANNEL'S ONE READER IN THIS TU (architect 2026-08-30): the
@@ -2629,6 +2632,59 @@ void GuiInputHandler::run_undo_redo_without_key(bool redo) {
     }
     if (authoring_lock_refuses_chord(key, mods)) return;
     run_undo_redo_command(redo, /*synthesized_repeat=*/false);
+}
+
+// THE CAR'S PLAY MEETS SPACE'S OWN GATES (architect 2026-09-17: "look at how
+// undo/redo and play work in the GUI under an open flag editor or a drag, and
+// follow that rule" — EACH CAR BUTTON IS ITS KEY). Bare Space's head gates in
+// on_key's order, through the same verdicts and the same sentences the skips'
+// road above asks, answered for the caller: TRUE means the press died here,
+// having already said whatever the key says. The routers ranked above these
+// gates and the `h` view's are the caller's to drop
+// (GuiCarTransport::admits).
+//
+// IT IS THE GATES AND NOT THE KEY WHOLE, the one place the car's three
+// buttons differ in shape: Previous and Next run Ctrl+Z's own command body,
+// while the play's ACT is the car's alone — a loop of the trim from its begin,
+// GuiPlaybackLifecycle::car_toggle_playback — so the cluster keeps the act
+// (and Space's target-view readiness gate, which ranks below these) and takes
+// only the gates from here.
+//
+// THE EDITOR ARM RAISES NO CARD, AND THE KEY IS WHY. Space is a PRINTABLE key
+// (text_editor::classify_key), so modal_editor_key_blocked ADMITS it and an
+// open flag, bound or level editor takes it as a typed space: the transport
+// never sees the press, and the field showing the space is the whole answer.
+// The car has no character to type, so its play is consumed in that same
+// silence rather than borrowing the swallow's sentence, which would say Space
+// is ignored when Space is being read. (The DIALOG editors never reach here —
+// the caller drops them.)
+//
+// THE AUTHORING LOCK IS NOT ASKED, and that too is the key's answer: both its
+// reasons ADMIT Space — read_only_key_blocked carries is_play_pause on its
+// allowlist and iteration_lock_key_blocked falls through to that list — so a
+// call would be a branch with no true arm.
+bool GuiInputHandler::car_play_refused_by_key_gates() {
+    const GuiKey key = GuiKeys::Space;
+    GuiInputState mods{};
+    const auto card_bound = [&](std::string sentence) {
+        if (chord_is_bound(key, mods, app.history_mode.active))
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 std::move(sentence));
+    };
+    if (no_audio_to_dispatch_on()) {
+        card_bound(kNoAudioLoadedCard);
+        return true;
+    }
+    if (app.editor_text_drag.active) {
+        card_bound(kKeysDuringDrag);
+        return true;
+    }
+    if (keyboard_modal_editor_active()) return true;
+    if (keyboard_owned_by_pointer_gesture()) {
+        card_bound(kKeysDuringDrag);
+        return true;
+    }
+    return false;
 }
 
 // THE ADDRESSED-CELL WRITE AND ITS DAMAGE, spelled once for the walk: the

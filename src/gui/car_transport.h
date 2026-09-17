@@ -54,12 +54,13 @@ struct GuiInputHandler;
 // THE THREE LINES, with the player closed (architect 2026-09-17): the ALBUM
 // (the console's dim top line) is the project's name, the ARTIST is THE VIEW
 // ALONE ("T+W" — view_pair_label, the view bar's one speller; no tab letter,
-// no trim span), and the TITLE, the big line, is THE UNDO POSITION AROUND THE
-// SAVE as three numbers ("-2, 0, +2" — car_transport_undo_position_line, the
-// formula and the spelling at its declaration), so a Previous or Next reads
-// back on the console as the middle number moving. The title's spelling is
-// the planner's proposal, to be ruled on by the architect on his console; it
-// is one composer, so a respelling is one edit. The DURATION is unknown (-1: the console counts up with no end to
+// no trim span), and the TITLE, the big line, is WHERE THE SESSION STANDS,
+// SPELLED AS A BATCH CELL'S BASENAME IS — "<index>_<distance>", the live
+// state's number in the session walk's counting and its distance from the save
+// ("5_2", "3_0", "1_-2" — car_transport_title_line, the formula and the
+// spelling at its declaration) — so a Previous or Next reads back on the
+// console as both numbers stepping together. ONE COMPOSER, so a respelling is
+// one edit. The DURATION is unknown (-1: the console counts up with no end to
 // run into, the silence track's shape) and the POSITION is the loop clock
 // while a transport session is live — the cursor less the trim's begin — and
 // 0 at rest.
@@ -86,47 +87,72 @@ struct GuiInputHandler;
 // editor and the BPM bracket editor, the surfaces whose open stopped
 // playback and whose keys are theirs alone) and in the `h` history view
 // (playback is removed from the view whole and bare Space is consumed
-// there). It ACTS under a top-strip flag editor (chords-only modality: the
-// editor stops no playback and the car is not a key) and under a pointer
-// drag (the player's own rule: the drag swallow is the key road's, and a
-// direct act never enters it). A read-only tab and the iteration lock are
-// LEGAL for the play, as Space is. PREVIOUS AND NEXT ASK MORE, BECAUSE THEY ARE
-// Ctrl+Z AND Ctrl+Shift+Z WHOLE: past admits() they meet the key's own head
-// gates (GuiInputHandler::run_undo_redo_without_key — under a flag editor or a
-// pointer drag the chord is swallowed with the key's card, a read-only tab
-// cards the chord, the iteration lock cards undo's own sentence) and then
-// the command's own refusals and cards (the empty stack, the other tab's
-// lock, the restrict-undo lamp).
+// there).
 //
-// THE INPUT HANDLER IS AN ACT OWNER'S BACK-POINTER, NOT THE DELETED KEY ROAD:
-// Previous and Next call GuiInputHandler::run_undo_redo_without_key, the
-// one body Ctrl+Z's arm shares — no key is pressed, no modal ring is touched,
-// no dispatch runs — as a DELIBERATE press (a synthesized repeat's silent
-// empty-stack wall is the held key's alone; the wheel does not repeat). A
-// restore stops a live session exactly as the key's does (the restore body's
-// own stop), the car's loop included.
+// PAST admits(), ALL THREE BUTTONS ARE THEIR KEYS (architect 2026-09-17:
+// "look at how undo/redo and play work in the GUI under an open flag editor
+// or a drag, and follow that rule"), so each meets the head gates on_key asks
+// ahead of its own chord, through the same verdicts and the same sentences:
+//   PREVIOUS AND NEXT ARE Ctrl+Z AND Ctrl+Shift+Z WHOLE
+//     (GuiInputHandler::run_undo_redo_without_key) — under a flag editor or a
+//     pointer drag the chord is swallowed with the key's card, a read-only tab
+//     cards the chord, the iteration lock cards undo's own sentence — and then
+//     they meet the command's own refusals and cards (the empty stack, the
+//     other tab's lock, the restrict-undo lamp).
+//   THE PLAY TAKES BARE SPACE'S GATES
+//     (GuiInputHandler::car_play_refused_by_key_gates) — the gates alone,
+//     because the ACT is the car's own loop rather than toggle_playback: under
+//     a pointer drag it cards `Keys are ignored during a drag` as Space does,
+//     and UNDER A TOP-STRIP FLAG, BOUND OR LEVEL EDITOR IT IS CONSUMED IN
+//     SILENCE, which is what Space does there too (Space is printable, so the
+//     field takes it as a typed character and the transport never sees it;
+//     the car has no character to type, so it borrows no sentence). A
+//     read-only tab and the iteration lock stay LEGAL for it, as they are for
+//     Space.
+// So the play no longer acts under a flag editor or a pointer drag, and what
+// it still acts under is nothing the keyboard would refuse either.
+//
+// THE INPUT HANDLER IS AN ACT OWNER'S AND A GATE OWNER'S BACK-POINTER, NOT
+// THE DELETED KEY ROAD: Previous and Next call
+// GuiInputHandler::run_undo_redo_without_key, the one body Ctrl+Z's arm
+// shares, and the play calls car_play_refused_by_key_gates for Space's own
+// head gates — no key is pressed, no modal ring is touched, no dispatch runs —
+// each as a DELIBERATE press (a synthesized repeat's silent empty-stack wall
+// is the held key's alone; the wheel does not repeat). A restore stops a live
+// session exactly as the key's does (the restore body's own stop), the car's
+// loop included.
 
-// THE TITLE'S ONE COMPOSER: THE UNDO POSITION AROUND THE SAVE. With
-// U = undo_stack.size(), R = redo_stack.size() and d = saved_distance (the
-// saved state is d steps from the live one: 0 at the save, negative when the
-// save lies |d| undos back, positive when it lies d redos ahead — every
-// push, pop, restore and eviction moves it with the stacks, UndoHistory):
-//   first  = -(U + d)   the entries standing BEFORE the save (<= 0)
-//   middle = -d         the live position relative to the save
-//   third  = R - d      the entries standing AFTER the save (>= 0)
-// The first and third are invariant under undo and redo (each moves U or R
-// and d together), so a Previous / Next moves the middle alone. HIS EXAMPLE:
-// open, drop two, save, drop two -> "-2, 2, +2"; undo twice -> "-2, 0, +2".
-// SPELLING: ", "-separated; the first with its minus when nonzero, the third
-// with a `+` when nonzero, the middle signed only when negative, a zero bare
-// "0" everywhere — an empty history reads "0, 0, 0". WITH NO SAVE IN REACH
-// (saved_valid false: a push that orphaned a save lying on the redo side, the
-// cap's eviction of the state it named, or a coalesced burst's net-zero pop
-// at the save) the line is
-// "?, <U>, ?" — the middle counted from the oldest reachable state, so it
-// still moves under Previous / Next, and the two `?` say there is no save to
-// measure against.
-std::string car_transport_undo_position_line(const UndoHistory& history);
+// THE TITLE'S ONE COMPOSER: WHERE THE SESSION STANDS, SPELLED AS A BATCH
+// CELL'S BASENAME IS (architect 2026-09-17, replacing the three-number line of
+// that morning) — the leading index, an underscore, then the payload:
+//
+//     <index>_<distance>
+//
+// <index> IS THE LIVE STATE'S NUMBER in the session walk's counting, the same
+// number the `h` view's Local walk shows for the state on screen: N − live
+// index = (U + R + 1) − R = U + 1 with U = undo_stack.size() and
+// R = redo_stack.size(). It is that ONE ARITHMETIC here rather than a call
+// into HistoryMode::member_number, because the walk is bound only while the
+// view stands and this line composes on every tick. Bare decimal, no padding:
+// a batch cell pads to its folder's width, and a session has no set to pad
+// against.
+//
+// <distance> IS HOW FAR THE LIVE STATE STANDS FROM THE SAVE — positive after
+// it, 0 at it, negative behind it — which is −saved_distance under
+// UndoHistory's sign convention (the saved state is d steps from the live one:
+// 0 at the save, negative when the save lies |d| undos back, positive when it
+// lies d redos ahead; every push, pop, restore and eviction moves it with the
+// stacks). PROJECT OPEN COUNTS AS THE SAVE until the first save: `saved_distance`
+// starts at 0 with `saved_valid` true, so an untouched fresh project reads
+// "1_0". WITH NO SAVE IN REACH (saved_valid false: a push that orphaned a save
+// lying on the redo side, the cap's eviction of the state it named, or a
+// coalesced burst's net-zero pop at the save) the distance reads `?`, the
+// index still standing.
+//
+// SPELLING: to_string's own — a negative carries its minus, a zero is bare
+// "0", a positive carries no sign. HIS EXAMPLE: open, drop two, save, drop two
+// -> "5_2"; Previous twice -> "3_0"; Previous twice more -> "1_-2".
+std::string car_transport_title_line(const UndoHistory& history);
 
 struct GuiCarTransport {
     AppState&              app;
@@ -166,8 +192,8 @@ struct GuiCarTransport {
     //     console sends whichever verb it believes and every one of them
     //     means "the other one"; the body is the car's Space
     //     (GuiPlaybackLifecycle::car_toggle_playback — the stop arm the one
-    //     stop body, the play arm the loop of the trim), behind Space's own
-    //     target-view readiness gate.
+    //     stop body, the play arm the loop of the trim), behind bare Space's
+    //     own head gates and then its target-view readiness gate.
     //   Previous -> car_previous(): run_undo_redo_without_key(false), UNDO
     //     WHOLE — Ctrl+Z's head gates, refusals and cards, then the restore
     //     (which stops a live session, the car's loop included).

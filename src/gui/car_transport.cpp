@@ -1,27 +1,25 @@
 #include "car_transport.h"
 
-#include "input_handler.h"   // run_undo_redo_without_key, modal_dialog_editor_active
+#include "input_handler.h"   // run_undo_redo_without_key,
+                             // car_play_refused_by_key_gates,
+                             // modal_dialog_editor_active
 
 #include <cstdint>
 #include <string>
-#include <utility>
 
 // The title (the formula, his example and the spelling at the declaration).
-std::string car_transport_undo_position_line(const UndoHistory& history) {
+std::string car_transport_title_line(const UndoHistory& history) {
     const int64_t u = static_cast<int64_t>(history.undo_stack.size());
-    const int64_t r = static_cast<int64_t>(history.redo_stack.size());
-    if (!history.saved_valid)
-        return "?, " + std::to_string(u) + ", ?";
-    const int64_t d      = history.saved_distance;
-    const int64_t before = -(u + d);
-    const int64_t middle = -d;
-    const int64_t after  = r - d;
-    // to_string spells a negative with its minus and a zero bare, which is
-    // the first's and the middle's whole spelling; the third takes a `+`.
-    std::string s = std::to_string(before) + ", " + std::to_string(middle) +
-                    ", ";
-    if (after > 0) s += '+';
-    s += std::to_string(after);
+    // The live state's number in the session walk's counting: U + 1.
+    std::string s = std::to_string(u + 1);
+    s += '_';
+    if (!history.saved_valid) {
+        s += '?';
+        return s;
+    }
+    // to_string spells a negative with its minus and a zero bare, which is the
+    // distance's whole spelling.
+    s += std::to_string(-static_cast<int64_t>(history.saved_distance));
     return s;
 }
 
@@ -75,14 +73,21 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
     }
 }
 
-// THE CAR'S SPACE. Space's own target-view gate is asked here, ahead of the
-// launch, exactly where on_key asks it ahead of toggle_playback: in target
-// view with nothing playing and the preview not ready the press is a silent
-// refusal — row 8's process line already carries the preview render's
-// `Updating...`, the one-dimensional class (messaging.md's silent list). The
-// stop arm never meets it: `!playback.is_playing()` is the gate's own term.
+// THE CAR'S SPACE, AND IT MEETS SPACE'S OWN GATES (architect 2026-09-17 —
+// each car button is its key): past admits() the press asks the HEAD GATES
+// on_key asks ahead of bare Space, through the one statement of them
+// (GuiInputHandler::car_play_refused_by_key_gates, which carries the order,
+// the cards and the two gates it deliberately does not ask), so a flag editor
+// or a pointer drag answers the console exactly as it answers the keyboard.
+// Then Space's own target-view gate, asked here where on_key asks it ahead of
+// toggle_playback: in target view with nothing playing and the preview not
+// ready the press is a silent refusal — row 8's process line already carries
+// the preview render's `Updating...`, the one-dimensional class
+// (messaging.md's silent list). The stop arm never meets it:
+// `!playback.is_playing()` is the gate's own term.
 void GuiCarTransport::car_toggle() {
     if (!admits()) return;
+    if (input_handler.car_play_refused_by_key_gates()) return;
     if (app.active_audio_view == 'T' && !playback.is_playing() &&
         !target_render.preview_ready()) {
         return;
@@ -111,7 +116,7 @@ GuiMediaState GuiCarTransport::derive() const {
     // alone (as the player's is).
     st.playing        = transport_session_live(app);
     st.album          = app.project_name;
-    st.title          = car_transport_undo_position_line(app.history);
+    st.title          = car_transport_title_line(app.history);
     st.artist         = view_pair_label(app.active_audio_view,
                                         app.active_markers_view);
     st.duration_ms    = -1;
