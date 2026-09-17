@@ -47,10 +47,9 @@ namespace {
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the six coalescing kinds (GestureKind, undo.h, re-grepped 2026-09-16: the
+// the five coalescing kinds (GestureKind, undo.h, re-grepped 2026-09-16: the
 // THREE position nudges — warp, phase reset and magnification level — and the
-// three value steps, the tempo cent step, the measure step and the
-// magnification level step)
+// two value steps, the tempo cent step and the magnification level step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
 // verdicted on. There are three of them, re-grepped at this writing
@@ -302,11 +301,12 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // the selection on one of TWO stores rather than the selection itself.
     // Both went with the kind on 2026-09-10, when the iteration bracket left
     // the undo domain: the bound step pushes nothing, so it has no entry for a
-    // later tap to merge into and no subject to keep apart. The four kinds
-    // standing now (GestureKind, undo.h, re-grepped: WarpNudge,
-    // PhaseResetNudge, TempoStep, MeasureStep) are one-body kinds whose
-    // subject the selection carries whole — the two value steps' FIELDS keep
-    // apart by the kind itself, each field its own kind.)
+    // later tap to merge into and no subject to keep apart. The five kinds
+    // standing now (GestureKind, undo.h, re-grepped 2026-09-16: WarpNudge,
+    // PhaseResetNudge, TempoStep, MagnificationLevelNudge,
+    // MagnificationLevelStep) are one-body kinds whose subject the selection
+    // carries whole — the two value steps' FIELDS keep apart by the kind
+    // itself, each field its own kind.)
 
     bool merge = false;
     if (stamp_matches) {
@@ -477,16 +477,18 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
     // preference. The routes are the nudges' shared prologue, both arms of
-    // the Up/Down cent step, and since 2026-09-14 the value step's measure
-    // body (grep this function's callers; the Up/Down BOUND
+    // the Up/Down cent step, and the magnification level column's level step
+    // (grep this function's callers; the Up/Down BOUND
     // step was among them until 2026-09-10, when the iteration bracket left
     // the undo domain and that step stopped asking any verdict at all).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
     // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
-    // at every eligible route — FIVE routes over FOUR call sites (the two
-    // position nudges through their shared commit tail, the singleton and
-    // group arms of the Up/Down cent step, and the measure step) — and ONLY
+    // at every eligible route — SIX routes over FIVE call sites, re-grepped
+    // 2026-09-16 (the warp and phase-reset position nudges through their
+    // shared commit tail, the magnification level nudge and level step each
+    // at its own, and the singleton and group arms of the Up/Down cent
+    // step) — and ONLY
     // on the
     // accepted path, so a REFUSED press
     // never enables a later merge into an older entry, tap or repeat. Presses
@@ -529,11 +531,12 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // the subject terms are untouched.
     //
     // ONE SEAM FOR EVERY KIND: every eligible route reaches this call
-    // post-mutation on its accepted path — FIVE routes over FOUR call sites:
-    // the two position nudges through their shared commit tail, the singleton
-    // and group arms of the Up/Down cent step, and the measure step
-    // (2026-09-14) at its own — so the equality question has ONE owner here
-    // rather than five copies; the
+    // post-mutation on its accepted path — SIX routes over FIVE call sites,
+    // re-grepped 2026-09-16: the warp and phase-reset position nudges through
+    // their shared commit tail, the magnification level nudge and level step
+    // each at its own, and the singleton and group arms of the Up/Down cent
+    // step — so the equality question has ONE owner here
+    // rather than six copies; the
     // per-column readers it uses are the row enumerations at the head of this
     // file. (The Up/Down BOUND step was a fifth route over a fourth call site
     // until 2026-09-10, when the iteration bracket left the undo domain: it
@@ -1022,8 +1025,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
     // recorded, a restore lands the combination the op was AUTHORED in; the
     // keyless S+P now arrives when, and only when, the op was authored there
-    // (reachable by toggling `t` off T+P, where the marker MEASURE authors —
-    // the home-view binding's fourth ruled exception). Before this tag existed
+    // (reachable by leaving T+P for source view, the phase-reset column
+    // authoring in both audio views). Before this tag existed
     // the restore MANUFACTURED S+P out of a T+P entry undone from S+W, which is
     // the defect it closes.
     if (input) input->switch_active_audio_view_to(entry.audio_view);

@@ -212,7 +212,8 @@ struct GuiInputState {
 // arrow's own act steps — a painted COLUMN for Left / Right (the playhead in
 // the waveform lane, the focused marker in the marker lane, both columns) and
 // for Up / Down the addressed cell's own unit — a CENT on the tempo (singleton
-// and group), a cent or a hop on a bound, a whole measure on the measure.
+// and group), a cent or a hop on a bound, a level on the magnification level
+// column's flag.
 // ONE OWNER for
 // all four arms, because the ladder is one ruling and not two: a second
 // spelling in the vertical arm could drift from the horizontal one.
@@ -671,8 +672,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Digit4:
             return bare;
 
-        // The measure editor.
-        case GuiKeys::Slash: return bare;
         // The settings editor, and the load in place / render player.
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
@@ -705,7 +704,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // live walk admits it.
         case GuiKeys::IsoLeftTab: return bare || sh;
         // The value step on the addressed cell (the tempo, a bound or the
-        // measure), and the playhead / marker position
+        // magnification level), and the playhead / marker position
         // step —
         // EACH IN THREE MAGNITUDES since 2026-08-31 (R12): bare one unit,
         // Shift three, Ctrl ten, on whatever the bare arrow's own subject is

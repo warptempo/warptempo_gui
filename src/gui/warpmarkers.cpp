@@ -42,9 +42,8 @@ std::string format_warpmarkers_text(
     std::ostringstream out;
     for (size_t i = 0; i < markers_.size(); ++i) {
         const auto& m = markers_[i];
-        // Canonical new format, no whitespace anywhere in the canonical
-        // prefix:
-        //   [#]?<frame position>|PAYLOAD[ //<measure>]
+        // Canonical new format, no whitespace anywhere on the line:
+        //   [#]?<frame position>|PAYLOAD
         if (m.disabled) out << '#';
         out << format_authored_frame(m.time_frame) << '|';
 
@@ -77,14 +76,6 @@ std::string format_warpmarkers_text(
                 out << ':' << m.label_def;
             }
         }
-
-        // The comment (split_marker_comment, marker_measure.h), and the one
-        // place a space may appear on a marker line: ` //<measure>`, emitted
-        // iff a measure is set. A blank measure emits nothing at all — the
-        // empty `//` is load-fatal precisely because this writer never
-        // produces it, which is what keeps the removal path (the measure
-        // editor's empty commit) and the load rules in agreement.
-        if (!m.measure.empty()) out << " //" << m.measure;
 
         out << '\n';
     }

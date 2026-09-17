@@ -872,8 +872,8 @@ struct GuiInputHandler {
     GuiRenderPlayer&         render_player;
     // THE NOTIFICATION CARDS (2026-08-29). Its readers here: every producer
     // that answers a user's act with a sentence (the load-in-place refusals,
-    // the picker's, Synchronize's, the checkpoint verdicts, the measure
-    // paste's stop, the revert's wall) calls notify; the X's press claim
+    // the picker's, Synchronize's, the checkpoint verdicts, the propagate
+    // pastes' stops, the revert's wall) calls notify; the X's press claim
     // calls dismiss; the motion handler and the pointer-left hook drive the
     // hover; the tick is main.cpp's.
     GuiNotifications&        notifications;
@@ -1555,10 +1555,9 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's seventeen — the transport three, then the right block's four marker
+    // row's sixteen — the transport three, then the right block's four marker
     // verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG button
-    // (2026-08-27), the MARKER MEASURE
-    // (2026-08-19) and ADD TO SELECTION (2026-08-18) behind them, three walk
+    // (2026-08-27) and ADD TO SELECTION (2026-08-18) behind them, two walk
     // steps and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
@@ -2299,7 +2298,7 @@ struct GuiInputHandler {
     // closes it; then the flag under (x, y) is SELECTED exactly as a plain
     // click selects it (run_marker_plain_select — no prior selection needed,
     // every audio view and column) and THAT CELL takes THE VALUE STEP as
-    // Up / Down would — the tempo, a bound or the measure,
+    // Up / Down would — the tempo, a bound or the magnification level,
     // a phase reset's payload stepping nothing — one step per detent, up =
     // increase, through the same bodies. The step asks the key's two lock
     // gates first; EVERY REFUSAL IS SILENT; synthesized_repeat is false, so a
@@ -2351,7 +2350,7 @@ struct GuiInputHandler {
     // its kinds (unlike modal_dialog_editor_active, which names the three
     // DIALOG-hosted surfaces — those first two plus the flag editor's
     // BpmBracket kind — and omits
-    // the FlagPayload, MeasureText, IterBound and MagnificationLevelText
+    // the FlagPayload, IterBound and MagnificationLevelText
     // kinds, all of which paint in the marker lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
@@ -2873,10 +2872,10 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. ALL FIVE kinds this editor state carries take
+    // close routing. ALL FOUR kinds this editor state carries take
     // route_modal_editor_key: the bpm
     // bracket editor as ever, the FlagPayload flag editor since it became
-    // keyboard-modal, the MeasureText measure editor since 2026-08-19, the
+    // keyboard-modal, the
     // IterBound editor since 2026-09-05 and the MagnificationLevelText level
     // editor since 2026-09-15 — they differ only in their commit/cancel bodies and in which area
     // they repaint. There is no longer a tail that cancels an edit to let an
@@ -4096,8 +4095,7 @@ private:
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
     // EVERY editor does — the two single-State dialog ones (settings,
-    // commit title), the bpm bracket, the marker MEASURE
-    // editor, and the
+    // commit title), the bpm bracket, the bound and level editors, and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.

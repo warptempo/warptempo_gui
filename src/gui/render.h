@@ -665,14 +665,13 @@ inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
 // CELL'S (architect 2026-09-05, "light the colour of only the flag that's
 // clicked"): a selected marker paints its ADDRESSED cell in the bright pair
 // and every other cell of its run — the flag box, the two iteration bound
-// cells, the measure box, each a cell — in its calm pair; the addressed cell
+// cells, each a cell — in its calm pair; the addressed cell
 // is the payload for every selected marker but the focus, whose addressed
 // cell is AppState::addressed_cell (the cell a press landed on, or the cell
 // an editor opened; a focus reached any other way — a walk, a jump, a clear,
 // a restore — is addressed at its payload. A bracket-only undo entry's
 // restore brought back the bound it had moved until 2026-09-10, when the
-// bracket left the undo domain with that entry). The measure box swaps its own purple pair by the same rule
-// (kMarkerMeasureFillSel below, the flag's own pair since 2026-09-15). The geometry, the stem and the hit rect are
+// bracket left the undo domain with that entry). The geometry, the stem and the hit rect are
 // identical either way. This RETIRES the "selection is not a class" ruling
 // for the marker flags — that rule existed because a selected OUTLINE would
 // have outranked the disabled pair; here the swap can never outrank
@@ -698,53 +697,20 @@ inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x8E3C44);
 // from the class ALONE and never from the selection bit).
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
-// THE MEASURE BOX'S TWO PAIRS (2026-08-19 to 2026-09-13, Breeze's own
-// selection blue; PURPLE SINCE 2026-09-15). A marker carrying a measure
-// reference extends its flag RIGHTWARD with a second box that SHARES THE
-// FLAG'S OWN PURPLE PAIR (architect 2026-09-15): the measure now sits beside
-// the purple bound cells — "fine for now" — so the box that used to read
-// instantly as "not the flag" beside the purple reads as the flag's own
-// colour continuing across the seam instead. (The box was the marker
-// COMMENT's for one day; the field became the MEASURE on 2026-08-20 and the
-// four values were unchanged by that rebrand — a rename, never a retune.)
-//
-// THE FOUR VALUES ARE THE FLAG'S OWN, spelled as their own constants by the
-// hard-coded rule (two facts that agree, not one referenced twice) rather
-// than aliased to kMarkerFlagFill/Edge/FillSel/EdgeSel — a retune of one
-// surface must not silently retune the other. (THE BLUE PAIR'S OWN
-// PROVENANCE, KEPT FOR THE RECORD: #3daee9 was the Breeze highlight blue,
-// the palette's one sampled value there; the other three were RECORDED
-// DERIVATIONS off it — the edge a darkened shade of the fill, the selected
-// pair a lifted fill over a mid-darkness edge. The pair moved to the
-// phase-reset flag box below, which wears it now.)
-//
-// THE SEAM CARRIED NO BORDER FROM 2026-08-19 (architect: "run the blue right
-// next to the purple base") AND CARRIES ONE UNDER TRIAL FROM 2026-08-20. The
-// borderless reading was that the fill-colour change IS the boundary; the
-// architect then found the two fields reading at different DEPTHS on the glass
-// — adjacent saturated hues produce chromostereopsis, the purple appearing to
-// stand in front of the blue — and the mitigation being tried is a 1px
-// kMarkerFlagBorder column on the seam, the same dark rule that already sits
-// one column left of every flag and reads as a drop shadow there. IT SURVIVED
-// THE GLASS AND IS A STANDING RULING since 2026-09-02; the borderless record
-// above is history, kept because it is the reading someone will re-derive. THE
-// SEAM COLUMN STAYS under the purple-on-purple pairing too (architect
-// 2026-09-15: the boundary is still worth marking even where the
-// chromostereopsis argument no longer applies). Everything else is unchanged: the flag's own
-// 1px left border stands where it always did, the measure box has no right
-// border (matching the flag's own open right edge), and the top edge anatomy
-// is the flag's — a 1px edge over the fill, across the whole box.
-inline constexpr GuiColor kMarkerMeasureFill     = hex(0x9B59B6);
-inline constexpr GuiColor kMarkerMeasureEdge     = hex(0x563165);
-inline constexpr GuiColor kMarkerMeasureFillSel  = hex(0xC974ED);
-inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x704083);
+// THE SEAM COLUMN between a flag box and the cell to its right is a 1px
+// kMarkerFlagBorder column, the same dark rule that already sits one column
+// left of every flag and reads as a drop shadow there (architect 2026-08-20,
+// a standing ruling since 2026-09-02; kept under the purple-on-purple pairing
+// too, architect 2026-09-15: the boundary is worth marking). The rest of a
+// cell's anatomy is the flag's — a 1px edge over the fill across the whole
+// box, no right border (the flag's own open right edge).
 
 // THE PHASE-RESET FLAG BOX'S PAIRS (architect 2026-09-15): the phase-reset
 // column's flag box — default and selected classes, and the disabled blend
-// of both — now paints in the pair the MEASURE BOX wore until this same
-// ruling moved it here, freeing the blue for a column that previously shared
-// the warp flag's purple outright. PROVENANCE UNCHANGED FROM THE MEASURE
-// BOX'S OWN RECORD: #3daee9 is the Breeze highlight blue, the palette's one
+// of both — paints in Breeze's own selection blue, a pair that had been the
+// marker lane's since 2026-08-19 on a box the lane no longer has, freeing the
+// blue for a column that previously shared the warp flag's purple outright.
+// PROVENANCE: #3daee9 is the Breeze highlight blue, the palette's one
 // sampled value; the other three are RECORDED DERIVATIONS off it in the
 // relationships the marker crops showed between their own four — the edge a
 // darkened shade of the fill, the selected pair a lifted fill over a
@@ -753,8 +719,8 @@ inline constexpr GuiColor kMarkerMeasureEdgeSel  = hex(0x704083);
 // column), and the phase-reset STEM mirrors the warp rule — it reads the
 // CLASS alone, so a selected default-class reset keeps this calm fill and
 // only the flag brightens. THE BOUND (hop) CELLS ON THIS COLUMN DO NOT TAKE
-// THIS PAIR: the architect kept them on the purple beside the measure box's
-// own bound cells ("fine for now"), so every bound-cell call site into
+// THIS PAIR: the architect kept them on the purple of the warp column's own
+// bound cells ("fine for now"), so every bound-cell call site into
 // resolve_flag_face passes `FlagColumnFace::Warp` EXPLICITLY — the argument
 // is required, never defaulted (warp is never the unmarked default), so a
 // bound cell's purple is a stated choice at its own call, not an omission
@@ -784,8 +750,8 @@ inline constexpr GuiColor kMarkerMagnificationEdgeSel = hex(0x138871);
 // went back to kdenlive itself with a bitmap font on the flag text and read
 // #000000 out of it for every colour and every state — the reference crops are
 // under tmp/screenshots/kdenlive/redesign). It covers the whole lane: the warp
-// and phase-reset flag LABELS on all three live classes, the warp MEASURE
-// BOX's text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
+// and phase-reset flag LABELS on all three live classes, the bound cells'
+// text, the `h` view's DIFF-FLAG labels (which share this lane's anatomy, so
 // they share its ink), and the flag editor's unrolled text and its caret,
 // which resolve through the same face. THE ONE EXCEPTION IS THE FLAG EDITOR'S
 // SELECTED SUBSTRING (architect 2026-08-28): a selected span is the accent
@@ -801,8 +767,8 @@ inline constexpr GuiColor kMarkerMagnificationEdgeSel = hex(0x138871);
 // WHAT IT BUYS, per class (black against the fill, versus the #fcfcfc it
 // replaces): the calm purple is a wash (4.50 vs 4.51) and everything else is a
 // gain, the brighter the fill the larger — selected purple 7.21 vs 2.82, red
-// 7.68 vs 2.64, the measure blue 8.43 vs 2.41 (the case that prompted the
-// ruling: light ink on #3daee9 was illegible), selected measure blue 12.1 vs
+// 7.68 vs 2.64, the phase-reset blue 8.43 vs 2.41 (the case that prompted the
+// ruling: light ink on #3daee9 was illegible), selected phase-reset blue 12.1 vs
 // 1.66, the diff lane's green 8.72 vs 2.33 and its red 4.93 vs 4.11. So the
 // one class that does not gain does not lose either, which is what makes a
 // single ink honest across the ladder.
@@ -844,7 +810,7 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // Both read against the accent, so neither needed a rule of its own.
 //
 // THE RECORDED COST: #fcfcfc on #3daee9 is a 2.41 contrast ratio, the same
-// pairing the marker lane's ink ruling above rejected for the measure box.
+// pairing the marker lane's ink ruling above rejected for the flag boxes.
 // It stands here because a SELECTION is transient and is marked by its GROUND
 // as much as by its ink, and because one convention across every editor was
 // the ruling's stated point. The paint sites are render_flag_editor_box
@@ -941,7 +907,7 @@ inline constexpr GuiColor kMarkerFlagBorder      = hex(0x131516);
 // ladder: there is no separate disabled brightness rule to drift.
 //
 // THIS FRACTION IS THE SURFACES' — fill, top edge and left border, on the flag,
-// the measure box AND, since 2026-08-22, the `h` view's DIFF FLAGS, whose halves
+// the cells AND, since 2026-08-22, the `h` view's DIFF FLAGS, whose halves
 // dim by their own commit side's disable bit through these same expressions over
 // the kHistoryAdded*/kHistoryRemoved* inks (render_history_diff_flags owns that
 // ruling; the derivation is the live lane's, applied to another set of inks, so
@@ -973,15 +939,11 @@ inline constexpr double kMarkerDisabledMix = 0.25;
 // 1.73 — so 0.75 buys nearly all of the reachable contrast while leaving the
 // label visibly inside the disabled face rather than painting it at full live
 // strength. On the brighter dimmed pairs it lands where the ruling asked: the
-// selected flag 1.80, the red flag 1.81. (THE MEASURE BOX READ 1.90 AGAINST
-// ITS OWN #274557 — a lighter blue fill whose ceiling was 2.10, headroom the
-// calm purple does not have — until 2026-09-15, when the architect moved the
-// measure box onto the flag's own purple pair: it shares the flag's 1.73
-// ceiling now, having no fill of its own left to give it headroom. THE SAME
-// DAY GAVE THE PHASE-RESET FLAG BOX THAT BLUE INSTEAD — kPhaseResetFlagFill,
-// the same #3daee9 — so a disabled phase-reset flag's label is where the
-// ~1.90 headroom lives now, off the generic mix_color call resolve_flag_face
-// feeds it; no new constant, the fraction unchanged.) ONE
+// selected flag 1.80, the red flag 1.81. (THE PHASE-RESET FLAG BOX reads
+// ~1.90 against its own #274557 — a lighter blue fill whose ceiling is 2.10,
+// headroom the calm purple does not have — off the generic mix_color call
+// resolve_flag_face feeds it; no constant of its own, the fraction
+// unchanged.) ONE
 // fraction for both surfaces, glass retunes.
 inline constexpr double kMarkerDisabledLabelMix = 0.75;
 
@@ -2177,19 +2139,17 @@ inline int waveform_border_px() {
 // lowercase-ASCII label grammar, the numeric serializers, the locked iter
 // bracket), and with the ellipsis gone the truncation marker is ASCII too — a
 // label byte is a label glyph, which is what makes this a byte walk. THAT
-// PREMISE IS SCOPED TO THE LABEL SPAN and no wider: the marker MEASURE BOX
-// paints its own run beside the label, a separate box budgeted by nothing and
-// truncated by nothing, so it never enters this walk. ITS TEXT IS PRINTABLE
-// ASCII TOO (the measure grammar, marker_measure.h), so the product paints NO
-// non-ASCII surface — the box was free UTF-8 for one day, 2026-08-19 to
-// 2026-08-20, and that carve-out RETIRED with the field's rebrand to the
-// measure. The product has ONE face and no font fallback by standing ruling,
-// and nothing painted now needs one. DISPLAY ONLY: the store,
+// PREMISE IS SCOPED TO THE LABEL SPAN and no wider: the iteration bound cells
+// paint their own runs beside the label, separate boxes budgeted by nothing
+// and truncated by nothing, so they never enter this walk. Their text is
+// printable ASCII too, so the product paints NO non-ASCII surface — it has
+// ONE face and no font fallback by standing ruling, and nothing painted needs
+// one. DISPLAY ONLY: the store,
 // the sidecars, the editor seed and the copy payload never see the dots.
 //
 // WHAT IT COVERS is the LABEL, and only the label: the iteration bound cells
-// and the measure box paint their own runs beside it, budgeted by nothing
-// (their grammars fix their width).
+// paint their own runs beside it, budgeted by nothing (their grammar fixes
+// their width).
 inline constexpr size_t kMarkerLabelGlyphBudget = 9;
 
 // THE TRUNCATION MARKER ITSELF, so the bytes cap_marker_label appends and the
@@ -2233,7 +2193,7 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // cull a marker whose flag still reached into the viewport. The cells' shape
 // is FIXED, so this stays a constant-time bound rather than becoming a
 // measurement, and it is charged flat rather than per marker — every carrier
-// paints both cells in the mode, unlike the measure, which most markers lack.
+// paints both cells in the mode.
 //
 // ONE BOUND SERVES BOTH COLUMNS (2026-09-09): the phase-reset column's cells
 // carry a signed whole hop (`+9` at the widest — kIterCellGlyphs is the WARP
@@ -2522,20 +2482,18 @@ inline int playhead_half_px() {
 // marker's frame column (marker_flag_border_px) — because this stash has always
 // been the painted extent and a click on the border is a click on the flag.
 //
-// IT SPANS THE TWO ITERATION BOUND CELLS AND THE MEASURE BOX TOO where they
+// IT SPANS THE TWO ITERATION BOUND CELLS TOO where they
 // paint: each is the flag continued, so all of it is ordinary flag surface for
-// press, drag and select and the rect covers the whole run. The three
+// press, drag and select and the rect covers the whole run. The two
 // boundaries are the PAINTER'S own numbers, published rather than re-derived,
 // because a second shaping pass could disagree with the pixels: the window x
 // where the flag box ends and the LOWER cell's seam begins
-// (`iter_lower_boundary_x`), where the lower cell ends and the UPPER cell's
-// seam begins (`iter_upper_boundary_x`), and where the cells end and the
-// measure's seam begins (`measure_boundary_x`). They are non-decreasing, and
+// (`iter_lower_boundary_x`) and where the lower cell ends and the UPPER cell's
+// seam begins (`iter_upper_boundary_x`). They are non-decreasing, and
 // each collapses onto the next when its box did not paint — a cell-less flag
-// publishes both cell boundaries AT the measure boundary, and a measureless
-// flag its measure boundary AT the rect's own right edge — so
-// hit_test_flag_cell's walk (Measure first, then Upper, Lower, else Payload)
-// can never answer a cell that has no pixels. EVERY PRODUCER SETS ALL THREE (the flag pass, the editor's riding run and the `h`
+// publishes both cell boundaries AT the rect's own right edge — so
+// hit_test_flag_cell's walk (Upper first, then Lower, else Payload)
+// can never answer a cell that has no pixels. EVERY PRODUCER SETS BOTH (the flag pass, the editor's riding run and the `h`
 // view's diff flags). ONE READER, hit_test_flag_cell (app_state.cpp),
 // whose MarkerCell answer the marker press reads for the addressed cell and
 // the double-click seed.
@@ -2559,7 +2517,6 @@ struct FlagHitRect {
     double h            = 0.0;
     double iter_lower_boundary_x = 0.0;
     double iter_upper_boundary_x = 0.0;
-    double measure_boundary_x    = 0.0;
 };
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
@@ -3146,17 +3103,17 @@ struct MarkerStem {
 // by render_flag_editor_box.
 //
 // `cell` NAMES THE EDITED BOX in the marker's own left-to-right run — Payload
-// (the flag box itself), then Lower, Upper, Measure — and this pass's rule is
+// (the flag box itself), then Lower, Upper — and this pass's rule is
 // ONE COMPARISON: it paints the boxes LEFT of that cell exactly as it does at
 // rest, and NOTHING from that cell rightward. A payload editor therefore takes
 // the marker's whole column (the flag is its leftmost box), a lower-bound
-// editor leaves the flag standing and takes the lower cell, the upper cell and
-// the measure, an upper-bound editor leaves the flag and the lower cell, and a
-// measure editor takes the measure box alone — the rule the two separate
+// editor leaves the flag standing and takes the lower cell and the upper cell,
+// and an upper-bound editor leaves the flag and the lower cell and takes the
+// upper cell alone — the rule the two separate
 // indices this replaced applied to the two kinds they covered.
 //
 // ONE BOX AT MOST, which is why this is an index and a cell rather than a set:
-// the four editors are ONE text_editor::State, so no two can stand together.
+// the three editors are ONE text_editor::State, so no two can stand together.
 // `marker_index` -1, the resting value, suppresses nothing on any column.
 // THE MAGNIFICATION LEVEL EDITOR (2026-09-15) NAMES Payload like the warp
 // column's flag editor, that column's flag having exactly one box — so its
@@ -3176,8 +3133,7 @@ struct SuppressedBox {
 // So the pass that skips, the cache that keys and the painter that draws
 // cannot disagree about which box is being edited. Kind FlagPayload answers
 // Payload, MagnificationLevelText answers Payload too (2026-09-15 — an M flag
-// has exactly one box and that editor stands in for it), MeasureText answers
-// Measure, IterBound answers the session's own
+// has exactly one box and that editor stands in for it), IterBound answers the session's own
 // side (iter_bound_editor_side, app_state.h); every other kind, and no editor
 // at all, answer the resting value.
 SuppressedBox suppressed_flag_box(const AppState& app);
@@ -3228,7 +3184,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box (and on
 //              EVERY BOUND CELL, either column — the phase-reset column's own
 //              cells are its one exception to the fork below, architect
-//              2026-09-15: "fine for now" beside the purple measure box), or
+//              2026-09-15: "fine for now"), or
 //              kPhaseResetFlagFill / kPhaseResetFlagEdge on the PHASE-RESET
 //              flag box, or kMarkerMagnificationFill / kMarkerMagnificationEdge
 //              on the MAGNIFICATION LEVEL flag box (`FlagColumnFace`,
@@ -3255,9 +3211,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // bound in its signed two-decimal form (format_iter_bound_cell). A cell
 // reads as another flag payload, and the sign is its whole syntax: a flag
 // payload never carries one and a cell always does, so no bracket or
-// separator opens in one cell to close in the next. The measure box, when one
-// paints, follows the cells. The flag's own text is the plain composer's
-// (flag_text) in every state; no bracket paints anywhere.
+// separator opens in one cell to close in the next. The flag's own text is
+// the plain composer's (flag_text) in every state; no bracket paints anywhere.
 //
 // `focus_marker` / `focus_cell` NAME THE BRIGHT CELL (architect 2026-09-05):
 // a selected marker paints its ADDRESSED cell in the selected pair and its
@@ -3303,9 +3258,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // drawn. THE STEM IS THE EXCEPTION on both counts — it paints and publishes for
 // the whole session, the editor unrolling from the flag's own column.
 //
-// BOTH COLUMNS TAKE IT, but the PAYLOAD and MEASURE cells are
-// unreachable on the phase-reset one: those editors are warp-column surfaces by their own
-// open gates (the bound editor is both columns'), and that painter enforces
+// BOTH COLUMNS TAKE IT, but the PAYLOAD cell is
+// unreachable on the phase-reset one: that editor is a warp-column surface by its own
+// open gate (the bound editor is both columns'), and that painter enforces
 // the asymmetry at its own call rather than trusting its caller (recorded
 // there).
 //
@@ -3338,16 +3293,14 @@ void render_flags(cairo_t* cr,
 // DERIVED FROM A SHAPED RUN, which is exactly why it is published rather than
 // recomputed: a second shaping pass in the hit path could disagree with the
 // pixels. THREE EDITOR KINDS PUBLISH THROUGH IT — the payload editor (the
-// flag unrolled), the MEASURE editor (the purple box as the field, Breeze
-// blue until 2026-09-15) and the ITERATION BOUND editor (one bound cell as
-// the field) — and the pointer path reads it identically for all three, which is why the consumers test the
+// flag unrolled), the ITERATION BOUND editor (one bound cell as the field)
+// and the MAGNIFICATION LEVEL editor (the M flag's one box as the field) —
+// and the pointer path reads it identically for all three, which is why the consumers test the
 // published rect and never the kind.
 //
 //   `box`           the painted box in window coordinates — for the payload
 //                   editor the marker's flag, unrolled to hold the FULL
-//                   untruncated pending; for the measure editor the purple
-//                   measure box in the same role, anchored past the committed
-//                   flag; for the bound editor the bound cell in the same
+//                   untruncated pending; for the bound editor the bound cell in the same
 //                   role, anchored at that cell's own seam. ONE WIDTH RULE FOR
 //                   ALL THREE (architect 2026-09-05, retiring the bound
 //                   field's pin to its cell): the box is its two pads plus its
@@ -3384,11 +3337,9 @@ void render_flags(cairo_t* cr,
 //                   the edited box's width live (architect 2026-09-05, THE ONE
 //                   GRAPHIC MODEL — SuppressedBox above states it once). What
 //                   rides follows from which box the field stands in for: the
-//                   payload field carries the two bound cells and the
-//                   measure, the LOWER-bound field the upper cell and the
-//                   measure, the UPPER-bound field the measure, and the
-//                   measure field nothing, it being the rightmost box there
-//                   is.
+//                   payload field carries the two bound cells, the
+//                   LOWER-bound field the upper cell, and the UPPER-bound
+//                   field nothing, it being the rightmost box there is.
 //                   Published as a FlagHitRect: the run's whole painted
 //                   extent, every seam divider included, keyed to the edited
 //                   marker and carrying the same three boundaries a resting
@@ -3421,7 +3372,7 @@ void render_flags(cairo_t* cr,
 //                   `box`: the caret / text-drag claim seats a caret for any
 //                   press inside `box` and the cursor map shows the I-beam
 //                   over exactly that rect, so a folded run would map presses
-//                   on cell and measure ink to payload bytes and promise
+//                   on cell ink to payload bytes and promise
 //                   editing where none is. What the run promises instead is
 //                   the marker-lane cue, which it gets for free from the same
 //                   walk. On close the boxes settle back into the cached pass
@@ -3512,9 +3463,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // bound as a SIGNED WHOLE HOP of the analysis lattice
 // (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
 // on the warp column, and the ABSENT DECIMALS are what tell a hop cell from a
-// cent cell. The focus and its addressed cell arrive as they always did. No
-// measure box paints on this column (render_phase_reset_flags' measure
-// callback records the asymmetry).
+// cent cell. The focus and its addressed cell arrive as they always did.
 void render_phase_reset_flags(cairo_t* cr,
                             GuiRect top_strip_area,
                             FlagLaneRects lanes,
@@ -3538,17 +3487,16 @@ void render_phase_reset_flags(cairo_t* cr,
                             // painter is what makes that true — it drops a
                             // suppression naming the payload box, that editor
                             // being a warp-column surface by its own open
-                            // gates, while the measure and bound editors are
-                            // both columns'.
+                            // gates, while the bound editor is both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
 // The magnification level markers column's flags (architect 2026-09-15): the
 // identical box, class ladder and publication contract render_flags documents
 // above, in the column's green (FlagColumnFace::MagnificationLevel,
 // render.cpp). The LABEL is the marker's level digit
-// (format_marker_magnification). NO MEASURE BOX AND NO BOUND CELLS — the column
-// carries no measure and grid iterations never lights on it — so the signature
-// takes neither, and the focus's addressed cell is the PAYLOAD by construction:
+// (format_marker_magnification). NO BOUND CELLS — grid iterations never
+// lights on this column — so the signature
+// takes none, and the focus's addressed cell is the PAYLOAD by construction:
 // an M flag has exactly one box, so there is no other cell to address.
 // Red is `red_set` alone, the coincidence set
 // (magnification_level_red_flag_set_cached, warp_frame_map_view.h).
@@ -3559,8 +3507,8 @@ void render_phase_reset_flags(cairo_t* cr,
 // its proposal like the other two columns'; and the one-digit LEVEL EDITOR
 // stands in for the payload box, so the pass drops that box while the field
 // paints in its place (SuppressedBox and the one graphic model, above). A
-// suppression naming a CELL or the MEASURE is dropped here, those editors being
-// the other columns' by their own open gates — the mirror of render_flags'
+// suppression naming a CELL is dropped here, that editor being
+// the other columns' by its own open gates — the mirror of render_flags'
 // own fork, each painter owning its column's asymmetry.
 void render_magnification_level_flags(
     cairo_t* cr,
@@ -3683,12 +3631,9 @@ struct HistoryDiffFlag {
 // the halves of a pair are routinely ASYMMETRIC and the seam, the border and
 // the one hit rect all compose off the two measured widths rather than off any
 // assumed equality. That is proven machinery: a warp pair's two tempo tokens
-// have differed in width since this lane's first day. It is why the phase
-// halves' measure bytes (architect 2026-08-22, appended to each half's label at
-// history_diff_label) need nothing here — a longer half simply measures longer,
-// and THESE LABELS ARE NEVER TRUNCATED (the cull bound follows the commit's own
-// widest text; the reasoning is at the paint site), so a measure is cut exactly
-// as much as the token beside it is, which is not at all.
+// have differed in width since this lane's first day. A longer half simply
+// measures longer, and THESE LABELS ARE NEVER TRUNCATED (the cull bound
+// follows the commit's own widest text; the reasoning is at the paint site).
 //
 // THE LANE CARRIES THE DISABLED AXIS, PER COMMIT SIDE (architect 2026-08-22,
 // closing a state-axis gap the view shipped with: a `#` line and a live one
@@ -3748,7 +3693,7 @@ void render_history_diff_flags(cairo_t* cr,
 // line's payload — tempo, `*scale`, `:label` or the pass / ref forms — and
 // never a bracket. The FLAG paints it (its LABEL truncated at the nine-glyph
 // budget), the flag editor seeds from it (enter_top_flag_edit) and the
-// measure field's anchor measures it (committed_flag_box_w), so the tempo,
+// bound field's anchor measures it (committed_cell_seam_off), so the tempo,
 // scale and label a flag shows and the ones its editor opens with are one
 // string by construction. The iteration bounds are the two cells beside the
 // flag (format_iter_bound_cell owns their spelling), each with its own

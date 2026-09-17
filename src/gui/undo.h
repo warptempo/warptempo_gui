@@ -19,15 +19,15 @@ struct GuiInputHandler;
 // pure repeat-identity model's "separate presses are separate entries" clause on
 // the live complaint that rapid manual taps each pushed their own entry). A burst
 // of eligible keyboard
-// gestures — SIX of them, re-grepped 2026-09-15 from GestureKind below (it
+// gestures — FIVE of them, re-grepped 2026-09-16 from GestureKind below (it
 // was three from 2026-07-29, when the W+target tempo-IMAGE step was deleted
 // with the whole tempo-image family, marker_drag.h; four from 2026-09-04 with
-// the iteration bound step, which left the undo domain 2026-09-10; three again
-// until the measure step joined 2026-09-14, and SIX the next day with the
-// magnification level column's nudge and level step): the THREE COLUMNS'
-// position nudges (Left/Right in the
-// marker lane) and the three coalescing arms of the Up/Down VALUE STEP on the
-// addressed cell — the tempo cent step, the measure step and the magnification
+// the iteration bound step, which left the undo domain 2026-09-10; six from
+// 2026-09-15 with the magnification level column's nudge and level step, and
+// five since the measure step left with the measures feature 2026-09-16): the
+// THREE COLUMNS' position nudges (Left/Right in the
+// marker lane) and the two coalescing arms of the Up/Down VALUE STEP on the
+// addressed cell — the tempo cent step and the magnification
 // LEVEL step, each also
 // reached by the plain wheel over its flag cell — each in
 // the
@@ -93,11 +93,10 @@ struct GuiInputHandler;
 // their place (the stamped selection and A/B tab must still stand); the
 // derivation is at coalesce_gesture's definition.
 // THE ELIGIBLE KINDS, one per coalescing gesture plus None: the THREE position
-// nudges and the Up/Down value step's three coalescing arms — the cent step
-// (TempoStep, singleton and group), the measure step (MeasureStep, since
-// 2026-09-14) and the magnification level step (MagnificationLevelStep, since
-// 2026-09-15, singleton and group) — each its own kind, so a nudge burst, a
-// tempo burst, a measure burst and a level burst stay separate.
+// nudges and the Up/Down value step's two coalescing arms — the cent step
+// (TempoStep, singleton and group) and the magnification level step
+// (MagnificationLevelStep, since 2026-09-15, singleton and group) — each its
+// own kind, so a nudge burst, a tempo burst and a level burst stay separate.
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h). ITERBOUNDSTEP WAS A FOURTH
 // FROM 2026-09-04 TO 2026-09-10 — the same arrows' second body, stepping a
@@ -106,13 +105,8 @@ struct GuiInputHandler;
 // stack at all; they're considered transient by design"). The bound step
 // pushes nothing now, so it has nothing to coalesce INTO, and the two subject
 // terms that kind alone read — the addressed cell and the W/P column — went
-// with it.
-// MEASURESTEP (architect 2026-09-14) is the value step's newer axis — the
-// same arrows (and the plain wheel over a flag cell) stepping the measure
-// field, singleton on the focus. It is a SEPARATE KIND rather than TempoStep
-// keyed by the cell so that a burst never merges across cells: a tempo tap
-// then a measure tap on the same marker open two entries, as a nudge tap then
-// a tempo tap always did.
+// with it. MEASURESTEP, the warp marker's measure step, was a kind from
+// 2026-09-14 until the measures feature was deleted whole 2026-09-16.
 // MAGNIFICATIONLEVELNUDGE AND MAGNIFICATIONLEVELSTEP (architect 2026-09-15,
 // with the magnification level markers column's authoring) are the third
 // column's two bursts — its POSITION nudge, the other two columns' twin, and
@@ -121,7 +115,7 @@ struct GuiInputHandler;
 // never merges across subjects, so a nudge tap then a level tap on the same
 // marker open two entries.
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep, MeasureStep,
+    None, WarpNudge, PhaseResetNudge, TempoStep,
     MagnificationLevelNudge, MagnificationLevelStep
 };
 

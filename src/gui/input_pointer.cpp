@@ -435,9 +435,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
-    // ADD TO SELECTION landed behind them later that day; the MARKER MEASURE
-    // joined the verb group 2026-08-19).
-    // SEVENTEEN
+    // ADD TO SELECTION landed behind them later that day).
+    // SIXTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -538,14 +537,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // accepts (the marker walk's IsoLeftTab precedent).
     //
     // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), it does NOT
-    // repeat (an editor opener, and openers never repeat — the Measure's own
-    // line), and it admits NEITHER shift NOR ctrl, so a modified press is
+    // repeat (an editor opener, and openers never repeat), and it admits
+    // NEITHER shift NOR ctrl, so a modified press is
     // refused at the band gate and the long press reaches nothing.
     //
     // THE BUTTON IS ENTER IN EVERY STATE, A STANDING EDITOR INCLUDED
     // (architect 2026-08-27, naming the button by its hotkey: "just say Enter,
     // because that's what triggers the editor"). A button that IS a key does
-    // what the key does, so a press while the flag or the measure editor stands
+    // what the key does, so a press while a marker-lane editor stands
     // COMMITS that editor on valid text and RED-FLASHES it on invalid — exactly
     // what the keyboard's Enter does there, and what the on-screen keyboard's
     // own Enter key does. No second road and no special case: the bottom row's
@@ -559,41 +558,23 @@ constexpr ToolbarChord kToolbarChords[] = {
     // KEY, which has no marker under it at all.
     //
     // IT OPENS THE ADDRESSED CELL'S EDITOR (architect 2026-09-05), because
-    // Return does: the payload editor by default, a bound cell's or the
-    // measure's editor where a press or an editor open addressed that cell,
+    // Return does: the payload editor by default, a bound cell's editor
+    // where a press or an editor open addressed that cell,
     // and its tooltip names whichever (redesign_button_tooltip's stateful
-    // arm). ITS GATES ARE THE MEASURE'S but one exception narrower: the `h`
+    // arm). ITS GATES: the `h`
     // view consumes bare Return and greys it with the verbs, and so does the
-    // READ-ONLY lock (the canonical line is serialized content). Where it
-    // differs from the Measure is the P VIEW with a BOUND cell addressed —
-    // the bound editor is both columns', while the payload and measure
-    // editors refuse there — and the P view's refusal GREYS the button since 2026-08-30
+    // READ-ONLY lock (the canonical line is serialized content); in the P
+    // VIEW it is live with a BOUND cell addressed — the bound editor is both
+    // columns', while the payload editor refuses there — and the P view's
+    // refusal GREYS the button since 2026-08-30
     // (flag_editor_open_actionable, the Return arm's own predicate, under
     // the truthful-buttons ruling; it was a consumed no-op with a live face
     // under the 2026-08-15 no-blink ruling until then).
     {RedesignButton::IconMarkerEditFlag,
      GuiKeys::Return, false, false, false, false, true},                            // bare Enter
-    // THE MARKER MEASURE (architect 2026-08-19), the verb group's sixth since
-    // 2026-08-27 and its fifth before that, with the Copy resolved value
-    // button seated immediately behind it since 2026-08-29: BARE
-    // `/`, which was free. It opens the measure editor on the focused warp marker,
-    // and button-is-its-chord holds literally — the press dispatches bare `/`
-    // through on_key at the LIFT like every other chrome button, while the KEY
-    // acts at the press like every other hotkey.
-    //
-    // IT IS NOT A RADIO AND CARRIES NO LAMP (an act, not a mode), and it does
-    // NOT repeat: an editor opener, and openers never repeat.
-    //
-    // ITS GATES: the `h` view consumes bare `/` and greys it with the four
-    // verbs above, and so does the READ-ONLY lock (a measure is serialized
-    // content), and it greys on the phase-reset column (phase resets carry no
-    // measure; marker_measure_edit_actionable). It differs from those four in
-    // one place — no AUDIO-VIEW gate, measures being the fourth ruled
-    // exception to the home-view binding.
-    {RedesignButton::IconMarkerMeasure,
-     GuiKeys::Slash,  false, false, false, false, true},                             // bare /
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
-    // SEVENTH and the value pair's pointer home: BARE `j`, which was free
+    // SIXTH (seventh until the Marker Measure ahead of it left 2026-09-16)
+    // and the value pair's pointer home: BARE `j`, which was free
     // (greped at the landing). Its plain lift copies the focused marker's
     // resolved value to the system clipboard, exactly as the key does —
     // button-is-its-chord literally, the press dispatching bare `j` through
@@ -619,8 +600,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // partition.
     {RedesignButton::IconCopyValue,
      GuiKeys::J,      false, false, false, false, true},                             // bare j
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's EIGHTH since
-    // 2026-08-29 (its seventh from 2026-08-27 and its sixth before that):
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH since
+    // 2026-09-16 (eighth from 2026-08-29, seventh from 2026-08-27 and sixth
+    // before that):
     // BARE `k`, which was free — he picked it over `n`
     // (already reading as INHERIT) and over `a` (too easy to hit by accident).
     // It is a MODE toggle, so the button's lamp reads the same bit the key
@@ -952,7 +934,7 @@ struct ActiveEditorText {
     // field (modal_dialog.field, the painter's published rect; the box
     // around it is chrome) or the marker lane's whole published box
     // (flag_editor_box.box — the unrolled flag under the payload editor, the
-    // measure box under the measure editor (purple since 2026-09-15), pads included: the box is
+    // cell under a bound editor, pads included: the box is
     // the field, and a click in its padding puts the caret at the nearest
     // end as clicking a text field's margin does). The press claim and the
     // touch translation's editor-field query both read this, so "in the
@@ -990,8 +972,8 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
         return g;
     } else if (text_editor::is_active(app.top_flag_editor)) {
         // THE MARKER LANE'S OWN FIELD — the UNROLLED FLAG BOX under the payload
-        // editor, the BLUE MEASURE BOX under the measure editor. KIND-BLIND
-        // deliberately: both publish through the one painter into the one
+        // editor, the CELL under a bound editor. KIND-BLIND
+        // deliberately: all publish through the one painter into the one
         // stash, so this reads the published geometry and never asks which kind
         // made it (contract at FlagEditorBox, render.h). The origin already
         // carries the view offset and the boundaries are the shaped run's own
@@ -1810,8 +1792,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // IT SITS AHEAD OF THE DIALOG EDITOR'S BLANKET rather than with those
     // three arms below, and that rank is what makes it ONE owner for BOTH
     // editor families: the blanket answers first while a dialog editor stands
-    // and would decide its drag by position, while the marker lane's flag /
-    // measure box falls THROUGH the blanket (keyboard-modal, pointer- and
+    // and would decide its drag by position, while the marker lane's flag
+    // box falls THROUGH the blanket (keyboard-modal, pointer- and
     // wheel-transparent — conventions.md) to the box's own hover arm far
     // below. One arm above both covers both. THE CARDS AND THE FOUR BLANKETS
     // ABOVE STILL WIN, the rank the trim and marker drags already take under
@@ -1964,7 +1946,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // editor's pointer-TRANSPARENCY is untouched — that is about what a press OUTSIDE
     // the box reaches, and outside is exactly where this arm stops. A cold or
     // closed editor publishes a zero rect, which contains no point. It covers
-    // the MEASURE editor's field too, which publishes the same rect through the
+    // every marker-lane field alike, each publishing the same rect through the
     // same painter — and covers the RIDING BOXES deliberately NOT: that run is
     // the marker's own boxes painted beside the field, whatever the editor's
     // kind, not editable text, so an I-beam over it would promise a caret the
@@ -3084,9 +3066,9 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // of these): a prompt or modal editor owns the input, an open dropdown
     // owns the pointer, unloaded audio has no columns to span, and a live
     // pointer gesture must not be torn by a second writer. THE EDITOR GATE
-    // IS THE SIX-EDITOR PREDICATE, the flag editor and the measure editor
-    // deliberately included though both are pointer-transparent: every
-    // pointer press CLOSES an open flag or measure editor before any claim
+    // IS THE SIX-EDITOR PREDICATE, the marker-lane editors
+    // deliberately included though they are pointer-transparent: every
+    // pointer press CLOSES an open marker-lane editor before any claim
     // runs, so no region gesture can begin under one — and this begin, which
     // skips the press path, must not become the first (the declaration
     // carries the full argument). The `h`
@@ -3264,7 +3246,7 @@ void GuiInputHandler::close_top_flag_editor_for_outside_press(int x, int y) {
     // editors are transparent to each other for the pointer as they already
     // are graphically). This owner is KIND-BLIND and that is the point: it
     // tests the published FIELD and nothing else, so it serves the payload,
-    // bound and measure editors through one body. The refusal that stood here
+    // bound and level editors through one body. The refusal that stood here
     // for the payload editor's riding run, and the caller's consume that went
     // with it, are both gone; the FIELD is still the one thing this owner
     // refuses on, because a press there is caret work the F2.1 block already
@@ -3851,9 +3833,6 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
         }
         (void)warpops.adjust_iter_bound_cents(cell, delta);
         return;
-    case MarkerCell::Measure:
-        (void)warpops.adjust_measure_step(delta, /*synthesized_repeat=*/false);
-        return;
     }
 }
 
@@ -3876,8 +3855,8 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
 // the bound cells "are considered outside of undo, and so in many ways
 // they're a separate system"; "iterations mode is by design targeting each
 // marker individually"). THE PAYLOAD IS THE MEMBERSHIP SURFACE; EVERY OTHER
-// BOX TAKES THE PLAIN PRESS ONLY — a ctrl or shift press on a Lower, Upper or
-// Measure box is a SILENT NO-OP, the guard below returning ahead of the stop:
+// BOX TAKES THE PLAIN PRESS ONLY — a ctrl or shift press on a Lower or
+// Upper box is a SILENT NO-OP, the guard below returning ahead of the stop:
 // no toggle, no range, no land, no address, no arm and no playback stop, the
 // pointer's own non-event. A range or a membership toggle addressed off a
 // bound cell would build the very 2+ selection with a bound axis the cells'
@@ -3885,9 +3864,8 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
 // act whose subject is the marker rather than the box. The PLAIN press on
 // those boxes is untouched — single-select, address the cell, land — which is
 // what makes a cell reachable at all. THE `k` FOLD RIDES THE SAME RULE: a
-// lit Add to selection turns a plain press into the toggle, so a `k`-lit
-// press on a MEASURE box is the no-op too (the measure is "every other box");
-// on the two BOUND cells the pair cannot compose AT ALL, and it is THIS no-op
+// lit Add to selection turns a plain press into the toggle, so on the two
+// BOUND cells the pair cannot compose AT ALL, and it is THIS no-op
 // that is the reason: with the sticky ctrl lit the cells could not be
 // addressed by pointer, so bare `k` is refused while grid iterations stands
 // (iteration_lock_key_blocked, with the button greyed) and bare `i`'s ON edge
@@ -4007,8 +3985,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         // selects and lands on every shape and the axis is one more thing the
         // press says. Written AFTER the fork, because every mutator above resets
         // the axis to the payload as it seats the focus (Selection::seat_focus),
-        // and a press is one of the FOUR routes that name a cell — the measure
-        // editor's open, the bound editor's open and the TAB WALK's cell step are
+        // and a press is one of the THREE routes that name a cell — the bound
+        // editor's open and the TAB WALK's cell step are
         // the others, each writing behind its own selection write; a focus reached
         // by none of them is addressed at its payload. Read-only does not refuse
         // it: the axis is navigation, as the selection is, and the act it
@@ -4067,15 +4045,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // 2026-09-05 — "each should be like a mini flag with its own
     // double-click"). The seed carries which cell of the run the FIRST press
     // landed on (MarkerCell): the flag box opens the payload editor, a bound
-    // cell its bound editor, the measure box the measure editor, and a pair
+    // cell its bound editor, and a pair
     // straddling a seam opens the one the first click named. The gates
     // differ with them: the PAYLOAD editor keeps the LOCK and the P view,
     // the BOUND editor read-only and the cell's own eligibility (a cell that
     // paints is eligible, and the open is a belt behind that) on EITHER column
-    // since 2026-09-09, while the
-    // MEASURE editor asks the LOCK ALONE — measures are the fourth ruled
-    // exception to the home-view binding, and a measure box paints on warp
-    // flags alone (phase resets carry no measure); a phase-reset bound cell's
+    // since 2026-09-09; a phase-reset bound cell's
     // double-click authors a session-only render parameter rather than
     // content. Since 2026-08-24 the payload editor
     // no longer differs about the AUDIO view either: it is the fifth
@@ -4089,9 +4064,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
         std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
-        // Read-only refuses every one of the three editors, as it always did.
-        // The ITERATION lock refuses the payload and the measure — each opens
-        // over serialized content, each pushes —
+        // Read-only refuses every one of the marker-lane editors, as it
+        // always did. The ITERATION lock refuses the payload — it opens
+        // over serialized content and pushes —
         // and ADMITS a bound cell, the
         // mode's own authoring surface, which is the keyboard's own delta at
         // iteration_lock_key_blocked (input_key_dispatch.cpp) written for the
@@ -4126,13 +4101,6 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
             // re-ask the eligibility.
             flag_editor.enter_iter_bound_edit(app.active_markers_view, hit,
                                               dc_at_press.cell);
-            return;
-        case MarkerCell::Measure:
-            // The seed is the marker's own measure, which is the whole of
-            // what a measure is — nothing inherits. A measure box paints on
-            // warp flags alone (PhaseResetMarker), so this cell is warp-only
-            // by construction.
-            flag_editor.enter_measure_edit(hit);
             return;
         }
     }
@@ -5672,9 +5640,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         //
         // THE RIDING BOXES TAKE THAT SAME ROAD (architect 2026-09-05):
         // whichever of the marker's boxes stand to the RIGHT of the open field
-        // — under the payload field its two bound cells and its measure, under
-        // the lower bound's field the upper cell and the measure, under the
-        // upper bound's field the measure — are painted by the editor's own
+        // — under the payload field its two bound cells, under
+        // the lower bound's field the upper cell — are painted by the editor's own
         // publisher at that field's right edge, and they are the MARKER'S boxes
         // for the pointer as well as graphically, so a press on one is an
         // ordinary outside press: it closes the session here and falls through
@@ -7246,7 +7213,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's three menu anchors and the view bar's four, row 3's two
 // tabs, row 4's twenty — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// seventeen since 2026-09-15: the enum's
+// sixteen since 2026-09-16: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

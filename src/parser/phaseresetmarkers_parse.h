@@ -19,12 +19,11 @@ struct PhaseResetMarker {
     int64_t time_frame  = 0;
     bool    disabled    = false;
 
-    // RECORDED ASYMMETRY: phase resets carry no measure (architect
-    // 2026-09-14, architect approval 2026-09-14 for this frozen touch); the
-    // measure is the warp column's alone (WarpMarker::measure,
-    // warpmarkers_parse.h). A magnification level is a field of neither this
-    // column nor the warp one: the magnification level markers column carries
-    // it as its own payload (MagnificationLevelMarker::level,
+    // A phase reset carries nothing beside its position and its disabled
+    // bit (architect approval 2026-09-16, comment only, with the measures
+    // feature's deletion). A magnification level is a field of neither this column nor the
+    // warp one: the magnification level markers column carries it as its own
+    // payload (MagnificationLevelMarker::level,
     // magnificationlevelmarkers_parse.h) (architect approval 2026-09-16).
 };
 
@@ -34,9 +33,11 @@ struct PhaseResetMarker {
 // writer emits none). A leading '#' is the disabled-marker prefix, NOT a
 // comment introducer: a '#' line whose remainder is not a valid frame position
 // is load-fatal. A line is `[#]<frame position>` and nothing else: comment
-// LINES do not exist in the grammar and phase resets carry no measure
-// (PhaseResetMarker), so a ` //` suffix meets the whitespace refusal and is
-// load-fatal like any other adversarial line (architect approval 2026-09-14).
+// LINES do not exist in the grammar and no marker line carries a suffix, so a
+// ` //` meets the whitespace refusal and is load-fatal like any other
+// adversarial line (architect approval 2026-09-14; the warp column's own
+// comment left its grammar 2026-09-16 — architect approval 2026-09-16,
+// comment only here; warpmarkers_parse.h).
 // On the first malformed line, or an unopenable file, returns a one-line
 // diagnostic (line-tagged where line-specific). Canonical reader for the GUI store and the headless CLI.
 //

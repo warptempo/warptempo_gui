@@ -79,17 +79,6 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
         // Ctrl+Q hatch, which force-ends this gesture through its own commit).
         // The commit pushes it iff the value actually moved.
         st.pre_drag_snapshot = mv;
-    } else if (cell == MarkerCell::Measure) {
-        // THE MEASURE ARM (architect 2026-09-14), seeded by the arrows' own
-        // start owner (app_state.h's value-step block): the measure's integer,
-        // 0 for a blank (a blank counts as 0, so the drag's first motion lands
-        // where that many single steps would). The field is serialized
-        // content, so the snapshot is captured here for the commit's one entry.
-        const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
-        if (marker >= static_cast<int>(mv.size())) return false;
-        st.start_value =
-            measure_step_start(mv[static_cast<size_t>(marker)].measure);
-        st.pre_drag_snapshot = mv;
     } else if (column == 'P') {
         const std::vector<GuiPhaseResetMarker>& pv =
             app.phaseresetmarkers.markers();
@@ -175,22 +164,6 @@ void ValueDragOps::apply_motion(int mouse_y) {
             m->tempo_cents    = cents;
             m->tempo_scale    = app.value_drag.start_scale;
         }
-    } else if (app.value_drag.cell == MarkerCell::Measure) {
-        // THE MEASURE WRITE, through the arrows' landing owner as a delta from
-        // the value the store holds right now: a blank counts as 0 and every
-        // landing clamps into [1, 999] silently. The spelling is the
-        // grammar's own writer. Asked before marker_mut for the tempo arm's
-        // reason (no generation bump on a landing that stands still).
-        const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
-        const std::string& now = mv[static_cast<size_t>(idx)].measure;
-        const int64_t cur = measure_step_start(now);
-        MarkerMeasureValue landed;
-        landed.whole = measure_step_landing(cur, target - cur);
-        std::string spelled = format_marker_measure(landed);
-        if (spelled == now) return;
-        if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx))
-            m->measure = std::move(spelled);
     } else if (app.value_drag.column == 'P') {
         const std::vector<GuiPhaseResetMarker>& pv =
             app.phaseresetmarkers.markers();
@@ -260,25 +233,6 @@ void ValueDragOps::commit() {
     // re-warp, no re-land, no dirty bit and no preview to trigger. The gesture
     // simply ends.
     if (st.cell == MarkerCell::Lower || st.cell == MarkerCell::Upper) return;
-
-    // THE MEASURE ARM'S ONE ENTRY (2026-09-14), gated on the FIELD'S NET
-    // CHANGE against the press snapshot, fenced from the tap window by
-    // push_undo_warp's own stamp clear exactly as the tempo arm is (below).
-    // NO TEMPO TAIL: the field is not a map input, so there is no re-warp, no
-    // re-land and no render trigger.
-    if (st.cell == MarkerCell::Measure) {
-        const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
-        if (st.marker < 0 || st.marker >= static_cast<int>(mv.size()) ||
-            st.marker >= static_cast<int>(st.pre_drag_snapshot.size()))
-            return;
-        const GuiWarpMarker& now = mv[static_cast<size_t>(st.marker)];
-        const GuiWarpMarker& was =
-            st.pre_drag_snapshot[static_cast<size_t>(st.marker)];
-        if (now.measure == was.measure) return;
-        undo.push_undo_warp(std::move(st.pre_drag_snapshot));
-        undo.recompute_dirty();
-        return;
-    }
 
     // THE TEMPO ARM'S ONE ENTRY, gated on NET CHANGE against the pre-drag
     // snapshot rather than on whether motion occurred — the marker drag's own

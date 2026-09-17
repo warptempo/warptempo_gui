@@ -315,7 +315,6 @@ bool replace_selection(State& s, const std::string& raw) {
     if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
     if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
     if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
-    if (s.kind == Kind::MeasureText)       cap = kMaxPendingCharsMeasure;
     if (s.kind == Kind::MagnificationLevelText)
         cap = kMaxPendingCharsMagnificationLevel;
     // ONE KIND, TWO GRAMMARS: the phase-reset column's bound is a sign and one

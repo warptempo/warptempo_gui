@@ -1,19 +1,18 @@
 #pragma once
 
-#include "marker_measure.h"
-
 #include <cstdint>
 #include <expected>
 #include <optional>
 #include <string>
 #include <vector>
 
-// One warp marker's serialized form — the eight fields the .warpmarkers
+// One warp marker's serialized form — the seven fields the .warpmarkers
 // file round-trips, and the only fields the parser domain and the
-// engine-bound render path read. Three independent state axes (the eighth
-// field, the measure, is a score reference, not a state axis; the ninth, a
-// per-marker magnification, left the marker whole — architect approval
-// 2026-09-15):
+// engine-bound render path read. Three independent state axes (a per-marker
+// magnification left the marker whole — architect approval 2026-09-15 — and
+// the measure reference, the ` //<measure>` comment past the canonical line,
+// left it whole too — architect approval 2026-09-16; the departure record is
+// at parse_single_canonical_line):
 //
 //   1. Tempo source. `tempo_inherits == false`: this marker owns its tempo
 //      (`tempo_cents` is the numeric value). `tempo_inherits == true` (a
@@ -57,22 +56,6 @@ struct WarpMarker {
     std::string label_ref;
 
     bool disabled      = false;
-
-    // MEASURE REFERENCE (architect approval 2026-08-20), serialized as the
-    // ` //<measure>` comment past the canonical line (architect approval
-    // 2026-09-15) — grammar, canonical spelling and byte bound in
-    // marker_measure.h, the comment's split there too. Empty means no
-    // measure; the writer emits no comment at all then, and an empty `//` is
-    // load-fatal.
-    //
-    // IT IS HOMED ON THE BASE rather than on the GUI's derived marker because
-    // the field must round-trip through the file, and both readers are shared:
-    // the CLI parses it (and never re-serializes anything), while the GUI store
-    // upcasts this base whole. It reaches no further: MarkerForRender never
-    // carries a measure, and the render fingerprint serializes resolved fields
-    // only — so a measure cannot move a render key, and editing one can never
-    // invalidate a completed render.
-    std::string measure;
 };
 
 // Parse a .warpmarkers file in the canonical GUI-authored format. Never
@@ -82,11 +65,10 @@ struct WarpMarker {
 // missing frame-0 tempo owner is NOT a load rule — the render resolver
 // (resolve_warp_markers_for_render) normalizes it, silently seeding a plain
 // enabled 1.00 owner at frame 0, so any state the GUI can save loads back and
-// renders. Every line may carry the ` //<measure>` comment
-// (split_marker_comment, marker_measure.h — architect approval 2026-09-15); a
-// malformed one — the empty `//`, any comma, a measure off its grammar or
-// past its byte bound — is GUI-unproducible and load-fatal like any other
-// adversarial line.
+// renders. A line is the canonical line WHOLE — no comment, no suffix of any
+// kind (architect approval 2026-09-16; the record is at
+// parse_single_canonical_line) — so any byte past it, a ` //` included, is
+// GUI-unproducible and load-fatal like any other adversarial line.
 // This is the canonical .warpmarkers reader for both the GUI store and the
 // headless CLI.
 //
@@ -114,28 +96,14 @@ namespace warpmarkers_internal {
 // populated with inert defaults (100 / nullopt). Returns the marker on
 // success, or a one-line diagnostic on failure.
 //
-// `accept_comment` selects whether the line may carry the
-// ` //<measure>` comment (split_marker_comment, marker_measure.h; architect
-// approval 2026-09-15). When true the comment is split off first, the
-// measure validated and attached;
-// when false the comment is not a concept and the no-whitespace refusal
-// below rejects the line whole. The five callers and their answers:
-//
-//   - the whole-file loop below (TRUE) — the on-disk grammar carries comments.
-//   - the revert's warp reconstitution (bare `v` since 2026-09-01, `Ctrl+H`
-//     before it; TRUE, input_key_dispatch.cpp) — the delta token carries the
-//     comment, so the rebuilt line does too.
-//     (Comment-only touch, architect grant 2026-08-29: the chord was renamed
-//     and this sentence named the old one.)
-//   - extract_warp_entry (TRUE, history_diff.cpp) — the history delta reads
-//     the same on-disk lines; false there would refuse every commented marker
-//     on the whitespace loop and vanish it from the diff lane.
-//   - warp_side_effective_disabled (TRUE, history_diff.cpp) — the same lines,
-//     parsed for the per-side cascade verdicts.
-//   - the flag editor's candidate parse (FALSE, the default) — the payload
-//     buffer never holds a comment, so a ` //` typed into it is a grammar
-//     error that red-flashes at commit. The measure has its own editor.
+// THE LINE IS THE CANONICAL LINE WHOLE. Every caller — the whole-file loop,
+// the revert's warp reconstitution (input_key_dispatch.cpp), the history
+// delta's extract_warp_entry and warp_side_effective_disabled
+// (history_diff.cpp), and the flag editor's candidate parse — reads the same
+// grammar, and the no-whitespace refusal is what rejects any suffix: a ` //`
+// on a sidecar line is adversarial and load-fatal, and one typed into the
+// payload field is a grammar error that red-flashes at the commit.
 std::expected<WarpMarker, std::string> parse_single_canonical_line(
-    const std::string& raw_line, bool accept_comment = false);
+    const std::string& raw_line);
 
 } // namespace warpmarkers_internal

@@ -115,8 +115,7 @@ constexpr const char* kCommitTitleEditorPrefix = "Commit: ";
 //   * the CORNER passes disabled=false and the `scale=` token, the payload arm
 //     alone.
 //
-// A warp token is rest-of-line, so it carries its own comment
-// verbatim; phase resets carry no measure (PhaseResetMarker). ASCII by
+// A warp token is rest-of-line, the whole payload. ASCII by
 // construction: the signs are literals and every token comes from a sidecar
 // grammar that is ASCII-only.
 std::string history_diff_label(const char* sign, bool disabled,
@@ -291,8 +290,8 @@ struct WaveformCache {
 // editor owns it whole. SINCE 2026-09-05 THAT IS ONE RULE FOR ALL THREE KINDS
 // (SuppressedBox, render.h): the pass omits the edited box AND everything right
 // of it, those boxes riding the field's edge under the editor's own painter, so
-// a payload field takes its marker's whole column, a bound field takes its cell
-// and whatever follows, and a measure field takes the measure box alone. The
+// a payload field takes its marker's whole column and a bound field takes its
+// cell and whatever follows. The
 // suppression is a fingerprint field in both its halves
 // (fp_suppressed_box_index, fp_suppressed_box_cell) precisely so open, close,
 // retarget and a move between one marker's own cells all rebuild this surface.
@@ -313,7 +312,7 @@ struct FlagCache {
     uint64_t  fp_warp_frame_map_hash        = 0;
     // THE GUI SCALE THESE PIXELS WERE LAID OUT AT, as an integer PERCENT
     // (gui_scale_percent(), render.h). Every dimension of a flag rides the
-    // scale — the box, the pole, the label's font size, the measure box's
+    // scale — the box, the pole, the label's font size, the cells'
     // padding — so it is an input to this surface exactly as the viewport and
     // the marker generations are, and it is keyed BY FIELD like the plate's own
     // inset and gain profile rather than through whatever else happens to move
@@ -370,8 +369,7 @@ struct FlagCache {
     // it opened.
     //
     // ONE FACT IN TWO FIELDS, replacing the two independent target indices
-    // this carried while the payload and measure editors were the only kinds
-    // that suppressed anything: the bound editors joined them on 2026-09-05
+    // this carried before the bound editors joined on 2026-09-05
     // and a bare index could not have said WHICH cell. The value is the one
     // derivation's (suppressed_flag_box), read here and by the painter alike.
     int       fp_suppressed_box_index     = -1;
@@ -811,7 +809,7 @@ private:
     // 2026-08-12; the arrows flush right since the same day's relayout): the
     // transport three at the left pad, then the right margin's block — the
     // four marker verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG
-    // button, the MEASURE and ADD TO SELECTION
+    // button and ADD TO SELECTION
     // behind them + separator + marker-walk two + separator + arrow four (2026-08-15 for the walk
     // group, 2026-08-18 for the verbs) — at
     // the icon row's boxes, the

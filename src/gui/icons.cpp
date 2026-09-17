@@ -556,64 +556,6 @@ constexpr IconPath kEditSelectPaths[] = {
      "19 10.900391 14.300781 17 14 7 6"},
 };
 
-// THE MARKER MEASURE ACT'S GLYPH: minuet-scales, KDE Minuet's own icon —
-// three note heads climbing a five-line staff. THE ARCHITECT PICKED IT
-// 2026-08-20, replacing edit-comment's speech balloon, which had been right for
-// the ONE DAY the field was a free-text comment and read wrong the moment it
-// became a strict measure grammar: the button names a place in the SCORE now,
-// so its glyph says notes on staff lines rather than something somebody said.
-// edit-comment's def and its committed asset are DELETED with the swap, no
-// button being left that wears it.
-//
-// PROVENANCE, per the theme-provenance rule: breeze-dark's
-// actions/22/minuet-scales.svg, a REAL FILE and not a symlink (unlike
-// edit-comment, which pointed at dialog-messages.svg — the resolution note that
-// stood here belonged to that file and goes with it). The committed
-// assets/icons/breeze/minuet-scales.svg is that install's bytes verbatim, the
-// edit-select precedent, so a diff between this table and that asset is a
-// transcription bug and nothing else. Breeze LIGHT carries the identical `d`
-// under #232629 ink; the dark one is the source because #fcfcfc is what this
-// roster's kIconText already is.
-//
-// IT NEEDS NO TRANSLATE, AND THAT IS WORTH SAYING because the file appears to
-// carry two: the `<g>` wraps everything in `translate(0 -1030.4)` and the path
-// answers with `translate(0,1030.4)`, which cancel EXACTLY. The geometry is
-// already in viewBox coordinates, so transcribing either one alone would move
-// the glyph a thousand units off the tile. The three files that genuinely need
-// the field are unchanged (dialog-ok-apply, dialog-cancel, and — until today —
-// edit-comment).
-//
-// Command coverage: relative `m` with `h`, `v`, `a` and `z` plus implicit
-// repetition, glued arc flags ("0 0 0-0.365" is three flags and an x), and
-// EXPONENT NOTATION — `8e-3`, `2e-3`, `4e-3` — which is this file's own
-// contribution to the subset (parse_number carries the record; the alternative
-// was re-spelling six numbers by hand and losing the verbatim invariant).
-constexpr IconPath kMinuetScalesPaths[] = {
-    {kIconText,
-     "m16 3v2h-13v1h13v1.6523a1.9977 1.9977 0 0 0-0.365-0.1523l-8e-3 "
-     "-2e-3a1.9977 1.9977 0 0 0-2.488 1.334 1.9977 1.9977 0 0 0-0.041 "
-     "0.168h-0.098v-2h-1v2h-9v1h9v1.652a1.9977 1.9977 0 0 0-0.365-0.152l-8e-3 "
-     "-2e-3a1.9977 1.9977 0 0 0-2.4883 1.334 1.9977 1.9977 0 0 0-0.041 "
-     "0.168h-0.0977v-2h-1v2h-5v1h5v1.654a1.9977 1.9977 0 0 "
-     "0-0.3652-0.154l-0.0078-2e-3a1.9977 1.9977 0 0 0-2.4883 1.334 1.9977 "
-     "1.9977 0 0 0-0.041 0.168h-2.0977v1h2.1445a1.9977 1.9977 0 0 0 1.3262 "
-     "1.322 1.9977 1.9977 0 0 0 2.4902-1.322h10.0391v-1h-9.9961a1.9977 1.9977 "
-     "0 0 0-0.0039-0.018v-2.982h0.1445a1.9977 1.9977 0 0 0 1.3285 1.322 1.9977 "
-     "1.9977 0 0 0 2.488-1.322h6.039v-1h-5.996a1.9977 1.9977 0 0 0-4e-3 "
-     "-0.018v-2.982h0.145a1.9977 1.9977 0 0 0 1.328 1.322 1.9977 1.9977 0 0 0 "
-     "2.488-1.322h2.039v-1h-1.996a1.9977 1.9977 0 0 0-4e-3 "
-     "-0.0176v-2.9824h2v-1h-2v-2h-1zm-0.943 5.457a0.97972 0.97972 0 0 1 "
-     "0.255 0.0352l0.026 0.0078a0.97972 0.97972 0 0 1 0.652 1.2168 0.97972 "
-     "0.97972 0 0 1-1.213 0.6602 0.97972 0.97972 0 0 1-0.668-1.209 0.97972 "
-     "0.97972 0 0 1 0.948-0.711zm-4 4a0.97972 0.97972 0 0 1 0.255 "
-     "0.035l0.026 8e-3a0.97972 0.97972 0 0 1 0.652 1.217 0.97972 0.97972 0 0 "
-     "1-1.213 0.66 0.97972 0.97972 0 0 1-0.668-1.209 0.97972 0.97972 0 0 1 "
-     "0.948-0.711zm-4.0004 4a0.97972 0.97972 0 0 1 0.2559 0.035l0.0254 "
-     "8e-3a0.97972 0.97972 0 0 1 0.6523 1.217 0.97972 0.97972 0 0 1-1.2129 "
-     "0.66 0.97972 0.97972 0 0 1-0.6679-1.209 0.97972 0.97972 0 0 1 "
-     "0.9472-0.711z"},
-};
-
 // THE EDIT FLAG ACT'S GLYPH (2026-08-27): text-field, Breeze's own TEXT
 // CURSOR — a serif I-beam standing on a field's underline rule, which is what
 // the button does (put a caret in the focused marker's flag text and type).
@@ -623,14 +565,14 @@ constexpr IconPath kMinuetScalesPaths[] = {
 // PROVENANCE, per the theme-provenance rule: breeze-dark's
 // actions/22/text-field.svg, a REAL FILE and not a symlink. The committed
 // assets/icons/breeze/text-field.svg is that install's bytes verbatim — the
-// edit-select and minuet-scales precedent — so a diff between this table and
+// edit-select precedent — so a diff between this table and
 // that asset is a transcription bug and nothing else. Breeze LIGHT carries the
 // identical `d` under #232629 ink; the dark one is the source because #fcfcfc
 // is what this roster's kIconText already is.
 //
 // Command coverage: absolute `M` / `L` with implicit repetition and a closing
 // `z` on each of the TWO SUBPATHS in one `d` — the I-beam and the underline —
-// which is minuet-scales' multi-subpath shape in the absolute spelling
+// a multi-subpath shape in the absolute spelling
 // edit-select already uses. Nothing new for the interpreter, and the two
 // subpaths are disjoint, so the fill rule never has to arbitrate between them.
 constexpr IconPath kTextFieldPaths[] = {
@@ -1113,7 +1055,6 @@ constexpr IconDef kKeyframeNext       {22.0, kKeyframeNextPaths,        1};
 constexpr IconDef kDocumentRevert     {22.0, kDocumentRevertPaths,      1};
 constexpr IconDef kShallowHistory     {22.0, kShallowHistoryPaths,      1};
 constexpr IconDef kEditSelect         {22.0, kEditSelectPaths,          1};
-constexpr IconDef kMinuetScales       {22.0, kMinuetScalesPaths,        1};
 constexpr IconDef kTextField          {22.0, kTextFieldPaths,           1};
 constexpr IconDef kFolder             {22.0, kFolderPaths,              1};
 constexpr IconDef kAudioXWav          {22.0, kAudioXWavPaths,           1};
@@ -1164,7 +1105,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DocumentRevert:      return kDocumentRevert;
         case Icon::ShallowHistory:      return kShallowHistory;
         case Icon::EditSelect:          return kEditSelect;
-        case Icon::MinuetScales:        return kMinuetScales;
         case Icon::TextField:           return kTextField;
         case Icon::Folder:              return kFolder;
         case Icon::AudioXWav:           return kAudioXWav;
@@ -1208,8 +1148,10 @@ const IconDef& icon_def(Icon icon) {
 // document-revert.svg, whose arrow lobes are smooth cubics; the alternative was
 // to flatten them into plain `c` in the table by hand, which would have put
 // numbers there that appear in no file. EXPONENT NOTATION JOINED 2026-08-20 THE
-// SAME WAY, with minuet-scales.svg's `8e-3` / `2e-3` offsets (the scanner's own
-// comment at parse_number carries the record). No Q/q, T/t: absent from every
+// SAME WAY (the scanner's own comment at parse_number carries the record; its
+// one producer, minuet-scales.svg, left the roster 2026-09-16 with the
+// measures feature, and the scanner stays — the subset grows with a producer
+// and is not shrunk when one leaves). No Q/q, T/t: absent from every
 // committed file, so they have no producer here and the parser refuses them
 // loudly rather than guessing. Elliptical 'a' is implemented
 // GENERALLY (endpoint->center conversion plus a quarter-arc bezier split) even
@@ -1242,14 +1184,17 @@ void skip_separators(PathCursor& c) {
 // optional EXPONENT. The single-point rule is what splits ".207031.207031" into
 // two numbers.
 //
-// THE EXPONENT JOINED 2026-08-20 WITH ITS FIRST PRODUCER, minuet-scales.svg,
+// THE EXPONENT JOINED 2026-08-20 WITH ITS FIRST PRODUCER, a Breeze file
 // whose author's editor wrote small offsets as `8e-3` and `2e-3` — the S/s
 // precedent exactly (a grammar feature enters this subset when a committed file
-// spells it, never ahead of one). The alternative was to re-spell those six
+// spells it, never ahead of one). The alternative was to re-spell those
 // numbers as decimals in the table, which would have put numbers there that
 // appear in no file and broken the one invariant this whole table rests on: the
 // `d` string is the committed asset's, byte for byte, so a diff between them is
-// a transcription bug and nothing else.
+// a transcription bug and nothing else. THAT PRODUCER LEFT 2026-09-16
+// (minuet-scales, with the measures feature) and no committed file spells an
+// exponent today; the scanner stays, the subset growing with a producer and
+// not shrinking when one leaves.
 //
 // IT IS SCANNED STRICTLY: the `e` is consumed only when an optional sign and at
 // least ONE digit follow it, so a trailing `e` ends the number instead of

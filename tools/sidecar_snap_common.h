@@ -264,8 +264,8 @@ inline std::string join_lines(const std::vector<Line>& lines) {
 }
 
 // Rewrite ONLY the leading `[#]<digits>` position token of a canonical marker
-// line, leaving every later byte alone — the warp payload, the ` //<measure>`
-// suffix, any trailing bytes. The caller has parsed the line with the product
+// line, leaving every later byte alone — the warp payload, any trailing
+// bytes. The caller has parsed the line with the product
 // parser, so the token is exactly an optional '#' followed by a digit run.
 inline std::string replace_leading_frame_token(const std::string& content,
                                                const std::string& frame_text) {

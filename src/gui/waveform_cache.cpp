@@ -885,9 +885,8 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // have leaves its bits at the struct's false, which no painter or act reads:
     // each is meaningful exactly when its own half's bool is set.
     //
-    // A WARP token is rest-of-line and already carries its comment;
-    // phase resets carry no measure (PhaseResetMarker), so the phase fills
-    // pass no token at all.
+    // A WARP token is the payload past the '|'; a phase reset has no payload,
+    // so the phase fills pass no token at all.
     //
     // EACH HALF'S ORDINAL RIDES ALONG TOO (2026-09-16): a changed pair copies
     // both sides', a removed flag its then side's, an added flag its now
@@ -1342,8 +1341,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     } else if (mv == 'M') {
         // THE MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-15): its
         // flags paint while it is the active column and at no other time, the
-        // other two columns' rule. The level digit on the green box, no measure
-        // and no cells (the painter's declaration, render.h); red is the
+        // other two columns' rule. The level digit on the green box and no
+        // cells (the painter's declaration, render.h); red is the
         // column's coincidence set alone. IT TAKES A DRAG OVERLAY AND A
         // SUPPRESSION since the column gained its authoring the same day — the
         // flag's horizontal drag and the one-digit LEVEL EDITOR, which stands

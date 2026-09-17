@@ -552,10 +552,8 @@ struct DragState {
 // the press's own y — and THE HORIZONTAL MARKER DRAG IS OFF ON EVERY FLAG (the
 // architect: "we never allow multi-axis dragging; flags move up and down or
 // not at all"). What it steps is the cell the press landed on, through the
-// arrows' own landing owners: the BASE TEMPO on a warp flag's payload, a BOUND
-// on either column's purple cell, and since 2026-09-14 the MEASURE (a blank or
-// direct integer) on a warp flag's purple box (Breeze blue until
-// 2026-09-15).
+// arrows' own landing owners: the BASE TEMPO on a warp flag's payload and a
+// BOUND on either column's purple cell.
 // The target rule is one predicate,
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
@@ -595,15 +593,12 @@ struct ValueDragState {
     // drag-modal gate swallows every chord but the Ctrl+Q hatch), so this is a
     // record of what was grabbed, not a defence against a switch.
     char       column  = 'W';
-    // Which cell the press landed on — Payload (the base tempo), Lower /
-    // Upper (a bound), or since 2026-09-14 Measure (a steppable measure) —
-    // value_drag_target decides which it may be.
+    // Which cell the press landed on — Payload (the base tempo) or Lower /
+    // Upper (a bound) — value_drag_target decides which it may be.
     MarkerCell cell    = MarkerCell::Payload;
     int        press_y = 0;    // window px: the travel is measured from here
     // The value the press found, in the cell's own domain: authored CENTS on
-    // the payload and on a warp bound, HOPS on a phase-reset bound, the
-    // MEASURE's integer (0 for a BLANK, so the first motion lands measure 1
-    // through measure_step_landing). ON A PASS
+    // the payload and on a warp bound, HOPS on a phase-reset bound. ON A PASS
     // IT IS THE EFFECTIVE BASE and not the stored field (architect 2026-09-10,
     // "the pass inherits whatever it was and then applies on up and down"):
     // the seed comes from warp_tempo_step_start (warpmarkers_ops.h), the very
@@ -621,11 +616,11 @@ struct ValueDragState {
     // early when the count has not moved, so a hand wandering inside one step's
     // kValueDragPxPerStep writes nothing and damages nothing.
     int64_t    last_steps  = 0;
-    // The undo payload of the TEMPO and MEASURE arms, captured at the begin
-    // and pushed by the commit iff the field netted a change — the tempo's
+    // The undo payload of the TEMPO arm, captured at the begin and pushed by
+    // the commit iff the field netted a change — the tempo's
     // tempo_inherits/tempo_cents PAIR (a pass converted and dragged back to its
-    // own base moved the pair, not the cents) and the measure string. Empty on a bound drag by construction — that arm pushes
-    // nothing.
+    // own base moved the pair, not the cents). Empty on a bound drag by
+    // construction — that arm pushes nothing.
     std::vector<GuiWarpMarker> pre_drag_snapshot;
 };
 
@@ -935,8 +930,7 @@ struct EditorTextDragState {
 // WHICH BOX OF A MARKER'S RUN A PRESS LANDED ON is a MarkerCell
 // (warpmarkers.h — the one enum for the press, the addressed cell and the
 // editors since 2026-09-05; a four-way span of its own from 2026-08-19).
-// The flag, its two iteration BOUND CELLS and its purple MEASURE box (Breeze
-// blue until 2026-09-15) are one
+// The flag and its two iteration BOUND CELLS are one
 // clickable surface for press, drag and select — one marker, one rect — and
 // the pressed cell decides two things. THE ADDRESSED CELL: every marker press
 // writes AppState::addressed_cell from the cell it landed on, inside
@@ -944,10 +938,9 @@ struct EditorTextDragState {
 // mutator that reset it, so the bright cell, the vertical arrows and Enter
 // all follow the press. THE DOUBLE-CLICK'S EDITOR: each cell opens its own —
 // the payload editor on the flag box (warp only, its own gates), the bound
-// editor on a bound cell, the measure editor on the measure box (both
-// columns, both views). It is resolved from the painter's own published
-// boundaries (FlagHitRect::iter_lower_boundary_x / iter_upper_boundary_x /
-// measure_boundary_x, hit_test_flag_cell) and never re-derived, and the seed
+// editor on a bound cell (both columns, both views). It is resolved from the
+// painter's own published boundaries (FlagHitRect::iter_lower_boundary_x /
+// iter_upper_boundary_x, hit_test_flag_cell) and never re-derived, and the seed
 // is stamped at the FIRST press so the pair of clicks agrees about what it is
 // opening even if the box has since been repainted at a different width.
 
@@ -1035,8 +1028,8 @@ struct PendingMarkerPress {
 // step alone. The delete list and the do-not-re-propose note live at the head of
 // marker_drag.h. So the reposition drag above is the ONLY pointer marker
 // gesture that MOVES anything, and W+target has no pointer authoring gesture
-// that MOVES anything — its pointer vocabulary is the measure double-click and
-// the payload double-click, both editor opens.)
+// that MOVES anything — its pointer vocabulary is the payload double-click,
+// an editor open.)
 
 // Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span)
@@ -1815,10 +1808,10 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-15) — the
+// 2026-09-01), then the bottom row's SIXTEEN (re-counted 2026-09-16) — the
 // transport three, the FOUR SINGLE-MARKER VERBS with the COPY VALUE button
-// (2026-08-29), the EDIT FLAG BUTTON (2026-08-27),
-// the MARKER MEASURE (2026-08-19), ADD TO SELECTION (2026-08-18) behind
+// (2026-08-29), the EDIT FLAG BUTTON (2026-08-27) and ADD TO SELECTION
+// (2026-08-18) behind
 // them, the MARKER-WALK two
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
@@ -2379,7 +2372,7 @@ enum class RedesignButton {
     // groups divided by two more separators — THE FOUR SINGLE-MARKER VERBS
     // (2026-08-18: drop = bare `s`, delete = Delete, disable = Ctrl+D, inherit
     // = Ctrl+N) WITH THE EDIT FLAG BUTTON (2026-08-27, bare Enter — the flag
-    // editor's third road), THE MARKER MEASURE (2026-08-19, bare `/`) AND ADD
+    // editor's third road) AND ADD
     // TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
     // — 2026-08-18, later the same day as the verbs; the VALUE DRAG LAMP on
     // bare `x` stood behind it from 2026-09-10 to 2026-09-13),
@@ -2546,7 +2539,7 @@ enum class RedesignButton {
     // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
-    // FIFTH member, seated between Toggle inherit and the Measure (it was the
+    // FIFTH member, seated after Toggle inherit (it was the
     // SIXTH for the afternoon of 2026-08-29, when the Copy value button landed
     // in the slot after Toggle inherit and left it again that evening),
     // DELIBERATELY FAR FROM DELETE ("away from the delete button"): its act is
@@ -2572,7 +2565,7 @@ enum class RedesignButton {
     // has no per-flag editor): the button greys exactly where bare Return is
     // a consumed no-op, the architect's truthful-buttons ruling ("Any time a
     // button would be a no-op, grey it"). From its 2026-08-27 landing until
-    // then it had NO focus term and no view term, like the Measure beside it,
+    // then it had NO focus term and no view term,
     // under the 2026-08-15 no-blink ruling — a face tracking the selection
     // would blink at interaction cadence — which he withdrew for himself: he
     // is deliberate with his presses, and greying is a face the row already
@@ -2591,57 +2584,12 @@ enum class RedesignButton {
     // so a modified press is refused at the band gate and the long press —
     // glass's held shift — reaches nothing.
     IconMarkerEditFlag,
-    // THE MARKER MEASURE — the verb group's SIXTH member since 2026-08-27,
-    // when the Edit flag button landed ahead of it (its fifth from 2026-08-19
-    // before that, and its seventh for the afternoon of 2026-08-29, while the
-    // Copy value button sat after Toggle inherit), seated after the Edit
-    // flag button and ahead of the COPY VALUE button, which took the slot
-    // between it and Add to selection that evening (architect 2026-08-29).
-    // Bare `/`,
-    // minuet-scales (notes climbing a staff — the speech balloon it wore for
-    // the field's one free-text day was swapped with the grammar on
-    // 2026-08-20), and it opens the MEASURE EDITOR on the focused marker of the
-    // active markers view.
-    //
-    // ITS ENABLED ARM HAS A FOCUS TERM SINCE 2026-08-30 (marker_focus_standing,
-    // the `/` arm's own refusal): the button greys with nothing focused, where
-    // the act was always a consumed no-op. It had none from 2026-08-19 until
-    // then, under the 2026-08-15 no-blink ruling — a grey tracking the
-    // selection would blink at interaction cadence, the reasoning that took
-    // the four cardinal arrows and the revert button always-on — which the
-    // architect withdrew with "Any time a button would be a no-op, grey it".
-    // ITS COLUMN TERM SINCE 2026-09-14: measures are the warp column's, in
-    // both audio views (marker_measure_edit_actionable). NO LAMP: it is an
-    // act, not a mode.
-    //
-    // IT IS NOT HOME-VIEW GATED: measures are
-    // the FOURTH ruled exception to the home-view binding (the inventory is at
-    // active_column_authoring_allowed), so the button works on the warp column
-    // in both audio views. That once set it apart from all four verbs above it;
-    // since 2026-08-24 it is apart from the DROP alone, Delete / Disable /
-    // Toggle inherit having joined the fifth ruled exception in the WARP
-    // column (the drop is positional and keeps the binding — the WARP
-    // column's alone since the P side opened on 2026-08-30). NO FACE MOVED WITH THAT
-    // RULING: every verb on this row already greyed on READ-ONLY alone and
-    // never on the home view, the roster's no-blink policy having kept the
-    // binding out of the faces from the start. The `h` view greys it through
-    // the derived partition, bare `/` being neither the mode's vocabulary nor
-    // on its allowlist.
-    //
-    // IT ADMITS NO SHIFT AND GREYS UNDER THE READ-ONLY LOCK like its four
-    // neighbours: its one chord opens an editor over serialized content, which
-    // read_only_key_blocked drops. (From 2026-08-20 to the 2026-08-21 sunset
-    // its shift half was the score-video jump, which kept it lit on a locked
-    // tab and in redesign_button_shift_admits; the jump left the product whole
-    // and the button returned to the lock's set with it.)
-    IconMarkerMeasure,
-    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SEVENTH
-    // member, seated IMMEDIATELY AFTER THE MEASURE (architect 2026-08-29, his
-    // live pass that evening; it sat after Toggle inherit for the afternoon
-    // between its landing and the move, on the coder's reading of his first
-    // ask "beside Toggle inherit"). It sits between the Measure and Add to
-    // Selection now, at the group's tail with the two acts that reach a marker
-    // without authoring it.
+    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SIXTH
+    // member since the Marker Measure between it and the Edit flag button
+    // left with the measures feature (2026-09-16; its seventh before that),
+    // seated at the group's tail with Add to Selection, the two acts that
+    // reach a marker without authoring it — the architect's own seat, taken
+    // on his live pass the evening it landed.
     //
     // ITS CHORD IS BARE `j` and its act is that key's exactly — copy the
     // FOCUSED marker's resolved value to the system clipboard — while its
@@ -2758,18 +2706,17 @@ enum class RedesignButton {
     TransportWalkPrev, TransportWalkNext,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-09-15, at
-// the view bar's fourth button — T+M then, S+M since 2026-09-16, a rename
-// and a reorder that moved no count): SEVEN in row 1 (the three menu anchors
-// and the view bar's four), two in row 3, TWENTY in row 4 and SEVENTEEN in
-// the bottom row — 46. Of those, FORTY-THREE carry a chord in
+// THE ROSTER, re-derived by counting the enumerators above (2026-09-16, at
+// the Marker Measure's deletion from the bottom row): SEVEN in row 1 (the
+// three menu anchors and the view bar's four), two in row 3, TWENTY in row 4
+// and SIXTEEN in the bottom row — 45. Of those, FORTY-TWO carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 46;
+inline constexpr int kRedesignButtonCount = 45;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2863,7 +2810,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerEditFlag:
-        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -2877,13 +2823,14 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-15: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — SIXTEEN since 2026-09-16: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row on 2026-08-18 with the MARKER MEASURE, ADD TO SELECTION, (2026-08-27)
+// row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
 // the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button landing behind
-// them (the VALUE DRAG LAMP stood last in that group from 2026-09-10 to its
-// deletion 2026-09-13, and the MARKER MAGNIFICATION behind the Measure from
-// 2026-09-14 to 2026-09-15), the MARKER-WALK GROUP's two (2026-08-15; three
+// them (the MARKER MEASURE stood among them from 2026-08-19 until the
+// measures feature was deleted 2026-09-16, the VALUE DRAG LAMP last in that
+// group from 2026-09-10 to its deletion 2026-09-13, and the MARKER
+// MAGNIFICATION from 2026-09-14 to 2026-09-15), the MARKER-WALK GROUP's two (2026-08-15; three
 // until Walk Both Tabs left on 2026-09-14) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
@@ -2916,7 +2863,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconMarkerEditFlag:
-        case RedesignButton::IconMarkerMeasure:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrev:
@@ -5745,8 +5691,8 @@ struct AppState {
     // settings editor, the commit-title editor and the bpm bracket editor;
     // the top-strip flag
     // editor is deliberately not one of them in ANY of its non-bracket
-    // kinds — FlagPayload, MeasureText, IterBound or MagnificationLevelText
-    // (2026-09-15), all four of
+    // kinds — FlagPayload, IterBound or MagnificationLevelText
+    // (2026-09-15), all three of
     // which paint in the top strip; the `h` view's load editor and the Open project editor were the
     // fifth and sixth until 2026-08-28, when both became the field-less
     // PICKER, which is a modal owner and not an editor — AppState::Picker).
@@ -7600,9 +7546,7 @@ struct AppState {
     // since row 5's text-on-flag model: render_flag_editor_box unrolls the
     // marker's own box, which the flag pass therefore skips), the BPM editor
     // (Kind::BpmBracket), which paints as the BOTTOM ROW'S MODAL like the
-    // other two dialog editors (2026-08-13), the marker MEASURE editor
-    // (Kind::MeasureText, since 2026-08-19), which paints in the top strip
-    // like the flag editor and carries no red-flash edge of its own, and the
+    // other two dialog editors (2026-08-13), and the
     // ITERATION BOUND editor (Kind::IterBound, since 2026-09-05), which
     // paints over its bound cell in the top strip and carries no stem flash
     // either. The editor owns the keyboard while active.
@@ -8037,14 +7981,14 @@ struct AppState {
     // THE ADDRESSED CELL: which cell of the FOCUSED marker is the bright one,
     // the one the vertical arrows step and the one Enter opens (MarkerCell,
     // warpmarkers.h; architect 2026-09-04 for the axis, 2026-09-05 for its
-    // reach over all four cells and its reset). Session-only, in no settings
+    // reach over every cell and its reset). Session-only, in no settings
     // vocabulary, Payload at every launch.
     //
-    // WRITTEN TO A CELL BY FOUR ROUTES, each behind the selection write it
+    // WRITTEN TO A CELL BY THREE ROUTES, each behind the selection write it
     // rides: a marker press inside run_marker_click_act (the pressed cell,
-    // all four, on all three click shapes), the measure editor's open
-    // (Measure), the bound editor's open (Lower or Upper) — an editor open
-    // seats the cell it edits — and, since 2026-09-10, THE BARE TAB WALK
+    // all three, on all three click shapes), the bound editor's open (Lower
+    // or Upper) — an editor open seats the cell it edits — and, since
+    // 2026-09-10, THE BARE TAB WALK
     // (GuiInputHandler::cycle_marker_focus), which steps through the focused
     // marker's PURPLE cells while grid iterations paints them and enters a
     // marker from the right on Shift+Tab. The walk's cell write comes after
@@ -8077,10 +8021,10 @@ struct AppState {
     // (remap_marker_indices_after_reorder) is not a focus change — the same
     // marker keeps its cell. And the mode going off puts a Lower or Upper
     // axis back on the payload (wipe_iter_state, which every exit runs),
-    // the cells going with the mode; a Measure axis survives it.
+    // the cells going with the mode.
     //
     // READERS: the Up/Down dispatch's fork (input_handler.cpp — THE VALUE
-    // STEP, one body per cell: the tempo, a bound, the measure), the plain wheel over a flag cell (run_flag_cell_wheel,
+    // STEP, one body per cell: the tempo, a bound), the plain wheel over a flag cell (run_flag_cell_wheel,
     // input_pointer.cpp, which writes it first through the plain click's
     // select body and then steps it), the Return arm's
     // editor fork, the flag painter's bright cell (render_flags through the
@@ -9463,18 +9407,9 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // outside the undo domain altogether, so the write reaches neither disk nor a
 // render nor a history entry — the cent step's own class of argument. The `i` TOGGLE ITSELF IS NOT ON THIS
 // LIST: it moves MODE STATE, not authored content, and simply gates on the warp
-// column in either view. (4) THE MARKER MEASURE (architect 2026-08-19, the
-// field rebranded from the marker comment 2026-08-20), on the WARP COLUMN
-// ALONE (phase resets carry no measure, PhaseResetMarker) and in BOTH AUDIO
-// VIEWS: a measure names where a marker sits IN THE SCORE rather than
-// authoring a musical value — nothing in it reaches the engine, the frame map
-// or the render fingerprint — so it is editable wherever a warp flag paints.
-// Its three entry routes (bare `/`, the bottom-row button, the double-click on
-// the box — purple since 2026-09-15, Breeze blue before it) consult this
-// predicate nowhere; their gates are READ-ONLY,
-// which still refuses, a measure being serialized content, and the column
-// (marker_measure_edit_refusal).
-// (5) THE WARP STATUS/VALUE FAMILY IN W+TARGET (architect 2026-08-24, asked as
+// column in either view. (4) THE MARKER MEASURE was the fourth from
+// 2026-08-19 until the measures feature was deleted whole 2026-09-16; its
+// number is kept so the fifth's stays. (5) THE WARP STATUS/VALUE FAMILY IN W+TARGET (architect 2026-08-24, asked as
 // "why are Ctrl+D, Ctrl+N, Delete and the flag editor blocked there?" and
 // ruled "add the ones we can, and omit the ones we must omit"). FOUR MEMBERS,
 // all in the WARP column: Ctrl+D (GuiWarpMarkersOps::toggle_disabled — the
@@ -9559,8 +9494,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // Left/Right TEMPO-IMAGE STEP — were DELETED wholesale (the delete list is at the
 // head of marker_drag.h), so bare Left/Right in W+target with a selection is now
 // a consumed refusal and W+target has no pointer authoring gesture that MOVES
-// anything — its pointer vocabulary is the measure double-click and the
-// payload double-click, both editor opens.
+// anything — its pointer vocabulary is the payload double-click, an editor
+// open.
 // (The 2026-07-24 "third exception" — a both-views
 // warp POSITION nudge — was re-ruled away the same day: there is no warp
 // position authoring in target view at all, and exception (5) does not
@@ -9598,7 +9533,7 @@ inline bool active_column_authoring_allowed(const AppState& app) {
 //     horizontal arrows step in (GuiInputHandler::playhead_in_marker_lane
 //     delegates here, its own contract at its declaration).
 //   * DOES A FOCUS STAND — the single-marker acts' subject (the flag editor,
-//     the measure editor, the inherit toggle, the cent step), read off
+//     the inherit toggle, the cent step), read off
 //     app.last_selected_marker. The dispatch arms run
 //     Selection::repair_last_selected ahead of asking; a face cannot repair
 //     (it reads const state per tick) and does not need to — the selection
@@ -9851,8 +9786,7 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 //     and the Up / Down buttons' MODIFIER LINE in the stateful tooltip
 //     overload below, which drops where it answers non-null (the plain, the
 //     shifted and the ctrl press all refuse alike, so "Press Shift for a
-//     3-step, Ctrl for 10." would name three rungs that do nothing different
-//     — the measure axis's grey drops its line on the same reasoning);
+//     3-step, Ctrl for 10." would name three rungs that do nothing different);
 //   * the INDEX form — tempo_cent_step_direction_actionable's singleton arm,
 //     THE UP / DOWN FACE, asked of the focus it has already range-checked;
 //     and value_drag_target below, the gesture's ONE predicate, which the
@@ -9953,8 +9887,7 @@ inline bool marker_paints_iter_cells(const AppState& app, char column,
 // The vertical arrows' SECOND step body steps one bound of the focused
 // marker's iteration bracket while the addressed cell
 // (AppState::addressed_cell) is Lower or Upper; a Payload axis is the tempo
-// step and the Measure axis runs its own value step (measure_step_*, beside
-// value_drag_target below).
+// step (or, on the magnification level column, the level step).
 // Its predicates mirror the tempo step's above one for one —
 // the stable-state refusals, the landing owner, the
 // directional face, the kind refusal — and each has the same readers: the act,
@@ -10000,11 +9933,6 @@ inline bool iter_bound_step_actionable(const AppState& app) {
     }
     return tempo_cent_step_actionable(app);
 }
-
-// (THE MEASURE AXIS was a refusal here — addressed_cell_step_refusal, "A
-// measure has no value to step" — until 2026-09-14, when the cell gained a
-// value step of its own: THE VALUE STEP's measure owners stand beside
-// value_drag_target below, after authoring_locked, which they read.)
 
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
 // tempo_cent_step_landing in the bracket's delta domain. The start is the
@@ -10428,35 +10356,16 @@ inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
     return ed.iter_upper ? MarkerCell::Upper : MarkerCell::Lower;
 }
 
-// THE MEASURE EDITOR'S OPEN REFUSAL — ONE OWNER for bare `/` (the card) and
-// the Measure button's face (the grey): the focus first, then the column,
-// phase resets carrying no measure (PhaseResetMarker). nullptr is the open.
-inline constexpr const char* kMeasureNoFocusCard =
-    "Select a marker to edit its measure";
-inline constexpr const char* kMeasureWarpOnlyCard =
-    "Measures are set on warp markers";
-inline const char* marker_measure_edit_refusal(const AppState& app) {
-    if (app.active_markers_view != 'W') return kMeasureWarpOnlyCard;
-    if (!marker_focus_standing(app))    return kMeasureNoFocusCard;
-    return nullptr;
-}
-inline bool marker_measure_edit_actionable(const AppState& app) {
-    return marker_measure_edit_refusal(app) == nullptr;
-}
-
 // BARE RETURN'S OPEN REFUSAL, composed (architect 2026-08-30; over the
 // addressed cell since 2026-09-05): Return opens the ADDRESSED CELL'S editor
 // on the FOCUSED marker, so it wants a focus first, and then the cell's own
 // column — the flag's payload editor is the warp column's (the P view has no
-// per-flag editor), the measure editor asks its own owner
-// (marker_measure_edit_actionable, above), while the BOUND editor is both
+// per-flag editor), while the BOUND editor is both
 // columns' since 2026-09-09: a bound cell is addressed on either column's
 // eligible flags, so that arm asks no column. A bound cell's kind refusal
 // (an owner disabled after its cell was addressed) stays the act's own
 // card behind a live face, as the Up/Down pair's is. READERS: the Return arm
-// (input_handler.cpp) and the Edit flag button's disabled face. The MEASURE
-// editor's own key (bare `/`) and its button read
-// marker_measure_edit_refusal / marker_measure_edit_actionable.
+// (input_handler.cpp) and the Edit flag button's disabled face.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
@@ -10470,7 +10379,6 @@ inline bool flag_editor_open_actionable(const AppState& app) {
     case MarkerCell::Payload: return app.active_markers_view != 'P';
     case MarkerCell::Lower:
     case MarkerCell::Upper:   return true;
-    case MarkerCell::Measure: return marker_measure_edit_actionable(app);
     }
     return false;
 }
@@ -11039,7 +10947,7 @@ inline bool any_tab_read_only(const AppState& a) {
 // IT IS THE ITERATION HALF ALONE, deliberately, and every reader composes its
 // own read-only half:
 //   * most of the members' read-only half is the tab's bare bit (the marker
-//     verbs, the Measure, Edit flag, Up/Down);
+//     verbs, Edit flag, Up/Down);
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
 //     writable one does), the view bar's four (bare 1/2/3/4 are on
@@ -11094,14 +11002,12 @@ inline bool any_tab_read_only(const AppState& a) {
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
-        // The four marker verbs and the Measure: every one
-        // of them writes a store and pushes, which is the whole of what the
-        // lock holds back.
+        // The four marker verbs: every one of them writes a store and
+        // pushes, which is the whole of what the lock holds back.
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        case RedesignButton::IconMarkerMeasure:
         // The Toggle History View button — the view's own acts push history,
         // and two modal views are not composed, so the ENTRY refuses
         // (handle_history_mode_key, input_key_dispatch.cpp).
@@ -11180,9 +11086,9 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // EDIT FLAG AND THE VERTICAL PAIR FORK ON THE ADDRESSED AXIS, exactly
         // as the keyboard gate's own bound-axis test does: with Lower or Upper
         // addressed the press reaches the bound cells — the mode's one
-        // authoring surface — and on the PAYLOAD or the MEASURE axis it would
+        // authoring surface — and on the PAYLOAD axis it would
         // open an editor over serialized content or run a value step that
-        // pushes (the tempo or the measure). The gate
+        // pushes (the tempo). The gate
         // admits the two bound cells and nothing else, so the lock is the
         // refusal that stands on every other axis under a lit lamp.
         case RedesignButton::IconMarkerEditFlag:
@@ -11209,110 +11115,15 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     }
 }
 
-// -- THE VALUE STEP'S MEASURE AXIS (architect 2026-09-14) -------------------
+// -- THE VALUE STEP'S MAGNIFICATION LEVEL AXIS (architect 2026-09-15) --------
 //
 // "The value step" is the NAME of bare Up/Down: they step the ADDRESSED
 // CELL's value, one body per cell — the tempo on the payload
 // (adjust_tempo_cents, whose tempo_cent_step_* symbols keep their names), a
-// bound on Lower / Upper (adjust_iter_bound_cents / _hops), and since
-// 2026-09-14 THE MEASURE (GuiWarpMarkersOps::adjust_measure_step,
-// warpmarkers_ops.cpp). The owners below serve that body and have the same readers as the tempo
-// step's owners: the act, the Up / Down face (redesign_button_enabled), their
-// tooltip (the stateful overload), the VALUE DRAG (value_drag_target and
-// ValueDragOps) and the plain WHEEL over a flag cell (run_flag_cell_wheel,
-// input_pointer.cpp), which reaches the act itself.
-//
-// ITS SHAPE: the warp column alone (a phase reset carries no measure), a
-// SINGLETON on the focus (a group press collapses to its focus, the
-// bound step's shape), both locks refusing (the field is serialized content
-// and the step pushes an undo entry — read-only and the iteration lock alike,
-// authoring_locked), a silent wall asked ahead of the coalesce stamp, and
-// nothing past the write but the undo entry, the dirty bit and the damage: no
-// re-warp, no render, no re-land, the playhead unmoved (the field moves no
-// map and no marker).
-
-// THE STABLE-STATE REFUSALS: the warp column, a standing
-// selection and a valid focus — the tempo step's own three terms, read rather
-// than restated. The LOCK is not a term here: the act asks authoring_locked on
-// its own so it can card the lock's sentence rather than this one, and the
-// face greys on read-only and iteration_lock_greys ahead of this.
-inline bool warp_value_step_actionable(const AppState& a) {
-    return tempo_cent_step_actionable(a);
-}
-
-// THE MEASURE STEP'S KIND REFUSAL — an OFFSET measure (`+…`, whole or
-// fractional) has no absolute number to step, so it refuses as a label ref's
-// tempo does: THE KEY CARDS this sentence and the Up / Down face GREYS on it
-// (a blank or a direct integer is steppable — measure_is_steppable,
-// marker_measure.h, the grammar's own judge). INDEX FORM for the value drag and
-// the wheel's cursor-shaped asks, FOCUS FORM for the act, the face and the
-// tooltip; both answer nullptr off the warp column and on a stale index, those
-// being other refusals' business.
-inline constexpr const char* kMeasureOffsetNoStepCard =
-    "A measure offset has no value to step";
-inline const char* measure_step_kind_refusal_for(const AppState& a, int idx) {
-    const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
-    if (idx < 0 || idx >= static_cast<int>(mv.size())) return nullptr;
-    return measure_is_steppable(mv[static_cast<size_t>(idx)].measure)
-               ? nullptr
-               : kMeasureOffsetNoStepCard;
-}
-inline const char* measure_step_kind_refusal(const AppState& a) {
-    if (a.active_markers_view != 'W') return nullptr;
-    return measure_step_kind_refusal_for(a, a.last_selected_marker);
-}
-
-// WHERE A MEASURE STARTS — the measure's integer, 0 for a BLANK. Called only
-// on a steppable measure (the kind refusal above ran first); an offset answers
-// 0 as a belt and never reaches a landing.
-inline int64_t measure_step_start(std::string_view measure) {
-    if (measure.empty()) return 0;
-    MarkerMeasureValue parsed;
-    std::string        error;
-    if (!parse_marker_measure(measure, parsed, error) || parsed.is_offset)
-        return 0;
-    return parsed.whole;
-}
-
-// WHERE ONE MEASURE STEP LANDS — THE ONE LANDING OWNER, shared by the key, the
-// drag and the wheel, and ONE RULE: A BLANK COUNTS AS 0 and the landing is
-// clamp(start + delta, 1, kMeasureMaxWhole). So bare Up and bare Down on a
-// blank both land on MEASURE 1 (the ruling: "Down on blank gives 1"), Shift+Up
-// on a blank lands on 3, and Down at 1 and Up at 999 land where they stand —
-// the WALLS, silent. WHY NO BLANK SPECIAL CASE: a delta of k must land exactly
-// where k single steps would, because the platform COALESCES — the wheel sends
-// a completed frame's detents as one signed delta, and the value drag's first
-// motion may cross several step thresholds at once — so a blank that answered
-// 1 for every magnitude would make the authored result depend on how the
-// compositor batched the hand's detents. Counting the blank as 0 keeps every
-// detent its own step. The write spells the landing through the grammar's own
-// writer (format_marker_measure).
-inline int64_t measure_step_landing(int64_t start, int64_t delta) {
-    return std::clamp<int64_t>(start + delta, 1, kMeasureMaxWhole);
-}
-
-// THE MEASURE STEP'S DIRECTIONAL FACE — false on the kind refusal and on a
-// wall, true otherwise; A BLANK NEVER WALLS (its start 0 lands on 1 or above
-// in either direction, never on itself — the landing owner's own arithmetic,
-// not a branch here). Magnitude-invariant for the tempo step's reason: a
-// positive delta's clamped landing equals the start iff the start IS the max,
-// whatever the delta. A stale focus answers true (a belt; the stable-state
-// refusals own it).
-inline bool measure_step_direction_actionable(const AppState& a,
-                                              int64_t delta) {
-    if (measure_step_kind_refusal(a)) return false;
-    const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
-    const int f = a.last_selected_marker;
-    if (f < 0 || f >= static_cast<int>(mv.size())) return true;
-    const int64_t start = measure_step_start(mv[static_cast<size_t>(f)].measure);
-    return measure_step_landing(start, delta) != start;
-}
-
-// -- THE VALUE STEP'S MAGNIFICATION LEVEL AXIS (architect 2026-09-15) --------
-//
-// The third column's arm of bare Up/Down, and the value step's third body
-// (GuiMagnificationLevelMarkersOps::adjust_magnification_level_step). Its
-// owners have the tempo and measure axes' readers: the act, the Up / Down face
+// bound on Lower / Upper (adjust_iter_bound_cents / _hops), and on the
+// magnification level column the LEVEL, this axis, the value step's third
+// body (GuiMagnificationLevelMarkersOps::adjust_magnification_level_step). Its
+// owners have the tempo axis's readers: the act, the Up / Down face
 // (redesign_button_enabled) and the plain WHEEL over an M flag
 // (run_flag_cell_wheel, input_pointer.cpp). THE VALUE DRAG IS NOT ONE OF THEM —
 // value_drag_posture answers NO on this column (the plain flag drag is the
@@ -11330,9 +11141,8 @@ inline bool measure_step_direction_actionable(const AppState& a,
 
 // THE STABLE-STATE REFUSALS: the M column, a standing selection and a valid
 // focus — the tempo step's own three terms in this column's, read by the act
-// and by the face. The LOCK is not a term here, the measure axis's rule: the
-// act asks authoring_locked on its own so it can card the lock's sentence
-// rather than this one.
+// and by the face. The LOCK is not a term here: the act asks authoring_locked
+// on its own so it can card the lock's sentence rather than this one.
 inline bool magnification_level_step_actionable(const AppState& a) {
     return a.active_markers_view == 'M' &&
            marker_selection_standing(a) && marker_focus_standing(a);
@@ -11510,8 +11320,8 @@ inline bool magnification_level_step_direction_actionable(const AppState& a,
 // region overlay at the press (run_marker_click_act), and ctrl-click and
 // shift-click act at the press and arm nothing, so neither can become a drag.
 // The posture says WHETHER the gesture is armed; value_drag_target below says
-// ON WHAT, and a press on a non-target — a label ref, an offset measure, a
-// phase reset's payload — is the silent non-event.
+// ON WHAT, and a press on a non-target — a label ref, a phase reset's
+// payload — is the silent non-event.
 //
 // IT MAY BE TRUE WHILE ADD TO SELECTION IS LIT, harmlessly and by
 // construction: the sticky ctrl turns every plain flag press into the
@@ -11603,12 +11413,7 @@ inline bool value_drag_posture(const AppState& a) {
 // on read_only_key_blocked's allowlist, so the keyboard refuses a bound step
 // on a locked tab and the pointer refuses it here.
 //
-// THE MEASURE ARM (2026-09-14) admits a steppable measure (blank or a direct
-// integer), on the warp column, under neither lock — the arrows' own
-// admission.
-//
-// EVERYTHING ELSE IS FALSE: an offset measure (the arrows card it and the
-// pointer says it in silence), a phase reset's payload, a ref, a collapse
+// EVERYTHING ELSE IS FALSE: a phase reset's payload, a ref, a collapse
 // member, a payload in source view.
 // THE POINTER'S REFUSAL IS SILENT everywhere in this gesture: a pointer
 // gesture's non-event is its own answer, the flag drag's standing rule.
@@ -11637,19 +11442,6 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
     case MarkerCell::Upper:
         if (active_view_state(a).read_only) return false;
         return marker_paints_iter_cells(a, column, idx);
-    case MarkerCell::Measure: {
-        // THE MEASURE (architect 2026-09-14): the value step's newer axis,
-        // where the posture already stands (which is T+W in effect — a phase
-        // reset carries no measure). Both locks refuse as they refuse the
-        // payload, the field being serialized content the step records. It
-        // asks the arrows' kind owner about THIS marker (an offset has no
-        // number to step).
-        if (column != 'W') return false;
-        if (authoring_locked(a)) return false;
-        const std::vector<GuiWarpMarker>& mv = a.warpmarkers.markers();
-        if (idx >= static_cast<int>(mv.size())) return false;
-        return measure_step_kind_refusal_for(a, idx) == nullptr;
-    }
     }
     return false;
 }
@@ -11737,25 +11529,14 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
 // seat it started on — an ADDRESSED-CELL write and nothing else, no select, no
 // playhead land, no framing.
 //
-// THE RANK IS THE PAINTED ORDER, purple only: payload < lower < upper. The
-// MEASURE box sits past upper and is NEVER A STOP — the architect kept the
-// walk to the boxes the colour tied together at the 2026-09-10 ruling ("only
-// the purple cells — measure is excluded, which is a good reason we went
-// with purple for the payload and the bounds"), the measure box wearing
-// Breeze blue at the time; THE MEASURE BOX ITSELF TOOK THE SAME PURPLE ON
-// 2026-09-15, so the colour argument no longer distinguishes it from the
-// walk's three stops — the exclusion is BY RULE now (this walk cycles the
-// iteration bracket alone, and a measure carries none), not by hue, and
-// stands unchanged; a colour-only reader re-deriving the ruling today would
-// find the quote's premise gone. A
-// Measure axis is still a legal SEAT (a press lands on that box), so the
-// backward step reads it as "one box right of upper" and walks into whatever
-// box actually stands left of it — ON A FLAG THAT PAINTS CELLS, and only
-// there. A flag showing no cells (the mode dark, or an ineligible marker
-// under a lit lamp) has no rank walk of any kind: every cell arm is skipped
-// and the seat falls WHOLE to the marker step, so a Measure axis is
-// walk-inert exactly as Payload is and the lamp-off walk is byte-identical to
-// the walk that stood before the cells existed.
+// THE RANK IS THE PAINTED ORDER: payload < lower < upper, the three boxes a
+// flag can carry — the walk cycles the iteration bracket and the payload
+// (architect 2026-09-10, "only the purple cells"). The rank walk runs ON A
+// FLAG THAT PAINTS CELLS, and only there. A flag showing no cells (the mode
+// dark, or an ineligible marker under a lit lamp) has no rank walk of any
+// kind: every cell arm is skipped and the seat falls WHOLE to the marker
+// step, so the lamp-off walk is byte-identical to the walk that stood before
+// the cells existed.
 struct MarkerWalkStep {
     int        marker      = -1;
     MarkerCell cell        = MarkerCell::Payload;
@@ -11887,11 +11668,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     singleton's changed path past that tail, and the group arm past its
 //     verdict (GuiWarpMarkersOps::adjust_tempo_cents and
 //     ::adjust_tempo_cents_group, warpmarkers_ops.cpp);
-//   * THE MEASURE STEP (2026-09-14), the value step's newer axis, on its one
-//     accepted exit — the wall exit (an accepted step landing where it
-//     stands) and the changed path alike (GuiWarpMarkersOps::
-//     adjust_measure_step, warpmarkers_ops.cpp), the tempo step's placement;
-//   * THE MAGNIFICATION LEVEL STEP (2026-09-15), the third value axis, on its
+//   * THE MAGNIFICATION LEVEL STEP (2026-09-15), the value step's third axis, on its
 //     two accepted exits exactly as the two above — the singleton's silent
 //     clamp and the changed path past the no-change belt
 //     (GuiMagnificationLevelMarkersOps::adjust_magnification_level_step,
@@ -11990,10 +11767,6 @@ inline bool warp_row_fields_differ(const GuiWarpMarker& a,
         || a.tempo_scale    != b.tempo_scale
         || a.label_def      != b.label_def
         || a.label_ref      != b.label_ref
-        // The measure is a serialized field like the rest: a measure-only undo
-        // mutates nothing else, so omitting it would strand the selection
-        // exactly as an omitted bracket would.
-        || a.measure        != b.measure
         // The session-only BPM fields ride undo snapshots, and row identity
         // means the whole struct for them: a bpm-only undo mutates only these,
         // so omitting them would leave the same-count matcher finding no
@@ -13243,9 +13016,9 @@ inline bool playback_launch_playable(const AppState& a,
 //     bound cells and the marker lane's absence — and its whole membership has
 //     one owner, iteration_lock_greys (above), which the arms alone read since
 //     2026-09-12 (the HINTS were its second reader until the refusal-reason
-//     tooltip class was deleted). SEVEN ARMS BELOW COMPOSE BOTH HALVES — Drop marker, Delete,
-//     Disable, Toggle inherit, Measure, Edit flag and the Up/Down pair, the
-//     last three admitted on a BOUND AXIS, where the cells are the mode's own
+//     tooltip class was deleted). SIX ARMS BELOW COMPOSE BOTH HALVES — Drop marker, Delete,
+//     Disable, Toggle inherit, Edit flag and the Up/Down pair, the
+//     last two admitted on a BOUND AXIS, where the cells are the mode's own
 //     authoring surface. ONE ASKS THE ITERATION HALF ALONE, having no
 //     read-only term to compose: TOGGLE HISTORY VIEW (the mode is claimed
 //     above the gate and a locked tab reads history as a writable one does)
@@ -13283,10 +13056,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     chords — blocked, with no face to grey. (BARE `m` AND BARE `i` MADE THE
 //     POINT TWICE, leaving this list with their buttons at the 2026-08-27
 //     Series relocation and coming back with them on 2026-09-04: the gate's
-//     answer never moved either time, only whether a face existed to wear it.) (THE MEASURE, bare `/`, was off
-//     this list for one day — 2026-08-20 to the 2026-08-21 sunset — while its
-//     shift half was the lock-legal score-video jump; the jump's removal
-//     returned it.) The mirror is a membership, never an equivalence, in both
+//     answer never moved either time, only whether a face existed to wear it.) The mirror is a membership, never an equivalence, in both
 //     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the TRIM REGION toggle (2026-08-16 —
@@ -13355,10 +13125,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     beside it — the gate's answer for bare `'` now depends on the MODE (it
 //     blocks inside the view and admits outside it, where the chord opens the
 //     render player), so the walk would light that button on every locked tab
-//     outside the view, which is exactly where the mode greys it,
-//     and since 2026-08-20 THE MEASURE, whose base chord the lock eats while
-//     its shifted twin is admitted — one key, two answers, and a face that can
-//     only give one. A derivation would therefore need an override list on top
+//     outside the view, which is exactly where the mode greys it. A
+//     derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
 //   * Row 1's three anchors and row 3's tabs answer true HERE: row 1 keeps its
@@ -13397,9 +13165,7 @@ inline bool playback_launch_playable(const AppState& a,
 // toolbar four (Save / Undo / Redo / Render — icon-row members since the
 // 2026-08-12 relayout, keeping their mirrored derivations), THE SET THE
 // READ-ONLY LOCK GREYS (its membership is the read-only arm of the switch
-// below, which owns it and is not counted here — it moved twice on 2026-08-20,
-// losing the propagate pair with their buttons and the MEASURE to its
-// lock-legal shift half), and, since 2026-08-15, THE BOTTOM ROW'S ALWAYS-ON
+// below, which owns it and is not counted here), and, since 2026-08-15, THE BOTTOM ROW'S ALWAYS-ON
 // MEMBERS (every chord on that row drops at on_key's loading/blank return, so
 // their faces grey there too — and that guard is now the ONLY thing they all
 // have to say; the set is the one that breaks out of the switch below, which
@@ -13818,11 +13584,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // on either closed the menu and the chord refused silently exactly as
         // the key did — AND THEY ARE BACK HERE SINCE 2026-09-04, that menu
         // deleted and both buttons in the icon row again, each with its own
-        // arm below. THE MEASURE (bare
-        // `/`) sits here since the 2026-08-21 sunset returned it: its one
-        // chord opens an editor over serialized content, exactly the class
-        // every other member is in. (It was out for one day while its shift
-        // half was the lock-legal score-video jump; the jump left whole.)
+        // arm below.
         //
         // IT IS NO LONGER ONE ROW'S: since the
         // 2026-08-18 relayout the four MARKER VERBS are the BOTTOM row's — and
@@ -13903,7 +13665,7 @@ inline bool redesign_button_enabled(const AppState& a,
                    !iteration_lock_greys(a, b) &&
                    inherit_toggle_actionable(a);
         // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
-        // it is the MEASURE'S CLASS EXACTLY: bare Return opens an editor over
+        // it is the verbs' class exactly: bare Return opens an editor over
         // SERIALIZED CONTENT — the marker's canonical line — and sits on no
         // read_only_key_blocked allowlist entry, so the lock eats the chord and
         // the face says so. ITS OTHER REFUSALS (nothing focused, the P view)
@@ -13914,7 +13676,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // THE ITERATION LOCK ADMITS IT ON A BOUND AXIS (architect 2026-09-10):
         // with Lower or Upper addressed, Return opens THAT CELL'S editor, and
         // the bound cells are the mode's own authoring surface — the one thing
-        // the lock leaves open. On the payload or the measure axis the same
+        // the lock leaves open. On the payload axis the same
         // press would open an editor over serialized content, which the lock
         // refuses like every other authoring verb, so the face greys exactly
         // where the keyboard gate drops the chord (the two deltas are stated
@@ -13926,14 +13688,6 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    flag_editor_open_actionable(a);
-        // THE MEASURE GREYS WITH NOTHING FOCUSED (2026-08-30) AND ON THE
-        // PHASE-RESET COLUMN (2026-09-14) — the `/` arm's refusal past the
-        // lock, its one owner marker_measure_edit_actionable; no audio-view
-        // term, the measure being the warp column's in both views.
-        case RedesignButton::IconMarkerMeasure:
-            return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b) &&
-                   marker_measure_edit_actionable(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
@@ -14125,19 +13879,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on
         // its allowlist), THE FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT
-        // FLAG BUTTON, THE MARKER MEASURE and ADD TO SELECTION (bare `j`,
-        // bare Return, bare `k` and bare `/` are consumed in there like the
-        // verbs' four chords) — THIRTEEN of the seventeen. The two SKIPS and
+        // FLAG BUTTON and ADD TO SELECTION (bare `j`,
+        // bare Return and bare `k` are consumed in there like the
+        // verbs' four chords) — TWELVE of the sixteen. The two SKIPS and
         // the MARKER-WALK GROUP'S TWO stay lit, being the mode's own
         // absolute jumps and its diff-flag cycle (the tab row's shifted press
         // carries the march that composes that cycle with the A/B switch, the
         // tabs being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
-        // THE VIEW: the four VERBS, THE EDIT FLAG BUTTON and THE MARKER MEASURE
+        // THE VIEW: the four VERBS and THE EDIT FLAG BUTTON
         // on a locked tab, their own gate, stated at their arm above — and,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
-        // inherit, Edit flag and the Measure (that same arm), on UP / DOWN,
+        // inherit and Edit flag (that same arm), on UP / DOWN,
         // LEFT / RIGHT, the two WALK STEPS and COPY VALUE (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
@@ -14380,29 +14134,19 @@ inline bool redesign_button_enabled(const AppState& a,
             // and the keyboard gate drops the chord (the deltas are stated
             // once at iteration_lock_key_blocked, input_key_dispatch.cpp). The
             // axis fork is the membership predicate's (iteration_lock_greys),
-            // which the pair's HINT reads too — and it RANKS ABOVE the measure
-            // axis's own refusal below for the reason the key does: under a
-            // lit lamp the gate eats the chord before the step is ever asked,
-            // so the lock is the refusal that stands on the measure axis as
-            // much as on the payload one.
+            // which the pair's HINT reads too — and it RANKS ABOVE every
+            // step's own refusal below for the reason the key does: under a
+            // lit lamp the gate eats the chord before the step is ever asked.
             if (iteration_lock_greys(a, b)) return false;
             // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
             // a bound cell addressed the pair reads the bound step's own
-            // owners, with the MEASURE addressed that axis's value step
-            // owners (2026-09-14: the stable refusals, the offset kind
-            // refusal, the walls),
+            // owners,
             // otherwise the tempo step's — the same fork the dispatch makes,
             // so the face and the act read one decision either way. IT IS
             // STILL ONE SWITCH with the mode's second column (2026-09-09): the
             // bound step's predicates fork on app.active_markers_view inside
             // their own bodies, so this face asks the same two questions
             // whichever column is live.
-            if (a.addressed_cell == MarkerCell::Measure) {
-                if (!warp_value_step_actionable(a) || authoring_locked(a))
-                    return false;
-                if (!measure_step_direction_actionable(a, delta)) return false;
-                break;
-            }
             if (a.addressed_cell != MarkerCell::Payload) {
                 if (!iter_bound_step_actionable(a)) return false;
                 if (!iter_bound_step_direction_actionable(a, audio,
@@ -14487,11 +14231,6 @@ inline bool redesign_button_enabled(const AppState& a,
             if (!payload_eligible_marker(a, audio, a.last_selected_marker))
                 return false;
             break;
-        // (THE MARKER MEASURE sat here — the row's always-on policy — from
-        // 2026-08-20 to the 2026-08-21 sunset, lit under the lock because its
-        // shift half was the lock-legal score-video jump and a chrome face
-        // cannot split. The jump left the product whole and the button
-        // returned to the read-only arm above with its four neighbours.)
         // ADD TO SELECTION MIRRORS THE TWO LAMPS IT CANNOT STAND BESIDE
         // (architect 2026-09-10, NO SILENT SWAPS: "every mutual exclusion is a
         // refusal with a card, a greyed button and the reason in its
@@ -14662,7 +14401,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // TRANSPORT THREE HAVE THEIR ARMS HERE, below the guard, because their
         // predicates ask about a loaded piece — playhead_skip_landing_frame
         // and playback_launch_playable have nothing to say about a blank one.
-        // (The four MARKER VERBS, the EDIT FLAG BUTTON and the MEASURE are not
+        // (The four MARKER VERBS and the EDIT FLAG BUTTON are not
         // among the members here: their read-only term and their selection
         // terms are in the arm above, carried down from the icon row with
         // the buttons on 2026-08-18.)
@@ -14773,8 +14512,8 @@ inline bool redesign_button_enabled(const AppState& a,
             // lock's membership; the ruling, the 2026-08-15 reversal it
             // supersedes and the
             // per-pair successions are at that block. The row's remaining
-            // members are the four SINGLE-MARKER VERBS, the EDIT FLAG BUTTON
-            // and the MARKER MEASURE, which return from the read-only arm
+            // members are the four SINGLE-MARKER VERBS and the EDIT FLAG
+            // BUTTON, which return from the read-only arm
             // above — that arm's own case list is the one authoritative
             // statement of who takes the lock's grey, so no count of it is
             // restated here. Every other id returned above, from one switch
@@ -14962,19 +14701,17 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
-        // THE MARKER MEASURE IS MOMENTARY TOO: it opens an editor and the
-        // editor's own session is the state; there is no bit for a lamp. THE
-        // EDIT FLAG BUTTON beside it answers for the same reason and on the
-        // same editor machinery (2026-08-27).
+        // THE EDIT FLAG BUTTON IS MOMENTARY TOO (2026-08-27): it opens an
+        // editor and the editor's own session is the state; there is no bit
+        // for a lamp.
         case RedesignButton::IconMarkerEditFlag:
-        case RedesignButton::IconMarkerMeasure:
         // COPY VALUE IS MOMENTARY (2026-08-29): a copy completes, and so does
         // the jump its shifted twin runs. Nothing stays true afterwards for a
         // lamp to report.
         case RedesignButton::IconCopyValue:
         // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
         // 2026-09-04): it opens an editor and the editor's own session is the
-        // state, exactly as the measure and the edit-flag buttons answer. Its
+        // state, exactly as the edit-flag button answers. Its
         // neighbour on the same separator IS a lamp, which is the pair's whole
         // asymmetry — one opens a dialog, the other flips a mode.
         case RedesignButton::IconBpm:
@@ -15164,10 +14901,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // for Ctrl+Alt+Shift+P, the paste-state chord, which the EDIT MENU now carries
 // as a row of its own — a menu item names its command outright, so the shifted
 // twin needs no admission to be reachable and the long-press half has nothing
-// left to serve either. THE MARKER MEASURE joined this set 2026-08-20 for its
-// Shift+`/` score-video jump and left it whole at the 2026-08-21 sunset that
-// removed the jump: the button has one chord again, so there is no twin for a
-// shift press or a long press to reach.)
+// left to serve either.)
 // (THE DROP JOINED 2026-08-28, with Shift+S: every shift-enabled gesture whose
 // BARE form has a button admits that button's shift press and its long press,
 // and says so on its second line — the architect's rule, stated here because
@@ -15664,9 +15398,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // THE TWO SKIPS ARE THE ROW'S ONLY TWO-LINE FORMS (2026-08-24, when
         // their CTRL-CLICK gained the whole-piece jump); every other button here
-        // admits no modifier at all. (The MEASURE carried a two-line form and a
-        // shift admission from 2026-08-20 to the 2026-08-21 sunset, for the
-        // score-video jump that left the product whole.) The names are the
+        // admits no modifier at all. The names are the
         // ratified sentence-case
         // labels, the
         // accelerators the table's own convention (a NAMED key by Qt's own
@@ -15729,9 +15461,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
         // RULING REACHES THEM HERE (architect 2026-08-07): these four are the
         // row's resting greys — in the `h` view and on a locked tab, both the
-        // buttons' own gates — and a dead icon still explains itself. (The
-        // MARKER MEASURE below them shares both greys since the 2026-08-21
-        // sunset returned it to the lock's set.)
+        // buttons' own gates — and a dead icon still explains itself.
         // THE DROP'S SHIFT LINE (2026-08-28) names the act and the modifier
         // and not a key, this table's rule for second lines; the
         // static_assert below keeps the line and the admission one fact. It
@@ -15774,18 +15504,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerEditFlag:
             return {"Edit Flag (Return)", nullptr};
-        // THE MARKER MEASURE (2026-08-19), the verb group's sixth since
-        // 2026-08-27 and its fifth before that, ONE LINE
-        // like its neighbours: the act named, no shift line, the button
-        // admitting no shift press. (Its second line advertised the
-        // score-video jump from 2026-08-20 until the 2026-08-21 sunset removed
-        // the jump whole.) It greys in the `h` view and on a locked tab —
-        // the verbs' own two resting greys — and still explains itself in
-        // both, the tooltips-on-disabled ruling above.
-        case RedesignButton::IconMarkerMeasure:
-            return {"Measure (/)", nullptr};
-        // COPY RESOLVED VALUE (2026-08-29), the verb group's seventh since
-        // that evening's reseat and its SECOND two-line form: bare `j` copies
+        // COPY RESOLVED VALUE (2026-08-29), the verb group's sixth since the
+        // Marker Measure's deletion (2026-09-16; seventh before it) and its
+        // SECOND two-line form: bare `j` copies
         // the focused marker's resolved value, and the shifted twin JUMPS to
         // the marker that value came from — so the second line names the act
         // and the modifier and not a key, this table's rule for second lines,
@@ -16252,7 +15973,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // coincident-collapse member in target view), which is magnitude-blind
         // by construction. THE FACE GREYS ON IT TOO since 2026-09-13
         // (tempo_cent_step_direction_actionable), and THE DROP STAYS on the
-        // measure axis's precedent just below: a modifier line exists where
+        // bound axis's precedent just below: a modifier line exists where
         // the modified press does something different in that state, and on a
         // dead face every rung is equally dead, so the ladder line would name
         // three rungs that differ in nothing. It is not a reason line — it
@@ -16272,21 +15993,12 @@ inline RedesignTooltipText redesign_button_tooltip(
         // with the same ladder line, dropped on the bound step's own kind
         // refusal (iter_bound_step_kind_refusal: a marker without a tempo of
         // its own, a disabled owner — magnitude-blind, every rung carding
-        // alike). WITH THE MEASURE ADDRESSED (2026-09-14) the pair steps that
-        // field and the hint names it the same way ("Measure Up (Up)"), the
-        // ladder line dropping on the measure's offset kind refusal
-        // (measure_step_kind_refusal, magnitude-blind, the face's own grey). A second
+        // alike). A second
         // line only where the table already binds one: these two carry both
         // admissions.
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown: {
             const bool up = b == RedesignButton::TransportUp;
-            if (a.addressed_cell == MarkerCell::Measure) {
-                return {up ? "Measure Up (Up)" : "Measure Down (Down)",
-                        measure_step_kind_refusal(a)
-                            ? nullptr
-                            : redesign_button_tooltip(b).line2};
-            }
             if (a.addressed_cell != MarkerCell::Payload) {
                 const char* name =
                     a.addressed_cell == MarkerCell::Lower
@@ -16298,7 +16010,7 @@ inline RedesignTooltipText redesign_button_tooltip(
             }
             // AND THE PAYLOAD AXIS NAMES ITS COLUMN'S FIELD (2026-09-15): on
             // the MAGNIFICATION LEVEL column the pair steps the LEVEL DIGIT, so
-            // the hint says which, the measure axis's shape exactly. The ladder
+            // the hint says which, the bound axis's shape exactly. The ladder
             // line drops on that column's ONE kind refusal (architect
             // 2026-09-16 — a coincident-collapse member,
             // magnification_level_step_kind_refusal, magnitude-blind, every
@@ -16334,8 +16046,6 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {"Edit Lower Bound (Return)", nullptr};
             case MarkerCell::Upper:
                 return {"Edit Upper Bound (Return)", nullptr};
-            case MarkerCell::Measure:
-                return {"Edit Measure (Return)", nullptr};
             }
             break;
         // LEFT / RIGHT: the marker lane in T+W, where the nudge refuses WHOLE
@@ -16532,10 +16242,6 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // colour swap now, so there is no second pass. Works in both 'W' and 'P'
 // authoring views — the stash holds the ACTIVE column's boxes only, because
 // that is the column the painter drew.
-// SINCE 2026-08-19 THE BOX MAY INCLUDE A MEASURE BOX past the flag's own right
-// edge (the flag continued in blue until 2026-09-15, in purple since), and it
-// is part of the same rect: one marker, one clickable surface for press, drag
-// and select.
 // AND SINCE 2026-09-05 IT ALSO READS THE OPEN EDITOR'S RIDING BOXES
 // (AppState::flag_editor_box.riding_cells): while any marker-lane editor
 // stands the flag pass drops the edited box and everything right of it, and
@@ -16723,17 +16429,10 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // drag's own road out, unchanged. (Its own PENDING press is already a member
 // above: the same pending arms both drags, so the freeze covers this gesture
 // from the press through the crossing and on to the release with no gap.)
-//
-// AND ONLY ON THE CELLS THAT CAN MOVE A MAP (architect 2026-09-14): the
-// value drag's MEASURE arm is NOT a member. The field is not a map input, so
-// its per-motion writes move no target map hash and there is nothing to
-// protect the screen from. The PAYLOAD (a tempo, which moves
-// the target map) and the two BOUND cells keep the freeze as they had it.
 inline bool displayed_basis_frozen(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||
-           (app.value_drag.active &&
-            app.value_drag.cell != MarkerCell::Measure) ||
+           app.value_drag.active ||
            app.pending_marker_press.active ||
            app.pending_trim_drag.active;
 }

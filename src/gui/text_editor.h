@@ -3,11 +3,10 @@
 #include "gui_input.h"
 #include "marker_magnification.h"  // kMaxMarkerMagnificationBytes — the level
                                    // cap's bound, taken from the grammar's owner
-#include "marker_measure.h"
 #include "phaseresetmarkers.h"  // kIterHopMax — the hop cap's bound, taken
                                 // from its one owner rather than re-spelled,
-                                // exactly as the measure cap takes
-                                // kMaxMarkerMeasureBytes from marker_measure.h
+                                // exactly as the level cap takes
+                                // kMaxMarkerMagnificationBytes
 #include "value_format.h"
 
 #include <algorithm>
@@ -63,8 +62,8 @@ namespace text_editor {
 // whose cap is wider than what it can legally commit advertises longer typing
 // than it allows, which is the truthfulness defect the roster answers. FOUR
 // CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
-// iteration bound, the measure (which takes the load bound from its owner),
-// and, since 2026-09-06, the BPM bracket, whose
+// iteration bound, the magnification level (which takes the load bound from
+// its owner), and, since 2026-09-06, the BPM bracket, whose
 // beats field stopped admitting leading zeros and so gained a widest spelling
 // like every other field of that grammar. THE OTHER TWO ARE POLICY CEILINGS
 // and each says so where it stands: the settings value and the commit title
@@ -214,19 +213,12 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // the field-less picker replaced it; that picker retired the next day and the
 // view's `'` raises a plain confirmation now, with nothing to type at all.)
 constexpr int kMaxPendingCharsCommitTitle = 256;
-// The marker MEASURE editor (bare `/`, its bottom-row button, the double-click
-// on the box — purple since 2026-09-15, Breeze blue before it). The cap IS the load bound, taken from its one owner rather
-// than re-spelled: kMaxMarkerMeasureBytes (marker_measure.h) is what the warp
-// file parser refuses past, and the two must be the same number for "a measure that
-// commits here loads back" to hold exactly. Only the type changes — every cap
-// in this module is an int, which is what the cap tests read.
-constexpr int kMaxPendingCharsMeasure =
-    static_cast<int>(kMaxMarkerMeasureBytes);
 // The MAGNIFICATION LEVEL editor (bare Return on a focused magnification level
 // marker, and that flag's double-click). ITS GRAMMAR IS ONE ASCII DIGIT `0`..`4`
 // — no sign, no leading zero, no whitespace (marker_magnification.h, the
 // grammar's one owner) — so ONE BYTE is its widest spelling and its cap, taken
-// from that owner rather than re-spelled, exactly as the measure's cap is. A
+// from that owner rather than re-spelled (only the type changes — every cap
+// in this module is an int, which is what the cap tests read). A
 // TIGHT BOUND: the cap advertises exactly what parse_marker_magnification
 // accepts, and the second character is refused by the field-full card, which is
 // the truthful refusal for a field that could never commit one.
@@ -240,10 +232,7 @@ constexpr int kMaxPendingCharsMagnificationLevel =
 // canonical payload — tempo, scale, labels, never a bracket); the BPM popup
 // uses BpmBracket; the settings-prompt editor uses SettingsAssignment
 // (`key=value`); the history mode's commit-title editor uses CommitTitle
-// (free one-line text, the message the checkpoint commit carries); the
-// MARKER MEASURE editor uses MeasureText (the ` //<measure>` comment a warp
-// marker line may carry — an ASCII GRAMMAR since the field's 2026-08-20 rebrand,
-// judged at the commit by marker_measure.h and not at all on the keyboard);
+// (free one-line text, the message the checkpoint commit carries);
 // and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
 // State::iter_upper below — judged at its commit against the bracket's walls).
@@ -255,13 +244,15 @@ constexpr int kMaxPendingCharsMagnificationLevel =
 // they name. The MAGNIFICATION LEVEL editor uses MagnificationLevelText
 // (2026-09-15, with the magnification level markers column's authoring): the
 // one digit that IS a magnification level marker, judged at its commit by
-// marker_magnification.h, on the M column's flag alone. THERE ARE SEVEN KINDS
+// marker_magnification.h, on the M column's flag alone. THERE ARE SIX KINDS
 // AND THREE OF THEM ARE
-// DIALOG EDITORS; the four top-strip kinds (FlagPayload, MeasureText,
+// DIALOG EDITORS; the three top-strip kinds (FlagPayload,
 // IterBound, MagnificationLevelText) share the flag editor's State and paint in
 // the marker lane.
-// The MeasureText kind was architect-blessed 2026-08-19 and IterBound arrived on
-// 2026-09-05, when every cell became a mini flag with its own editor; TWO
+// IterBound arrived on
+// 2026-09-05, when every cell became a mini flag with its own editor (the
+// MeasureText kind, the marker measure editor, stood from 2026-08-19 until the
+// measures feature was deleted whole 2026-09-16); TWO
 // KINDS RETIRED WHOLE on 2026-08-28 (architect, R22/R23: "we're not allowing
 // free-form typing there") — LoadInPlace, the `h` view's typed load prompt,
 // and OpenProject, the Open project prompt's field, both replaced by the
@@ -274,7 +265,6 @@ enum class Kind {
     BpmBracket,
     SettingsAssignment,
     CommitTitle,
-    MeasureText,
     IterBound,
     MagnificationLevelText,
 };
@@ -342,7 +332,7 @@ struct State {
     // other kind. IT EXISTS FOR THIS MODULE ALONE, which selects the byte cap
     // and cannot see AppState to ask which column is live — every other reader
     // (the open, the commit, the painter) reads app.active_markers_view
-    // directly, the same way commit_measure_edit does, because the view CANNOT
+    // directly, because the view CANNOT
     // MOVE under an open session and so no session needs a stored column.
     bool iter_hops = false;
 

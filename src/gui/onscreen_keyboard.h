@@ -131,9 +131,8 @@ inline constexpr KeyDef kLetterRow2[] = {
 // below them, the arithmetic and separator family on row 1 and the brackets and
 // joiners on row 2. THE SET IS THE PRODUCT'S OWN GRAMMARS, not a general
 // symbol page: `.` and the digits spell a tempo, `#` disables a marker,
-// `+ - [ ] ,` are the iteration bracket, `/` and space and `+` are the marker
-// measure, `_` `:` `=` `;` `'` `|` `*` cover the settings keys, the commit
-// titles and the render-entry paths.
+// `+ - [ ] ,` are the iteration bracket, `/` `_` `:` `=` `;` `'` `|` `*`
+// cover the settings keys, the commit titles and the render-entry paths.
 //
 // ROW 2'S LEADING SLOT IS TAB (architect 2026-08-27, with the project model):
 // the letter layer's Shift position, and the one key the letter layer has no
@@ -377,8 +376,8 @@ inline int surface_height_px() {
 // none of which is a
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that
-// could raise one (the flag editor's double-click, the measure button — the
-// roster is dead under all three but the FILE anchor above the band, whose
+// could raise one (the flag editor's double-click; the roster is dead under
+// all three but the FILE anchor above the band, whose
 // three rows open no editor); and the touch region begin refuses under
 // all three.
 // So the second term is false whenever the overlay stands, and this

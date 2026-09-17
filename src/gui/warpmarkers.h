@@ -283,27 +283,6 @@ struct WaveformGainProfile {
 // empty profile.
 uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile);
 
-// (THERE IS NO LABEL-CASCADE RESOLVER FOR THE MEASURE FIELD, and the absence
-// is a RULING rather than a gap — architect 2026-08-20, reversing his own
-// ruling of the day before. The field INHERITED down the label cascade for one
-// day: a ref carrying no value of its own displayed the definition's, the way
-// it takes that definition's tempo. He drove it and reversed it on what the
-// field SAYS: it is a POSITION IN THE SCORE, true where the definition sits and
-// FALSE at a reference sitting bars later, so rippling it puts a confident
-// wrong bar number on every copy. EVERY MEASURE IS ITS OWN, hand-authored,
-// inherited from nothing down this axis. The flag painters read the plain field
-// on both columns, which is why the phase column needed no counterpart and the
-// warp one no longer has any. Do not re-derive one from the label cascade; the
-// cascade carries tempo and the disabled bit, and those are values that a copy
-// genuinely shares.
-//
-// THIS RULING IS ABOUT THE CASCADE AXIS ALONE and says nothing about the
-// measure grammar's own '+' OFFSET FORM, which is a different axis entirely:
-// it runs PREDECESSOR TO SUCCESSOR down the store, never definition to ref, it
-// is owned by marker_measure.h where its semantics are stated once, and it is
-// resolved at ACT time by the consumer rather than at display time here. A
-// resolver for it is not the resolver this ruling forbids.)
-
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)
 
@@ -343,33 +322,31 @@ inline std::string format_signed_hops(int hops) {
 // marker, the display token on a phase reset — Lower and Upper are the two
 // bound cells iteration mode paints to its right on an eligible marker OF
 // EITHER COLUMN (a warp marker's tempo bracket in cents, a phase reset's hop
-// bracket in whole lattice hops since 2026-09-09), Measure is the purple box
-// (Breeze blue until 2026-09-15) that follows (a warp marker's alone; phase
-// resets carry no measure box). It answers three questions with
-// one value: WHICH BOX a press landed on (hit_test_flag_cell, app_state.cpp,
-// off the painter's published boundaries), WHICH CELL OF THE FOCUS IS
-// ADDRESSED (AppState::addressed_cell — the bright cell, the cell the vertical
-// arrows step, the cell Enter opens) and WHICH EDITOR a double-click or Enter
-// opens (the Payload editor, the bound editor on Lower or Upper, the measure
-// editor). The type lives here, beside the bracket two of its members
+// bracket in whole lattice hops since 2026-09-09). It answers three questions
+// with one value: WHICH BOX a press landed on (hit_test_flag_cell,
+// app_state.cpp, off the painter's published boundaries), WHICH CELL OF THE
+// FOCUS IS ADDRESSED (AppState::addressed_cell — the bright cell, the cell the
+// vertical arrows step, the cell Enter opens) and WHICH EDITOR a double-click
+// or Enter opens (the Payload editor, the bound editor on Lower or Upper). The
+// type lives here, beside the bracket two of its members
 // address, because the painter (render.h) needs it and render.h cannot see
 // AppState.
 //
 // THE PAYLOAD IS THE MEMBERSHIP SURFACE; EVERY OTHER BOX TAKES THE PLAIN
 // PRESS ONLY (architect 2026-09-10, the bound cells being "a separate
-// system"): a ctrl or shift press landing on Lower, Upper or Measure is a
-// silent no-op at the one act owner (run_marker_click_act, input_pointer.cpp,
-// which argues it), so a selection is built and ranged from the flag box
-// alone while a plain press on any box selects, addresses that box and lands.
-enum class MarkerCell { Payload, Lower, Upper, Measure };
+// system"): a ctrl or shift press landing on Lower or Upper is a silent
+// no-op at the one act owner (run_marker_click_act, input_pointer.cpp, which
+// argues it), so a selection is built and ranged from the flag box alone
+// while a plain press on any box selects, addresses that box and lands.
+enum class MarkerCell { Payload, Lower, Upper };
 
 // Iteration mode: the text of ONE bound cell — the bound in the signed
 // two-decimal form, `+0.00` for a blank bracket on either side. THE BLANK
 // RULE HAS THIS ONE HOME: the flag's two cells and the bound editor's seed
 // (GuiFlagEditor::enter_iter_bound_edit) both read it, so what a cell shows
 // and what its editor opens with are one spelling of one value. `side` is
-// Lower or Upper; any other member answers the lower bound, the harmless
-// reading, since neither the payload nor the measure carries a delta.
+// Lower or Upper; the payload answers the lower bound, the harmless
+// reading, since it carries no delta.
 inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
                                           MarkerCell side) {
     const bool blank = !m.iter_start_cents.has_value() ||

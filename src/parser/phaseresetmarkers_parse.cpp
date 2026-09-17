@@ -80,9 +80,9 @@ parse_phaseresetmarkers_file(const std::string& path,
         // remainder as a frame position; a '#' line whose remainder is not a
         // valid position is a parse error like any other malformed line —
         // adversarial, load-fatal, first error only. Comment LINES are not part
-        // of the grammar, and phase resets carry no measure (PhaseResetMarker):
-        // a ` //` suffix carries a space and refuses below (architect approval
-        // 2026-09-14).
+        // of the grammar and no line carries a suffix: a ` //` carries a
+        // space and refuses below (architect approval 2026-09-14; retold
+        // under architect approval 2026-09-16, comment only).
 
         // Marker lines are byte-exact canonical: no BOM, blank, or whitespace
         // tolerance anywhere on the line (the writer emits none). Any space,

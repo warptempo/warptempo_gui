@@ -346,11 +346,10 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     // THE PAINTER'S OWN BOUNDARIES, never a re-derivation: each is the seam
     // column of the box it introduces, and each collapses onto the next where
     // that box did not paint (FlagHitRect's contract), so the walk from the
-    // rightmost box inward can only answer a box with pixels — a cell-less,
-    // measureless flag answers Payload everywhere by construction.
+    // rightmost box inward can only answer a box with pixels — a cell-less
+    // flag answers Payload everywhere by construction.
     if (!r) return MarkerCell::Payload;
     const double x = static_cast<double>(mouse_x);
-    if (x >= r->measure_boundary_x)    return MarkerCell::Measure;
     if (x >= r->iter_upper_boundary_x) return MarkerCell::Upper;
     if (x >= r->iter_lower_boundary_x) return MarkerCell::Lower;
     return MarkerCell::Payload;
@@ -382,10 +381,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // earlier ones, so the topmost box under a point is the LAST containing
     // rect. Walk backwards and take the first hit (topmost_flag_rect above).
     // Selection no longer lifts anything (it is a colour swap, not a z-rule),
-    // so this is the whole arbitration — one pass, no class split. The measure
-    // box needs no rule of its own here either: it is part of the same rect, so
-    // a later flag covering an earlier measure's tail resolves to the later
-    // marker exactly as the pixels say.
+    // so this is the whole arbitration — one pass, no class split; a later
+    // flag covering an earlier flag's cells resolves to the later marker
+    // exactly as the pixels say.
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     return r ? r->marker_index : -1;
 }
@@ -507,9 +505,8 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
     if (stop >= 0) {
         if (marker_paints_iter_cells(a, column, stop)) {
             // The seat's own boxes, in painted order: payload, lower, upper.
-            // Forward off the upper (or off the measure, which sits past it
-            // and is never a stop) leaves the marker;
-            // backward off the payload does.
+            // Forward off the upper leaves the marker; backward off the
+            // payload does.
             if (forward) {
                 switch (a.addressed_cell) {
                 case MarkerCell::Payload:
@@ -517,13 +514,10 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                 case MarkerCell::Lower:
                     return {stop, MarkerCell::Upper, true};
                 case MarkerCell::Upper:
-                case MarkerCell::Measure:
                     break;
                 }
             } else {
                 switch (a.addressed_cell) {
-                case MarkerCell::Measure:
-                    return {stop, MarkerCell::Upper, true};
                 case MarkerCell::Upper:
                     return {stop, MarkerCell::Lower, true};
                 case MarkerCell::Lower:
@@ -533,14 +527,11 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                 }
             }
         }
-        // A FLAG THAT PAINTS NO CELLS HAS NO ARM HERE AT ALL — not even the
-        // backward step off a Measure seat, which a press seats on every
-        // marker of both columns whether the mode is lit or not. With no
+        // A FLAG THAT PAINTS NO CELLS HAS NO ARM HERE AT ALL. With no
         // purple row to walk there is nothing to step THROUGH, so the seat
         // falls whole to the marker step below and the walk is byte-identical
-        // to the pre-2026-09-10 walk: a Measure axis is walk-inert there
-        // exactly as Payload is (architect: "with iterations mode off the tab
-        // is unchanged").
+        // to the pre-2026-09-10 walk (architect: "with iterations mode off
+        // the tab is unchanged").
     }
     // THE MARKER STEP: the landing owner's answer, untouched.
     const int m = marker_walk_landing(a, audio, forward);

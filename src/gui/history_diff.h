@@ -238,12 +238,8 @@ enum class GuiHistoryWalkSource {
 // One warp line resolved out of a diff hunk. The tempo token is the line's own
 // payload text past the '|', VERBATIM: the flag displays the sidecar's own
 // spelling, never a re-derivation through the typed value and back. That slice
-// is rest-of-line, so a ` //<measure>` comment RIDES INSIDE the
-// token — which is what carries the measure through the revert's line
-// reconstitution unchanged, and why the h view's warp labels show the comment
-// text inline. No measure BOX
-// paints in this mode — the bytes ride the label. Phase resets carry no
-// measure (PhaseResetMarker).
+// is rest-of-line, which is the whole payload: a warp line is the canonical
+// line whole (warpmarkers_parse.h).
 struct GuiHistoryWarpEntry {
     int64_t     frame    = 0;
     // THE LINE'S ORDINAL WITHIN ITS FRAME'S RUN, ON ITS OWN SIDE (2026-09-16,

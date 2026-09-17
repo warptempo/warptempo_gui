@@ -24,8 +24,8 @@
 
 namespace {
 
-// THE LOCK'S SENTENCE, the warp value step's own body in this cluster (its
-// twin is warp_value_step_lock_refusal, warpmarkers_ops.cpp): the tab's
+// THE LOCK'S SENTENCE, asked in this body because the plain wheel over an M
+// flag reaches it past no keyboard gate of its own: the tab's
 // sentence on a read-only tab, grid iterations' under the lit lamp — the two
 // sentences the keyboard gate's cards carry for the same two states. (Grid
 // iterations never lights on this column, so the second arm is a belt that
@@ -330,8 +330,8 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
 
 // -- THE VALUE STEP'S LEVEL BODY (architect 2026-09-15) ---------------------
 //
-// The contract is at the declaration. It mirrors the measure step clause for
-// clause — the leading refusal block the face reads, the lock asked HERE
+// The contract is at the declaration. It mirrors the tempo step's singleton
+// arm clause for clause — the leading refusal block the face reads, the lock asked HERE
 // (because the plain wheel over an M flag reaches this body past no keyboard
 // gate of its own), the wall asked AHEAD OF THE COALESCE STAMP through the
 // pair's own face, the write, one undo entry per burst, the byte-equal pop
@@ -339,8 +339,8 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
 // are this column's: the step is SINGLETON AND GROUP, forking exactly as the
 // TEMPO step forks (architect 2026-09-16 — the singleton's clamp silent, the
 // group all-or-nothing and carded; there is no collapse to the focus, a value
-// step never being a movement), and the tail owes the PICTURE a gain kick where
-// the measure step owes nothing at all.
+// step never being a movement), and the tail owes the PICTURE a gain kick and
+// no tempo tail — a level is not a map input.
 GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
         int64_t delta, bool synthesized_repeat) {
     if (!magnification_level_step_actionable(app))

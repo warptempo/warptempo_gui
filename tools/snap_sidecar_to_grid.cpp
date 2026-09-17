@@ -36,9 +36,9 @@
 // refuses an UN-MIGRATED file cleanly:
 // a legacy MM:SS.mmm position is not a canonical frame position and never
 // reaches the snap. The rewrite that follows is TEXTUAL and replaces only each
-// changed line's leading [#]<digits> token — the warp payload, the ` //<measure>`
-// suffix and the terminator structure ride through byte-identically, so a snap
-// touches positions and nothing else.
+// changed line's leading [#]<digits> token — the warp payload and the
+// terminator structure ride through byte-identically, so a snap touches
+// positions and nothing else.
 //
 // TWO REFUSALS BEYOND THE PARSE, both of which write nothing:
 //   - a post-snap DUPLICATE frame that was not already a duplicate. A snap must
@@ -140,8 +140,8 @@ void report(const std::vector<Snapped>& snapped, size_t total_markers) {
 // ONE CAPTURED READ, ONE TRUTH. The snap's two halves — the product parse that
 // yields the positions and the verdict, and the textual rewrite that copies
 // every unchanged byte through — must see the SAME version of the subject, or a
-// run can publish a hybrid: positions computed from one version, payload,
-// measure suffix and terminators copied from another, and the published bytes
+// run can publish a hybrid: positions computed from one version, payload and
+// terminators copied from another, and the published bytes
 // never validated as a whole by any parse. The product parsers take a PATH and
 // no string overload may be added to them (src/parser is frozen), so the
 // captured bytes are laid down in a private file here and THAT is what the

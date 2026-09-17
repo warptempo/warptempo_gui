@@ -337,28 +337,8 @@ enum class Icon {
     // cap, which went with it.)
     BboxPrev,            // Previous marker (Shift+Tab)
     BboxNext,            // Next marker (Tab)
-    // THE MARKER MEASURE BUTTON'S GLYPH, the bottom row's verb group between
-    // the Edit flag button and Add to selection (between Toggle inherit and Add
-    // to Selection until 2026-08-27): minuet-scales, KDE Minuet's own
-    // icon — three note heads climbing a five-line staff.
-    //
-    // IT REPLACED edit-comment ON 2026-08-20 (architect), and the swap is about
-    // what the field IS rather than about taste: the balloon was picked on
-    // 2026-08-19 for a FREE-TEXT COMMENT and stopped being true the next day,
-    // when the field was rebranded into a strict measure grammar. A button that
-    // names a place in the SCORE wants staff lines, not speech. edit-comment's
-    // enumerator, its def and its committed asset all went with the swap, no
-    // button being left that wore it.
-    //
-    // THE ENUMERATOR KEEPS THE BREEZE FILE NAME while the product act it faces
-    // is the MARKER MEASURE: icon ids name their PROVENANCE, not the product
-    // verb (the theme-provenance rule), so this is MinuetScales and not
-    // IconMeasure. Unlike its predecessor the file is a REAL one rather than a
-    // symlink, so the committed asset is the installed breeze-dark bytes
-    // verbatim — the table entry carries that record.
-    MinuetScales,        // Measure (bare `/`)
     // THE EDIT FLAG BUTTON'S GLYPH (2026-08-27), the bottom row's verb group
-    // between Toggle inherit and the Measure: text-field, Breeze's own
+    // after Toggle inherit: text-field, Breeze's own
     // TEXT CURSOR — a serif I-beam standing on a field's underline rule.
     //
     // WHY THIS ONE OF THE FAMILY'S FOUR. The architect asked for "an
@@ -376,8 +356,7 @@ enum class Icon {
     //
     // THE ENUMERATOR KEEPS THE BREEZE FILE NAME while the product act it faces
     // is EDIT FLAG: icon ids name their PROVENANCE, not the product verb (the
-    // theme-provenance rule), so this is TextField and not IconEditFlag —
-    // MinuetScales' own precedent, one entry above.
+    // theme-provenance rule), so this is TextField and not IconEditFlag.
     TextField,           // Edit flag (Return)
 
     // THE FOLDER OVERLAY'S TWO ROW GLYPHS (2026-08-28, the render player):
@@ -451,16 +430,18 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 49 SINCE 2026-09-15, THE PER-MARKER MAGNIFICATION'S RETIREMENT (architect
-// 2026-09-15): zoom-in-y left with the Magnification button that wore it —
-// enumerator, def and asset together. It was 50 earlier that day, after the
+// 48 SINCE 2026-09-16, THE MEASURES FEATURE'S DELETION (architect
+// 2026-09-16): minuet-scales left with the Marker Measure button that wore
+// it — enumerator, def and asset together. It was 49 from 2026-09-15, the
+// per-marker magnification's retirement, when zoom-in-y left with the
+// Magnification button the same way. It was 50 earlier that day, after the
 // two view lamps' deletion, when document-import and chronometer-start left
 // with the two lamp buttons that wore them, the edit-cut precedent. It was 52 from 2026-09-14, the Keep
 // Centered While Nudging and Ignore Waveform Magnification deletion, when
 // align-horizontal-center and zoom-out-y left with the two lamps that wore
 // them. The count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 49;
+inline constexpr int kIconCount = 48;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

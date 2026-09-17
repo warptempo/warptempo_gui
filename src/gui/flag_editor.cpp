@@ -82,8 +82,9 @@ bool parse_signed_hops(const std::string& v, int& out) {
 } // namespace
 
 // Flag-editor cluster: the marker lane's three editors (the flag's
-// canonical-line editor, the iteration bound editor and the measure editor —
-// text_editor::Kind's FlagPayload, IterBound and MeasureText) —
+// canonical-line editor, the iteration bound editor and the magnification
+// level editor — text_editor::Kind's FlagPayload, IterBound and
+// MagnificationLevelText) —
 // their enter / commit / exit paths — and the bpm-bracket editor session,
 // reaching undo and viewport through the struct's reference members. The
 // eligibility and flag-text helpers (iter_bracket_carrier,
@@ -220,8 +221,9 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
                           flag_text(mv, idx));
 }
 
-// The contract is at the declaration; this is enter_measure_edit's mechanics,
-// over TWO STORES, with the cell's own eligibility in front.
+// The contract is at the declaration; this is the payload editor's open
+// mechanics (enter_top_flag_edit), over TWO STORES, with the cell's own
+// eligibility in front.
 void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
                                           MarkerCell side) {
     if (idx < 0) return;
@@ -258,7 +260,7 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
         return;
     }
 
-    // The focus repaired, then single-selected and landed — the measure
+    // The focus repaired, then single-selected and landed — the payload
     // editor's open verbatim (its comments carry the why, the select and the
     // land both resolving against the ACTIVE column's store). The select
     // resets the addressed cell to the payload through the Selection
@@ -308,8 +310,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     const MarkerCell side = iter_bound_editor_side(app.top_flag_editor);
     const std::string next = app.top_flag_editor.pending;
 
-    // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN, for
-    // commit_measure_edit's own reason (stated in full there): the view CANNOT
+    // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN: the view CANNOT
     // MOVE under an open session — every column-switching key is dropped at
     // the keyboard-modal gate while any editor stands, and every
     // column-switching BUTTON acts at the LIFT whose own PRESS already closed
@@ -351,7 +352,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     if (next.empty()) {
         // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
         // one bound alone is not representable, so emptying either cell is
-        // the removal — the measure's own empty-removes rule.
+        // the removal.
         m.iter_start_cents.reset();
         m.iter_end_cents.reset();
     } else {
@@ -456,7 +457,7 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     if (next.empty()) {
         // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
         // one bound alone is not representable, so emptying either cell is the
-        // removal — the measure's own empty-removes rule.
+        // removal.
         m.iter_start_hops.reset();
         m.iter_end_hops.reset();
     } else {
@@ -529,171 +530,8 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     viewport.invalidate_top_strip();
 }
 
-// THE MEASURE EDITOR'S OPEN. The contract is at the declaration; this is the
-// mechanics, on the warp store alone.
-//
-// NO PLAYBACK STOP, the top-strip family's recorded exemption: this editor is
-// keyboard-modal and pointer/wheel-transparent exactly as the payload editor
-// is, so a live audition survives the open. The decision table is at
-// GuiPlaybackLifecycle::stop_playback_for_modal_open, which this surface — like
-// its sibling — deliberately does not call.
-void GuiFlagEditor::enter_measure_edit(int idx) {
-    if (app.active_markers_view != 'W') return;
-    if (idx < 0) return;
-    if (idx >= static_cast<int>(app.warpmarkers.markers().size())) return;
-
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::MeasureText &&
-        app.top_flag_editor.target == idx) {
-        // Re-open on the live session's own target: preserve the pending text
-        // and any in-progress state, just repaint (the payload editor's rule).
-        viewport.invalidate_top_strip();
-        return;
-    }
-
-    // THE FOCUS IS REPAIRED FIRST, the bare-Return arm's twin (input_handler.cpp
-    // — a stale focus outside the selection moves to the largest remaining
-    // member before anything reads it). The key ROUTE repairs before resolving
-    // `idx` from the focus; this second call is the pointer route's, where the
-    // index came from a hit test, and it is idempotent on an already-consistent
-    // focus.
-    selection.repair_last_selected();
-
-    // Target-switching: single-select the new target so the marker column's
-    // outline follows it, and LAND the playhead on it — the marker lane owns
-    // the playhead, and an editor open hands the lane a new focus (the rule is
-    // at land_playhead_on_marker, input_pointer.cpp). Both resolve against the
-    // ACTIVE column's store, which the guard above pinned to the warp column.
-    selection.set_single_selection(idx);
-    land_playhead_on_marker(app, audio, viewport, idx);
-    // THE OPEN SEATS THE CELL IT EDITS (architect 2026-09-05): the select
-    // above reset the addressed cell to the payload through the Selection
-    // chokepoint, and the measure box is the cell this editor is, so it is
-    // written here, behind the select — the bright cell follows the field.
-    app.addressed_cell = MarkerCell::Measure;
-
-    // Discard any prior edit silently before switching surfaces.
-    if (text_editor::is_active(app.top_flag_editor)) {
-        text_editor::deactivate(app.top_flag_editor);
-    }
-    // THE SEED IS THE MARKER'S OWN MEASURE — the only measure there is. A
-    // display-time inheritance down the label cascade existed for one day and
-    // the architect reversed it on 2026-08-20 (the field is a POSITION in the
-    // score, wrong at a reference sitting bars later), so what a flag paints
-    // and what this editor opens with are the same one field.
-    // That the seed is the marker's OWN is now trivially true and is still
-    // spelled here, because it is what makes an empty commit a REMOVAL of this
-    // marker's measure and nothing else's.
-    const std::string seed =
-        app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
-    text_editor::enter(app.top_flag_editor, idx, seed,
-                       text_editor::Kind::MeasureText);
-
-    // Open-selected, the family's rule: the seeded text is fully selected so
-    // the first keystroke replaces it wholesale; a blank seed selects nothing
-    // and rests at caret 0.
-    if (!app.top_flag_editor.pending.empty()) {
-        app.top_flag_editor.selection_anchor = 0;
-        app.top_flag_editor.cursor_pos =
-            static_cast<int>(app.top_flag_editor.pending.size());
-    } else {
-        app.top_flag_editor.selection_anchor = -1;
-        app.top_flag_editor.cursor_pos = 0;
-    }
-
-    viewport.invalidate_top_strip();
-}
-
-// THE MEASURE COMMIT, and it HAS a validator arm (2026-08-20, with the field's
-// rebrand from the free-text comment): the measure is a GRAMMAR, so the buffer
-// is judged HERE against validate_marker_measure — the same one judge the warp
-// file parser and the warp history delta extractor use, which is what keeps
-// "loadable iff it commits" exact rather than merely likely. The type-time
-// filters cannot carry the grammar the way they carried the old byte class: a
-// half-typed `+1/` is a legal prefix of a legal token, so refusal belongs at
-// the commit and nowhere earlier. There is deliberately NO Kind-dependent
-// keystroke filter; typing stays free and the commit decides.
-//
-// THE REFUSAL IS THIS EDITOR'S OWN SHAPE, not a dialog's: `red = true`, a
-// top-strip repaint, one stderr line, A NORMAL CARD carrying that same
-// composed sentence (2026-08-30 — a red field says only THAT it refused), and
-// RETURN WITHOUT DEACTIVATING, so the
-// session stands with the offending text in place for correction. The damage
-// is the top strip alone — the stem flash that the FlagPayload refusal drives
-// is gated on that Kind at the painter, so a MeasureText red never reaches a
-// waveform pixel and there is no waveform-area edge to invalidate.
-//
-// AN EMPTY BUFFER REMOVES THE MEASURE and is exempt from the grammar (the
-// validator has no "empty is fine" reading — a blank measure is no comment at
-// all, never a token), so the writer emits no comment — which is what makes
-// the empty `//` a state the GUI can never write.
-void GuiFlagEditor::commit_measure_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    if (app.top_flag_editor.kind != text_editor::Kind::MeasureText) return;
-    const int idx = app.top_flag_editor.target;
-    const std::string next = app.top_flag_editor.pending;
-
-    if (!next.empty()) {
-        std::string measure_err;
-        if (!validate_marker_measure(next, measure_err)) {
-            app.top_flag_editor.red = true;
-            viewport.invalidate_top_strip();
-            // ONE COMPOSER, TWO READERS (architect 2026-08-30): the sentence is
-            // built once and read by the stderr line and by the card. The
-            // stderr line keeps the offending token after it; the card does
-            // not, that text being on screen in the red field the refusal
-            // leaves standing.
-            const std::string refusal = "Measure rejected: " + measure_err;
-            std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                refusal.c_str(), next.c_str());
-            notifications.notify(AppState::NotificationClass::Normal, refusal);
-            return;
-        }
-    }
-    // THE STORE IS THE WARP COLUMN'S, the open's own: the open refuses any
-    // other column, and the view CANNOT MOVE under an open session — every
-    // column-switching key (the bare 1/2/3/4 selectors, Ctrl+Tab) is
-    // dropped at the keyboard-modal gate while any editor stands, and every
-    // column-switching BUTTON acts at the LIFT whose own PRESS already closed
-    // this editor (close_top_flag_editor_for_outside_press).
-    //
-    // The target may have gone out from under the editor (an undo or a delete
-    // while it stood): drop the edit, exactly as the payload commit does.
-    const int n = static_cast<int>(app.warpmarkers.markers().size());
-    if (idx < 0 || idx >= n) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
-
-    // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no dirty
-    // bit, no store bump — the shape every no-op commit in the product takes.
-    const std::string& before =
-        app.warpmarkers.markers()[static_cast<size_t>(idx)].measure;
-    if (before == next) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
-
-    // ONE UNDO ENTRY: a measure is serialized content and its edit dirties the
-    // tab like any other authored change. The snapshot is taken before the
-    // write, the store's own convention.
-    {
-        std::vector<GuiWarpMarker> pre = app.warpmarkers.markers();
-        GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
-        if (m) m->measure = next;
-        undo.push_undo_warp(std::move(pre));
-    }
-    undo.recompute_dirty();
-
-    // NO RE-RENDER AND NO MAP REBUILD: a measure reaches neither the engine nor
-    // the render fingerprint (the field's own contract at WarpMarker::measure),
-    // so the box is the only thing that moved and the strip is the only damage.
-    text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_top_strip();
-}
-
 // THE MAGNIFICATION LEVEL EDITOR'S OPEN. The contract is at the declaration;
-// this is enter_measure_edit's mechanics over the third store.
+// this is the payload editor's open mechanics over the third store.
 //
 // NO PLAYBACK STOP, the top-strip family's recorded exemption (the decision
 // table is at GuiPlaybackLifecycle::stop_playback_for_modal_open, which this
@@ -725,7 +563,7 @@ void GuiFlagEditor::enter_magnification_level_edit(int idx) {
     // ACTIVE column's store, which the guard above pinned to this one.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
-    // NO CELL WRITE HERE, unlike the measure editor's open: this editor IS the
+    // NO CELL WRITE HERE, unlike the bound editor's open: this editor IS the
     // payload box, and the select above already seated the addressed cell on
     // the payload through the Selection chokepoint.
 
@@ -770,12 +608,11 @@ void GuiFlagEditor::enter_magnification_level_edit(int idx) {
 // FlagPayload refusal drives is gated on that Kind at the painter, so this red
 // reaches no waveform pixel.
 //
-// AN EMPTY BUFFER IS A REFUSAL, NOT A REMOVAL, and that is the ONE PLACE THIS
-// EDITOR PARTS FROM THE MEASURE'S (architect 2026-09-15): a measure is an
-// OPTIONAL field whose absence is a legal state, so an empty commit removes it;
-// a LEVEL is what a magnification level marker IS, and a row with no level is
+// AN EMPTY BUFFER IS A REFUSAL, NOT A REMOVAL (architect 2026-09-15): a
+// LEVEL is what a magnification level marker IS, and a row with no level is
 // not a line the grammar can spell. Deleting the marker is Delete's act, and
-// this field has no state to clear back to.
+// this field has no state to clear back to. (The bound editor's empty commit
+// clears, a bracket being optional.)
 void GuiFlagEditor::commit_magnification_level_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     if (app.top_flag_editor.kind != text_editor::Kind::MagnificationLevelText)
@@ -788,7 +625,7 @@ void GuiFlagEditor::commit_magnification_level_edit() {
     if (!parse_marker_magnification(next, parsed, level_err)) {
         app.top_flag_editor.red = true;
         viewport.invalidate_top_strip();
-        // ONE COMPOSER, TWO READERS (the measure commit's own rule): the stderr
+        // ONE COMPOSER, TWO READERS (architect 2026-08-30): the stderr
         // line keeps the offending token after it; the card does not, that text
         // being on screen in the red field the refusal leaves standing.
         const std::string refusal = "Magnification level rejected: " + level_err;
@@ -958,12 +795,6 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // disabled is not the editor's field — the candidate carried the marker's
     // own bit, parse_single_canonical_line populated it; reapply.
     m.disabled      = parsed.disabled;
-    // THE MEASURE IS NOT THIS EDITOR'S and is preserved by construction: `m`
-    // is the live marker copied whole, and no line above writes the field. The
-    // candidate parsed at accept_comment = false, so `parsed.measure` is always
-    // empty and may not be assigned from —
-    // a ` //` typed into the payload buffer is a grammar error the parse
-    // already red-flashed. The measure has its own editor (Kind::MeasureText).
 
     // Cascade rename: if label_def changed to another NON-EMPTY name,
     // every other marker that referenced old_def gets its ref updated to
@@ -1124,8 +955,7 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // bracket test, because this body is the one thing every exit from the mode
 // runs — there is no single mode setter, the two writers of the off edge
 // each flip the bit themselves after calling this — so a step outside the
-// mode can only ever be the tempo step, on either column. An addressed
-// MEASURE is left alone: that cell is not the mode's. History-less like
+// mode can only ever be the tempo step, on either column. History-less like
 // everything else here: the axis is a session address, not content.
 void GuiFlagEditor::wipe_iter_state() {
     if (app.addressed_cell == MarkerCell::Lower ||

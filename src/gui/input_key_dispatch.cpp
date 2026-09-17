@@ -236,9 +236,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // keyboard chord was the only save route the lock ever stopped.
 // WHAT STAYS BLOCKED, the authoring vocabulary, dropped here at the gate rather
 // than admitted for a deeper owner refusal: the marker drop / status-toggle /
-// position-nudge / Delete chords, the flag, BPM and MEASURE editors' openers
-// (bare `/` among them — its SHIFTED twin, the score-video jump, is admitted
-// below, the one key on this gate whose two spellings answer differently),
+// position-nudge / Delete chords, the flag and BPM editors' openers,
 // `;` (the settings editor, whose engine-key commits ARE authored content), `i`,
 // undo/redo (Ctrl+Z / Ctrl+Shift+Z), every propagate command (the COPY,
 // Ctrl+P, explicitly — a copy is non-mutating, but it arms a paste that is
@@ -264,7 +262,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // THE LOCK HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
 // 2026-08-15): the roster buttons wearing the disabled face while the active
 // tab is locked — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N),
-// the Edit flag button and the Measure on the bottom row, the load-in-place
+// the Edit flag button on the bottom row, the load-in-place
 // in the icon row, and since 2026-08-30 THE FOUR CARDINAL ARROWS (planner
 // decision 52: Up/Down, dropped outright here; Left/Right, dropped only in
 // the marker lane through the is_playhead_step entry, whose lane term is the
@@ -276,12 +274,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // is consumed with its plain one.
 // THE MIRROR IS NOT AN EQUIVALENCE, and one direction has a member: the
 // propagate copy/paste pair is BLOCKED here with no face left to grey (its two
-// buttons left with the 2026-08-20 relocation). The other direction is EMPTY
-// since the 2026-08-21 sunset: THE MARKER MEASURE was LIT on a locked tab for
-// one day although bare `/` dropped here (architect 2026-08-20) — its SHIFT
-// half was the score-video jump, admitted here then, and a chrome face cannot
-// split — and the jump left the product whole, so the Measure greys under the
-// lock with its four neighbours (its arm in redesign_button_enabled). THE MIRROR IS
+// buttons left with the 2026-08-20 relocation). The other direction — a
+// button lit on a locked tab whose chord drops here — is EMPTY. THE MIRROR IS
 // HAND-LISTED at
 // redesign_button_enabled (app_state.h) rather than derived by walking the
 // chord table through this predicate, and the two classes that walk gets wrong
@@ -585,11 +579,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // exactly as it consumes a plain one (arm_redesign_press, one predicate
     // for both routes), so the button's shift-click and its long press refuse
     // where the key refuses.
-    // BARE `/` IS BLOCKED and is not admitted by any entry here: it opens the
-    // measure EDITOR, and a measure is serialized content. (Shift+`/` was the
-    // score-video jump's lock-legal admission from 2026-08-20 until the
-    // 2026-08-21 sunset removed the jump whole; the chord is unbound and the
-    // strict-modifier rule makes it a no-op everywhere, so no entry answers it.)
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
     // nothing on it — are NOT on the allowlist: both drop at this gate. The
     // old design admitted them because an undo entry
@@ -736,8 +725,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //   * UP / DOWN AND RETURN WITH A BOUND AXIS ADDRESSED — the bound cells, the
 //     mode's own authoring surface. The axis is AppState::addressed_cell:
 //     Lower or Upper runs the bound step or opens that cell's editor, while
-//     the payload axis is the TEMPO step and the measure axis is the measure
-//     editor, both of which push and both of which stay refused. The step
+//     the payload axis is the TEMPO step or the payload editor, both of
+//     which push and both of which stay refused. The step
 //     ladder's three magnitudes are admitted together for the arrows (bare,
 //     shift and ctrl, exactly the dispatch arm's own spelling) and Return
 //     admits its plain form alone, KpEnter with it. The bound EDITOR's own
@@ -773,9 +762,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // app_state.h — the membership the ENABLED ARMS read, and they alone since
 // 2026-09-12, when the refusal-reason tooltip lines went: a greyed button
 // names its own act, the grey is the message, and the reason lives at the
-// key's card). Its members are the four marker verbs, the Measure, the
+// key's card). Its members are the four marker verbs, the
 // Toggle History View button, Edit flag and the
-// Up/Down pair on a PAYLOAD or MEASURE axis, Left/Right in the marker
+// Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
 // 2026-09-10 — THE VIEW BAR'S FOUR SELECTORS (four since the magnification
 // level selector joined the bar on 2026-09-15), the column
@@ -3713,18 +3702,15 @@ void GuiInputHandler::run_history_revert() {
                 // The sidecar line this flag's then side came off, rebuilt:
                 // the disable prefix, the canonical frame spelling
                 // (format_authored_frame, the one serializer), the '|' and the
-                // verbatim payload token. The token is rest-of-line, so a
-                // ` //<measure>` comment is already inside it and the rebuilt
-                // line is the sidecar's line byte for byte — which is why the
-                // parse accepts comments here; refusing them would fire the
-                // "unreachable" arm below on every commented marker.
+                // verbatim payload token, which is rest-of-line — so the
+                // rebuilt line is the sidecar's line byte for byte.
                 std::string line;
                 if (f.then_disabled) line += '#';
                 line += format_authored_frame(f.time_frame);
                 line += '|';
                 line += f.then_token;
-                auto parsed = warpmarkers_internal::parse_single_canonical_line(
-                    line, /*accept_comment=*/true);
+                auto parsed =
+                    warpmarkers_internal::parse_single_canonical_line(line);
                 if (!parsed) {
                     // UNREACHABLE BY CONSTRUCTION and stated loudly rather
                     // than recovered from: every walk member is strict-load
@@ -4156,7 +4142,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Global dispatch: only the continuous step gestures repeat — the
     // ARROWS all four (Left/Right being the playhead step in the waveform lane
     // and the position nudge in the marker lane, Up/Down the
-    // VALUE STEP on the addressed cell — the tempo, a bound or the measure;
+    // VALUE STEP on the addressed cell — the tempo, a bound or the
+    // magnification level;
     // the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family — and since 2026-08-31 they repeat on their
     // shifted and ctrl spellings too, which the arm below this one owns),
@@ -4251,9 +4238,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL SIX editor kinds — the settings prompt,
-// the commit-title editor (2026-08-07), the bpm bracket, the MARKER MEASURE
-// editor (2026-08-19), the ITERATION BOUND editor (2026-09-05) and
+// dropped. It serves ALL SIX editor kinds (text_editor::Kind, re-grepped
+// 2026-09-16) — the settings prompt,
+// the commit-title editor (2026-08-07), the bpm bracket, the ITERATION BOUND
+// editor (2026-09-05), the MAGNIFICATION LEVEL editor (2026-09-15) and
 // (architect 2026-07-28) the top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
@@ -6364,8 +6352,9 @@ void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
     // prompt VEILS everything and is itself the answer on screen — its
     // question is what the press has to deal with — while an editor is
-    // pointer-transparent in the three of its six kinds the top-strip flag
-    // editor takes (FlagPayload, MeasureText and IterBound, text_editor.h), so
+    // pointer-transparent in the three of its five kinds the top-strip flag
+    // editor takes (FlagPayload, IterBound and MagnificationLevelText,
+    // text_editor.h), so
     // the File menu's Open project row is reachable under it and owes a
     // sentence. The KEY road never reaches either arm: Ctrl+O under any
     // editor dies at on_key's editor gate, which says these very words with
@@ -8962,9 +8951,9 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // bpm bracket editor draws in the MODAL DIALOG on the bottom row (like the
 // settings editor; its damage is that row's own lane owner) and commits into a
 // render sweep, the FlagPayload editor draws in the TOP strip and commits the
-// flag's own payload, the MeasureText editor draws in the TOP strip too and
-// commits the marker's measure, and the IterBound editor draws over its bound
-// cell in the TOP strip and commits that bound. None passes a bare-Tab hook,
+// flag's own payload, the IterBound editor draws over its bound
+// cell in the TOP strip and commits that bound, and the MagnificationLevelText
+// editor draws in the TOP strip and commits the marker's level. None passes a bare-Tab hook,
 // having no vocabulary to complete: in the BPM editor, a DIALOG, bare Tab
 // walks the modal's focus ring from the first press, while for the three
 // top-strip kinds it never reaches this route at all — the on_key gate
@@ -9017,8 +9006,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] { viewport.invalidate_modal_dialog_area(); });
     }
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
-        // The ITERATION BOUND editor: the measure editor's route exactly —
-        // the same modal route, the same top-strip repaint, and no waveform
+        // The ITERATION BOUND editor: the payload editor's route less its
+        // waveform edge — the same modal route, the same top-strip repaint, and no waveform
         // edge, its red reaching no stem (the flash is gated on
         // Kind::FlagPayload at paint_marker_stems) and its whole surface
         // being the cell in the strip.
@@ -9031,7 +9020,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     }
     if (app.top_flag_editor.kind ==
         text_editor::Kind::MagnificationLevelText) {
-        // The MAGNIFICATION LEVEL editor: the measure editor's route exactly —
+        // The MAGNIFICATION LEVEL editor: the bound editor's route exactly —
         // the same modal route, the same top-strip repaint, and no waveform
         // edge, its red reaching no stem (the flash is gated on
         // Kind::FlagPayload at paint_marker_stems) and its whole surface being
@@ -9042,22 +9031,6 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
             [this] { flag_editor.commit_magnification_level_edit(); },
-            [this] { flag_editor.exit_top_flag_edit_no_commit(); },
-            [this] { viewport.invalidate_top_strip(); });
-    }
-    if (app.top_flag_editor.kind == text_editor::Kind::MeasureText) {
-        // The MEASURE editor: the same modal route, the same top-strip repaint
-        // as the payload editor's — and STILL no waveform red-flash edge, even
-        // though this kind DOES have a commit-time refusal since 2026-08-20
-        // (the measure grammar is judged at commit_measure_edit). The reason is
-        // the PAINTER, not the absence of a producer: the stem flash is gated
-        // on Kind::FlagPayload at paint_marker_stems, so a MeasureText `red`
-        // reaches no waveform pixel at all — its whole surface is the box in
-        // the strip, which this route's repaint already covers.
-        return route_modal_editor_key(
-            app.top_flag_editor, key, mods,
-            /*autocomplete=*/nullptr,
-            [this] { flag_editor.commit_measure_edit(); },
             [this] { flag_editor.exit_top_flag_edit_no_commit(); },
             [this] { viewport.invalidate_top_strip(); });
     }

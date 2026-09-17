@@ -1127,8 +1127,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // W+target a consumed refusal at the split below), the phase-reset
     // propagate paste (it starts in source view and lands in target through
     // handle_active_audio_view_toggle, bare 1/2/3/4's own chokepoint now that
-    // bare `t` is deleted), the iteration-bracket wipe, the marker
-    // MEASURE, and — since 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
+    // bare `t` is deleted), the iteration-bracket wipe, and — since
+    // 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
     // Ctrl+N, Delete and the flag editor's Return open, each admitted in
     // W+target with the cent step's re-land contract in its own tail.
 
@@ -1638,8 +1638,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // exception left since 2026-09-10 (a bracket-only entry's restore brought
     // back the bound cell it changed until then; the bracket left the undo
     // domain and the entry with it) — opens the
-    // canonical-line editor, a bound cell its bound editor, the measure box
-    // the measure editor, each with its seeded content fully selected
+    // canonical-line editor, a bound cell its bound editor, each with its
+    // seeded content fully selected
     // (open-selected, like every open route — the first keystroke replaces
     // it). The Edit Flag button is this chord and inherits the fork.
     // Read-only already dropped Return at the allowlist gate above (every
@@ -1656,8 +1656,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // (the inventory is at active_column_authoring_allowed, app_state.h;
         // the commit's own tail carries the target-view re-warp and playhead
         // re-land). P view still refuses it — phase resets have no per-flag
-        // editor — as it refuses the measure editor (marker_measure_edit_actionable),
-        // while the BOUND editor is both columns' since 2026-09-09: a bound
+        // editor — while the BOUND editor is both columns' since 2026-09-09: a bound
         // cell is addressed on either column's eligible flags now. THE REFUSALS ARE ONE
         // PREDICATE since 2026-08-30 (flag_editor_open_actionable,
         // app_state.h, forking on the axis since 2026-09-05), which the Edit
@@ -1709,44 +1708,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             flag_editor.enter_iter_bound_edit(app.active_markers_view, focus,
                                               app.addressed_cell);
             return;
-        case MarkerCell::Measure:
-            flag_editor.enter_measure_edit(focus);
-            return;
         }
-        return;
-    }
-
-    // Bare `/` opens the MEASURE editor on the focused warp marker — the
-    // Return arm's sibling. MEASURES ARE THE FOURTH RULED EXCEPTION TO THE
-    // HOME-VIEW BINDING (architect 2026-08-19; the inventory is at
-    // active_column_authoring_allowed, app_state.h): a measure names where a
-    // marker sits in the SCORE rather than authoring a musical value, so it is
-    // editable wherever a warp flag paints — the WARP column in BOTH audio
-    // views, phase resets carrying no measure — and this arm deliberately
-    // asks no active_column_authoring_allowed. Read-only still refuses: a measure IS
-    // serialized content, and `/` is on no read_only_key_blocked entry, so a
-    // locked tab drops this press before it reaches here. The
-    // `h` view drops it at its own allowlist too.
-    // NOTHING FOCUSED IS A CONSUMED NO-OP, read off the one owner
-    // (marker_focus_standing, app_state.h), AND THE MEASURE BUTTON'S FACE
-    // READS THE SAME FACT since 2026-08-30 — the truthful-buttons ruling. From
-    // 2026-08-19 until then the refusal lived here alone and the button was
-    // lit whenever the tab was writable, its click simply doing nothing with
-    // no focus (the 2026-08-15 no-blink ruling, which the architect withdrew).
-    // Modifier-strict: only the plain, unmodified press binds. (Shift+`/` was
-    // the score-video jump until the 2026-08-21 sunset; the chord is unbound —
-    // strict modifier validation makes it a consumed no-op, no arm anywhere.)
-    if (key == GuiKeys::Slash && !ctrl && !shift && !alt) {
-        selection.repair_last_selected();
-        // THE REFUSAL SAYS SO, one owner for this card and the Measure
-        // button's grey (marker_measure_edit_refusal, app_state.h): the
-        // phase-reset column, then nothing focused. The greyed Measure button
-        // never reaches it.
-        if (const char* refusal = marker_measure_edit_refusal(app)) {
-            notifications.notify(AppState::NotificationClass::Normal, refusal);
-            return;
-        }
-        flag_editor.enter_measure_edit(app.last_selected_marker);
         return;
     }
 
@@ -2231,19 +2193,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the mode goes off) the same chord at the same magnitude runs the SECOND
     // step body — adjust_iter_bound_cents on the warp column and
     // adjust_iter_bound_hops on the phase-reset one — whose refusal this arm
-    // cards exactly as it cards the tempo step's; with the MEASURE addressed
-    // (2026-09-14) the same chord runs that field's own step body
-    // (adjust_measure_step, the owners at app_state.h's value-step block),
-    // whose refusals it cards the same way. THIS ARM IS THE VALUE STEP — the chord's name — and the cell
+    // cards exactly as it cards the tempo step's. THIS ARM IS THE VALUE STEP — the chord's name — and the cell
     // is its subject. SAME LADDER: the bound step takes no repeat bit and no
     // coalescing at all (2026-09-10 — it records nothing, so a held run has no
     // burst to open or merge into and simply steps), while the tempo and
-    // measure steps keep both, each under its own GestureKind. The
+    // level steps keep both, each under its own GestureKind. The
     // Up/Down buttons' face forks on the same axis.
     //
     // AND UNDER A LIT LAMP ONLY THE BOUND ARM IS REACHED: the composed gate
     // above admits Up/Down exactly on a bound axis (iteration_lock_key_blocked),
-    // so the payload and measure steps both belong to a dark
+    // so the payload step belongs to a dark
     // lamp, and the buttons grey on the same fork.
     if (!alt && !(ctrl && shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down)) {
@@ -2292,11 +2251,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             card_op_refusal(notifications,
                             warpops.adjust_iter_bound_cents(
                                 app.addressed_cell, delta));
-            return;
-        case MarkerCell::Measure:
-            card_op_refusal(notifications,
-                            warpops.adjust_measure_step(
-                                delta, mods.synthesized_repeat));
             return;
         }
         return;
@@ -3847,11 +3801,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // is a no-op when none is open. Only `t` and the settings-editor
     // `active_audio_view=` commit route here — Ctrl+Tab never changes
     // active_audio_view — so this is the one place either edge is handled.
-    // THE CLOSE IS KIND-AGNOSTIC: it also tears down a live MEASURE editor
-    // (Kind::MeasureText) on T->S, where before 2026-08-24 it survived only
-    // because nothing closed it. Flagged for a ruling and the architect
-    // ruled 2026-08-25: KEEP — "we want symmetry as much as possible", the
-    // same reason as the payload editor's.
+    // THE CLOSE IS KIND-AGNOSTIC: every top-strip editor kind tears down on
+    // T->S (architect 2026-08-25: "we want symmetry as much as possible").
     flag_editor.exit_top_flag_edit_no_commit();
 
     // (NOTHING HAPPENS TO ITERATION MODE ON THIS EDGE — the record of a

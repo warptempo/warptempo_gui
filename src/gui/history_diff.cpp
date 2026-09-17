@@ -883,12 +883,7 @@ std::string scale_token_of(const std::string& settings_text) {
 // the flag can show the file's own spelling rather than a round trip through
 // the typed value.
 bool extract_warp_entry(const std::string& line, GuiHistoryWarpEntry& out) {
-    // THE COMMENT IS PART OF THE GRAMMAR HERE: these are the same on-disk
-    // lines the loader accepts, so the ` //<measure>` comment
-    // is accepted too. Refusing it would drop every commented marker on the
-    // whitespace refusal and vanish it from the diff lane entirely.
-    auto parsed = warpmarkers_internal::parse_single_canonical_line(
-        line, /*accept_comment=*/true);
+    auto parsed = warpmarkers_internal::parse_single_canonical_line(line);
     if (!parsed) return false;
     out.frame    = parsed->time_frame;
     out.disabled = parsed->disabled;
@@ -932,8 +927,7 @@ std::map<std::string, bool> warp_side_effective_disabled(
     line_of.reserve(lines.size());
     for (const std::string& line : lines) {
         if (line.empty()) continue;
-        auto parsed = warpmarkers_internal::parse_single_canonical_line(
-            line, /*accept_comment=*/true);
+        auto parsed = warpmarkers_internal::parse_single_canonical_line(line);
         if (!parsed) continue;
         mv.push_back(std::move(*parsed));
         line_of.push_back(&line);
@@ -950,8 +944,8 @@ std::map<std::string, bool> warp_side_effective_disabled(
 // The phase reset column has NO callable per-line entry point — its parser's
 // parse_line lives in an anonymous namespace, whole-file only — so this
 // mirrors it exactly rather than relaxing anything: no whitespace anywhere on
-// the line (so a ` //` suffix refuses, phase resets carrying no measure —
-// PhaseResetMarker), an optional leading '#' meaning disabled, then the
+// the line (so a ` //` suffix refuses, as it does on the warp column),
+// an optional leading '#' meaning disabled, then the
 // CANONICAL authored frame spelling (parse_authored_frame, frame_format.h) and
 // nothing else. A byte-empty line has no frame and is refused here just as it
 // is at load; comment LINES are not in the grammar. The frame parse is this

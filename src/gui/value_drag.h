@@ -25,14 +25,12 @@ struct GuiTargetRender;
 // movement, and the press already put the playhead where it belongs.
 //
 // WHAT IT STEPS, and through whose arithmetic: the BASE TEMPO on a warp flag's
-// payload, a BOUND on either column's purple cell, and — since 2026-09-14 —
-// a WARP MARKER'S MEASURE on its own box, each written through the
+// payload and a BOUND on either column's purple cell, each written through the
 // ARROWS' OWN LANDING OWNER as a delta from the value the store currently
 // holds (tempo_cent_step_landing / iter_bound_step_landing /
-// phase_iter_bound_step_landing / measure_step_landing, app_state.h). So the
+// phase_iter_bound_step_landing, app_state.h). So the
 // walls are the arrows'
-// walls — the tempo bracket, the cell's window and its partner bound, the
-// measure's [1, 999] — and
+// walls — the tempo bracket, the cell's window and its partner bound — and
 // they clamp silently, exactly as a held Up does at the bracket's end. There
 // is no second arithmetic anywhere in this file.
 //
@@ -68,11 +66,7 @@ struct GuiTargetRender;
 // Undo::push_undo_warp clears the coalescing stamp — so an Up tapped straight
 // after a drag opens its own entry rather than merging into the drag's, which
 // is exactly how commit_drag's entry is fenced (that body records no gesture
-// either). THE MEASURE ARM PUSHES ITS OWN ONE ENTRY on the same terms and on
-// the same fence: the commit compares the marker's `measure` field against the
-// press snapshot and pushes that snapshot iff the field moved, with NO tempo
-// tail behind it — a measure is not a map input, so there is no re-warp, no
-// re-land and no render trigger. THE BOUND ARM PUSHES NOTHING AT ALL: a
+// either). THE BOUND ARM PUSHES NOTHING AT ALL: a
 // bracket is outside the undo
 // domain whole (the iteration lock's own rule), so a bound drag is a session
 // act from end to end.

@@ -13,8 +13,8 @@
 
 struct GuiTargetRender;
 
-// Flag-editor cluster. Covers the marker lane's FOUR editors — the flag's
-// canonical-line editor and the measure editor (the warp column's alone), the
+// Flag-editor cluster. Covers the marker lane's THREE editors — the flag's
+// canonical-line editor (the warp column's alone), the
 // iteration bound editor (the warp and phase-reset columns') and the
 // magnification level editor (the third column's, 2026-09-15) — the
 // BPM dialog editor, and the
@@ -66,7 +66,7 @@ struct GuiFlagEditor {
     // opens over, and the open takes the cell's own eligibility (that column's
     // sweep predicate under a lit mode: no cell, no editor), refusing on the
     // bound step's kind sentence where the marker carries no live bracket. The
-    // mechanics are enter_measure_edit's, over two stores: the focus repaired,
+    // mechanics are the payload editor's open's, over two stores: the focus repaired,
     // the marker single-selected and landed, the addressed cell written to
     // `side` behind that select, the seed the cell's own token (`+0.00` or
     // `+0` on a blank bracket, the column deciding) fully selected.
@@ -75,9 +75,8 @@ struct GuiFlagEditor {
     // as the flag editor's open does.
     void enter_iter_bound_edit(char column, int idx, MarkerCell side);
     // Commit the open bound session, ON THE LIVE COLUMN (which is the open's
-    // column — the view cannot move under an open session, the measure
-    // commit's own argument): an EMPTY buffer CLEARS THE WHOLE BRACKET (the
-    // measure's empty-removes precedent; one bound alone is not
+    // column — the view cannot move under an open session): an EMPTY buffer
+    // CLEARS THE WHOLE BRACKET (one bound alone is not
     // representable), a non-empty one must parse as that column's grammar —
     // the signed two-decimal cent bound on warp, the signed whole hop on
     // phase — and satisfy the walls, which are the partner bound plus the
@@ -91,28 +90,7 @@ struct GuiFlagEditor {
     // every path except the refusal.
     void commit_iter_bound_edit();
 
-    // THE MEASURE EDITOR'S ONE ENTRY (the sixth text_editor Kind), on the WARP
-    // column alone — phase resets carry no measure (PhaseResetMarker) — and in
-    // either audio view, measures being the FOURTH ruled exception to the
-    // home-view binding. The callers' gate is marker_measure_edit_actionable
-    // (app_state.h); a call with the phase-reset column active is a silent
-    // defensive no-op, the selection and the land resolving against the
-    // active column's store.
-    //
-    // NOT enter_text_edit: that helper is the payload's (it seeds the payload
-    // kind's open), while this editor seeds the measure and seats the measure
-    // cell. The seed is the marker's own measure field, which is the whole of
-    // what a measure is — nothing inherits down the label cascade (architect
-    // 2026-08-20).
-    void enter_measure_edit(int idx);
-    // Commit the open measure session: an EMPTY buffer REMOVES the measure, a
-    // non-empty one is JUDGED against the measure grammar (marker_measure.h)
-    // and either stored verbatim or REFUSED with the editor left standing,
-    // red, and a card saying which rule the token broke. One undo entry when
-    // the field actually changed; the editor closes on
-    // every path except the refusal.
-    void commit_measure_edit();
-    // THE MAGNIFICATION LEVEL EDITOR'S ONE ENTRY (the eighth text_editor Kind,
+    // THE MAGNIFICATION LEVEL EDITOR'S ONE ENTRY (the sixth text_editor Kind,
     // architect 2026-09-15), on the MAGNIFICATION LEVEL column alone and in
     // source view, the only view that column exists in (2026-09-16; target
     // for its first day). It is that column's
@@ -123,7 +101,7 @@ struct GuiFlagEditor {
     // arm (app_state.h); a call with another column active is a silent
     // defensive no-op.
     //
-    // The mechanics are enter_measure_edit's over the third store: the focus
+    // The mechanics are the payload editor's open's over the third store: the focus
     // repaired, the marker single-selected and landed, the seed the marker's
     // own level digit fully selected. Keyboard-modal, pointer/wheel-transparent,
     // no playback stop — the top-strip family's recorded exemption. Read-only
@@ -131,7 +109,7 @@ struct GuiFlagEditor {
     void enter_magnification_level_edit(int idx);
     // Commit the open level session. THE LEVEL IS REQUIRED — a magnification
     // level marker with no level is not a state the grammar can spell
-    // (magnificationlevelmarkers_parse.h) — so unlike the measure's commit
+    // (magnificationlevelmarkers_parse.h) — so unlike the bound editor's commit
     // there is NO EMPTY-CLEARS ARM: an EMPTY buffer and an out-of-grammar one
     // are the same refusal, the editor left standing, red, with a card saying
     // which rule the token broke. One undo entry when the digit actually

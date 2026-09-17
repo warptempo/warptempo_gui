@@ -11,8 +11,9 @@
 //
 // A magnification LEVEL is a count of waveform-picture doublings in
 // [0, kMarkerMagnificationMax]. NEITHER RENDER COLUMN carries one as a field:
-// the warp marker's comment is the measure alone (WarpMarker::measure,
-// warpmarkers_parse.h) and a phase reset carries nothing beside its position.
+// a warp marker's line is its canonical line whole (warpmarkers_parse.h;
+// architect approval 2026-09-16, comment only) and a phase reset carries
+// nothing beside its position.
 // THE MAGNIFICATION LEVEL MARKERS COLUMN IS THE LEVEL'S ONE HOME
 // (MagnificationLevelMarker::level, magnificationlevelmarkers_parse.h, which
 // says the same of this header), and this header is its grammar and range

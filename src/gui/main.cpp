@@ -179,7 +179,7 @@ namespace {
 // 8 and 9 merged; THE ICON ROW'S OWN HEIGHT AND PADS since 2026-08-14) — the
 // transport three at the left
 // pad and, flush right, the four single-marker verbs with the Edit flag
-// button, the Marker Measure, the Copy resolved value
+// button, the Copy resolved value
 // button and Add to selection behind them, the
 // marker-walk two and the four
 // cardinal arrows, divided by
@@ -2464,11 +2464,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its seventeen
+            // second arm covers both of the row's surfaces, its sixteen
             // roster buttons (the transport three, and the right block's four
-            // marker verbs with the Edit flag button, the Marker Measure, the
+            // marker verbs with the Edit flag button, the
             // Copy resolved value button and
-            // Add to selection behind them, three walk steps and four cardinal
+            // Add to selection behind them, two walk steps and four cardinal
             // arrows) and the MODAL's own buttons
             // (2026-08-13), which paint in the same lane. The HIDE edge has the
             // published rect and damages exactly that.
