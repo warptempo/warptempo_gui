@@ -969,8 +969,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // joined the zoom group, dissolving two separator-led groups into it; the
     // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
-    // carries the current count — TWENTY-FOUR in SIX since 2026-09-14's Zoom
-    // In / Zoom Out deletion.)
+    // carries the current count — TWENTY-ONE in FIVE since 2026-09-17's
+    // Ignore Waveform Magnification lamp.)
     // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
     // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
     // it then, the Show trim region button filled it on 2026-08-16 and led it
@@ -1012,6 +1012,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // and no separator moving.
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-17), the `]` lamp,
+    // right behind Center in the same group: Breeze's zoom-out-y, the
+    // magnifier with a ruler on its dial beside a minus — the vertical scale
+    // taken back down. It joins the group rather than opening one, so it adds
+    // one box and one 2px gap to the walk and no separator.
+    {RedesignButton::IconIgnoreWaveformMagnification, icons::Icon::ZoomOutY},
     // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
     // to 2026-09-14 — magnify wearing zoom-in-y and reduce wearing
     // zoom-out-y — and left with the setting it stepped (architect
@@ -2668,20 +2674,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-FOUR members
-    // in SIX groups since 2026-09-14, RE-COUNTED off the roster enum and the
+    // separator-divided groups of 32x32 buttons — TWENTY-ONE members
+    // in FIVE groups since 2026-09-17 (the width math below is the count's
+    // one statement), RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
-    // Redo / Render, the deleted row 2's, leading the row), THE TWO VIEW LAMPS
-    // sharing one group since the second of that day's rulings deleted the
-    // divider the radio-pair collapse had left standing between them, THE ZOOM
+    // Redo / Render, the deleted row 2's, leading the row), THE ZOOM
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
     // until that ruling), then the zoom pair (2026-08-12), THE IGNORE WAVEFORM
-    // MAGNIFICATION LAMP behind them (2026-09-14), FOLLOW, which came
+    // MAGNIFICATION LAMP behind them (2026-09-14, deleted that evening and back
+    // 2026-09-17), FOLLOW, which came
     // in from the
-    // dissolved mass-marker group the same day, THE KEEP-CENTERED LAMP beside
-    // it (2026-08-31, R11), and THE RESTRICT UNDO TO VIEWPORT LAMP closing
+    // dissolved mass-marker group the same day, and THE RESTRICT UNDO TO VIEWPORT LAMP closing
     // the group (2026-09-04, arriving from the toolbar group later that day
     // because it is a viewport gesture too) — THE ITERATION PAIR (the BPM
     // opener and grid iteration mode, back from the deleted menu row later
@@ -2694,7 +2699,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-two paint on every
+    // hiding/showing icons in top icon row"): all twenty-one paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2709,28 +2714,28 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY MEMBERS IN FIVE GROUPS since 2026-09-15, when the
-    // architect deleted the two view lamps' whole category (down from 22 in
-    // 6):
-    //   8 + 20·32 + (20−5)·2 + (5−1)·9 = 8 + 640 + 30 + 36 = 714px,
+    // minus groups): TWENTY-ONE MEMBERS IN FIVE GROUPS since 2026-09-17, when
+    // the Ignore Waveform Magnification lamp joined the zoom group behind
+    // Center (up from 20 in 5, one box and one gap and no separator):
+    //   8 + 21·32 + (21−5)·2 + (5−1)·9 = 8 + 672 + 32 + 36 = 748px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 722.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 756.
     //
-    // THE TABLET FIT CEILING IS 322 (re-derived 2026-09-15 at the view-lamp
-    // deletion): the
-    // walk fits while 714·factor ≤ 2304, 714·3.22 = 2299.08, and 323 overruns
-    // (714·3.23 = 2306.22). (Counting the trailing pad the ceiling is 319 —
-    // 722·3.19 = 2303.18 fits and 320 overruns — but the pad is ground, not
+    // THE TABLET FIT CEILING IS 308 (re-derived 2026-09-17 at the lamp's
+    // arrival): the
+    // walk fits while 748·factor ≤ 2304, 748·3.08 = 2303.84, and 309 overruns
+    // (748·3.09 = 2311.32). (Counting the trailing pad the ceiling is 304 —
+    // 756·3.04 = 2298.24 fits and 305 overruns — but the pad is ground, not
     // ink, so the icons themselves are the thing measured.) The tablet's
-    // first-run 225 clears it by 697.5 device px (714·2.25 = 1606.5 against
-    // 2304) — 310 of the panel's 1024 logical px at that scale. The laptop
-    // clears it outright at 722 of 1920. The row's width succession is in git
+    // first-run 225 clears it by 621 device px (748·2.25 = 1683 against
+    // 2304) — 276 of the panel's 1024 logical px at that scale. The laptop
+    // clears it outright at 756 of 1920. The row's width succession is in git
     // history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 225% is ~77 and ~92
-    // device px against its panel — room for nine more members at 225%, a
-    // tenth one cropping.
+    // device px against its panel — room for eight more members at 225%, a
+    // ninth one cropping.
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -8937,27 +8942,13 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // ceiling at the new width. The level ceiling and the viewport clamp both
     // live in clamp_viewport_start now; the resize keeps only its TRIGGER role
     // and delegates. When the level actually moved the reflow changed spp under
-    // the playback predictor, so re-anchor it.
-    //
-    // A LEVEL MOVE ACROSS THE WORKING ZOOM FLIPS THE MAGNIFICATION (the gain
-    // applies only at working or finer, effective_waveform_gain_profile): a
-    // whole-song-visible level following a ceiling across 2.0, or a short
-    // file's ceiling clamping a coarser rest down across it. The plate would
-    // blit its old gain until the
-    // worker publishes, so the picture would lag the level. When the effective
-    // hash moved, rebuild the plate synchronously here — the gain category's
-    // before/after shape (Viewport::kick_waveform_sync_if_gain_changed, which
-    // this handler holds no Viewport to call). Safe at this point: both
-    // platforms fire on_resize after the new dimensions are installed and the
-    // presentation buffers recreated, the rebuild renders into the plate's own
-    // image surface off app.width / app.height and the settled clamp, and its
-    // damage (window top through the waveform) joins the full-surface damage
-    // the resize already queued. Every other resize stays on the worker.
-    const double   old_zoom       = app.zoom_level;
-    const uint64_t old_gain_hash  = effective_waveform_gain_profile(app).hash;
+    // the playback predictor, so re-anchor it. (A level move here changes no
+    // magnification: the gain profile has no zoom term since 2026-09-17,
+    // effective_waveform_gain_profile, so the synchronous gain rebuild this
+    // handler ran for a level crossing the working zoom is gone and every
+    // resize stays on the worker.)
+    const double old_zoom = app.zoom_level;
     clamp_viewport_start(app, audio);
     if (app.zoom_level != old_zoom && playback.is_playing())
         playback.resync_predictor();
-    if (effective_waveform_gain_profile(app).hash != old_gain_hash)
-        force_synchronous_waveform_rebuild();
 }

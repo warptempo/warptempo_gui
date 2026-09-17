@@ -150,11 +150,11 @@ struct Viewport {
     //    re-keys the profile (waveform_gain_profile_cached,
     //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
     //    with no gain-change kick of its own.
-    //    (The gain gate's other input, the zoom — magnification applies only
-    //    at the working zoom or finer, effective_waveform_gain_profile — changes with a
-    //    zoom write, whose applier's own synchronous kick carries it; the one
-    //    zoom write with no applier, the resize's clamp, runs the same
-    //    before/after test itself at GuiPaintHandler::on_resize.)
+    //    (The gain gate's other input, the Ignore Waveform Magnification lamp
+    //    — effective_waveform_gain_profile — takes the same before/after kick
+    //    at its one setter, GuiInputHandler::set_ignore_waveform_magnification.
+    //    The zoom is no input since 2026-09-17: magnification applies at every
+    //    zoom.)
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and a level write takes the kick so the
@@ -255,11 +255,12 @@ struct Viewport {
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
     // inventory above): a level write kicks the synchronous rebuild ONLY WHEN
     // THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile — empty
-    // coarser than the working zoom) ACTUALLY CHANGED across it. The caller
+    // while the Ignore Waveform Magnification lamp is lit) ACTUALLY CHANGED
+    // across it. The caller
     // captures `waveform_gain_hash()` BEFORE its store write and hands it to
     // `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives here and
-    // nowhere else. A write the picture cannot see — any write at a zoom
-    // coarser than working, a level equal to the one already in force —
+    // nowhere else. A write the picture cannot see — any write while the lamp
+    // is lit, a level equal to the one already in force —
     // changes the store and not the profile, and must not drain the worker and
     // re-render the whole plate.
     uint64_t waveform_gain_hash() const;

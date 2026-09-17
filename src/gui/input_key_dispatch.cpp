@@ -388,6 +388,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
+    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-17): a
+    // display posture about the picture, authoring nothing the lock protects,
+    // so it is admitted on a locked tab — and under the grid-iterations lock,
+    // whose gate falls through to this list.
+    const bool is_ignore_magnification =
+        (key == GuiKeys::BracketRight && !ctrl && !shift && !alt);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
@@ -600,7 +606,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_home_end || is_page_updown ||
              is_zero ||
              is_follow ||
-             is_restrict_undo ||
+             is_restrict_undo || is_ignore_magnification ||
              is_center ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -2685,6 +2691,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
+    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-17): a pure
+    // display posture, and the view's plate shows the LIVE store's
+    // magnification (effective_waveform_gain_profile has no view term), so the
+    // lamp changes what this view paints and is admitted; its button stays
+    // live through the derived partition.
+    const bool is_ignore_magnification = (key == GuiKeys::BracketRight && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
     // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
@@ -2855,7 +2867,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zero || is_page_updown ||
+    return !(is_zero || is_ignore_magnification || is_page_updown ||
              is_view_selector || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q || is_open_project || is_revert_project ||
@@ -8911,6 +8923,15 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // History-less, one-shot — and nothing moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
+        break;
+    case GuiKeys::BracketRight:
+        // Toggle the Ignore Waveform Magnification lamp (architect
+        // 2026-09-17). The setter is GuiInputHandler::
+        // set_ignore_waveform_magnification, shared with the icon-row button's
+        // synthesized chord and with nothing else. History-less, one-shot,
+        // legal on a locked tab, under the iteration lock and in the `h` view;
+        // it refuses nowhere, so it has no card.
+        set_ignore_waveform_magnification(!app.ignore_waveform_magnification);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

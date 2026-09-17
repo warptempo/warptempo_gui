@@ -58,7 +58,8 @@ struct WaveformJob {
     int       inset_px         = 0;
 
     // THE WAVEFORM'S GAIN PROFILE (effective_waveform_gain_profile — the
-    // per-section magnification at the working zoom or finer, empty coarser),
+    // per-section magnification, empty while the Ignore Waveform Magnification
+    // lamp is lit),
     // an owned
     // snapshot taken on the GUI thread at job submission exactly as the warp
     // map is, so the worker reads no live store. Its HASH is the FINGERPRINT

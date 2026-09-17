@@ -381,9 +381,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // motion that moves a boundary re-renders the plate synchronously in THIS
     // frame — through the gain category's one owner, which renders nothing when
     // the hash did not move (a warp or phase-reset drag, a motion within one
-    // column, two neighbouring sections at the same level). At a zoom coarser
-    // than working the effective profile is empty on both sides of the motion,
-    // so the kick renders nothing there either.
+    // column, two neighbouring sections at the same level). While the Ignore
+    // Waveform Magnification lamp is lit the effective profile is empty on
+    // both sides of the motion, so the kick renders nothing there either.
     //
     // WHY A SYNCHRONOUS RENDER IS SAFE UNDER THE DRAG'S FREEZE HERE
     // (displayed_basis_frozen names app.drag.active): the freeze protects the

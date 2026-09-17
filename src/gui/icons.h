@@ -149,6 +149,11 @@ enum class Icon {
     // other button wearing them.
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
+    // ZOOM-OUT-Y, the vertical magnifier's minus (the ruler beside a minus):
+    // worn by the Ignore Waveform Magnification lamp behind Center (architect
+    // 2026-09-17), restored with its def and asset from the lamp's first
+    // stand of 2026-09-14.
+    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `]`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -430,7 +435,9 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 48 SINCE 2026-09-16, THE MEASURES FEATURE'S DELETION (architect
+// 49 SINCE 2026-09-17, when zoom-out-y came back with the Ignore Waveform
+// Magnification lamp that wears it (architect 2026-09-17). It was
+// 48 from 2026-09-16, THE MEASURES FEATURE'S DELETION (architect
 // 2026-09-16): minuet-scales left with the Marker Measure button that wore
 // it — enumerator, def and asset together. It was 49 from 2026-09-15, the
 // per-marker magnification's retirement, when zoom-in-y left with the
@@ -441,7 +448,7 @@ enum class Icon {
 // align-horizontal-center and zoom-out-y left with the two lamps that wore
 // them. The count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 48;
+inline constexpr int kIconCount = 49;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

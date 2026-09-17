@@ -178,7 +178,7 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app) {
-    if (!zoom_level_at_or_finer_than_working(app.zoom_level)) {
+    if (app.ignore_waveform_magnification) {
         static const WaveformGainProfileCache kUnmagnified = [] {
             WaveformGainProfileCache c;
             c.valid = true;

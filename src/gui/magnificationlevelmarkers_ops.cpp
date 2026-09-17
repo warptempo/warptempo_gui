@@ -317,9 +317,9 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // against the live effective profile's) answers both halves at once: a
     // camera move that rendered leaves the fingerprint current and nothing more
     // is owed; a hold that moved no viewport, or none at all coarser than
-    // working, leaves it stale exactly when the profile moved — and coarser
-    // than working the effective profile is empty on both sides, so nothing
-    // renders there either, the cluster's own rule. No hash fallback is kept
+    // working, leaves it stale exactly when the profile moved — and while the
+    // Ignore Waveform Magnification lamp is lit the effective profile is empty
+    // on both sides, so nothing renders there either, the cluster's own rule. No hash fallback is kept
     // for the unwired case: the predicate is wired in main.cpp ahead of the
     // loop, and the drag's release relies on the same wiring; with no plate
     // displayed it answers false and the tick's dirty-detect renders the first
