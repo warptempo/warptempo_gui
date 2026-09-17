@@ -427,8 +427,8 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 // workflow (parking the playhead upstream) is supplied by the audition
 // scrub instead.
 //
-// No drag recenters the viewport (the one recenter is the Left/Right nudge's,
-// Viewport::recenter_after_nudge).
+// No drag moves the viewport (the Left/Right nudge's held column is a nudge's
+// alone, Viewport::hold_subject_column_after_nudge).
 //
 // Write-back step: the live store was untouched throughout motion (the
 // proposed position lived in app.drag.moveable_times and paint read

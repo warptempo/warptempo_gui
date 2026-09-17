@@ -8835,17 +8835,22 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // which is why the buttons' face can read the BARE step and still answer
     // for all three (the twin rule's own resolution, at
     // horizontal_arrow_step_actionable).
+    // THE HELD COLUMN (the rule at Viewport::hold_subject_column_after_nudge):
+    // the subject's place is captured BEFORE the step — the cursor and the
+    // viewport it painted on, the landing's keep-visible edge-align being free
+    // to scroll that viewport — and a step that moved the cursor then places
+    // the viewport so the cursor paints in that same column, clamped to the
+    // waveform's edge columns, at the working zoom or finer (never changing
+    // the zoom), in every view, target view on the warp column included; a
+    // walled step moved nothing and moves no camera. Every magnitude and every
+    // held repeat — the key's and the Left / Right buttons' — runs through
+    // this body, so the column holds at each step.
     const int64_t cursor_before = app.playhead_cursor_sample;
+    const int64_t viewport_start_before = app.viewport_start_sample;
     viewport.move_playhead_pixels(step_columns);
-    // THE RECENTER (the rule at Viewport::recenter_after_nudge): a step that
-    // moved the cursor recenters on it at the working zoom or finer (never
-    // changing the zoom), in every view
-    // target view on the warp column included; a walled step moved nothing
-    // and recenters nothing. Every magnitude and
-    // every held repeat — the key's and the Left / Right buttons' — runs
-    // through this body, so the recenter lands at each step.
     if (app.playhead_cursor_sample != cursor_before)
-        viewport.recenter_after_nudge();
+        viewport.hold_subject_column_after_nudge(cursor_before,
+                                                 viewport_start_before);
 }
 
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {

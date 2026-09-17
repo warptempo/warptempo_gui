@@ -19,7 +19,7 @@
 // it to kick_waveform_sync_if_gain_changed after; THE NUDGE ASKS THE DISPLAYED
 // PLATE INSTEAD (architect 2026-09-16, at its tail), because its shared commit
 // tail may already have rendered the new gain through the at-working
-// recentre, and a compare against the pre-write hash would render that same
+// held-column move, and a compare against the pre-write hash would render that same
 // plate twice. The comments here carry only what is this column's.
 
 namespace {
@@ -296,27 +296,27 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
                                            std::move(touched_live));
     }
     // Shared commit tail: record/dirty/invalidate, playhead follow, the
-    // at-working recentre, and the point command's region collapse. IT PASSES
+    // at-working held column, and the point command's region collapse. IT PASSES
     // A NULL GuiTargetRender — this column reaches no render input, so the
     // tail's (h) is skipped and the PICTURE's repayment takes its place below
     // (the pointer's contract is at finish_position_nudge's declaration).
     finish_position_nudge(app, audio, viewport, undo,
                           GestureKind::MagnificationLevelNudge, merge,
-                          committed_f, /*target_render=*/nullptr);
+                          orig_f, committed_f, /*target_render=*/nullptr);
     // THE PICTURE IS REPAID ONLY WHERE THE DISPLAYED PLATE IS STALE (architect
     // 2026-09-16, "prefer the correct way"): the M drag's release rule
     // (MarkerDragOps::commit_drag's tail) rather than the cluster's pre-write
     // hash compare. The tail above may already have rendered the new gain —
-    // at the working zoom or finer its recentre moves the viewport through
-    // center_viewport_on_playhead, whose synchronous kick reads the committed
+    // at the working zoom or finer its held-column move shifts the viewport
+    // through hold_subject_column_after_nudge, whose synchronous kick reads the committed
     // store's profile and publishes the displayed fingerprint with it — and a
     // compare against the hash captured BEFORE the write would then render
     // that same plate a second time, synchronously, on every held repeat that
     // moved a breakpoint. Asking the DISPLAYED plate's own gain fingerprint
     // (Viewport::displayed_plate_gain_is_stale — its published gain hash
     // against the live effective profile's) answers both halves at once: a
-    // recentre that rendered leaves the fingerprint current and nothing more
-    // is owed; a recentre that moved no viewport, or none at all coarser than
+    // camera move that rendered leaves the fingerprint current and nothing more
+    // is owed; a hold that moved no viewport, or none at all coarser than
     // working, leaves it stale exactly when the profile moved — and coarser
     // than working the effective profile is empty on both sides, so nothing
     // renders there either, the cluster's own rule. No hash fallback is kept

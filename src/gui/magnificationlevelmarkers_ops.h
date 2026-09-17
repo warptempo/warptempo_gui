@@ -38,7 +38,7 @@ class GuiAudio;
 //     moves no hash and renders nothing, which is that owner's own rule. THE
 //     NUDGE IS THE ONE EXCEPTION (architect 2026-09-16): its shared commit
 //     tail may already have rendered the new gain through the at-working
-//     recentre, so it asks the DISPLAYED plate's gain fingerprint instead
+//     held-column move, so it asks the DISPLAYED plate's gain fingerprint instead
 //     (Viewport::displayed_plate_gain_is_stale, the M drag release's rule)
 //     and renders only a plate that is still stale.
 //

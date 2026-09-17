@@ -667,17 +667,21 @@ void Viewport::center_viewport_on_playhead() {
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample = target - visible / 2;
     clamp_viewport_start(app, audio);
-    if (app.viewport_start_sample != old_vp) {
-        invalidate_waveform_area();
-        const GuiRect ts = top_strip_area(app);
-        gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
-        if (playback.is_playing()) playback.resync_predictor();
-        // Viewport actually moved (inside the changed guard). Center-on-
-        // playhead is a one-shot discrete jump (the C key, the Tab recenter
-        // family and the nudge's recenter at the working zoom or finer) — render the plate synchronously so the playhead overlay does
-        // not lead the waveform by a frame.
-        kick_waveform_sync();
-    }
+    if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
+}
+
+// THE DISCRETE MOVE'S TAIL, shared by center_viewport_on_playhead and
+// hold_subject_column_after_nudge — the two one-shot camera jumps that land
+// the viewport on a playhead: waveform and top-strip damage, the predictor
+// re-anchored if playing, and the synchronous rebuild so the playhead overlay
+// does not lead the waveform by a frame. Callers invoke it on their changed
+// path alone.
+void Viewport::finish_discrete_viewport_move() {
+    invalidate_waveform_area();
+    const GuiRect ts = top_strip_area(app);
+    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    if (playback.is_playing()) playback.resync_predictor();
+    kick_waveform_sync();
 }
 
 uint64_t Viewport::waveform_gain_hash() const {
@@ -703,26 +707,61 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
-// THE NUDGE'S RECENTER (architect 2026-09-14, deriving it from the zoom; the
-// declaration in viewport.h states the rule): a Left/Right nudge that MOVED
-// SOMETHING calls this on its changed path, and AT THE WORKING ZOOM OR FINER
-// (zoom_level_at_or_finer_than_working) the viewport recenters on the result
-// through center_viewport_on_playhead — the standing zoom, the clamp at the
-// song's two ends, the pan's damage and the synchronous rebuild; coarser the
-// camera holds. Both
-// nudges have stopped playback before their write, so the body's ternary takes
-// the resting cursor, which is where each nudge has just put the playhead.
-// TWO CALLERS: the marker nudge's commit tail (finish_position_nudge,
-// position_nudge.cpp) and the waveform-lane playhead step
-// (GuiInputHandler::run_waveform_lane_playhead_step). A held key's repeats and
-// a held arrow button's fires reach both through the same act bodies, so the
-// recenter runs at every step. NO VIEW TERM: in target view on the warp column
-// the marker nudge is refused upstream (active_column_authoring_allowed) and
-// never arrives, while the playhead step recenters there as anywhere. THE
-// ZOOM IS NEVER CHANGED HERE: a finer level recenters at that level.
-void Viewport::recenter_after_nudge() {
+// THE NUDGE HOLDS ITS SUBJECT'S COLUMN (architect 2026-09-17: "I like to see
+// every delta when nudging" — the centring it replaced swallowed the first
+// nudge's pixel in its jump; it centred on the result 2026-09-14 to
+// 2026-09-17). A Left/Right nudge that MOVED SOMETHING calls this on its
+// changed path, and AT THE WORKING ZOOM OR FINER
+// (zoom_level_at_or_finer_than_working, the placement-instrument principle)
+// the viewport is placed so the subject — the resting cursor the nudge has
+// just landed — paints in THE COLUMN IT PAINTED IN BEFORE THE NUDGE, clamped
+// into the waveform's first and last columns; coarser the camera holds. So an
+// onscreen subject keeps its exact screen column and the waveform slides under
+// it by the nudge's own delta, and a subject that was offscreen lands on the
+// edge column on its side and stays there on later nudges, the window walking
+// with it. NOTHING CENTRES: `c` is the centring act, this only shows the
+// subject is falling off screen.
+//
+// THE PRIOR VIEWPORT IS A PARAMETER because the landing has already run: the
+// movement owner's keep-visible edge-align (reseat_playhead_to) may have
+// scrolled the viewport before this body is reached, so the column is taken
+// against the viewport the subject painted on before the nudge. THE SAMPLE
+// OFFSET IS HELD, not a re-rounded column: offset = prior subject − prior
+// start, clamped into [0, floor((w − 1)·q)] with q the painter-quantized spp
+// (painter_samples_per_pixel) — the painted column is nearbyint(offset / q)
+// (displayed_column_at, the playhead's and the stems' placement), so offset 0
+// paints column 0 and the upper bound paints column w − 1, never one past it.
+// The new start is new subject − offset through clamp_viewport_start, whose
+// grid snap absorbs the sub-sample residue of a column-anchored step, and
+// whose song-end clamp WINS at the song's two ends: there the column cannot
+// be held and the subject walks toward the wall instead — accepted. A move
+// that changes nothing (a zero delta) repaints nothing.
+//
+// Both nudges have stopped playback before their write, so the cursor is the
+// subject. TWO CALLERS: the marker nudge's commit tail (finish_position_nudge,
+// position_nudge.cpp — the focused marker's pre-write frame in the active
+// domain) and the waveform-lane playhead step
+// (GuiInputHandler::run_waveform_lane_playhead_step — the cursor before the
+// step). A held key's repeats and a held arrow button's fires reach both
+// through the same act bodies, so the hold runs at every step. NO VIEW TERM:
+// in target view on the warp column the marker nudge is refused upstream
+// (active_column_authoring_allowed) and never arrives, while the playhead step
+// holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE.
+void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
+                                               int64_t prior_viewport_start) {
     if (!zoom_level_at_or_finer_than_working(app.zoom_level)) return;
-    center_viewport_on_playhead();
+    if (audio.total_frames() <= 0) return;
+    const GuiRect area = waveform_area(app);
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0 || area.w <= 0) return;
+    const int64_t last_offset = static_cast<int64_t>(
+        std::floor(static_cast<double>(area.w - 1) * q));
+    const int64_t offset = std::clamp<int64_t>(
+        prior_subject_sample - prior_viewport_start, 0, last_offset);
+    const int64_t old_vp = app.viewport_start_sample;
+    app.viewport_start_sample = app.playhead_cursor_sample - offset;
+    clamp_viewport_start(app, audio);
+    if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }
 
 // Auto-follow during playback: when the scanner leaves the viewport,

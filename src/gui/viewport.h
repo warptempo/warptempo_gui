@@ -131,7 +131,7 @@ struct Viewport {
     //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
     //    release's or the nudge's plate lands in its own frame — the nudge
     //    asks the displayed plate rather than a pre-write hash because its
-    //    shared commit tail's at-working recentre may already have rendered
+    //    shared commit tail's at-working held-column move may already have rendered
     //    the new gain (architect 2026-09-16). THE LEVEL WRITERS THAT CARRY
     //    A GAIN-CHANGE KICK OF THEIR OWN call kick_waveform_sync_if_gain_changed
     //    (re-grepped 2026-09-16): the authoring cluster's four hash-comparing
@@ -366,13 +366,18 @@ struct Viewport {
     // with the incremental path retired every scroll renders synchronously.
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
-    // THE NUDGE'S RECENTER (architect 2026-09-14): a Left/Right nudge that
-    // moved something recenters on the playhead it just moved IFF the zoom is
-    // at working or finer (zoom_level_at_or_finer_than_working), at that zoom
-    // and never changing it; coarser the camera holds. No lamp and no view
-    // term. The two callers
-    // are named at the definition.
-    void recenter_after_nudge();
+    // THE NUDGE HOLDS ITS SUBJECT'S COLUMN (architect 2026-09-17): a
+    // Left/Right nudge that moved something places the viewport so the
+    // playhead it just landed paints in the column the subject painted in
+    // before the nudge (prior subject sample against the prior viewport start),
+    // clamped into the waveform's first and last columns, IFF the zoom is at
+    // working or finer (zoom_level_at_or_finer_than_working), never changing
+    // the zoom; coarser the camera holds. No centring, no lamp, no view term.
+    // The clamp derivation and the two callers are at the definition.
+    void hold_subject_column_after_nudge(int64_t prior_subject_sample,
+                                         int64_t prior_viewport_start);
+    // The changed-path tail the two one-shot playhead camera jumps above share.
+    void finish_discrete_viewport_move();
     void follow_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the

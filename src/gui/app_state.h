@@ -11612,7 +11612,7 @@ enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 // finer (a smaller level is finer), the line inclusive; false coarser. The
 // ONE AT-OR-FINER PREDICATE, the spelling THREE readers share, each deriving a
 // posture from the zoom (architect 2026-09-14): the Left/Right nudge's
-// recenter (Viewport::recenter_after_nudge), the waveform gain gate
+// held column (Viewport::hold_subject_column_after_nudge), the waveform gain gate
 // (effective_waveform_gain_profile, warp_frame_map_view.cpp — a gain profile
 // applies finer than working too) and the bare Tab walk's framing
 // (marker_walk_frame, below).

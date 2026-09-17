@@ -183,8 +183,8 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
-    GestureKind kind, bool merged, int64_t committed_focused_frame,
-    GuiTargetRender* target_render) {
+    GestureKind kind, bool merged, int64_t prior_focused_frame,
+    int64_t committed_focused_frame, GuiTargetRender* target_render) {
     // (a) settle the burst: re-stamp this press's kind for the next coalesce
     // test, or — on a MERGED press whose mutation returned the stores to the
     // burst entry's own snapshot — POP that entry, the byte-equal pop
@@ -210,18 +210,30 @@ void finish_position_nudge(
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
     // (e) playhead follows the nudged marker's committed frame through the
-    // movement owner.
+    // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f): the
+    // focused marker's pre-write frame in the active domain (the identity in
+    // source view; a target-view nudge exists only on the P column, which is
+    // no map input, so the map translating it is the one it painted under) and
+    // the viewport it painted on — (e)'s keep-visible edge-align may scroll
+    // that viewport, and nothing between the twin's capture of the frame and
+    // here moves it.
+    const int64_t prior_subject_sample =
+        source_frame_to_active_domain(app, audio, prior_focused_frame);
+    const int64_t prior_viewport_start = app.viewport_start_sample;
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) THE RECENTER: at the working zoom or finer the viewport recenters on the
-    // playhead (e) just landed on the nudged marker — at every step, a held
-    // key's repeats and a held arrow button's fires included, because each of
-    // them runs this tail; coarser the camera holds. This tail is the nudge's
-    // CHANGED path (each twin returns on its post-clamp identity no-op before
-    // reaching it), so a walled press recenters nothing — a 2+ press walled
-    // after its collapse keeps the collapse and the land, and nothing more.
-    // The rule and body are at Viewport::recenter_after_nudge.
-    viewport.recenter_after_nudge();
+    // (f) THE HELD COLUMN: at the working zoom or finer the viewport is placed
+    // so the playhead (e) just landed on the nudged marker paints in the
+    // column the marker painted in before the nudge, clamped to the waveform's
+    // edge columns — at every step, a held key's repeats and a held arrow
+    // button's fires included, because each of them runs this tail; coarser
+    // the camera holds. This tail is the nudge's CHANGED path (each twin
+    // returns on its post-clamp identity no-op before reaching it), so a
+    // walled press moves no camera — a 2+ press walled after its collapse
+    // keeps the collapse and the land, and nothing more. The rule and body are
+    // at Viewport::hold_subject_column_after_nudge.
+    viewport.hold_subject_column_after_nudge(prior_subject_sample,
+                                             prior_viewport_start);
     // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,
     // and discarding nothing — the trim stands behind it. IT NEEDS NO CALL OF

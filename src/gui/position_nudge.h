@@ -327,12 +327,16 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     cursor field only (playback was stopped by the prologue, past its
 //     refusal verdict and ahead of the first write, so this tail always runs
 //     stopped).
-// (f) THE RECENTER: Viewport::recenter_after_nudge, which at the working zoom or finer
-//     recenters the viewport on the playhead (e) just landed (the rule at its
-//     declaration, viewport.h). Every press that reaches this
-//     tail moved its marker — the twins return on the post-clamp identity
-//     no-op first — so a walled press recenters nothing, and a held key's or
-//     button's repeats each run the tail and recenter at every step.
+// (f) THE HELD COLUMN: Viewport::hold_subject_column_after_nudge, which at the
+//     working zoom or finer places the viewport so the playhead (e) just
+//     landed paints in the column the marker painted in before the nudge
+//     (prior_focused_frame, the twin's pre-write frame, taken into the active
+//     domain against the viewport as it stood ahead of (e)'s edge-align),
+//     clamped to the waveform's edge columns (the rule at its declaration,
+//     viewport.h). Every press that reaches this tail moved its marker — the
+//     twins return on the post-clamp identity no-op first — so a walled press
+//     moves no camera, and a held key's or button's repeats each run the tail
+//     and hold the column at every step.
 // (g) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
 //     singleton — and it discards nothing, the trim standing behind it. It owes
@@ -403,5 +407,5 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // nothing the playhead move writes.
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
-    GestureKind kind, bool merged, int64_t committed_focused_frame,
-    GuiTargetRender* target_render);
+    GestureKind kind, bool merged, int64_t prior_focused_frame,
+    int64_t committed_focused_frame, GuiTargetRender* target_render);

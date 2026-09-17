@@ -1649,7 +1649,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // view-independent target trigger (no synchronous re-warp — source-view warp
     // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,
-                                GestureKind::WarpNudge, merge, committed_f,
+                                GestureKind::WarpNudge, merge, orig_f, committed_f,
                                 &target_render);
     return std::nullopt;
 }
