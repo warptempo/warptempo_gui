@@ -45,10 +45,12 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
             // deliberately so: this arm writes no authored, transport or modal
             // state, and its whole purpose — the Bluetooth audio link coming
             // up under the car's fade-in — holds whatever stands on the
-            // screen, so admits() has nothing to say about it. The answer is
-            // IGNORED: a console key is not a deliberate press at the glass,
-            // so a failed reopen raises no card; the next real press meets the
-            // launch gates and cards there.
+            // screen, so admits() has nothing to say about it — and the
+            // render player's own arm answers ahead of its prompt guard for
+            // that same reason, so both car roads answer a connect alike. The
+            // answer is IGNORED: a console key is not a deliberate press at
+            // the glass, so a failed reopen raises no card; the next real
+            // press meets the launch gates and cards there.
             (void)playback.ensure_device_available_for_play();
             return;
         case Kind::Pause:

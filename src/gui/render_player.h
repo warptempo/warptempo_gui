@@ -629,9 +629,10 @@ struct GuiRenderPlayer {
     // drives the project's own transport), and this guard catches only a
     // command queued before the close drained. It is the player's own
     // statement about the state it needs — the same kind as the PROMPT guard
-    // beside it, which drops every command while a question stands over the
-    // player (the load confirmation): the car's buttons are the player's
-    // acts, not a question's answer.
+    // behind it, which drops every command BUT PLAY while a question stands
+    // over the player (the load confirmation): the car's buttons are the
+    // player's acts, not a question's answer, while Play is not an act on the
+    // player at all (its arm below).
     //
     // A CAR COMMAND ACTS UNDER A POINTER DRAG exactly as the modal row's own
     // button would, and that is deliberate: the keyboard's drag swallow
@@ -665,10 +666,14 @@ struct GuiRenderPlayer {
     //     it SILENT under the car's own fade-in, where the crackle is spent.
     //     No transport starts, nothing is published, and a failed reopen
     //     raises NO CARD — a console key is not a deliberate press at the
-    //     glass, and the next real press cards at the launch gates. It stands
-    //     behind this body's two head guards above (the mode belt and the
-    //     prompt), unlike the car transport's own ungated arm; the asymmetry
-    //     and its reason are recorded at the site.
+    //     glass, and the next real press cards at the launch gates. IT IS
+    //     ANSWERED AHEAD OF THE PROMPT GUARD, at the head of that body rather
+    //     than in its switch, as the car transport's own arm stands ahead of
+    //     admits(): the reopen writes no authored, transport, modal or
+    //     published state and its purpose holds whatever stands on the screen,
+    //     so a question over the player has nothing to protect from it and
+    //     BOTH CAR ROADS ANSWER A CONNECT ALIKE. Only the mode belt stands in
+    //     front of it.
     //   Previous / Next -> car_previous() / car_next(), the playlist walk with
     //     the up-a-folder exit (their contract is at the declarations).
     //   Stop -> PAUSE AND THEN HOME, two direct acts in order (architect

@@ -1491,10 +1491,38 @@ void GuiRenderPlayer::close() {
 // -- The car ---------------------------------------------------------------------
 
 void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
+    using Kind = GuiMediaCommand::Kind;
     const AppState::RenderPlayer& rp = app.render_player;
     // Belt: the hook's fork on this very bit is the partition, so a command
     // reaching here with the mode down was queued before the close drained.
     if (!rp.active) return;
+    // PLAY IS THE ONE KIND ANSWERED AHEAD OF THE PROMPT GUARD, and the arm
+    // stands here whole — the switch below carries a pointer back to it.
+    //
+    // PLAY MEANS REOPEN THE STREAM AND START NOTHING (architect 2026-09-18,
+    // measured in the car; the car transport's table owns the measurement and
+    // the accepted cost). The Accord sends a plain KEYCODE_MEDIA_PLAY about a
+    // second after the Bluetooth link comes up — that IS its autoplay — while
+    // every human press arrives as Pause, the dummy display leaving the
+    // console nothing else to send; the connect kills the AAudio stream and
+    // nothing but a press reopens it, so the arm reopens it and starts it
+    // SILENT under the car's own fade-in, where the crackle is spent. No
+    // transport starts, nothing is published, and the answer is ignored — a
+    // console key is not a deliberate press at the glass, so a failed reopen
+    // raises no card and the next real press cards at the launch gates.
+    //
+    // THE PROMPT HAS NOTHING TO PROTECT FROM IT, which is why it runs first:
+    // the reopen writes no authored, transport, modal or published state, and
+    // its whole purpose — the Bluetooth audio link coming up under the car's
+    // fade-in — holds whatever stands on the screen, exactly as it does for
+    // GuiCarTransport::on_media_command's own ungated arm, so both car roads
+    // answer a connect alike whether or not a load confirmation happens to be
+    // standing. The MODE BELT above it stays the player's own statement about
+    // the state it needs, and EVERY OTHER KIND is still the prompt's to drop.
+    if (cmd.kind == Kind::Play) {
+        (void)playback.ensure_device_available_for_play();
+        return;
+    }
     if (app.prompt.active) return; // a question on the screen is answered there
 
     // EVERY COMMAND IS A DIRECT ACT ON THIS CLUSTER (architect 2026-09-12,
@@ -1516,31 +1544,10 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     // no armed press (a row lift re-hits the published rect), and the scrub's
     // release commits its seek against whatever item is live, clamped into it
     // by the mapping.
-    using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
         case Kind::Play:
-            // PLAY MEANS REOPEN THE STREAM AND START NOTHING (architect
-            // 2026-09-18, measured in the car; the car transport's table owns
-            // the measurement and the accepted cost). The Accord sends a plain
-            // KEYCODE_MEDIA_PLAY about a second after the Bluetooth link comes
-            // up — that IS its autoplay — while every human press arrives as
-            // Pause, the dummy display leaving the console nothing else to
-            // send; the connect kills the AAudio stream and nothing but a
-            // press reopens it, so this arm reopens it and starts it SILENT
-            // under the car's own fade-in, where the crackle is spent. No
-            // transport starts, nothing is published, and the answer is
-            // ignored — a console key is not a deliberate press at the glass,
-            // so a failed reopen raises no card and the next real press cards
-            // at the launch gates.
-            //
-            // THE ASYMMETRY WITH THE CAR TRANSPORT'S OWN ARM, recorded rather
-            // than repaired: that one is ungated, this one stands behind the
-            // two head guards above (the mode belt and the prompt), because
-            // they are early returns ahead of this switch and the reopen is
-            // not worth a second dispatch site in front of them. A reopen
-            // skipped because a load confirmation happened to stand at the
-            // connect is spent by the next command instead.
-            (void)playback.ensure_device_available_for_play();
+            // Answered at the head of this body, ahead of the prompt guard,
+            // and so never reached here; the arm and its reason are there.
             return;
         case Kind::Pause:
         case Kind::PlayPause:

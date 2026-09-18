@@ -218,7 +218,10 @@ struct GuiCarTransport {
     //     there: the Bluetooth audio link comes up under the car's own
     //     fade-in, where the connect's crackle is spent, and the constant
     //     stream this car design rests on begins at the connect. A healthy
-    //     stream makes the call a no-op.
+    //     stream makes the call a no-op. THE RENDER PLAYER'S OWN ARM ANSWERS
+    //     AHEAD OF ITS PROMPT GUARD on the same reason (architect 2026-09-18,
+    //     "we want symmetry as much as possible"), so both car roads answer a
+    //     connect alike whatever stands on the screen.
     //     THE ACCEPTED COST: a PLAY key can no longer start
     //     playback from any remote — it costs nothing while the dummy display
     //     stands, because a remote that believes PLAYING sends PAUSE, and the
