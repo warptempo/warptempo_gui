@@ -264,26 +264,36 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
-// THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE (architect
-// 2026-09-17: magnification applies at EVERY zoom — "now I have more control
-// over it and feel more comfortable" — and the Ignore Waveform Magnification
-// lamp, bare `]`, is the one way to set it aside): the LIVE magnification
-// level store's memoized profile (waveform_gain_profile_cached above) — else,
-// WHILE THE LAMP IS LIT (AppState::ignore_waveform_magnification), the EMPTY
-// profile, level 0 everywhere, hash 0. No zoom term and no view term: target
-// view, source view and the `h` view answer alike, the `h` view's plate
-// showing the LIVE store's gain, never the viewed checkpoint's. ONE place, so
-// the picture caches' existing hash keys re-render on the lamp's write with no
-// per-caller code (a live store with no enabled level above 0 is hash 0 as
-// well, and there the two answers are rightly the same picture). The lamp is
-// display-only: the M column's authoring, its red cue, the drag slot's own
-// cache and the render never read this answer. READERS (re-grepped
+// THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE:
+// MAGNIFICATION FOLLOWS THE AUDIO VIEW (architect 2026-09-17) — the picture is
+// magnified in SOURCE view and flat in TARGET view, and there is no switch of
+// any kind. SOURCE ('S') answers the LIVE magnification level store's memoized
+// profile (waveform_gain_profile_cached above); TARGET ('T') answers the EMPTY
+// profile, level 0 everywhere, hash 0.
+//
+// THE DERIVATION: magnification serves FINE HORIZONTAL PLACEMENT, and the two
+// SOURCE views are what author it — S+W's warp markers and S+M's own level
+// boundaries — while the target view's authored column, the phase resets, moves
+// on the HOP LATTICE in quantized steps that no superfine picture helps. So the
+// answer is DERIVED from what the view authors rather than held by hand; the
+// placement-instrument principle (zoom-viewport-strip.md) is where that test
+// lives.
+//
+// AN AUDIO-VIEW TERM AND NOTHING ELSE: no zoom term (magnification applies at
+// every zoom level, architect 2026-09-17) and no mode term — the `h` view
+// follows the audio view it stands in, its plate showing the LIVE store's gain,
+// never the viewed checkpoint's. ONE place, so the picture caches' existing
+// hash keys re-render on the S/T flip with no per-caller code (a live store
+// with no enabled level above 0 is hash 0 as well, and there the two answers
+// are rightly the same picture; the flip's own kick_waveform_sync is what
+// publishes it). DISPLAY-ONLY: the M column's authoring, its red cue, the drag
+// slot's own cache and the render never read this answer. READERS (re-grepped
 // 2026-09-17): the plate's render inputs (compute_waveform_render_inputs),
 // the plate FINGERPRINT's own gain field and the gain kick's hash
 // (Viewport::waveform_gain_hash). While a MAGNIFICATION-LEVEL-column marker
-// drag stands with the lamp dark the live answer is the DRAG SLOT's
-// (waveform_gain_profile_drag_cached, above), so the picture shows the store as
-// the release would leave it.
+// drag stands — source view alone, that column existing in no other — the live
+// answer is the DRAG SLOT's (waveform_gain_profile_drag_cached, above), so the
+// picture shows the store as the release would leave it.
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app);
 

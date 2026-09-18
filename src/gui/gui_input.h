@@ -676,9 +676,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
         case GuiKeys::BracketLeft: return bare || sh;
-        // Toggle Ignore Waveform Magnification (architect 2026-09-17), bound
-        // in both modes: a display posture the `h` view admits too.
-        case GuiKeys::BracketRight: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it

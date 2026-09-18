@@ -169,8 +169,8 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
-    // The waveform PICTURE's gain profile, at every zoom and empty while the
-    // Ignore Waveform Magnification lamp is lit
+    // The waveform PICTURE's gain profile, at every zoom in source view and
+    // empty in target view
     // (effective_waveform_gain_profile — the `h` view's plate
     // included, it being the live plate), captured here
     // with the geometry as an owned snapshot, so the worker reads no live

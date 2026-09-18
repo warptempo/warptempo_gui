@@ -273,16 +273,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ctrl-drag and the pinch.)
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-17) — bare `]`, a
-    // TOGGLE with a lamp, right after `c` and ahead of Follow. Live on a
-    // locked tab, under the grid-iterations lock and in the `h` view (a
-    // display posture on all three allowlists); it greys nowhere.
-    {RedesignButton::IconIgnoreWaveformMagnification,
-     GuiKeys::BracketRight, false, false, false, false, true},                     // bare ]
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain is a per-section profile resolved from the
-    // warp markers now.)
+    // magnification level markers column now. THE `]` MAGNIFICATION LAMP'S ROW
+    // went the same way on 2026-09-17, with its button, when magnification
+    // became a function of the audio view; `]` is unbound.)
     // FOLLOW — the ZOOM GROUP'S LAST MEMBER since 2026-08-27, and the last
     // survivor of the mass-marker category. Bare `f`, a TOGGLE with a lamp,
     // consumed by the `h` view and greyed in there.
@@ -7218,7 +7214,7 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's four, row 3's two
-// tabs, row 4's twenty-one — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
 // sixteen since 2026-09-16: the enum's
 // own count at kRedesignButtonCount — the stash is

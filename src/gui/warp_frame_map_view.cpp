@@ -178,7 +178,10 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app) {
-    if (app.ignore_waveform_magnification) {
+    // TARGET VIEW IS FLAT (the rule and its derivation are at the
+    // declaration): the phase resets it authors move on the hop lattice, which
+    // no magnified picture helps.
+    if (app.active_audio_view == 'T') {
         static const WaveformGainProfileCache kUnmagnified = [] {
             WaveformGainProfileCache c;
             c.valid = true;
