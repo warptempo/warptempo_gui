@@ -149,8 +149,16 @@ import java.nio.charset.StandardCharsets;
  * product's own, the native side forking them on whether the render player
  * stands -- ITS toggle between the item and silence and its playlist walk
  * with an up-a-folder exit, or, with it closed, the main window's play/pause
- * (which loops the trim) and the playhead's jumps to the trim's two ends --
- * and no key is synthesized either way. (Each command pressed one of
+ * (which loops the trim) and UNDO / REDO on the outer two -- and no key is
+ * synthesized either way. A BARE PLAY KEY IS NOT THAT TOGGLE ON EITHER SIDE
+ * OF THE FORK, THOUGH (architect 2026-09-18): a head unit sends it about a
+ * second after the Bluetooth link comes up as its autoplay, so the native
+ * side answers it with the audio stream's silent reopen and starts nothing --
+ * PAUSE and the undivided PLAY_PAUSE are the toggle instead, which is why
+ * onMediaButtonEvent below keeps MEDIA_PLAY a kind of its own rather than
+ * folding it into PLAY_PAUSE (the tables are at
+ * GuiCarTransport::on_media_command and GuiRenderPlayer::on_media_command on
+ * the native side). (Each command pressed one of
  * the player's keys until that day: Space, Home / End, Left / Right, and
  * Page Up / Page Down for the skips before 2026-08-31.) onMediaButtonEvent IS
  * OVERRIDDEN and the keycodes are mapped here, at once, rather than left to
