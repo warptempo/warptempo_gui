@@ -153,28 +153,36 @@ struct GuiMediaState {
     // spelling this carries. Never empty, for the title's reason and since the
     // same day.
     //
-    // WITH THE PLAYER CLOSED: THE VIEW ALONE — "T+W", the active views through
-    // the one speller view_pair_label (GuiCarTransport::derive). THE CONSOLE'S
-    // BOTTOM LINE.
+    // WITH THE PLAYER CLOSED: THE TAB AND THEN THE VIEW — "A) T+W", the
+    // active A/B tab's letter, a close parenthesis and a space, then the
+    // active views through the one speller view_pair_label, which carries no
+    // tab term of its own (the composition is GuiCarTransport::derive's).
+    // THE CONSOLE'S BOTTOM LINE.
     std::string artist;
     // The project's name, always and in EVERY arm of BOTH owners — the
     // console's DIM TOP LINE, above the title, and the one string that does
     // not move while the player is walked or the project's views are switched.
     std::string album;
-    // THE ITEM'S LENGTH IN MILLISECONDS, OR -1 FOR UNKNOWN — which is what the
-    // SILENCE TRACK sends, and what the PROJECT TRANSPORT sends always, the
-    // consuming side putting no duration key at all
-    // for a value of 0 or less (Android's "unknown"): the state says PLAYING
-    // at speed 1.0, so a real duration would run the console's clock into a
-    // track end that never comes. The player's item arm is the one arm that
-    // carries a real length.
+    // THE LENGTH OF WHAT IS SOUNDING, IN MILLISECONDS, OR -1 FOR UNKNOWN —
+    // the consuming side putting no duration key at all for a value of 0 or
+    // less (Android's "unknown"). A LENGTH IS PUBLISHED ONLY WHILE SOMETHING
+    // SOUNDS, on both owners and for one reason: the state says PLAYING at
+    // speed 1.0 always, so the console extrapolates a clock of its own and a
+    // length sent at rest would run it into the end of a track that is not
+    // playing. The player's ITEM arm carries the item's own length and its
+    // SILENCE TRACK sends -1; WITH THE PLAYER CLOSED the project transport
+    // sends THE TRIM WINDOW'S LENGTH while its loop is live — the trim is the
+    // whole lap, so the console's bar fills through it and refills at each
+    // wrap — and -1 at rest (GuiCarTransport::derive, which gates the length
+    // and the position below on one condition).
     int64_t     duration_ms    = 0;
     // MILLISECONDS INTO WHAT THE TITLE NAMES. The player's item arm carries
     // the engine's cursor in the item and its silence track sends 0. WITH THE
     // PLAYER CLOSED it is THE LOOP CLOCK — the cursor less the trim's begin —
     // while the project's transport is live, and 0 at rest, and it is
     // RE-PUSHED AT EVERY LOOP WRAP (GuiCarTransport::note_loop_wrap), so the
-    // console's clock re-starts at the trim's start on each lap: the one
+    // console's clock re-starts at the trim's start on each lap and, with the
+    // trim's length above it, its bar refills through each one: the one
     // freedom the dummy display has, truthful while a loop plays and a
     // running dummy at rest.
     int64_t     position_ms    = 0;

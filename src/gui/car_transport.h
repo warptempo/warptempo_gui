@@ -52,18 +52,26 @@ struct GuiInputHandler;
 // a no-op and the hook never fires, so nothing here has an effect there.
 //
 // THE THREE LINES, with the player closed (architect 2026-09-17): the ALBUM
-// (the console's dim top line) is the project's name, the ARTIST is THE VIEW
-// ALONE ("T+W" — view_pair_label, the view bar's one speller; no tab letter,
-// no trim span), and the TITLE, the big line, is WHERE THE SESSION STANDS,
-// SPELLED AS A BATCH CELL'S BASENAME IS — "<index>_<distance>", the live
-// state's number in the session walk's counting and its distance from the save
-// ("5_2", "3_0", "1_-2" — car_transport_title_line, the formula and the
-// spelling at its declaration) — so a Previous or Next reads back on the
-// console as both numbers stepping together. ONE COMPOSER, so a respelling is
-// one edit. The DURATION is unknown (-1: the console counts up with no end to
-// run into, the silence track's shape) and the POSITION is the loop clock
-// while a transport session is live — the cursor less the trim's begin — and
-// 0 at rest.
+// (the console's dim top line) is the project's name, the ARTIST is THE TAB
+// AND THEN THE VIEW ("A) T+W" — the active A/B tab's letter, a close
+// parenthesis and a space, then view_pair_label, the view bar's one speller,
+// which carries no tab term of its own), and the TITLE, the big line, is
+// WHERE THE SESSION STANDS, SPELLED AS A BATCH CELL'S BASENAME IS —
+// "<index>_<distance>", the live state's number in the session walk's counting
+// and its distance from the save ("5_2", "3_0", "1_-2" —
+// car_transport_title_line, the formula and the spelling at its declaration) —
+// so a Previous or Next reads back on the console as both numbers stepping
+// together. ONE COMPOSER PER LINE, so a respelling is one edit.
+//
+// THE CLOCK IS THE LOOP'S, AND SO IS THE LENGTH. The POSITION is the cursor
+// less the trim's begin while a transport session is live, and 0 at rest; the
+// DURATION is THE TRIM WINDOW'S OWN LENGTH under the SAME gate — the trim is
+// the whole lap, so the console's bar fills through it and refills at each
+// wrap, the way a media file's does (architect 2026-09-17, from the car) —
+// and -1, unknown, at rest, because the session says PLAYING at speed 1.0 at
+// all times and a length published at rest would run the console's own clock
+// into the end of a track that is not sounding. The one gate and the
+// audition's inherited approximation are stated at derive().
 //
 // THE PUBLISHER IS A PER-TICK COMPARATOR, NOT AN EDGE INVENTORY, and that is
 // a deliberate departure from the player's shape: the player pushes at the

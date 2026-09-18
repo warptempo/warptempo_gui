@@ -402,14 +402,15 @@ public class MainActivity extends NativeActivity {
     // something different -- ALBUM the project's name, the dim top line
     // taking the LEAST important of the three; ARTIST the folder (the
     // playing item's own while it sounds, otherwise the one the listing is
-    // in -- or, with the render player closed, THE TRIM SPAN of the piece
-    // being edited), the console's bottom line; TITLE the bare name of the
+    // in -- or, with the render player closed, THE A/B TAB AND THE VIEW,
+    // "A) T+W"), the console's bottom line; TITLE the bare name of the
     // playing file or of the highlighted row -- or, with the player closed,
-    // THE TAB AND THE VIEW. (The first try had it backwards: ARTIST
+    // WHERE THE SESSION STANDS IN THE UNDO HISTORY, spelled as a batch cell's
+    // basename is ("5_2"). (The first try had it backwards: ARTIST
     // carried the project's name and ALBUM the folder, on the assumption that
     // ARTIST was the top line -- it is the bottom one, and the ruling above
     // swapped the two strings once the layout was seen on the console
-    // itself.) DURATION is the item's length WHEN THERE IS ONE.
+    // itself.) DURATION is the length of what is sounding WHEN THERE IS ONE.
     //
     // THE STATE IS A DUMMY AND SAYS PLAYING WHENEVER THE APP IS RUNNING
     // (architect 2026-09-12, from the car, widened 2026-09-17 with the
@@ -420,14 +421,18 @@ public class MainActivity extends NativeActivity {
     // session tells it what it already believes and its one button becomes a
     // plain toggle. `playing` is the TRUE transport bit and is read HERE FOR
     // THE AUDIO FOCUS ALONE. A DURATION OF 0 OR LESS PUTS NO DURATION KEY AT
-    // ALL, which is Android's "unknown": with nothing sounding under the
-    // render player the native side
+    // ALL, which is Android's "unknown", AND A LENGTH ARRIVES ONLY WHILE
+    // SOMETHING SOUNDS: with nothing sounding under the render player the
+    // native side
     // sends a SILENCE TRACK naming the highlighted row at position 0 with the
     // duration unknown, so the console counts up from zero with no length to
     // run into (the rule is at GuiRenderPlayer::publish_media_state), and the
-    // PROJECT TRANSPORT sends the duration unknown always -- its clock is the
-    // loop's position inside the trim, re-sent at each lap
-    // (GuiCarTransport::derive).
+    // PROJECT TRANSPORT sends THE TRIM WINDOW'S LENGTH while its loop is live
+    // -- the trim is the whole lap, so the bar here fills through it and
+    // refills at each wrap, its clock being the loop's position inside the
+    // trim, re-sent at each lap -- and the duration unknown at rest, where a
+    // length under a PLAYING state would run this clock into a track end that
+    // is not sounding (GuiCarTransport::derive).
     // setActive FOLLOWS THE PUSH, and the push says active for the app's life
     // (architect 2026-09-17): the render player's open and close are the wire
     // changing owners on the native side, not the session coming and going, so

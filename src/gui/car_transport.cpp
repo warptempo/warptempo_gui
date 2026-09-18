@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 // The title (the formula, his example and the spelling at the declaration).
 std::string car_transport_title_line(const UndoHistory& history) {
@@ -117,16 +118,57 @@ GuiMediaState GuiCarTransport::derive() const {
     st.playing        = transport_session_live(app);
     st.album          = app.project_name;
     st.title          = car_transport_title_line(app.history);
-    st.artist         = view_pair_label(app.active_audio_view,
+    // THE ARTIST NAMES THE TAB AND THEN THE VIEW (architect 2026-09-17, from
+    // the car: "instead of just T+W it should say A) T+W"): the active A/B
+    // tab's own letter, a close parenthesis and a space, then the view pair
+    // exactly as the view bar spells it. THE TAB TERM IS THIS LINE'S ALONE —
+    // view_pair_label is the VIEW BAR's speller and its four buttons paint
+    // `T+W` with no tab in it — so the tab letter is composed here and in no
+    // other place.
+    st.artist         = std::string(1, app.active_tab_view) + ") " +
+                        view_pair_label(app.active_audio_view,
                                         app.active_markers_view);
+    // THE CLOCK, AND A LENGTH ONLY WHILE THE LOOP SOUNDS. The session is
+    // published PLAYING AT SPEED 1.0 AT ALL TIMES by ruling (the dummy
+    // display, the head comment), so the console extrapolates a clock of its
+    // own from every push: a duration published at rest would run that clock
+    // into the end of a track that is not sounding and stop it there. The
+    // render player's item arm draws the same line — its item carries a real
+    // length only while it sounds, and its silence track sends -1.
+    //
+    // ONE GATE SERVES BOTH FIELDS, NOT TWO. A live A/B audition sets
+    // transport_session_live as well, and it plays BOUNDED WINDOWS rather than
+    // the trim, so it inherits here exactly the approximation its position has
+    // always carried; no bit is added to tell a car loop from an audition,
+    // the engine exposing no main-thread "is looping" read (only
+    // consume_loop_wrap, which is the wrap's own edge).
     st.duration_ms    = -1;
     st.position_ms    = 0;
     const int64_t rate = audio.sample_rate();
     if (st.playing && rate > 0) {
+        // ONE PAIR OF BOUNDS FOR BOTH FIELDS, taken once: the trim window is
+        // the car loop's whole lap, so its LENGTH is the track's length and
+        // the cursor's distance from its begin is the position.
+        // Viewport::trim_range answers the ACTIVE DOMAIN's bounds (source
+        // frames in source view, the live target domain's through the map in
+        // target view, navigation_trim_range).
+        const std::pair<int64_t, int64_t> trim = viewport.trim_range();
+        // ONE DIVISOR SERVES BOTH, AND NEITHER FORKS ON THE AUDIO VIEW: the
+        // render body's per-output-frame increment is source_rate /
+        // output_rate whichever buffer is bound (playback_common.h), so the
+        // bound buffer's frames are consumed at the source's own rate in
+        // either domain.
+        const int64_t span = trim.second - trim.first;
+        // A DEGENERATE OR CROSSED PAIR PUBLISHES NO LENGTH: the range clamps
+        // each side into the domain and deliberately does NOT order them
+        // (mid-gesture crossing is free and this runs per tick), so the
+        // unknown -1 above stands rather than a negative or zero length the
+        // console would have to interpret.
+        if (span > 0) st.duration_ms = span * 1000 / rate;
         // The loop clock: the predictor's position less the trim's begin,
         // floored at 0 (a position under the begin is the launch anchor's
         // floor or the frame before a resync lands, both momentary).
-        int64_t pos = playback.cursor() - viewport.trim_range().first;
+        int64_t pos = playback.cursor() - trim.first;
         if (pos < 0) pos = 0;
         st.position_ms = pos * 1000 / rate;
     }
