@@ -1077,7 +1077,27 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   moving to an app that plays nothing, the framework left with no media-button
   session at all) are all recorded at `MainActivity.java`'s `onStop`, which owns
   the machinery. So the `setActive(false)` calls a running app reaches are
-  `onDestroy`'s and the step-aside's. It also owns the AUDIO
+  `onDestroy`'s and the step-aside's. THE AAUDIO STREAM IS NOT A LEVER HERE AND
+  WILL NOT BE MADE ONE (architect 2026-09-18, after verifying the fix on his
+  AirPods Pro): stopping the stream so the tablet stops reading as a player was
+  proposed and REFUSED — "I can accept closing the GUI. I prefer that to
+  crackling issues in the car or a wild goose chase for a fix that won't
+  happen" — the 2026-09-12 crackle ruling standing untouched. IT IS ALSO NOT
+  NEEDED, which is what the refusal rests on: measured on his own earbuds with
+  this app running in the background and its session released, three presses
+  reached MPV and MPV obeyed all three — pause, then PLAY (it resumed), then
+  pause. WHAT REMAINS IS ANOTHER APP'S CHURN, NOT OURS: the tablet's AVRCP
+  layer moves its own "active player" between every app holding an active
+  session, and YouTube Music holds one permanently with a paused track, so two
+  of his presses landed there rather than in MPV — CLOSING THIS APP IS THE
+  ACCEPTED ANSWER when the buds misbehave, and it is a workaround for that
+  churn rather than for anything this app does, our own release being honoured
+  within 43 ms of `onStop`. The diagnosis road for anyone who revisits this,
+  since it costs no build: `dumpsys media_session` (who holds the media-button
+  session, plus its own key-event log), `dumpsys bluetooth_manager`'s
+  `AvrcpTargetService` section (the controller list, the active-player events
+  and every key the buds sent with the player it went to), and `dumpsys audio`
+  (which players are started or paused). It also owns the AUDIO
   FOCUS machine:
   `AudioFocusRequest` GAIN with the AAudio stream's own attributes
   (USAGE_MEDIA / CONTENT_TYPE_MUSIC), requested when a push says playing and
