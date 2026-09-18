@@ -22,13 +22,16 @@ struct GuiInputHandler;
 // (GuiRenderPlayer::on_media_command, render-player.md's car section), and
 // with it closed every command is THIS cluster's. The console's Bluetooth
 // face is exactly three buttons — rewind (Previous), play/pause, fast-forward
-// (Next) — and his spec for them: PLAY / PAUSE / PLAYPAUSE are the play
-// transport, PREVIOUS IS UNDO and NEXT IS REDO (Ctrl+Z and Ctrl+Shift+Z
+// (Next) — and his spec for them: the middle button is the play transport
+// (PAUSE and PLAYPAUSE, the two kinds a console's own button sends against a
+// display that says PLAYING; a bare PLAY starts nothing at all and is the
+// audio route's reopen, the arm and its measured reason at the table below),
+// PREVIOUS IS UNDO and NEXT IS REDO (Ctrl+Z and Ctrl+Shift+Z
 // whole, 2026-09-17 — the console steps the piece's history and reads the
 // position back off its own display) — under the same dummy-track trick as
 // the player (the session says PLAYING always, its clock always in motion),
-// with ONE DIFFERENCE from the GUI's own transport: A PLAY ISSUED FROM THE
-// CONSOLE LOOPS THE TRIM FOREVER, in every view, ALWAYS FROM THE TRIM'S BEGIN
+// with ONE DIFFERENCE from the GUI's own transport: A PLAY STARTED FROM THAT
+// BUTTON LOOPS THE TRIM FOREVER, in every view, ALWAYS FROM THE TRIM'S BEGIN
 // (the resting playhead is no term of it; a restart is the button itself —
 // pause, then play). PAUSE IS THE GUI'S STOP: the
 // console's pause runs the one stop body exactly as Space's stop does — no
@@ -194,14 +197,34 @@ struct GuiCarTransport {
           input_handler(input_handler_) {}
 
     // A HEAD UNIT'S BUTTON WITH THE PLAYER CLOSED — THE TABLE, each arm gated
-    // by admits() (the head comment owns the gate's terms):
-    //   Play / Pause / PlayPause -> car_toggle(): ONE BODY FOR ALL THREE, the
-    //     player's reason — the display is a dummy that says PLAYING, so the
-    //     console sends whichever verb it believes and every one of them
-    //     means "the other one"; the body is the car's Space
+    // by admits() EXCEPT the Play arm, which is ungated for the reason stated
+    // there (the head comment owns the gate's terms):
+    //   Pause / PlayPause -> car_toggle(): ONE BODY FOR THE TWO, the player's
+    //     reason — the display is a dummy that says PLAYING, so the console's
+    //     one button sends whichever verb it believes and both of them mean
+    //     "the other one"; the body is the car's Space
     //     (GuiPlaybackLifecycle::car_toggle_playback — the stop arm the one
     //     stop body, the play arm the loop of the trim), behind bare Space's
     //     own head gates and then its target-view readiness gate.
+    //   Play -> GuiPlayback::ensure_device_available_for_play() AND NOTHING
+    //     ELSE: PLAY MEANS REOPEN THE STREAM AND START NOTHING (architect
+    //     2026-09-18, measured in the car). The Accord sends a plain
+    //     KEYCODE_MEDIA_PLAY about a second after the Bluetooth link comes up
+    //     and that IS its autoplay — there is no separate signal — while every
+    //     HUMAN press arrives as Pause, the dummy display leaving the console
+    //     nothing else to send. The link coming up also KILLS the AAudio
+    //     stream (AAUDIO_ERROR_DISCONNECTED at the connect), and nothing but a
+    //     press reopens it, so this arm reopens it and starts it SILENT right
+    //     there: the Bluetooth audio link comes up under the car's own
+    //     fade-in, where the connect's crackle is spent, and the constant
+    //     stream this car design rests on begins at the connect. A healthy
+    //     stream makes the call a no-op.
+    //     THE ACCEPTED COST: a PLAY key can no longer start
+    //     playback from any remote — it costs nothing while the dummy display
+    //     stands, because a remote that believes PLAYING sends PAUSE, and the
+    //     earbuds with the GUI in front behave as the car does. NOT A TIMING
+    //     GESTURE: no timer and no window after the connect; the rule is the
+    //     key's kind alone.
     //   Previous -> car_previous(): run_undo_redo_without_key(false), UNDO
     //     WHOLE — Ctrl+Z's head gates, refusals and cards, then the restore
     //     (which stops a live session, the car's loop included).

@@ -546,11 +546,14 @@ struct GuiRenderPlayer {
     // and Next, and these three bodies are what those buttons mean. Their one
     // caller each is on_media_command's arm, which owns the table.
     //
-    // car_toggle() — EVERY CAR BUTTON THAT SAYS PLAY OR PAUSE, undivided:
-    //   Play, Pause and PlayPause all reach this one body, because the session
+    // car_toggle() — THE CONSOLE'S ONE PLAY/PAUSE BUTTON, undivided:
+    //   Pause and PlayPause both reach this one body, because the session
     //   tells the console it is PLAYING whatever the transport is doing (the
     //   dummy display at publish_media_state), so the console's press is a
-    //   TOGGLE whichever verb it happens to send. A LIVE transport takes
+    //   TOGGLE whichever of the two verbs it happens to send. A bare Play is
+    //   a head unit's autoplay at the connect rather than a press of that
+    //   button and goes to the stream's reopen instead (the table at
+    //   on_media_command). A LIVE transport takes
     //   toggle_pause — the item pauses and keeps its resume point, and the
     //   silence takes over the display on the publish — and anything else
     //   takes play_button_act WHOLE, the tablet's Play button: a highlighted
@@ -642,14 +645,30 @@ struct GuiRenderPlayer {
     //
     // THE TABLE. The Accord's three buttons are REWIND, PLAY/PAUSE and
     // FAST-FORWARD, the outer two arriving as Previous and Next:
-    //   Play / Pause / PlayPause -> car_toggle(), ONE BODY FOR ALL THREE. The
+    //   Pause / PlayPause -> car_toggle(), ONE BODY FOR THE TWO. The
     //     published state says PLAYING whenever the player stands (the dummy
-    //     display at publish_media_state), so the console sends whichever verb
-    //     its own display believes and every one of them means "the other
-    //     one": LIVE pauses (toggle_pause), anything else takes the tablet's
-    //     Play whole (play_button_act). The three state gates the directional
-    //     arms carried, and the re-publishes their refusals made, are deleted
-    //     with them — a constant PLAYING leaves no drifted display to correct.
+    //     display at publish_media_state), so the console's one button sends
+    //     whichever of these two verbs its own display believes and both of
+    //     them mean "the other one": LIVE pauses (toggle_pause), anything else
+    //     takes the tablet's Play whole (play_button_act). The three state
+    //     gates the directional arms carried, and the re-publishes their
+    //     refusals made, are deleted with them — a constant PLAYING leaves no
+    //     drifted display to correct.
+    //   Play -> GuiPlayback::ensure_device_available_for_play() AND NOTHING
+    //     ELSE: PLAY MEANS REOPEN THE STREAM AND START NOTHING (architect
+    //     2026-09-18, measured in the car; GuiCarTransport::on_media_command's
+    //     table owns the measurement and the accepted cost). A plain
+    //     KEYCODE_MEDIA_PLAY about a second after the Bluetooth link comes up
+    //     IS the head unit's autoplay, while every HUMAN press arrives as
+    //     Pause against the dummy display; the connect kills the AAudio stream
+    //     and nothing but a press reopens it, so the arm reopens it and starts
+    //     it SILENT under the car's own fade-in, where the crackle is spent.
+    //     No transport starts, nothing is published, and a failed reopen
+    //     raises NO CARD — a console key is not a deliberate press at the
+    //     glass, and the next real press cards at the launch gates. It stands
+    //     behind this body's two head guards above (the mode belt and the
+    //     prompt), unlike the car transport's own ungated arm; the asymmetry
+    //     and its reason are recorded at the site.
     //   Previous / Next -> car_previous() / car_next(), the playlist walk with
     //     the up-a-folder exit (their contract is at the declarations).
     //   Stop -> PAUSE AND THEN HOME, two direct acts in order (architect

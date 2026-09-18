@@ -1048,14 +1048,17 @@ void GuiRenderPlayer::next_track() {
 // buttons and are reached from on_media_command alone, never from a key and
 // never from the modal row. Their contracts are at the declarations.
 
-// EVERY CAR BUTTON THAT SAYS PLAY OR PAUSE. The session publishes PLAYING
-// whenever the player stands (publish_media_state's dummy display), so the
-// console sends whichever verb its own picture believes and all three kinds
-// mean the same thing here: the other one. A LIVE transport pauses and keeps
-// its resume point — the silence track takes over the display at the pause's
-// own push — and anything else takes the tablet's Play button WHOLE, the
-// highlight arm included, so a highlighted folder opens, a highlighted other
-// wav plays, and the item's own row resumes or starts from its start.
+// THE CONSOLE'S ONE PLAY/PAUSE BUTTON. The session publishes PLAYING whenever
+// the player stands (publish_media_state's dummy display), so the console
+// sends whichever verb its own picture believes — Pause or the undivided
+// PlayPause, the two kinds that reach this body — and either of them means the
+// same thing here: the other one. (A bare Play is NOT a press of that button
+// but a head unit's autoplay at the connect, and it reaches the stream's
+// reopen instead; the arm is at on_media_command.) A LIVE transport pauses and
+// keeps its resume point — the silence track takes over the display at the
+// pause's own push — and anything else takes the tablet's Play button WHOLE,
+// the highlight arm included, so a highlighted folder opens, a highlighted
+// other wav plays, and the item's own row resumes or starts from its start.
 //
 // NO STATE GATE AND NO RE-PUBLISH: a gate existed to keep a "play" said to a
 // live transport from pausing it, and a re-publish to correct a display that
@@ -1516,13 +1519,37 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
         case Kind::Play:
+            // PLAY MEANS REOPEN THE STREAM AND START NOTHING (architect
+            // 2026-09-18, measured in the car; the car transport's table owns
+            // the measurement and the accepted cost). The Accord sends a plain
+            // KEYCODE_MEDIA_PLAY about a second after the Bluetooth link comes
+            // up — that IS its autoplay — while every human press arrives as
+            // Pause, the dummy display leaving the console nothing else to
+            // send; the connect kills the AAudio stream and nothing but a
+            // press reopens it, so this arm reopens it and starts it SILENT
+            // under the car's own fade-in, where the crackle is spent. No
+            // transport starts, nothing is published, and the answer is
+            // ignored — a console key is not a deliberate press at the glass,
+            // so a failed reopen raises no card and the next real press cards
+            // at the launch gates.
+            //
+            // THE ASYMMETRY WITH THE CAR TRANSPORT'S OWN ARM, recorded rather
+            // than repaired: that one is ungated, this one stands behind the
+            // two head guards above (the mode belt and the prompt), because
+            // they are early returns ahead of this switch and the reopen is
+            // not worth a second dispatch site in front of them. A reopen
+            // skipped because a load confirmation happened to stand at the
+            // connect is spent by the next command instead.
+            (void)playback.ensure_device_available_for_play();
+            return;
         case Kind::Pause:
         case Kind::PlayPause:
-            // ONE BUTTON, ONE BODY. The console's display says PLAYING as long
-            // as the player stands, so whichever verb it sends it means "the
-            // other one" — and the three gates that once decided whether a
-            // named direction ran, with the re-publishes their refusals made,
-            // went with the display that could drift.
+            // ONE BUTTON, ONE BODY FOR THE TWO VERBS IT SENDS. The console's
+            // display says PLAYING as long as the player stands, so whichever
+            // of them it sends it means "the other one" — and the three gates
+            // that once decided whether a named direction ran, with the
+            // re-publishes their refusals made, went with the display that
+            // could drift.
             car_toggle();
             return;
         case Kind::Next:

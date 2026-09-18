@@ -49,10 +49,15 @@ struct GuiMediaCommand {
     // would split KEYCODE_MEDIA_PLAY_PAUSE against the session's published
     // state — after holding the press for a double-tap window it turns into a
     // skip — so the sliver bypasses it and hands the undivided key down as
-    // PlayPause. HEADSETHOOK arrives as the same kind. THE THREE PLAY/PAUSE
-    // KINDS NOW MEAN ONE THING: the published state says PLAYING whenever the
-    // player stands, so a console sends whichever verb its own display
-    // believes and all three reach the player's one toggle.
+    // PlayPause. HEADSETHOOK arrives as the same kind. PAUSE AND PLAYPAUSE
+    // MEAN ONE THING: the published state says PLAYING whenever the app runs,
+    // so a console's one button sends whichever of those two its own display
+    // believes and both reach the standing owner's toggle. A BARE PLAY IS NOT
+    // THAT BUTTON (architect 2026-09-18, measured in the car): a head unit
+    // sends it about a second after the Bluetooth link comes up, as its
+    // autoplay, so both owners answer it with the audio route's silent reopen
+    // and start nothing (the tables at GuiCarTransport::on_media_command and
+    // GuiRenderPlayer::on_media_command).
     enum class Kind : int {
         Play              = 0,   // MEDIA_PLAY
         Pause             = 1,   // MEDIA_PAUSE

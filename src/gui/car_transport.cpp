@@ -40,6 +40,17 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
     using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
         case Kind::Play:
+            // PLAY MEANS REOPEN THE STREAM AND START NOTHING (the measured
+            // reason and the accepted cost are at the table). UNGATED, and
+            // deliberately so: this arm writes no authored, transport or modal
+            // state, and its whole purpose — the Bluetooth audio link coming
+            // up under the car's fade-in — holds whatever stands on the
+            // screen, so admits() has nothing to say about it. The answer is
+            // IGNORED: a console key is not a deliberate press at the glass,
+            // so a failed reopen raises no card; the next real press meets the
+            // launch gates and cards there.
+            (void)playback.ensure_device_available_for_play();
+            return;
         case Kind::Pause:
         case Kind::PlayPause:
             car_toggle();
