@@ -13,7 +13,9 @@ import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.util.Log;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
@@ -123,11 +125,12 @@ import java.nio.charset.StandardCharsets;
  * <p>THE CAR (architect design 2026-08-28, section 3): the head unit's buttons
  * reach an app over Bluetooth AVRCP as media-button events delivered to
  * whichever app holds an ACTIVE MediaSession, and the head unit's display
- * reads that session's metadata and playback state. This class creates ONE
- * session in onCreate (on the UI thread, so its callbacks land there) and
- * releases it in onDestroy; it is ACTIVE FROM THE FIRST TICK OF THE FIRST
- * PROJECT UNTIL THAT onDestroy (architect 2026-09-17), which the native side
- * says through mediaState(...) -- the same push carrying
+ * reads that session's metadata and playback state. This class holds ONE
+ * SESSION AT A TIME (createSessionLocked, its one creator, called on the UI
+ * thread so the callbacks land there -- by onCreate and again by onStart's
+ * rebuild) and releases it in onDestroy; it is ACTIVE FROM THE FIRST TICK OF
+ * THE FIRST PROJECT UNTIL THAT onDestroy (architect 2026-09-17), which the
+ * native side says through mediaState(...) -- the same push carrying
  * THE CONSOLE'S THREE LINES, the project as the album on both sides of the
  * fork below, and beneath it either the render player's picture (the folder as
  * the artist and the bare name of the playing or highlighted file as the
@@ -159,6 +162,24 @@ import java.nio.charset.StandardCharsets;
  * the same command road ("Android's one imposed interrupt"), a refused
  * request is logged and playback proceeds (the AAudio stream is already
  * running; focus decides who else ducks, not whether we sound).
+ *
+ * <p>THAT LIFETIME HAS ONE EXCEPTION: THE SESSION STEPS ASIDE WHILE ANOTHER
+ * APP HOLDS THE SCREEN (architect 2026-09-18). With this app running behind
+ * something else -- his own case is MPV on AirPods -- a pause and then a play
+ * on the earbuds started THIS app's loop instead of resuming the app he was
+ * watching, because the framework hands the media buttons to the app that is
+ * still playing audio and this app's AAudio stream never stops while a project
+ * is open. So onStop RELEASES the session -- setActive(false) is not the lever
+ * and the machinery, all four links of it, is recorded at that override -- and
+ * onStart builds a new one and re-seeds it with the last push. THE GATE IS THE
+ * DISPLAY BEING ON, not the wakefulness, and it is deliberately conservative:
+ * a wrong KEEP leaves a corner of the earbud bug standing, while a wrong
+ * RELEASE takes the head unit away for a whole drive -- in the car this
+ * activity is never left and the one lifecycle event of a drive is the cover
+ * closing, over a screen that has already gone off. The absence is invisible
+ * to the native side: a push that lands while the session is away is CACHED
+ * for onStart to re-seed, and its audio-focus arms still run, focus following
+ * the sound rather than the session.
  *
  * <p>THIS PHASE IS A MediaSession ALONE, BY RULING: no notification, no
  * foreground service, no background playback, no lock-screen transport. The
@@ -229,12 +250,36 @@ public class MainActivity extends NativeActivity {
 
     // The session and the focus machine. `this` is the one lock: mediaState
     // runs on the native loop's thread while the callbacks, the focus listener
-    // and onDestroy run on the UI thread.
+    // and the lifecycle overrides that touch them run on the UI thread.
     private MediaSession      session;
     private AudioManager      audioManager;
     private AudioFocusRequest focusRequest;
     private boolean           focusHeld;
     private boolean           released;
+
+    // THE STEP-ASIDE LATCH: true exactly while there is no session BECAUSE
+    // ANOTHER APP HAS THE SCREEN. onStop's gate is its only writer and
+    // onStart's rebuild its only clearer, so it is what tells a null `session`
+    // apart from the process ending (`released`) and from the moments before
+    // onCreate has built one. A push that lands while it stands touches no
+    // session and cannot resurrect one: the two creators are onCreate and
+    // onStart, both on the UI thread, because a session delivers its callbacks
+    // on its creating thread's Looper.
+    private boolean steppedAside;
+
+    // THE LAST PUSH, FOR EXACTLY ONE READER: onStart's re-seed, a fresh session
+    // carrying no metadata of its own while the native side's publisher pushes
+    // only on CHANGE. EVERY push records itself here, including one that lands
+    // while the session is away. `playing` is NOT among them and needs no
+    // field: it is read for the audio focus alone, the focus arms run on the
+    // push itself in either state, and the re-seed asks nothing of it.
+    private boolean havePushed;
+    private boolean lastActive;
+    private String  lastTitle;
+    private String  lastArtist;
+    private String  lastAlbum;
+    private long    lastDurationMs;
+    private long    lastPositionMs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -312,29 +357,15 @@ public class MainActivity extends NativeActivity {
                     0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
         }
 
-        // THE MEDIA SESSION, PER PROCESS-LIFE OF THIS ACTIVITY: created here
-        // on the UI thread so its callbacks are delivered on this thread's
-        // Looper (the session takes the creating thread's), released in
-        // onDestroy. INACTIVE until the native side's FIRST PUSH, which comes
-        // on the first tick of the first project and activates it for the
-        // app's life (architect 2026-09-17) -- it stayed inactive until the
-        // render player stood until that day, and the head unit's buttons
-        // reached nothing while the waveform was being edited, which is
-        // exactly what changed: they drive the main window's transport now.
-        // The state is seeded
-        // STOPPED with the full action set so the framework's default
-        // media-button routing has actions to dispatch against from the first
-        // activation. SPEED 0: nothing is playing, and the speed a state
-        // carries is the RATE OF PLAYBACK, off which a controller
-        // extrapolates the position from the moment of the push (the rule at
-        // mediaState).
-        session = new MediaSession(this, TAG);
-        session.setCallback(new TransportCallback());
-        session.setPlaybackState(new PlaybackState.Builder()
-                .setActions(SESSION_ACTIONS)
-                .setState(PlaybackState.STATE_STOPPED, 0L, 0.0f)
-                .build());
-        session.setActive(false);
+        // THE MEDIA SESSION, through its ONE owner below and on the UI thread,
+        // which is why the call is here and not on the native side's road: a
+        // session delivers its callbacks on its creating thread's Looper. The
+        // lock is taken because super.onCreate above has already started the
+        // native loop's thread, and that thread's mediaState is the other
+        // writer of every field the owner touches.
+        synchronized (this) {
+            createSessionLocked();
+        }
 
         // AUDIO FOCUS: the request carries the attributes the AAudio stream
         // opens with (USAGE_MEDIA / CONTENT_TYPE_MUSIC, playback_aaudio.cpp),
@@ -357,19 +388,170 @@ public class MainActivity extends NativeActivity {
                 .build();
     }
 
-    // THE FIRST LIFECYCLE OVERRIDE BESIDE onCreate, and it exists for the
-    // session: a MediaSession is a system-side object that outlives a
-    // released-without-release() activity and keeps its media-button claim,
-    // so it is released here. super.onDestroy() FIRST: NativeActivity's own
-    // onDestroy posts APP_CMD_DESTROY and JOINS the native loop's thread, so
-    // by the time it returns no mediaState call can still be in flight and
-    // the session may be taken down under the one lock with nothing racing
-    // it. FOCUS IS ABANDONED HERE AND, IN PRACTICE, ONLY HERE (2026-09-17):
+    // THE SESSION'S ONE CREATOR, with TWO callers -- onCreate's and onStart's
+    // rebuild after a step-aside -- and both are on the UI thread, which is the
+    // whole reason this is a method and not a native-side road: a MediaSession
+    // delivers its callbacks on its CREATING thread's Looper, so a session
+    // built anywhere else would hand the head unit's buttons to a thread with
+    // no Looper to run them on. INACTIVE as it leaves here: the native side's
+    // push is what activates it, which on a first create comes on the first
+    // tick of the first project and then stands for the app's life (architect
+    // 2026-09-17) -- it stayed inactive until the render player stood until
+    // that day, and the head unit's buttons reached nothing while the waveform
+    // was being edited, which is exactly what changed: they drive the main
+    // window's transport now. The state is seeded STOPPED with the full action
+    // set so the framework's default media-button routing has actions to
+    // dispatch against from the first activation. SPEED 0: nothing is playing,
+    // and the speed a state carries is the RATE OF PLAYBACK, off which a
+    // controller extrapolates the position from the moment of the push (the
+    // rule at mediaState).
+    private void createSessionLocked() {
+        session = new MediaSession(this, TAG);
+        session.setCallback(new TransportCallback());
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(SESSION_ACTIONS)
+                .setState(PlaybackState.STATE_STOPPED, 0L, 0.0f)
+                .build());
+        session.setActive(false);
+    }
+
+    // THE OTHER HALF OF THE STEP-ASIDE: the session comes back when this
+    // activity is in front again. A FRESH SESSION CARRIES NO METADATA AND NO
+    // STATE OF ITS OWN, and the native side's publisher is a per-tick
+    // COMPARATOR that pushes only when a field changes (GuiCarTransport::tick;
+    // the render player publishes at the edges of its own display), so without
+    // this re-seed the head unit would show nothing at all until something
+    // happened to change. It is applied exactly as a push is, through the one
+    // publisher below. THE CACHED POSITION IS STALE by however long the step
+    // aside lasted; the next change-push corrects it, and the car never reaches
+    // this path at all -- the session is not released there (the gate is at
+    // onStop).
+    @Override
+    protected void onStart() {
+        super.onStart();
+        synchronized (this) {
+            if (released || !steppedAside) return;
+            steppedAside = false;
+            createSessionLocked();
+            Log.i(TAG, "onStart rebuilt the media session (cached push "
+                    + (havePushed ? "re-seeded)" : "none yet)"));
+            if (havePushed) {
+                publishToSessionLocked(lastActive, lastTitle, lastArtist,
+                                       lastAlbum, lastDurationMs,
+                                       lastPositionMs);
+            }
+        }
+    }
+
+    // THE SESSION STEPS ASIDE WHILE ANOTHER APP HOLDS THE SCREEN (architect
+    // 2026-09-18). THE SYMPTOM: with this app running behind MPV on AirPods, a
+    // pause and then a play on the earbuds started THIS app's loop instead of
+    // resuming MPV, "even though the GUI is not focused, and the most recent
+    // thing I was using is MPV". Before the car transport drove the project's
+    // own playback the same press did nothing at all.
+    //
+    // THE MECHANISM IS FOUR LINKS, and each one was read rather than assumed
+    // (reproduced on the tablet with `dumpsys media_session`, which named
+    // `com.warptempo.gui` the media button session while MPV was the resumed
+    // activity and paused):
+    //   1. OUR AUDIO PLAYER NEVER STOPS. `dumpsys audio` with this activity
+    //      STOPPED still reports our AAudio stream `state:started` against
+    //      MPV's `state:paused` -- the no-click lifecycle the crackle ruling
+    //      keeps, the stream being started at a project's open and stopped only
+    //      where it is about to be closed. In the framework's eyes this app is
+    //      playing audio at every moment it runs.
+    //   2. THE FRAMEWORK PROMOTES THE ONLY APP THAT IS STILL PLAYING.
+    //      AudioPlayerStateMonitor keeps its uid list most-recently-started
+    //      first and then moves the first uid that is ACTIVELY playing to the
+    //      head of it. With MPV paused, that uid is ours.
+    //   3. THE SESSION AT THAT UID IS THEN CHOSEN AND ITS ACTIVE FLAG IS NEVER
+    //      CONSULTED. MediaSessionStack walks that list and takes the first uid
+    //      that HAS a session; the match tests the uid and the playback state
+    //      and nothing else, the active-state change only drops a cache, and
+    //      the dispatch site sends the button to whatever that walk returned.
+    //   4. NOR DOES THE APP SIDE GATE IT: MediaSession's dispatch posts the
+    //      button straight to the callback without reading its own active bit.
+    // SO setActive(false) CANNOT BE THE LEVER -- an inactive session goes on
+    // receiving media buttons. release() is: the record leaves the stack, and a
+    // uid with no session is SKIPPED, so the walk falls through to the next
+    // app, which is the one the user is watching. Verified on the device: with
+    // our session gone the earbud press resumed MPV at its own position.
+    //
+    // THE GATE IS THE DISPLAY, NOT THE WAKEFULNESS, AND IT IS CONSERVATIVE BY
+    // DESIGN: it steps aside only when BOTH the activity's own display reads
+    // STATE_ON AND PowerManager.isInteractive() agrees the screen is up, and
+    // EITHER of them saying otherwise KEEPS the session. A wrong KEEP leaves a
+    // corner of the earbud bug standing; a wrong RELEASE takes the head unit
+    // away for a whole drive -- and his car fact is what makes that the worse
+    // failure (2026-09-18): "in the car, I use only the GUI. I shut the cover
+    // but I never change apps." WHY isInteractive() CANNOT STAND ALONE: the
+    // cover close is ordered, and the DISPLAY goes off long before this
+    // override runs while the WAKEFULNESS follows it. Measured from his own
+    // cover close with this activity resumed -- `Going to sleep due to
+    // cover_close` at .578, `screenTurnedOff()` and the Display-off sleep token
+    // (which is what pauses the activity) at .955, `wm_on_paused_called` at
+    // .960, `wm_on_stop_called` at 54.003, `Dozing...` at 54.267 -- so at our
+    // onStop the display is already off and isInteractive() still reads true. A
+    // gate on the wakefulness alone would release the session at every cover
+    // close.
+    @Override
+    protected void onStop() {
+        super.onStop();
+        synchronized (this) {
+            if (released || session == null) return;
+
+            // A NULL DISPLAY IS "WE CANNOT SEE THE SCREEN" and keeps the
+            // session, the same answer the conservative gate gives to every
+            // other uncertainty.
+            final Display display = getDisplay();
+            final int displayState = display == null
+                    ? Display.STATE_UNKNOWN
+                    : display.getState();
+            final PowerManager power =
+                    (PowerManager) getSystemService(POWER_SERVICE);
+            final boolean interactive = power != null && power.isInteractive();
+            if (displayState != Display.STATE_ON || !interactive) {
+                Log.i(TAG, "onStop keeps the media session (display state "
+                        + displayState + ", interactive " + interactive + ")");
+                return;
+            }
+
+            // THE ONE RESIDUAL CORNER, and it is Android's own answer rather
+            // than ours: if this app is in front and the user moves to an app
+            // that is playing NOTHING, the released session leaves the
+            // framework with no media button session at all, and the next press
+            // reaches its last media-button receiver instead. That is what
+            // "nobody is playing" means to the framework, and it is what any
+            // app that releases its session produces.
+            Log.i(TAG, "onStop releases the media session (display state "
+                    + displayState + ", interactive " + interactive + ")");
+            steppedAside = true;
+            session.setActive(false);
+            session.release();
+            session = null;
+            // AUDIO FOCUS IS NOT TOUCHED HERE: the stream is still running and
+            // still sounding, and focus follows the sound rather than the
+            // session.
+        }
+    }
+
+    // THE LIFECYCLE OVERRIDE THAT TAKES THE SESSION DOWN FOR GOOD, and it
+    // exists for the session: a MediaSession is a system-side object that
+    // outlives a released-without-release() activity and keeps its
+    // media-button claim, so it is released here. super.onDestroy() FIRST:
+    // NativeActivity's own onDestroy posts APP_CMD_DESTROY and JOINS the
+    // native loop's thread, so by the time it returns no mediaState call can
+    // still be in flight and the session may be taken down under the one lock
+    // with nothing racing it. THE SESSION MAY ALREADY BE GONE -- a step-aside
+    // released it and the process is ending behind another app's screen -- and
+    // the null test that has always been here is what covers that; `released`
+    // is what stops onStart from ever building another.
+    // FOCUS IS ABANDONED HERE AND, IN PRACTICE, ONLY HERE (2026-09-17):
     // the native side's inactive push was what released it at the render
     // player's close, and that push is gone with the session's new lifetime
-    // (the session stands for the app's life), so this is the abandon a
-    // running app always reaches -- which is also why it was already written
-    // to cover a process ending with something still sounding.
+    // (the session stands for the app's life, the step-aside apart), so this is
+    // the abandon a running app always reaches -- which is also why it was
+    // already written to cover a process ending with something still sounding.
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -436,7 +618,11 @@ public class MainActivity extends NativeActivity {
     // setActive FOLLOWS THE PUSH, and the push says active for the app's life
     // (architect 2026-09-17): the render player's open and close are the wire
     // changing owners on the native side, not the session coming and going, so
-    // the only setActive(false) a running app reaches is onDestroy's.
+    // the two setActive(false) calls a running app reaches are onDestroy's and
+    // the step-aside's at onStop, neither of them a push.
+    // A PUSH THAT FINDS NO SESSION -- the step-aside's window -- IS STILL A
+    // PUSH: it records itself for onStart's re-seed and runs the focus arms
+    // below, and only the session's own setters are skipped.
     // Every setter here is a binder call and is callable from
     // any attached thread; the lock is against onDestroy's release on the UI
     // thread. Focus: requested when a push says playing and none is held;
@@ -453,31 +639,34 @@ public class MainActivity extends NativeActivity {
                                         String title, String artist,
                                         String album,
                                         long durationMs, long positionMs) {
-        if (released || session == null) return;
+        if (released) return;
 
-        final MediaMetadata.Builder meta = new MediaMetadata.Builder()
-                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
-                .putString(MediaMetadata.METADATA_KEY_ALBUM, album);
-        if (durationMs > 0) {
-            meta.putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs);
+        // EVERY PUSH RECORDS ITSELF, the ones that land while the session has
+        // stepped aside included: what onStart re-seeds must be the last
+        // picture the native side MEANT, not the last one that reached a
+        // session.
+        havePushed     = true;
+        lastActive     = active;
+        lastTitle      = title;
+        lastArtist     = artist;
+        lastAlbum      = album;
+        lastDurationMs = durationMs;
+        lastPositionMs = positionMs;
+
+        if (session != null) {
+            publishToSessionLocked(active, title, artist, album,
+                                   durationMs, positionMs);
         }
-        session.setMetadata(meta.build());
 
-        final int state = active ? PlaybackState.STATE_PLAYING
-                                 : PlaybackState.STATE_STOPPED;
-        // THE SPEED IS THE RATE OF PLAYBACK, not a constant: a controller
-        // EXTRAPOLATES the position from `positionMs` at this speed and the
-        // moment of this push. The clock is meant to run whenever the app is
-        // running -- that is the dummy display's other half -- so the speed is
-        // the state's own: 1.0 while active and 0.0 at an inactive push, which
-        // no running app makes any more.
-        final float speed = active ? 1.0f : 0.0f;
-        session.setPlaybackState(new PlaybackState.Builder()
-                .setActions(SESSION_ACTIONS)
-                .setState(state, positionMs, speed)
-                .build());
-        session.setActive(active);
+        // THE FOCUS ARMS RUN WHETHER OR NOT THERE IS A SESSION, because focus
+        // follows THE SOUND and not the session: the AAudio stream goes on
+        // sounding through a step-aside, so a push that says playing still asks
+        // for focus and an inactive push still lets it go. THE MACHINE IS ASKED
+        // FOR RATHER THAN ASSUMED, the same test onDestroy's abandon makes:
+        // onCreate builds it BELOW the session and the native loop's thread is
+        // already running by then, so a first push can reach here before it
+        // exists.
+        if (audioManager == null || focusRequest == null) return;
 
         if (active && playing && !focusHeld) {
             // A REFUSED REQUEST IS LOGGED AND PLAYBACK PROCEEDS: the AAudio
@@ -495,6 +684,42 @@ public class MainActivity extends NativeActivity {
             audioManager.abandonAudioFocusRequest(focusRequest);
             focusHeld = false;
         }
+    }
+
+    // THE PICTURE'S ONE WRITER ONTO THE SESSION, with TWO callers -- a push
+    // above and onStart's re-seed after a step-aside -- so a rebuilt session
+    // carries exactly what a push carries and the two can never come to
+    // disagree. It touches the session and nothing else: the audio focus is the
+    // push's own business (the rule is above) and is no part of re-seeding a
+    // display. The caller holds the lock.
+    //
+    // THE SPEED IS THE RATE OF PLAYBACK, not a constant: a controller
+    // EXTRAPOLATES the position from `positionMs` at this speed and the moment
+    // of this call. The clock is meant to run whenever the app is running --
+    // that is the dummy display's other half -- so the speed is the state's
+    // own: 1.0 while active and 0.0 at an inactive push, which no running app
+    // makes any more.
+    private void publishToSessionLocked(boolean active,
+                                       String title, String artist,
+                                       String album,
+                                       long durationMs, long positionMs) {
+        final MediaMetadata.Builder meta = new MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, album);
+        if (durationMs > 0) {
+            meta.putLong(MediaMetadata.METADATA_KEY_DURATION, durationMs);
+        }
+        session.setMetadata(meta.build());
+
+        final int state = active ? PlaybackState.STATE_PLAYING
+                                 : PlaybackState.STATE_STOPPED;
+        final float speed = active ? 1.0f : 0.0f;
+        session.setPlaybackState(new PlaybackState.Builder()
+                .setActions(SESSION_ACTIONS)
+                .setState(state, positionMs, speed)
+                .build());
+        session.setActive(active);
     }
 
     // THE SYSTEM CLIPBOARD, THE SECOND JNI ROAD UP (architect 2026-09-03,

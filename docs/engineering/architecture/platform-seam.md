@@ -911,9 +911,10 @@ independent and each with its own failure line; a fourth, `windowActive(boolean)
 landed and was deleted the same day, 2026-09-06, the status bar being the native
 band's pixels rather than the framework's), an inner
 `MediaSession.Callback` (an inner class, not a second top-level one) and
-the first lifecycle override beside `onCreate` — `onDestroy`, which
+the lifecycle overrides beside `onCreate` — `onDestroy`, which
 releases the session after `super.onDestroy()` has joined the native
-thread. Launch component: `com.warptempo.gui/.MainActivity`.
+thread, and, since 2026-09-18, `onStop` / `onStart`, THE SESSION'S STEP-ASIDE
+(the section below). Launch component: `com.warptempo.gui/.MainActivity`.
 
 ## The car: the MediaSession and the command road
 
@@ -1040,12 +1041,43 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   behaviour). It calls
   `setActive(active)` — **THE SESSION IS ACTIVE FROM THE FIRST TICK OF THE
   FIRST PROJECT UNTIL `onDestroy`** (architect 2026-09-17), created in
-  `onCreate` on the UI thread so its callbacks land there and released in
-  `onDestroy`, which is the one `setActive(false)` a running app reaches. It
+  `onCreate` on the UI thread so its callbacks land there (`createSessionLocked`
+  is the one creator) and released in
+  `onDestroy`. It
   was ACTIVE ONLY WHILE THE RENDER PLAYER STOOD (R7) until that day; the
   close's inactive push is deleted, because the head unit's buttons now drive
   the project's own transport whenever the player is closed and a session that
-  came and went between plays could not carry them. It also owns the AUDIO
+  came and went between plays could not carry them. **THAT LIFETIME HAS ONE
+  EXCEPTION: THE SESSION STEPS ASIDE WHILE ANOTHER APP HOLDS THE SCREEN**
+  (architect 2026-09-18, on the earbuds at home — the GUI running behind MPV,
+  a pause on the buds and then a play starting THIS app's loop instead of
+  resuming MPV, "even though the GUI is not focused, and the most recent thing I
+  was using is MPV"). The framework hands the media buttons to the app that is
+  still PLAYING AUDIO, and this app's AAudio stream never stops while a project
+  is open (the no-click lifecycle the crackle ruling keeps), so this app is
+  promoted over every paused one. THE LEVER IS `release()` AND NOT
+  `setActive(false)`: the selection walk reads the uid and the playback state
+  and never the active flag, on either side of the binder, so an inactive
+  session goes on receiving buttons while a uid with NO session is skipped and
+  the walk falls through to the app the user is watching. So `onStop` releases
+  the session and `onStart` builds a new one and RE-SEEDS it with the last push
+  (a fresh session carries no metadata and the publisher above pushes only on
+  change, so without the re-seed the console would show nothing until something
+  moved); a push that lands while the session is away is cached and its
+  audio-focus arms still run, focus following the sound rather than the session.
+  **THE GATE IS THE SCREEN BEING ON** — the activity's own `Display` reading
+  `STATE_ON` AND `PowerManager.isInteractive()` agreeing, either one saying
+  otherwise KEEPING the session — and it is conservative by his car fact ("in
+  the car, I use only the GUI. I shut the cover but I never change apps."): a
+  wrong keep leaves a corner of the earbud bug standing, a wrong release takes
+  the head unit away for a whole drive. The WAKEFULNESS cannot stand alone
+  because the cover close is ordered the other way — the display is off before
+  our `onStop` runs and the doze follows it — and the measured ordering, the
+  four-link mechanism and the one residual corner (this app in front, the user
+  moving to an app that plays nothing, the framework left with no media-button
+  session at all) are all recorded at `MainActivity.java`'s `onStop`, which owns
+  the machinery. So the `setActive(false)` calls a running app reaches are
+  `onDestroy`'s and the step-aside's. It also owns the AUDIO
   FOCUS machine:
   `AudioFocusRequest` GAIN with the AAudio stream's own attributes
   (USAGE_MEDIA / CONTENT_TYPE_MUSIC), requested when a push says playing and
@@ -1077,7 +1109,9 @@ service, no background playback, no lock-screen transport — the tablet is a
 kiosk on a stand with the app in the foreground — so the manifest gains
 nothing (no `<service>`, no `FOREGROUND_SERVICE*` / `POST_NOTIFICATIONS`, no
 `res/`). Backgrounding (`APP_CMD_LOST_FOCUS`) does not deactivate the session;
-since 2026-09-17 nothing but `onDestroy` does.
+since 2026-09-17 nothing but `onDestroy` does, and since 2026-09-18 the
+step-aside RELEASES it rather than deactivating it — on the ACTIVITY's `onStop`
+with the screen still on, never on the native side's focus edge.
 
 "NO BACKGROUND PLAYBACK" IS BUILD SCOPE, NOT BEHAVIOUR (recorded 2026-09-02,
 the four-tier review's R-18): it says this build ships no service to keep
