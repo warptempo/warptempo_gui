@@ -2394,6 +2394,43 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             through the chrome press's release half
 //                             (finish_chrome_press_release), like every other
 //                             redesigned button.
+//   - k (bare)              → ADD TO SELECTION, the sticky ctrl (architect
+//                             2026-09-17, from the tablet: the key "does not
+//                             work, it's grayed out, Toggle Add to Selection.
+//                             It should work in the Git history… so that I can
+//                             select two events — the diff consists of two
+//                             events, and I need to select them both if I want
+//                             to revert, for example"). THE LAMP IS A PRODUCER
+//                             OF THE MODE'S OWN MULTI-SELECTION NOW: while it
+//                             stands a PLAIN diff-flag press runs the mode's
+//                             CTRL body (select_history_diff_flags_modified
+//                             with extend=false, at the router's plain lane
+//                             claim, input_pointer.cpp), which is exactly what
+//                             the sticky ctrl does to a live flag. THE REASON
+//                             IS THE RIG: the view's multi-selection had two
+//                             roads, ctrl-click and shift-click, and there is
+//                             NO CTRL KEY ON GLASS — so the two-flag selection
+//                             bare `v` reverts had no spelling at all on the
+//                             tablet, which is the exact gap the sticky ctrl
+//                             exists to close (AppState::add_to_selection).
+//                             ADMITTED ON THE HEADER'S OWN STANDARD, the
+//                             read-only allowlist's argument repeated: the
+//                             chord flips a session bit and the click it
+//                             enables is a SELECTION act over the mode's own
+//                             ordinals — no store, no undo entry, no dirty
+//                             bit, and the LIVE store selection stays as
+//                             untouched as the plain click leaves it. It is
+//                             not dispatched from here and not from a mode arm
+//                             either: the admission lets the press fall
+//                             through to on_key's ordinary body, below the
+//                             read-only gate, which admits it too. THE BUTTON
+//                             LIGHTS FROM THIS LINE WITH NO ARM OF ITS OWN —
+//                             history_mode_disables_button walks
+//                             IconAddToSelection's chord through this
+//                             predicate. Until 2026-09-17 the chord fell out
+//                             of this list and the derived partition greyed
+//                             the button, and what made that honest then was
+//                             that the lamp produced nothing in here.
 //   - ' (bare)              → THE LOAD CONFIRMATION on the VIEWED walk member,
 //                             and the mode's one admitted
 //                             MUTATOR (2026-08-04). It is admitted because in
@@ -2836,6 +2873,12 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3 || key == GuiKeys::Digit4) && bare);
+    // ADD TO SELECTION (architect 2026-09-17), bare-exact — exactly the
+    // dispatch arm's own spelling and the roster row's, so the key, the button
+    // and this admission cannot drift. The argument is in the header's bullet:
+    // the lamp turns a plain diff-flag press into the mode's ctrl body, which
+    // is the only road to a two-flag selection a finger has.
+    const bool is_add_to_selection = (key == GuiKeys::K && bare);
     const bool is_esc = (key == GuiKeys::Escape && bare);
     // THE A/B TAB SWITCH (architect 2026-08-18): "ctrl+tab should work as
     // normal in history view — it becomes essentially another view but in
@@ -2865,7 +2908,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     return !(is_zero || is_page_updown ||
-             is_view_selector || is_esc || is_ctrl_tab ||
+             is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q || is_open_project || is_revert_project ||
              is_sync_external);
@@ -3828,6 +3871,23 @@ void GuiInputHandler::run_history_revert() {
     // "only when something changed" claim below, which covers the four effects
     // that do wait on a change.
     playback_lifecycle.stop_playback_if_playing();
+
+    // THE SELECTION HAS BEEN SPENT (architect 2026-09-17, the day the sticky
+    // ctrl reached this view): the act's subject IS the mode's multi-selection,
+    // so a revert is exactly the "I have already acted" the class is named for,
+    // and the ADD TO SELECTION lamp goes out. THE REASON IS WHERE THE PRESS
+    // LEAVES THE USER: the act closes the view and returns him to the LIVE
+    // lane, where a lamp still lit would make his next plain flag click ADD to
+    // a selection instead of replacing it — the surprise this rule exists to
+    // prevent. THE PLACEMENT IS THE CLASS'S OWN (selection_consumed,
+    // app_state.h): past every refusal — the past-EOF wall and the duplicate-
+    // label grammar check both return above this line, and a refused act
+    // consumes nothing — and AHEAD of the changed-path test below, because a
+    // revert whose subject found the live state already carrying its then side
+    // was still an act the user performed. It is owed no damage: the lamp
+    // repaints on the per-tick face comparator, and close_history_mode below
+    // invalidates the window whole in any case.
+    selection_consumed(app);
 
     // THE FOUR EFFECTS THAT WAIT ON A CHANGE, the install among them, and
     // `changed` is "the state DIFFERED", not "a store call happened": a subject
@@ -8056,8 +8116,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // columns and both audio views (a selection is not authored content, so
     // the home-view binding has nothing to say about it), legal on a LOCKED
     // tab (read_only_key_blocked admits it, where it drops the four marker
-    // verbs), and unreachable in the `h` view, whose allowlist consumes it
-    // above this dispatch. It stops no playback and hides no overlay: turning
+    // verbs), and LEGAL IN THE `h` VIEW SINCE 2026-09-17 (architect, from the
+    // tablet: "it should work in the Git history… so that I can select two
+    // events") — history_mode_key_blocked admits the chord, so the press
+    // reaches this arm from in there too and the lamp lights the same bit for
+    // the mode's DIFF flags: a plain diff-flag press then runs the mode's ctrl
+    // body, the only road onto that multi-selection a finger has. The view
+    // consumed the chord until that day, when the lamp produced nothing in it.
+    // It stops no playback and hides no overlay: turning
     // the mode on IS NOT a selection act — the click that follows is, and that
     // click runs the marker act's own stop and region hide.
     //

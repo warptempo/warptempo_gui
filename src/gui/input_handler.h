@@ -4581,17 +4581,23 @@ private:
     //     PRESS for the framing and for all three diff-flag clicks (2026-08-17,
     //     reverting the one-day lift deferral: the mode has no drag for any of
     //     them to become): the two bodies below are called from this router's
-    //     own flag claims.
+    //     own flag claims, the PLAIN one forking on the Add to selection lamp
+    //     since 2026-09-17.
     //   * focus_history_diff_flag is the PLAIN focus click's body — the flag
     //     box in the lane, the flag's one pointer surface (its waveform STEM
     //     surface died with the stems-inert ruling, 2026-08-12). It
-    //     clears the mode's multi-selection: a plain click replaces it.
+    //     clears the mode's multi-selection: a plain click replaces it. It is
+    //     the plain claim's body while ADD TO SELECTION IS DARK (2026-09-17).
     //   * select_history_diff_flags_modified is the SHIFT and CTRL clicks' body,
     //     over the MARKER LANE ALONE — the range extend and the membership
     //     toggle, both then focusing the clicked flag and landing on it (over
     //     the waveform a modifier names a gesture, not a selection — the
     //     2026-08-06 symmetry ruling — and since 2026-08-12 a plain waveform
     //     press resolves no flag either: the placement press at every column).
+    //     THE CTRL ARM IS ALSO THE PLAIN CLAIM'S BODY WHILE ADD TO SELECTION
+    //     STANDS (architect 2026-09-17, extend=false): the sticky ctrl reaches
+    //     this view's flags now, being the one road onto this multi-selection
+    //     a finger has.
     //   * close_history_mode is the ONE exit owner; every closer calls it. It
     //     PUT THE EDITOR'S PARKED NAVIGATION BAND BACK from 2026-08-05 to
     //     2026-08-18 and does not any more: the view owns no navigation state

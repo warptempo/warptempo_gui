@@ -4853,9 +4853,28 @@ struct AppState {
     // SCOPE: FLAG HITS ONLY. run_marker_click_act is the one act owner and it
     // runs on a resolved marker hit and nothing else, so the empty marker
     // lane — its plain click, its double-click create — never sees this bit at
-    // all. The `h` view's diff flags have their own mode-local multi-selection
-    // and are a different press router entirely; the button greys in there and
-    // bare `k` is consumed.
+    // all.
+    //
+    // AND IT REACHES THE `h` VIEW'S DIFF FLAGS SINCE 2026-09-17 (architect,
+    // from the tablet: "it should work in the Git history… so that I can
+    // select two events — the diff consists of two events, and I need to
+    // select them both if I want to revert"). That view has its own
+    // mode-local multi-selection over its own press router, and its only
+    // roads onto it were CTRL-click and SHIFT-click — and there is no ctrl
+    // key on glass, so a two-flag selection for bare `v` to revert could not
+    // be built on the tablet at all, which is the exact gap this lamp exists
+    // to close. So bare `k` is on history_mode_key_blocked's allowlist, the
+    // button lights through the derived partition with no arm of its own, and
+    // while the lamp stands a plain diff-flag press runs that mode's CTRL body
+    // (select_history_diff_flags_modified with extend=false) — the same fold
+    // in the same words, over the mode's ordinals instead of the store's
+    // markers. The FLAG-HITS-ONLY scope is the mode's too: an empty lane
+    // stretch in there is the navigation surface's pending click, untouched.
+    // Until that day the view consumed the chord and greyed the button,
+    // honestly, because the lamp produced nothing in it.
+    // THE VIEW'S REVERT SPENDS IT like every other act that spends a
+    // selection (bare `v`, at run_history_revert's committed tail —
+    // selection_consumed's inventory below).
     //
     // SHIFT BEATS THE MODE, deliberately (the architect: "Shift+click needs no
     // rule here, because it has its own gesture"). The act's fork is
@@ -11696,7 +11715,7 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 // AHEAD OF ITS CHANGED-PATH TEST. A refused act consumed nothing and leaves the
 // lamp lit; an accepted one that happens to land the value already standing did
 // consume the selection, because "in fact I have already acted" reads the
-// PRESS. The callers, by act (re-greped 2026-09-16):
+// PRESS. The callers, by act (re-greped 2026-09-17):
 //   * THE TEMPO CENT STEP, BRANCH-LOCALLY — its refusals are per-branch (the
 //     group's walled / empty verdict, target view's kind refusals, source
 //     view's label ref, the last of them inside the changed-path tail), so the
@@ -11724,7 +11743,15 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
 //     which is a use case rather than an act: the mode's bound cells are
-//     addressed by a PLAIN press, which the sticky ctrl would eat.
+//     addressed by a PLAIN press, which the sticky ctrl would eat;
+//   * THE `h` VIEW'S REVERT, bare `v` (architect 2026-09-17, the day the
+//     sticky ctrl reached that view's diff flags — GuiInputHandler::
+//     run_history_revert, input_key_dispatch.cpp, past the past-EOF wall and
+//     the duplicate-label grammar check and ahead of its `changed` test). Its
+//     subject IS a selection — the mode's own, over its diff-flag ordinals
+//     rather than the store's markers — and the act CLOSES THE VIEW, so it
+//     hands the user back to the live lane, where a lamp left lit would make
+//     his next plain flag click add rather than replace.
 // THE VALUE DRAG'S TEMPO COMMIT IS A MEMBER OF THE CLASS WITH NO LINE OF ITS
 // OWN, and it needs none by construction: while this lamp stands a plain flag
 // press takes the membership-toggle branch and ARMS NOTHING, so no value drag
@@ -14298,11 +14325,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // tooltip"), and nothing else. Its chord authors nothing, so the
         // READ-ONLY arm above deliberately does not carry it — a selection is
         // navigation, the same ruling that keeps the trim gestures legal on a
-        // locked tab (2026-08-18) — and its `h` VIEW grey comes from the
-        // DERIVED partition at the top of this body (bare `k` is neither
-        // history_mode_owns_key's vocabulary nor on history_mode_key_blocked's
-        // allowlist, so the mode consumes it and the face follows), nothing
-        // hand-listed. WHAT IT DOES MIRROR IS THE PAIR OF REFUSALS ITS KEY NOW
+        // locked tab (2026-08-18) — and IT IS LIT IN THE `h` VIEW SINCE
+        // 2026-09-17 by that same derived partition at the top of this body,
+        // with nothing hand-listed either way: bare `k` is on
+        // history_mode_key_blocked's allowlist now (architect — the lamp
+        // produces that view's own multi-selection, the one road onto it a
+        // finger has), so the face follows the gate exactly as it followed it
+        // into the grey before. WHAT IT DOES MIRROR IS THE PAIR OF REFUSALS ITS KEY NOW
         // RAISES: GRID ITERATIONS, through the membership predicate — the
         // sticky ctrl would take away the plain click the bound cells are
         // addressed by, so bare `k` is delta (a)'s fourth member and the gate
@@ -15612,9 +15641,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // named the ON act over a lit lamp whose press turns the mode off).
         // ONE LINE, no shift line (it admits no shift press) and NO GESTURE
         // HINT: the words never explain how to use the mode, which is the
-        // product's standing rule about UI text. It greys in the `h` view
-        // alone and still explains itself there, the tooltips-on-disabled
-        // ruling above.
+        // product's standing rule about UI text. THE `h` VIEW WAS ITS ONE
+        // GREYED HOME UNTIL 2026-09-17, when the architect admitted the chord
+        // in there (the lamp is a producer of that view's own multi-selection
+        // now), so the button is live in every state the roster paints it in
+        // and only grid iterations greys it — the words are unchanged either
+        // way, a tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
         // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next

@@ -613,10 +613,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // KEY acts at the press like every other hotkey — both fall out of the
     // machinery, with no timing code of its own anywhere.
     //
-    // ITS GATES DIVERGE FROM THE FOUR ABOVE IT and that is the point: the `h`
-    // view consumes bare `k` and greys the button with them, but the READ-ONLY
-    // lock ADMITS it (read_only_key_blocked's allowlist) — a selection is
-    // navigation, not authored content.
+    // ITS GATES DIVERGE FROM THE FOUR ABOVE IT and that is the point: the
+    // READ-ONLY lock ADMITS it (read_only_key_blocked's allowlist) — a
+    // selection is navigation, not authored content — and SO DOES THE `h`
+    // VIEW SINCE 2026-09-17 (history_mode_key_blocked's own admission), where
+    // the four above it stay grey: the lamp produces that view's own
+    // multi-selection now, so this button is lit in there while they are not.
+    // The face needs no arm for either fact — the walk below asks each gate
+    // about this row's chord.
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
@@ -2171,17 +2175,20 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // wears everywhere in this map, and a box still promising the
             // horizontal move would promise a gesture the press cannot begin.
             //
-            // AND IT IS THE LIVE LANE'S TERM ALONE. In the `h` view the flags
-            // are the mode's DIFF flags, whose plain press is the mode's own
-            // focus click (handle_history_mode_press -> focus_history_diff_flag
-            // — the mode's multi-selection is its explicit ctrl and shift
-            // clicks, and this lamp is no producer of it), so the sticky ctrl
-            // changes nothing a diff flag does and must change nothing it
-            // wears: in there the box keeps the ruled one-shape-for-the-one-
-            // surface answer below. The value drag's own term needs no such
-            // fork — its posture answers false whole in the view, at its own
-            // declaration.
-            if (app.add_to_selection && !app.history_mode.active)
+            // AND IT IS THE `h` VIEW'S TERM TOO SINCE 2026-09-17 (architect):
+            // in there the flags are the mode's DIFF flags, and the lamp is a
+            // PRODUCER of the mode's multi-selection now — a plain diff-flag
+            // press runs the mode's ctrl body
+            // (handle_history_mode_press -> select_history_diff_flags_modified)
+            // exactly as a plain live-flag press runs the toggle branch, and it
+            // arms nothing either. So the box wears the Arrow in both views for
+            // one reason, and the `!history_mode.active` term this arm carried
+            // is deleted: it existed only while the lamp produced nothing in
+            // the view, where the cursor had to keep promising the diff flag's
+            // own click. The cursor promises the gesture, and the gesture now
+            // exists there. The value drag's own term needs no such fork — its
+            // posture answers false whole in the view, at its own declaration.
+            if (app.add_to_selection)
                 return GuiCursorKind::Arrow;
             if (value_drag_posture(app)) {
                 return value_drag_target(app, audio, flag_hit,
@@ -8373,11 +8380,18 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
 //     no live focus, no auto-select, no playback stop. It DOES take a resting
 //     overlay with it (2026-08-06), through its LAND: a click that lands the
 //     playhead moves the playhead's position in the music, which is the rule.
+//     ADD TO SELECTION FORKS THIS ACT since 2026-09-17 (architect): with the
+//     lamp lit the very same press runs the CTRL click below instead — the
+//     membership toggle over the mode's list — which is the sticky ctrl's own
+//     meaning applied to this router, and the one road onto a two-flag
+//     selection a finger has (AppState::add_to_selection).
 //   * the MARKER LANE's two MODIFIED clicks, on its FLAG BOXES: SHIFT takes
 //     the contiguous range from the focus, CTRL toggles one flag's membership,
 //     and both then focus the clicked flag and land the playhead on it (the live
 //     selection model over the mode's own list; the store selection stays as
-//     untouched as the plain click leaves it). A modified lane press that hits
+//     untouched as the plain click leaves it). THE CTRL ARM HAS A SECOND
+//     PRODUCER since 2026-09-17 — a PLAIN press while Add to selection stands,
+//     the plain claim's own fork above. A modified lane press that hits
 //     NO flag is the GESTURE the modifier names, exactly as in the live views
 //     since the lanes became the extension: shift the former, ctrl the zoom.
 //   * SHIFT-exact on the navigation surface — THE SWEEP, CARVED OUT OF ITS OWN
@@ -8574,7 +8588,28 @@ bool GuiInputHandler::handle_history_mode_press(
         if (hit >= 0) {
             // THE PRESS ACTS (2026-08-17): the focus move, the land and the
             // region hide are the CLICK, run here on the live hit.
-            focus_history_diff_flag(hit);
+            //
+            // ADD TO SELECTION FORKS IT (architect 2026-09-17): while the
+            // sticky ctrl stands, a plain press on a diff flag runs the MODE'S
+            // OWN CTRL BODY instead — the membership toggle, the focus and the
+            // land, everything else left standing. THE LIVE MODEL'S SHAPE IS
+            // RE-EXPRESSED OVER THE MODE'S LIST, exactly as
+            // select_history_diff_flags_modified already re-expresses the live
+            // selection model: out there the fold is
+            // `ctrl || (add_to_selection && !shift)` at run_marker_click_act's
+            // one toggle term, and in here the `!shift` half costs nothing to
+            // spell because SHIFT CANNOT REACH THIS ARM — the router's
+            // modified branch claims every shift and ctrl flag press above,
+            // and the `if (ctrl || shift || alt) return true` line below it
+            // eats the rest, so PLAIN is all this arm ever sees. Adding a
+            // shift term here would restate a guarantee the structure already
+            // gives. THE EMPTY-LANE STRETCH IS UNTOUCHED, the lamp governing
+            // FLAG presses alone as it does on the live lane
+            // (AppState::add_to_selection's scope rule).
+            if (app.add_to_selection)
+                select_history_diff_flags_modified(hit, /*extend=*/false);
+            else
+                focus_history_diff_flag(hit);
         } else {
             arm_nav_press(x, y, /*history=*/true, /*seed_empty_lane=*/false,
                           /*scrub_release=*/false);
@@ -8605,7 +8640,10 @@ bool GuiInputHandler::handle_history_mode_press(
 // `hit` is an index into app.history_mode.flags, RESOLVED AND ACTED ON AT THE
 // PRESS (2026-08-17 — the mode has no drag for a flag press to become, so the
 // click's identity is certain and the one-day lift deferral of 2026-08-15 is
-// inverted): its ONE caller is handle_history_mode_press's plain flag claim.
+// inverted): its ONE caller is handle_history_mode_press's plain flag claim,
+// which reaches it while ADD TO SELECTION IS DARK — with that lamp lit the
+// same claim runs the mode's ctrl body instead (2026-09-17, the fork at the
+// claim).
 // The router resolves a flag only since
 // 2026-08-12 (an empty lane stretch is the
 // navigation surface's pending click now — the eighth glass ruling — whose
@@ -8662,8 +8700,12 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 // (architect 2026-08-06, the symmetry ruling: selection is lane vocabulary in
 // both views, and the stem-based pair this body briefly also served is gone).
 // BOTH RUN AT THE PRESS (2026-08-17 — the mode has no drag for either press to
-// become, so nothing needs the lift; its one caller is the router's modified
-// flag claim, with the press's own modifier shape). It
+// become, so nothing needs the lift). TWO CALLERS SINCE 2026-09-17: the
+// router's MODIFIED flag claim, with the press's own modifier shape, and its
+// PLAIN flag claim while ADD TO SELECTION stands, which calls the ctrl arm
+// (extend=false) — the sticky ctrl's whole meaning, and the only road onto
+// this multi-selection a finger has, there being no ctrl key on glass
+// (AppState::add_to_selection). It
 // is the LIVE selection model re-expressed over the mode's own list
 // (selection-model.md):
 //
