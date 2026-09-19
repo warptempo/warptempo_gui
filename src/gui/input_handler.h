@@ -1567,9 +1567,9 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's sixteen — the transport three, then the right block's four marker
-    // verbs with the COPY VALUE button (2026-08-29), the EDIT FLAG button
-    // (2026-08-27) and ADD TO SELECTION (2026-08-18) behind them, two walk
+    // row's seventeen — the transport three, then the right block's
+    // MARKER-VERB GROUP of eight (kMarkerVerbGroup, paint_handler.cpp, owns
+    // that membership), two walk
     // steps and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went

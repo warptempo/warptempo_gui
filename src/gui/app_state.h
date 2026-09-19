@@ -1808,11 +1808,10 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's SIXTEEN (re-counted 2026-09-16) — the
-// transport three, the FOUR SINGLE-MARKER VERBS with the COPY VALUE button
-// (2026-08-29), the EDIT FLAG BUTTON (2026-08-27) and ADD TO SELECTION
-// (2026-08-18) behind
-// them, the MARKER-WALK two
+// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-19) — the
+// transport three, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
+// paint_handler.cpp, owns that membership and its succession), the
+// MARKER-WALK two
 // (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
@@ -2371,13 +2370,15 @@ enum class RedesignButton {
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
     // THE ONE PLAY/STOP BUTTON = bare Space, skip-forward = bare End) with the
     // CLOCK behind its separator, then — FLUSH AT THE RIGHT MARGIN, three
-    // groups divided by two more separators — THE FOUR SINGLE-MARKER VERBS
-    // (2026-08-18: drop = bare `s`, delete = Delete, disable = Ctrl+D, inherit
-    // = Ctrl+N) WITH THE EDIT FLAG BUTTON (2026-08-27, bare Enter — the flag
-    // editor's third road) AND ADD
+    // groups divided by two more separators — THE MARKER-VERB GROUP'S EIGHT
+    // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
+    // Delete, disable = Ctrl+D, inherit = Ctrl+N; then FLATTEN
+    // (2026-09-19, Ctrl+F), THE EDIT FLAG BUTTON (2026-08-27, bare Enter —
+    // the flag editor's third road), COPY RESOLVED VALUE (2026-08-29, bare
+    // `j`) AND ADD
     // TO SELECTION CLOSING THEM (bare `k`, the sticky ctrl
     // — 2026-08-18, later the same day as the verbs; the VALUE DRAG LAMP on
-    // bare `x` stood behind it from 2026-09-10 to 2026-09-13),
+    // bare `x` stood behind it from 2026-09-10 to 2026-09-13)),
     // THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
     // next = Tab), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
@@ -2509,8 +2510,12 @@ enum class RedesignButton {
     // ABOUT THEM CHANGED WITH THE ROW — the chords, the gates and both faces
     // came across whole.
     //
-    // THE DROP ADMITS SHIFT (architect 2026-08-28), and it is the group's one
-    // member that does: its twin is SHIFT+S, THE PHASE-RESET DROP FROM ANY
+    // THE DROP ADMITS SHIFT (architect 2026-08-28), the first of the verb
+    // group's members to — Copy value's Shift+`j` landed 2026-08-29, and
+    // 2026-09-19 brought two more, Toggle inherit's Ctrl+Shift+N (THE TIE)
+    // and the Flatten button's Ctrl+Shift+F (the COLLAPSE). The membership is
+    // redesign_button_shift_admits' alone, never a count restated here. Its
+    // own twin is SHIFT+S, THE PHASE-RESET DROP FROM ANY
     // VIEW, so a shift-click or a LONG PRESS lands the session in T+P and
     // drops the lead-in reset there — bare `s`'s own act with the view trip in
     // front of it (drop_phase_reset_in_target_view, input_handler.cpp; the
@@ -2519,8 +2524,8 @@ enum class RedesignButton {
     // WANTED here for the play button's reason: a phase reset dropped without
     // leaving the warp column is a glass workflow as much as a desk one, and
     // the panel has no shift key. THE LOCK STILL REFUSES IT — the button is
-    // one of the four this arm greys on a read-only tab, and a greyed button
-    // consumes a shift press with its plain one, so the face and both chords
+    // one of the marker verbs this arm greys on a read-only tab, and a
+    // greyed button consumes a shift press with its plain one, so the face and both chords
     // agree with no second edit.
     //
     // THEIR GATES ARE THE BUTTONS' OWN, NOT THE ROW'S: the `h` view GREYS all
@@ -2626,8 +2631,9 @@ enum class RedesignButton {
     // SHIFTED twin, Shift+`j`, JUMPS to the marker that value came from on the
     // other A/B tab, so the reference and its definition stand one Ctrl+Tab
     // apart, each tab framed on its own half by the jump's two `c` calls. IT
-    // IS THE ROSTER'S SEVENTH SHIFT-ADMITTING BUTTON
-    // (redesign_button_shift_admits owns the membership and the
+    // IS ONE OF THE ROSTER'S SHIFT-ADMITTING BUTTONS, the second of them to
+    // land in this group, after the Drop's on 2026-08-28
+    // (redesign_button_shift_admits owns the membership, never a count, and the
     // static_assert binds the tooltip's second line to it), which is what
     // gives a keyboardless panel the jump through a LONG PRESS.
     //
@@ -2658,10 +2664,13 @@ enum class RedesignButton {
     // (bare `j` is neither the mode's vocabulary nor on its allowlist) and the
     // folder overlay's own arm — nothing else. NO LAMP: an act, not a mode.
     IconCopyValue,
-    // ADD TO SELECTION — the verb group's EIGHTH member since 2026-08-29 (its
-    // seventh from 2026-08-27 and its sixth from 2026-08-18; the Edit flag
-    // button and then the Copy value button landed ahead of it, the second of
-    // them immediately ahead of it since that evening's reseat),
+    // ADD TO SELECTION — the verb group's EIGHTH member since 2026-09-19,
+    // when the Flatten button landed ahead of it (its seventh from the Marker
+    // Measure's deletion with the measures feature on 2026-09-16, its eighth
+    // from 2026-08-29, its seventh from 2026-08-27 and its sixth from
+    // 2026-08-18; every one of those arrivals landed AHEAD of it, and the
+    // Copy value button has stood immediately ahead of it since that
+    // evening's reseat),
     // seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
@@ -2697,7 +2706,7 @@ enum class RedesignButton {
     // none between the Cumulative toggle's departure earlier the same day and
     // this arrival.
     //
-    // ITS GATES ARE ITS OWN, like the four verbs beside it, and they are NOT
+    // ITS GATES ARE ITS OWN, like the marker verbs beside it, and they are NOT
     // theirs: the `h` view LEAVES IT LIT SINCE 2026-09-17 (bare `k` is on
     // history_mode_key_blocked's allowlist now — the lamp produces that view's
     // own multi-selection, the one road onto it a finger has — and the derived
@@ -11711,6 +11720,12 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     switch (b) {
         // The marker verbs: every one of them writes a store and
         // pushes, which is the whole of what the lock holds back.
+        // (THE FLATTEN BUTTON, a verb since 2026-09-19, IS NOT HERE and needs
+        // nothing here: its face reads tempo_flatten_actionable, which
+        // composes authoring_locked — both locks at once — so the grey comes
+        // out of the act's own predicate. Ctrl+F is on neither gate's
+        // allowlist, so the key refuses under the lamp as it does under the
+        // padlock.)
         // (TOGGLE INHERIT LEFT THIS MEMBERSHIP 2026-09-19, ON THE TWIN RULE.
         // Its plain chord Ctrl+N is still refused under a lit lamp — the gate
         // drops it and cards the lock's own sentence — but its SHIFTED twin
@@ -14808,24 +14823,27 @@ inline bool redesign_button_enabled(const AppState& a,
         // theirs — so the face and the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW GREYS, re-derived 2026-08-30. IN THE `h` VIEW, all
+        // WHAT THE ROW GREYS, re-derived 2026-09-19. IN THE `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
         // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on
-        // its allowlist), THE FOUR SINGLE-MARKER VERBS, COPY VALUE, THE EDIT
-        // FLAG BUTTON and ADD TO SELECTION (bare `j`,
-        // bare Return and bare `k` are consumed in there like the
-        // verbs' four chords) — TWELVE of the sixteen. The two SKIPS and
+        // its allowlist), THE FIVE MARKER VERBS, COPY VALUE and THE EDIT
+        // FLAG BUTTON (bare `j` and
+        // bare Return are consumed in there like the
+        // verbs' own chords) — TWELVE of the seventeen. ADD TO SELECTION
+        // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
+        // now. The two SKIPS and
         // the MARKER-WALK GROUP'S TWO stay lit, being the mode's own
         // absolute jumps and its diff-flag cycle (the tab row's shifted press
         // carries the march that composes that cycle with the A/B switch, the
         // tabs being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
-        // THE VIEW: the four VERBS and THE EDIT FLAG BUTTON
-        // on a locked tab, their own gate, stated at their arm above — and,
+        // THE VIEW: the five VERBS and THE EDIT FLAG BUTTON
+        // on a locked tab, their own gate, stated at their arm above (FLATTEN
+        // greys there through the lock its own predicate composes) — and,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
-        // inherit and Edit flag (that same arm), on UP / DOWN,
+        // inherit, Flatten and Edit flag (that same arm), on UP / DOWN,
         // LEFT / RIGHT, the two WALK STEPS and COPY VALUE (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
@@ -15702,7 +15720,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // between the Cumulative toggle going back up to the icon row and ADD
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
-        // two skips, the marker-walk two, the four arrows and the four
+        // two skips, the marker-walk two, the four arrows and the
         // marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
@@ -16429,18 +16447,20 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Go to End (End)",
                     "Press Ctrl to ignore the trim window."};
         // THE SINGLE-MARKER VERBS (2026-08-12), the acts named plainly in
-        // HELP's vocabulary. ONE OF THEM ADMITS SHIFT since 2026-08-28 — the
-        // DROP, whose shifted chord crosses from the warp column and drops a
+        // HELP's vocabulary. THREE OF THEM ADMIT SHIFT and carry the second
+        // line that says so — the DROP since 2026-08-28, whose shifted chord
+        // crosses from the warp column and drops a
         // phase reset (refusing as already crossed in the P column since
-        // 2026-08-30) — and it
-        // carries the second line that says so; the other three take one line
+        // 2026-08-30), and TOGGLE INHERIT and FLATTEN since 2026-09-19 — while
+        // DELETE and TOGGLE DISABLED take one line
         // each. (COPY RESOLVED VALUE, seated among them since 2026-08-29,
-        // carries the group's second two-line form; its own row below says
-        // why.) They are the bottom
+        // carries a two-line form of its own; its own row below says
+        // why.) The admissions are redesign_button_shift_admits',
+        // never a count restated here. They are the bottom
         // row's since 2026-08-18 and their rows did not change with the lane —
         // this table is keyed by id and carries no row of its own; it is kept
         // in painted order for the reader alone. THE TOOLTIPS-ON-DISABLED
-        // RULING REACHES THEM HERE (architect 2026-08-07): these four are the
+        // RULING REACHES THEM HERE (architect 2026-08-07): these verbs are the
         // row's resting greys — in the `h` view and on a locked tab, both the
         // buttons' own gates — and a dead icon still explains itself.
         // THE DROP'S SHIFT LINE (2026-08-28) names the act and the modifier
@@ -16489,8 +16509,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconMarkerInherit:
             return {"Toggle Inherit (Ctrl+N)",
                     "Press Shift to tie the markers into one sweep axis."};
-        // FLATTEN (2026-09-19), the group's SECOND two-line form by seat,
-        // between the drop's and the copy's: the plain
+        // FLATTEN (2026-09-19), a two-line form seated between Toggle
+        // inherit's and the copy's: the plain
         // act clears the selected markers' tempo deviations and the shifted
         // twin collapses them into one, so the second line names the act and
         // the modifier and not a key — this table's rule for second lines,
@@ -16516,8 +16536,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Edit Flag (Return)", nullptr};
         // COPY RESOLVED VALUE (2026-08-29), the verb group's seventh since
         // the Flatten button joined 2026-09-19 (sixth from the Marker
-        // Measure's deletion on 2026-09-16, seventh before it) and its
-        // THIRD two-line form: bare `j` copies
+        // Measure's deletion on 2026-09-16, seventh before it) and the LAST
+        // of the group's two-line forms by seat: bare `j` copies
         // the focused marker's resolved value, and the shifted twin JUMPS to
         // the marker that value came from — so the second line names the act
         // and the modifier and not a key, this table's rule for second lines,
@@ -16527,9 +16547,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // shows the unresolved one, and the second names the two things a
         // source can be — the DEFINITION a `label_ref` points at, the
         // PREVIOUS marker a pass inherits from. The
-        // accelerator is a bare letter and so a capital. It is the group's one
-        // member the READ-ONLY LOCK leaves lit, both its chords being
-        // navigation, and it still explains itself in the `h` view, where the
+        // accelerator is a bare letter and so a capital. It is the one ACT in
+        // the group the READ-ONLY LOCK leaves lit, both its chords being
+        // navigation (Add to selection, a mode, is left lit for the same
+        // reason), and it still explains itself in the `h` view, where the
         // derived partition greys it — the tooltips-on-disabled ruling above.
         // THE OVERLOAD DROPS THE SECOND LINE wherever the shifted press would
         // not jump — the jump's own two questions, payload_eligible_marker and

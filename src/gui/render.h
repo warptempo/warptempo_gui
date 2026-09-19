@@ -2001,10 +2001,13 @@ int  waveform_max_h_px();
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
 // clock behind their separator (left-anchored since 2026-08-18, centred in the
-// lane before it), and the four marker verbs with ADD TO SELECTION behind them
+// lane before it), and the MARKER-VERB GROUP
 // + separator + marker-walk two + separator + four cardinal
 // arrows flush right (2026-08-15 for the walk group, 2026-08-18 for the
-// verbs), all one line ON THE WINDOW'S FOOT — which it holds again since
+// verbs; kMarkerVerbGroup in paint_handler.cpp owns that group's membership,
+// which has changed under this geometry several times and does not bear
+// restating here), all one line ON THE WINDOW'S FOOT — which it holds again
+// since
 // 2026-08-29's evening fold, a STATUS BAR having stood under it for that one
 // day — with the
 // flexible blank

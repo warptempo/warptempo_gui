@@ -262,7 +262,11 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // rule with no site left to disagree with it.
 // THE LOCK HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
 // 2026-08-15): the roster buttons wearing the disabled face while the active
-// tab is locked — the four marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N),
+// tab is locked — the FIVE marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N and,
+// since 2026-09-19, Ctrl+F, the FLATTEN button, whose chord this allowlist
+// drops like the other four; its face is the only one of the five that does
+// not read the lock directly, tempo_flatten_actionable composing
+// authoring_locked itself, and it greys with them all the same),
 // the Edit flag button on the bottom row, the load-in-place
 // in the icon row, and since 2026-08-30 THE FOUR CARDINAL ARROWS (planner
 // decision 52: Up/Down, dropped outright here; Left/Right, dropped only in
@@ -575,7 +579,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // bare `s` drops and exactly what this gate refuses — and the is_save
     // entry above is ctrl-exact, so the shifted spelling reaches no admission
     // and falls out at the default. THE FACE FOLLOWS THE KEY WITH NO SECOND
-    // EDIT: the Drop marker button is already one of the four verbs the lock
+    // EDIT: the Drop marker button is already one of the marker verbs the lock
     // greys, and its press arm consumes a SHIFT press on a disabled button
     // exactly as it consumes a plain one (arm_redesign_press, one predicate
     // for both routes), so the button's shift-click and its long press refuse
@@ -777,10 +781,14 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // app_state.h — the membership the ENABLED ARMS read, and they alone since
 // 2026-09-12, when the refusal-reason tooltip lines went: a greyed button
 // names its own act, the grey is the message, and the reason lives at the
-// key's card). Its members are THREE of the four marker verbs (TOGGLE INHERIT
+// key's card). Its members are THREE of the marker verbs — the DROP, DELETE
+// and DISABLE buttons (TOGGLE INHERIT
 // left them 2026-09-19 on the twin rule — its shifted chord Ctrl+Shift+N, the
 // TIE, is admitted above, so the button stays lit wherever a tie or an untie
-// is possible and its arm composes the fork itself), the
+// is possible and its arm composes the fork itself; FLATTEN, which joined the
+// verbs that same day, was never one either — its face reads
+// tempo_flatten_actionable, which composes authoring_locked itself, so the
+// grey falls out of the act's own predicate with no membership here), the
 // Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
@@ -8417,8 +8425,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
     // columns and both audio views (a selection is not authored content, so
     // the home-view binding has nothing to say about it), legal on a LOCKED
-    // tab (read_only_key_blocked admits it, where it drops the four marker
-    // verbs), and LEGAL IN THE `h` VIEW SINCE 2026-09-17 (architect, from the
+    // tab (read_only_key_blocked admits it, where it drops the marker verbs'
+    // own chords), and LEGAL IN THE `h` VIEW SINCE 2026-09-17 (architect,
+    // from the
     // tablet: "it should work in the Git history… so that I can select two
     // events") — history_mode_key_blocked admits the chord, so the press
     // reaches this arm from in there too and the lamp lights the same bit for

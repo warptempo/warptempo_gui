@@ -7281,7 +7281,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's three menu anchors and the view bar's four, row 3's two
 // tabs, row 4's twenty — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// sixteen since 2026-09-16: the enum's
+// seventeen since 2026-09-19: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

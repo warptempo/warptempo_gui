@@ -2918,7 +2918,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // cannot express it.
         // THE LOCK'S SET IS HAND-LISTED at redesign_button_enabled with
         // read_only_key_blocked named as its owner, and that arm's own case
-        // list is where the membership is stated — the four marker verbs
+        // list is where the membership is stated — the marker verbs
         // are the BOTTOM row's since 2026-08-18, leaving THE
         // ITERATION PAIR as this row's two since 2026-09-04, when the two
         // buttons came back from the deleted Iterations menu (the copy/paste
@@ -3154,12 +3154,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the outline stroke, the corner
 // radius, the centering rule): same ground, same five faces, same one disabled
-// blend. WHO WEARS THE DEAD FACE HERE, re-derived after the 2026-08-18
-// rulings — TWELVE of the sixteen, where it used to be one: in the `h` view
+// blend. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-19 — TWELVE of the
+// seventeen, where it used to be one: in the `h` view
 // the derived partition greys the PLAY/STOP button (Space is consumed there),
 // the FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
-// since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, COPY
+// since the cluster swap's deletion), the FIVE MARKER VERBS, COPY
 // VALUE and THE EDIT
 // FLAG BUTTON (bare `j` and bare Return, consumed in there like
 // the verbs' chords); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
@@ -3167,7 +3167,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // multi-selection; the two
 // SKIPS and the MARKER-WALK GROUP'S TWO stay lit, Home/End being the mode's
 // own absolute jumps and Tab/Shift+Tab its diff-flag cycle (architect-confirmed
-// for the skips). Outside the view the four VERBS and the EDIT FLAG BUTTON
+// for the skips). Outside the view the five VERBS and the EDIT FLAG BUTTON
 // grey on a locked tab, their own
 // gate — COPY VALUE, seated among them, does NOT, both its chords being
 // navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT THE
@@ -3269,13 +3269,15 @@ constexpr TransportRowDef kTransportGroup[] = {
 // member of this table that ever wears the lit fill; the four verbs above are
 // acts that complete.
 //
-// THE GROUP IS SEVEN since 2026-09-16, when the MARKER MEASURE (bare `/`,
+// THE GROUP IS EIGHT since 2026-09-19, when the FLATTEN BUTTON landed
+// between Toggle inherit and Edit flag: the four verbs, then FLATTEN, then
+// the EDIT FLAG BUTTON, then COPY RESOLVED VALUE and ADD TO SELECTION at the
+// tail. It was SEVEN from 2026-09-16, when the MARKER MEASURE (bare `/`,
 // minuet-scales, seated after the Edit flag button) left with the measures
-// feature: the four verbs, then the EDIT FLAG BUTTON, then COPY RESOLVED
-// VALUE and ADD TO SELECTION at the tail. Its succession — the Measure's
-// 2026-08-19 arrival, the Edit flag button's on 2026-08-27, Copy value's on
-// 2026-08-29, the value drag lamp of 2026-09-10..13 and the marker
-// magnification of 2026-09-14..15 — is in git history.
+// feature. The rest of the succession — the Measure's 2026-08-19 arrival, the
+// Edit flag button's on 2026-08-27, Copy value's on 2026-08-29, the value
+// drag lamp of 2026-09-10..13 and the marker magnification of 2026-09-14..15
+// — is in git history.
 //
 // THE EDIT FLAG BUTTON (2026-08-27) — bare Enter, text-field (Breeze's own text
 // cursor: a serif I-beam on a field's underline rule). THE SEAT IS THE
@@ -3293,9 +3295,11 @@ constexpr TransportRowDef kTransportGroup[] = {
 // first ask "beside Toggle inherit", and he moved it the same day): the four
 // verbs and the editor opener keep their run, and this
 // button joins Add to selection at the end, the two members that reach a
-// marker without authoring it. It is the group's one member the READ-ONLY LOCK
-// does not grey (its two chords author nothing) and the second on this row to
-// admit SHIFT, whose twin is the jump to the marker the value came from.
+// marker without authoring it. It is the one ACT in the group the READ-ONLY
+// LOCK does not grey (its two chords author nothing; Add to selection is left
+// lit too, a selection being navigation) and one of the buttons that
+// admit SHIFT (redesign_button_shift_admits owns that membership), its twin
+// being the jump to the marker the value came from.
 //
 // THE FLATTEN BUTTON (architect 2026-09-19; Ctrl+F, Breeze's merge — three
 // offset boxes reading as two, which is what a deviation chain does under it)
@@ -4089,7 +4093,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // below them at all, so a hint dropped there would fall off the window and
     // it hangs upward instead, the
     // same box flipped about the button. That covers BOTH bottom-row surfaces —
-    // the row's sixteen roster buttons and, since 2026-08-13, the modal's own,
+    // the row's seventeen roster buttons and, since 2026-08-13, the modal's own,
     // which paint in the same lane (the fork was resolved with the owner,
     // above). Then CLAMPED
     // FULLY ON-WINDOW so a
@@ -6175,10 +6179,9 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // modal's RECTANGLE moved from the window's centre onto this row, so this is
 // emphatically not the scrapped second-toplevel model (conventions.md carries
 // that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all SIXTEEN buttons — the transport three, the four
-// single-marker verbs with the Edit flag button, Copy
-// Resolved Value and Add to Selection behind
-// them, the marker-walk two and the four arrows — plus the clock and the row's three separators stand
+// YIELDS WHOLE: all SEVENTEEN buttons — the transport three, the VERB
+// GROUP'S EIGHT,
+// the marker-walk two and the four arrows — plus the clock and the row's three separators stand
 // down, nothing negotiates
 // for space,
 // and paint_modal_dialog paints the modal into the lane they left.
@@ -6245,9 +6248,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // the transport three
     // on the left at the icon row's boxes with the monospace clock behind their
     // separator (left-aligned since 2026-08-18, lane-centred before), and —
-    // flush right since 2026-08-15 — the four marker verbs, the marker-walk
-    // three and the four cardinal arrows behind two more of the ruled
-    // separators. THAT IS THE WHOLE ROSTER since
+    // flush right since 2026-08-15 — the MARKER-VERB GROUP, the marker-walk
+    // two and the four cardinal arrows behind two more of the ruled
+    // separators (the three tables above own those memberships).
+    // THAT IS THE WHOLE ROSTER since
     // 2026-08-13, when the architect moved the STATUS CHAIN — the critical
     // chip and section C's precedence ladder — up into the TAB ROW (the chain
     // was deleted there on 2026-08-29; its critical chip became the cards and
@@ -6326,7 +6330,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // here: paint_modal_dialog owns the lane from this frame until the
     // dialog's closer.
     //
-    // THE SIXTEEN BUTTONS PUBLISH ZERO RECTS rather than stranding the last
+    // THE ROW'S BUTTONS PUBLISH ZERO RECTS rather than stranding the last
     // frame's (the roster's own model — a zero/invalid stash contains no
     // point), so nothing can hit an unpainted button and no consumer of those
     // rects can read a phantom bound. Their THREE FACE BITS ARE
