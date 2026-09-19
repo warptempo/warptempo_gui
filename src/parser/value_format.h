@@ -176,13 +176,20 @@ inline bool parse_tempo_cents(std::string_view s, int64_t& out) {
 // parse_tempo_cents admits digits and one dot and nothing else, so the first
 // '+' or '-' in a tempo field is where the base ends and the chain begins,
 // and a label — four bytes `x.yz`, never signed — cannot collide with one.
-inline constexpr int kMaxTempoDeviationTerms = 8;  // (architect approval
-// 2026-09-18) — his number, and it is a READABILITY bound rather than a
-// structural one: the whole chain paints on the flag untruncated, and past
-// eight terms a flag stops being a thing a musician reads at a glance. The
-// walls that bound the VALUE are the three next to it: the spelled base and
-// the resolved total each take the tempo bracket, and each term takes
-// ±kIterDeltaMaxCents.
+inline constexpr int kMaxTempoDeviationTerms = 16;  // (architect approval
+// 2026-09-19, raising the eight of 2026-09-18) — his number, and it is a
+// HEADROOM bound rather than a structural one. A chain is written a term at a
+// time across a revision session, and he runs long ones: he expects one to
+// four terms before he flattens the marker, and eight was close enough to
+// that to make him ration his own revisions. Sixteen is the room above the
+// number he expects to use. IT IS NOT FREE, and the price is paint rather
+// than data: the base and the whole chain paint on the flag untruncated
+// (flag_display_text, render.h), so the widest flag is now about ninety
+// glyphs — re-derived at the two declarations that state an arithmetic over
+// this constant, marker_flag_max_width_px (render.h) and kMaxPendingChars
+// (text_editor.h). The walls that bound the VALUE are the three next to it:
+// the spelled base and the resolved total each take the tempo bracket, and
+// each term takes ±kIterDeltaMaxCents.
 
 // Signed deviation cents -> the exact text: a mandatory sign then the N.NN
 // spelling of the magnitude ("+0.01", "-4.00", "+0.00" for zero). The

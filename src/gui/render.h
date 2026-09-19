@@ -2275,9 +2275,11 @@ inline constexpr size_t kIterCellGlyphs = 5;
 //
 // THE GLYPH COUNT IS THE WORST PAINTED TOTAL, spelled out of the display
 // composer's own grammar (flag_display_text): FOUR bytes of base (a tempo is
-// N.NN and the bracket's integer part is one digit), FORTY of chain
-// (kMaxTempoDeviationTerms terms at five bytes each, `+0.01`), FIVE of capped
-// scale (`*` and kMarkerFlagScaleGlyphs) and THREE of truncation marker — 52.
+// N.NN and the bracket's integer part is one digit), EIGHTY of chain
+// (kMaxTempoDeviationTerms terms at five bytes each, `+0.01` — sixteen since
+// 2026-09-19), FIVE of capped scale (`*` and kMarkerFlagScaleGlyphs) and
+// THREE of truncation marker — 92. The expression below reads the constant,
+// so a term-cap retune moves this bound without an edit here.
 // A label definition rides inside the last two terms rather than past them:
 // it paints whole only where no scale was cut, and a `:a.aa` is four bytes
 // under the `*N.NN...` it replaces there. The phase-reset token (five bytes)
@@ -3830,6 +3832,16 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx);
 // FULL: a tempo is what the flag is for, and a chain the user authored term
 // by term is unreadable as `1.23+0.0...`. With no scale nothing is cut at
 // all and the label definition paints whole.
+//
+// SO A FLAG'S WIDTH IS ITS CHAIN'S, AND THAT IS WHAT THE TERM CAP COSTS
+// (stated here because this is where the never-cut rule lives): at
+// kMaxTempoDeviationTerms — sixteen since 2026-09-19 — the worst box paints
+// about ninety glyphs and paints every one of them. It is a known price and
+// not a surprise. Nothing is laid out against it: marker_flag_max_width_px
+// above is a CULL bound derived from the same constant, and a flag too wide
+// for the window runs off its right edge exactly as any other over-wide flag
+// does. The chains he expects to author are one to four terms long, and the
+// cap is the headroom above that rather than a shape to plan for.
 //
 // TWO READERS, and they must be exactly two: the warp column's flag pass
 // (render_flags' label lambda) and the BOUND CELLS' SEAM MEASUREMENT

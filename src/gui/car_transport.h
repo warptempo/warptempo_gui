@@ -354,12 +354,27 @@ private:
     // the measured reason it exists is rule 2 of the head comment), and fired
     // or dropped by tick(). The three fields are THE AXES THAT DECIDE WHAT
     // WOULD BE HEARD: the AUDIO VIEW picks the buffer, the TAB picks the trim
-    // and the marker stores, and the TITLE names the authored state — so a
+    // and the marker stores, and the STATE ID names the authored state — so a
     // later step, an S/T switch, a tab switch or a save makes this wait stale
     // and the tick drops it rather than playing something he has already left.
-    // `title` is car_transport_title_line(app.history) taken at the arm — the
-    // live state's own number, which every undo and redo moves — so it names
-    // WHICH state the wait is for.
+    //
+    // `state_id` IS AN IDENTITY AND NOT A DISPLAY STRING, which is why it is
+    // not called `title`: it is spelled by car_transport_title_line, whose
+    // `<index>_<distance>` line HAPPENS TO SPELL exactly the identity this
+    // latch needs — the live state's own number, which every undo and redo
+    // moves — and a retune of that line's spelling (it changed once already,
+    // 2026-09-17) must be read as a change to a wire string and never as a
+    // silent change to this staleness test.
+    //
+    // WHY THE COMPOSITE AND NOT THE BARE UNDO DEPTH: undo, then author a new
+    // edit, and undo_stack.size() comes back to the number it already had on
+    // a DIFFERENT state, so a depth alone would call a stale wait fresh. The
+    // distance half moves on that push and tells the two apart.
+    //
+    // THE ONE OVER-CLEAR IT BUYS, said plainly rather than left implied: the
+    // distance half also moves on a SAVE, so a save while the preview settles
+    // clears a pending play. Harmless — the play is one press away — and
+    // nearly unreachable from the console, which has no Ctrl+S.
     //
     // THE MARKER COLUMN IS DELIBERATELY NOT AMONG THEM (2026-09-19). W, P and
     // M choose which flags are authored and painted and change NOTHING about
@@ -368,14 +383,14 @@ private:
     // settles would cost him the play, and the play he lost would have sounded
     // identical to the one he gets by pressing it again. A RESTORE IS ALREADY
     // COVERED: an undo entry carries all three view tags and its restore
-    // writes them, so any restore that moved the column moved the history
-    // TITLE with it and this wait is stale on that field — a column that moves
-    // with the title standing still can only be a deliberate 1/2/3/4 press.
+    // writes them, so any restore that moved the column moved the STATE ID
+    // with it and this wait is stale on that field — a column that moves with
+    // the state id standing still can only be a deliberate 1/2/3/4 press.
     struct PendingCarPlay {
         bool        armed      = false;
         char        audio_view = '\0';
         char        tab        = '\0';
-        std::string title;
+        std::string state_id;
     };
     // THE CLEARS, ALL OF THEM, AND NOT ONE OF THEM IS A DURATION (nothing in
     // this product decides a wait by a timer, and every state below is one

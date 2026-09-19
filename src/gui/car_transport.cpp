@@ -146,7 +146,7 @@ void GuiCarTransport::car_play_after_step() {
         pending_play_.armed      = true;
         pending_play_.audio_view = app.active_audio_view;
         pending_play_.tab        = app.active_tab_view;
-        pending_play_.title      = car_transport_title_line(app.history);
+        pending_play_.state_id   = car_transport_title_line(app.history);
         return;
     }
     playback_lifecycle.car_play_playback();
@@ -164,7 +164,7 @@ void GuiCarTransport::run_pending_play() {
     }
     if (app.active_audio_view != pending_play_.audio_view ||
         app.active_tab_view   != pending_play_.tab ||
-        car_transport_title_line(app.history) != pending_play_.title) {
+        car_transport_title_line(app.history) != pending_play_.state_id) {
         // A later step, a view switch, a tab switch or a save superseded the
         // wait: the state it was for is not the state on screen.
         pending_play_ = PendingCarPlay{};
