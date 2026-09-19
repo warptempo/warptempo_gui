@@ -2217,34 +2217,35 @@ inline int marker_flag_baseline_px() {
 inline int waveform_border_px() {
     return scaled_px(kWaveformBorderPx, 1);
 }
-// THE NINE-GLYPH LABEL BUDGET, kept from the retired marker-text lane. It
-// counts the KEPT LABEL GLYPHS, not the painted total: a label longer than nine
-// glyphs displays as its first NINE bytes plus a literal three-period `...`, so
-// a truncated flag paints twelve glyphs. The truncation marker is three ASCII
-// periods rather than U+2026 by the architect's own side-by-side verdict
-// (2026-08-02): he compared the two on his flag crop and preferred the wider,
-// looser three-dot look, so it is the spec.
-//
-// Composed marker LABEL text is printable ASCII by construction (the
-// lowercase-ASCII label grammar, the numeric serializers, the locked iter
-// bracket), and with the ellipsis gone the truncation marker is ASCII too — a
-// label byte is a label glyph, which is what makes this a byte walk. THAT
-// PREMISE IS SCOPED TO THE LABEL SPAN and no wider: the iteration bound cells
-// paint their own runs beside the label, separate boxes budgeted by nothing
-// and truncated by nothing, so they never enter this walk. Their text is
-// printable ASCII too, so the product paints NO non-ASCII surface — it has
-// ONE face and no font fallback by standing ruling, and nothing painted needs
-// one. DISPLAY ONLY: the store,
-// the sidecars, the editor seed and the copy payload never see the dots.
-//
-// WHAT IT COVERS is the LABEL, and only the label: the iteration bound cells
-// paint their own runs beside it, budgeted by nothing (their grammar fixes
-// their width).
-inline constexpr size_t kMarkerLabelGlyphBudget = 9;
+// THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
+// nine-glyph budget this lane carried from the retired marker-text lane). A
+// warp payload's TEMPO — its base and its whole deviation chain — is the
+// reason the flag exists, so it paints in full however long the chain runs;
+// what a glance does not need is the scale's low digits, which is exactly
+// what the old budget happened to cut on the payloads that could reach it.
+// So the DISPLAY composer (flag_display_text, render.h's flag-text block)
+// keeps `*` plus these FOUR bytes of the scale — `*1.01` — and drops
+// everything after them, and the rule reproduces the old paint byte for byte
+// on every payload authorable before the chain landed: a scale is spelled
+// min-4 (format_value_double), so it is at least six bytes and always cuts,
+// and a four-byte base plus five capped scale bytes IS the old nine.
+inline constexpr size_t kMarkerFlagScaleGlyphs = 4;
 
-// THE TRUNCATION MARKER ITSELF, so the bytes cap_marker_label appends and the
-// glyphs the width bound below charges for have ONE owner and cannot drift
-// apart. Pure ASCII, so its size() is both its byte length and its glyph count.
+// THE TRUNCATION MARKER, appended by the display composer when it cut
+// anything — the scale's low digits, a label definition riding past them —
+// so the bytes it appends and the glyphs the width bound below charges for
+// have ONE owner and cannot drift apart. Three ASCII periods rather than
+// U+2026 by the architect's own side-by-side verdict (2026-08-02): he
+// compared the two on his flag crop and preferred the wider, looser
+// three-dot look, so it is the spec. Pure ASCII, so its size() is both its
+// byte length and its glyph count.
+//
+// Composed marker flag text is printable ASCII by construction (the
+// lowercase-ASCII label grammar and the numeric serializers), and so is
+// every bound cell's token beside it, so the product paints NO non-ASCII
+// surface — it has ONE face and no font fallback by standing ruling, and
+// nothing painted needs one. DISPLAY ONLY: the store, the sidecars, the
+// editor seed and the copy payload never see the dots.
 inline constexpr std::string_view kMarkerLabelTruncationMarker = "...";
 
 // ONE ITERATION BOUND CELL'S GLYPH COUNT, a fixed shape by grammar
@@ -2272,10 +2273,16 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // two pads bounds every box the truncation can produce. A bound, not a size:
 // nothing is laid out against it.
 //
-// THE GLYPH COUNT IS THE WORST PAINTED TOTAL, not the budget: the budget is the
-// KEPT LABEL, and a truncated flag paints the marker's own glyphs after it, so
-// both terms are here. An untruncated label is shorter than the budget by
-// definition, so the truncated form is the worst case on both arms.
+// THE GLYPH COUNT IS THE WORST PAINTED TOTAL, spelled out of the display
+// composer's own grammar (flag_display_text): FOUR bytes of base (a tempo is
+// N.NN and the bracket's integer part is one digit), FORTY of chain
+// (kMaxTempoDeviationTerms terms at five bytes each, `+0.01`), FIVE of capped
+// scale (`*` and kMarkerFlagScaleGlyphs) and THREE of truncation marker — 52.
+// A label definition rides inside the last two terms rather than past them:
+// it paints whole only where no scale was cut, and a `:a.aa` is four bytes
+// under the `*N.NN...` it replaces there. The phase-reset token (five bytes)
+// and the magnification digit (one) are far under it, which is why ONE bound
+// still serves all three columns.
 //
 // `iteration_on` ADDS THE TWO BOUND CELLS, and it must: an eligible flag runs
 // two cells further right than its label predicts (each a seam column, two
@@ -2301,7 +2308,9 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // would only over-admit culled markers by one column and never save a visible
 // one. The cells' seam columns ARE in it: they stand to the right.
 inline double marker_flag_max_width_px(bool iteration_on) {
-    const size_t glyphs = kMarkerLabelGlyphBudget +
+    const size_t glyphs = 4 +                                  // `N.NN` base
+                          5 * kMaxTempoDeviationTerms +        // `+0.01` each
+                          1 + kMarkerFlagScaleGlyphs +         // `*N.NN`
                           kMarkerLabelTruncationMarker.size();
     const double pads = static_cast<double>(marker_flag_pad_left_px() +
                                             marker_flag_pad_right_px());
@@ -3234,7 +3243,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // marker lane vertically, carrying a 1px top edge in its class's edge color and
 // the marker's own composed label in the redesign's sans face. The width is
 // DERIVED from the shaped label (pad + shaped + pad); the anatomy, the pad and
-// the nine-glyph truncation live at kMarkerFlagPadXPx above.
+// the warp payload's scale truncation live at kMarkerFlagPadXPx above.
 //
 // PLUS A 1px LEFT BORDER OUTSIDE THAT FILL (architect 2026-08-02),
 // kMarkerFlagBorder, full box height, standing one column LEFT of the frame
@@ -3800,15 +3809,36 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
-// line's payload — tempo, `*scale`, `:label` or the pass / ref forms — and
-// never a bracket. The FLAG paints it (its LABEL truncated at the nine-glyph
-// budget), the flag editor seeds from it (enter_top_flag_edit) and the
-// bound field's anchor measures it (committed_cell_seam_off), so the tempo,
-// scale and label a flag shows and the ones its editor opens with are one
-// string by construction. The iteration bounds are the two cells beside the
-// flag (format_iter_bound_cell owns their spelling), each with its own
-// editor, so no composer splices them anywhere.
+// line's payload WHOLE — the tempo's derived base and its every deviation
+// term, `*scale`, `:label`, or the pass / ref forms — and never a bracket.
+// NOTHING HERE IS EVER CUT, and its ONE READER is why: the flag editor seeds
+// its field from it (enter_top_flag_edit, flag_editor.cpp), so what the field
+// opens with is what the store holds — a cut seed would let a commit throw
+// away a scale's digits or a chain's terms the user never touched. (The `j`
+// copy's payload is composed in the parser instead, off the RESOLVED value
+// and never off this string: resolved_marker_payload, warp_frame_map_build.h.)
+// The iteration bounds are the two cells beside the flag
+// (format_iter_bound_cell owns their spelling), each with its own editor, so
+// no composer splices them anywhere.
 std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx);
+
+// WHAT THE FLAG BOX ACTUALLY PAINTS (architect 2026-09-19; defined in
+// render.cpp beside the composer above): the same payload with THE SCALE
+// CAPPED to `*N.NN` (kMarkerFlagScaleGlyphs) and the truncation marker
+// appended where that cut anything — more scale digits, or a label
+// definition riding past them. THE BASE AND THE WHOLE CHAIN ALWAYS PAINT IN
+// FULL: a tempo is what the flag is for, and a chain the user authored term
+// by term is unreadable as `1.23+0.0...`. With no scale nothing is cut at
+// all and the label definition paints whole.
+//
+// TWO READERS, and they must be exactly two: the warp column's flag pass
+// (render_flags' label lambda) and the BOUND CELLS' SEAM MEASUREMENT
+// (committed_cell_seam_off), which shapes this same string to find where a
+// marker's first cell begins. Measuring the UNCUT composer there would open
+// a bound field at a column no cell stands on — the one place where the
+// wrong composer is invisible until a cell is in the wrong place.
+std::string flag_display_text(const std::vector<GuiWarpMarker>& markers,
+                              int idx);
 
 // (THE MEASURED MONOSPACE GRID IS GONE — row 7, 2026-08-01: monospace_advance,
 // monospace_text_box_h, monospace_text_row_baseline_offset,
@@ -3848,16 +3878,18 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx);
 // own name spells the concept in full, and so does every identifier around it.
 //
 // THE WORD ITSELF (architect 2026-09-17): the flag says what the marker IS,
-// and the lane's own budget decides how much of it fits. The two words `phase
-// reset` did not fit — eleven bytes handed to cap_marker_label, nine kept,
-// then the three-period truncation marker, so every reset in the product
-// painted `phase res...` and the second word never showed at all. At five
-// bytes `reset` passes the cap untouched, and with it goes the ONE label that
-// spent its own budget by construction (every other label reaching a flag box
-// is user text). Nothing lays out against the old width: every flag's width is
-// pad + shaped(label) + pad, re-derived from the shaping pass, and
-// marker_flag_max_width_px bounds the left cull at budget + marker glyphs, so
-// the box simply narrows with the word. TWO SITES READ THIS TOKEN, both by
+// and the lane's own budget decided how much of it fit. The two words `phase
+// reset` did not fit — eleven bytes handed to the shared nine-byte cap of
+// the day, then the three-period truncation marker, so every reset in the
+// product painted `phase res...` and the second word never showed at all. At
+// five bytes `reset` passed that cap untouched, and with it went the ONE
+// label that spent its own budget by construction (every other label reaching
+// a flag box is user text); the shared cap itself is gone since 2026-09-19,
+// so this column cuts nothing at all now. Nothing lays out against the old
+// width: every flag's width is pad + shaped(label) + pad, re-derived from the
+// shaping pass, and marker_flag_max_width_px bounds the left cull at the
+// WARP payload's worst case, comfortably past this token, so the box simply
+// narrows with the word. TWO SITES READ THIS TOKEN, both by
 // calling the constant (render.cpp): the flag painter, and the bound cells'
 // SEAM MEASUREMENT, which shapes this same string to find where a reset's
 // first iteration cell starts — so the cells move with the word and the two

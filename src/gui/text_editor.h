@@ -77,11 +77,22 @@ namespace text_editor {
 // parse the load runs (warpmarkers_parse.cpp owns the grammar) — so the
 // widest committable payload is the widest LOADABLE one. The forms are
 // `pass`, `x.yz`, `pass:x.yz`, `N.NN`, `N.NN*SCALE`, `N.NN:x.yz` and
-// `N.NN*SCALE:x.yz`, so the widest is TEMPO + `*` + SCALE + `:` + LABEL:
-//   TEMPO   4 bytes — `4.00`. parse_tempo_cents pins exactly the N.NN
+// `N.NN*SCALE:x.yz`, each numeric form optionally carrying a DEVIATION CHAIN
+// after its base, so the widest is BASE + CHAIN + `*` + SCALE + `:` + LABEL:
+//   BASE    4 bytes — `4.00`. parse_tempo_cents pins exactly the N.NN
 //           spelling and the bracket pins the integer part to one digit at
 //           kTempoMaxCents; the assert below keeps that honest across a
 //           bracket retune.
+//   CHAIN  40 bytes — kMaxTempoDeviationTerms terms at FIVE each
+//           (architect approval 2026-09-18). A term is a mandatory sign and
+//           the same N.NN magnitude (parse_deviation_cents, value_format.h),
+//           whose integer part is pinned to one digit by the term's own wall
+//           ±kIterDeltaMaxCents — the second assert below keeps THAT honest.
+//           The bound is attained: eight terms all spelled `-4.00` is a legal
+//           chain whenever the base leaves room for the total to stay in
+//           bracket, and the cap must admit the typing even where the WALLS
+//           will then refuse the value, since a cap narrower than the
+//           grammar hides the field's own refusal behind a full-field card.
 //   SCALE  18 bytes, and this is the term that had to be ANSWERED rather
 //           than assumed, the scale being a full double. THE READER IS NOT
 //           FREE: parse_positive_value's last arm refuses any spelling that
@@ -99,10 +110,12 @@ namespace text_editor {
 //           `0.5000000000000001`.
 //   LABEL   4 bytes exactly (is_valid_label_format: a lowercase letter, the
 //           dot, two lowercase alphanumerics).
-// 4 + 1 + 18 + 1 + 4 = 28, spelled whole: `4.00*0.5000000000000001:a.aa`.
-// A TIGHT BOUND, not a policy cap. (It was 52 until 2026-09-05, sized for a
-// full-double BASE from before tempo became integer cents pinned to N.NN; the
-// remainder was advertising typing the commit refuses.)
+// 4 + 40 + 1 + 18 + 1 + 4 = 68, spelled whole:
+// `4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00*0.5000000000000001:a.aa`.
+// A TIGHT BOUND, not a policy cap. (It was 28 from 2026-09-05 until the
+// deviation chain landed on 2026-09-18, and 52 before that — sized then for
+// a full-double BASE from before tempo became integer cents pinned to N.NN,
+// where the remainder was advertising typing the commit refuses.)
 //
 // An operation that would grow the pending past this cap refuses atomically
 // and sets the red state (the whole edit lands or the buffer is untouched);
@@ -116,7 +129,9 @@ namespace text_editor {
 // payload can reach the editor at all.
 static_assert(kTempoMaxCents < 1000,
               "a tempo's integer part no longer fits one digit");
-constexpr int kMaxPendingChars = 28;
+static_assert(kIterDeltaMaxCents < 1000,
+              "a deviation term's integer part no longer fits one digit");
+constexpr int kMaxPendingChars = 68;
 // The ITERATION BOUND editor (a double-click or Enter on one of the two bound
 // cells a flag grows in iteration mode). ITS GRAMMAR IS FIXED-WIDTH: a sign,
 // one integer digit, the point, two decimals (format_signed_delta_cents,

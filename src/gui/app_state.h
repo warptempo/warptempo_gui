@@ -9704,6 +9704,60 @@ inline int64_t tempo_cent_step_landing(int64_t start_cents,
                       kTempoMaxCents);
 }
 
+// WHAT A CENT STEP DOES TO A MARKER THAT CARRIES A DEVIATION CHAIN — ONE
+// OWNER for the three hands that step a tempo (architect approval
+// 2026-09-18). THE STEP MOVES THE LAST TERM WHEN A CHAIN EXISTS AND THE BASE
+// WHEN NONE DOES, which with this data model is one act rather than two: the
+// total and the last term take THE SAME delta, so the DERIVED base
+// (tempo_cents minus the chain's sum) does not move — and that is the whole
+// point of the feature. `1.23+0.01` stepped up reads `1.23+0.02`, never
+// `1.24+0.01`, and the section's main speed stays where the user put it.
+//
+// TWO HEADROOMS AND THE SMALLER ONE WINS. The total's is
+// tempo_cent_step_landing's — the bracket clamp, THE one owner of that
+// arithmetic, composed here and never re-spelled — and the last term's is
+// its own wall, ±kIterDeltaMaxCents. Both are computed as "where the clamp
+// lands, less where we started", so each carries the step's own sign and a
+// magnitude no larger than it; composing them therefore yields exactly the
+// smaller of the two, and the term clamp is applied to the total's answer
+// rather than to the raw delta so a run into either wall stops both fields
+// together. A step whose applied delta is ZERO changes nothing — which is
+// what the Up / Down face reads.
+//
+// A TERM AT `+0.00` IS NOT A SPECIAL CASE: it stays on the chain (it is
+// history), and the next step simply moves it off zero again.
+struct WarpTempoStepMove {
+    int64_t applied = 0;   // the delta the total AND the last term both take
+    int64_t cents   = 0;   // where the resolved total lands
+};
+inline WarpTempoStepMove warp_tempo_step_move(
+        int64_t start_cents, const std::vector<int64_t>& chain,
+        int64_t delta_cents) {
+    WarpTempoStepMove out;
+    out.applied = tempo_cent_step_landing(start_cents, delta_cents) -
+                  start_cents;
+    if (!chain.empty()) {
+        const int64_t last = chain.back();
+        out.applied = std::clamp(last + out.applied, -kIterDeltaMaxCents,
+                                 kIterDeltaMaxCents) - last;
+    }
+    out.cents = start_cents + out.applied;
+    return out;
+}
+
+// THE WRITE THE MOVE ABOVE NAMES, so no caller spells the chain's half twice:
+// the resolved total, and the last term carried by the same delta. A marker
+// with no chain takes the total alone, which is every marker the product
+// could hold before 2026-09-18 and every one a plain authoring road writes.
+// The caller owns the OTHER tempo fields (a singleton step's pass freeze
+// writes tempo_inherits and the seed's scale beside this call).
+inline void warp_tempo_step_write(GuiWarpMarker& m,
+                                  const WarpTempoStepMove& move) {
+    m.tempo_cents = move.cents;
+    if (!m.tempo_deviation_cents.empty())
+        m.tempo_deviation_cents.back() += move.applied;
+}
+
 // THE GROUP STEP'S WALL SCAN, one const owner (2026-08-31): true when EVERY
 // selected marker could take a step of `delta_cents` — no pass, no label ref,
 // no coincident-collapse member, none that would leave the tempo bracket under
@@ -11822,12 +11876,22 @@ inline bool history_step_actionable(const AppState& a,
 // whole frame and an authored tempo whole cents BY TYPE, and the two double
 // fields (tempo_scale, the bpm bracket) are compared as stored — what a restore
 // would write back, field for field.
+//
+// THE DEVIATION CHAIN IS IN THE BASIS (architect approval 2026-09-18): TWO
+// MARKERS EQUAL IN TOTAL AND DIFFERENT IN SPELLING ARE DIFFERENT ROWS. The
+// chain is serialized state a restore writes back, so leaving it out would
+// let a respelling-only entry find no touched row and strand the selection —
+// the same argument the bpm fields carry below, reached from the other side.
+// (The `h` view needs no term of its own for it: its diff compares the
+// sidecar's LINE TEXT, extract_warp_entry taking the whole payload token as
+// rest-of-line, so a respelling is already a different row there.)
 inline bool warp_row_fields_differ(const GuiWarpMarker& a,
                                    const GuiWarpMarker& b) {
     return a.time_frame     != b.time_frame
         || a.disabled       != b.disabled
         || a.tempo_inherits != b.tempo_inherits
         || a.tempo_cents    != b.tempo_cents
+        || a.tempo_deviation_cents != b.tempo_deviation_cents
         || a.tempo_scale    != b.tempo_scale
         || a.label_def      != b.label_def
         || a.label_ref      != b.label_ref

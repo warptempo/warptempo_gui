@@ -778,16 +778,27 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // owned value. label_def is independent of tempo source —
     // `pass:LABEL` carries a def at this position while inheriting
     // the tempo from a prior owning marker.
+    //
+    // THE DEVIATION CHAIN RIDES WITH THE TEMPO (architect approval
+    // 2026-09-18) because it IS the tempo's spelling: the parse resolved the
+    // total into tempo_cents and left the terms beside it, so copying both
+    // is what makes a typed `1.23+0.01` survive the commit. THE TWO ARMS
+    // THAT WRITE A NON-OWNER CLEAR IT, and both are here: the pass arm
+    // explicitly, and the second arm by assignment — a label ref parses with
+    // an empty chain by grammar (`a.aa+0.01` is load-fatal), so the copy IS
+    // the clear on that form and no third road exists.
     if (parsed.tempo_inherits) {
         m.tempo_inherits = true;
         m.tempo_cents    = 100;
         m.tempo_scale.reset();
+        m.tempo_deviation_cents.clear();
         m.label_def      = parsed.label_def;
         m.label_ref.clear();
     } else {
         m.tempo_inherits = false;
         m.tempo_cents    = parsed.tempo_cents;
         m.tempo_scale    = parsed.tempo_scale;
+        m.tempo_deviation_cents = parsed.tempo_deviation_cents;
         m.label_def      = parsed.label_def;
         m.label_ref      = parsed.label_ref;
     }
@@ -835,10 +846,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
     }
 
     // Did any serialized field change? Cascade renames imply a label_def
-    // change, already covered by the field compare below.
+    // change, already covered by the field compare below. THE DEVIATION
+    // CHAIN IS A SERIALIZED FIELD AND IT IS ASKED HERE (architect approval
+    // 2026-09-18): a commit that only RESPELLS — `1.24` typed as
+    // `1.23+0.01` — moves no total and no other field, so without this term
+    // the edit would leave the file changed with no undo entry behind it and
+    // no dirty mark on the clock.
     const bool canonical_changed =
         m.tempo_inherits != before.tempo_inherits ||
         m.tempo_cents    != before.tempo_cents ||
+        m.tempo_deviation_cents != before.tempo_deviation_cents ||
         m.tempo_scale    != before.tempo_scale ||
         m.label_def      != before.label_def ||
         m.label_ref      != before.label_ref ||

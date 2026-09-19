@@ -4817,6 +4817,13 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // (the `'` load-in-place) stays closed under the grammar by type AND
             // by VOCABULARY: the cell values a sweep can write are exactly
             // the values the strict sidecar parse accepts.
+            // A CELL MOVES THE TOTAL, so on a marker carrying a DEVIATION
+            // CHAIN it moves the DERIVED BASE and leaves the terms where
+            // they are — the cell's sidecar spells a different base beside
+            // the same chain, which is what a swept marker's file says it
+            // is. Nothing downstream can see the difference (the chain is
+            // spelling, never engine input), and the sidecar re-parses to
+            // exactly this total.
             cell_warp_markers[mi].tempo_cents =
                 base_warp_markers[mi].tempo_cents +
                 per_marker_delta_cents[k][indices[k]];

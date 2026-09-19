@@ -58,6 +58,25 @@ bool parse_tempo_field(const std::string& s, int64_t& out,
     return true;
 }
 
+// Parse and wall-check ONE TEMPO DEVIATION TERM (architect approval
+// 2026-09-18). The whole verdict — the mandatory sign, the strict N.NN
+// magnitude, the no-negative-zero rule and the ±kIterDeltaMaxCents wall —
+// belongs to parse_deviation_cents (value_format.h), so the load and the flag
+// editor's commit judge a term with one body. ONE JUDGE EARNS ONE SENTENCE:
+// unlike parse_tempo_field above, which can say which of the form and the
+// bracket it refused on, this names the form and the window together and
+// echoes the offending text, which is what a hand-edited chain needs to see.
+bool parse_deviation_field(const std::string& s, int64_t& out,
+                           std::string& error_out) {
+    if (!parse_deviation_cents(s, out)) {
+        error_out = "tempo deviation must be a signed N.NN within [" +
+                    format_deviation_cents(-kIterDeltaMaxCents) + ", " +
+                    format_deviation_cents(kIterDeltaMaxCents) + "]: " + s;
+        return false;
+    }
+    return true;
+}
+
 // Parse and range-check an authored SCALE value: full double via
 // parse_value_double (whole field consumed, finite, no leading '-') under
 // a strict positivity refusal — a typed zero (a canonical spelling like
@@ -97,8 +116,26 @@ bool parse_positive_value(const std::string& s, double& out,
 
 // Parse TEMPO[*SCALE] into m's tempo fields (owner form: inherits=false).
 // Splits on an optional '*', parses the tempo through parse_tempo_field and
-// the optional scale through parse_positive_value, then writes the three
+// the optional scale through parse_positive_value, then writes the four
 // tempo fields. label_def, if any, is the caller's to attach.
+//
+// THE TEMPO PART IS A BASE AND A CHAIN (architect approval 2026-09-18): the
+// base, then zero to kMaxTempoDeviationTerms signed terms, `1.23+0.01-0.02`.
+// The split is unambiguous because parse_tempo_cents admits digits and one
+// dot and nothing else, so the FIRST '+' or '-' can only be a term's sign;
+// each term then runs from its own sign to the next sign or to the end.
+// FOUR WALLS, each with its own sentence: the SPELLED BASE takes the tempo
+// bracket (parse_tempo_field, unchanged — its bracket IS the base's wall),
+// each TERM takes ±kIterDeltaMaxCents, the COUNT takes the term cap, and the
+// RESOLVED TOTAL takes the tempo bracket again. The total is what
+// tempo_cents holds; the terms are the spelling beside it, and the base is
+// re-derived from the two at format time (warpmarkers_parse.h).
+//
+// A PASS AND A LABEL REF NEVER REACH THIS BODY: parse_new_payload matches
+// them exactly, so `pass+0.01` and `a.aa+0.01` arrive here as numeric
+// payloads and are refused as the malformed bases they are — the chain needs
+// no rule of its own to keep them plain (architect 2026-09-19: "a pass is
+// simply a pass").
 bool parse_tempo_with_scale(const std::string& s, WarpMarker& m,
                             std::string& error_out) {
     const size_t star = s.find('*');
@@ -106,8 +143,41 @@ bool parse_tempo_with_scale(const std::string& s, WarpMarker& m,
         ? s : s.substr(0, star);
     const std::string scale_part = (star == std::string::npos)
         ? std::string() : s.substr(star + 1);
+    const size_t chain = tempo_part.find_first_of("+-");
+    const std::string base_part = (chain == std::string::npos)
+        ? tempo_part : tempo_part.substr(0, chain);
     int64_t tempo_c = 0;
-    if (!parse_tempo_field(tempo_part, tempo_c, error_out)) {
+    if (!parse_tempo_field(base_part, tempo_c, error_out)) {
+        return false;
+    }
+    std::vector<int64_t> terms;
+    for (size_t at = chain; at != std::string::npos; ) {
+        const size_t next = tempo_part.find_first_of("+-", at + 1);
+        const std::string term = (next == std::string::npos)
+            ? tempo_part.substr(at) : tempo_part.substr(at, next - at);
+        if (terms.size() == static_cast<size_t>(kMaxTempoDeviationTerms)) {
+            error_out = "tempo carries at most " +
+                        std::to_string(kMaxTempoDeviationTerms) +
+                        " deviations: " + tempo_part;
+            return false;
+        }
+        int64_t term_c = 0;
+        if (!parse_deviation_field(term, term_c, error_out)) {
+            return false;
+        }
+        terms.push_back(term_c);
+        tempo_c += term_c;
+        at = next;
+    }
+    // THE RESOLVED TOTAL TAKES THE TEMPO BRACKET, its own sentence naming the
+    // whole tempo part: a chain whose terms are each legal can still walk the
+    // sounding tempo out of the authored window, and tempo_cents is what every
+    // reader of this marker takes. Base and terms are bracketed, so the sum
+    // cannot overflow.
+    if (tempo_c < kTempoMinCents || tempo_c > kTempoMaxCents) {
+        error_out = "tempo and its deviations must total within [" +
+                    format_tempo_cents(kTempoMinCents) + ", " +
+                    format_tempo_cents(kTempoMaxCents) + "]: " + tempo_part;
         return false;
     }
     std::optional<double> scale_v;
@@ -121,6 +191,7 @@ bool parse_tempo_with_scale(const std::string& s, WarpMarker& m,
     m.tempo_inherits = false;
     m.tempo_cents    = tempo_c;
     m.tempo_scale    = scale_v;
+    m.tempo_deviation_cents = std::move(terms);
     return true;
 }
 
@@ -167,6 +238,7 @@ bool parse_new_payload(const std::string& payload,
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
+            m.tempo_deviation_cents.clear();
             return true;
         }
         if (is_valid_label_format(payload)) {
@@ -174,6 +246,7 @@ bool parse_new_payload(const std::string& payload,
             m.tempo_inherits = false;
             m.tempo_cents    = 0;
             m.tempo_scale.reset();
+            m.tempo_deviation_cents.clear();
             return true;
         }
         // Tempo (numeric, with optional *scale).
@@ -198,6 +271,7 @@ bool parse_new_payload(const std::string& payload,
         m.tempo_inherits = true;
         m.tempo_cents    = 100;
         m.tempo_scale.reset();
+        m.tempo_deviation_cents.clear();
         m.label_def      = label_def;
         return true;
     }

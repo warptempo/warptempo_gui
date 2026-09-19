@@ -53,21 +53,39 @@ std::string format_warpmarkers_text(
         //   inherit, with def       → "pass:a.42"
         //   owning, no scale        → "1.23"
         //   owning, with scale      → "1.23*1.2345"
+        //   owning, with a chain    → "1.23+0.01-0.02"
         //   def, no scale           → "1.23:a.03"
         //   def, with scale         → "1.23*1.2345:a.03"
+        //   the whole shape         → "1.23+0.01-0.02*1.2345:a.03"
         // Tempo persists through its integer-cents serialization owner
         // (format_tempo_cents, value_format.h — the exact N.NN text, byte-
         // identical to the historical min-2-padded form); scale persists as
         // a padded shortest-round-trip double (format_value_double, min 4).
         // A saved store reloads bit-identically and historical
         // fixed-decimal forms re-serialize byte-for-byte.
+        //
+        // THE BASE IS DERIVED HERE AND NOWHERE ELSE (architect approval
+        // 2026-09-18): tempo_cents is the RESOLVED TOTAL, so the spelled base
+        // is that total less the chain's own sum, and each term follows it
+        // through format_deviation_cents. Write the total and re-derive the
+        // base is what makes `1.23+0.01` and `1.24` one number to every
+        // reader while the FILE keeps the spelling the user authored — a
+        // load-then-save round-trips the chain byte for byte.
+        // A PASS AND A REF CARRY NO CHAIN BY GRAMMAR (the load refuses one,
+        // and every GUI road that writes either form clears the vector), so
+        // neither arm below branches on it: the chain lives on the numeric
+        // arm because that is the only place it can exist.
         if (!m.label_ref.empty()) {
             out << m.label_ref;
         } else {
             if (m.tempo_inherits) {
                 out << "pass";
             } else {
-                out << format_tempo_cents(m.tempo_cents);
+                int64_t chain_sum = 0;
+                for (int64_t term : m.tempo_deviation_cents) chain_sum += term;
+                out << format_tempo_cents(m.tempo_cents - chain_sum);
+                for (int64_t term : m.tempo_deviation_cents)
+                    out << format_deviation_cents(term);
                 if (m.tempo_scale.has_value()) {
                     out << '*' << format_value_double(*m.tempo_scale, 4);
                 }

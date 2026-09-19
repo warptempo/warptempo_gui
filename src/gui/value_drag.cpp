@@ -144,7 +144,16 @@ void ValueDragOps::apply_motion(int mouse_y) {
         const bool inherits = mv[static_cast<size_t>(idx)].tempo_inherits;
         const int64_t cur = inherits ? app.value_drag.start_value
                                      : mv[static_cast<size_t>(idx)].tempo_cents;
-        const int64_t cents = tempo_cent_step_landing(cur, target - cur);
+        // THROUGH THE STEP'S MOVE OWNER (warp_tempo_step_move, app_state.h),
+        // which composes that landing and adds the DEVIATION CHAIN's own
+        // headroom: where the marker carries a chain, the hand walks the
+        // LAST TERM and the total together so the derived base holds still,
+        // and either wall stops both. A pass carries no chain by grammar, so
+        // its arm gets the plain bracket clamp and freezes to a plain base.
+        const WarpTempoStepMove move = warp_tempo_step_move(
+            cur, mv[static_cast<size_t>(idx)].tempo_deviation_cents,
+            target - cur);
+        const int64_t cents = move.cents;
         // Asked BEFORE marker_mut, which bumps the store generation on call:
         // a step that lands where it already stands must cost nothing at all,
         // not a spurious generation bump and the cache rebuild behind it. A
@@ -156,12 +165,14 @@ void ValueDragOps::apply_motion(int mouse_y) {
         // `!m.tempo_inherits` term.
         if (!inherits && cents == cur) return;
         if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx)) {
-            // THE STEP'S OWN THREE WRITES, in its own order. On an owner the
-            // first and the third are no-ops (the seed's scale IS its scale),
-            // so spelling all three costs nothing and keeps the two hands one
-            // act rather than two that agree today.
+            // THE STEP'S OWN WRITES, in its own order, the middle one through
+            // the step's shared body (warp_tempo_step_write, app_state.h —
+            // the total and, where one stands, the chain's last term). On an
+            // owner the first and the last are no-ops (the seed's scale IS
+            // its scale), so spelling them costs nothing and keeps the two
+            // hands one act rather than two that agree today.
             m->tempo_inherits = false;
-            m->tempo_cents    = cents;
+            warp_tempo_step_write(*m, move);
             m->tempo_scale    = app.value_drag.start_scale;
         }
     } else if (app.value_drag.column == 'P') {

@@ -287,18 +287,20 @@ uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile);
 // above; flag_editor.cpp sees it transitively through this header.)
 
 // Signed tempo-delta cents -> the explicit-sign two-decimal text ("+1.50",
-// "-0.50", "+0.00"). The signed session-only sibling of format_tempo_cents
-// (value_format.h): iter deltas live in integer cents, so their display
-// text formats directly from cents with no double round-trip. Used by the
-// inline iter bracket below and the iteration sweep's delta CSV filenames.
+// "-0.50", "+0.00") — THE ITERATION BRACKET'S FACE ON THE PRODUCT'S ONE
+// SIGNED-CENTS SPELLING. It DELEGATES to format_deviation_cents
+// (value_format.h) since 2026-09-18 (architect approval 2026-09-18), when a
+// serialized TEMPO DEVIATION TERM began wearing the same shape: two domains,
+// one spelling, one body — the term is AUTHORED STATE inside a warp payload
+// while a bracket bound is SESSION-ONLY and never serialized, and the two
+// share the ±kIterDeltaMaxCents magnitude that makes their widest spellings
+// identical. The delegation is byte-for-byte what this body emitted (the
+// magnitude runs through format_tempo_cents either way), so the flag cells
+// and the iteration sweep's delta CSV filenames are unchanged. TWO READERS
+// here: the inline iter bracket cell below, and the iteration sweep's
+// per-cell basename (input_key_dispatch.cpp).
 inline std::string format_signed_delta_cents(int64_t cents) {
-    std::string s(1, cents < 0 ? '-' : '+');
-    const int64_t a = cents < 0 ? -cents : cents;
-    s += std::to_string(a / 100);
-    s += '.';
-    s += static_cast<char>('0' + (a % 100) / 10);
-    s += static_cast<char>('0' + a % 10);
-    return s;
+    return format_deviation_cents(cents);
 }
 
 // Signed integer HOPS -> the explicit-sign text ("+2", "-3", "+0"). The

@@ -20,7 +20,11 @@
 // parse_tempo_cents pair below is its single serialization owner — the
 // exact tempo sibling of frame_format.h's authored pair. The N.NN spelling
 // is the text interface only; no scale-style full-double input latitude
-// exists on the tempo field.
+// exists on the tempo field. A THIRD PAIR sits beside it since 2026-09-18
+// (architect approval 2026-09-18): format_deviation_cents /
+// parse_deviation_cents, the SIGNED cent value a tempo DEVIATION TERM is
+// spelled with, which takes its magnitude from the tempo pair so the product
+// spells a centesimal value one way.
 
 // Authored-value brackets, the single definition of the legal value
 // vocabulary. Tempo and scale carry separate brackets. Tempo (marker
@@ -60,8 +64,13 @@ inline constexpr double kScaleMax = 2.0;
 inline constexpr double kBpmMin   = 10.0;   // bpm bracket bounds
 inline constexpr double kBpmMax   = 400.0;
 inline constexpr int    kBpmBeatsMax  = 9999; // beats stays a positive int, capped
-// Iteration deltas live in [-4.00, +4.00], i.e. [-400, +400] integer cents
-// (session-only, never serialized).
+// Signed cent deltas live in [-4.00, +4.00], i.e. [-400, +400] integer cents.
+// TWO DOMAINS SHARE THIS ONE WALL (architect approval 2026-09-18): the
+// ITERATION BRACKET's bounds, session-only and never serialized, and a TEMPO
+// DEVIATION TERM, which is serialized inside the warp payload
+// (parse_deviation_cents below). One magnitude for both because they are the
+// same question asked twice — how far from a base one authored step may reach
+// — and a term's own spelling is the bracket cell's spelling too.
 inline constexpr int64_t kIterDeltaMaxCents = 400;
 
 // Integer tempo cents -> the tempo double. The ONE cents-to-double
@@ -94,9 +103,11 @@ double tempo_from_cents(double) = delete;
 // sweep's per-cell computed mutations are deliberately unbracketed and can
 // go non-positive, so the negative arm prints a leading '-' ("-3.75") —
 // text the strict parse then refuses on load, exactly like the historical
-// double writer's output for such a cell. Signed session-only deltas have
-// their own explicit-sign formatter (format_signed_delta_cents,
-// warpmarkers.h).
+// double writer's output for such a cell. Signed cent values — a tempo
+// deviation term, an iteration bracket bound — wear an explicit sign and take
+// the magnitude from here through format_deviation_cents below (architect
+// approval 2026-09-18; the GUI's format_signed_delta_cents, warpmarkers.h, is
+// that pair's face on the session-only bracket).
 inline std::string format_tempo_cents(int64_t cents) {
     std::string s;
     uint64_t a;
@@ -148,6 +159,67 @@ inline bool parse_tempo_cents(std::string_view s, int64_t& out) {
     }
     if (whole > (kMax - 99) / 100) return false;        // overflow refused
     out = whole * 100 + (frac_part[0] - '0') * 10 + (frac_part[1] - '0');
+    return true;
+}
+
+// Serialization of a TEMPO DEVIATION TERM (architect approval 2026-09-18) —
+// the third pair in this file and the tempo pair's signed sibling. A warp
+// marker's payload may spell its tempo as a base plus a CHAIN of deviations,
+// `1.23+0.01-0.02`, so a section's main speed stays visible beside each bit's
+// departure from it and the chain reads as the history of the decisions that
+// got there. The chain is SPELLING ALONE: the marker's tempo_cents is the
+// resolved TOTAL and the base is DERIVED at format time as total minus the
+// terms' sum (warpmarkers_parse.h), so `1.23+0.01` and `1.24` are the same
+// number everywhere a number is read and no render can see the difference.
+//
+// THE TERM'S SIGN IS MANDATORY, and it is what makes the grammar unambiguous:
+// parse_tempo_cents admits digits and one dot and nothing else, so the first
+// '+' or '-' in a tempo field is where the base ends and the chain begins,
+// and a label — four bytes `x.yz`, never signed — cannot collide with one.
+inline constexpr int kMaxTempoDeviationTerms = 8;  // (architect approval
+// 2026-09-18) — his number, and it is a READABILITY bound rather than a
+// structural one: the whole chain paints on the flag untruncated, and past
+// eight terms a flag stops being a thing a musician reads at a glance. The
+// walls that bound the VALUE are the three next to it: the spelled base and
+// the resolved total each take the tempo bracket, and each term takes
+// ±kIterDeltaMaxCents.
+
+// Signed deviation cents -> the exact text: a mandatory sign then the N.NN
+// spelling of the magnitude ("+0.01", "-4.00", "+0.00" for zero). The
+// magnitude runs through format_tempo_cents above, so the product has ONE
+// spelling of a centesimal value and a term cannot drift from a tempo; the
+// negative arm hands it the signed value directly, which already prints its
+// own '-' and is INT64_MIN-safe.
+//
+// ZERO IS `+0.00` AND HAS NO SECOND SPELLING. A term that has come back to
+// zero STAYS on the chain — it is history, and dropping it would rewrite the
+// record — so the writer must be able to spell it, while `-0.00` is refused
+// on load: one value, one spelling, the file-format rule this whole header
+// exists for.
+inline std::string format_deviation_cents(int64_t cents) {
+    if (cents < 0) return format_tempo_cents(cents);
+    return "+" + format_tempo_cents(cents);
+}
+
+// Text -> deviation cents. THE WHOLE JUDGE of one term, so the load and the
+// flag editor (whose commit runs the same canonical-line parse) can never
+// disagree about what a term is: exactly one leading '+' or '-', then the
+// strict N.NN spelling through parse_tempo_cents — which refuses "1.1",
+// "1.100", "1", a leading zero and every scientific form — then the two
+// value rules, NO NEGATIVE ZERO ("-0.00": zero has one spelling) and the
+// magnitude wall ±kIterDeltaMaxCents. Returns true and sets `out` on
+// success; returns false and leaves `out` untouched on failure. The caller
+// composes the diagnostic (warpmarkers_parse.cpp names the offending text and
+// the window together, since one judge earns one sentence).
+inline bool parse_deviation_cents(std::string_view s, int64_t& out) {
+    if (s.empty()) return false;
+    const char sign = s.front();
+    if (sign != '+' && sign != '-') return false;
+    int64_t mag = 0;
+    if (!parse_tempo_cents(s.substr(1), mag)) return false;
+    if (sign == '-' && mag == 0) return false;      // zero has one spelling
+    if (mag > kIterDeltaMaxCents) return false;
+    out = (sign == '-') ? -mag : mag;
     return true;
 }
 

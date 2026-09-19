@@ -24,20 +24,35 @@
 // main.cpp's invalidation, with its provenance and its authored value stated at
 // the definition.
 
+// THE OWNER'S NUMERIC RUN — the DERIVED base and its whole deviation chain,
+// the one composition the two flag composers below share so a cut form and an
+// uncut one can never spell the tempo differently. tempo_cents is the
+// RESOLVED TOTAL and the base is that total less the chain's sum, exactly as
+// the serializer derives it (format_warpmarkers_text, warpmarkers.cpp), so
+// what the flag shows is what the file holds.
+static std::string warp_tempo_run(const GuiWarpMarker& m) {
+    int64_t chain_sum = 0;
+    for (int64_t term : m.tempo_deviation_cents) chain_sum += term;
+    std::string text = format_tempo_cents(m.tempo_cents - chain_sum);
+    for (int64_t term : m.tempo_deviation_cents)
+        text += format_deviation_cents(term);
+    return text;
+}
+
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe); metadata
 // (b=/e=/#) never appears in it, and neither does the iteration bracket —
 // the bounds are the two cells beside the flag, each with its own editor.
-// This is the ONE composer for warp flag text: the FLAG BOX paints it
-// (truncated at the nine-glyph budget), the flag editor seeds from it
-// (enter_top_flag_edit) and the bound field's anchor measures it
-// (committed_cell_seam_off), so what they show and open with are one string
-// by construction. The contract is at the declaration (render.h).
+// This is the ONE composer for warp flag text and it CUTS NOTHING: the flag
+// editor seeds from it (enter_top_flag_edit), so a commit cannot lose what
+// the store holds. What the box paints is flag_display_text below. The
+// contract is at the declaration (render.h).
 //
 // Variants:
 //   label_ref              → "a.42"
 //   inherit, no def        → "pass"
 //   inherit, with def      → "pass:a.42"
 //   owning, no scale       → "1.23"
+//   owning, with a chain   → "1.23+0.01-0.02"
 //   owning, with scale     → "1.23*1.2345"
 //   def, no scale          → "1.23:a.03"
 //   def, with scale        → "1.23*1.2345:a.03"
@@ -52,11 +67,10 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
     if (m.tempo_inherits) {
         text = "pass";
     } else {
-        // Serializer forms (tempo straight from integer cents via
-        // format_tempo_cents, scale min-4 padded shortest round trip) — the
-        // flag paints the stored value at full precision, exactly the
-        // serializer's bytes.
-        text = format_tempo_cents(m.tempo_cents);
+        // Serializer forms (the tempo run straight from integer cents, scale
+        // min-4 padded shortest round trip) — the flag paints the stored
+        // value at full precision, exactly the serializer's bytes.
+        text = warp_tempo_run(m);
         if (m.tempo_scale.has_value()) {
             text += "*";
             text += format_value_double(*m.tempo_scale, 4);
@@ -66,6 +80,40 @@ std::string flag_text(const std::vector<GuiWarpMarker>& markers, int idx) {
         text += ":";
         text += m.label_def;
     }
+    return text;
+}
+
+// THE PAINTED FORM (architect 2026-09-19). The contract — what is cut, what
+// never is, and why the seam measurement must read this and not its uncut
+// sibling — is at the declaration (render.h). The scale is the only cut, and
+// the truncation marker says so; with no scale there is nothing to cut and
+// the whole payload paints, label definition included.
+std::string flag_display_text(const std::vector<GuiWarpMarker>& markers,
+                              int idx) {
+    const auto& m = markers[idx];
+
+    if (!m.label_ref.empty()) {
+        return m.label_ref;
+    }
+
+    std::string text = m.tempo_inherits ? std::string("pass")
+                                        : warp_tempo_run(m);
+    if (!m.tempo_scale.has_value()) {
+        if (!m.label_def.empty()) {
+            text += ":";
+            text += m.label_def;
+        }
+        return text;
+    }
+    // A scale is spelled min-4, so it is always longer than the cap and the
+    // marker always follows — which is why the `||` below is not a
+    // one-armed test in practice; it is there because the rule is "the marker
+    // stands for whatever was cut", and a label definition is cut here too.
+    const std::string scale = format_value_double(*m.tempo_scale, 4);
+    text += "*";
+    text += scale.substr(0, kMarkerFlagScaleGlyphs);
+    if (scale.size() > kMarkerFlagScaleGlyphs || !m.label_def.empty())
+        text += kMarkerLabelTruncationMarker;
     return text;
 }
 
@@ -893,7 +941,7 @@ void iterate_visible_flags_impl(
     // may open and still reach into it. A caller-supplied number rather than a
     // derivation here because the callers do not share one width family: the
     // marker columns pass marker_flag_max_width_px(iteration_on), a constant
-    // bound their nine-glyph label budget guarantees, while the history mode's
+    // bound the display composers' own grammars guarantee, while the history mode's
     // diff lane does not truncate at all and derives its bound from the commit's
     // own longest label. A bound over-admits a handful of offscreen items per
     // frame and never drops a visible one, so the only requirement is that it
@@ -951,19 +999,14 @@ void iterate_visible_flags_impl(
     }
 }
 
-// Cap a marker label at the nine-glyph budget — the contract, the byte/glyph
-// identity and the display-only rule all live at kMarkerLabelGlyphBudget
-// (render.h). NINE budgeted bytes are kept, then the truncation marker follows:
-// twelve painted glyphs in the truncated case. The whole text is the label: the
-// iteration bounds paint in boxes of their own and never enter
-// this walk (an exempt-span arm carried the spliced bracket through it from
-// 2026-08-02 until the bound cells landed on 2026-09-04).
-std::string cap_marker_label(const std::string& text) {
-    if (text.size() <= kMarkerLabelGlyphBudget) return text;
-    std::string out = text.substr(0, kMarkerLabelGlyphBudget);
-    out += kMarkerLabelTruncationMarker;
-    return out;
-}
+// (THE SHARED LABEL CAP IS GONE, 2026-09-19. cap_marker_label kept the first
+// nine bytes of whatever a column composed and appended the truncation
+// marker; the WARP payload was its only real subject — the phase-reset token
+// is five bytes and the magnification digit one — and once a tempo could
+// carry a chain, cutting by a byte count would have eaten the very terms the
+// feature exists to show. The cut now lives inside the one composer that
+// knows what it is cutting, flag_display_text above, and the other two
+// columns' labels reach the pass whole.)
 
 // The two bound cells an eligible flag paints while iteration mode is on, or
 // nothing. The lambda form each column hands render_flag_boxes_impl answers
@@ -1394,13 +1437,14 @@ void render_flag_boxes_impl(
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
                                // `iteration_on` widens the bound by the iter
-                               // bracket's own glyphs, which the label budget
-                               // does not cover; the reasoning is at the bound.
+                               // bracket's own glyphs, which the payload's
+                               // own worst case does not cover; the reasoning
+                               // is at the bound.
                                marker_flag_max_width_px(iteration_on),
         [&](int i, double left_x) {
-            // The label is the whole of the composed text; the cap spends the
-            // budget on it.
-            const std::string text = cap_marker_label(label_of(i));
+            // THE LABEL LAMBDA COMPOSES THE PAINTED FORM ITSELF — each
+            // column's own, and the cut (where there is one) is inside it.
+            const std::string text = label_of(i);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, text);
 
@@ -1774,10 +1818,11 @@ void render_flags(cairo_t* cr,
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
-        // The one composer (flag_text, render.h): the flag shows the tempo,
-        // scale and label its editor opens with, and the bounds are the two
-        // cells beside it.
-        [&](int i) { return flag_text(markers, i); },
+        // THE PAINTED COMPOSER (flag_display_text, render.h): the tempo's
+        // base and its whole chain, the scale capped to `*N.NN`, and the
+        // bounds are the two cells beside it. The editor seeds from the UNCUT
+        // sibling, flag_text, so nothing a commit reads passes through here.
+        [&](int i) { return flag_display_text(markers, i); },
         // The warp column's disabled verdict follows the label_ref cascade.
         [&](int i) { return effective_disabled(markers, i); },
         // The two bound cells, on exactly the markers the sweep reads
@@ -1812,10 +1857,9 @@ void render_phase_reset_flags(cairo_t* cr,
         viewport_start_sample, viewport_end_sample, sample_rate,
         selected_set, red_set,
         // A phase reset authors no payload, so its flag carries the display-only
-        // token (render.h owns it and what it reads). It fits the nine-glyph
-        // budget since 2026-09-17, when the two words it used to be gave way
-        // to `reset`, so the shared cap below leaves it whole — no label in
-        // the product truncates by construction any more.
+        // token (render.h owns it and what it reads). It reaches the pass
+        // whole: the shared byte cap is gone (2026-09-19) and this column has
+        // nothing to cut — the token is five bytes by ruling.
         [&](int) { return std::string(kPhaseResetLaneToken); },
         // No label_ref cascade on this column — the bool is the whole verdict.
         [&](int i) { return phase_resets[i].disabled; },
@@ -1935,12 +1979,12 @@ void render_history_diff_flags(
                             static_cast<double>(marker_flag_baseline_px());
 
     // THE LEFT CULL'S BOUND, DERIVED FROM THIS COMMIT'S OWN TEXT rather than
-    // from the lane's nine-glyph budget, because THESE LABELS ARE NOT CAPPED.
+    // from the marker lane's own worst case, because THESE LABELS ARE NOT CUT.
     // The live lane truncates because a marker label is free text the user types
     // and a runaway one would swamp its neighbours; a diff flag's label is the
     // SIDECAR'S OWN TOKEN with a three-byte sign prefix, and cutting it would
     // throw away the one thing the flag exists to show — a `[-]chorus=1.05`
-    // capped at nine budgeted bytes reads `[-]choru...`, which names neither
+    // cut at nine bytes would read `[-]choru...`, which names neither
     // the label nor the value. So the text prints whole and the bound follows
     // it: one byte per em is the same over-estimate marker_flag_max_width_px
     // makes (no ASCII glyph on this face advances a full em at these sizes), and
@@ -2307,10 +2351,13 @@ static int committed_cell_seam_off(const AppState& app,
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv =
         app.phaseresetmarkers.markers();
+    // THE PAINTED COMPOSER ON EACH COLUMN, never the uncut one: this shapes
+    // exactly what the flag pass shaped, or the field would open at a column
+    // no cell stands on (the declaration of flag_display_text says why this
+    // is the one place a wrong composer hides).
     const std::string label = phase ? std::string(kPhaseResetLaneToken)
-                                    : flag_text(mv, idx);
-    const text_shape::ShapedRun run =
-        text_shape::shape_text_run(font, cap_marker_label(label));
+                                    : flag_display_text(mv, idx);
+    const text_shape::ShapedRun run = text_shape::shape_text_run(font, label);
     const int pads   = marker_flag_pad_left_px() + marker_flag_pad_right_px();
     const int flag_w = pads + static_cast<int>(std::nearbyint(run.width_px));
     const IterCellLayout cl = measure_iter_cells(
@@ -2388,8 +2435,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_set_font_size(cr, redesign_font_size_px());
     cairo_scaled_font_t* font = cairo_get_scaled_font(cr);
 
-    // THE FULL, UNTRUNCATED pending — the unroll's whole point. The nine-glyph
-    // budget is a LABEL rule; an editor shows what it is editing.
+    // THE FULL, UNTRUNCATED pending — the unroll's whole point. The scale cap
+    // is a PAINTED-FLAG rule; an editor shows what it is editing.
     const text_shape::ShapedRun run =
         text_shape::shape_text_run(font, ed.pending);
     std::vector<double> byte_x =

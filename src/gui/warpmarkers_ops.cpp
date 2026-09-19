@@ -136,6 +136,13 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     nm.tempo_inherits  = inherit;
     nm.tempo_cents     = tempo_cents;
     nm.tempo_scale     = scale;
+    // NO DEVIATION CHAIN ON A NEW MARKER (architect approval 2026-09-18), and
+    // it is the DEFAULT here rather than a clear: `tempo_cents` is the
+    // RESOLVED TOTAL on every road into this body — bare `s` copying the
+    // previous owner's value (drop_copy_previous_at_playhead), the empty-lane
+    // double-click — so a drop writes that total as a PLAIN BASE. The chain
+    // is the history of the decisions made on the marker the value came from,
+    // and it stays with that marker.
     // Snapshot pre-mutation state for undo. Captured after the wall check
     // so rejected drops don't leave a no-op entry on the stack.
     std::vector<GuiWarpMarker> pre_state = mv;
@@ -453,11 +460,22 @@ void GuiWarpMarkersOps::toggle_inherits() {
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         GuiWarpMarker& m = proposed[idx];
+        // THE DEVIATION CHAIN IS THE TEMPO'S SPELLING, so it goes wherever
+        // the tempo goes (architect approval 2026-09-18). A marker that
+        // STOPS OWNING loses it with the value — and the undo entry puts
+        // both back together, exactly as it already restores the tempo —
+        // while a pass that STARTS owning takes the resolved owner's TOTAL
+        // as a PLAIN BASE: the chain is the history of the decisions made on
+        // the marker it came from, and copying it here would claim a history
+        // this marker never had. The two non-owner arms clear explicitly; the
+        // freeze arm has nothing to clear, a pass carrying no chain by
+        // grammar, and simply writes no terms.
         if (!m.label_ref.empty()) {
             m.label_ref.clear();
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
+            m.tempo_deviation_cents.clear();
             m.iter_start_cents.reset();
             m.iter_end_cents.reset();
         } else if (m.tempo_inherits) {
@@ -479,6 +497,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
+            m.tempo_deviation_cents.clear();
             m.iter_start_cents.reset();
             m.iter_end_cents.reset();
         }
@@ -830,11 +849,19 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // app_state.h): the clamp is the same one line it always was, and
         // naming it is what lets the Up / Down face compare THIS arithmetic
         // against the resting value instead of re-spelling "at the bracket
-        // edge" (tempo_cent_step_direction_actionable, below).
-        const int64_t cents = tempo_cent_step_landing(start.cents, delta_cents);
-        if (!m.tempo_inherits && cents == m.tempo_cents) continue;
+        // edge" (tempo_cent_step_direction_actionable, below). SINCE
+        // 2026-09-18 the landing owner is composed by warp_tempo_step_move,
+        // which adds the DEVIATION CHAIN's own headroom: where a chain
+        // stands, the step moves the total AND its last term by one delta so
+        // the derived base holds still. A PASS CARRIES NO CHAIN (the grammar
+        // refuses one and every road that writes a pass clears it), so the
+        // freeze below hands the move an empty chain and gets the plain
+        // bracket clamp — and the frozen marker lands with a plain base.
+        const WarpTempoStepMove move = warp_tempo_step_move(
+            start.cents, m.tempo_deviation_cents, delta_cents);
+        if (!m.tempo_inherits && move.cents == m.tempo_cents) continue;
         m.tempo_inherits = false;
-        m.tempo_cents    = cents;
+        warp_tempo_step_write(m, move);
         m.tempo_scale    = start.scale;
         // (THE BRACKET RODE THE BASE HERE from 2026-08-02 to 2026-09-10,
         // through a retroactive clamp that folded a live bracket onto the
@@ -983,16 +1010,21 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         if (collapsed.count(idx) && !effective_disabled(mv, idx)) return false;
         // THE WALL IS "CAN THIS MEMBER TAKE THE WHOLE STEP", not "is it AT the
         // bracket edge" (2026-08-31, with the step ladder — R12): the group
-        // arm ADDS delta_cents raw, so with the ten-cent chord a member three
-        // cents from the max would land OUT of bracket, and clamping it would
-        // be exactly the pooling GROUP RIGIDITY refuses. Asked through the
-        // landing owner, so the bracket's ends are named nowhere here: the
-        // clamp bites iff the member cannot take the full step. At the bare
-        // ±1 this is the old edge compare exactly — a member is out of bracket
-        // after one cent iff it was resting on that edge — so the day's other
-        // behaviour is untouched.
-        if (tempo_cent_step_landing(m.tempo_cents, delta_cents) !=
-            m.tempo_cents + delta_cents)
+        // arm applies delta_cents whole, so with the ten-cent chord a member
+        // three cents from the max would land OUT of bracket, and clamping it
+        // would be exactly the pooling GROUP RIGIDITY refuses. Asked through
+        // the step's move owner, so neither the bracket's ends nor the
+        // deviation term's wall is named here: the move's APPLIED delta falls
+        // short of the press's iff the member cannot take the full step. At
+        // the bare ±1 this is the old edge compare exactly — a member is out
+        // of bracket after one cent iff it was resting on that edge — so the
+        // day's other behaviour is untouched. GROUP RIGIDITY NOW COVERS THE
+        // CHAIN TOO (architect approval 2026-09-18): a member whose LAST TERM
+        // would leave ±kIterDeltaMaxCents walls the whole press exactly as an
+        // out-of-bracket total does, because the group must move as a group
+        // whichever wall a member meets.
+        if (warp_tempo_step_move(m.tempo_cents, m.tempo_deviation_cents,
+                                 delta_cents).applied != delta_cents)
             return false;
     }
     return true;
@@ -1179,10 +1211,14 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
     if (tempo_cent_step_kind_refusal_for(a, audio, f)) return false;
     const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
     // A PASS ALWAYS FREEZES (in both views) and so always changes. Only an
-    // OWNER can rest on a wall, and its wall is the landing owner's own
-    // answer.
+    // OWNER can rest on a wall, and its wall is the step's own move owner —
+    // the same body the act writes through, so the face compares the act's
+    // arithmetic and not a second spelling of it. An APPLIED DELTA OF ZERO is
+    // the whole no-change test, and it covers both walls: the tempo bracket,
+    // and (on a marker carrying a chain) the last term's own ± wall.
     if (m.tempo_inherits) return true;
-    return tempo_cent_step_landing(m.tempo_cents, delta_cents) != m.tempo_cents;
+    return warp_tempo_step_move(m.tempo_cents, m.tempo_deviation_cents,
+                                delta_cents).applied != 0;
 }
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
@@ -1259,7 +1295,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         if (idx < 0 || idx >= n) continue;
         GuiWarpMarker* m = app.warpmarkers.marker_mut(idx);
         if (!m) continue;
-        m->tempo_cents = m->tempo_cents + delta_cents;
+        // THE STEP'S OWN WRITE (warp_tempo_step_write, app_state.h): the
+        // total and, where the member carries one, its chain's last term,
+        // both by the press's delta. The scan above guaranteed the WHOLE
+        // step, so the move's applied delta is delta_cents here and the
+        // composition is a plain add on both fields.
+        warp_tempo_step_write(*m, warp_tempo_step_move(
+            m->tempo_cents, m->tempo_deviation_cents, delta_cents));
         touched.push_back(idx);
     }
     // Defensive (a fully-stale selection): a belt against an invariant the

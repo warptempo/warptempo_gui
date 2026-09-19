@@ -224,15 +224,26 @@ inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
     if (!(old_effective_cents > 0.0)) return std::nullopt;
     const double new_cents = static_cast<double>(derived_base_tempo_cents);
 
+    // EVERY MARKER THIS SWEEP WRITES IS WRITTEN FLATTENED (architect approval
+    // 2026-09-18): the cell REWRITES the span's tempo and RESCALES every
+    // owner outside it by MULTIPLYING, and a multiplied value is not the base
+    // the chain's terms departed from — keeping the terms beside it would
+    // spell a history that never produced this number. So a cell's markers
+    // carry a PLAIN BASE, which is exactly what the per-cell `.warpmarkers`
+    // sidecar then writes and what a `'` load in place recalls. The markers
+    // this act leaves UNTOUCHED — the disabled ones, the passes and the refs
+    // — keep whatever they had, as they keep every other field.
     std::vector<GuiWarpMarker> cell = base;
     cell[owner_idx].tempo_inherits = false;
     cell[owner_idx].tempo_cents    = derived_base_tempo_cents;
     cell[owner_idx].tempo_scale.reset();
+    cell[owner_idx].tempo_deviation_cents.clear();
     for (int i = owner_idx + 1; i < endpoint_idx; ++i) {
         if (effective_disabled(base, i)) continue;   // invisible to the act
         cell[i].tempo_inherits = true;
         cell[i].tempo_cents    = 100;   // inert default
         cell[i].tempo_scale.reset();    // inert: no typed scale
+        cell[i].tempo_deviation_cents.clear();   // inert: a pass spells none
     }
     for (int i = 0; i < n; ++i) {
         if (i >= owner_idx && i < endpoint_idx) continue;   // the span
@@ -248,6 +259,7 @@ inline std::optional<std::vector<GuiWarpMarker>> bpm_cell_warp_markers(
             return std::nullopt;
         }
         m.tempo_cents = static_cast<int64_t>(rescaled);
+        m.tempo_deviation_cents.clear();   // rescaled: a plain base (above)
     }
     return cell;
 }
