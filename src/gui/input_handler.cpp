@@ -1992,12 +1992,21 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         this->run_iter_tie_toggle();
         return;
     }
-    // CTRL+F AND CTRL+SHIFT+F: flatten the selected warp markers' TEMPO
-    // DEVIATIONS (architect 2026-09-19) — the plain chord CLEARS the terms,
-    // the shifted twin COLLAPSES them to their one sum. Ctrl-exact and
-    // ctrl+shift-exact, and ONE-SHOT: a flatten repeats onto itself, so
-    // neither form is in repeat_eligible. Bare `f` is the follow lamp and
-    // reaches handle_plain_bare_keys, which a chord has no road into.
+    // CTRL+F AND CTRL+SHIFT+F: flatten EVERY warp marker's TEMPO DEVIATIONS
+    // (architect 2026-09-19) — the plain chord CLEARS the terms, the shifted
+    // twin COLLAPSES them to their one sum. Ctrl-exact and ctrl+shift-exact,
+    // and ONE-SHOT: a flatten repeats onto itself, so neither form is in
+    // repeat_eligible. Bare `f` is the follow lamp and reaches
+    // handle_plain_bare_keys, which a chord has no road into.
+    //
+    // UNIVERSAL, AND NO SELECTION IS READ (architect 2026-09-19, after using
+    // the feature: "Universal always. Otherwise I just have to shift-click
+    // everything. That's how the old script worked, and I'm comfortable with
+    // it."). Both kinds act on every owning warp marker in the piece: nothing
+    // needs selecting first, nothing is consulted, and a selection cannot
+    // protect a marker from either — which is also why this arm spends no
+    // selection (the class and the exclusion are at selection_consumed,
+    // app_state.h).
     //
     // BOTH LOCKS RANK ABOVE THIS ARM and neither is spelled here: `F` sits on
     // no read_only_key_blocked and no iteration_lock_key_blocked allowlist
@@ -2006,31 +2015,34 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the outermost refusal a locked press can get. The Ctrl+D and Ctrl+N
     // arms above take the same order.
     //
-    // ONE CARD PER PRESS, AND ONE SENTENCE PER KIND: the predicate is
-    // composed (tempo_flatten_actionable, app_state.h — the column, the
-    // selection, the lock and a subject the kind could change), and its
-    // sentence is true of EVERY state it refuses in, the P and M columns and
-    // the empty selection included, so this arm spells no second sentence for
-    // a column or a selection rule that already has one elsewhere. The op's
-    // identical leading return is the belt below it and stays silent; the
-    // Flatten button greys on the CLEAR kind, so a plain lift never reaches
-    // this line while a shifted one still can (the twin rule).
+    // ONE CARD PER PRESS, AND THE REFUSAL SAYS WHICH ONE IT IS, forked on the
+    // predicate's own first term exactly as the Ctrl+N arm above forks: in
+    // the W column the sentence is a statement about the PIECE and the kind
+    // picks which of the two it is, while the P and M columns each get a fact
+    // about the column — a phase reset and a magnification level marker carry
+    // no tempo at all, so the W sentences would be false there whenever warp
+    // markers do carry terms. The op's identical leading return is the belt
+    // below it and stays silent; the Flatten button greys on the CLEAR kind,
+    // so a plain lift never reaches this line while a shifted one still can
+    // (the twin rule).
     if (key == GuiKeys::F && ctrl && !alt) {
         const TempoFlattenKind kind =
             shift ? TempoFlattenKind::Collapse : TempoFlattenKind::Clear;
         if (!tempo_flatten_actionable(app, kind)) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                shift ? "No selected marker carries more than one tempo "
-                        "deviation"
-                      : "No selected marker carries tempo deviations");
+            const char* card =
+                shift ? "No marker carries more than one tempo deviation"
+                      : "No marker carries tempo deviations";
+            switch (app.active_markers_view) {
+                case 'P': card = "Phase resets carry no tempo to flatten"; break;
+                case 'M':
+                    card = "Magnification level markers carry no tempo to "
+                           "flatten";
+                    break;
+                case 'W': break;
+            }
+            notifications.notify(AppState::NotificationClass::Normal, card);
             return;
         }
-        // THE SELECTION IS SPENT (architect 2026-09-12), the Ctrl+N arm's
-        // twin: past the carded refusal and ahead of the op's own
-        // changed-path test, and spelled at neither op (selection_consumed,
-        // app_state.h).
-        selection_consumed(app);
         warpops.flatten_tempo_deviations(kind);
         return;
     }

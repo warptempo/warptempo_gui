@@ -591,30 +591,30 @@ void GuiWarpMarkersOps::toggle_disabled() {
 // WHAT A FLATTEN NEEDS TO ACT — the declaration and the whole ruling are at
 // tempo_flatten_actionable (app_state.h); this is the walk, seated
 // immediately above the one act that reads it, the group cent step's own
-// arrangement. A PASS AND A LABEL REF ARE SKIPPED rather than refused: by
-// grammar neither carries a chain (warpmarkers_parse.h), so neither can be a
-// subject and neither has an opinion about one.
+// arrangement. IT WALKS THE WHOLE STORE AND ASKS NO SELECTION AT ALL
+// (architect 2026-09-19): the act's subject is the PIECE, so the question is
+// whether any owning warp marker in it carries a term this kind could change.
+// A PASS AND A LABEL REF ARE SKIPPED rather than refused: by grammar neither
+// carries a chain (warpmarkers_parse.h), so neither can be a subject and
+// neither has an opinion about one.
 bool tempo_flatten_actionable(const AppState& app, TempoFlattenKind kind) {
     if (app.active_markers_view != 'W') return false;
-    if (!marker_selection_standing(app)) return false;
     if (authoring_locked(app)) return false;
     // Clear wants ONE term to remove; Collapse wants TWO to join — a lone
     // term collapses to itself and is no subject.
     const std::size_t needed = (kind == TempoFlattenKind::Clear) ? 1u : 2u;
-    const auto& mv = app.warpmarkers.markers();
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(mv.size())) continue;
-        const GuiWarpMarker& m = mv[static_cast<std::size_t>(idx)];
+    for (const GuiWarpMarker& m : app.warpmarkers.markers()) {
         if (m.tempo_inherits || !m.label_ref.empty()) continue;
         if (m.tempo_deviation_cents.size() >= needed) return true;
     }
     return false;
 }
 
-// Ctrl+F and Ctrl+Shift+F: flatten the selected markers' tempo deviations,
-// the kind saying whether the terms GO or become their ONE SUM. The ruling,
+// Ctrl+F and Ctrl+Shift+F: flatten EVERY warp marker's tempo deviations, the
+// kind saying whether the terms GO or become their ONE SUM. The ruling,
 // the two spellings and the wall argument are at TempoFlattenKind
-// (app_state.h); the shape is toggle_disabled's above, the group-verb one.
+// (app_state.h); the shape is toggle_disabled's above, the group-verb one —
+// A GROUP OF ONE MEMBER, THE PIECE, since the act reads no selection.
 //
 // THIS FAMILY'S ONE RECORDED ASYMMETRY: it owes NO TARGET-VIEW TAIL and NO
 // target_render.trigger(), where every other GuiWarpMarkersOps body ends with
@@ -636,9 +636,9 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
     bool changed = false;
-    for (int idx : app.selected_markers) {
-        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
-        GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
+    // THE WHOLE STORE, the predicate's own walk: no selection is read, so no
+    // selection can protect a marker from either kind.
+    for (GuiWarpMarker& m : proposed) {
         // A pass and a label ref carry no chain by grammar — skipped, never
         // refused (the predicate's own rule).
         if (m.tempo_inherits || !m.label_ref.empty()) continue;
@@ -654,8 +654,8 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
         }
         changed = true;
     }
-    // A REAL COMPARISON, not a loop-ran flag: a selection whose every member
-    // is already flat pushes no undo entry and leaves no dirty mark.
+    // A REAL COMPARISON, not a loop-ran flag: a piece whose every marker is
+    // already flat pushes no undo entry and leaves no dirty mark.
     if (!changed) return;
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);

@@ -2230,13 +2230,29 @@ enum class RedesignButton {
     // removes, and the seat is a statement about what it acts ON rather than
     // about where verbs live.
     //
-    // WHAT IS NOT THE REASON: "it is a group act and the bottom row's are
-    // not" is only four-sevenths true and is deliberately not written here —
-    // the single-marker verbs' group holds Delete and Toggle disabled, which
-    // walk the whole selection exactly as this act does, beside the four that
-    // really do read one marker (the drop places one at the playhead, Ctrl+N
-    // collapses to the focus, and Edit flag and Copy resolved value read the
-    // focus alone).
+    // AND THE SAME DAY THE ACT WENT UNIVERSAL, WHICH IS THE SECOND HALF OF
+    // THAT CLASSIFICATION (architect 2026-09-19, "Universal always. Otherwise
+    // I just have to shift-click everything. That's how the old script worked,
+    // and I'm comfortable with it" — the provenance he gave is that old
+    // script). EVERY BOTTOM-ROW VERB IS POINTED AT
+    // SOMETHING FIRST: Delete and Toggle disabled walk a selection, Ctrl+N
+    // collapses to the focus, Edit flag and Copy resolved value read the focus
+    // alone, Add to selection is the posture that builds one, and even the
+    // drop — the group's one member with no existing subject — acts at the
+    // playhead you put there. With nothing pointed at, that whole row acts on
+    // nothing. FLATTEN TAKES NO SELECTION AT ALL AND ACTS ON THE WHOLE PIECE
+    // — which is the scope of the very sweep it undoes: a grid sweep renders
+    // every bracketed marker in the piece and asks no selection either
+    // (iteration_sweep_plan). So the seat is filed by what the act acts on,
+    // and the act's subject is now the same one its neighbour's is. (The BPM
+    // opener beside them does take a selected run, which is why the claim is
+    // made about the GRID sweep and not about the group as a whole.)
+    //
+    // WHAT IS STILL NOT THE REASON: "it is a group act and the bottom row's
+    // are not" — only four-sevenths true, as the enumeration above shows, so
+    // group-ness never separated this button from that row and is written
+    // here only to be ruled out. THE SCOPE DOES SEPARATE THEM: a selection
+    // against the whole piece.
     //
     // IT IS RENAMED FROM IconMarkerFlatten WITH THE MOVE: the `IconMarker*`
     // prefix is the bottom-row verb family's, and a member that has left that
@@ -2247,18 +2263,18 @@ enum class RedesignButton {
     // different thing from a lane.
     //
     // ITS CHORD IS CTRL+F and its SHIFT TWIN is Ctrl+Shift+F: the plain act
-    // CLEARS every selected marker's deviation terms (`1.23+0.01-0.02` reads
+    // CLEARS every warp marker's deviation terms (`1.23+0.01-0.02` reads
     // `1.22`), the shifted one COLLAPSES them to their single sum
     // (`1.23-0.01`, and `1.23+0.00` where they cancel). It is the roster's
     // pointer home for both — no Edit-menu row and no bottom-row button, one
     // command and one pointer road.
     //
-    // ITS FACE READS THE ACT'S OWN PREDICATE (tempo_flatten_actionable, with
-    // the marker-verb refusals), which composes the W column, a standing
-    // selection, BOTH LOCKS and the would-anything-change question.
+    // ITS FACE READS THE ACT'S OWN PREDICATE (tempo_flatten_actionable),
+    // which composes the W column, BOTH LOCKS and the would-anything-change
+    // question over the whole store — no selection term, the act having none.
     // THE TWIN RULE DECIDES WHICH KIND THE FACE ASKS: the plain act needs one
-    // selected marker with a term, the shifted one needs two on a marker, so
-    // the weaker condition is the face's and a shift-click over a selection
+    // marker in the piece with a term, the shifted one needs two on a marker,
+    // so the weaker condition is the face's and a shift-click over a piece
     // where nothing carries two terms reaches the chord, which CARDS.
     //
     // NO LAMP (an act, not a mode), no repeat (a flatten repeats onto
@@ -10937,13 +10953,22 @@ enum class TempoFlattenKind { Clear, Collapse };
 
 // WHAT A FLATTEN NEEDS TO ACT, composed (architect 2026-09-19): the WARP
 // column (a phase reset and a magnification level marker spell no tempo at
-// all), a standing selection, NEITHER LOCK — a flatten writes the store and
-// pushes an undo entry, which is the whole of what both locks hold back — and
-// a SUBJECT the kind could change. A PASS AND A LABEL REF ARE INVISIBLE TO
+// all), NEITHER LOCK — a flatten writes the store and pushes an undo entry,
+// which is the whole of what both locks hold back — and a SUBJECT the kind
+// could change ANYWHERE IN THE PIECE. A PASS AND A LABEL REF ARE INVISIBLE TO
 // IT: neither carries a chain by grammar, so neither is ever a subject and
 // neither refuses on its own; a marker with no terms is no subject for either
 // kind, and one with exactly ONE term is no subject for Collapse, its
 // collapse being itself.
+//
+// THERE IS NO SELECTION TERM AND THERE IS NO SELECTION WALK (architect
+// 2026-09-19, after using the feature: "Universal always. Otherwise I just
+// have to shift-click everything. That's how the old script worked, and I'm
+// comfortable with it"). BOTH KINDS ACT ON EVERY OWNING WARP MARKER IN THE
+// PIECE: nothing needs selecting first, none of it is consulted, and no
+// selection can narrow either act or protect a marker from it. That is also
+// why the dispatch arm spends no selection — the act never touched what Add
+// to selection was gathering (the exclusion is at selection_consumed, below).
 //
 // THE LOCK IS COMPOSED HERE rather than through iteration_lock_greys (above),
 // which is why this button is not in that predicate's membership: the act,
@@ -10958,7 +10983,7 @@ enum class TempoFlattenKind { Clear, Collapse };
 //
 // DEFINED IN warpmarkers_ops.cpp IMMEDIATELY ABOVE THE ACT, the group cent
 // step's own shape (tempo_cent_step_group_actionable, above): the body walks
-// the selection and composes authoring_locked, which this header declares
+// the warp store and composes authoring_locked, which this header declares
 // further down, so the seat here is the declaration and the walk lives beside
 // the one act that reads it.
 bool tempo_flatten_actionable(const AppState& app, TempoFlattenKind kind);
@@ -12323,10 +12348,6 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     reset, magnification level), plus Ctrl+N, at their dispatch arms past
 //     the carded refusal and ahead of the column fork (input_handler.cpp) —
 //     the co-equal-axes rule says a delete is a delete in every column;
-//   * THE TWO FLATTEN COMMANDS, Ctrl+F and Ctrl+Shift+F (2026-09-19), at
-//     their one dispatch arm past the carded refusal and ahead of the op's
-//     own changed-path test (input_handler.cpp) — a marker verb acting on
-//     what Add to selection built, Ctrl+N's own shape;
 //   * THE TWO CLIPBOARD COPIES, Ctrl+P and (2026-09-15) Ctrl+M, each past
 //     its three gates;
 //   * THE FOUR PROPAGATE PASTES — each family's confirmed placement paste
@@ -12360,6 +12381,11 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 // and spends no selection.
 //
 // WHAT IS NOT A CALLER, and why:
+//   * THE TWO FLATTEN COMMANDS, Ctrl+F and Ctrl+Shift+F — they LEFT this
+//     inventory on 2026-09-19, the day the architect made them universal:
+//     this writer exists for an act that SPENDS a selection, and a flatten
+//     reads none at all (tempo_flatten_actionable, above), so putting the
+//     lamp out here would end a selecting pass the act never touched;
 //   * THE LEFT / RIGHT POSITION NUDGE — a group press REFUSES WHOLE
 //     (position_nudge.h), so the nudge never acts on a selection at all; what
 //     it acts on is a singleton, which is not a selection that was built;
@@ -13867,10 +13893,16 @@ inline bool playback_launch_playable(const AppState& a,
 //     Undo and Redo take the mode through history_step_actionable instead, the
 //     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
-//     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops:
-//     bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, bare `/`, the BPM opener
-//     (bare `m` then, Ctrl+B since 2026-09-15) and
-//     bare `i` — EIGHT as of 2026-09-04, when the ITERATION PAIR came back to
+//     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops.
+//     RE-DERIVED FROM THE ARMS 2026-09-19, it is SEVEN — bare `s`, Delete,
+//     Ctrl+D, Ctrl+N, bare Return, Ctrl+B and bare `i` — BARE `/` having gone
+//     with the measures feature whole on 2026-09-16, which took the measure
+//     editor, its button and its chord together. (CTRL+F IS NOT AN EIGHTH
+//     although this gate drops it too: the Flatten button's face does not read
+//     the lock at this arm — tempo_flatten_actionable composes authoring_locked
+//     itself — so it greys with them while owning no term here. The same
+//     carve-out is stated at iteration_lock_greys, above.) It was EIGHT from
+//     2026-09-04, when the ITERATION PAIR came back to
 //     the icon row from the deleted Iterations menu and the two chords the gate
 //     had gone on eating got faces again. It was SIX from
 //     2026-09-01, when BARE `'` LEFT for the history group's own arm with the
@@ -14569,10 +14601,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // act's condition, taken one step further than its group's other two
         // arms because the act's own predicate was written to carry the lock. IT
         // ASKS THE CLEAR KIND under the twin rule: Ctrl+F acts wherever a
-        // selected marker carries one deviation term and Ctrl+Shift+F
+        // marker IN THE PIECE carries one deviation term and Ctrl+Shift+F
         // wherever one carries two, so the weaker condition is the face's and
-        // a shift-click over a selection where nothing carries two reaches
-        // the chord, which cards.
+        // a shift-click over a piece where nothing carries two reaches
+        // the chord, which cards. NEITHER KIND HAS A SELECTION TERM since the
+        // act went universal (2026-09-19), so this face never blinks with a
+        // selecting pass.
         case RedesignButton::IconFlatten:
             return tempo_flatten_actionable(a, TempoFlattenKind::Clear);
         // (THE MARKER COLUMN LAMP AND THE AUDIO VIEW LAMP stood here through
@@ -16192,7 +16226,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Toggle Grid Iterations (I)", nullptr};
         // FLATTEN (2026-09-19), the iteration group's third row and its only
         // TWO-LINE form: the plain
-        // act clears the selected markers' tempo deviations and the shifted
+        // act clears every marker's tempo deviations and the shifted
         // twin collapses them into one, so the second line names the act and
         // the modifier and not a key — this table's rule for second lines,
         // with the static_assert below keeping the line and the admission one
@@ -16871,7 +16905,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // (2026-09-19), the same shape the drop's arm above and the copy's
         // below take, which the move to the icon row's iteration group left
         // untouched — this overload keys off buttons, not lanes: the face reads the
-        // CLEAR kind under the twin rule, so over a selection whose markers
+        // CLEAR kind under the twin rule, so over a piece whose markers
         // each carry exactly ONE term the button is lit for the plain act
         // while the shifted press cards — a marker with one term is no
         // subject for Collapse, its collapse being itself — and a line that

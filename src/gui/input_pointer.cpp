@@ -332,19 +332,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconIter, GuiKeys::I,   false, false, false, false, true},     // bare i
     // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
     // row's marker verbs the same day it landed there: CTRL+F, which clears
-    // the selected markers' tempo deviation terms. ITS SEAT IS A
+    // EVERY warp marker's tempo deviation terms. ITS SEAT IS A
     // CLASSIFICATION BY SUBJECT — a deviation term exists because a GRID SWEEP
     // APPENDED ONE to every cell it wrote, so the act that takes those terms
-    // off again stands beside the mode that produces them (the full reasoning
-    // is at the roster entry, app_state.h).
+    // off again stands beside the mode that produces them, and both read the
+    // piece rather than a selection (the full reasoning is at the roster
+    // entry, app_state.h).
     //
     // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches Ctrl+F
     // through on_key at the LIFT like every other chrome button, while the
     // KEY acts at the press like every other hotkey. The ACT is on_key's own
     // arm and there is no second body, so both locks, the W-column rule, the
-    // empty-selection refusal and the card are all inherited whole — the move
-    // between lanes touched none of them, this table being read by id and
-    // never by position.
+    // nothing-to-flatten refusal and the card are all inherited whole — the
+    // move between lanes touched none of them, this table being read by id
+    // and never by position.
     //
     // AND IT ADMITS SHIFT, alone in this group: its twin is CTRL+SHIFT+F,
     // which COLLAPSES those

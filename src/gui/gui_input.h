@@ -616,7 +616,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
             return bare;
         // THE LETTER CARRIES THREE ACTS since 2026-09-19: bare `f` is the
         // FOLLOW LAMP (unchanged, the group above's own kind), Ctrl+F flattens
-        // the selected markers' tempo deviations and Ctrl+Shift+F collapses
+        // every warp marker's tempo deviations and Ctrl+Shift+F collapses
         // them into one — the shifted form being the plain act's twin, `s`'s
         // and `j`'s shape on a ctrl chord rather than a bare one. The ctrl
         // spelling is what guards an authoring verb against a stray bare
