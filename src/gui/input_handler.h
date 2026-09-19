@@ -890,9 +890,10 @@ struct GuiInputHandler {
     // hover; the tick is main.cpp's.
     GuiNotifications&        notifications;
     PhaseResetPropagate&     phase_reset_propagate;
-    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the phase family's
-    // sibling: its three readers here are the Ctrl+M-family arms in
-    // handle_mode_keys.
+    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the third column's own
+    // copy and paste — NOT the phase family's shape on another letter
+    // (magnification_level_propagate.h states the divergence): its two readers
+    // here are the Ctrl+M and Ctrl+Alt+M arms in handle_mode_keys.
     MagnificationLevelPropagate& magnification_level_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
@@ -2811,7 +2812,7 @@ private:
 
     // P / M / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
     // clipboard ops, the Ctrl+M-family magnification level clipboard ops
-    // (2026-09-15, the same three shapes), `i` iteration mode, `k` ADD TO
+    // (2026-09-15; its own two shapes since 2026-09-19), `i` iteration mode, `k` ADD TO
     // SELECTION (the sticky ctrl, 2026-08-18) and `l` / Shift+L, the folder
     // overlay's two openers. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.

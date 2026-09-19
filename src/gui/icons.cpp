@@ -836,9 +836,11 @@ constexpr IconPath kToolRectSelectionPaths[] = {
 // interpreter for anything new. (The plus and minus magnifiers of the same
 // file family left with the Zoom In / Zoom Out buttons on 2026-09-14,
 // zoom-in-y with the per-marker Magnification button on 2026-09-15, and
-// zoom-out-y with the `]` magnification lamp on 2026-09-17, when magnification
-// became a function of the audio view — enumerators, defs and assets
-// together.)
+// zoom-out-y with the `]` magnification lamp on 2026-09-17 — each asset
+// deleted with the button it was drawn for, enumerators, defs and assets
+// together. This is the roster's record of which files left and makes no
+// claim about what magnification does; that rule lives at
+// effective_waveform_gain_profile.)
 
 constexpr IconPath kZoomFitBestPaths[] = {
     {kIconText,

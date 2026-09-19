@@ -998,8 +998,8 @@ bool extract_magnification_level_entry(
 // change as its then and now ordinals — so a pair whose halves sit at
 // different ordinals of one run (`[100|4, 100|1]` against `[100|1, 100|3]`
 // pairs then-0 with now-1) still reverts to the checkpoint's own rows.
-// (The propagate family's state paste pairs by its own block walk in
-// magnification_level_propagate.cpp and never reaches this function.)
+// (The phase reset propagate's state paste pairs by its own block walk in
+// phase_reset_propagate.cpp and never reaches this function.)
 template <typename Entry, typename Change, typename Make>
 void pair_changes_by_frame(std::vector<Entry>&  removed,
                            std::vector<Entry>&  added,

@@ -14,9 +14,9 @@
 // in lockstep with the clipboard, materializing phase resets at the
 // destination's actual durations. Single-slot, in-memory only — never
 // persisted to any sidecar, cleared on app exit. THE BLOCK AND THE SLOT ARE
-// THE FAMILY'S SHARED SHAPE since 2026-09-15 (propagate_clipboard.h, the
-// magnification level propagate's clipboard being the other instantiation);
-// what this header owns is the PLACEMENT, the one thing that differs.
+// TEMPLATES in propagate_clipboard.h, which states why they were split out and
+// what became of the second instantiation; what this header owns is the
+// PLACEMENT, the part that carries this column's own meaning.
 
 // `anchor_source_frame`, `source_start_frame` and `source_end_frame` carry
 // absolute source-domain geometry so paste_state_apply can apply a
@@ -71,11 +71,12 @@ inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
 }
 
 // THE PROPAGATE WALK'S MEMBERSHIP, one predicate for every walk that asks it —
-// re-greped: the phase copy's selected-run loop (phase_reset_propagate.cpp),
-// the magnification level copy's (magnification_level_propagate.cpp) and the
-// destination walk both families share (walk_named_blocks,
-// propagate_blocks.h): a marker takes part iff it CARRIES A LABEL
-// NAME and is EFFECTIVELY ENABLED.
+// re-greped 2026-09-19: the copy's selected-run loop
+// (phase_reset_propagate.cpp) and the pastes' destination walk
+// (walk_named_blocks, propagate_blocks.h). TWO READERS, both this family's —
+// the magnification level copy was a third until it stopped reading warp
+// markers at all. A marker takes part iff it CARRIES A LABEL NAME and is
+// EFFECTIVELY ENABLED.
 //
 // Both terms are load-bearing and neither is an efficiency filter. The LABEL is
 // what the paste's lockstep matches on, so an unlabeled marker has nothing to
@@ -86,7 +87,7 @@ inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
 //
 // IT IS EXTRACTED RATHER THAN RESTATED because "the two sides must filter
 // identically" is the paste's whole correctness premise, and a premise held by
-// discipline across four loops is the kind that drifts. `effective_disabled`
+// discipline across separate loops is the kind that drifts. `effective_disabled`
 // re-scans the store for a disabled def on every label-ref query, so a whole
 // walk through here is worst-case O(n^2) — the deliberate choice over a cached
 // keep-mask, propagate being a discrete command over tens-to-hundreds of

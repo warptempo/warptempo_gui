@@ -39,8 +39,8 @@ struct Selection {
     // — the paste is W-gated, so that switch always fires — but a property of
     // the paste's entry gate rather than of the replace) — and the
     // magnification level propagate's source-view landing
-    // (MagnificationLevelPropagate::land_paste_in_source_view), the sibling
-    // tail on the third column, which joined 2026-09-15. THE UNDO RESTORE is
+    // (MagnificationLevelPropagate::land_paste_in_source_view), the third
+    // column's own tail, which joined 2026-09-15. THE UNDO RESTORE is
     // the third (apply_post_restore_rules_impl, undo.cpp): it installs the
     // TOUCHED set rather than a created one, and its own comment carries why
     // the mutator rather than a hand-written pair. So a wholesale replace

@@ -5850,7 +5850,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // nothing on the pointer at all. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
-        // seven Ctrl+Alt chords.)
+        // Ctrl+Alt chords, whose inventory is conventions.md's alt
+        // vocabulary.)
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the

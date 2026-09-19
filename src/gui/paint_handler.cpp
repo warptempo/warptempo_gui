@@ -1316,11 +1316,14 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 //
 //   File       "Synchronize to External Storage" | "Ctrl+Q"   -> content
 //   Settings   "Projects Repository" (no column)              -> estimate FLOOR
-//   Edit       "Paste Magnification Level State" | "Ctrl+Alt+Shift+M"
-//                                                            -> content
-//              (unmeasured; the row joined 2026-09-15 and is wider than
-//              "Paste Phase Reset State" | "Ctrl+Alt+Shift+P", whose 374
-//              already won over the floor)
+//   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P"  -> content
+//              (374 at 100%, past the floor; re-derived 2026-09-19, when
+//              "Paste Magnification Level State" was deleted with the chord
+//              it advertised and left this the widest row again — the other
+//              candidate, "Paste Magnification Levels" | "Ctrl+Alt+M", trades
+//              a longer label for a shorter accelerator and is unmeasured,
+//              which moves no VERDICT: both ask more than the floor, so this
+//              popup derives at every scale either way)
 //   (Help      "AV Sync Stats" | "Shift+L"                    -> FLOOR, 2026-09-03..09)
 //
 // EVERY FIGURE HERE WAS MEASURED ON THE SENTENCE-CASE SPELLING these labels

@@ -96,7 +96,7 @@ void GuiPrompt::open_revert_confirm() {
 // did, one stderr line and nothing on screen, because its refusals are
 // unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
 // QUESTIONS ALONE now: the unsaved-work question with its save-failed rung,
-// the two propagate paste confirmations, the load confirmation and the revert
+// the phase reset paste's confirmation, the load confirmation and the revert
 // confirmation.)
 
 // Single-key response dispatch. The trigger captured at prompt-open
@@ -111,19 +111,16 @@ void GuiPrompt::activate_response(char k) {
     // See open_unsaved above.
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
-        // ONE PROMPT BODY, TWO SUBJECTS (2026-09-15): the question was raised
-        // by one of the two propagate families' open_paste_confirmation, which
-        // tagged the pending paste with its column (AppState::
-        // pending_paste_column) — the load confirmation's own shape, the fork
-        // living at the answer. The prompt closes first either way, so the act
-        // runs on the ordinary modal state.
+        // ONE SUBJECT: the phase reset paste, raised by
+        // PhaseResetPropagate::open_paste_confirmation. It carried a second
+        // from 2026-09-15 to 2026-09-19, the magnification level paste, which
+        // now applies at the press with no prompt — so the tag the answer used
+        // to fork on is gone with it. The prompt closes first either way, so
+        // the act runs on the ordinary modal state.
         if (k == 'y') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            if (app.pending_paste_column == 'M')
-                magnification_level_propagate.paste_apply();
-            else
-                phase_reset_propagate.paste_apply();
+            phase_reset_propagate.paste_apply();
             return;
         }
         if (k == '\x1b') {

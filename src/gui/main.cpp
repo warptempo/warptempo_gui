@@ -1426,17 +1426,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                               target_render, active_views,
                                               playback_lifecycle,
                                               notifications, selection);
-    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the phase family's
-    // sibling over the third column. IT TAKES NO GuiTargetRender, the
-    // authoring cluster's rule above (a level is display-only, so no act on
-    // that column may dispatch a preview); it takes the audio itself instead,
-    // for the song end and the sample rate.
+    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the third column's own
+    // copy and paste. IT TAKES NO GuiTargetRender, the authoring cluster's
+    // rule above (a level is display-only, so no act on that column may
+    // dispatch a preview); it takes the audio itself instead, for the song end
+    // and the stop report's timestamp. AND NO GuiPlaybackLifecycle: its paste
+    // raises no modal, so it has no playback to stop (architect 2026-09-19 —
+    // the confirmation prompt is the phase family's alone).
     MagnificationLevelPropagate magnification_level_propagate(
-        app, viewport, undo, audio, active_views, playback_lifecycle,
+        app, viewport, undo, audio, active_views,
         notifications, selection);
     GuiSaveOps save_ops(app, undo, active_views, notifications);
     GuiPrompt prompt(app, gui, viewport,
-                     phase_reset_propagate, magnification_level_propagate,
+                     phase_reset_propagate,
                      save_ops, playback_lifecycle, render_player);
     GuiSettingsEditor settings_editor(app, audio, viewport, selection,
                                       active_views, undo,

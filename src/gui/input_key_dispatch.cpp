@@ -598,7 +598,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
     // Delete, `;`, `i` and the propagate copy/paste chords of BOTH families
-    // (the Ctrl+P three and, since 2026-09-15, the Ctrl+M three) are likewise
+    // (the Ctrl+P three and the Ctrl+M two) are likewise
     // absent (blocked here); `'` LEFT that list on 2026-09-01 for a
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
@@ -752,21 +752,22 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     history_step_actionable greys both buttons on the same fact.
 //   * THE TWO CLIPBOARD COPIES — Ctrl+P (the phase-reset placements) and
 //     Ctrl+M (the magnification levels) — which are
-//     CLIPBOARD-ONLY: each reads a
-//     contiguous labeled run into a session clipboard and writes no store, no
+//     CLIPBOARD-ONLY: each reads a selection into a session clipboard and
+//     writes no store, no
 //     undo entry and no dirty bit, so the whole reason this lock exists says
 //     nothing about them (the lock protects the undo domain; nothing here can
 //     ever land in it). The base list refuses them because READ-ONLY is a
 //     different question — it protects one tab's authored content and eats
-//     the propagate family whole — and this is the one place the two locks
+//     both propagate families whole — and this is the one place the two locks
 //     part company in the admitting direction rather than the refusing one.
-//     THE TWO PASTES STAY REFUSED by the base: Ctrl+Alt+P and
-//     Ctrl+Alt+Shift+P each rewrite a store and push, which is exactly what
-//     the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
+//     EVERY PASTE STAYS REFUSED by the base — the phase family's Ctrl+Alt+P
+//     and Ctrl+Alt+Shift+P and the magnification family's Ctrl+Alt+M, three
+//     since 2026-09-19 — each rewriting a store and pushing, which is exactly
+//     what the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
 //     arm's own spelling — so the alt-bearing pastes cannot reach this
-//     admission by widening it. THE EDIT MENU'S COPY ROW comes back with it
-//     and needed no edit of its own: it synthesizes its chord through on_key,
-//     so the row is the key.
+//     admission by widening it. THE EDIT MENU'S TWO COPY ROWS come back with
+//     it and needed no edit of their own: each synthesizes its chord through
+//     on_key, so the row is the key.
 //   * CTRL+SHIFT+N — THE TIE (architect 2026-09-19), and it belongs here for
 //     the lock's own reason rather than as an exception to it: a tie says
 //     which markers are ONE AXIS of the sweep, which is BRACKET state and
@@ -862,7 +863,7 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
     // The clipboard copies, ctrl-exact as their dispatch arms are — which is
-    // what keeps the four ALT-bearing pastes out of this admission. Ctrl+M,
+    // what keeps the three ALT-bearing pastes out of this admission. Ctrl+M,
     // the magnification level copy (2026-09-15), on Ctrl+P's own standard: a
     // copy writes a session clipboard and no store.
     if ((key == GuiKeys::P || key == GuiKeys::M) && ctrl && !shift && !alt)
@@ -7738,34 +7739,46 @@ void GuiInputHandler::on_external_sync_complete(
 }
 
 // P / M / I / K / L letter-key handlers. See the declaration for the chord list.
-// THE CLIPBOARD FAMILY'S SHARED SENTENCES (architect 2026-08-30, the
-// strictness ruling). Six chords since 2026-09-15 — the phase-reset
-// propagate's copy and its two pastes, and the magnification level
-// propagate's three, the same shape on the letter M — take the SAME gates
-// term for term, so where two of them refuse on the same fact they say the
-// same words and the literal lives once. What is NOT shared is each chord's
-// own first gate (what it copies from, what it pastes onto), which names its
-// own payload and is spelled at its arm. kSelectOneRun HAS A THIRD READER,
-// the BPM sweep's contiguity arm below: the gates are the same test on the
-// same set for the same reason (the run must have one span meaning), so they
-// answer in one sentence.
+// THE CLIPBOARD CHORDS' SHARED SENTENCES (architect 2026-08-30, the
+// strictness ruling). FIVE CHORDS — the phase-reset propagate's copy and its
+// two pastes, and the magnification level propagate's copy and paste — and
+// only ONE sentence is common to both families now, the empty-clipboard
+// answer: where two chords refuse on the same fact they say the same words
+// and the literal lives once. What is NOT shared is each chord's own first
+// gate (what it copies from, what it pastes onto), which names its own
+// payload and is spelled at its arm — and the two families' gates diverged
+// with their models on 2026-09-19, the magnification pair reading the M
+// column while the phase three read W (magnification_level_propagate.h states
+// the whole divergence).
+//
+// kSelectOneRun's readers, re-greped 2026-09-19: the PHASE copy's contiguity
+// arm and the BPM sweep's below — the same test on the same set for the same
+// reason (the run must have one span meaning), so they answer in one
+// sentence. The magnification copy left them, its paste having no lockstep
+// walk to keep aligned.
 constexpr const char* kSelectOneRun =
     "Select one consecutive run of markers";
+// The one sentence both families still share: each paste's empty-clipboard
+// answer, three readers (the phase pair and the magnification paste).
 constexpr const char* kNothingCopiedYet = "Nothing has been copied yet";
+// The PHASE pastes' anchor gate, two readers — its paste is anchored on a
+// selected warp marker where the magnification paste is anchored on the
+// playhead.
 constexpr const char* kSelectOneAnchor =
     "Select exactly one marker to paste onto";
 constexpr const char* kPastePhaseOntoWarp =
     "Phase resets are pasted onto warp markers";
-constexpr const char* kPasteMagnificationOntoWarp =
-    "Magnification levels are pasted onto warp markers";
-// THE COPIES' "NOTHING WAS CAPTURED" SENTENCE (2026-08-30), the kNothingMatched
-// twin on the copy side (propagate_blocks.h): both copies' membership is
-// warp_marker_propagates — labeled AND effectively enabled — so a run of
+// THE PHASE COPY'S "NOTHING WAS CAPTURED" SENTENCE (2026-08-30), the
+// kNothingMatched twin on the copy side (propagate_blocks.h): its membership
+// is warp_marker_propagates — labeled AND effectively enabled — so a run of
 // unlabeled or disabled markers passes every gate and captures nothing,
 // leaving an EMPTY clipboard that the paste then refuses with "Nothing has
 // been copied yet". It names the membership rather than the label alone
-// because a labeled but disabled marker propagates nothing either, and it
-// names no column because the membership is the warp run's on both.
+// because a labeled but disabled marker propagates nothing either. ONE READER
+// since 2026-09-19: the magnification copy captures the SELECTED MAGNIFICATION
+// LEVEL MARKERS THEMSELVES, which no membership rule can thin out, so past its
+// non-empty-selection gate it always captures something and has no
+// empty-capture case to answer.
 constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
 
@@ -7907,60 +7920,61 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // -- THE MAGNIFICATION LEVEL PROPAGATE (architect 2026-09-15): the three
-    // arms above on the letter M, gate for gate and sentence for sentence,
-    // over the third column's own clipboard and family
-    // (MagnificationLevelPropagate, magnification_level_propagate.h — its
-    // deltas from the phase family are stated once at that header). W-mode
-    // only on all three, as the phase three are: the run is a run of WARP
-    // markers, whichever column the captured markers live on.
+    // -- THE MAGNIFICATION LEVEL PROPAGATE: two arms on the letter M, and it
+    // is NOT the three above with a letter swapped (architect 2026-09-19).
+    // The phase three are W-column acts that carry a labeled phrase's resets
+    // from one occurrence of a label to another; these two are M-COLUMN acts
+    // that copy a group of magnification level markers and lay the same SHAPE
+    // — the frame distances between them — down again from the playhead. The
+    // whole model and every way it parts from the sibling are stated once at
+    // MagnificationLevelPropagate (magnification_level_propagate.h). The
+    // column exists in source view alone, so the marker view is the whole
+    // gate on both and neither needs an audio-view term.
 
-    // Ctrl+M: copy magnification level placements from the selected warp
-    // markers into the column's own clipboard — Ctrl+P's arm, its three gates
-    // and its two answers (the family's sentences, the copy-specific ones
-    // naming this payload).
+    // Ctrl+M: copy the SELECTED magnification level markers into the column's
+    // own clipboard. TWO GATES, not three: the column, and a standing
+    // selection. There is no consecutive-run gate — the sibling's exists for
+    // its lockstep block walk, and a gapped selection has perfectly
+    // well-defined offsets under a distance model.
     if (key == GuiKeys::M && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Magnification levels are copied from warp markers");
+        if (app.active_markers_view != 'M') {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Magnification levels are copied in the magnification level view");
             return true;
         }
         if (app.selected_markers.empty()) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
-                "Select the markers whose magnification levels to copy");
+                "Select the magnification level markers to copy");
             return true;
         }
-        if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
-                != static_cast<int>(app.selected_markers.size())) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneRun);
-            return true;
-        }
-        // THE SELECTION IS SPENT past the three gates, Ctrl+P's own placement
+        // THE SELECTION IS SPENT past both gates, Ctrl+P's own placement
         // (selection_consumed, app_state.h).
         selection_consumed(app);
         magnification_level_propagate.copy_from_selection();
-        // THE COPY SAYS SO, and says WHICH of the two things it did (Ctrl+P's
-        // reasoning); the empty-capture sentence is the family's, the
-        // membership being the same warp run's.
-        if (app.magnification_level_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingToCopy);
-            return true;
-        }
+        // THE COPY SAYS SO (Ctrl+P's reasoning: nothing paints a clipboard).
+        // ONE ANSWER AND NOT TWO — past the gate above the capture is the
+        // selection itself, which no membership rule thins out, so this copy
+        // has no empty-capture case for the family's kNothingToCopy to
+        // answer.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Copied the selected markers' magnification levels");
         return true;
     }
 
-    // Ctrl+Alt+M: paste clipboard magnification levels onto the destination
-    // anchored at the single selected warp marker — Ctrl+Alt+P's arm and its
-    // three carded gates; opens the confirmation prompt before any mutation.
+    // Ctrl+Alt+M: lay the clipboard's shape down again with its first marker
+    // on the playhead. TWO GATES — the column, and an empty clipboard — and NO
+    // CONFIRMATION PROMPT: the act is purely additive (it clears nothing and
+    // matches nothing) and one undo entry away, where the sibling's paste
+    // clears the destination blocks' existing resets and so keeps its
+    // question. There is no anchor gate either: the anchor is the playhead,
+    // not a selected marker.
     if (key == GuiKeys::M && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kPasteMagnificationOntoWarp);
+        if (app.active_markers_view != 'M') {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Magnification levels are pasted in the magnification level view");
             return true;
         }
         if (app.magnification_level_clipboard.empty()) {
@@ -7968,37 +7982,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                                  kNothingCopiedYet);
             return true;
         }
-        if (app.selected_markers.size() != 1) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneAnchor);
-            return true;
-        }
-        magnification_level_propagate.open_paste_confirmation();
-        return true;
-    }
-
-    // Ctrl+Alt+Shift+M: propagate the *state* — the level AND the disabled
-    // bit — of clipboard placements onto the matching destination region's
-    // magnification level markers, in order; positions are not modified.
-    // Ctrl+Alt+Shift+P's arm: the same three gates, no confirmation prompt,
-    // a divergence or mismatch reported on a card.
-    if (key == GuiKeys::M && ctrl && shift && alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kPasteMagnificationOntoWarp);
-            return true;
-        }
-        if (app.magnification_level_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingCopiedYet);
-            return true;
-        }
-        if (app.selected_markers.size() != 1) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneAnchor);
-            return true;
-        }
-        magnification_level_propagate.paste_state_apply();
+        magnification_level_propagate.paste_apply();
         return true;
     }
 

@@ -50,7 +50,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // select_active_markers_view (the column entry, below) runs the coincidence
 // auto-select; the S/T audio switch (input_handler.cpp) lands S+M on W before
 // it leaves for target view and runs nothing after;
-// the two propagate pastes' landing tails — the phase-reset paste's into
+// the two propagate families' landing tails — the phase-reset paste's into
 // target view (phase_reset_propagate.cpp) and the magnification level paste's
 // into source view (magnification_level_propagate.cpp) — each write their OWN
 // selection and land on that; the undo restore (undo.cpp) writes the entry's

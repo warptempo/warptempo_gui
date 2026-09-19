@@ -1831,7 +1831,7 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-19 against kDropdownMenus and the chord table (42 chord
+// re-greped 2026-09-19 against kDropdownMenus and the chord table (43 chord
 // rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-19);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -3444,12 +3444,17 @@ inline constexpr int kFilePopupItemCount =
     static_cast<int>(std::size(kFilePopupItems));
 
 // THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE PROPAGATE COMMANDS,
-// the PHASE RESET family's three and, since 2026-09-15, the MAGNIFICATION
-// LEVEL family's three, each family in its own order: copy, then paste, then
-// the variant paste. One category, no separator; THE ITEM IS ITS CHORD on all
-// six.
+// the MAGNIFICATION LEVEL family's two and then the PHASE RESET family's
+// three, each family in its own order: copy, then paste, then (where the
+// family has one) the variant paste. One category, no separator; THE ITEM IS
+// ITS CHORD on all five.
 //
-// THIS MENU IS THE SIX COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
+// THE MAGNIFICATION ROWS COME FIRST (architect 2026-09-19): the magnification
+// level view took first place in the view bar and the backtick the same day,
+// because it is the view a piece is set up in and then left behind, and this
+// menu's order reflects the bar's.
+//
+// THIS MENU IS THE FIVE COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
 // deleted from the icon row in the same ruling, so nothing here duplicates a
 // button: the no-second-road doctrine is SATISFIED rather than amended, which
 // is the zoom group's history run in reverse (there, four BUTTONS took the
@@ -3465,38 +3470,35 @@ inline constexpr int kFilePopupItemCount =
 // with it), so the relocation removed no pointer road from the family.
 //
 // EVERY ROW DISPLAYS ITS HOTKEY, the accelerator column File's one row has
-// carried alone since 2026-08-15 — the column had six producers instead of one
-// from this ruling, eight while the Iterations menu's two rows stood
-// (2026-08-27 to 2026-09-04), nine while File's third row and the Help
-// menu's one both stood (2026-09-03..09), eight from the Help menu's
-// deletion, seven from the measure rows' (2026-09-14; File's four rows and
-// this menu's three) and TEN since the magnification level rows' joined
-// (2026-09-15), and its metrics and layout term are unchanged throughout. The
-// spelling convention is the crop's: modifiers spelled out with `+`, and a
+// carried alone since 2026-08-15 — the column has NINE producers today
+// (re-derived 2026-09-19: File's four rows and this menu's five), and its
+// metrics and layout term are unchanged throughout every move of that number.
+// The spelling convention is the crop's: modifiers spelled out with `+`, and a
 // non-letter key written as itself (`\`).
 //
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — wrong mode, wrong selection, an empty
 // clipboard, a locked tab — still dispatches, and its own arm answers exactly
-// as the key does, which for all six of these is a notification card naming
+// as the key does, which for all five of these is a notification card naming
 // the rule it failed (2026-08-30, the strictness ruling; they were silent
 // no-ops before it). So there is nothing here that could lie the way the
 // deleted Navigation menu's one ruled exception could — the row acts, and the
 // act says what it found.
 inline constexpr CommandPopupItem kEditPopupItems[] = {
+    // THE MAGNIFICATION LEVEL FAMILY (architect 2026-09-15): TWO rows, not
+    // the phase three's shape on another letter — it copies a group of
+    // magnification level markers and lays the same frame distances down
+    // again from the playhead, and there is nothing for a state paste to
+    // align onto (magnification_level_propagate.h carries the model).
+    {"Copy Magnification Levels",       "Ctrl+M",           GuiKeys::M,
+     true,  false, false, false},
+    {"Paste Magnification Levels",      "Ctrl+Alt+M",       GuiKeys::M,
+     true,  false, true,  false},
     {"Copy Phase Resets",      "Ctrl+P",           GuiKeys::P,
      true,  false, false, false},
     {"Paste Phase Resets",     "Ctrl+Alt+P",       GuiKeys::P,
      true,  false, true,  false},
     {"Paste Phase Reset State", "Ctrl+Alt+Shift+P", GuiKeys::P,
-     true,  true,  true,  false},
-    // THE MAGNIFICATION LEVEL FAMILY (architect 2026-09-15), the phase-reset
-    // three's exact shape on the letter M, in the same noun pattern.
-    {"Copy Magnification Levels",       "Ctrl+M",           GuiKeys::M,
-     true,  false, false, false},
-    {"Paste Magnification Levels",      "Ctrl+Alt+M",       GuiKeys::M,
-     true,  false, true,  false},
-    {"Paste Magnification Level State", "Ctrl+Alt+Shift+M", GuiKeys::M,
      true,  true,  true,  false},
 };
 inline constexpr int kEditPopupItemCount =
@@ -3877,10 +3879,13 @@ inline int drag_moved_threshold_px() {
 // GuiPrompt, where the opener stood.
 enum class DialogTrigger {
     CLOSE_WINDOW,
-    // THE PROPAGATE PASTE CONFIRMATION — ONE PROMPT BODY, TWO SUBJECTS since
-    // 2026-09-15: the phase reset paste's question and the magnification level
-    // paste's, raised by each family's open_paste_confirmation and answered by
-    // one `y` arm that forks on AppState::pending_paste_column.
+    // THE PHASE RESET PASTE'S CONFIRMATION — its question alone, raised by
+    // PhaseResetPropagate::open_paste_confirmation and answered by one `y`
+    // arm with nothing to fork on. It asks because that paste CLEARS the
+    // destination blocks' existing resets; the magnification level paste is
+    // purely additive and applies at the press with no prompt at all
+    // (architect 2026-09-19), which is why this trigger carried two subjects
+    // from 2026-09-15 to that day and carries one again.
     PASTE_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
@@ -8045,24 +8050,21 @@ struct AppState {
     PendingArchivalCommand pending_archival;
 
     // Phase reset propagate (W-mode Ctrl+P / Ctrl+Alt+P). Single-slot
-    // session-only clipboard cleared on app exit. `pending_paste_anchor`
-    // is the destination warp-marker index captured when the paste
-    // confirmation prompt opens; consumed by the prompt response.
+    // session-only clipboard cleared on app exit.
     PhaseResetClipboard phase_reset_clipboard;
-    // THE MAGNIFICATION LEVEL PROPAGATE'S OWN SLOT (W-mode Ctrl+M /
+    // THE MAGNIFICATION LEVEL PROPAGATE'S OWN SLOT (M-column Ctrl+M /
     // Ctrl+Alt+M; architect 2026-09-15): a second clipboard beside the first,
-    // so a copy of one column never overwrites the other's — the family's
-    // shared shape over this column's placement
-    // (magnification_level_clipboard.h).
+    // so a copy of one column never overwrites the other's. IT SHARES NO TYPE
+    // WITH IT — this one is a flat list of frame offsets, the other a
+    // sequence of named warp blocks (magnification_level_clipboard.h carries
+    // the ruling).
     MagnificationLevelClipboard magnification_level_clipboard;
+    // The destination warp-marker index captured when the PHASE RESET paste's
+    // confirmation prompt opens; consumed by the prompt response. THE PROMPT
+    // HAS ONE SUBJECT AGAIN (architect 2026-09-19): the magnification paste
+    // applies at the press, so no tag says which family a pending paste
+    // belongs to.
     int                pending_paste_anchor = -1;
-    // WHICH FAMILY THE PENDING PASTE IS ('P' the phase reset propagate, 'M'
-    // the magnification level propagate): ONE PASTE_CONFIRM prompt body
-    // serves both, and its `y` forks on this tag (GuiPrompt::activate_response)
-    // — the load confirmation's one-body-two-subjects shape. Written by each
-    // family's open_paste_confirmation, the two producers; meaningful only
-    // while pending_paste_anchor is seated.
-    char               pending_paste_column = 'P';
 
     // (THERE IS NO TEXT CLIPBOARD FIELD HERE — 2026-08-02. The session-only
     // `text_clipboard` string is DELETED with the system clipboard's arrival:
@@ -12353,11 +12355,13 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     the carded refusal and ahead of the column fork (input_handler.cpp) —
 //     the co-equal-axes rule says a delete is a delete in every column;
 //   * THE TWO CLIPBOARD COPIES, Ctrl+P and (2026-09-15) Ctrl+M, each past
-//     its three gates;
-//   * THE FOUR PROPAGATE PASTES — each family's confirmed placement paste
-//     (PhaseResetPropagate::paste_apply,
-//     MagnificationLevelPropagate::paste_apply) and its state paste
-//     (paste_state_apply on both), each past its own last refusal;
+//     its own gates — three on the phase copy, two on the magnification one,
+//     which asks for no consecutive run;
+//   * THE THREE PROPAGATE PASTES — the phase family's confirmed placement
+//     paste and its state paste (PhaseResetPropagate::paste_apply,
+//     ::paste_state_apply) and the magnification level family's one paste
+//     (MagnificationLevelPropagate::paste_apply), each past its own last
+//     refusal;
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -13570,8 +13574,9 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // beside the chord table it walks) asks history_mode_key_blocked about each
 // button's own chord and hand-answers the THREE ANCHORS, which have none —
 // Settings dead on the toggle_dropdown lockout, EDIT dead beside it since
-// 2026-08-20 (every one of its three propagate rows is a chord the mode drops,
-// so its menu would open onto nothing), File live since 2026-08-13, its
+// 2026-08-20 (every one of its propagate rows — FIVE, re-derived 2026-09-19
+// off kEditPopupItems — is a chord the mode drops, so its menu would open
+// onto nothing), File live since 2026-08-13, its
 // menu opening in the view — and IT CARRIES THE AUTHORITATIVE PARTITION
 // INVENTORY. (It hand-answered a fourth, Navigation, live from 2026-08-08 until
 // that anchor's deletion 2026-08-15.) Read
@@ -16145,8 +16150,9 @@ struct RedesignTooltipText {
 inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     switch (b) {
         // Row 1 — the menu row: no tooltips, per the rule above. The view bar's
-        // three joined the exclusion with the row (2026-08-02): their labels are
-        // the combinations themselves, so a hint could only restate them.
+        // FOUR joined the exclusion with the row (2026-08-02; re-greped
+        // 2026-09-19 against the case labels below): their labels are the
+        // combinations themselves, so a hint could only restate them.
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:

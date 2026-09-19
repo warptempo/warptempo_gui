@@ -1,7 +1,6 @@
 #pragma once
 
 #include "app_state.h"
-#include "magnification_level_propagate.h"
 #include "phase_reset_propagate.h"
 #include "platform.h"
 #include "playback_lifecycle.h"
@@ -48,9 +47,6 @@ struct GuiPrompt {
     GuiPlatform&          gui;
     Viewport&             viewport;
     PhaseResetPropagate&  phase_reset_propagate;
-    // THE PASTE CONFIRMATION'S SECOND SUBJECT (2026-09-15): the `y` arm forks
-    // on AppState::pending_paste_column between the two families' paste_apply.
-    MagnificationLevelPropagate& magnification_level_propagate;
     GuiSaveOps&           save_ops;
     GuiPlaybackLifecycle& playback_lifecycle;
     // THE RENDER PLAYER, held for one line of request_close: a close gesture
@@ -77,7 +73,6 @@ struct GuiPrompt {
               GuiPlatform&          gui_,
               Viewport&             viewport_,
               PhaseResetPropagate&  phase_reset_propagate_,
-              MagnificationLevelPropagate& magnification_level_propagate_,
               GuiSaveOps&           save_ops_,
               GuiPlaybackLifecycle& playback_lifecycle_,
               GuiRenderPlayer&      render_player_)
@@ -85,7 +80,6 @@ struct GuiPrompt {
           gui(gui_),
           viewport(viewport_),
           phase_reset_propagate(phase_reset_propagate_),
-          magnification_level_propagate(magnification_level_propagate_),
           save_ops(save_ops_),
           playback_lifecycle(playback_lifecycle_),
           render_player(render_player_) {}
@@ -168,9 +162,8 @@ struct GuiPrompt {
     // asynchronous raises one at all.)
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
-    // prompt and clear the pending paste anchor (whichever family seated it —
-    // the anchor is the one pending state, the column tag being meaningful
-    // only beside it). Called from activate_response on Esc, and from the
+    // prompt and clear the pending paste anchor, which is the phase reset
+    // paste's whole pending state. Called from activate_response on Esc, and from the
     // Ctrl+Q interception in input_handler so both cancels go through one
     // path (no synthesized Esc keystroke). Safe to call only when a
     // PASTE_CONFIRM prompt is up.

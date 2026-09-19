@@ -868,10 +868,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
-    // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+M, ctrl-exact (each reads a run
-    // into a session clipboard and pushes nothing, so the undo domain this
-    // lock protects has no interest in them; the FOUR ALT-BEARING PASTES stay
-    // refused). That
+    // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+M, ctrl-exact (each reads a
+    // selection into a session clipboard and pushes nothing, so the undo domain
+    // this lock protects has no interest in them; the THREE ALT-BEARING PASTES
+    // stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
@@ -959,7 +959,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
     // commits are authored content), `i`, `'` in the `h` view, the
     // propagate copy/paste of BOTH families (the Ctrl+P three and the Ctrl+M
-    // three), and undo/redo
+    // two), and undo/redo
     // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
     // POINTER path too has gone, the trim band's gate having been deleted with

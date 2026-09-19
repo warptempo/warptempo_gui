@@ -5,24 +5,21 @@
 #include <utility>
 #include <vector>
 
-// THE PROPAGATE FAMILY'S CLIPBOARD SHAPE, shared by its two members (the phase
-// reset propagate, phase_reset_clipboard.h, and the magnification level
-// propagate, magnification_level_clipboard.h — 2026-09-15): a session-only,
-// single-slot, in-memory clipboard holding a SEQUENCE OF NAMED WARP BLOCKS,
-// each carrying the placements a copy captured inside it. Never persisted to
-// any sidecar, cleared on app exit.
+// THE PHASE RESET PROPAGATE'S CLIPBOARD SHAPE (phase_reset_clipboard.h, its
+// one instantiation): a session-only, single-slot, in-memory clipboard holding
+// a SEQUENCE OF NAMED WARP BLOCKS, each carrying the placements a copy
+// captured inside it — the owning warp marker's label, its section's extent in
+// absolute source frames (what the state paste re-buckets against), and the
+// placements. Never persisted to any sidecar, cleared on app exit.
 //
-// WHAT IS SHARED IS THE BLOCK AND THE SLOT, NOT THE PLACEMENT: a block is the
-// same thing to both families — the owning warp marker's label, its section's
-// extent in absolute source frames (what the state paste re-buckets against),
-// and the placements captured in it — while what a placement IS differs per
-// column (an anchored phase reset with its disabled bit; a magnification level
-// marker's own frame with its level and its disabled bit), so the placement is
-// the template parameter and each family's header states its own.
-//
-// EACH FAMILY HAS ITS OWN SLOT (architect 2026-09-15): a copy of one column
-// never overwrites the other's clipboard, so the two slots are two members of
-// AppState, each an instantiation of the container below.
+// THE BLOCK AND THE SLOT ARE SPLIT FROM THE PLACEMENT because the placement is
+// the part that carries a column's own meaning, and that split is why these
+// are templates. They had a SECOND INSTANTIATION from 2026-09-15 to
+// 2026-09-19, the magnification level propagate's clipboard, which bucketed by
+// the same named warp blocks; that family became a PURE FRAME DISTANCE from
+// the playhead and its clipboard is a flat list of offsets with no block in it
+// at all (magnification_level_clipboard.h), so what is left here is the phase
+// family's shape alone.
 
 template <class Placement>
 struct PropagateClipboardBlock {

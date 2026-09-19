@@ -145,8 +145,8 @@ struct Viewport {
     //    rebuild after their store write — the source load's first plate, the
     //    three loads in place (GuiInputHandler::apply_recipe_in_place's
     //    tail), the undo/redo restore (Undo::restore_history_entry's tail)
-    //    and, since 2026-09-15, THE MAGNIFICATION LEVEL PROPAGATE'S TWO
-    //    PASTES, whose every store-writing run ends in
+    //    and, since 2026-09-15, THE MAGNIFICATION LEVEL PROPAGATE'S PASTE,
+    //    whose every store-writing run ends in
     //    land_paste_in_source_view's kick — and the store's generation
     //    re-keys the profile (waveform_gain_profile_cached,
     //    warp_frame_map_view.h), so each of those rebuilds reads the new gain

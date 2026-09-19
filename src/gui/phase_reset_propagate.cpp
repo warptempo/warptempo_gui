@@ -23,12 +23,9 @@
 namespace {
 
 // (THE BOUNDARY GUARD, THE BLOCK TYPE, THE MEMBERSHIP WINDOW, THE DESTINATION
-// WALK AND THE NOTHING-MATCHED SENTENCE LEFT THIS FILE on 2026-09-15, when the
-// magnification level propagate became their second reader: they are the
-// family's shared owners in propagate_blocks.h, factored where the two
-// families' spelling was mechanically identical. WHAT STAYS HERE IS THE
-// ANCHOR — the block below and the three loops that ask the window OF IT —
-// because that is the one thing the sibling does not have.)
+// WALK AND THE NOTHING-MATCHED SENTENCE LIVE IN propagate_blocks.h, this
+// family's own shared half across its three acts. WHAT STAYS HERE IS THE
+// ANCHOR — the block below and the three loops that ask the window OF IT.)
 //
 // THE WINDOW IS ASKED OF THE ANCHOR, NOT OF THE RESET (architect 2026-09-11,
 // the block below): a reset aimed at a marker has its anchor ON that marker,
@@ -292,12 +289,6 @@ void PhaseResetPropagate::open_paste_confirmation() {
     if (anchor < 0 || anchor >= n) return;
 
     app.pending_paste_anchor   = anchor;
-    // THE SUBJECT TAG (2026-09-15): one PASTE_CONFIRM prompt body serves this
-    // family and the magnification level propagate, and its `y` forks on this
-    // (GuiPrompt::activate_response); each opener is the one writer of which
-    // family is pending, so a cancelled paste of the other family leaves no
-    // stale tag under this question.
-    app.pending_paste_column   = 'P';
     // A modal surface is opening: stop playback. Space is swallowed while
     // the prompt is up, so playback cannot restart until it closes.
     playback_lifecycle.stop_playback_if_playing();

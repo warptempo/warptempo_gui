@@ -650,10 +650,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The three phase-reset propagate chords (the W/P flip's bare `p` was
         // deleted whole with its view lamp 2026-09-15).
         case GuiKeys::P: return cl || ca || cas;
-        // The three magnification level propagate chords (2026-09-15), the
-        // phase-reset three's exact shape on the letter the BPM opener left
-        // free that morning; BARE `m` STAYS UNBOUND.
-        case GuiKeys::M: return cl || ca || cas;
+        // The magnification level propagate's TWO chords, the copy and the
+        // paste (2026-09-15; two since 2026-09-19). NOT the phase-reset
+        // three's shape on another letter: that family's third chord pastes
+        // STATE onto the destination's existing resets block by block, and
+        // this one's paste walks no blocks, so there is nothing to hook a
+        // state onto (magnification_level_propagate.h). Ctrl+Alt+Shift+M and
+        // BARE `m` are both unbound.
+        case GuiKeys::M: return cl || ca;
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven
