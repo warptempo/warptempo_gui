@@ -167,14 +167,10 @@ enum class Icon {
     // collapsing to one or to none. His own pick, with "I might change it
     // later" attached to it.
     //
-    // TAKEN AT 22 THOUGH HE NAMED THE 16px PATH
-    // (/usr/share/icons/breeze/actions/16/merge.svg): every asset in this set
-    // is 22 and every IconDef is {22.0, ...}, ToolRectSelection's own
-    // precedent one size over. UNLIKE THAT CASE THE TWO FILES ARE NOT THE SAME
-    // DRAWING — the 22 adds two 1-unit round dots between the boxes (the `d`'s
-    // two C-curve subpaths) that the 16 does not carry at all — so a later
-    // swap to the 16 is a known move: it would redraw the glyph, not merely
-    // rescale it.
+    // THE 22px FILE IS HIS OWN PICK AND THE SET'S SIZE
+    // (/usr/share/icons/breeze/actions/22/merge.svg): every asset in this set
+    // is 22 and every IconDef is {22.0, ...}, so the glyph is transcribed at
+    // the size the rest of the roster already wears. NO SWAP IS PENDING.
     Merge,               // Flatten tempo deviations (`Ctrl+F`)
     // (EDITCOPY AND EDITPASTE ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave the propagate commands the

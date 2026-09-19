@@ -663,8 +663,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::H: return bare;
         // Toggle disabled / quit.
         case GuiKeys::D: case GuiKeys::Q: return cl;
-        // Toggle inherit.
-        case GuiKeys::N: return cl;
+        // Toggle inherit, and THE TIE since 2026-09-19: Ctrl+Shift+N makes
+        // one axis of the grid iteration sweep out of the selected markers,
+        // or unties them again. The shifted form is the plain act's twin on a
+        // ctrl chord, `F`'s shape just above — and the letter is the inherit
+        // toggle's, so the tie rides that button's shift-click and long press
+        // rather than asking for a button of its own. Plain `n` and Shift+N
+        // stay unbound.
+        case GuiKeys::N: return cl || cs;
         // Undo, and redo on the one meaningful shift bit — plus, since
         // 2026-09-04, the RESTRICT UNDO TO VIEWPORT lamp on the bare letter,
         // which was free. The lamp governs exactly the pair it shares the key

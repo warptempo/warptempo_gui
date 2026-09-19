@@ -1954,6 +1954,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.toggle_inherits();
         return;
     }
+    // CTRL+SHIFT+N: TIE the selected markers into ONE AXIS of the grid
+    // iteration sweep, or untie them again (architect 2026-09-19) — every
+    // cell of the grid then applies the same delta to each tied member, so
+    // three markers with the first two tied make a 3 x 2 grid rather than a
+    // 3 x 3 x 2 one. Ctrl-and-shift exact, ONE-SHOT: a tie repeats onto
+    // itself, so the chord is in no repeat_eligible list.
+    //
+    // IT IS THE INHERIT TOGGLE'S OWN LETTER AND ITS OWN BUTTON: the tie has
+    // no button of its own — it rides IconMarkerInherit's shift-click and
+    // kChromeShiftHoldMs long press (redesign_button_shift_admits,
+    // app_state.h), which is where the two acts' relation is argued.
+    //
+    // BOTH COLUMNS, and the LIT one: the body takes the active column, which
+    // the verdict's lamp test has already narrowed to W or P. THE ITERATION
+    // LOCK ADMITS THIS CHORD (iteration_lock_key_blocked's delta (b),
+    // input_key_dispatch.cpp) — a tie is bracket state, and the bracket's own
+    // acts are what the lock leaves open — while READ-ONLY refuses it with no
+    // entry of its own, the base allowlist carrying no `N` at all.
+    if (key == GuiKeys::N && ctrl && shift && !alt) {
+        // ONE OWNER FOR THE REFUSAL, THE CARD AND THE DIRECTION
+        // (iter_tie_toggle_verdict, app_state.h), asked inside the body so
+        // the face and the act cannot read it differently.
+        this->run_iter_tie_toggle();
+        return;
+    }
     // CTRL+F AND CTRL+SHIFT+F: flatten the selected warp markers' TEMPO
     // DEVIATIONS (architect 2026-09-19) — the plain chord CLEARS the terms,
     // the shifted twin COLLAPSES them to their one sum. Ctrl-exact and

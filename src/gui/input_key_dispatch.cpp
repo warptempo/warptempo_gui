@@ -713,8 +713,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // other subtractions; each named a chord read-only was thought to admit and
 // does not. Re-greped at the base's body.)
 //
-// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, four
-// entries and each with its own reason (BARE `m` WAS A FIFTH until 2026-09-10:
+// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, FIVE
+// entries since 2026-09-19 and each with its own reason (BARE `m` WAS A SIXTH
+// until 2026-09-10:
 // it was admitted as the one road that LEFT this mode by entering another,
 // enter_bpm_mode having run the same wipe the `i` toggle runs, and the
 // architect ruled that swap out the same evening — "we should card the exit,
@@ -758,13 +759,28 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     admission by widening it. THE EDIT MENU'S COPY ROW comes back with it
 //     and needed no edit of its own: it synthesizes its chord through on_key,
 //     so the row is the key.
+//   * CTRL+SHIFT+N — THE TIE (architect 2026-09-19), and it belongs here for
+//     the lock's own reason rather than as an exception to it: a tie says
+//     which markers are ONE AXIS of the sweep, which is BRACKET state and
+//     nothing else (GuiWarpMarker::iter_tie_group, warpmarkers.h) — session
+//     only, stripped from every snapshot, wiped with the mode, pushing no
+//     undo entry and moving no dirty mark — and the bound cells being the
+//     mode's only authoring surface is precisely why the bracket's own acts
+//     stay open. Ctrl-and-shift exact, the dispatch arm's own spelling, so
+//     the PLAIN Ctrl+N — the inherit toggle, which writes a store and pushes
+//     — stays refused by the base list beside it. OUTSIDE A LIT LAMP the
+//     chord refuses at its own arm instead, a tie existing only where
+//     brackets do.
 //
 // THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
 // ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
 // app_state.h — the membership the ENABLED ARMS read, and they alone since
 // 2026-09-12, when the refusal-reason tooltip lines went: a greyed button
 // names its own act, the grey is the message, and the reason lives at the
-// key's card). Its members are the four marker verbs, the
+// key's card). Its members are THREE of the four marker verbs (TOGGLE INHERIT
+// left them 2026-09-19 on the twin rule — its shifted chord Ctrl+Shift+N, the
+// TIE, is admitted above, so the button stays lit wherever a tie or an untie
+// is possible and its arm composes the fork itself), the
 // Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
@@ -829,6 +845,9 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // The undo pair, admitted for its own card (the whole family, alt binding
     // nothing on it — the dispatch arm's own spelling).
     if (key == GuiKeys::Z && ctrl && !alt) return false;
+    // THE TIE, ctrl-and-shift exact as its dispatch arm is — which is what
+    // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
+    if (key == GuiKeys::N && ctrl && shift && !alt) return false;
     // The clipboard copies, ctrl-exact as their dispatch arms are — which is
     // what keeps the four ALT-bearing pastes out of this admission. Ctrl+M,
     // the magnification level copy (2026-09-15), on Ctrl+P's own standard: a
@@ -852,6 +871,138 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
             return false;
     }
     return read_only_key_blocked(key, mods);
+}
+
+// -- THE TIE TOGGLE, CTRL+SHIFT+N (architect 2026-09-19) --------------------
+
+namespace {
+
+// Apply the tie act to ONE store. `untie` is the direction the verdict owner
+// chose (iter_tie_toggle_verdict, app_state.h) and this body takes it rather
+// than re-deriving it, so the card the user was shown and the store write can
+// never describe different acts. Returns whether anything moved.
+//
+// IT IS ONE BODY FOR BOTH COLUMNS, over the tie's shared walk
+// (iter_tie_leader_index, warpmarkers.h) and the two same-named per-column
+// bracket helpers (clear_iter_bracket / copy_iter_bracket, one overload per
+// GUI marker type) — the naming-symmetry rule met by construction rather than
+// by a twin that could drift.
+template <typename GuiM>
+bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
+                    bool untie) {
+    const auto in_range = [&](int i) {
+        return i >= 0 && i < static_cast<int>(v.size());
+    };
+    if (untie) {
+        // ONE GROUP, by the verdict's own spanning refusal: a selection
+        // reaching two ties never gets here.
+        int  group           = 0;
+        bool leader_selected = false;
+        for (int idx : selected) {
+            if (!in_range(idx)) continue;
+            if (v[static_cast<size_t>(idx)].iter_tie_group == 0) continue;
+            group = v[static_cast<size_t>(idx)].iter_tie_group;
+            if (iter_tie_leader_index(v, idx) == idx) leader_selected = true;
+        }
+        if (group == 0) return false;
+        int leader = -1;
+        for (int i = 0; i < static_cast<int>(v.size()); ++i)
+            if (v[static_cast<size_t>(i)].iter_tie_group == group) {
+                leader = i;
+                break;
+            }
+        if (leader < 0) return false;
+        // NOTHING POPS: every member leaving keeps A COPY of the bracket that
+        // governed it, so the cells read exactly what they read a moment
+        // earlier and only their grey goes. The leader's own pair is read
+        // once, ahead of any write.
+        const GuiM governing = v[static_cast<size_t>(leader)];
+        if (leader_selected) {
+            // THE LEADER DISSOLVES THE WHOLE GROUP: it is the tie's one
+            // bracket, so untying it leaves no bracket for the rest to follow.
+            for (GuiM& m : v) {
+                if (m.iter_tie_group != group) continue;
+                copy_iter_bracket(m, governing);
+                m.iter_tie_group = 0;
+            }
+            return true;
+        }
+        for (int idx : selected) {
+            if (!in_range(idx)) continue;
+            GuiM& m = v[static_cast<size_t>(idx)];
+            if (m.iter_tie_group != group) continue;
+            copy_iter_bracket(m, governing);
+            m.iter_tie_group = 0;
+        }
+        // A TIE OF ONE IS NOT A TIE: the last member left behind leaves too,
+        // keeping what it already had.
+        if (iter_tie_group_size(v, group) == 1)
+            for (GuiM& m : v)
+                if (m.iter_tie_group == group) m.iter_tie_group = 0;
+        return true;
+    }
+    // THE TIE. A fresh id, the EARLIEST selected marker leading (the selection
+    // is a sorted set of store indices and the store is sorted by time, so its
+    // first member is the earliest), and every follower's own bracket cleared
+    // — a follower carries none by rule, the leader's governing it.
+    const int fresh  = next_free_iter_tie_group(v);
+    int       leader = -1;
+    for (int idx : selected)
+        if (in_range(idx)) { leader = idx; break; }
+    if (leader < 0) return false;
+    bool changed = false;
+    for (int idx : selected) {
+        if (!in_range(idx)) continue;
+        GuiM& m = v[static_cast<size_t>(idx)];
+        m.iter_tie_group = fresh;
+        if (idx != leader) clear_iter_bracket(m);
+        changed = true;
+    }
+    return changed;
+}
+
+} // namespace
+
+// THE ACT. Its refusals, its direction and its card all come from the ONE
+// verdict owner, which the Toggle inherit button's face reads too, so a lit
+// button and an acting press are one decision.
+//
+// IT PUSHES NO UNDO ENTRY AND MOVES NO DIRTY MARK, exactly as a bound step
+// does: a tie is bracket state (GuiWarpMarker::iter_tie_group, warpmarkers.h),
+// session-only, stripped from every snapshot and wiped with the mode. There is
+// no gesture stamp either — there is no entry for a burst to merge into.
+//
+// THE DAMAGE IS THE TOP STRIP'S ALONE: the cells' numbers and their grey are
+// all that moved, the store's generation carrying the flag cache's rebuild. No
+// map input changed, so no image and no render.
+void GuiInputHandler::run_iter_tie_toggle() {
+    const IterTieVerdict verdict = iter_tie_toggle_verdict(app);
+    if (verdict.refusal) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             verdict.refusal);
+        return;
+    }
+    // THE SELECTION IS SPENT, Ctrl+N's own clause at its own arm: a press past
+    // the refusal is a marker verb acting on what Add to selection built, so
+    // the building pass ends here (selection_consumed, app_state.h).
+    selection_consumed(app);
+    const bool untie = verdict.act == IterTieAct::Untie;
+    bool changed = false;
+    // The lamp is target-view only and the magnification level column is
+    // source-view only, so the verdict's own lamp test has already made this
+    // fork W or P.
+    if (app.active_markers_view == 'P') {
+        std::vector<GuiPhaseResetMarker> proposed =
+            app.phaseresetmarkers.markers();
+        changed = apply_iter_tie(proposed, app.selected_markers, untie);
+        if (changed)
+            app.phaseresetmarkers.markers_mut() = std::move(proposed);
+    } else {
+        std::vector<GuiWarpMarker> proposed = app.warpmarkers.markers();
+        changed = apply_iter_tie(proposed, app.selected_markers, untie);
+        if (changed) app.warpmarkers.markers_mut() = std::move(proposed);
+    }
+    if (changed) viewport.invalidate_top_strip();
 }
 
 // -- THE HISTORY MODE'S OWN KEYS AND ITS ONE KEYBOARD ALLOWLIST -------------

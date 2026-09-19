@@ -124,8 +124,9 @@ struct GuiFlagEditor {
     bool commit_bpm_edit();
     void enter_bpm_mode();
     void exit_bpm_mode();
-    // Wipe BOTH stores' session-only iter brackets — the single clear
-    // every iteration-mode exit route shares, TWO routes re-greped
+    // Wipe BOTH stores' session-only iter brackets AND THEIR TIES
+    // (2026-09-19, a tie being the bracket's own kind of state) — the single
+    // clear every iteration-mode exit route shares, TWO routes re-greped
     // 2026-09-10: the `i` toggle's turning-off branch and the iteration
     // sweep's success tail (the S->T
     // audio-view toggle left the list 2026-08-07; enter_bpm_mode's forced

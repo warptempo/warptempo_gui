@@ -2798,6 +2798,16 @@ private:
     // preconditions and its own refusals are stated at the definition.
     void run_iteration_sweep_render();
 
+    // THE TIE TOGGLE'S BODY (architect 2026-09-19), called from the one place
+    // its chord lives — Ctrl+Shift+N's arm in on_key. It ties the selected
+    // markers of the LIT COLUMN into one axis of the grid iteration sweep, or
+    // unties them; which of the two is the selection's own answer, taken from
+    // the one verdict owner (iter_tie_toggle_verdict, app_state.h) that the
+    // Toggle inherit button's face reads too. It pushes NO UNDO ENTRY and
+    // moves no dirty mark — a tie is bracket state — and it spends the
+    // selection like every other marker verb.
+    void run_iter_tie_toggle();
+
     // P / M / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
     // clipboard ops, the Ctrl+M-family magnification level clipboard ops
     // (2026-09-15, the same three shapes), `i` iteration mode, `k` ADD TO

@@ -930,9 +930,7 @@ constexpr IconPath kInsertLinkPaths[] = {
 // MERGE — the FLATTEN pair's glyph (Ctrl+F and Ctrl+Shift+F), the 22px
 // Breeze file's one `d` transcribed VERBATIM. Its two 1-unit dots between the
 // boxes are the two subpaths of absolute `C` curves below, which the renderer
-// takes as ordinary cubics (the command's own arm in draw_path); they are
-// what the 16px file the architect named does not carry, the divergence
-// recorded at the enum entry in icons.h.
+// takes as ordinary cubics (the command's own arm in draw_path).
 constexpr IconPath kMergePaths[] = {
     {kIconText,
      "M 3 3 L 3 7 L 9 7 L 10 7 L 11 7 L 11 15 L 10 15 L 9 15 L 3 15 L 3 19 "

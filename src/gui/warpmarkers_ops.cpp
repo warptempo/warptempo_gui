@@ -476,8 +476,12 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
             m.tempo_deviation_cents.clear();
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
+            // A CARRIER LOSS TAKES THE TIE WITH THE BRACKET (2026-09-19): a
+            // marker that stops owning its tempo can be neither a leader nor
+            // a follower, so leaving the group id behind would let a
+            // non-carrier govern somebody's cells.
+            clear_iter_bracket(m);
+            m.iter_tie_group = 0;
         } else if (m.tempo_inherits) {
             const MarkerEffective eff =
                 marker_effective(resolved_src, idx, audio.total_frames());
@@ -498,8 +502,10 @@ void GuiWarpMarkersOps::toggle_inherits() {
             m.tempo_cents    = 100;
             m.tempo_scale.reset();
             m.tempo_deviation_cents.clear();
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
+            // The owner->pass arm's own carrier loss, the ref arm's clause
+            // above verbatim: the bracket goes and the tie with it.
+            clear_iter_bracket(m);
+            m.iter_tie_group = 0;
         }
         changed = true;
     }

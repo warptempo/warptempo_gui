@@ -10039,6 +10039,118 @@ inline bool marker_paints_iter_cells(const AppState& app, char column,
     return false;
 }
 
+// -- THE TIE TOGGLE'S ONE VERDICT (architect 2026-09-19) --------------------
+//
+// Ctrl+Shift+N ties the selected markers into ONE AXIS of the sweep, or
+// unties them again: every cell of the grid applies the same delta to each
+// tied member, so three markers with the first two tied make a 3 x 2 grid
+// rather than a 3 x 3 x 2 one (the field's whole contract is at
+// GuiWarpMarker::iter_tie_group, warpmarkers.h).
+//
+// ONE OWNER FOR THE SENTENCE AND THE DIRECTION, because the act and the face
+// must not disagree about either: the dispatch arm cards `refusal` and runs
+// `act` past it, and the Toggle inherit button's face — the chord's one
+// pointer road, through that button's shift-click and long press — greys on
+// the very same answer. Nothing else composes a tie sentence.
+//
+// THE DIRECTION IS THE SELECTION'S, not a second chord: a selection holding
+// any tied marker UNTIES, one holding none TIES. A selection SPANNING TWO
+// TIES is the refusal in between — the architect's "a member already in
+// another tie" — because neither reading of it is the one act the press
+// names.
+enum class IterTieAct { Tie, Untie };
+
+struct IterTieVerdict {
+    // nullptr when the press would act; otherwise the one clause the card
+    // carries.
+    const char* refusal = nullptr;
+    IterTieAct  act     = IterTieAct::Tie;
+};
+
+// The column-agnostic half, over any store whose markers carry the tie field:
+// the walk is one rule on both columns (iter_tie_leader_index, warpmarkers.h)
+// and only ELIGIBILITY has a per-column sentence, which arrives as
+// `kind_refusal(idx)` — nullptr for a marker the sweep reads, that column's
+// own words otherwise.
+template <typename GuiM, typename KindFn>
+inline IterTieVerdict iter_tie_verdict_over(const std::vector<GuiM>& v,
+                                            const std::set<int>& selected,
+                                            KindFn&& kind_refusal) {
+    // THE SPANNING TEST FIRST, ahead of the direction it decides: two groups
+    // in one selection is neither a tie nor an untie.
+    int group = 0;
+    for (int idx : selected) {
+        if (idx < 0 || idx >= static_cast<int>(v.size())) continue;
+        const int g = v[static_cast<size_t>(idx)].iter_tie_group;
+        if (g == 0) continue;
+        if (group != 0 && g != group)
+            return {"A selected marker is already in another tie",
+                    IterTieAct::Untie};
+        group = g;
+    }
+    // A TIED MEMBER IN THE SELECTION MAKES IT AN UNTIE, and an untie has no
+    // further refusal: every member of a standing tie is eligible by
+    // construction (the tie act below refused an ineligible one, and the lock
+    // holds the piece still for as long as the tie can exist), and a single
+    // tied marker is subject enough.
+    if (group != 0) return {nullptr, IterTieAct::Untie};
+    // THE TIE DIRECTION. Every member must be one the sweep reads, and there
+    // must be two of them — a tie of one is not a tie.
+    for (int idx : selected) {
+        if (idx < 0 || idx >= static_cast<int>(v.size())) continue;
+        if (const char* why = kind_refusal(idx)) return {why, IterTieAct::Tie};
+    }
+    // Past the kind loop every in-range member is one the sweep reads, so
+    // this count IS the count of eligible members.
+    int subjects = 0;
+    for (int idx : selected)
+        if (idx >= 0 && idx < static_cast<int>(v.size())) ++subjects;
+    if (subjects < 2)
+        return {"Select two or more markers to tie", IterTieAct::Tie};
+    return {nullptr, IterTieAct::Tie};
+}
+
+inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a) {
+    // A TIE EXISTS ONLY WHERE BRACKETS DO: outside a lit lamp there is no
+    // sweep axis to tie, so the chord is a refusal naming the way in — the
+    // iteration lock's own card read the other way round.
+    if (!a.iteration_mode_enabled)
+        return {"Turn on grid iterations first", IterTieAct::Tie};
+    // The lamp is target-view only and the magnification level column is
+    // source-view only, so past the test above the column is W or P and this
+    // fork is exhaustive.
+    if (a.active_markers_view == 'P') {
+        const auto& pv = a.phaseresetmarkers.markers();
+        return iter_tie_verdict_over(
+            pv, a.selected_markers, [&](int idx) -> const char* {
+                return phase_reset_iter_eligible_marker(pv, idx)
+                           ? nullptr
+                           : "A disabled phase reset has no range";
+            });
+    }
+    const auto& mv = a.warpmarkers.markers();
+    return iter_tie_verdict_over(
+        mv, a.selected_markers, [&](int idx) -> const char* {
+            if (iter_popup_eligible_marker(mv, idx)) return nullptr;
+            // THE VERDICT IS THE ELIGIBILITY OWNER'S and only the WORDS fork
+            // here, on its structural half: a pass or a label ref carries no
+            // tempo for a delta to ride, and an enabled carrier that refused
+            // can only have refused on the disabled term.
+            return iter_bracket_carrier(mv[static_cast<size_t>(idx)])
+                       ? "A disabled marker has no range"
+                       : "Only a marker that owns its tempo has a range";
+        });
+}
+
+// THE FACE'S HALF of the verdict above. It carries no lock term of its own:
+// the lamp is the mode's own bit, asked inside, and the READ-ONLY lock cannot
+// stand beside a lit lamp at all (the two are piece-wide exclusive —
+// authoring_locked's own record), so the button's arm composes read-only for
+// its OTHER chord and this predicate answers for this one.
+inline bool iter_tie_toggle_actionable(const AppState& a) {
+    return iter_tie_toggle_verdict(a).refusal == nullptr;
+}
+
 // -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
 //
 // The vertical arrows' SECOND step body steps one bound of the focused
@@ -10161,8 +10273,11 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
     const int64_t new_lo = side == MarkerCell::Lower ? landing : lo;
     const int64_t new_hi = side == MarkerCell::Upper ? landing : hi;
     if (new_lo == 0 && new_hi == 0) {
-        m.iter_start_cents.reset();
-        m.iter_end_cents.reset();
+        // THE BLANK, THROUGH ITS ONE OWNER (clear_iter_bracket,
+        // warpmarkers.h) — and a blank is not a dissolution: a TIE survives
+        // it, the leader's blank governing its followers' cells exactly as a
+        // set bracket would.
+        clear_iter_bracket(m);
         return;
     }
     m.iter_start_cents = new_lo;
@@ -10241,8 +10356,9 @@ inline void phase_iter_bound_step_write(GuiPhaseResetMarker& m,
     const int new_lo = side == MarkerCell::Lower ? landing : lo;
     const int new_hi = side == MarkerCell::Upper ? landing : hi;
     if (new_lo == 0 && new_hi == 0) {
-        m.iter_start_hops.reset();
-        m.iter_end_hops.reset();
+        // The blank through this column's own owner (clear_iter_bracket,
+        // phaseresetmarkers.h), the tie standing as it does on the warp side.
+        clear_iter_bracket(m);
         return;
     }
     m.iter_start_hops = new_lo;
@@ -11214,12 +11330,19 @@ inline bool any_tab_read_only(const AppState& a) {
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
     switch (b) {
-        // The four marker verbs: every one of them writes a store and
+        // The marker verbs: every one of them writes a store and
         // pushes, which is the whole of what the lock holds back.
+        // (TOGGLE INHERIT LEFT THIS MEMBERSHIP 2026-09-19, ON THE TWIN RULE.
+        // Its plain chord Ctrl+N is still refused under a lit lamp — the gate
+        // drops it and cards the lock's own sentence — but its SHIFTED twin
+        // Ctrl+Shift+N is the TIE, a bracket act the lock exists to leave
+        // open, so the button must stay lit wherever a tie or an untie is
+        // possible. Its arm composes the fork itself, asking whichever chord
+        // the standing state admits (redesign_button_enabled), which is also
+        // why it is not here: a membership answer cannot fork per chord.)
         case RedesignButton::IconMarkerDrop:
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
-        case RedesignButton::IconMarkerInherit:
         // The Toggle History View button — the view's own acts push history,
         // and two modal views are not composed, so the ENTRY refuses
         // (handle_history_mode_key, input_key_dispatch.cpp).
@@ -12015,12 +12138,13 @@ inline bool warp_row_fields_differ(const GuiWarpMarker& a,
         // so omitting them would leave the same-count matcher finding no
         // touched row and stranding the selection.
         //
-        // THE ITERATION BRACKET IS NOT IN ROW IDENTITY (architect 2026-09-10):
-        // it left the undo domain whole — no push carries it, every push
-        // strips it from the snapshot it takes (strip_iter_fields,
-        // warpmarkers.h) — so there is no bracket-only entry for the matcher
-        // to reconstruct and no snapshot in which the field can differ. Asking
-        // it here would be a term with no producer.
+        // THE ITERATION BRACKET IS NOT IN ROW IDENTITY (architect 2026-09-10),
+        // AND SINCE 2026-09-19 NEITHER IS ITS TIE: both left the undo domain
+        // whole — no push carries them, every push strips them from the
+        // snapshot it takes (strip_iter_fields, warpmarkers.h) — so there is
+        // no bracket-or-tie-only entry for the matcher to reconstruct and no
+        // snapshot in which either field can differ. Asking them here would be
+        // two terms with no producer.
         || a.bpm_owner        != b.bpm_owner
         || a.bpm_beats        != b.bpm_beats
         || a.bpm_lo           != b.bpm_lo
@@ -12032,10 +12156,11 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
                                           const GuiPhaseResetMarker& b) {
     return a.time_frame != b.time_frame
         || a.disabled   != b.disabled;
-    // The session-only HOP BRACKET is not in row identity, for the warp
-    // comparator's own reason (2026-09-10): the bracket left the undo domain,
-    // every push strips it from the snapshot it takes, and a term with no
-    // producer is a term that lies about what an entry can hold.
+    // The session-only HOP BRACKET and its TIE are not in row identity, for
+    // the warp comparator's own reason (2026-09-10, the tie 2026-09-19): both
+    // left the undo domain, every push strips them from the snapshot it takes,
+    // and a term with no producer is a term that lies about what an entry can
+    // hold.
 }
 
 // WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
@@ -14014,10 +14139,20 @@ inline bool redesign_button_enabled(const AppState& a,
                    marker_selection_verb_actionable(a);
         // TOGGLE INHERIT GREYS ON THE OP'S OWN LEADING RETURN (2026-08-30):
         // the P view, an empty selection, no focus — inherit_toggle_actionable.
+        //
+        // AND IT ASKS THE CHORD THE STATE ADMITS (2026-09-19, the twin rule):
+        // under a lit lamp Ctrl+N is dead and CTRL+SHIFT+N — the TIE, this
+        // button's shift-click and long press — is the live half, so the face
+        // reads the tie's own verdict there and the plain half's predicate
+        // everywhere else. Exactly one of the two is reachable in each state,
+        // which is why this is a fork and not an OR: a lit button whose plain
+        // lift the gate cards is the twin rule working as ruled. The button
+        // is NOT in iteration_lock_greys for this reason (the record is at
+        // that owner).
         case RedesignButton::IconMarkerInherit:
             return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b) &&
-                   inherit_toggle_actionable(a);
+                   (a.iteration_mode_enabled ? iter_tie_toggle_actionable(a)
+                                             : inherit_toggle_actionable(a));
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
         // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
         // asks neither separately — the rule against a face restating an
@@ -15360,6 +15495,16 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // form has a button. The TWIN RULE decides the face: the plain act's
 // condition is the weaker of the two, so the button stays lit where only the
 // shifted press would refuse and that press reaches the chord's own card.)
+// (TOGGLE INHERIT JOINED 2026-09-19 with Ctrl+Shift+N, THE TIE: several
+// markers become ONE AXIS of the grid iteration sweep, every cell applying
+// the same delta to each of them. It NEEDS NO BUTTON OF ITS OWN — the tie is
+// the inherit toggle's own letter and its own link glyph, so the act rides
+// this button's shift-click and its long press, the drop's and the copy's
+// rule once more. THE TWIN RULE DECIDES THE FACE AND IT FORKS RATHER THAN
+// ORING: under a lit lamp Ctrl+N is refused at the keyboard gate and the tie
+// is the live half, outside it the tie refuses and the plain act is, so the
+// button's arm asks whichever chord the state admits and the other half's
+// press cards (redesign_button_enabled).)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::TabA ||
@@ -15369,6 +15514,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::HistoryNewer ||
            b == RedesignButton::TransportPlayStop ||
            b == RedesignButton::IconMarkerDrop ||
+           b == RedesignButton::IconMarkerInherit ||
            b == RedesignButton::IconCopyValue ||
            b == RedesignButton::IconMarkerFlatten ||
            b == RedesignButton::IconListen ||
@@ -15884,8 +16030,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // direction of a toggle.
         case RedesignButton::IconMarkerDisable:
             return {"Toggle Disabled (Ctrl+D)", nullptr};
+        // TOGGLE INHERIT, two-line since 2026-09-19: the plain act converts
+        // the selection between owning and inheriting its tempo, and the
+        // shifted twin TIES the selected markers into one axis of the grid
+        // iteration sweep (or unties them again). The second line names the
+        // act and the modifier and not a key, this table's rule, and it says
+        // "tie" rather than "chain" — a chain is what a pass makes of its
+        // tempo, which is this button's PLAIN act.
         case RedesignButton::IconMarkerInherit:
-            return {"Toggle Inherit (Ctrl+N)", nullptr};
+            return {"Toggle Inherit (Ctrl+N)",
+                    "Press Shift to tie the markers into one sweep axis."};
         // FLATTEN (2026-09-19), the group's SECOND two-line form by seat,
         // between the drop's and the copy's: the plain
         // act clears the selected markers' tempo deviations and the shifted
@@ -16350,6 +16504,16 @@ inline RedesignTooltipText redesign_button_tooltip(
         // memoizing on the store generation, the focus and the frame count;
         // it ran at each paint of the hint until then, which the paint path's
         // per-damage-rectangle redraw made a real cost during playback.
+        // TOGGLE INHERIT DROPS ITS TIE LINE WHERE THE TIE REFUSES
+        // (2026-09-19): the shifted twin is a BRACKET act, so outside a lit
+        // grid-iterations lamp — and inside one where the selection is no
+        // subject for either direction — the modified press does nothing
+        // different from the plain one, and the line goes. The condition is
+        // the tie's own verdict owner, restated nowhere.
+        case RedesignButton::IconMarkerInherit:
+            if (!iter_tie_toggle_actionable(a))
+                return {redesign_button_tooltip(b).line1, nullptr};
+            break;
         case RedesignButton::IconCopyValue: {
             const PayloadEligibility verdict =
                 payload_eligibility(a, audio, a.last_selected_marker);

@@ -75,6 +75,19 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // are their whole enforcement.
     std::optional<int> iter_start_hops;
     std::optional<int> iter_end_hops;
+
+    // THE TIE ON THIS COLUMN (architect 2026-09-19): several resets form ONE
+    // AXIS of the sweep, every cell displacing each of them by the same hop
+    // count. 0 is untied and any positive value a group id shared by that
+    // tie's members; the earliest member in store order LEADS and the rest
+    // FOLLOW, carrying no bracket of their own and showing the leader's.
+    // The field's whole contract — why a group id rather than a leader index
+    // or a tied-to-previous bit, and why session-only state is sound here —
+    // is argued once at GuiWarpMarker::iter_tie_group (warpmarkers.h), the
+    // bracket's own two-headers shape. The walk that reads it is shared by
+    // both columns (iter_tie_leader_index, warpmarkers.h); what forks here is
+    // the bracket, which is hops.
+    int iter_tie_group = 0;
 };
 
 // THE SINGLE DIGIT (architect 2026-09-09): a bracket bound is at most nine
@@ -86,15 +99,42 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
 // the derivation).
 inline constexpr int kIterHopMax = 9;
 
+// BLANK ONE RESET'S HOP BRACKET — clear_iter_bracket's twin on this column,
+// the SAME NAME over the hop pair so the tie act and the strip below can say
+// it once for both stores. It is the blank and never a dissolution: the tie
+// stands, a leader's blank bracket governing its followers' cells as a set
+// one would. The contract is at the warp body (warpmarkers.h).
+inline void clear_iter_bracket(GuiPhaseResetMarker& m) {
+    m.iter_start_hops.reset();
+    m.iter_end_hops.reset();
+}
+
+// Copy one reset's hop bracket onto another — copy_iter_bracket's twin on
+// this column (warpmarkers.h, where the contract is), the untie's one caller.
+inline void copy_iter_bracket(GuiPhaseResetMarker& dst,
+                              const GuiPhaseResetMarker& src) {
+    dst.iter_start_hops = src.iter_start_hops;
+    dst.iter_end_hops   = src.iter_end_hops;
+}
+
+// THE RESET WHOSE BRACKET GOVERNS `idx` — iter_bracket_governor's twin on
+// this column (warpmarkers.h, where the contract is): the tie's LEADER for a
+// follower, `idx`'s own reset otherwise, read by this column's cell composer
+// so a follower shows the leader's hops.
+inline const GuiPhaseResetMarker& phase_iter_bracket_governor(
+        const std::vector<GuiPhaseResetMarker>& pv, int idx) {
+    return pv[static_cast<size_t>(iter_tie_leader_index(pv, idx))];
+}
+
 // STRIP THE SESSION-ONLY HOP BRACKET FROM A SNAPSHOT — strip_iter_fields'
 // twin on this column (architect 2026-09-10), called by every undo push that
 // captures this store so no entry can carry a bracket and no restore can
 // install one. The contract, and why the two halves are one ruling, are at the
-// warp helper (warpmarkers.h).
+// warp helper (warpmarkers.h), the tie it strips beside the bracket included.
 inline void strip_iter_fields(std::vector<GuiPhaseResetMarker>& v) {
     for (GuiPhaseResetMarker& m : v) {
-        m.iter_start_hops.reset();
-        m.iter_end_hops.reset();
+        clear_iter_bracket(m);
+        m.iter_tie_group = 0;
     }
 }
 
@@ -142,9 +182,11 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // enabled bit under a standing bracket. This verdict is therefore about the
 // reset's PARTICIPATION and never about hiding a value it still holds — a belt
 // with no producer for a bracketed reset, kept for the warp predicate's own
-// reason (it states the SWEEP's input, not the bracket's writers). SIX
+// reason (it states the SWEEP's input, not the bracket's writers). SEVEN
 // READERS, the warp predicate's own inventory in
-// this column's terms (re-greped 2026-09-10): the sweep's dispatch
+// this column's terms (re-greped 2026-09-19, when the TIE's verdict owner
+// joined them — iter_tie_toggle_verdict, app_state.h, which refuses a member
+// the sweep does not read): the sweep's dispatch
 // (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's plan
 // (iteration_sweep_plan, app_state.h) skip the reset, so its bracket neither
 // multiplies the cell count nor names a cell; the flag painter

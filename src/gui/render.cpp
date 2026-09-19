@@ -1007,6 +1007,16 @@ void iterate_visible_flags_impl(
 // column) — and the two differ in their COMPOSER alone, cents against hops.
 struct IterCellText {
     bool        present = false;
+    // IS THIS MARKER A TIE FOLLOWER (architect 2026-09-19) — one of several
+    // markers the sweep treats as ONE AXIS, and not the tie's leader. Its two
+    // cells show THE LEADER'S bracket (the strings below are composed off the
+    // governing marker, so tied members cannot disagree) and paint GREYED,
+    // wearing the palette's DISABLED blend because the cell is not this
+    // marker's to author. It is an ordinary content input like the strings and
+    // reaches the painter the same way; the flag cache needs no field for it,
+    // the tie living in the store whose GENERATION the fingerprint already
+    // carries.
+    bool        follower = false;
     std::string lower;
     std::string upper;
 };
@@ -1030,10 +1040,15 @@ static IterCellText warp_iter_cells(const std::vector<GuiWarpMarker>& markers,
                                     int i, bool iteration_on) {
     IterCellText c;
     if (!iteration_on || !iter_popup_eligible_marker(markers, i)) return c;
-    const GuiWarpMarker& m = markers[static_cast<size_t>(i)];
-    c.present = true;
-    c.lower   = format_iter_bound_cell(m, MarkerCell::Lower);
-    c.upper   = format_iter_bound_cell(m, MarkerCell::Upper);
+    // THE BRACKET IS THE GOVERNING MARKER'S (iter_bracket_governor,
+    // warpmarkers.h): its own for an untied marker or a tie's leader, THE
+    // LEADER'S for a follower — one owner for the walk, so the cells and
+    // every act that reads a bound name the same bracket.
+    const GuiWarpMarker& m = iter_bracket_governor(markers, i);
+    c.present  = true;
+    c.follower = marker_is_tie_follower(markers, i);
+    c.lower    = format_iter_bound_cell(m, MarkerCell::Lower);
+    c.upper    = format_iter_bound_cell(m, MarkerCell::Upper);
     return c;
 }
 
@@ -1054,10 +1069,13 @@ static IterCellText phase_iter_cells(
     IterCellText c;
     if (!iteration_on || !phase_reset_iter_eligible_marker(phase_resets, i))
         return c;
-    const GuiPhaseResetMarker& m = phase_resets[static_cast<size_t>(i)];
-    c.present = true;
-    c.lower   = format_phase_iter_bound_cell(m, MarkerCell::Lower);
-    c.upper   = format_phase_iter_bound_cell(m, MarkerCell::Upper);
+    // The governing reset's hops, the warp body's own rule on this column
+    // (phase_iter_bracket_governor, phaseresetmarkers.h).
+    const GuiPhaseResetMarker& m = phase_iter_bracket_governor(phase_resets, i);
+    c.present  = true;
+    c.follower = marker_is_tie_follower(phase_resets, i);
+    c.lower    = format_phase_iter_bound_cell(m, MarkerCell::Lower);
+    c.upper    = format_phase_iter_bound_cell(m, MarkerCell::Upper);
     return c;
 }
 
@@ -1645,7 +1663,22 @@ void render_flag_boxes_impl(
                         // 2026-09-15, "fine for now"): a bound cell never wears the phase-reset
                         // flag's blue, regardless of which store `mv`/`pmv`
                         // this pass is painting.
-                        resolve_flag_face(dis, red, cell_selected(which),
+                        //
+                        // A TIE FOLLOWER'S CELLS TAKE THE DISABLED FACE
+                        // (architect 2026-09-19): they show the LEADER's
+                        // numbers and are not this marker's to author, which
+                        // is exactly what the palette's disabled blend
+                        // already says — the class's own pair damped toward
+                        // the lane ground at kMarkerDisabledMix, its ink at
+                        // kMarkerDisabledLabelMix, no new colour and no
+                        // second rule. The marker's own `dis` is false
+                        // wherever `follower` is true (a disabled marker is
+                        // no tie member and paints no cells at all), so the
+                        // OR cannot double-damp; the FLAG BOX above is
+                        // untouched and keeps its live class, the grey being
+                        // about the cells alone.
+                        resolve_flag_face(dis || cells.follower, red,
+                                          cell_selected(which),
                                           FlagColumnFace::Warp));
                 };
                 paint_cell(lower_x, lower_w, cl.lower_run, MarkerCell::Lower);
@@ -2930,10 +2963,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // cells — and where the LOWER field stands it lays out one token that
         // will not paint, the pair being one measurement, which is the same
         // one-run cost the flag pass pays on that marker.
-        const IterCellLayout cl = measure_iter_cells(
-            font, !ride_cells ? IterCellText{}
-                  : phase     ? phase_iter_cells(pmv, idx, iteration_on)
-                              : warp_iter_cells(mv, idx, iteration_on));
+        const IterCellText cells =
+            !ride_cells ? IterCellText{}
+            : phase     ? phase_iter_cells(pmv, idx, iteration_on)
+                        : warp_iter_cells(mv, idx, iteration_on);
+        const IterCellLayout cl = measure_iter_cells(font, cells);
+        // A TIE FOLLOWER'S RIDING CELLS GREY exactly as its resting ones do
+        // (2026-09-19): they are the same boxes at a different x, off the same
+        // composer, so the face composes the same term — and it comes from the
+        // composer's own answer rather than a second walk of the tie.
+        const bool cell_dis = dis || cells.follower;
         const bool ride_lower =
             cl.present && field_rank < flag_box_rank(MarkerCell::Lower);
         const bool ride_upper =
@@ -2955,7 +2994,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 baseline, cl.lower_run,
                 // `Warp`: a riding bound cell stays purple on either column
                 // (architect 2026-09-15).
-                resolve_flag_face(dis, red_class,
+                resolve_flag_face(cell_dis, red_class,
                                   cell_selected(MarkerCell::Lower),
                                   FlagColumnFace::Warp));
             cursor_x += border_w + cl.lower_w;
@@ -2966,7 +3005,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 cr, lane, cursor_x, cl.upper_w, border_w, edge_h, pad_l,
                 baseline, cl.upper_run,
                 // `Warp`, same reason as the lower cell just above.
-                resolve_flag_face(dis, red_class,
+                resolve_flag_face(cell_dis, red_class,
                                   cell_selected(MarkerCell::Upper),
                                   FlagColumnFace::Warp));
             cursor_x += border_w + cl.upper_w;

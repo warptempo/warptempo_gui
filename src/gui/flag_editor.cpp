@@ -274,10 +274,17 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     if (text_editor::is_active(app.top_flag_editor)) {
         text_editor::deactivate(app.top_flag_editor);
     }
-    // THE SEED IS THE CELL'S OWN TOKEN — the one spelling the cell paints on
-    // this column (format_iter_bound_cell's `+0.00` on the warp side,
-    // format_phase_iter_bound_cell's `+0` on the phase side, each blank), so
-    // what the cell shows and what its editor opens with cannot differ.
+    // THE SEED IS THE MARKER'S OWN TOKEN, in the one spelling the cell paints
+    // on this column (format_iter_bound_cell's `+0.00` on the warp side,
+    // format_phase_iter_bound_cell's `+0` on the phase side, each blank).
+    //
+    // IT READS THE MARKER AND NOT THE TIE'S GOVERNOR, so on a TIE FOLLOWER —
+    // whose cells show the LEADER's numbers (iter_bracket_governor,
+    // warpmarkers.h) — the field opens on the follower's own, unused bracket
+    // and commits into it. A follower's bracket is not its authoring surface
+    // at all and this editor has no business opening there; the refusal is
+    // the tie's own next step, and until it lands this is the one place a
+    // follower's cell and its field can disagree.
     const std::string seed =
         phase ? format_phase_iter_bound_cell(pmv[static_cast<size_t>(idx)],
                                              side)
@@ -352,9 +359,10 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     if (next.empty()) {
         // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
         // one bound alone is not representable, so emptying either cell is
-        // the removal.
-        m.iter_start_cents.reset();
-        m.iter_end_cents.reset();
+        // the removal. IT IS THE BLANK AND NOT A DISSOLUTION — a tie stands
+        // through it, the leader's blank governing its followers' cells
+        // (clear_iter_bracket, warpmarkers.h).
+        clear_iter_bracket(m);
     } else {
         int64_t value = 0;
         if (!parse_signed_2dp_cents(next, value)) {
@@ -457,9 +465,9 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     if (next.empty()) {
         // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
         // one bound alone is not representable, so emptying either cell is the
-        // removal.
-        m.iter_start_hops.reset();
-        m.iter_end_hops.reset();
+        // removal — the blank, with the tie standing, exactly as the warp
+        // column's commit takes it (clear_iter_bracket, phaseresetmarkers.h).
+        clear_iter_bracket(m);
     } else {
         int value = 0;
         if (!parse_signed_hops(next, value)) {
@@ -841,8 +849,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // FOLLOWED IT IS DELETED with its owner: this commit can move the base
     // tempo, but never under a bracket.
     if (!iter_bracket_carrier(m)) {
-        m.iter_start_cents.reset();
-        m.iter_end_cents.reset();
+        clear_iter_bracket(m);
+        // AND THE TIE GOES WITH IT (2026-09-19), the belt's own second
+        // clause: a non-carrier is no tie member, so a group id left behind
+        // would let it govern somebody's cells.
+        m.iter_tie_group = 0;
     }
 
     // Did any serialized field change? Cascade renames imply a label_def
@@ -974,6 +985,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // each flip the bit themselves after calling this — so a step outside the
 // mode can only ever be the tempo step, on either column. History-less like
 // everything else here: the axis is a session address, not content.
+// AND IT DISSOLVES EVERY TIE WITH THE BRACKETS (2026-09-19): a tie is the
+// bracket's own kind of session state (GuiWarpMarker::iter_tie_group,
+// warpmarkers.h) and leaves by the same door, on both columns.
 void GuiFlagEditor::wipe_iter_state() {
     if (app.addressed_cell == MarkerCell::Lower ||
         app.addressed_cell == MarkerCell::Upper) {
@@ -982,16 +996,22 @@ void GuiFlagEditor::wipe_iter_state() {
     // The two scans read the stores CONST, so a bracketless exit bumps neither
     // generation and rebuilds no cache: markers_mut is what bumps, and it is
     // reached only past the test below.
+    // EACH SCAN ASKS THE TIE TOO (2026-09-19): a store can carry ties and no
+    // bracket at all — every follower is bracketless by rule, and a leader's
+    // own pair may be blank — so a bracket-only test would leave a tie
+    // standing past the mode that authored it.
     bool warp_any = false;
     for (const auto& m : app.warpmarkers.markers()) {
-        if (m.iter_start_cents.has_value() || m.iter_end_cents.has_value()) {
+        if (m.iter_start_cents.has_value() || m.iter_end_cents.has_value() ||
+            m.iter_tie_group != 0) {
             warp_any = true;
             break;
         }
     }
     bool phase_any = false;
     for (const auto& p : app.phaseresetmarkers.markers()) {
-        if (p.iter_start_hops.has_value() || p.iter_end_hops.has_value()) {
+        if (p.iter_start_hops.has_value() || p.iter_end_hops.has_value() ||
+            p.iter_tie_group != 0) {
             phase_any = true;
             break;
         }
@@ -1001,14 +1021,14 @@ void GuiFlagEditor::wipe_iter_state() {
     // same reason: an untouched store keeps its generation.
     if (warp_any) {
         for (auto& m : app.warpmarkers.markers_mut()) {
-            m.iter_start_cents.reset();
-            m.iter_end_cents.reset();
+            clear_iter_bracket(m);
+            m.iter_tie_group = 0;
         }
     }
     if (phase_any) {
         for (auto& p : app.phaseresetmarkers.markers_mut()) {
-            p.iter_start_hops.reset();
-            p.iter_end_hops.reset();
+            clear_iter_bracket(p);
+            p.iter_tie_group = 0;
         }
     }
 }

@@ -70,6 +70,40 @@ struct GuiWarpMarker : WarpMarker {
     std::optional<int64_t> iter_start_cents;
     std::optional<int64_t> iter_end_cents;
 
+    // THE TIE — WHICH MARKERS ARE ONE AXIS OF THE SWEEP (architect
+    // 2026-09-19). Several markers may be tied so that every sweep cell
+    // applies THE SAME DELTA to each of them: three markers with the first
+    // two tied at [-0.02, 0] and the third at [0, +0.01] is a 3 x 2 grid, not
+    // a 3 x 3 x 2 one, and a cell's basename carries one entry for the tie —
+    // standing at its FIRST member's position — rather than one per marker.
+    //
+    // 0 IS UNTIED; any positive value is a GROUP ID shared by that tie's
+    // members. THE EARLIEST MEMBER IN STORE ORDER IS THE LEADER and every
+    // other member a FOLLOWER; a follower stores no bracket of its own and
+    // SHOWS THE LEADER'S, derived at the read (iter_tie_leader_index and
+    // iter_bracket_governor below), so tied members cannot disagree about
+    // what their cells say.
+    //
+    // WHY A GROUP ID RATHER THAN A LEADER INDEX OR A TIED-TO-PREVIOUS BIT: a
+    // stored leader INDEX can dangle and would have to be repaired whenever
+    // the store shifted under it, and a tied-to-previous BIT would force
+    // every tie to be CONTIGUOUS in the store, which no ruling asks for and
+    // the use case argues against — a user ties every downbeat marker, not
+    // every neighbour. A group id is index-free, admits non-adjacent members,
+    // and makes "the leader is the earliest member" a DERIVATION rather than
+    // a stored fact that could disagree with the store.
+    //
+    // IT IS THE BRACKET'S OWN KIND OF STATE and lives by the bracket's three
+    // properties verbatim (above): session-only, never serialized, stripped
+    // from every snapshot (strip_iter_fields below), wiped when the mode goes
+    // off (GuiFlagEditor::wipe_iter_state), outside the undo domain, and no
+    // mover of the dirty mark. THAT IS SOUND FOR THE SAME REASON THE BRACKET
+    // IS: while the lamp is lit the piece is LOCKED, so no marker is added,
+    // deleted or moved under a standing tie and "the earliest member" holds
+    // BY CONSTRUCTION. A NON-CARRIER IS NEVER A MEMBER — the act refuses one
+    // and every carrier-loss clear takes the tie with the bracket.
+    int iter_tie_group = 0;
+
     // BPM mode. Session-only authoring state for basetempo-scale
     // sweeps; never serialized, lost on app close. The mode is SECTION-based
     // (architect 2026-07-23): a contiguous run of selected markers is chosen;
@@ -434,8 +468,10 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // bracket's writers, which is why it stays. (A 2026-09-09 reading claimed a
 // cascade-disabled marker was the reachable case the term existed for; that
 // was impossible even then, a ref being no carrier — codex round 5's P3.)
-// SIX READERS,
-// and a disabled marker is invisible at all six: the sweep's
+// SEVEN READERS since 2026-09-19 (the tie's verdict owner joined them —
+// iter_tie_toggle_verdict, app_state.h, which refuses a member the sweep does
+// not read, so a tie can never hold a marker whose cells do not paint),
+// and a disabled marker is invisible at all seven: the sweep's
 // dispatch (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's
 // plan (iteration_sweep_plan, app_state.h) skip the marker, so its bracket
 // neither multiplies the cell count nor names a byte-identical cell — the
@@ -456,6 +492,104 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return false;
     return iter_bracket_carrier(mv[static_cast<size_t>(idx)]) &&
            !effective_disabled(mv, idx);
+}
+
+// BLANK ONE MARKER'S ITERATION BRACKET, this column's spelling. It is the
+// BLANK and not a dissolution: the tie is untouched, because a tie of blank
+// brackets is an ordinary state (the leader's blank governs its followers'
+// cells exactly as a set bracket would). Its twin on the phase-reset column
+// is the same name over the hop pair (phaseresetmarkers.h), which is what
+// lets the tie act (apply_iter_tie, input_key_dispatch.cpp) say
+// `clear_iter_bracket(m)` once for both columns.
+// THE CALLERS ARE THE BLANK'S OWN: the bound step's write site and the bound
+// editor's empty commit. A marker that LOSES ITS CARRIER clears the tie
+// beside this call, at the THREE sites that can produce one — the flag
+// editor's payload commit and Ctrl+N's ref->pass and owner->pass conversions
+// — because those are carrier losses and not blanks.
+inline void clear_iter_bracket(GuiWarpMarker& m) {
+    m.iter_start_cents.reset();
+    m.iter_end_cents.reset();
+}
+
+// COPY ONE MARKER'S BRACKET ONTO ANOTHER, this column's spelling and the
+// phase column's twin name. ONE CALLER, the tie's UNTIE arm: a member
+// leaving a tie keeps A COPY of the bracket that governed it, so nothing
+// pops off the screen when a tie dissolves.
+inline void copy_iter_bracket(GuiWarpMarker& dst, const GuiWarpMarker& src) {
+    dst.iter_start_cents = src.iter_start_cents;
+    dst.iter_end_cents   = src.iter_end_cents;
+}
+
+// -- THE TIE'S RESOLUTION, BOTH COLUMNS -------------------------------------
+//
+// ONE OWNER FOR THE WALK (architect 2026-09-19, the tie's own field doc at
+// GuiWarpMarker::iter_tie_group): the painter, the bound steps and editors,
+// and the sweep all ask these rather than re-deriving "who leads this tie",
+// so no two of them can answer differently. They are TEMPLATES over the
+// marker vector because the walk reads `iter_tie_group` and nothing else —
+// the field is on both columns' GUI marker types and the rule is one rule, so
+// the two columns share a body instead of owning a twin each (the
+// naming-symmetry ruling met by construction rather than by a recorded
+// asymmetry). WHAT FORKS PER COLUMN is the bracket itself, whose fields carry
+// per-column names: the governors below.
+
+// THE LEADER OF `idx`'s TIE — the EARLIEST index sharing its group, or `idx`
+// itself when it is untied or out of range. Derived at every read, never
+// stored: the mode locks the piece, so store order cannot move under a
+// standing tie and this walk answers the same thing for as long as the lamp
+// is lit.
+template <typename GuiM>
+inline int iter_tie_leader_index(const std::vector<GuiM>& v, int idx) {
+    if (idx < 0 || idx >= static_cast<int>(v.size())) return idx;
+    const int group = v[static_cast<size_t>(idx)].iter_tie_group;
+    if (group == 0) return idx;
+    for (int i = 0; i < idx; ++i)
+        if (v[static_cast<size_t>(i)].iter_tie_group == group) return i;
+    return idx;
+}
+
+// IS `idx` A FOLLOWER — a tied marker that is not its tie's leader. THE
+// DISPLAY AND REFUSAL PREDICATE: a follower's two cells paint greyed and show
+// the leader's numbers, and it carries no bracket of its own to author.
+template <typename GuiM>
+inline bool marker_is_tie_follower(const std::vector<GuiM>& v, int idx) {
+    return iter_tie_leader_index(v, idx) != idx;
+}
+
+// HOW MANY MARKERS CARRY `group`. A TIE OF ONE IS NOT A TIE, so the act below
+// dissolves a group this leaves at 1; a group at rest always has at least 2
+// members.
+template <typename GuiM>
+inline int iter_tie_group_size(const std::vector<GuiM>& v, int group) {
+    if (group == 0) return 0;
+    int n = 0;
+    for (const GuiM& m : v)
+        if (m.iter_tie_group == group) ++n;
+    return n;
+}
+
+// A GROUP ID NO MARKER IN THIS STORE CARRIES — the highest in use plus one,
+// so an id is never reused while the ties it named still stand. The ids are
+// per column and per session; nothing outside this store reads them.
+template <typename GuiM>
+inline int next_free_iter_tie_group(const std::vector<GuiM>& v) {
+    int highest = 0;
+    for (const GuiM& m : v)
+        if (m.iter_tie_group > highest) highest = m.iter_tie_group;
+    return highest + 1;
+}
+
+// THE MARKER WHOSE BRACKET GOVERNS `idx` — the tie's LEADER for a follower,
+// `idx`'s own marker otherwise. It is the one road to a tied marker's bounds:
+// the flag's two cells compose their text off this (warp_iter_cells,
+// render.cpp) so a follower shows the leader's numbers in this column's own
+// spelling, through the existing composer and the one blank rule. An
+// out-of-range index is the caller's error and is not reachable — every
+// caller has already resolved a painted or selected marker.
+// Its twin is phase_iter_bracket_governor (phaseresetmarkers.h).
+inline const GuiWarpMarker& iter_bracket_governor(
+        const std::vector<GuiWarpMarker>& mv, int idx) {
+    return mv[static_cast<size_t>(iter_tie_leader_index(mv, idx))];
 }
 
 // (THE ITER BRACKET RODE ITS BASE from 2026-08-02 to 2026-09-10, through one
@@ -479,11 +613,14 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // restore can install one. It is the mechanical half of "they just don't go in
 // the undo stack at all"; the other half is that nothing which pushes an entry
 // can run while a bracket stands. Its phase-reset twin is in
-// phaseresetmarkers.h, over the hop bracket.
+// phaseresetmarkers.h, over the hop bracket. THE TIE GOES WITH THE BRACKET
+// (2026-09-19): it is the same kind of session state and lives by the same
+// three properties, so a snapshot carries neither and no restore can install
+// one.
 inline void strip_iter_fields(std::vector<GuiWarpMarker>& v) {
     for (GuiWarpMarker& m : v) {
-        m.iter_start_cents.reset();
-        m.iter_end_cents.reset();
+        clear_iter_bracket(m);
+        m.iter_tie_group = 0;
     }
 }
 
