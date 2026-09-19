@@ -286,6 +286,42 @@ uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile);
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)
 
+// THE NUMERIC TEMPO RUN — the DERIVED BASE followed by every deviation term,
+// `1.23+0.01-0.02` — the whole numeric part of an owning marker's payload,
+// scale and label definition excluded.
+//
+// THE BASE IS DERIVED HERE AND NOWHERE ELSE (architect approval 2026-09-18):
+// tempo_cents is the RESOLVED TOTAL (warpmarkers_parse.h), so the spelled base
+// is that total less the chain's own sum, and each term follows it through
+// format_deviation_cents. Writing the TOTAL and re-deriving the base is what
+// makes `1.23+0.01` and `1.24` one number to every reader — the resolver, the
+// frame map, every wall — while the FILE keeps the spelling the user authored,
+// so a load-then-save round-trips the chain byte for byte.
+//
+// IT IS ONE BODY BECAUSE THE FLAG AND THE FILE ARE ONE SPELLING (2026-09-19):
+// the derivation had two of them — the serializer's own loop
+// (format_warpmarkers_text, warpmarkers.cpp) and a private twin the two flag
+// composers shared (render.cpp) — and what the deviation chain promises is
+// that the box on screen says what the sidecar holds, which two loops keep
+// true only by being edited together. THREE CALLERS: the serializer, the uncut
+// flag composer flag_text and the painted flag_display_text (render.cpp). A
+// FOURTH SITE READS IT THROUGH THE SERIALIZER — the grid-iteration sweep's
+// would-be-cell check (iteration_sweep_plan, app_state.h) hands the product's
+// own loader the exact bytes format_warpmarkers_text would write, so the
+// question it asks is about this body's spelling too.
+//
+// A PASS AND A LABEL REF NEVER REACH IT: neither carries a chain by grammar
+// and neither spells a number at all, so every caller forks on the payload's
+// shape before it asks — which is why there is no inheriting arm here.
+inline std::string warp_tempo_run(const GuiWarpMarker& m) {
+    int64_t chain_sum = 0;
+    for (int64_t term : m.tempo_deviation_cents) chain_sum += term;
+    std::string text = format_tempo_cents(m.tempo_cents - chain_sum);
+    for (int64_t term : m.tempo_deviation_cents)
+        text += format_deviation_cents(term);
+    return text;
+}
+
 // Signed tempo-delta cents -> the explicit-sign two-decimal text ("+1.50",
 // "-0.50", "+0.00") — THE ITERATION BRACKET'S FACE ON THE PRODUCT'S ONE
 // SIGNED-CENTS SPELLING. It DELEGATES to format_deviation_cents

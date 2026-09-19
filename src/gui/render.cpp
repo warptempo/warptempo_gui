@@ -24,20 +24,12 @@
 // main.cpp's invalidation, with its provenance and its authored value stated at
 // the definition.
 
-// THE OWNER'S NUMERIC RUN — the DERIVED base and its whole deviation chain,
-// the one composition the two flag composers below share so a cut form and an
-// uncut one can never spell the tempo differently. tempo_cents is the
-// RESOLVED TOTAL and the base is that total less the chain's sum, exactly as
-// the serializer derives it (format_warpmarkers_text, warpmarkers.cpp), so
-// what the flag shows is what the file holds.
-static std::string warp_tempo_run(const GuiWarpMarker& m) {
-    int64_t chain_sum = 0;
-    for (int64_t term : m.tempo_deviation_cents) chain_sum += term;
-    std::string text = format_tempo_cents(m.tempo_cents - chain_sum);
-    for (int64_t term : m.tempo_deviation_cents)
-        text += format_deviation_cents(term);
-    return text;
-}
+// THE NUMERIC RUN — the derived base and its whole deviation chain — is
+// warp_tempo_run (warpmarkers.h), which both flag composers below and the
+// SERIALIZER share. It stood here as a private twin of the serializer's own
+// loop for one day, 2026-09-18/19: what the deviation chain promises is that
+// the flag says what the file holds, and one body is what makes that true
+// rather than a coincidence of two.
 
 // Flag text mirrors the canonical line's PAYLOAD (post-pipe); metadata
 // (b=/e=/#) never appears in it, and neither does the iteration bracket —

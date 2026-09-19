@@ -269,7 +269,7 @@
 // routers' catch-all tails were a third until their catch-alls went silent
 // with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence that
 // belongs beside the VERDICT it spells rather than beside its one raiser: the
-// grid-iteration sweep's two cards live at app_state.h next to
+// grid-iteration sweep's three cards live at app_state.h next to
 // iteration_sweep_plan, the owner whose refusal each of them names, because
 // this header includes app_state.h and not the reverse. They are raised from
 // one translation unit — the sweep's own dispatch — the Render button reading

@@ -64,13 +64,12 @@ std::string format_warpmarkers_text(
         // A saved store reloads bit-identically and historical
         // fixed-decimal forms re-serialize byte-for-byte.
         //
-        // THE BASE IS DERIVED HERE AND NOWHERE ELSE (architect approval
-        // 2026-09-18): tempo_cents is the RESOLVED TOTAL, so the spelled base
-        // is that total less the chain's own sum, and each term follows it
-        // through format_deviation_cents. Write the total and re-derive the
-        // base is what makes `1.23+0.01` and `1.24` one number to every
-        // reader while the FILE keeps the spelling the user authored — a
-        // load-then-save round-trips the chain byte for byte.
+        // THE BASE IS DERIVED AT warp_tempo_run (warpmarkers.h) AND NOWHERE
+        // ELSE (architect approval 2026-09-18; the rationale for writing the
+        // TOTAL and re-deriving the base is at that owner). This serializer
+        // was its home until 2026-09-19, when it and the flag composers'
+        // private twin of the same loop became one body: the file and the flag
+        // are one spelling, and one body is what makes them one.
         // A PASS AND A REF CARRY NO CHAIN BY GRAMMAR (the load refuses one,
         // and every GUI road that writes either form clears the vector), so
         // neither arm below branches on it: the chain lives on the numeric
@@ -81,11 +80,7 @@ std::string format_warpmarkers_text(
             if (m.tempo_inherits) {
                 out << "pass";
             } else {
-                int64_t chain_sum = 0;
-                for (int64_t term : m.tempo_deviation_cents) chain_sum += term;
-                out << format_tempo_cents(m.tempo_cents - chain_sum);
-                for (int64_t term : m.tempo_deviation_cents)
-                    out << format_deviation_cents(term);
+                out << warp_tempo_run(m);
                 if (m.tempo_scale.has_value()) {
                     out << '*' << format_value_double(*m.tempo_scale, 4);
                 }

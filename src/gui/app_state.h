@@ -1831,8 +1831,8 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-09 against kDropdownMenus and the chord table (43 chord
-// rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-17);
+// re-greped 2026-09-19 against kDropdownMenus and the chord table (42 chord
+// rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-19);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -12545,19 +12545,22 @@ inline std::size_t history_walk_step_landing(
 // tooltip states no reason any more, so the grey is the button's whole share
 // of this verdict. The face reads this
 // per tick while the mode stands; the walk is the two stores', tens of markers
-// each, and it allocates nothing — the phase arm's window walk is at most
-// kIterHopMax landings per bracketed reset over a memoized map.
+// each, and it allocates nothing on a piece whose tempos carry no DEVIATION
+// CHAIN — the phase arm's window walk is at most kIterHopMax landings per
+// bracketed reset over a memoized map, and the warp arm's would-be-cell check
+// (CellWouldNotLoad, below) serializes and parses two lines per BRACKETED
+// CHAINED marker and none at all where there is no chain to respell.
 inline constexpr std::size_t kMaxIterSweepCells = 1000;
 
-// THE TWO SENTENCES, ONE SPELLING EACH. They live here rather than at the
+// THE THREE SENTENCES, ONE SPELLING EACH. They live here rather than at the
 // dispatch that raises them because the SWEEP PLAN's owner is here, and
 // notifications.h, the home for sentences several translation units raise,
-// includes this header rather than the other way round. EACH IS A CARD AND
-// ONLY A CARD since 2026-09-12: a `Hint` twin — the same sentence plus this
-// roster's accelerator — stood beside each for the greyed Render button to
-// wear, with a static_assert keeping the pair in step, and both went with the
-// reason-and-state tooltip class. The cap's static_assert stays: the sentence
-// spells the number.
+// includes this header rather than the other way round. THEY ARE CARDS AND
+// ONLY CARDS: the first two carried a `Hint` twin until 2026-09-12 — the same
+// sentence plus this roster's accelerator, for the greyed Render button to
+// wear, with a static_assert keeping each pair in step — and both twins went
+// with the reason-and-state tooltip class, so the third never had one. The
+// cap's static_assert stays: the sentence spells the number.
 //
 // THE FIRST SENTENCE MEANS "ON THE LIT COLUMN" since 2026-09-10 — the sweep
 // reads one column's store and the lamp says which — and it keeps its wording:
@@ -12567,8 +12570,19 @@ inline constexpr const char* kIterSweepNoBracketCard =
     "No iteration ranges are authored";
 inline constexpr const char* kIterSweepOverCapCard =
     "Grid iterations refused: the marker brackets make more than 1000 cells";
-// (THERE IS NO THIRD SENTENCE ANY MORE — architect 2026-09-10. A phase
-// bracket that had run off its walls was the plan's third refusal for one day,
+// THE THIRD SENTENCE (2026-09-19) — a cell whose warp payload the product's
+// own loader would refuse (CellWouldNotLoad below, where the whole rule is).
+// It NAMES THE CAUSE AND NOT A CURE: the cause is a deviation chain whose
+// spelled base the bound walks out of the tempo window, and what the user does
+// about it — narrow that bracket, or respell the tempo with fewer terms — is
+// his to choose, so the card says the one thing that is true of every road
+// out.
+// One clause in the cap sentence's shape, sentence case, no period.
+inline constexpr const char* kIterSweepUnloadableCellCard =
+    "Grid iterations refused: a marker's tempo deviations put a cell out of "
+    "range";
+// (A FOURTH SENTENCE STOOD FOR ONE DAY — architect 2026-09-10. A phase
+// bracket standing OFF its walls was a refusal of the plan's on 2026-09-09,
 // on the reasoning that a dozen writers could move a wall under a standing
 // bracket. The iteration lock retired every one of those writers: while a
 // bracket stands the mode is lit, and while it is lit the piece is locked.)
@@ -12662,6 +12676,7 @@ enum class IterationSweepRefusal {
     None,                 // the sweep would render `cells` cells
     NoBracketAuthored,    // no eligible marker carries a bracket at all
     OverCellCap,          // the Cartesian product passes kMaxIterSweepCells
+    CellWouldNotLoad,     // a cell's warp payload is one the loader refuses
 };
 
 struct IterationSweepPlan {
@@ -12707,6 +12722,66 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         any_swept = true;
         const int64_t start = *m.iter_start_cents;
         const int64_t end   = *m.iter_end_cents;
+        // A SWEEP MAY ONLY AUTHOR CELLS THE PRODUCT CAN LOAD, AND THE JUDGE IS
+        // THE LOADER ITSELF (2026-09-19, converting a Sol finding). A cell
+        // moves the marker's RESOLVED TOTAL and keeps its deviation chain, so
+        // on a chained marker it moves the SPELLED BASE — and the bound's own
+        // window walls the TOTAL alone (iter_bound_step_landing above, and the
+        // bound editor's commit), which is the right window for it to wall.
+        // `0.25+0.75` is a legal payload that the GUI commits (base 25, total
+        // 100, every wall passed) and a legal bound of -0.01 makes its cell's
+        // sidecar read `0.24+0.75`, which the strict parser refuses — the
+        // product writing a `.warpmarkers` it cannot read back, which `'` Load
+        // in place then reads. That is the two-category rule's own breach (a
+        // state the GUI can commit always loads), so the sweep refuses here,
+        // at the press, before any folder or request exists.
+        //
+        // IT ASKS THE LOADER RATHER THAN GROWING A WALL, deliberately. The
+        // bound's window is about the total and must stay that way; a writer
+        // that APPENDED its delta as a term instead of moving the base would
+        // want a different wall again, and a base wall on the bound would then
+        // refuse bounds that are perfectly safe. The parse is honest under
+        // either shape and covers every other line rule — the term cap, each
+        // term's own range, the total — for free. IF A FUTURE WRITER LEAVES
+        // THIS ARM WITH NO PRODUCER, the arm and its enum member go with it: a
+        // refusal nothing can raise is residue here.
+        //
+        // TWO PARSES PER MARKER, NOT ONE PER CELL: base and total both move
+        // linearly with the delta and every wall they meet is an interval, so
+        // a bracket whose two ENDS load has no interior cell that does not.
+        // The line is the SERIALIZER'S OWN BYTES (format_warpmarkers_text over
+        // the one-marker cell, its trailing row terminator dropped) handed to
+        // the reader that would read them, so no third spelling of the payload
+        // exists to drift.
+        //
+        // ONLY A CHAINED MARKER IS ASKED. With no chain the spelled base IS
+        // the total, and the bound's window is exactly the total's, so the
+        // line cannot leave the grammar — which is also what keeps this
+        // per-tick face free of a parse in every piece that carries no chain.
+        //
+        // IT IS ASKED AHEAD OF THE CAP because it is a verdict about ONE
+        // marker's own payload and the cap is a verdict about the product:
+        // the cap's count depends on every axis walked so far, this does not.
+        //
+        // THE PHASE COLUMN CARRIES NO SUCH ARM, and that is the asymmetry
+        // rather than a gap: a phase reset has no payload to spell — its cell
+        // moves the authored FRAME, an ordinary whole frame the sidecar
+        // grammar takes by construction — so there is no line for a hop to
+        // walk out of.
+        if (!m.tempo_deviation_cents.empty()) {
+            const auto cell_loads = [&m](int64_t bound) {
+                GuiWarpMarker cell = m;
+                cell.tempo_cents += bound;
+                std::string line = format_warpmarkers_text({cell});
+                if (!line.empty()) line.pop_back();
+                return warpmarkers_internal::parse_single_canonical_line(line)
+                    .has_value();
+            };
+            if (!cell_loads(start) || !cell_loads(end)) {
+                plan.refusal = IterationSweepRefusal::CellWouldNotLoad;
+                return plan;
+            }
+        }
         const std::size_t span =
             start > end ? std::size_t{1}
                         : static_cast<std::size_t>(end - start + 1);

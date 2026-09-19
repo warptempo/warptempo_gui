@@ -4640,13 +4640,13 @@ void GuiInputHandler::run_iteration_sweep_render() {
     }
 
     // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02, the four-tier
-    // review's R-10). Both refusals below are decided by iteration_sweep_plan
-    // (app_state.h), which has TWO readers — its own boolean face
-    // iteration_sweep_actionable, which the Render button's enabled arm asks,
-    // and this dispatch — so the button greys exactly where this body would
-    // refuse, the grey being the roster's whole message and the card below the
-    // key's. Nothing is counted twice: the owner walks the same
-    // store through the same eligibility predicate this body does, and no
+    // review's R-10). All three refusals below are decided by
+    // iteration_sweep_plan (app_state.h), which has TWO readers — its own
+    // boolean face iteration_sweep_actionable, which the Render button's
+    // enabled arm asks, and this dispatch — so the button greys exactly where
+    // this body would refuse, the grey being the roster's whole message and
+    // the card below the key's. Nothing is counted twice: the owner walks the
+    // same store through the same eligibility predicate this body does, and no
     // hand-rolled product survives here — the LIT COLUMN'S store in both
     // cases, the owner and this body forking on the one stamp. THE BREACH
     // ABOVE IS NOT ITS
@@ -4699,13 +4699,34 @@ void GuiInputHandler::run_iteration_sweep_render() {
                              kIterSweepOverCapCard);
         return;
     }
-    // (A THIRD ARM STOOD HERE for one day, 2026-09-09: a phase reset's hop
+    if (plan.refusal == IterationSweepRefusal::CellWouldNotLoad) {
+        // A CELL WOULD SPELL A PAYLOAD THE LOADER REFUSES (2026-09-19). The
+        // whole rule — why the judge is the parser and not a new wall on the
+        // bound, and why two parses bound a whole bracket — is at the arm
+        // (iteration_sweep_plan, app_state.h). Here, as at the cap above:
+        // refuse before any allocation, batch folder, request or render kill,
+        // so iteration mode and every bracket survive for correction.
+        //
+        // THE STDERR LINE NAMES THE CAUSE IN FULL because a terminal can carry
+        // it; the card is the one clause (kIterSweepUnloadableCellCard,
+        // app_state.h, which argues its wording). The Render button greys on
+        // this verdict as it does on the other two — the grey is the roster's
+        // whole message and this card is the key's.
+        std::fprintf(stderr,
+            "warptempo_gui: render-iterations: a marker's tempo deviations "
+            "put a swept cell outside the tempo window; nothing rendered\n");
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kIterSweepUnloadableCellCard);
+        return;
+    }
+    // (A PHASE ARM STOOD HERE for one day, 2026-09-09: a phase reset's hop
     // bracket standing OFF its walls, which the plan re-verified on every read
     // because a dozen writers could move a wall under a standing bracket. The
     // ITERATION LOCK retired every one of those writers on 2026-09-10 — while
     // a bracket stands the mode is lit, and while it is lit the piece is
-    // locked — so the walls hold by construction and the verdict has two
-    // refusals again.)
+    // locked — so those walls hold by construction and nothing re-asks them.
+    // The arm above is not its return: it asks the LOADER about a warp
+    // payload's spelling, which no lock can hold by construction.)
 
     // The delta lists built above and the owner's count are the same product
     // by construction — the same two stores, the same two eligibility walks,
@@ -4805,10 +4826,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
             const int mi = eligible_indices[k];
             // Per-cell tempo is a computed value, not an authored one, and
             // it needs no bracket gate HERE because it cannot leave the
-            // bracket: the bracket rides its base (architect 2026-08-02 —
-            // the tempo window, held by the two authoring roads, called
-            // by both base-tempo authoring surfaces), so both endpoints
-            // rest inside [kTempoMinCents - base, kTempoMaxCents - base]
+            // bracket: the bracket rides the marker's resting tempo
+            // (architect 2026-08-02 — the tempo window, held by the two
+            // authoring roads, called by both base-tempo authoring
+            // surfaces), so both endpoints rest inside
+            // [kTempoMinCents - tempo_cents, kTempoMaxCents - tempo_cents]
             // and every cell between them lands in the tempo bracket. No
             // downstream backstop is load-bearing for this sum. Base and
             // delta live in the one integer-cents domain, so the sum is
@@ -4822,8 +4844,17 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // they are — the cell's sidecar spells a different base beside
             // the same chain, which is what a swept marker's file says it
             // is. Nothing downstream can see the difference (the chain is
-            // spelling, never engine input), and the sidecar re-parses to
-            // exactly this total.
+            // spelling, never engine input). WHAT THE PARAGRAPH ABOVE
+            // PROMISES IS NOT THE CHAIN'S BY ITSELF: the bracket rides the
+            // TOTAL, so the total lands in the tempo window by arithmetic,
+            // but the SPELLED BASE is that total less the chain's sum and
+            // can leave the window on its own. The plan asks the product's
+            // own loader about both ends of every chained marker's bracket
+            // and refuses the whole press when either would not load
+            // (iteration_sweep_plan's CellWouldNotLoad arm, app_state.h,
+            // which carries the rule) — so past that arm this line is one
+            // the strict parse accepts and it re-parses to exactly this
+            // total.
             cell_warp_markers[mi].tempo_cents =
                 base_warp_markers[mi].tempo_cents +
                 per_marker_delta_cents[k][indices[k]];

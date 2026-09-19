@@ -352,13 +352,25 @@ private:
     // THE PENDING CAR PLAY (architect 2026-09-19) — armed by a skip whose
     // play was refused FOR THE PREVIEW'S READINESS ALONE (car_play_after_step;
     // the measured reason it exists is rule 2 of the head comment), and fired
-    // or dropped by tick(). The three fields are THE AXES THE WAIT IS ABOUT:
-    // a restore writes all three, so a later step, a view switch, a tab
-    // switch or a save makes this wait stale and the tick drops it rather
-    // than playing a state he has already left. `title` is
-    // car_transport_title_line(app.history) taken at the arm — the live
-    // state's own number, which every undo and redo moves — so it names WHICH
-    // state the wait is for.
+    // or dropped by tick(). The three fields are THE AXES THAT DECIDE WHAT
+    // WOULD BE HEARD: the AUDIO VIEW picks the buffer, the TAB picks the trim
+    // and the marker stores, and the TITLE names the authored state — so a
+    // later step, an S/T switch, a tab switch or a save makes this wait stale
+    // and the tick drops it rather than playing something he has already left.
+    // `title` is car_transport_title_line(app.history) taken at the arm — the
+    // live state's own number, which every undo and redo moves — so it names
+    // WHICH state the wait is for.
+    //
+    // THE MARKER COLUMN IS DELIBERATELY NOT AMONG THEM (2026-09-19). W, P and
+    // M choose which flags are authored and painted and change NOTHING about
+    // the sound this latch is waiting for: the same buffer, the same trim, the
+    // same state. Pressing `3` to look at the phase resets while the preview
+    // settles would cost him the play, and the play he lost would have sounded
+    // identical to the one he gets by pressing it again. A RESTORE IS ALREADY
+    // COVERED: an undo entry carries all three view tags and its restore
+    // writes them, so any restore that moved the column moved the history
+    // TITLE with it and this wait is stale on that field — a column that moves
+    // with the title standing still can only be a deliberate 1/2/3/4 press.
     struct PendingCarPlay {
         bool        armed      = false;
         char        audio_view = '\0';
