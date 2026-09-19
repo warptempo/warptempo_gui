@@ -262,9 +262,9 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // rule with no site left to disagree with it.
 // THE LOCK HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
 // 2026-08-15): the roster buttons wearing the disabled face while the active
-// tab is locked — the FIVE marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N and,
-// since 2026-09-19, Ctrl+F, the FLATTEN button, whose chord this allowlist
-// drops like the other four; its face is the only one of the five that does
+// tab is locked — the FOUR marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N),
+// FLATTEN up in the icon row's iteration group (Ctrl+F, which this allowlist
+// drops like the four; its face is the one that does
 // not read the lock directly, tempo_flatten_actionable composing
 // authoring_locked itself, and it greys with them all the same),
 // the Edit flag button on the bottom row, the load-in-place
@@ -785,8 +785,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // and DISABLE buttons (TOGGLE INHERIT
 // left them 2026-09-19 on the twin rule — its shifted chord Ctrl+Shift+N, the
 // TIE, is admitted above, so the button stays lit wherever a tie or an untie
-// is possible and its arm composes the fork itself; FLATTEN, which joined the
-// verbs that same day, was never one either — its face reads
+// is possible and its arm composes the fork itself; FLATTEN, which passed
+// through the verbs that same day on its way to the icon row's iteration
+// group, was never one either — its face reads
 // tempo_flatten_actionable, which composes authoring_locked itself, so the
 // grey falls out of the act's own predicate with no membership here), the
 // Toggle History View button, Edit flag and the

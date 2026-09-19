@@ -330,6 +330,36 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ANCHOR needed a hand-named arm for while it was a menu.
     {RedesignButton::IconBpm,  GuiKeys::B,   true,  false, false, false, true},     // Ctrl+B
     {RedesignButton::IconIter, GuiKeys::I,   false, false, false, false, true},     // bare i
+    // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
+    // row's marker verbs the same day it landed there: CTRL+F, which clears
+    // the selected markers' tempo deviation terms. ITS SEAT IS A
+    // CLASSIFICATION BY SUBJECT — a deviation term exists because a GRID SWEEP
+    // APPENDED ONE to every cell it wrote, so the act that takes those terms
+    // off again stands beside the mode that produces them (the full reasoning
+    // is at the roster entry, app_state.h).
+    //
+    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches Ctrl+F
+    // through on_key at the LIFT like every other chrome button, while the
+    // KEY acts at the press like every other hotkey. The ACT is on_key's own
+    // arm and there is no second body, so both locks, the W-column rule, the
+    // empty-selection refusal and the card are all inherited whole — the move
+    // between lanes touched none of them, this table being read by id and
+    // never by position.
+    //
+    // AND IT ADMITS SHIFT, alone in this group: its twin is CTRL+SHIFT+F,
+    // which COLLAPSES those
+    // terms into their one sum instead of removing them — so a shift-click or
+    // a LONG PRESS at kChromeShiftHoldMs reaches the second act with no
+    // keyboard. The row's own `shift` bit stays FALSE, the admission and the
+    // table bit being mutually exclusive by the shift term's construction
+    // (finish_chrome_press_release); the membership is
+    // redesign_button_shift_admits (app_state.h) and the tooltip's second
+    // line is bound to it by that predicate's static_assert.
+    //
+    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
+    // flatten repeats onto itself, so the keys are one-shot at
+    // repeat_eligible and this row carries no `repeats`.
+    {RedesignButton::IconFlatten, GuiKeys::F,   true,  false, false, false, true},  // Ctrl+F
     // THE RENDER-ENTRY GROUP (architect 2026-08-14): listen, load in place, the
     // read-only toggle, the history opener. IT IS LISTEN AND THE PADLOCK since
     // 2026-09-01, the LOAD IN PLACE having moved to the history group below
@@ -438,7 +468,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // SEVENTEEN
+    // SIXTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -507,49 +537,27 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::End,    false, false, false, false, true},                             // bare End
     // THE SINGLE-MARKER VERBS (2026-08-12), the right block's first group
     // since the architect moved them down here on 2026-08-18: drop, delete,
-    // disable toggle and inherit/collapse, joined by FLATTEN on 2026-09-19
-    // (its own row and its whole record are immediately below) — authoring
+    // disable toggle and inherit/collapse (FLATTEN stood among them for the
+    // hours of 2026-09-19 and its row is in the icon row's iteration group
+    // now) — authoring
     // chords whose refusals (read-only, the home view, an empty selection, an
-    // occupied frame, a selection with nothing to flatten) are the keys' own
+    // occupied frame) are the keys' own
     // consumed no-ops, inherited whole through on_key. NOTHING IN THESE ROWS
     // CHANGED WITH THE LANE, AND THE GROUP TAKES ONE PAIR OF GATES WHATEVER
     // ITS MEMBERSHIP: the `h` view consumes every one of these chords outright
     // — none of them is on history_mode_key_blocked's allowlist — and greys
     // them through the derived partition, and the READ-ONLY lock greys them
-    // too (2026-08-15; Flatten takes it inside its own predicate, through
-    // authoring_locked, which composes both locks). Both are the BUTTONS'
+    // too (2026-08-15). Both are the BUTTONS'
     // gates rather than the row's, so they are what makes this row's
     // otherwise-unconditional face policy have an exception at all.
     {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false, false, true}, // bare s
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
-    // THE FLATTEN BUTTON (architect 2026-09-19), the verb group's FIFTH and
-    // the tempo-spelling pair's pointer home: CTRL+F, which clears the
-    // selected markers' tempo deviation terms.
-    //
-    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches Ctrl+F
-    // through on_key at the LIFT like every other chrome button, while the
-    // KEY acts at the press like every other hotkey. The ACT is on_key's own
-    // arm and there is no second body, so both locks, the W-column rule, the
-    // empty-selection refusal and the card are all inherited whole.
-    //
-    // AND IT ADMITS SHIFT: its twin is CTRL+SHIFT+F, which COLLAPSES those
-    // terms into their one sum instead of removing them — so a shift-click or
-    // a LONG PRESS at kChromeShiftHoldMs reaches the second act with no
-    // keyboard. The row's own `shift` bit stays FALSE, the admission and the
-    // table bit being mutually exclusive by the shift term's construction
-    // (finish_chrome_press_release); the membership is
-    // redesign_button_shift_admits (app_state.h) and the tooltip's second
-    // line is bound to it by that predicate's static_assert.
-    //
-    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
-    // flatten repeats onto itself, so the keys are one-shot at
-    // repeat_eligible and this row carries no `repeats`.
-    {RedesignButton::IconMarkerFlatten, GuiKeys::F,      true,  false, false, false, true}, // Ctrl+F
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the verb group's
-    // SIXTH since the Flatten button landed ahead of it 2026-09-19 (its fifth
-    // until then) and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
+    // FIFTH (its sixth for the hours of 2026-09-19 while the Flatten button
+    // stood ahead of it, before that button took the icon row's iteration
+    // group) and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
     // has opened the editor with all along. It exists because the other two
     // roads are a double-click and a key, and glass has neither reliably — the
     // architect drove a taller flag hit rect for one evening chasing the missed
@@ -604,8 +612,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerEditFlag,
      GuiKeys::Return, false, false, false, false, true},                            // bare Enter
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
-    // SEVENTH since the Flatten button joined 2026-09-19 (sixth from the
-    // Marker Measure's deletion on 2026-09-16, seventh before that)
+    // SIXTH since the Marker Measure's deletion on 2026-09-16 (seventh before
+    // that, and seventh again for the hours of 2026-09-19 while the Flatten
+    // button stood ahead of it)
     // and the value pair's pointer home: BARE `j`, which was free
     // (greped at the landing). Its plain lift copies the focused marker's
     // resolved value to the system clipboard, exactly as the key does —
@@ -7279,9 +7288,10 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's four, row 3's two
-// tabs, row 4's twenty — the toolbar four included since the 2026-08-12
-// relayout, the history group's seven since 2026-08-18 — and the bottom row's
-// seventeen since 2026-09-19: the enum's
+// tabs, row 4's twenty-one — the toolbar four included since the 2026-08-12
+// relayout, the history group's seven since 2026-08-18, the FLATTEN button in
+// the iteration group since 2026-09-19 — and the bottom row's
+// sixteen: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

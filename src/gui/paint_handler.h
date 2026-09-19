@@ -771,11 +771,12 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty
-    // view/mode/action buttons since the two view lamps' whole category was
-    // deleted 2026-09-15, twenty-two before that —
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-one
+    // view/mode/action buttons since the FLATTEN button came up from the
+    // bottom row 2026-09-19, twenty from the two view lamps' whole-category
+    // deletion 2026-09-15 and twenty-two before that —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout,
-    // the ITERATION PAIR came back from the menu row on 2026-09-04
+    // the ITERATION GROUP came back from the menu row on 2026-09-04
     // and the history group's seven close them since 2026-08-18 — their
     // separators and its border-bottom, all of them painted on every frame
     // since 2026-08-14), and the UNIFIED BOTTOM ROW's button

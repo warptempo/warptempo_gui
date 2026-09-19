@@ -1561,14 +1561,15 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's four, row 3's two tabs, row 4's twenty (the
-    // toolbar four included since the 2026-08-12 relayout, the ITERATION PAIR
-    // back from the menu row since 2026-09-04, the history group's
+    // the view bar's four, row 3's two tabs, row 4's twenty-one (the
+    // toolbar four included since the 2026-08-12 relayout, the ITERATION
+    // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
+    // 2026-09-19, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's seventeen — the transport three, then the right block's
-    // MARKER-VERB GROUP of eight (kMarkerVerbGroup, paint_handler.cpp, owns
+    // row's sixteen — the transport three, then the right block's
+    // MARKER-VERB GROUP of seven (kMarkerVerbGroup, paint_handler.cpp, owns
     // that membership), two walk
     // steps and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
