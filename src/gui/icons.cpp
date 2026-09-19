@@ -927,6 +927,24 @@ constexpr IconPath kInsertLinkPaths[] = {
      "17 L 19 17 L 19 16 L 17 16 L 17 14 L 16 14 z "},
 };
 
+// MERGE — the FLATTEN pair's glyph (Ctrl+F and Ctrl+Shift+F), the 22px
+// Breeze file's one `d` transcribed VERBATIM. Its two 1-unit dots between the
+// boxes are the two subpaths of absolute `C` curves below, which the renderer
+// takes as ordinary cubics (the command's own arm in draw_path); they are
+// what the 16px file the architect named does not carry, the divergence
+// recorded at the enum entry in icons.h.
+constexpr IconPath kMergePaths[] = {
+    {kIconText,
+     "M 3 3 L 3 7 L 9 7 L 10 7 L 11 7 L 11 15 L 10 15 L 9 15 L 3 15 L 3 19 "
+     "L 12 19 L 12 15 L 12 13 L 19 13 L 19 9 L 12 9 L 12 7 L 12 3 L 3 3 z "
+     "M 4 4 L 11 4 L 11 6 L 4 6 L 4 4 z M 7.5 8 C 7.223 8 7 8.223 7 8.5 C 7 "
+     "8.777 7.223 9 7.5 9 C 7.777 9 8 8.777 8 8.5 C 8 8.223 7.777 8 7.5 8 z "
+     "M 12 10 L 13 10 L 14 10 L 18 10 L 18 12 L 14 12 L 13 12 L 12 12 L 12 "
+     "10 z M 7.5 13 C 7.223 13 7 13.223 7 13.5 C 7 13.777 7.223 14 7.5 14 C "
+     "7.777 14 8 13.777 8 13.5 C 8 13.223 7.777 13 7.5 13 z M 4 16 L 11 16 "
+     "L 11 18 L 4 18 L 4 16 z "},
+};
+
 // -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
 //
 // bboxprev (Shift+Tab, previous marker) and bboxnext (Tab, next marker). The
@@ -1077,6 +1095,7 @@ constexpr IconDef kListAdd            {22.0, kListAddPaths,             1};
 constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
+constexpr IconDef kMerge              {22.0, kMergePaths,               1};
 constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
@@ -1127,6 +1146,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ListRemove:          return kListRemove;
         case Icon::ViewHidden:          return kViewHidden;
         case Icon::InsertLink:          return kInsertLink;
+        case Icon::Merge:               return kMerge;
         case Icon::BboxPrev:            return kBboxPrev;
         case Icon::BboxNext:            return kBboxNext;
         case Icon::DialogOkApply:       break;

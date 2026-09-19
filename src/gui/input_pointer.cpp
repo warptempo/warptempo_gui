@@ -438,7 +438,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // SIXTEEN
+    // SEVENTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -519,8 +519,32 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false, true}, // Ctrl+N
+    // THE FLATTEN BUTTON (architect 2026-09-19), the verb group's FIFTH and
+    // the tempo-spelling pair's pointer home: CTRL+F, which clears the
+    // selected markers' tempo deviation terms.
+    //
+    // BUTTON-IS-ITS-CHORD HOLDS LITERALLY: the press dispatches Ctrl+F
+    // through on_key at the LIFT like every other chrome button, while the
+    // KEY acts at the press like every other hotkey. The ACT is on_key's own
+    // arm and there is no second body, so both locks, the W-column rule, the
+    // empty-selection refusal and the card are all inherited whole.
+    //
+    // AND IT ADMITS SHIFT: its twin is CTRL+SHIFT+F, which COLLAPSES those
+    // terms into their one sum instead of removing them — so a shift-click or
+    // a LONG PRESS at kChromeShiftHoldMs reaches the second act with no
+    // keyboard. The row's own `shift` bit stays FALSE, the admission and the
+    // table bit being mutually exclusive by the shift term's construction
+    // (finish_chrome_press_release); the membership is
+    // redesign_button_shift_admits (app_state.h) and the tooltip's second
+    // line is bound to it by that predicate's static_assert.
+    //
+    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
+    // flatten repeats onto itself, so the keys are one-shot at
+    // repeat_eligible and this row carries no `repeats`.
+    {RedesignButton::IconMarkerFlatten, GuiKeys::F,      true,  false, false, false, true}, // Ctrl+F
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass), the verb group's
-    // FIFTH and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
+    // SIXTH since the Flatten button landed ahead of it 2026-09-19 (its fifth
+    // until then) and the flag editor's THIRD ROAD: BARE Enter, which the keyboard
     // has opened the editor with all along. It exists because the other two
     // roads are a double-click and a key, and glass has neither reliably — the
     // architect drove a taller flag hit rect for one evening chasing the missed
@@ -575,7 +599,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerEditFlag,
      GuiKeys::Return, false, false, false, false, true},                            // bare Enter
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the verb group's
-    // SIXTH (seventh until the Marker Measure ahead of it left 2026-09-16)
+    // SEVENTH since the Flatten button joined 2026-09-19 (sixth from the
+    // Marker Measure's deletion on 2026-09-16, seventh before that)
     // and the value pair's pointer home: BARE `j`, which was free
     // (greped at the landing). Its plain lift copies the focused marker's
     // resolved value to the system clipboard, exactly as the key does —
@@ -602,9 +627,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // partition.
     {RedesignButton::IconCopyValue,
      GuiKeys::J,      false, false, false, false, true},                             // bare j
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH since
-    // 2026-09-16 (eighth from 2026-08-29, seventh from 2026-08-27 and sixth
-    // before that):
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's EIGHTH since
+    // 2026-09-19 (seventh from 2026-09-16, eighth from 2026-08-29, seventh
+    // from 2026-08-27 and sixth before that):
     // BARE `k`, which was free — he picked it over `n`
     // (already reading as INHERIT) and over `a` (too easy to hit by accident).
     // It is a MODE toggle, so the button's lamp reads the same bit the key

@@ -128,6 +128,17 @@ struct GuiWarpMarkersOps {
     void delete_selected_marker();
     void toggle_inherits();
     void toggle_disabled();
+    // THE TWO FLATTEN COMMANDS, ONE BODY (architect 2026-09-19): Ctrl+F
+    // CLEARS every selected marker's tempo deviation terms and Ctrl+Shift+F
+    // COLLAPSES them to their one sum — the kind is TempoFlattenKind
+    // (app_state.h, beside the predicate this body's leading return reads).
+    // A PLAIN GROUP VERB in toggle_disabled's shape and NOT toggle_inherits':
+    // the members are UNCOUPLED — each marker's own terms, with no
+    // inheritance walk in the act — so there is no collapse to the focus and
+    // no playhead land. ONE undo entry per press, from the pre-state, and
+    // NOTHING MOVES: the act lands no marker and moves no cursor, so it calls
+    // neither movement owner and the trim region overlay stands.
+    void flatten_tempo_deviations(TempoFlattenKind kind);
     // Steps the focused marker's tempo by `delta_cents` integer cents, signed
     // by direction of travel — ONE cent per bare keypress, THREE under shift
     // and TEN under ctrl since 2026-08-31 (the step ladder, one owner at

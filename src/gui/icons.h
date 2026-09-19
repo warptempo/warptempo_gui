@@ -161,6 +161,21 @@ enum class Icon {
     ListRemove,          // Delete markers (`Delete`)
     ViewHidden,          // Toggle disabled (`Ctrl+D`)
     InsertLink,          // Inherit tempo (`Ctrl+N`)
+    // THE FLATTEN BUTTON'S GLYPH (architect 2026-09-19): Breeze's MERGE, "one
+    // path, three offset boxes reading as two merging into one" — which is
+    // what the act does to a tempo's deviation terms, several of them
+    // collapsing to one or to none. His own pick, with "I might change it
+    // later" attached to it.
+    //
+    // TAKEN AT 22 THOUGH HE NAMED THE 16px PATH
+    // (/usr/share/icons/breeze/actions/16/merge.svg): every asset in this set
+    // is 22 and every IconDef is {22.0, ...}, ToolRectSelection's own
+    // precedent one size over. UNLIKE THAT CASE THE TWO FILES ARE NOT THE SAME
+    // DRAWING — the 22 adds two 1-unit round dots between the boxes (the `d`'s
+    // two C-curve subpaths) that the 16 does not carry at all — so a later
+    // swap to the 16 is a known move: it would redraw the glyph, not merely
+    // rescale it.
+    Merge,               // Flatten tempo deviations (`Ctrl+F`)
     // (EDITCOPY AND EDITPASTE ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave the propagate commands the
     // EDIT MENU as their one pointer home, and neither glyph had a second

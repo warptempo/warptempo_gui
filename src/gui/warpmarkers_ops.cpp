@@ -582,6 +582,87 @@ void GuiWarpMarkersOps::toggle_disabled() {
     target_render.trigger();
 }
 
+// WHAT A FLATTEN NEEDS TO ACT — the declaration and the whole ruling are at
+// tempo_flatten_actionable (app_state.h); this is the walk, seated
+// immediately above the one act that reads it, the group cent step's own
+// arrangement. A PASS AND A LABEL REF ARE SKIPPED rather than refused: by
+// grammar neither carries a chain (warpmarkers_parse.h), so neither can be a
+// subject and neither has an opinion about one.
+bool tempo_flatten_actionable(const AppState& app, TempoFlattenKind kind) {
+    if (app.active_markers_view != 'W') return false;
+    if (!marker_selection_standing(app)) return false;
+    if (authoring_locked(app)) return false;
+    // Clear wants ONE term to remove; Collapse wants TWO to join — a lone
+    // term collapses to itself and is no subject.
+    const std::size_t needed = (kind == TempoFlattenKind::Clear) ? 1u : 2u;
+    const auto& mv = app.warpmarkers.markers();
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(mv.size())) continue;
+        const GuiWarpMarker& m = mv[static_cast<std::size_t>(idx)];
+        if (m.tempo_inherits || !m.label_ref.empty()) continue;
+        if (m.tempo_deviation_cents.size() >= needed) return true;
+    }
+    return false;
+}
+
+// Ctrl+F and Ctrl+Shift+F: flatten the selected markers' tempo deviations,
+// the kind saying whether the terms GO or become their ONE SUM. The ruling,
+// the two spellings and the wall argument are at TempoFlattenKind
+// (app_state.h); the shape is toggle_disabled's above, the group-verb one.
+//
+// THIS FAMILY'S ONE RECORDED ASYMMETRY: it owes NO TARGET-VIEW TAIL and NO
+// target_render.trigger(), where every other GuiWarpMarkersOps body ends with
+// both (the contract at the head of this file). That is the asymmetry and not
+// an omission — the deviation chain is SPELLING, so nothing the tail exists
+// for can have happened: no map re-derives, no plate re-warps, no marker
+// image moves under the cursor and the render fingerprint is where it was. A
+// trigger here would say something changed that did not, and ensure_ready
+// would hand back the identical render for its trouble.
+//
+// WHAT IT DOES OWE is the MARKER LANE — the flag's painted text is the one
+// thing on screen that moves — and the dirty mark, whose own damage
+// recompute_dirty owns.
+void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
+    // SILENT, the sibling verbs' shape: the dispatch arm asks this same
+    // predicate ahead of the call so it can NAME the refusal on a card, and
+    // one press owes one card, so this stays the belt.
+    if (!tempo_flatten_actionable(app, kind)) return;
+    const auto& mv_const = app.warpmarkers.markers();
+    std::vector<GuiWarpMarker> proposed = mv_const;
+    bool changed = false;
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
+        // A pass and a label ref carry no chain by grammar — skipped, never
+        // refused (the predicate's own rule).
+        if (m.tempo_inherits || !m.label_ref.empty()) continue;
+        std::vector<int64_t>& terms = m.tempo_deviation_cents;
+        if (terms.empty()) continue;
+        if (kind == TempoFlattenKind::Clear) {
+            terms.clear();
+        } else {
+            if (terms.size() < 2) continue;   // its collapse is itself
+            int64_t sum = 0;
+            for (int64_t t : terms) sum += t;
+            terms.assign(1, sum);
+        }
+        changed = true;
+    }
+    // A REAL COMPARISON, not a loop-ran flag: a selection whose every member
+    // is already flat pushes no undo entry and leaves no dirty mark.
+    if (!changed) return;
+    std::vector<GuiWarpMarker> pre_state = mv_const;
+    app.warpmarkers.markers_mut() = std::move(proposed);
+    undo.push_undo_warp(std::move(pre_state));
+    undo.recompute_dirty();
+    // THE MARKER LANE ALONE. tempo_cents does not move, so the waveform, the
+    // stems and the plate are all untouched; what changed is the text inside
+    // the flag box, which lives in the top strip. The flag cache re-renders
+    // on its own because the store's generation moved (fp_warp_generation,
+    // waveform_cache.cpp), the one term the painted payload needs.
+    viewport.invalidate_top_strip();
+}
+
 // -- THE WARP TEMPO WRITE'S TAIL, ONE BODY (2026-09-10) ----------------------
 //
 // Everything a warp-column TEMPO write owes AFTER its own damage: in TARGET

@@ -2538,10 +2538,37 @@ enum class RedesignButton {
     // (a frame fact the lane shows). They keep their Icon* names: a roster id
     // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
+    // THE FLATTEN BUTTON (architect 2026-09-19), seated AFTER Toggle inherit
+    // and AHEAD of Edit flag: the two TEMPO-SPELLING verbs stand together —
+    // one converts a marker between owning and inheriting, the other flattens
+    // the deviation terms an owner's tempo is spelled with — and the seat
+    // keeps Edit flag one box further from Delete, which is the whole reason
+    // Edit flag sits where it does.
+    //
+    // ITS CHORD IS CTRL+F and its SHIFT TWIN is Ctrl+Shift+F: the plain act
+    // CLEARS every selected marker's deviation terms (`1.23+0.01-0.02` reads
+    // `1.22`), the shifted one COLLAPSES them to their single sum
+    // (`1.23-0.01`, and `1.23+0.00` where they cancel). It is the roster's
+    // pointer home for both — no Edit-menu row and no icon-row button, one
+    // command and one pointer road.
+    //
+    // ITS FACE READS THE ACT'S OWN PREDICATE (tempo_flatten_actionable, below
+    // with the other marker-verb refusals), which composes the W column, a
+    // standing selection, BOTH LOCKS and the would-anything-change question.
+    // THE TWIN RULE DECIDES WHICH KIND THE FACE ASKS: the plain act needs one
+    // selected marker with a term, the shifted one needs two on a marker, so
+    // the weaker condition is the face's and a shift-click over a selection
+    // where nothing carries two terms reaches the chord, which CARDS.
+    //
+    // NO LAMP (an act, not a mode), no repeat (a flatten repeats onto
+    // itself), and NO CTRL ADMISSION: the letter carries two acts and the
+    // shift press is the second, so there is no third for ctrl to be.
+    IconMarkerFlatten,
     // THE EDIT FLAG BUTTON (architect 2026-08-27, on glass) — the verb group's
-    // FIFTH member, seated after Toggle inherit (it was the
-    // SIXTH for the afternoon of 2026-08-29, when the Copy value button landed
-    // in the slot after Toggle inherit and left it again that evening),
+    // SIXTH member since the Flatten button landed ahead of it 2026-09-19
+    // (its fifth, seated directly after Toggle inherit, until then; it was the
+    // SIXTH for the afternoon of 2026-08-29 too, when the Copy value button
+    // landed in the slot after Toggle inherit and left it again that evening),
     // DELIBERATELY FAR FROM DELETE ("away from the delete button"): its act is
     // an editor open and its neighbour's is a destruction, and a fingertip
     // reaching for one must not be one box from the other.
@@ -2584,9 +2611,10 @@ enum class RedesignButton {
     // so a modified press is refused at the band gate and the long press —
     // glass's held shift — reaches nothing.
     IconMarkerEditFlag,
-    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SIXTH
-    // member since the Marker Measure between it and the Edit flag button
-    // left with the measures feature (2026-09-16; its seventh before that),
+    // THE COPY VALUE BUTTON (architect 2026-08-29) — the verb group's SEVENTH
+    // member since the Flatten button joined the group 2026-09-19 (its sixth
+    // from the Marker Measure's deletion with the measures feature on
+    // 2026-09-16, its seventh before that),
     // seated at the group's tail with Add to Selection, the two acts that
     // reach a marker without authoring it — the architect's own seat, taken
     // on his live pass the evening it landed.
@@ -2710,14 +2738,14 @@ enum class RedesignButton {
 // the `]` magnification lamp left row 4 and magnification became a function of
 // the audio view): SEVEN in row 1 (the
 // three menu anchors and the view bar's four), two in row 3, TWENTY in
-// row 4 and SIXTEEN in the bottom row — 45. Of those, FORTY-TWO carry a chord in
+// row 4 and SEVENTEEN in the bottom row — 46. Of those, FORTY-THREE carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 45;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2810,6 +2838,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconMarkerFlatten:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
@@ -2824,10 +2853,11 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SIXTEEN since 2026-09-16: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-19: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
-// the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button landing behind
+// the EDIT FLAG BUTTON, (2026-08-29) the COPY VALUE button and (2026-09-19)
+// the FLATTEN BUTTON landing among
 // them (the MARKER MEASURE stood among them from 2026-08-19 until the
 // measures feature was deleted 2026-09-16, the VALUE DRAG LAMP last in that
 // group from 2026-09-10 to its deletion 2026-09-13, and the MARKER
@@ -2863,6 +2893,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        case RedesignButton::IconMarkerFlatten:
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
@@ -10455,6 +10486,60 @@ inline bool inherit_toggle_actionable(const AppState& app) {
            marker_selection_standing(app) && marker_focus_standing(app);
 }
 
+// THE TWO FLATTEN COMMANDS' KIND (architect 2026-09-19). A warp marker's
+// tempo is a RESOLVED TOTAL plus the deviation terms it is SPELLED with
+// (warpmarkers_parse.h), and these two rewrite the spelling alone:
+//   * Clear   — Ctrl+F, "Flatten": the terms go. `1.23+0.01-0.02` reads
+//               `1.22`, the total it always was.
+//   * Collapse — Ctrl+Shift+F, "Flatten deviations": the terms become their
+//               ONE SUM. `1.23+0.01-0.02` reads `1.23-0.01`, and terms that
+//               cancel read `1.23+0.00` — the architect's own reading of it,
+//               "I've come back to where I started".
+// The enum lives HERE rather than at the ops header because the predicate
+// below is its first reader and this file cannot see warpmarkers_ops.h (that
+// header includes this one).
+//
+// BOTH ARE RENDER-INVISIBLE BY CONSTRUCTION: neither touches tempo_cents, and
+// no engine input carries the chain at all — the pipeline converts to
+// MarkerForRender (warp_frame_map_build.h), which has no such field — so
+// neither the frame map nor the render fingerprint can move under them.
+//
+// THE COLLAPSE CANNOT SPELL A PAYLOAD THE LOADER REJECTS, and it is the data
+// model that says so rather than a clamp: the parser walls the SPELLED BASE
+// and the RESOLVED TOTAL into [kTempoMinCents, kTempoMaxCents] and every term
+// at ±kIterDeltaMaxCents, and the collapse writes the term `total - base`
+// while leaving both of those where they were — so the one term it writes has
+// magnitude at most kTempoMaxCents - kTempoMinCents, inside the term wall.
+enum class TempoFlattenKind { Clear, Collapse };
+
+// WHAT A FLATTEN NEEDS TO ACT, composed (architect 2026-09-19): the WARP
+// column (a phase reset and a magnification level marker spell no tempo at
+// all), a standing selection, NEITHER LOCK — a flatten writes the store and
+// pushes an undo entry, which is the whole of what both locks hold back — and
+// a SUBJECT the kind could change. A PASS AND A LABEL REF ARE INVISIBLE TO
+// IT: neither carries a chain by grammar, so neither is ever a subject and
+// neither refuses on its own; a marker with no terms is no subject for either
+// kind, and one with exactly ONE term is no subject for Collapse, its
+// collapse being itself.
+//
+// THE LOCK IS COMPOSED HERE rather than through iteration_lock_greys (above),
+// which is why this button is not in that predicate's membership: the act,
+// the card and the face ask this one question, and a face arm that read the
+// lock separately would be restating a term the act already owns.
+//
+// READERS: GuiWarpMarkersOps::flatten_tempo_deviations' leading return (the
+// act, silent — the dispatch cards ahead of it), the Ctrl+F / Ctrl+Shift+F
+// dispatch arm's card (input_handler.cpp) and the Flatten button's disabled
+// face, which asks the CLEAR kind under the twin rule (the weaker of the two
+// conditions, so the shifted lift reaches the chord and the chord cards).
+//
+// DEFINED IN warpmarkers_ops.cpp IMMEDIATELY ABOVE THE ACT, the group cent
+// step's own shape (tempo_cent_step_group_actionable, above): the body walks
+// the selection and composes authoring_locked, which this header declares
+// further down, so the seat here is the declaration and the walk lives beside
+// the one act that reads it.
+bool tempo_flatten_actionable(const AppState& app, TempoFlattenKind kind);
+
 // WHICH BOUND AN OPEN IterBound SESSION EDITS, read off the session's own
 // side bit (text_editor::State::iter_upper) — the one place the bool is
 // given its cell name, so the painter (render_flag_editor_box), the commit
@@ -11787,6 +11872,10 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     reset, magnification level), plus Ctrl+N, at their dispatch arms past
 //     the carded refusal and ahead of the column fork (input_handler.cpp) —
 //     the co-equal-axes rule says a delete is a delete in every column;
+//   * THE TWO FLATTEN COMMANDS, Ctrl+F and Ctrl+Shift+F (2026-09-19), at
+//     their one dispatch arm past the carded refusal and ahead of the op's
+//     own changed-path test (input_handler.cpp) — a marker verb acting on
+//     what Add to selection built, Ctrl+N's own shape;
 //   * THE TWO CLIPBOARD COPIES, Ctrl+P and (2026-09-15) Ctrl+M, each past
 //     its three gates;
 //   * THE FOUR PROPAGATE PASTES — each family's confirmed placement paste
@@ -13900,6 +13989,18 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
                    inherit_toggle_actionable(a);
+        // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
+        // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
+        // asks neither separately — the rule against a face restating an
+        // act's condition, taken one step further than its neighbours because
+        // the act's own predicate was written to carry the lock. IT ASKS THE
+        // CLEAR KIND under the twin rule: Ctrl+F acts wherever a selected
+        // marker carries one deviation term and Ctrl+Shift+F wherever one
+        // carries two, so the weaker condition is the face's and a shift-click
+        // over a selection where nothing carries two reaches the chord, which
+        // cards.
+        case RedesignButton::IconMarkerFlatten:
+            return tempo_flatten_actionable(a, TempoFlattenKind::Clear);
         // THE EDIT FLAG BUTTON JOINED THIS ARM AT ITS LANDING (2026-08-27) and
         // it is the verbs' class exactly: bare Return opens an editor over
         // SERIALIZED CONTENT — the marker's canonical line — and sits on no
@@ -14954,6 +15055,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconMarkerDelete:
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
+        // FLATTEN IS MOMENTARY (2026-09-19): the terms go or they collapse,
+        // and the marker's own flag is where the result shows. Nothing stays
+        // true afterwards for a lamp to report.
+        case RedesignButton::IconMarkerFlatten:
         // THE EDIT FLAG BUTTON IS MOMENTARY TOO (2026-08-27): it opens an
         // editor and the editor's own session is the state; there is no bit
         // for a lamp.
@@ -15219,6 +15324,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (the twin rule). Only the OTHER tab takes the press — the selected one is a
 // radio and its press, shifted or not, is a consumed nothing — and the long
 // press is the tablet's one road to the march.)
+// (FLATTEN JOINED 2026-09-19 with Ctrl+Shift+F: its plain act clears a
+// marker's deviation terms and its shifted twin collapses them to one, the
+// drop's and the copy's rule once more — a shift-enabled gesture whose bare
+// form has a button. The TWIN RULE decides the face: the plain act's
+// condition is the weaker of the two, so the button stays lit where only the
+// shifted press would refuse and that press reaches the chord's own card.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::TabA ||
@@ -15229,6 +15340,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportPlayStop ||
            b == RedesignButton::IconMarkerDrop ||
            b == RedesignButton::IconCopyValue ||
+           b == RedesignButton::IconMarkerFlatten ||
            b == RedesignButton::IconListen ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown ||
@@ -15744,7 +15856,19 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Toggle Disabled (Ctrl+D)", nullptr};
         case RedesignButton::IconMarkerInherit:
             return {"Toggle Inherit (Ctrl+N)", nullptr};
-        // THE EDIT FLAG BUTTON (2026-08-27), the verb group's fifth, ONE LINE
+        // FLATTEN (2026-09-19), the group's SECOND two-line form by seat,
+        // between the drop's and the copy's: the plain
+        // act clears the selected markers' tempo deviations and the shifted
+        // twin collapses them into one, so the second line names the act and
+        // the modifier and not a key — this table's rule for second lines,
+        // with the static_assert below keeping the line and the admission one
+        // fact. The words say "deviations" and never "chain": the link
+        // metaphor belongs to a pass, whose own button wears the chain-link
+        // glyph two boxes back.
+        case RedesignButton::IconMarkerFlatten:
+            return {"Flatten (Ctrl+F)",
+                    "Press Shift to flatten the deviations into one."};
+        // THE EDIT FLAG BUTTON (2026-08-27), the verb group's sixth, ONE LINE
         // like its neighbours: the act named, no shift line, the button
         // admitting neither shift nor ctrl. THE ACCELERATOR IS "Return" since
         // 2026-09-01, because that is Qt's — and so kdenlive's — name for the
@@ -15757,9 +15881,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // both, the tooltips-on-disabled ruling above.
         case RedesignButton::IconMarkerEditFlag:
             return {"Edit Flag (Return)", nullptr};
-        // COPY RESOLVED VALUE (2026-08-29), the verb group's sixth since the
-        // Marker Measure's deletion (2026-09-16; seventh before it) and its
-        // SECOND two-line form: bare `j` copies
+        // COPY RESOLVED VALUE (2026-08-29), the verb group's seventh since
+        // the Flatten button joined 2026-09-19 (sixth from the Marker
+        // Measure's deletion on 2026-09-16, seventh before it) and its
+        // THIRD two-line form: bare `j` copies
         // the focused marker's resolved value, and the shifted twin JUMPS to
         // the marker that value came from — so the second line names the act
         // and the modifier and not a key, this table's rule for second lines,
@@ -15781,8 +15906,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconCopyValue:
             return {"Copy Resolved Value (J)",
                     "Press Shift to jump to defining/previous marker."};
-        // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH since
-        // 2026-08-27 and a MODE rather than an act — the hint NAMES THE
+        // ADD TO SELECTION (2026-08-18), the verb group's EIGHTH since
+        // 2026-09-19 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
         // it read "Add to Selection" from 2026-08-18 and "Add to selection"
         // for the hours of that day's sentence-case pass, a verb phrase that

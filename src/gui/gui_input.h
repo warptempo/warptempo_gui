@@ -603,15 +603,25 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the view toggle and the
-        // mode toggles (`c` centre, `f` follow, `i` iteration, `k` add to
-        // selection; `x` the value drag's lamp stood here 2026-09-10 to
+        // mode toggles (`c` centre, `i` iteration, `k` add to
+        // selection; `f` left this group 2026-09-19 for the two FLATTEN
+        // chords below, its bare form — the follow lamp — unchanged; `x` the
+        // value drag's lamp stood here 2026-09-10 to
         // 2026-09-13, `y` the keep-centered lamp 2026-08-31 to 2026-09-14,
         // `m` the bpm opener and `t` the S/T flip both 2026-08-01 (`m`)/
         // earlier to 2026-09-15, when the architect moved the opener to
         // Ctrl+B, below, and deleted `t` whole with its view lamp).
-        case GuiKeys::C: case GuiKeys::F: case GuiKeys::I:
+        case GuiKeys::C: case GuiKeys::I:
         case GuiKeys::K:
             return bare;
+        // THE LETTER CARRIES THREE ACTS since 2026-09-19: bare `f` is the
+        // FOLLOW LAMP (unchanged, the group above's own kind), Ctrl+F flattens
+        // the selected markers' tempo deviations and Ctrl+Shift+F collapses
+        // them into one — the shifted form being the plain act's twin, `s`'s
+        // and `j`'s shape on a ctrl chord rather than a bare one. The ctrl
+        // spelling is what guards an authoring verb against a stray bare
+        // press, exactly as Ctrl+D and Ctrl+N do.
+        case GuiKeys::F: return bare || cl || cs;
         // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
         // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
         case GuiKeys::B: return cl;

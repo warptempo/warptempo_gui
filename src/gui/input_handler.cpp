@@ -1954,6 +1954,48 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.toggle_inherits();
         return;
     }
+    // CTRL+F AND CTRL+SHIFT+F: flatten the selected warp markers' TEMPO
+    // DEVIATIONS (architect 2026-09-19) — the plain chord CLEARS the terms,
+    // the shifted twin COLLAPSES them to their one sum. Ctrl-exact and
+    // ctrl+shift-exact, and ONE-SHOT: a flatten repeats onto itself, so
+    // neither form is in repeat_eligible. Bare `f` is the follow lamp and
+    // reaches handle_plain_bare_keys, which a chord has no road into.
+    //
+    // BOTH LOCKS RANK ABOVE THIS ARM and neither is spelled here: `F` sits on
+    // no read_only_key_blocked and no iteration_lock_key_blocked allowlist
+    // entry — both gates are allowlists — so authoring_lock_refuses_chord at
+    // the head of on_key eats the chord and cards its own sentence, which is
+    // the outermost refusal a locked press can get. The Ctrl+D and Ctrl+N
+    // arms above take the same order.
+    //
+    // ONE CARD PER PRESS, AND ONE SENTENCE PER KIND: the predicate is
+    // composed (tempo_flatten_actionable, app_state.h — the column, the
+    // selection, the lock and a subject the kind could change), and its
+    // sentence is true of EVERY state it refuses in, the P and M columns and
+    // the empty selection included, so this arm spells no second sentence for
+    // a column or a selection rule that already has one elsewhere. The op's
+    // identical leading return is the belt below it and stays silent; the
+    // Flatten button greys on the CLEAR kind, so a plain lift never reaches
+    // this line while a shifted one still can (the twin rule).
+    if (key == GuiKeys::F && ctrl && !alt) {
+        const TempoFlattenKind kind =
+            shift ? TempoFlattenKind::Collapse : TempoFlattenKind::Clear;
+        if (!tempo_flatten_actionable(app, kind)) {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                shift ? "No selected marker carries more than one tempo "
+                        "deviation"
+                      : "No selected marker carries tempo deviations");
+            return;
+        }
+        // THE SELECTION IS SPENT (architect 2026-09-12), the Ctrl+N arm's
+        // twin: past the carded refusal and ahead of the op's own
+        // changed-path test, and spelled at neither op (selection_consumed,
+        // app_state.h).
+        selection_consumed(app);
+        warpops.flatten_tempo_deviations(kind);
+        return;
+    }
     // Ctrl+D: toggle disabled (warp + phase reset). Plain `d` and Shift+D are unbound.
     if (key == GuiKeys::D && ctrl && !alt && !shift) {
         // THE TWO COLUMNS ANSWER DIFFERENTLY SINCE 2026-08-24. The WARP arm
