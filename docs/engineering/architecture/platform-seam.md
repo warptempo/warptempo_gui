@@ -1212,7 +1212,10 @@ Android 16 / One UI 8.0.5, 2304x1440 @ 280 dpi (exactly 1.75x; the
 ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 322 since the TWO VIEW LAMPS'
 WHOLE ICON-ROW CATEGORY WAS DELETED on 2026-09-15 — two boxes, a group slot and
-a separator, leaving the walk 714 authored px
+a separator. THE WALK IS 748 AUTHORED PX AND THE CEILING 308 AGAIN since
+2026-09-19, when the FLATTEN BUTTON joined the iteration group (21 members in
+5 groups; 748*3.08 = 2303.84 of 2304, 309 overrunning at 2311.32). It was 714
+and 322 from 2026-09-17
 (714*3.22 = 2299.08 of 2304; 308 for the one day of 2026-09-17, when the `]`
 MAGNIFICATION LAMP had it at 748 before magnification became a function of the
 audio view that evening; 292 from the evening of 2026-09-14, when THE KEEP
@@ -1236,7 +1239,7 @@ lamp's 959 from 2026-08-31; 249 at the 2026-08-27
 Series relocation's 925, the same walk and the same ceiling reached from the
 other direction; 228 at the 1007-px row before that, and 221 for the one
 day the row was 1041). THE TABLET'S FIRST-RUN SCALE IS 225, settled on the glass 2026-08-27:
-the whole icon row lands (714*2.25 = 1606.5 of the panel's 2304, 697.5 px of slack
+the whole icon row lands (748*2.25 = 1683 of the panel's 2304, 621 px of slack
 where the 789-px row had 529, the 891-px row 299, the 959-px row 146 and the 993-px row 70) and the layout is the one the redesign was drawn
 against. 250 held the template for one
 afternoon that day — the architect's question was whether a marker flag is
