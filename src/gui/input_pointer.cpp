@@ -102,7 +102,7 @@ struct ToolbarChord {
     //
     // THE VIEW BAR'S FOUR ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
-    // ABSOLUTE selectors 1/2/3/4, which are IDEMPOTENT — on_key's own handler
+    // ABSOLUTE selectors, which are IDEMPOTENT — on_key's own handler
     // already makes a press on the current combination a no-op, so dispatching
     // would be harmless rather than wrong. The flag is set anyway, and for the
     // FACE: the crops give a selected face and a click face and nothing that is
@@ -164,17 +164,17 @@ struct ToolbarChord {
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
     // Row 1's RIGHT FLOAT — the view bar (2026-08-02; the magnification level
-    // selector 2026-09-15, S+M and SECOND since 2026-09-17). Bare 1/2/3/4, the
-    // ABSOLUTE view selectors: S+W, S+M, T+P, T+W — THE ROW ORDER HERE IS THE
+    // selector 2026-09-15, FIRST and on the backtick since 2026-09-19). The
+    // ABSOLUTE view selectors: S+M, S+W, T+P, T+W — THE ROW ORDER HERE IS THE
     // BAR'S (kViewBarButtons, paint_handler.cpp). Everything
-    // the digits own arrives by construction through on_key's own handler — the audio-first-then-markers
+    // the selectors own arrives by construction through on_key's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
+    {RedesignButton::ViewSM,     GuiKeys::Grave,  false, false, false, true, true}, // bare backtick
     {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
-    {RedesignButton::ViewSM,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
-    {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
-    {RedesignButton::ViewTW,     GuiKeys::Digit4, false, false, false, true, true}, // bare 4
+    {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
+    {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
     // The toolbar four — icon-row members since the 2026-08-12 relayout
     // dissolved row 2 (the chords, gates and flags are UNCHANGED by the move;
     // only the face and the band changed hands).
@@ -215,8 +215,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the radio-pair collapse, to 2026-09-15 — one button per axis where
     // IconS/IconT and IconW/IconP were four radios over the bare `t`/`p`
     // chords, each a plain TOGGLE carrying NO radio flag. The architect
-    // deleted the whole category with those two keys; bare 1/2/3/4 below are
-    // the axes' only keyboard road now.)
+    // deleted the whole category with those two keys; the four view selectors
+    // below are the axes' only keyboard road now.)
     // THE TRIM GROUP — the Show trim region button, alone in it since the scissors
     // were deleted on 2026-08-18 (the scissors opened the group in 2026-08-11
     // and led it until the architect's 2026-08-16 reorder). THIS TABLE DOES NOT
@@ -1188,8 +1188,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSW/ViewSM/ViewTP/ViewTW (bare
-//   1/2/3/4, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
+//   LIVE — the view bar's ViewSM/ViewSW/ViewTP/ViewTW (the backtick and bare
+//   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
 //   allowlist for the act, its own arm in redesign_button_enabled greying it
@@ -8985,8 +8985,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // row-1 button cannot be inside the flag editor's box, which lives in the
     // marker lane below the whole top strip's button rows.
     //
-    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's bare
-    // 1/2/3/4 drop at the keyboard-modal gate as consumed nothings — the modality
+    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's four
+    // selectors drop at the keyboard-modal gate as consumed nothings — the modality
     // ruling working as intended — and ending an edit there would be a behavior
     // change nobody asked for. (Quit needed nothing here while it was a button,
     // its Ctrl+Q being one of the three chords that gate admits; since

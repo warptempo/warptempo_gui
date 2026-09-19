@@ -45,7 +45,7 @@ struct PhaseResetPropagate {
     Undo&               undo;
     GuiTargetRender& target_render;
     // Owned end-of-paste view switch goes through switch_active_markers_view_to
-    // so the column switch's selection clear stays consistent with the digit
+    // so the column switch's selection clear stays consistent with the view
     // selectors' path. The two call sites
     // for paste_apply / paste_state_apply live in different files
     // (prompt.cpp / input_key_dispatch.cpp), only one of which holds
@@ -72,7 +72,7 @@ struct PhaseResetPropagate {
     // dependency is a pointer set after construction, mirroring the settings
     // editor's `input` back-wire). Reaches switch_active_audio_view_to so a
     // completed paste can land in target view through the SAME chokepoint the
-    // digit selectors use.
+    // view selectors use.
     GuiInputHandler*      input = nullptr;
 
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,

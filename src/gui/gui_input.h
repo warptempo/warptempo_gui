@@ -50,6 +50,7 @@ namespace GuiKeys {
     constexpr GuiKey BracketLeft  = 0x005b;
     constexpr GuiKey Backslash    = 0x005c;
     constexpr GuiKey BracketRight = 0x005d;
+    constexpr GuiKey Grave        = 0x0060;
 
     // Navigation, editing, control.
     constexpr GuiKey BackSpace  = 0xff08;
@@ -574,7 +575,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 //
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
-// reaches on_key only as a character inside an editor); the digits 5..9;
+// reaches on_key only as a character inside an editor); the digits 4..9;
 // Backspace, and every letter the ladder never tests (A, E, T, W, X, Y — Y
 // left the class 2026-08-31 for the keep-centered lamp's toggle and came BACK
 // on 2026-09-14 with that lamp's deletion; V left it on 2026-09-01, the
@@ -680,12 +681,15 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The render pair: the dispatch and the archival one.
         case GuiKeys::R: return ca || cas;
 
-        // The zoom-out and the four absolute view selectors (the magnification
-        // level markers column's joined 2026-09-15; the digits took the
-        // workflow's order 2026-09-17 — S+W, S+M, T+P, T+W).
+        // The zoom-out and the four absolute view selectors. S+M SITS OFF THE
+        // DIGIT RUN, ON THE BACKTICK (architect 2026-09-19): the magnification
+        // level pass is done once, at the beginning of a piece and by sight,
+        // so it is the view you never come back to and it gives up its digit
+        // to the three you live in. The backtick is S+M, bare 1 is S+W, bare 2
+        // T+P, bare 3 T+W, and 4..9 bind nothing.
+        case GuiKeys::Grave:
         case GuiKeys::Digit0: case GuiKeys::Digit1:
         case GuiKeys::Digit2: case GuiKeys::Digit3:
-        case GuiKeys::Digit4:
             return bare;
 
         // The settings editor, and the load in place / render player.
@@ -745,12 +749,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
-static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
+static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 1 is the S+W view selector and bare 4 the T+W one; "
-              "digits 5..9 are unbound");
+              "the bare backtick is the S+M view selector, bare 1 the S+W one "
+              "and bare 3 the T+W one; digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "
               "arms (the notification stack's clear), and its top-level "

@@ -1595,7 +1595,7 @@ struct ScrollDragState {
 //     for the next pair to pinch about a song point the fingers had left.
 //   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE since codex round 20, ON THE
 //     WRITERS THEMSELVES since round 21 — the S/T, W/P and A/B assignment sites,
-//     with every command that reaches one (the bare 1/2/3/4 selectors, Ctrl+Tab,
+//     with every command that reaches one (the four view selectors, Ctrl+Tab,
 //     the view bar, the settings keys, the
 //     propagate pastes and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
@@ -1852,10 +1852,12 @@ enum class RedesignButton {
     // Row 1, the menu row: the LEFT-FLOATING anchors, then the four of the
     // RIGHT-FLOATING view bar (2026-08-02; the fourth joined 2026-09-15 with
     // the magnification level markers column, as T+M at the bar's right end,
-    // and became S+M, the bar's second, when the column's home moved to
-    // source view and the digits took the workflow's order) in their painted
-    // order — the absolute view selectors S+W / S+M / T+P / T+W, which are
-    // bare 1/2/3/4 (architect 2026-09-17).
+    // and became S+M when the column's home moved to source view) in their
+    // painted order — the absolute view selectors S+M / S+W / T+P / T+W,
+    // which are the backtick and bare 1/2/3 (architect 2026-09-19: the
+    // magnification level pass is done once, at the beginning of a piece and
+    // by sight, so S+M leads the bar as the first thing done to a piece and
+    // leaves the digit run to the three views you live in).
     //
     // SETTINGS PAINTS LAST IN THE LEFT FLOAT (architect 2026-08-03, moving it
     // behind the NAVIGATION anchor that then sat between it and File). The float
@@ -1930,7 +1932,7 @@ enum class RedesignButton {
     // (is_av_sync_stats_key, toggle_av_sync_stats, redesign_button_shift_
     // admits). kHelpPopupItems, DropdownMenu::Help and every arm that named
     // the anchor went with it.)
-    File, Edit, Settings, ViewSW, ViewSM, ViewTP, ViewTW,
+    File, Edit, Settings, ViewSM, ViewSW, ViewTP, ViewTW,
     // Row 3, the tabs — TWO SLOTS, ALWAYS, AND THE A/B PAIR IN EVERY STATE
     // since 2026-08-18: they say "A" and "B", they light the active tab, they
     // carry their ordinary tooltips, and their Ctrl+Tab switches the active
@@ -1985,7 +1987,8 @@ enum class RedesignButton {
     // their own group here from 2026-09-04 to 2026-09-15, one button per
     // axis toggling Source/Target and Warp/Phase Reset away from home. The
     // architect deleted the category whole (bare `t` and bare `p` with it):
-    // the axes stay reachable through bare 1/2/3/4 and the view bar alone,
+    // the axes stay reachable through the four view selectors and the view bar
+    // alone,
     // which is what a two-button group bought nothing over. The row's group
     // count drops by one with it.)
     //
@@ -2872,8 +2875,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
-        case RedesignButton::ViewSW:
         case RedesignButton::ViewSM:
+        case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
             return true;
@@ -3037,7 +3040,7 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // leaving a hollowed group behind: IconAudioView stopped opening a group and
 // nothing takes its place, so the leader count fell by one and no other
 // group's membership moved (bare `t`/`p` and the lamps bought the group
-// nothing the view bar and bare 1/2/3/4 do not already answer). The paragraphs
+// nothing the view bar and the four view selectors do not already answer). The paragraphs
 // below are the group's history up to that deletion, kept for the record.
 //
 // SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
@@ -5077,8 +5080,8 @@ struct AppState {
 
     // Active markers view — THE COLUMN AXIS, three letters (architect
     // 2026-09-15): 'W' = warp markers, 'P' = phase reset markers, 'M' =
-    // magnification level markers. Selected absolutely by bare 1/2/3/4 and the
-    // view bar. Determines which marker collection is visible / edited /
+    // magnification level markers. Selected absolutely by the four view
+    // selectors and the view bar. Determines which marker collection is visible / edited /
     // hit-tested and which colour set its flags wear. 'M' PAIRS WITH SOURCE
     // VIEW ALONE (architect 2026-09-16; target view alone for its first day):
     // GuiActiveViews::switch_active_markers_view_to refuses 'M' outside
@@ -5092,7 +5095,7 @@ struct AppState {
     // Active audio view: 'S' = source (the authored timeline), 'T' =
     // target (the engine's deformed-output timeline). Orthogonal to
     // active_markers_view ('W'/'P'/'M'), and written by the same writers that
-    // axis has: the bare 1/2/3/4 absolute selectors (with the view bar, which
+    // axis has: the four absolute view selectors (with the view bar, which
     // synthesizes them) and the settings editor's typed `active_audio_view=`.
     // While 'T', app.viewport_start_sample / playhead_cursor_sample /
     // zoom_level carry target-frame values; the live fields'
@@ -6737,7 +6740,7 @@ struct AppState {
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
-    //   LIT — the view bar's four (bare 1/2/3/4), the
+    //   LIT — the view bar's four (the backtick and bare 1/2/3), the
     //   COMMIT-FACED SAVE (Ctrl+S, the act itself), BOTH row-3 tabs
     //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — the tabs switch tabs in here like everywhere else), the
@@ -7118,7 +7121,7 @@ struct AppState {
         //     lists, and the S/T flip re-lays the same list on another domain.
         //     The clear sits at each axis's own chokepoint — switch_active_-
         //     audio_view_to and GuiActiveViews::select_active_markers_view — which is
-        //     what makes the 1/2/3/4 selectors and the view bar inherit it by
+        //     what makes the four view selectors and the view bar inherit it by
         //     composition.
         //   - entry and exit (the whole-struct reset at both owners)
         //   - bare HOME / END (2026-08-05), the mode's SHIFT FORMER's press,
@@ -8615,7 +8618,7 @@ inline bool folder_overlay_stands(const AppState& a) {
 // which is the surface that actually needed it.
 //
 // THE `h` HISTORY VIEW WAS NEVER IN IT: a MODE is not a MODAL. The view keeps
-// the keyboard, its own allowlist including the view bar's 1/2/3/4, so its
+// the keyboard, its own allowlist including the view bar's four selectors, so its
 // header stays focused and its bar stays blue.
 //
 // DAMAGE: the activation hook damages the top strip (and the standing modal
@@ -11497,7 +11500,7 @@ inline const ViewState& active_view_state(const AppState& a) {
 // as any other authoring chord.) WHAT
 // IT TAKES AWAY IS THE COLUMN SWITCH AND THE PAIRED MARCH (architect
 // 2026-09-10): the mode is lit for the column you are in, so the
-// absolute view selectors 1/2/3/4 — which compose the column handler body
+// absolute view selectors — which compose the column handler body
 // (bare `p` itself deleted with its view lamp 2026-09-15) — refuse while the
 // lamp stands;
 // and Ctrl+Shift+Tab refuses with them, its own tab switch clearing the
@@ -11599,7 +11602,7 @@ inline bool any_tab_read_only(const AppState& a) {
 //     verbs, Edit flag, Up/Down);
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
-//     writable one does), the view bar's four (bare 1/2/3/4 are on
+//     writable one does), the view bar's four (the backtick and bare 1/2/3 are on
 //     read_only_key_blocked's allowlist) and the
 //     PADLOCK — so those arms read this predicate and nothing else. Nothing
 //     is lost by the omission: the two locks are MUTUALLY EXCLUSIVE
@@ -11710,9 +11713,9 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // stands, at that button's own arm.)
         case RedesignButton::IconBpm:
         // THE VIEW BAR'S FOUR (architect 2026-09-10; the magnification level
-        // selector joined 2026-09-15, S+M and bare 2 since 2026-09-17):
-        // bare 1/2/3/4 run the audio-view and column switches, so the delta
-        // blocks all four unconditionally
+        // selector joined 2026-09-15, and its key is the backtick since
+        // 2026-09-19): the backtick and bare 1/2/3 run the audio-view and
+        // column switches, so the delta blocks all four unconditionally
         // — iteration_lock_key_blocked's first test is a flat chord list
         // and not a "would this press move the column" question, which is why
         // S+W under a lit lamp in S+W refuses too. WHAT MEMBERSHIP BUYS THEM
@@ -11722,8 +11725,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // has no disabled paint and the bar's unfocused ground is not one —
         // and the hover outline is the one thing that follows the grey; the
         // account of what a reader sees is at their enabled arm below.
-        case RedesignButton::ViewSW:
         case RedesignButton::ViewSM:
+        case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
         // (WALK BOTH TABS WAS A MEMBER from 2026-09-10 until its deletion on
@@ -13933,7 +13936,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the VIEW BAR'S FOUR
-//     (bare 1/2/3/4), the zoom pair, follow, the
+//     (the backtick and bare 1/2/3), the zoom pair, follow, the
 //     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
@@ -14224,7 +14227,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // available in history mode. Leave that for the player, the picker and
     // the AV stats"). So the answer here is the ANCHOR OWNER'S,
     // menu_anchor_dead_in_mode, which File alone survives; every other
-    // button on the row and off it — the view bar's 1/2/3/4 included, whose
+    // button on the row and off it — the view bar's four included, whose
     // grey shows through view_bar_focused's ground swap — is dead. The
     // anchors' OPEN reads that same owner at toggle_dropdown's guard, and the
     // veil consumes every press but a live anchor's
@@ -14620,10 +14623,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // (iteration_lock_greys) with no read-only term — bare `p` and bare
         // `t` were each read-only-legal, a column or S/T switch authoring
         // nothing. The architect deleted both buttons whole that day; the
-        // view bar's four below carry the same delta on for the digits.)
+        // view bar's four below carry the same delta on for the selectors.)
         // THE VIEW BAR'S FOUR TAKE THAT SAME DELTA (architect 2026-09-10; the
         // magnification level selector joined 2026-09-15),
-        // and they left the never-grey group above for it: bare 1/2/3/4 COMPOSE
+        // and they left the never-grey group above for it: the four selectors COMPOSE
         // the column chokepoint, so they are the four chords the column
         // quartet blocks (iteration_lock_key_blocked's first test), and a
         // press that cannot act must not act — the roster's own rule, applied
@@ -14659,21 +14662,21 @@ inline bool redesign_button_enabled(const AppState& a,
         // three going dead together and the one that reports where you stand
         // being true whatever the lamp does. The ground, the box faces and
         // every metric are unchanged, and the row still has no tooltip, so the
-        // digit's own card is what says it in words and the lit Grid
+        // selector key's own card is what says it in words and the lit Grid
         // Iterations lamp one row down is what says why.
         //
         // NO READ-ONLY TERM, the column lamp's reading of the gate exactly:
-        // the digits are navigation, on read_only_key_blocked's allowlist, so
-        // a locked tab with the lamp dark leaves all four live — and with it
-        // lit there is no locked tab to be standing on, the two locks being
+        // the selectors are navigation, on read_only_key_blocked's allowlist,
+        // so a locked tab with the lamp dark leaves all four live — and with
+        // it lit there is no locked tab to be standing on, the two locks being
         // mutually exclusive. AND THE `h` VIEW NEVER REACHES
-        // THIS ARM: its 1/2/3/4 are on the mode's allowlist, so the derived
-        // partition above answers LIVE for all four and the two modes' greys
-        // never meet on this row. THE CROPS NAMED "disabled" ARE THE UNFOCUSED
-        // WINDOW and never this bit (architect 2026-08-02; the record and the
-        // arithmetic are at kRedesignViewBarBg, render.h).
-        case RedesignButton::ViewSW:
+        // THIS ARM: the backtick and bare 1/2/3 are on the mode's allowlist,
+        // so the derived partition above answers LIVE for all four and the two
+        // modes' greys never meet on this row. THE CROPS NAMED "disabled" ARE
+        // THE UNFOCUSED WINDOW and never this bit (architect 2026-08-02; the
+        // record and the arithmetic are at kRedesignViewBarBg, render.h).
         case RedesignButton::ViewSM:
+        case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:
             return !iteration_lock_greys(a, b);
@@ -15483,18 +15486,18 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
     switch (b) {
         // THE VIEW BAR READS THE LIVE COMBINATION — both axes at once, which is
         // what an ABSOLUTE selector reports — so a button lights however the
-        // state was reached: a digit, a restore, a typed setting or one of
-        // these four. AT MOST ONE IS EVER LIT, and S+P lights NONE: that
+        // state was reached: a selector key, a restore, a typed setting or one
+        // of these four. AT MOST ONE IS EVER LIT, and S+P lights NONE: that
         // combination is deliberately keyless, so the bar has no button to give
         // it and all four read false there. That is the honest face, not a gap
         // — an unlit bar says "you are in the combination none of these
         // selects". (T+M has no button either because it is no state at all:
         // the magnification level markers column is source view only since
         // 2026-09-16.)
-        case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
-                                                a.active_markers_view == 'W';
         case RedesignButton::ViewSM:     return a.active_audio_view   == 'S' &&
                                                 a.active_markers_view == 'M';
+        case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
+                                                a.active_markers_view == 'W';
         case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'P';
         case RedesignButton::ViewTW:     return a.active_audio_view   == 'T' &&
@@ -16126,8 +16129,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
-        case RedesignButton::ViewSW:
         case RedesignButton::ViewSM:
+        case RedesignButton::ViewSW:
         case RedesignButton::ViewTP:
         case RedesignButton::ViewTW:     return {nullptr, nullptr};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
@@ -16168,7 +16171,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
-        // category: their axes are bare 1/2/3/4's and the view bar's alone now.)
+        // category: their axes are the four view selectors' and the view bar's
+        // alone now.)
         // THE TRIM REGION TOGGLE, TWO LINES: its twin IS Shift+[ the
         // maximizer, so the hint says so and the shift admission and the line
         // are the one fact the static_assert below keeps together. The

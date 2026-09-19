@@ -97,8 +97,8 @@ struct Viewport {
     //    the damaged frame; it joins the class rather than growing a second
     //    flag-only kick (the reason is stated at its site, active_views.cpp), and
     //    the settings active_markers_view= key rides it through the same
-    //    function. Bare 1/2/3/4, the ABSOLUTE VIEW SELECTORS (2026-08-01; a
-    //    fourth digit since 2026-09-15), add NO fourth site: they run the audio
+    //    function. The backtick and bare 1/2/3, the ABSOLUTE VIEW SELECTORS
+    //    (2026-08-01; a fourth since 2026-09-15), add NO fourth site: they run the audio
     //    view's and the column's handlers themselves, so their kicks are those
     //    two entries and this list is unchanged by them.
     //    The PROPAGATE PASTE'S TARGET-VIEW TAIL

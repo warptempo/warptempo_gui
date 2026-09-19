@@ -87,7 +87,7 @@ struct MagnificationLevelPropagate {
     Undo&               undo;
     const GuiAudio&     audio;
     // Owned end-of-paste view switch goes through switch_active_markers_view_to
-    // so the column switch's selection clear stays consistent with the digit
+    // so the column switch's selection clear stays consistent with the view
     // selectors' path. The two call sites for paste_apply / paste_state_apply
     // live in different files (prompt.cpp / input_key_dispatch.cpp), only one
     // of which holds GuiActiveViews — keeping the dependency here covers both
@@ -109,7 +109,7 @@ struct MagnificationLevelPropagate {
     // constructed (the input handler holds this propagate by reference, so the
     // dependency is a pointer set after construction, the sibling's own
     // shape). Reaches switch_active_audio_view_to so a completed paste can
-    // land in source view through the SAME chokepoint the digit selectors use.
+    // land in source view through the SAME chokepoint the view selectors use.
     GuiInputHandler*      input = nullptr;
 
     MagnificationLevelPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,

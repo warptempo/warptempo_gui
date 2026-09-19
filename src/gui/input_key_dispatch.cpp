@@ -398,8 +398,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
-    // keys whole with their view lamps on 2026-09-15 (bare 1/2/3/4 are the
-    // axes' only keyboard road now, immediately below). Before that: each
+    // keys whole with their view lamps on 2026-09-15 (the four view selectors
+    // are the axes' only keyboard road now, immediately below). Before that: each
     // used to write the warp store on one edge — entering target view exited
     // iteration mode through wipe_iter_state, clearing every bracket and
     // pushing an undo entry, admitted here because iter brackets are
@@ -414,17 +414,18 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+W / S+M / T+P / T+W —
-    // the magnification level selector joined 2026-09-15, a switch like the
-    // other three, and the digits took the workflow's order 2026-09-17). They are
+    // The backtick and bare 1 / 2 / 3, the ABSOLUTE view selectors (S+M / S+W
+    // / T+P / T+W — the magnification level selector joined 2026-09-15, a
+    // switch like the other three, and took the backtick off the end of the
+    // digit run 2026-09-19). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no
     // store write at all (the S->T iter wipe that was the one exception is
     // deleted — see above). Nothing new to weigh.
     const bool is_view_selector =
-        ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
+        ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
+          key == GuiKeys::Digit2 || key == GuiKeys::Digit3) &&
          !ctrl && !shift && !alt);
     const bool is_tab_cycle =
         (!ctrl && !alt && key == GuiKeys::Tab) ||
@@ -648,10 +649,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // THREE MEMBERS wide since 2026-09-19 (bare `k` left it that day, the
 // paragraph below carrying its record; bare `t`/`p`, the individual axis
 // toggles, were deleted whole with their view lamps on 2026-09-15, so the
-// column switch's only remaining road is the digits below — see the S/T
+// column switch's only remaining road is the selectors below — see the S/T
 // paragraph's retirement note further down): THE COLUMN SWITCH's three chords — the
-// ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3 / 4 (four since the magnification
-// level selector joined 2026-09-15), which run the `t` and `p` handler
+// ABSOLUTE VIEW SELECTORS, the backtick and bare 1 / 2 / 3 (four since the
+// magnification level selector joined 2026-09-15), which run the `t` and `p` handler
 // BODIES (unchanged; only their bare keys are gone) and so carry the column
 // with them (architect 2026-09-10: the mode is lit for the column you are IN,
 // which is also what retired the stamped column that stood beside the mode
@@ -832,11 +833,11 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3/4 —
-    // bare `t`/`p`, the two individual axis toggles, were deleted whole with
-    // their view lamps on 2026-09-15, so the digits are its only road now),
-    // BARE `o` (the read-only toggle — the lock's own reachability, the
-    // header) and the paired march. Bare-exact on all five and
+    // DELTA (a), ahead of every admission: the column switch (the backtick and
+    // bare 1/2/3 — bare `t`/`p`, the two individual axis toggles, were deleted
+    // whole with their view lamps on 2026-09-15, so the selectors are its only
+    // road now), BARE `o` (the read-only toggle — the lock's own reachability,
+    // the header) and the paired march. Bare-exact on all five and
     // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
     // them. (BARE `k` STOOD HERE TOO until 2026-09-19, and the header carries
     // why it left. They lived in an
@@ -844,9 +845,9 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
     // state unreachable, and the owner went with it.)
     if (!alt && !ctrl && !shift &&
-        (key == GuiKeys::O ||
+        (key == GuiKeys::O || key == GuiKeys::Grave ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-         key == GuiKeys::Digit3 || key == GuiKeys::Digit4))
+         key == GuiKeys::Digit3))
         return true;
     if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
@@ -3038,15 +3039,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // which this mode cannot hide.
     const bool is_sync_external = is_sync_external_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
-    // bare-exact, read off its own arm in on_key: the 1/2/3/4 absolute
-    // selectors, which compose the `t`/`p` handler bodies and are their only
-    // road since the architect deleted the individual `t`/`p` keys and their
-    // view lamps 2026-09-15. Admitting a shape the dispatch does not bind
-    // would admit a press that then does nothing, which is the allowlist
-    // telling a lie about itself.
+    // bare-exact, read off its own arm in on_key: the four absolute selectors
+    // on the backtick and bare 1/2/3, which compose the `t`/`p` handler bodies
+    // and are their only road since the architect deleted the individual
+    // `t`/`p` keys and their view lamps 2026-09-15. Admitting a shape the
+    // dispatch does not bind would admit a press that then does nothing, which
+    // is the allowlist telling a lie about itself.
     const bool is_view_selector =
-        ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) && bare);
+        ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
+          key == GuiKeys::Digit2 || key == GuiKeys::Digit3) && bare);
     // ADD TO SELECTION (architect 2026-09-17), bare-exact — exactly the
     // dispatch arm's own spelling and the roster row's, so the key, the button
     // and this admission cannot drift. The argument is in the header's bullet:
@@ -8024,7 +8025,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // looking, and they stay there for the duration of the lamp being
         // lit."). It needs NO STAMP to be, and had one for a few hours of that
         // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
-        // (the four absolute view selectors bare 1/2/3/4, at
+        // (the four absolute view selectors, the backtick and bare 1/2/3, at
         // iteration_lock_key_blocked; the view bar's four buttons grey with
         // the sentence), so the column cannot move while the lamp stands
         // and `iteration_column_lit` reads the LIVE column. There is no
@@ -9400,7 +9401,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // unbound-keys ruling), the strict-modifier tail's other half and its
         // identical answer — this dispatch is the end of the bare road, so a
         // key reaching here binds nothing at all in this state (bare `u`, `g`,
-        // `v`, `,` and `.` outside the `h` view; the digits 5..9; a keysym with
+        // `v`, `,` and `.` outside the `h` view; the digits 4..9; a keysym with
         // no spelling), and saying nothing is what identifies it as unbound.
         // AND THE GATES AGREE WITH THIS ARM SINCE 2026-09-01 (U4): the
         // read-only lock, the two drag gates and the loading gate carded those

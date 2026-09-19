@@ -354,7 +354,7 @@ inline constexpr double kRedesignDisabledMix = 0.322;
 // no longer can, in either direction: the icon row greys for two MODES since
 // 2026-08-15 — the `h` view and the read-only lock — and this row greys for the
 // ITERATION lock since 2026-09-10. The view bar is untouched by the icon row's
-// two, its 1/2/3/4 being navigation.)
+// two, its four selectors being navigation.)
 //
 // kRedesignViewBarBgUnfocused is NUMERICALLY EQUAL to kRedesignRowGround
 // #292c30 and is NOT it: that constant is the FOCUSED CHROME ground, this one is

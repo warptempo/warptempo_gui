@@ -449,9 +449,10 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
 // Color" bar, the one row the redesign had left out) reborn as the four
-// ABSOLUTE VIEW SELECTORS: S+W, S+M, T+P, T+W, which are bare 1/2/3/4 (the
-// digits' order is the workflow's, architect 2026-09-17, and the bar reads in
-// it left to right).
+// ABSOLUTE VIEW SELECTORS: S+M, S+W, T+P, T+W, which are the backtick and
+// bare 1/2/3 (architect 2026-09-19: S+M is done once, at the beginning of a
+// piece, so it leads the bar and sits off the digit run; the bar reads in the
+// selectors' order left to right).
 //
 // THE FLOAT'S ROOM, re-measured 2026-09-09 when the HELP ANCHOR was deleted
 // (and 2026-09-04 for the ITERATIONS one): the LEFT float is 173 authored px
@@ -548,16 +549,17 @@ struct ViewBarButtonDef {
     char           audio;
     char           column;
 };
-// THE TABLE'S ORDER IS THE PAINT ORDER AND THE DIGITS' ORDER: the walk below
-// lays the buttons left to right as listed, and each is its digit's button
+// THE TABLE'S ORDER IS THE PAINT ORDER AND THE SELECTOR KEYS' ORDER: the walk
+// below lays the buttons left to right as listed, and each is its key's button
 // (kToolbarChords, input_pointer.cpp, keeps the same row order).
 constexpr ViewBarButtonDef kViewBarButtons[] = {
-    // The warp markers first, then the magnification level markers column
-    // (architect 2026-09-15, source view only), then the phase resets, then
-    // T+W for fine tuning — the workflow's order (architect 2026-09-17) —
-    // each spelled audio letter then column letter.
-    {RedesignButton::ViewSW, 'S', 'W'},
+    // The magnification level markers column leads (architect 2026-09-19): it
+    // is the first thing done to a piece and the one view never come back to,
+    // so it heads the bar and its key is the backtick off the end of the digit
+    // run, the three lived-in views taking bare 1/2/3. Each is spelled audio
+    // letter then column letter.
     {RedesignButton::ViewSM, 'S', 'M'},
+    {RedesignButton::ViewSW, 'S', 'W'},
     {RedesignButton::ViewTP, 'T', 'P'},
     {RedesignButton::ViewTW, 'T', 'W'},
 };
@@ -935,8 +937,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
     // chronometer-start lit in Phase Reset, one button per axis where four
     // radios had stood before that day's collapse. The architect deleted the
-    // whole category 2026-09-15, group slot and separator with it: bare 1/2/3/4
-    // and the view bar are the axes' only faces now. The two glyphs the
+    // whole category 2026-09-15, group slot and separator with it: the four
+    // view selectors and the view bar are the axes' only faces now. The two glyphs the
     // radios' retired halves wore, document-export and speedometer, had
     // already left icons::Icon with the collapse; the picks and their
     // runners-up are still recorded at that enum.)
@@ -1584,7 +1586,7 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+W / S+M / T+P / T+W (the right
+    // "Settings", and the RIGHT one, the view bar's S+M / S+W / T+P / T+W (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
     // Navigation anchor deleted from between them 2026-08-15, Edit arriving
     // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and
@@ -1617,9 +1619,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // deleted it — the keys had all grown buttons of their own.)
     //
     // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
-    // div, five faces from its own crops, and four chord buttons that are bare
-    // 1/2/3/4. Its layout, its box model and its face rule are at kViewBarButtons
-    // and view_bar_face above; its colors at kRedesignViewBarBg (render.h).
+    // div, five faces from its own crops, and four chord buttons that are the
+    // backtick and bare 1/2/3. Its layout, its box model and its face rule are
+    // at kViewBarButtons and view_bar_face above; its colors at
+    // kRedesignViewBarBg (render.h).
     const GuiRect row = top_menu_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
 
@@ -2015,8 +2018,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // the BAR'S UNFOCUSED GROUND (view_bar_focused's modal term), the
             // two halves of one disabled face rather than a doubled cue — it
             // was that ground alone that showed the state until 2026-09-10.
-            // THE `h` VIEW REACHES NEITHER: its 1/2/3/4 are on the mode's
-            // allowlist, so all four answer enabled there.
+            // THE `h` VIEW REACHES NEITHER: its four selectors are on the
+            // mode's allowlist, so all four answer enabled there.
             const double keep = (face.enabled || face.selected)
                                     ? 1.0 : kRedesignDisabledMix;
             // Toward the BAR'S ground, which is what a dead selector sits on:

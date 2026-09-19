@@ -529,12 +529,12 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // replaces S/T, W/P and A/B wholesale. So the rule now
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
-//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (bare
-//     1/2/3/4, the settings `active_audio_view=` key, the two crossings, bare
+//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the four
+//     view selectors, the settings `active_audio_view=` key, the two crossings, bare
 //     `i`'s own, the undo restore's tag and the two propagate pastes' audio
 //     half), below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P/M writer, below
-//     its same-mode and M-outside-source refusals (bare 1/2/3/4 and the
+//     its same-mode and M-outside-source refusals (the four view selectors and the
 //     settings key through select_active_markers_view, the S/T writer's
 //     landing of S+M on W, the two propagate pastes, which reach this helper
 //     direct, and
@@ -557,7 +557,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The bare 1/2/3/4 selectors, the view bar's four buttons (the two icon-row
+// The four view selectors, the view bar's four buttons (the two icon-row
 // VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
 // writers and inherit it.
 //
@@ -3906,7 +3906,7 @@ private:
     // refusal (a refused entry moves no column), the column writer's own
     // refusal of 'M' outside source view being the invariant's other half.
     // The SET-TO form exists for the callers that name a view rather than
-    // an axis: the bare 1/2/3/4 absolute selectors (and the settings editor's
+    // an axis: the four absolute view selectors (and the settings editor's
     // typed `active_markers_view=M`, which crosses to source through it), the
     // phase-reset propagate's land-in-target tail and the magnification level
     // propagate's land-in-source tail, and — both since 2026-08-28 —

@@ -847,11 +847,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // true OR grid iterations stands (authoring_locked, app_state.h).
     //
     // THE LIST BELOW IS THE READ-ONLY ONE. The iteration lock's is that list
-    // MINUS THE COLUMN SWITCH — the four absolute view selectors bare 1 / 2 /
-    // 3 / 4, which run the S/T and column chokepoint BODIES and so carry the
-    // column with them (the individual bare `t`/`p` keys were deleted whole
-    // with their view lamps 2026-09-15, so the digits are the axis's only
-    // road); the mode is lit for the column you are in —
+    // MINUS THE COLUMN SWITCH — the four absolute view selectors, the backtick
+    // and bare 1 / 2 / 3, which run the S/T and column chokepoint BODIES and so
+    // carry the column with them (the individual bare `t`/`p` keys were deleted
+    // whole with their view lamps 2026-09-15, so the selectors are the axis's
+    // only road); the mode is lit for the column you are in —
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
     // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
@@ -902,8 +902,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead
-    //   - 1/2/3/4 (no mods)      → the absolute view selectors (S+W / S+M /
-    //                              T+P / T+W), the ONE road onto both view
+    //   - backtick, 1/2/3        → the absolute view selectors (S+M / S+W /
+    //     (no mods)                T+P / T+W), the ONE road onto both view
     //                              axes: each composes the S/T chokepoint
     //                              switch_active_audio_view_to with the column
     //                              entry GuiActiveViews::select_active_markers_view
@@ -1122,7 +1122,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tempo-image step were deleted, marker_drag.h, leaving bare Left/Right in
     // W+target a consumed refusal at the split below), the phase-reset
     // propagate paste (it starts in source view and lands in target through
-    // handle_active_audio_view_toggle, bare 1/2/3/4's own chokepoint now that
+    // handle_active_audio_view_toggle, the view selectors' own chokepoint now that
     // bare `t` is deleted), the iteration-bracket wipe, and — since
     // 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
     // Ctrl+N, Delete and the flag editor's Return open, each admitted in
@@ -1130,16 +1130,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // (BARE `t` TOGGLED VIEW-DOMAIN (S <-> T) HERE FROM 2026-08-01 TO
     // 2026-09-15, when the architect deleted the key whole with its icon-row
-    // view lamp: source/target is reachable through bare 1/2/3/4 and the view
-    // bar alone now. handle_active_audio_view_toggle is the body it called —
-    // it stays, and bare 1/2/3/4 below are its only remaining keyboard road.)
+    // view lamp: source/target is reachable through the four view selectors
+    // and the view bar alone now. handle_active_audio_view_toggle is the body
+    // it called — it stays, and the selectors below are its only remaining
+    // keyboard road.)
 
-    // BARE 1 / 2 / 3 / 4 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01;
-    // a fourth 2026-09-15; THE DIGITS ARE THE WORKFLOW ORDER):
-    // `1` is S+W, `2` is S+M, `3` is T+P, `4` is T+W — the warp markers first,
-    // then magnification, then the phase resets roughly ballpark, then T+W
-    // for fine tuning (architect 2026-09-17; the record is in
-    // tempo-and-home-view.md). They
+    // THE BACKTICK AND BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect
+    // 2026-08-01; a fourth 2026-09-15; the backtick 2026-09-19):
+    // the backtick is S+M, `1` is S+W, `2` is T+P, `3` is T+W — the one view
+    // done once, at the beginning of a piece and by sight, sits off the digit
+    // run, and the three the work lives in take the digits (architect
+    // 2026-09-19; the record is in tempo-and-home-view.md). They
     // name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
     // consumed no-op — that is the whole difference from the deleted `t` and
     // `p` toggles. (S+P deliberately has NO key: phase resets author in target view,
@@ -1182,28 +1183,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the state the handler writes rather than through a new return value —
     // one owner, no signature change.
     //
-    // BARE 2 IS S+M (architect 2026-09-17; it was bare 4 and T+M from
-    // 2026-09-15), the magnification level markers column, which is SOURCE
-    // VIEW ONLY: leaving target for it never refuses, and the same
-    // audio-first order lands the column entry on a finished source view.
+    // THE BACKTICK IS S+M (architect 2026-09-19; it was bare 2 from
+    // 2026-09-17 and bare 4 with T+M from 2026-09-15), the magnification level
+    // markers column, which is SOURCE VIEW ONLY: leaving target for it never
+    // refuses, and the same audio-first order lands the column entry on a
+    // finished source view. The key sits off the digit run because that pass
+    // is done once, at the beginning of a piece and by sight, so the three
+    // views the work lives in keep bare 1/2/3.
     //
     // THE COLUMN ENTRY IS ASKED BEFORE THE AUDIO SWITCH AND RUN AFTER IT.
     // Leaving S+M for T+P or T+W, the audio switch itself lands the column on
     // W (its T-never-pairs-with-M owner, switch_active_audio_view_to), so a
-    // test read after it would find the column already right (bare 4) and
+    // test read after it would find the column already right (bare 3) and
     // skip the entry's coincidence auto-select; the column change is what
     // this press asked for, so it is decided off the state the press started
     // in, and the entry (GuiActiveViews::select_active_markers_view) is
     // idempotent on its writer and runs its own tail whichever writer moved
     // the column. A refused target entry moves no column either way — the
     // landing sits past the refusal in that body — so S+M stays whole.
-    if ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-         key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
+    if ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
+         key == GuiKeys::Digit2 || key == GuiKeys::Digit3) &&
         !ctrl && !shift && !alt) {
         const char want_audio   =
-            (key == GuiKeys::Digit1 || key == GuiKeys::Digit2) ? 'S' : 'T';
-        const char want_markers = (key == GuiKeys::Digit2) ? 'M'
-                                : (key == GuiKeys::Digit3) ? 'P'
+            (key == GuiKeys::Grave || key == GuiKeys::Digit1) ? 'S' : 'T';
+        const char want_markers = (key == GuiKeys::Grave)  ? 'M'
+                                : (key == GuiKeys::Digit2) ? 'P'
                                                            : 'W';
         const bool column_changes = (app.active_markers_view != want_markers);
         switch_active_audio_view_to(want_audio);
@@ -3937,7 +3941,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // THE SAME-VIEW NO-OP, the set-to form's own first line: naming the view you
     // are already in changes nothing — no stop, no translation, no editor
     // teardown, no kick. It is what lets a caller that names a COMBINATION (the
-    // 1/2/3/4 selectors, the undo restore) hand this axis its tag unconditionally
+    // four view selectors, the undo restore) hand this axis its tag unconditionally
     // instead of spelling the guard by hand. The flip above can never reach it.
     if (target_view != 'S' && target_view != 'T') return;
     if (target_view == app.active_audio_view) return;
@@ -3998,7 +4002,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // outside source view, the other half (GuiActiveViews::
     // switch_active_markers_view_to). Leaving S+M for target view LANDS THE
     // COLUMN ON W FIRST, through the writer itself, so every road that names
-    // 'T' inherits it with no refusal of its own: bare 3 and 4 (whose own
+    // 'T' inherits it with no refusal of its own: bare 2 and 3 (whose own
     // column entry then runs its coincidence auto-select), the settings
     // editor's typed `active_audio_view=T`, the undo/redo restore of an entry
     // authored in target view, Shift+S's crossing from S+M and bare `i`'s
@@ -4013,7 +4017,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // the selection empty the translation below has no focus to re-express.
     // The writer runs no coincidence auto-select, which is right for the
     // restore and the typed key (neither is a column entry the user asked
-    // for); bare 3 and 4 ask for one and get it at their own arm.
+    // for); bare 2 and 3 ask for one and get it at their own arm.
     if (target_view == 'T' && app.active_markers_view == 'M') {
         active_views.switch_active_markers_view_to('W');
     }
@@ -4023,7 +4027,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // the PAINTED diff-flag list, and the switch is about to rebuild that list
     // (the contract, and the full clearer list, are at AppState::HistoryMode::
     // focus). This axis's clear lives HERE, at the S/T chokepoint, so the bare
-    // 1/2/3/4 selectors and every other caller of this chokepoint inherit it
+    // four view selectors and every other caller of this chokepoint inherit it
     // with no second route; the column axis clears at its own switch. Placed
     // BELOW the refusal above (a switch that never
     // happened must not clear anything) and far above the kick at the tail,
@@ -4195,7 +4199,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // the trim every frame, through trim_overlay_span, which re-crosses the
     // bounds into whichever domain is live. Nothing here re-shows it.
     // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped: the four absolute
-    // view selectors bare 1/2/3/4 (and the view bar, which synthesizes them),
+    // view selectors on the backtick and bare 1/2/3 (and the view bar, which
+    // synthesizes them),
     // the settings editor's `active_audio_view=` GUI-key twin, the two
     // crossings Shift+S and Ctrl+Shift+S, bare `i`'s own crossing into target,
     // the undo/redo restore's audio-view tag, and the two propagate pastes'
@@ -4401,7 +4406,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     kick_waveform_sync and the target render's ensure_ready — arrives by
 //     construction.
 //   * A REFUSED ENTRY STOPS THE WHOLE PRESS, the absolute view selectors' own
-//     rule (bare 1/2/3/4, on_key): entering target view can fail its validity
+//     rule (the backtick and bare 1/2/3, on_key): entering target view can fail its validity
 //     gate (the tripwire class, unreachable from program-written input, silent
 //     on screen), and dropping into the column while the audio view stayed
 //     behind would

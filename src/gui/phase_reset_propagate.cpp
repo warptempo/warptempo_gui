@@ -822,7 +822,7 @@ void PhaseResetPropagate::paste_state_apply() {
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
 // wholesale region hide, then the selection set (the playhead land rides with
 // it, after the swap):
-//   * switch_active_audio_view_to is the SAME chokepoint the digit selectors run
+//   * switch_active_audio_view_to is the SAME chokepoint the view selectors run
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
 //     the region hide, kick_waveform_sync, and target_render.ensure_ready all
 //     fire exactly once). It is the SET-TO spelling, so naming 'T' from a

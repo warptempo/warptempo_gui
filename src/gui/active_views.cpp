@@ -71,7 +71,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // landing the column on W before it leaves SOURCE being the other
 // (switch_active_audio_view_to, input_handler.cpp). A refusal writes nothing,
 // clears nothing and is silent: every caller that names 'M' crosses to source
-// first and reads the column back (bare 2 and the view bar, the settings
+// first and reads the column back (the backtick and the view bar, the settings
 // editor's typed `active_markers_view=M`, the undo restore of an 'M' entry),
 // and leaving target never refuses, so the refusal is reached only through a
 // caller that never crossed at all, and the caller's own read of the state is
@@ -210,12 +210,13 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 // THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect
 // 2026-09-15, when the column axis grew its third letter and a toggle stopped
 // naming a destination): the writer above, then the entry's own tail. Its
-// callers are bare 1/2/3/4 (and the view bar, which synthesizes them) and the
+// callers are the backtick and bare 1/2/3 (and the view bar, which
+// synthesizes them) and the
 // settings editor's typed `active_markers_view=`; the writer's other callers
 // reach it directly (its inventory).
 //
 // THE TAIL RUNS WHENEVER THE COLUMN IS THE TARGET AFTER THE WRITE, whichever
-// writer moved it: bare 3 or 4 from S+M finds the column already on W, the
+// writer moved it: bare 2 or 3 from S+M finds the column already on W, the
 // audio switch having landed it there on its way into target view (bare 1,
 // S+W, changes the column itself with the audio untouched), and still owes the
 // column entry's coincidence auto-select. A write the writer REFUSED ('M'
