@@ -916,6 +916,13 @@ bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
         // governed it, so the cells read exactly what they read a moment
         // earlier and only their grey goes. The leader's own pair is read
         // once, ahead of any write.
+        //
+        // AND EVERY COPY IS LEGAL FOR THE MARKER THAT KEEPS IT, with no guard
+        // owed here: the TIE refused unless the leader's bracket lay inside
+        // the INTERSECTION of the members' windows (iter_tie_verdict_over,
+        // app_state.h), and inside the intersection is inside every member's
+        // own window — so a leaver's copy is a bracket that marker could have
+        // authored for itself.
         const GuiM governing = v[static_cast<size_t>(leader)];
         if (leader_selected) {
             // THE LEADER DISSOLVES THE WHOLE GROUP: it is the tie's one
@@ -945,6 +952,14 @@ bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
     // is a sorted set of store indices and the store is sorted by time, so its
     // first member is the earliest), and every follower's own bracket cleared
     // — a follower carries none by rule, the leader's governing it.
+    //
+    // THE CLEAR IS A BELT AND IT DESTROYS NOTHING: the verdict refused this
+    // press if any non-leader carried a bracket (iter_tie_verdict_over,
+    // app_state.h — a tie may not silently eat session work the undo domain
+    // cannot restore), so every marker this blanks is already blank. It stays
+    // because the FIELD's contract is that a follower holds no bracket of its
+    // own, and the write that makes a follower is the write that should say
+    // so.
     const int fresh  = next_free_iter_tie_group(v);
     int       leader = -1;
     for (int idx : selected)
@@ -976,7 +991,7 @@ bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
 // all that moved, the store's generation carrying the flag cache's rebuild. No
 // map input changed, so no image and no render.
 void GuiInputHandler::run_iter_tie_toggle() {
-    const IterTieVerdict verdict = iter_tie_toggle_verdict(app);
+    const IterTieVerdict verdict = iter_tie_toggle_verdict(app, audio);
     if (verdict.refusal) {
         notifications.notify(AppState::NotificationClass::Normal,
                              verdict.refusal);

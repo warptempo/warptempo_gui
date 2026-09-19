@@ -737,13 +737,18 @@ struct PhaseHopWindow {
 // re-verification, which existed because nothing clamps this bracket
 // retroactively: the walls hold by construction now.
 //
-// TWO READERS: the bound editor's commit (refuses a value outside the window
-// — GuiFlagEditor::commit_phase_iter_bound_edit, which names THE PIECE EDGE
-// outright, that being the only wall a COMMITTED value can break: the phase
-// grammar is a sign and one digit under a two-byte field cap, so what arrives
-// is already inside the digit wall) and the step's landing owner
-// (phase_iter_bound_step_landing, app_state.h, which CLAMPS into the window
-// and then at the partner, and is the one road the DIGIT wall closes), the
-// directional face reaching it through that landing.
+// ONE READER since 2026-09-19: phase_iter_bound_window_over (app_state.h),
+// the fold that INTERSECTS these windows across a tie's members — one sweep
+// cell displaces every tied reset by the same hop count, so a bound must fit
+// them all. The two roads onto a hop bound reach it through that fold's TIE
+// face rather than through this: the bound editor's commit REFUSES outside
+// the tie's window (GuiFlagEditor::commit_phase_iter_bound_edit, which names
+// THE PIECE EDGE outright, that being the only wall a COMMITTED value can
+// break: the phase grammar is a sign and one digit under a two-byte field
+// cap, so what arrives is already inside the digit wall) and the step's
+// landing owner CLAMPS into it and then at the partner
+// (phase_iter_bound_step_landing, app_state.h, the one road the DIGIT wall
+// closes), the directional face reaching it through that landing. An UNTIED
+// reset walks one member, so both roads still see exactly this answer.
 PhaseHopWindow phase_reset_hop_window(const AppState& app,
                                       const GuiAudio& audio, int idx);
