@@ -3585,9 +3585,9 @@ inline constexpr int kEditPopupItemCount =
 // reason is re-derived at toggle_dropdown.)
 
 // The published-rect array's size: the widest menu decides it, so a menu that
-// grows a row grows the array with no second edit. (File's one row cannot be
-// the widest and is in the expression anyway — the rule is "the widest menu",
-// not "the menus that happen to be long".)
+// grows a row grows the array with no second edit. (No menu is left out of
+// the expression on the assumption it will always be the shortest — the rule
+// is "the widest menu decides it", not "the menus that happen to be long".)
 inline constexpr int kDropdownMaxItemCount =
     std::max({kFilePopupItemCount, kEditPopupItemCount,
               kSettingsPopupItemCount});
