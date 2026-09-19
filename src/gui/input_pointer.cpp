@@ -2189,16 +2189,23 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // and for the crossing.
         const int flag_hit = hit_test_flag(app, audio, x, y);
         if (flag_hit >= 0) {
-            // ADD TO SELECTION GOVERNS THE WHOLE ARM (architect 2026-09-12,
-            // the ruling that let the two lamps stand lit together): while the
-            // sticky ctrl stands, EVERY plain flag press on the live lane takes
+            // ADD TO SELECTION GOVERNS THE PAYLOAD BOX (architect 2026-09-12
+            // for the arm, 2026-09-19 for the box it stops at): while the
+            // sticky ctrl stands, a plain press on a flag's PAYLOAD takes
             // the membership-toggle branch, which acts at the press and arms
             // NOTHING (run_marker_click_act's `toggle` term, this file), so no
-            // crossing can begin a drag of either axis on any flag. That is
+            // crossing can begin a drag of either axis there. That is
             // true whatever the value drag posture says, so the term is ranked
             // first and outside it: the Arrow is what a point arming nothing
             // wears everywhere in this map, and a box still promising the
             // horizontal move would promise a gesture the press cannot begin.
+            //
+            // THE TWO BOUND CELLS ARE OUTSIDE IT, on the press's own rule:
+            // the lamp folds nothing there, so a plain press still arms
+            // whatever the posture arms and the cue has to be the posture's.
+            // The term asks the SAME hit test the press asks, and the pending
+            // arm above asks the pending's own cell, so the cue cannot flip at
+            // the press or at the crossing.
             //
             // AND IT IS THE `h` VIEW'S TERM TOO SINCE 2026-09-17 (architect):
             // in there the flags are the mode's DIFF flags, and the lamp is a
@@ -2213,11 +2220,14 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // own click. The cursor promises the gesture, and the gesture now
             // exists there. The value drag's own term needs no such fork — its
             // posture answers false whole in the view, at its own declaration.
-            if (app.add_to_selection)
+            // A DIFF FLAG PAINTS NO CELLS, so the box test below answers
+            // Payload over the whole of one (hit_test_flag_cell, app_state.cpp)
+            // and the lamp's Arrow covers that view exactly as it did.
+            const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
+            if (app.add_to_selection && cell == MarkerCell::Payload)
                 return GuiCursorKind::Arrow;
             if (value_drag_posture(app)) {
-                return value_drag_target(app, audio, flag_hit,
-                                         hit_test_flag_cell(app, audio, x, y))
+                return value_drag_target(app, audio, flag_hit, cell)
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
             // A MAGNIFICATION LEVEL FLAG promises the HORIZONTAL move
@@ -3898,15 +3908,18 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
 // single-marker model has no meaning for, and a range select is a MEMBERSHIP
 // act whose subject is the marker rather than the box. The PLAIN press on
 // those boxes is untouched — single-select, address the cell, land — which is
-// what makes a cell reachable at all. THE `k` FOLD RIDES THE SAME RULE: a
-// lit Add to selection turns a plain press into the toggle, so on the two
-// BOUND cells the pair cannot compose AT ALL, and it is THIS no-op
-// that is the reason: with the sticky ctrl lit the cells could not be
-// addressed by pointer, so bare `k` is refused while grid iterations stands
-// (iteration_lock_key_blocked, with the button greyed) and bare `i`'s ON edge
-// PUTS ADD TO SELECTION OUT (architect 2026-09-12, selection_consumed —
-// raising the cells is an act that ends a selecting pass). Lit-and-lit has no
-// producer from either side.
+// what makes a cell reachable at all. AND THE `k` FOLD STOPS AT THE PAYLOAD
+// BOX FOR THAT REASON (architect 2026-09-19): the sticky ctrl turns a plain
+// press on the PAYLOAD into the toggle and leaves the two BOUND cells' plain
+// press exactly as it is — single-select, address, land — so the mode's own
+// authoring surface stays reachable by pointer with both lamps lit, which is
+// what admits bare `k` under grid iterations at all. The lamp therefore
+// cannot produce a `toggle` for the guard below to eat, and what that guard
+// still eats is the REAL ctrl press and the shift press this paragraph is
+// about. (Bare `i`'s ON edge still PUTS ADD TO SELECTION OUT — architect
+// 2026-09-12, selection_consumed — because raising the cells is an act that
+// ends a selecting pass, not because the cells would be unreachable under
+// it.)
 // It runs the stop, the three-way selection fork, the
 // land, the region hide and — plain only — the double-click consume-open,
 // and then ARMS the pending for the two things that genuinely belong to a
@@ -3938,11 +3951,25 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // of the stop.
     const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
     // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
-    // 2026-08-18): while the mode stands, a PLAIN press on a flag is a ctrl
-    // press in every respect — same branch, same land, same nothing-armed
-    // tail — because the mode's whole definition is "run the ctrl branch".
-    // Folding it into the term rather than growing a fourth arm is what makes
-    // that true by construction instead of by two bodies agreeing.
+    // 2026-08-18): while the mode stands, a PLAIN press on a flag's PAYLOAD
+    // BOX is a ctrl press in every respect — same branch, same land, same
+    // nothing-armed tail — because the mode's whole definition is "run the
+    // ctrl branch". Folding it into the term rather than growing a fourth arm
+    // is what makes that true by construction instead of by two bodies
+    // agreeing.
+    //
+    // AND IT STOPS AT THAT BOX (architect 2026-09-19): a plain press on a
+    // LOWER or UPPER cell is a plain press however the mode stands, so a cell
+    // keeps the single-select, the addressed cell and the land it has with the
+    // lamp dark. The bound cells are a separate system, authored one marker at
+    // a time, so a mode whose whole job is to BUILD a multi-marker selection
+    // has nothing to say about them — and the narrowing is what lets this lamp
+    // stand lit under grid iterations at all, the sticky ctrl no longer taking
+    // away the plain press the cells are addressed by (the record of the
+    // refusal it replaced is at iteration_lock_key_blocked,
+    // input_key_dispatch.cpp). THE CURSOR MAP CARRIES THE SAME TERM
+    // (pointer_cursor_kind, this file), so the cue on a cell promises what the
+    // press will do there.
     //
     // `&& !shift` IS THE SHIFT RULE AND IT IS LOAD-BEARING (the architect:
     // "Shift+click needs no rule here, because it has its own gesture"). The
@@ -3952,7 +3979,8 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // `ctrl` is already true — and ctrl+shift never reaches this owner at all
     // (the ctrl call site is ctrl-EXACT, and the plain/shift one passes
     // ctrl=false), so this term reads on the mode's arm alone.
-    const bool toggle = ctrl || (app.add_to_selection && !shift);
+    const bool toggle = ctrl || (app.add_to_selection && !shift &&
+                                 cell == MarkerCell::Payload);
     // THE PAYLOAD IS THE MEMBERSHIP SURFACE, and this is the whole of that
     // rule (the head of this body argues it): a MODIFIED press — the toggle
     // on either of its producers, or the shift range — landing on any box but
@@ -7663,21 +7691,23 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // the skips on the jump's landing, Play on the launch, Copy value on
         // its eligibility — so this line consumes exactly the presses whose
         // chord would be a consumed no-op. Inside the view the derived
-        // partition adds its own: the PLAY/STOP button, the FOUR ARROWS, the
-        // verbs and ADD TO SELECTION (Space, the bare arrows and bare `k` are
-        // consumed there), while the two skips — the mode's absolute jumps —
+        // partition adds its own: the PLAY/STOP button, the FOUR ARROWS and
+        // the verbs (Space and the bare arrows are consumed there), while the
+        // two skips — the mode's absolute jumps —
         // and the marker-walk TWO — its diff-flag cycle — take no partition
         // grey. The arrows joined the in-view list on
         // 2026-08-18 by being PAINTED in the view at all — the cluster swap
-        // that hid them went with the history companions. ADD TO SELECTION
-        // GAINED A RESTING REFUSAL ON 2026-09-10 out of the iteration lock,
-        // mirroring THE ONE LAMP IT CANNOT STAND BESIDE — grid iterations,
-        // bare `k` being delta (a)'s fourth member (the VALUE DRAG was a
-        // second until 2026-09-12, when the two lamps were allowed to stand
-        // lit together; WALK BOTH TABS took the same refusal for the march
-        // until its deletion on 2026-09-14). The READ-ONLY lock still does not
-        // carry it, a selection being navigation; it is the second lock that
-        // reaches it (the arm is at redesign_button_enabled).
+        // that hid them went with the history companions. ADD TO SELECTION IS
+        // IN NEITHER LIST ANY MORE: the `h` view ADMITTED bare `k` on
+        // 2026-09-17, the lamp producing that view's own multi-selection, and
+        // its RESTING REFUSAL out of the iteration lock — carried from
+        // 2026-09-10, when the sticky ctrl would have taken the bound cells'
+        // plain press away — went on 2026-09-19 with the narrowing that leaves
+        // that press alone (the VALUE DRAG was a second such refusal until
+        // 2026-09-12, when the two lamps were allowed to stand lit together;
+        // WALK BOTH TABS took the same refusal for the march until its
+        // deletion on 2026-09-14). The READ-ONLY lock never carried it, a
+        // selection being navigation.
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
                                     playback, target_render, tc.id))
             return true;

@@ -2200,9 +2200,11 @@ enum class RedesignButton {
     // card). ADD TO SELECTION NO LONGER REFUSES IT (2026-09-12, the lamps
     // resolved by use case): a lit lamp is ADMITTED and CONSUMED by an
     // accepted ON edge (selection_consumed, both columns) rather than
-    // blocking one — the reverse direction (bare `k` under a lit `i`) is
-    // the one surviving card, the cells being unreachable under a sticky
-    // ctrl. THE MODE LIVES IN TARGET VIEW ALONE since 2026-09-13: pressed
+    // blocking one — and since 2026-09-19 the reverse direction is no
+    // refusal either, the sticky ctrl folding a plain press into the toggle on
+    // the PAYLOAD BOX alone, so the cells keep the plain press they are
+    // addressed by and the two lamps stand lit together.
+    // THE MODE LIVES IN TARGET VIEW ALONE since 2026-09-13: pressed
     // in source view the ON edge crosses to target first, a refused entry
     // stopping the whole press (the record is at the `i` arm,
     // input_key_dispatch.cpp). Its glyph is mathmode, the italic f beside a
@@ -2688,18 +2690,24 @@ enum class RedesignButton {
     // this arrival.
     //
     // ITS GATES ARE ITS OWN, like the four verbs beside it, and they are NOT
-    // theirs: the `h` view GREYS it through the derived partition (bare `k` is
-    // neither the mode's vocabulary nor on its allowlist), while the READ-ONLY
+    // theirs: the `h` view LEAVES IT LIT SINCE 2026-09-17 (bare `k` is on
+    // history_mode_key_blocked's allowlist now — the lamp produces that view's
+    // own multi-selection, the one road onto it a finger has — and the derived
+    // partition follows the gate with no arm of its own), while the READ-ONLY
     // LOCK LEAVES IT LIT — a selection is navigation, not authored content,
     // the same reasoning that keeps the trim gestures legal on a locked tab,
     // so bare `k` is on read_only_key_blocked's allowlist and this button is
     // not one of the ones the READ-ONLY lock greys (that membership's one
     // authoritative statement is the read-only arm's own case list in
     // redesign_button_enabled, which is why no count of it is restated here).
-    // THE ITERATION LOCK IS A DIFFERENT ANSWER since 2026-09-10: bare `k` is on
-    // that gate's delta (a) and this button is in iteration_lock_greys, because
-    // the mode takes away the PLAIN flag click the bound cells are addressed by
-    // — a modified press on a bound cell being the pointer's silent non-event.
+    // THE ITERATION LOCK WAS THE ONE DIFFERENT ANSWER, from 2026-09-10 to
+    // 2026-09-19: bare `k` sat on that gate's delta (a) and this button in
+    // iteration_lock_greys, because the mode took away the PLAIN flag click
+    // the bound cells are addressed by — a modified press on a bound cell
+    // being the pointer's silent non-event. THE MODE IS NARROWED INSTEAD
+    // (architect 2026-09-19): the fold reaches the PAYLOAD BOX alone, a cell's
+    // plain press survives it, and both the refusal and this button's grey
+    // went with it — so nothing greys this button in any state.
     // THE VALUE DRAG'S POSTURE EXCLUDES IT NOT AT ALL: the posture is the
     // view's (value_drag_posture) and this lamp may stand lit under it.
     // It keeps the group's Icon* naming: a roster
@@ -4863,7 +4871,8 @@ struct AppState {
     int           shift_range_anchor = -1;
 
     // ADD TO SELECTION — THE STICKY CTRL (architect 2026-08-18). While this
-    // bit is set, a PLAIN FLAG CLICK takes the ctrl branch of the marker click
+    // bit is set, a PLAIN CLICK ON A FLAG'S PAYLOAD BOX takes the ctrl branch
+    // of the marker click
     // act: toggle the clicked marker's membership, land the playhead on the
     // focus the toggle leaves behind, and keep the rest of the selection. IT
     // IS NOT A NEW ACT — ctrl+click has always done exactly that, and the mode
@@ -4881,10 +4890,13 @@ struct AppState {
     // SESSION SCRATCH, NEVER SERIALIZED, like shift_range_anchor beside it and
     // history_cumulative: no sidecar key, no undo entry, no snapshot field.
     //
-    // SCOPE: FLAG HITS ONLY. run_marker_click_act is the one act owner and it
-    // runs on a resolved marker hit and nothing else, so the empty marker
-    // lane — its plain click, its double-click create — never sees this bit at
-    // all.
+    // SCOPE: THE PAYLOAD BOX OF A FLAG HIT, AND NOTHING ELSE.
+    // run_marker_click_act is the one act owner and it runs on a resolved
+    // marker hit, so the empty marker lane — its plain click, its double-click
+    // create — never sees this bit at all; and since 2026-09-19 the fold's own
+    // term asks WHICH BOX, so a press on a marker's LOWER or UPPER iteration
+    // cell is a plain press however this lamp stands (the term, and why the
+    // cells are outside the mode, are at run_marker_click_act).
     //
     // AND IT REACHES THE `h` VIEW'S DIFF FLAGS SINCE 2026-09-17 (architect,
     // from the tablet: "it should work in the Git history… so that I can
@@ -4966,20 +4978,26 @@ struct AppState {
     // delete, a disable, an inherit toggle, a copy, a paste or a BPM sweep says
     // the building is over.
     //
-    // ITS ONE REMAINING EXCLUSION IS GRID ITERATIONS, and it is a refusal in
-    // exactly one direction. Bare `k` is REFUSED while the lamp is lit
-    // (iteration_lock_key_blocked, the Add to Selection button greying with
-    // it): the sticky ctrl turns a plain flag press into a modified one, and a
-    // MODIFIED press on a bound cell is the pointer's silent non-event
-    // (run_marker_click_act), so a lit sticky ctrl would leave the mode's own
-    // authoring surface unreachable by pointer. The other direction is no
-    // longer a refusal at all — bare `i`'s ON edge calls selection_consumed and
-    // puts this lamp out, the mode being a use case that ends the selecting —
-    // so the pair cannot stand together and neither road cards for it.
+    // IT HAS NO EXCLUSION LEFT (architect 2026-09-19). GRID ITERATIONS WAS
+    // THE LAST ONE, a refusal in exactly one direction: bare `k` was REFUSED
+    // while the lamp was lit (iteration_lock_key_blocked, the Add to Selection
+    // button greying with it), because the sticky ctrl turned a plain flag
+    // press into a modified one and a MODIFIED press on a bound cell is the
+    // pointer's silent non-event (run_marker_click_act), so a lit sticky ctrl
+    // would have left the mode's own authoring surface unreachable by pointer.
+    // THE FOLD IS NARROWED INSTEAD — it reaches the PAYLOAD BOX alone, so a
+    // plain press on a Lower or Upper cell is a plain press however this lamp
+    // stands and the cells stay the pointer's. What the pair buys is the
+    // pointer road onto a multi-marker selection under a lit lamp: several
+    // markers ctrl-clicked on their flag boxes, and on glass this lamp is the
+    // only ctrl there is. The other direction stopped being a refusal on
+    // 2026-09-12 — bare `i`'s ON edge calls selection_consumed and puts this
+    // lamp out, the mode being a use case that ends the selecting — so the
+    // pair now stands lit together and neither road cards for it.
     // THE VALUE DRAG IS NO EXCLUSION EITHER: its posture may stand true
-    // beside this lamp harmlessly and by construction — a plain flag press
-    // under the sticky ctrl arms nothing, so no drag of either axis can begin
-    // (the account is at value_drag_posture).
+    // beside this lamp harmlessly and by construction — a plain press on the
+    // PAYLOAD under the sticky ctrl arms nothing, so no tempo drag can begin
+    // there (the account is at value_drag_posture).
     bool          add_to_selection = false;
 
     // STEMS ARE NO LONGER A SELECTION VISUAL AT ALL (row 5, architect). Every
@@ -11219,20 +11237,18 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // lock direction would need the face to fork on a state the mode
         // makes unreachable.
         case RedesignButton::IconReadOnly:
-        // ADD TO SELECTION (architect 2026-09-10, kept by his 2026-09-12
-        // re-ruling of the lamps as the ONE refusal of that pair). Bare `k` is
-        // delta (a)'s fourth member, and the reason is the cells' own
-        // reachability: while the sticky ctrl stands, a plain flag press is a
-        // MODIFIED press, and a modified press on a Lower or Upper cell is the
-        // pointer's SILENT NO-OP (run_marker_click_act, input_pointer.cpp — no
-        // toggle, no range, no land, no address, no arm) — so the mode's only
-        // authoring surface could not be addressed by pointer at all. It is the
-        // padlock's shape in what it protects — the sticky ctrl writes no store
-        // and pushes nothing — and unconditional here for the padlock's reason
-        // too: the chord TOGGLES, and forking on the direction would need a
-        // face to fork on a state the pair makes unreachable (bare `i`'s ON
-        // edge puts this lamp out, so lit-and-lit has no producer).
-        case RedesignButton::IconAddToSelection:
+        // (ADD TO SELECTION WAS A MEMBER from 2026-09-10 until 2026-09-19, and
+        // the architect retired the refusal by NARROWING THE MODE. The reason
+        // it had been one was the cells' own reachability: while the sticky
+        // ctrl stood, a plain flag press was a MODIFIED press, and a modified
+        // press on a Lower or Upper cell is the pointer's SILENT NO-OP
+        // (run_marker_click_act, input_pointer.cpp — no toggle, no range, no
+        // land, no address, no arm), so the mode's only authoring surface
+        // could not be addressed by pointer at all. The fold reaches the
+        // PAYLOAD BOX alone now, so a cell's plain press survives the lamp,
+        // bare `k` left delta (a) at the keyboard gate, and this face has
+        // nothing left to say — the two lamps stand lit together, which is the
+        // pointer road onto a multi-marker selection under the mode.)
         // BPM ITERATIONS (architect 2026-09-10, that evening: "we should card
         // the exit, because it is still one button automatically affecting the
         // other"). It was the mode's SECOND EXIT until then — admitted by the
@@ -11517,11 +11533,14 @@ inline bool magnification_level_step_direction_actionable(const AppState& a,
 // ON WHAT, and a press on a non-target — a label ref, a phase reset's
 // payload — is the silent non-event.
 //
-// IT MAY BE TRUE WHILE ADD TO SELECTION IS LIT, harmlessly and by
-// construction: the sticky ctrl turns every plain flag press into the
-// membership toggle, which arms nothing, so no crossing exists to begin either
-// drag — and the cursor map's flag arm asks that lamp FIRST and answers the
-// Arrow on the live lane (pointer_cursor_kind, input_pointer.cpp).
+// IT MAY BE TRUE WHILE ADD TO SELECTION IS LIT, and the two compose PER BOX
+// since 2026-09-19: the sticky ctrl turns a plain press on the PAYLOAD into
+// the membership toggle, which arms nothing, so no crossing exists THERE to
+// begin either drag — and the cursor map's flag arm asks that lamp FIRST for
+// that box and answers the Arrow. ON A BOUND CELL the lamp folds nothing, so
+// the plain press arms what this posture arms and the map falls through to
+// value_drag_target exactly as it does with the lamp dark
+// (pointer_cursor_kind, input_pointer.cpp).
 //
 // THREE READERS, re-grepped 2026-09-13: the THRESHOLD CROSSING
 // (input_pointer.cpp's pending-marker-press arm, which begins the value drag
@@ -11885,8 +11904,11 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
-//     which is a use case rather than an act: the mode's bound cells are
-//     addressed by a PLAIN press, which the sticky ctrl would eat;
+//     which is a use case rather than an act: raising the bound cells says the
+//     selecting pass is over. It is not a reachability fix and has not been
+//     one since 2026-09-19 — the sticky ctrl folds on the PAYLOAD BOX alone
+//     now, so the cells would be addressable by pointer with the lamp left
+//     lit;
 //   * THE `h` VIEW'S REVERT, bare `v` (architect 2026-09-17, the day the
 //     sticky ctrl reached that view's diff flags — GuiInputHandler::
 //     run_history_revert, input_key_dispatch.cpp, past the past-EOF wall and
@@ -11896,10 +11918,14 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     hands the user back to the live lane, where a lamp left lit would make
 //     his next plain flag click add rather than replace.
 // THE VALUE DRAG'S TEMPO COMMIT IS A MEMBER OF THE CLASS WITH NO LINE OF ITS
-// OWN, and it needs none by construction: while this lamp stands a plain flag
-// press takes the membership-toggle branch and ARMS NOTHING, so no value drag
-// can ever begin (the pair's harmlessness is argued at value_drag_posture) —
-// a call there could not run.
+// OWN, and it needs none by construction: the tempo is the PAYLOAD BOX's own
+// value, and while this lamp stands a plain press on that box takes the
+// membership-toggle branch and ARMS NOTHING, so a tempo drag can never begin
+// under it (the pair's harmlessness is argued at value_drag_posture) — a call
+// there could not run. A BOUND CELL'S drag can begin under the lamp since
+// 2026-09-19, the fold having narrowed off the cells, and it is outside this
+// class either way: a bound commit writes a session bracket, pushes nothing
+// and spends no selection.
 //
 // WHAT IS NOT A CALLER, and why:
 //   * THE LEFT / RIGHT POSITION NUDGE — a group press REFUSES WHOLE
@@ -12721,9 +12747,12 @@ inline constexpr const char* kIterationLockCard =
 // refusing under it, and the value drag and add to selection could both stand
 // lit, harmlessly and by construction (the value drag's lamp itself is gone
 // since 2026-09-13, its posture the view's) — so all three refusals are gone and no
-// reader is left for either sentence. The lock's own kIterationLockCard above
-// is untouched: bare `k` under a lit lamp still refuses, because the sticky
-// ctrl would leave the bound cells unreachable by pointer.)
+// reader is left for either sentence. THE LAST OF THE PAIR'S REFUSALS WENT ON
+// 2026-09-19: bare `k` under a lit lamp answered the lock's own
+// kIterationLockCard above until then, and the architect retired that one too
+// by narrowing the sticky ctrl to the PAYLOAD BOX, which leaves the bound
+// cells reachable by pointer with both lamps lit. That card keeps every other
+// reader it has.)
 
 // THE ITERATION LOCK'S UNDO PAIR (architect 2026-09-10: "They just don't go in
 // the undo stack at all; they're considered transient by design" — so while
@@ -14154,10 +14183,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // out rather than refusing under it — raising the bound cells is the
         // act that says the selecting is over — so the state this arm used to
         // grey for cannot arise from the press it greyed, and bare `i` is live
-        // whatever the sticky ctrl is doing. The exclusion's other direction
-        // stands and is the membership above: bare `k` under a lit lamp would
-        // leave the cells unreachable by pointer, so Add to Selection greys
-        // there. (The VALUE DRAG composes with this mode freely — under it
+        // whatever the sticky ctrl is doing. THE EXCLUSION'S OTHER DIRECTION
+        // WENT ON 2026-09-19: the sticky ctrl folds on the PAYLOAD BOX alone
+        // now, so the cells keep the plain press they are addressed by, bare
+        // `k` is admitted under a lit lamp and Add to Selection greys nowhere.
+        // (The VALUE DRAG composes with this mode freely — under it
         // the posture is armed on both columns, the cells being its targets —
         // and it has had no lamp since 2026-09-13.)
         // AND GRID ITERATIONS NEVER LIGHTS ON THE MAGNIFICATION LEVEL COLUMN
@@ -14568,30 +14598,30 @@ inline bool redesign_button_enabled(const AppState& a,
             if (!payload_eligible_marker(a, audio, a.last_selected_marker))
                 return false;
             break;
-        // ADD TO SELECTION MIRRORS THE TWO LAMPS IT CANNOT STAND BESIDE
-        // (architect 2026-09-10, NO SILENT SWAPS: "every mutual exclusion is a
-        // refusal with a card, a greyed button and the reason in its
-        // tooltip"), and nothing else. Its chord authors nothing, so the
+        // ADD TO SELECTION MIRRORS NOTHING AND NEVER GREYS (architect
+        // 2026-09-19). Its chord authors nothing, so the
         // READ-ONLY arm above deliberately does not carry it — a selection is
         // navigation, the same ruling that keeps the trim gestures legal on a
         // locked tab (2026-08-18) — and IT IS LIT IN THE `h` VIEW SINCE
-        // 2026-09-17 by that same derived partition at the top of this body,
+        // 2026-09-17 by the derived partition at the top of this body,
         // with nothing hand-listed either way: bare `k` is on
         // history_mode_key_blocked's allowlist now (architect — the lamp
         // produces that view's own multi-selection, the one road onto it a
         // finger has), so the face follows the gate exactly as it followed it
-        // into the grey before. WHAT IT DOES MIRROR IS THE PAIR OF REFUSALS ITS KEY NOW
-        // RAISES: GRID ITERATIONS, through the membership predicate — the
-        // sticky ctrl would take away the plain click the bound cells are
-        // addressed by, so bare `k` is delta (a)'s fourth member and the gate
-        // cards the lock's own sentence. THE VALUE DRAG IS NOT A SECOND REASON
+        // into the grey before. ITS LAST REFUSAL WAS GRID ITERATIONS, through
+        // the membership predicate, from 2026-09-10 until 2026-09-19: the
+        // sticky ctrl took away the plain click the bound cells are addressed
+        // by, so bare `k` sat in delta (a) and the gate carded the lock's own
+        // sentence. The fold reaches the PAYLOAD BOX alone now
+        // (run_marker_click_act, input_pointer.cpp), the cells keep that
+        // press, and the key is admitted — so a grey here would promise less
+        // than the key delivers. THE VALUE DRAG WAS NEVER A SECOND REASON
         // (architect 2026-09-12, and its lamp deleted 2026-09-13): its posture
         // may stand true under this lamp, harmless by construction
         // (value_drag_posture carries the account).
         // Its LAMP, not its enabled bit, is what reports the mode
         // (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
-            if (iteration_lock_greys(a, b)) return false;
             break;
         // THE FIVE HISTORY BUTTONS GREY OUTSIDE THE `h` VIEW (2026-08-18) — the
         // ICON ROW's own settled rule, which is where they live again since
@@ -16635,11 +16665,15 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   int mouse_x, int mouse_y);
 
 // WHICH CELL of that run the point landed on — the topmost rect's three
-// published boundaries compared against mouse_x, nothing more. Its ONE
-// consumer is the marker press (run_marker_click_act), which writes the
-// addressed cell from the answer and stamps it onto the double-click seed so
-// each cell can open its own editor (the MarkerCell block at
-// PendingMarkerPress states the whole rule). It answers Payload for a point
+// published boundaries compared against mouse_x, nothing more. TWO CONSUMERS,
+// re-grepped 2026-09-19. THE MARKER PRESS (run_marker_click_act) writes the
+// addressed cell from the answer, stamps it onto the double-click seed so
+// each cell can open its own editor, and asks it for the sticky ctrl's own
+// box test (the MarkerCell block at
+// PendingMarkerPress states the whole rule). THE CURSOR MAP
+// (pointer_cursor_kind, input_pointer.cpp) asks the same question of the
+// hovered point for those same two forks, so the cue and the press cannot
+// disagree about which box was hit. It answers Payload for a point
 // that hits no flag at all, which is the harmless answer: a caller with no
 // hit has nothing to fork. Same backward walk, same topmost-wins arbitration
 // as hit_test_flag — literally the same walk, so the two can never disagree

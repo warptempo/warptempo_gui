@@ -641,10 +641,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // first tests below.
 //
 // DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, and
-// FOUR MEMBERS wide since 2026-09-15 (bare `t`/`p`, the individual axis
-// toggles, were deleted whole with their view lamps that day, so the column
-// switch's only remaining road is the digits below — see the S/T paragraph's
-// retirement note further down): THE COLUMN SWITCH's three chords — the
+// THREE MEMBERS wide since 2026-09-19 (bare `k` left it that day, the
+// paragraph below carrying its record; bare `t`/`p`, the individual axis
+// toggles, were deleted whole with their view lamps on 2026-09-15, so the
+// column switch's only remaining road is the digits below — see the S/T
+// paragraph's retirement note further down): THE COLUMN SWITCH's three chords — the
 // ABSOLUTE VIEW SELECTORS bare 1 / 2 / 3 / 4 (four since the magnification
 // level selector joined 2026-09-15), which run the `t` and `p` handler
 // BODIES (unchanged; only their bare keys are gone) and so carry the column
@@ -662,23 +663,23 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // not put the lamp out; he ruled the road shut rather than widen the wider
 // list, so the padlock greys and cards `Turn off grid iterations first`.
 //
-// AND BARE `k`, ADD TO SELECTION (architect 2026-09-10, kept by his 2026-09-12
-// re-ruling of the lamps). It is the PADLOCK'S shape rather than the column
-// switch's: the sticky ctrl writes no store and pushes nothing, so the undo
-// domain has no interest in it either, and what the refusal protects is the
-// MODE'S OWN SURFACE. A lit sticky ctrl turns a PLAIN flag press into a
-// MODIFIED one, and a modified press on a Lower or Upper cell is the pointer's
-// SILENT NO-OP (run_marker_click_act) — so with both lamps lit the bound cells
-// could not be addressed by pointer at all. It refuses UNCONDITIONALLY, both
-// directions of its own toggle, for the padlock's own reason: forking on the
-// direction would need a face to fork on a state the pair makes unreachable.
-// The IconAddToSelection button greys with it (iteration_lock_greys,
-// app_state.h). THE OTHER HALF OF THAT PAIR IS NOT A REFUSAL ANY MORE and was
-// never a chord this gate could ask: bare `i`'s ON edge PUTS ADD TO SELECTION
-// OUT (architect 2026-09-12, its own arm calling selection_consumed — raising
-// the cells is an act that ends a selecting pass), where until then it refused
-// under it on a card. So the composed state still has no producer, by a write
-// on one side and this refusal on the other.
+// (BARE `k`, ADD TO SELECTION, WAS A FOURTH MEMBER from 2026-09-10 until
+// 2026-09-19, and the architect retired it by NARROWING THE MODE instead. The
+// refusal's whole subject was the bound cells' reachability: a lit sticky ctrl
+// turned a PLAIN flag press into a MODIFIED one, and a modified press on a
+// Lower or Upper cell is the pointer's SILENT NO-OP, so with both lamps lit
+// the mode's own authoring surface could not be addressed by pointer at all.
+// The fold reaches the PAYLOAD BOX alone now (the `toggle` term at
+// run_marker_click_act, input_pointer.cpp), a cell's plain press survives the
+// lamp, and there is nothing left for the refusal to protect — so the chord
+// left this delta and the IconAddToSelection button left iteration_lock_greys
+// with it. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
+// multi-marker selection under the lamp wants: several markers ctrl-clicked on
+// their flag boxes, and on glass this lamp is the only ctrl there is. Bare
+// `i`'s ON edge still PUTS ADD TO SELECTION OUT (architect 2026-09-12, its own
+// arm calling selection_consumed — raising the cells is an act that ends a
+// selecting pass), which is a use case ending rather than a refusal, so
+// neither direction cards.)
 //
 // THE OTHER HALF OF THE READ-ONLY RULE IS NOT A CHORD AT ALL and so is not
 // here either: bare `i`
@@ -770,8 +771,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // 2026-09-10 — THE VIEW BAR'S FOUR SELECTORS (four since the magnification
 // level selector joined the bar on 2026-09-15), the column
 // quartet's other three chords, THE PADLOCK, delta (a)'s third member (WALK
-// BOTH TABS was its second until that button's deletion on 2026-09-14), ADD TO SELECTION, its fourth, and BPM ITERATIONS,
-// which left delta (b) that evening. (THE TOGGLE MARKER COLUMN AND TOGGLE
+// BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
+// TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
+// retired that refusal and this membership lost the button with it), and BPM
+// ITERATIONS, which left delta (b) that evening. (THE TOGGLE MARKER COLUMN AND TOGGLE
 // AUDIO VIEW LAMPS were members here too, through 2026-09-15 — bare `p`'s and
 // bare `t`'s own faces (the latter since 2026-09-13) — and left the
 // membership whole when the architect deleted both buttons with their
@@ -808,14 +811,15 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // bare `t`/`p`, the two individual axis toggles, were deleted whole with
     // their view lamps on 2026-09-15, so the digits are its only road now),
     // BARE `o` (the read-only toggle — the lock's own reachability, the
-    // header), BARE `k` (ADD TO SELECTION — the header's fourth member) and
-    // the paired march. Bare-exact on all six and ctrl-and-shift exact on
-    // the march, exactly as their dispatch arms spell them. (They lived in an
+    // header) and the paired march. Bare-exact on all five and
+    // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
+    // them. (BARE `k` STOOD HERE TOO until 2026-09-19, and the header carries
+    // why it left. They lived in an
     // owner of their own until 2026-09-10, so that the gate could ask them
     // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
     // state unreachable, and the owner went with it.)
     if (!alt && !ctrl && !shift &&
-        (key == GuiKeys::O || key == GuiKeys::K ||
+        (key == GuiKeys::O ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
          key == GuiKeys::Digit3 || key == GuiKeys::Digit4))
         return true;
@@ -7849,18 +7853,16 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // ADD TO SELECTION NEEDS NO REFUSAL HERE AND NO LONGER HAS ONE
         // (architect 2026-09-12, the lamps resolved by use case: "most of the
         // conflicts are conflicts because they indicate different use cases; we
-        // analyze the use cases and target them as such"). The pair really
-        // cannot stand together — the sticky ctrl turns a PLAIN flag press into
-        // a modified one, and a modified press on a bound cell is the pointer's
-        // silent non-event, so the cells would be unreachable — but the USE
-        // CASES are sequential rather than rival: raising the bound cells is an
-        // act that says the selecting is over. So the ON EDGE below PUTS THAT
-        // LAMP OUT, through the act class's own writer, and the card that stood
-        // here is deleted. THE OTHER DIRECTION IS STILL A REFUSAL, because
-        // there the two orders differ: bare `k` under a lit lamp would take the
-        // cells away rather than finish a pass, so the gate eats it with the
-        // lock's own card (iteration_lock_key_blocked) and Add to Selection
-        // greys.
+        // analyze the use cases and target them as such"). The USE CASES are
+        // sequential rather than rival: raising the bound cells is an act that
+        // says the selecting is over. So the ON EDGE below PUTS THAT LAMP OUT,
+        // through the act class's own writer, and the card that stood here is
+        // deleted. THE OTHER DIRECTION IS NO REFUSAL EITHER SINCE 2026-09-19:
+        // the pair CAN stand together now, the sticky ctrl folding a plain
+        // press into the toggle on the PAYLOAD BOX alone, so a bound cell keeps
+        // the plain press it is addressed by; bare `k` left the lock's delta
+        // (a) that day (iteration_lock_key_blocked, above) and Add to
+        // Selection greys nowhere.
         // THE CROSSING, ON THE ON EDGE ALONE AND PAST EVERY REFUSAL ABOVE (the
         // gate's read-only and modal refusals and the piece-wide lock just
         // above), so a refused `i` switches nothing. switch_active_audio_view_to
@@ -8147,20 +8149,25 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // having been deleted that day (the whole contract, the posture and the
     // shift rule are at AppState::add_to_selection).
     //
-    // ITS ONE GATE IS GRID ITERATIONS, and it is refused a dispatch ABOVE this
-    // arm — bare `k` is a member of iteration_lock_key_blocked's delta (a), so
-    // the gate cards `Turn off grid iterations first` and this body never runs.
-    // The reason is the cells' reachability: while this lamp stands a plain
-    // flag press is a MODIFIED press, and a modified press on a bound cell is
-    // the pointer's silent no-op, so the mode's own authoring surface could not
-    // be addressed at all. It is FLAT — the chord refuses while the lamp
-    // stands, whichever way this toggle would have gone — and it costs no off
-    // edge, since bare `i`'s ON edge puts THIS lamp out (architect 2026-09-12)
-    // and lit-and-lit therefore has no producer.
-    // THE VALUE DRAG IS NO GATE: its posture (the view's since 2026-09-13)
-    // may stand beside this lamp harmlessly by construction — with this one
-    // lit no flag press arms anything, so that drag simply never begins and
-    // the cursor answers Arrow on the flag (value_drag_posture, app_state.h).
+    // IT HAS NO GATE AT ALL SINCE 2026-09-19 (architect). GRID ITERATIONS was
+    // its one gate from 2026-09-10: bare `k` sat in
+    // iteration_lock_key_blocked's delta (a), the gate carded `Turn off grid
+    // iterations first` and this body never ran under a lit lamp, because the
+    // sticky ctrl turned every plain flag press into a MODIFIED one and a
+    // modified press on a bound cell is the pointer's silent no-op — the
+    // mode's own authoring surface would have been unreachable. THE MODE IS
+    // NARROWED INSTEAD: the fold reaches the PAYLOAD BOX alone
+    // (run_marker_click_act, input_pointer.cpp), a bound cell's plain press is
+    // a plain press with both lamps lit, and the two stand together — which is
+    // what a pointer road onto a multi-marker selection under the lamp needs,
+    // this lamp being the only ctrl glass has. Bare `i`'s ON edge still puts
+    // THIS lamp out (architect 2026-09-12), a use case ending rather than a
+    // refusal.
+    // THE VALUE DRAG IS NO GATE EITHER: its posture (the view's since
+    // 2026-09-13) may stand beside this lamp harmlessly by construction — with
+    // this one lit a PAYLOAD press arms nothing, so no tempo drag begins there
+    // and the cursor answers Arrow on that box (value_drag_posture,
+    // app_state.h); a bound cell's drag is the posture's as usual.
     //
     // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
     // columns and both audio views (a selection is not authored content, so

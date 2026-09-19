@@ -170,9 +170,10 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // THE ITERATION LOCK IS THE OTHER LOCK AND ITS INVENTORY IS NOT THE SAME ONE
 // (architect 2026-09-10). It governs the keys by the identical rule — the
 // engine-key arm in commit() asks authoring_locked for both locks at once —
-// but its keyboard gate refuses SEVEN chords the read-only allowlist admits
+// but its keyboard gate refuses SIX chords the read-only allowlist admits
 // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
-// bare `k`, the four absolute view selectors and the paired march — bare
+// the four absolute view selectors and the paired march — bare `k` left that
+// delta 2026-09-19 with the sticky ctrl's narrowing, and bare
 // `t`/`p`, the individual axis toggles, were deleted with their view lamps
 // 2026-09-15, so the digits are the column/audio-view switch's only key now),
 // so a GUI-kind key whose chokepoint is one of those chords owes a gate of
@@ -198,9 +199,10 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // AND THE REST DO NOT, each because its own chord is live under a lit lamp:
 // `active_tab_view=` is Ctrl+Tab, and the per-tab
 // `viewport_start`/`zoom`/`playhead_cursor`/`trim_begin`/`trim_end` are
-// viewport and trim band, which neither lock protects. The delta's other two
-// chords — bare `k` and the paired march — have no key in this schema at all,
-// so nothing here can spell them. A change to that delta needs a hand edit
+// viewport and trim band, which neither lock protects. The delta's other
+// chord — the paired march — has no key in this schema at all, so nothing
+// here can spell it (bare `k` was a second such chord until 2026-09-19 and
+// had no key here either). A change to that delta needs a hand edit
 // here.
 void GuiSettingsEditor::open() {
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole

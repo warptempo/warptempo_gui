@@ -3160,10 +3160,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the FOUR CARDINAL ARROWS (bare Up/Down/Left/Right are neither the mode's
 // vocabulary nor on its allowlist, and they are painted in there at all only
 // since the cluster swap's deletion), the FOUR SINGLE-MARKER VERBS, COPY
-// VALUE, THE EDIT
-// FLAG BUTTON and ADD TO SELECTION (bare `j`, bare
-// Return and bare `k`, consumed in there like
-// the verbs' chords); the two
+// VALUE and THE EDIT
+// FLAG BUTTON (bare `j` and bare Return, consumed in there like
+// the verbs' chords); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
+// being on that mode's allowlist now and the lamp producing the view's own
+// multi-selection; the two
 // SKIPS and the MARKER-WALK GROUP'S TWO stay lit, Home/End being the mode's
 // own absolute jumps and Tab/Shift+Tab its diff-flag cycle (architect-confirmed
 // for the skips). Outside the view the four VERBS and the EDIT FLAG BUTTON
