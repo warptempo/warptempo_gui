@@ -507,14 +507,19 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::End,    false, false, false, false, true},                             // bare End
     // THE SINGLE-MARKER VERBS (2026-08-12), the right block's first group
     // since the architect moved them down here on 2026-08-18: drop, delete,
-    // disable toggle, inherit/collapse — authoring chords whose refusals
-    // (read-only, home view, empty selection, occupied frame) are the keys' own
-    // consumed no-ops, inherited whole through on_key. NOTHING IN THIS ROW
-    // CHANGED WITH THE LANE: the `h` view consumes all four outright and greys
+    // disable toggle and inherit/collapse, joined by FLATTEN on 2026-09-19
+    // (its own row and its whole record are immediately below) — authoring
+    // chords whose refusals (read-only, the home view, an empty selection, an
+    // occupied frame, a selection with nothing to flatten) are the keys' own
+    // consumed no-ops, inherited whole through on_key. NOTHING IN THESE ROWS
+    // CHANGED WITH THE LANE, AND THE GROUP TAKES ONE PAIR OF GATES WHATEVER
+    // ITS MEMBERSHIP: the `h` view consumes every one of these chords outright
+    // — none of them is on history_mode_key_blocked's allowlist — and greys
     // them through the derived partition, and the READ-ONLY lock greys them
-    // too (2026-08-15) — both are the BUTTONS' gates rather than the row's, so
-    // they are what makes this row's otherwise-unconditional face policy have
-    // an exception at all.
+    // too (2026-08-15; Flatten takes it inside its own predicate, through
+    // authoring_locked, which composes both locks). Both are the BUTTONS'
+    // gates rather than the row's, so they are what makes this row's
+    // otherwise-unconditional face policy have an exception at all.
     {RedesignButton::IconMarkerDrop,    GuiKeys::S,      false, false, false, false, true}, // bare s
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false, true}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false, true}, // Ctrl+D
@@ -8651,14 +8656,19 @@ bool GuiInputHandler::handle_history_mode_press(
             // RE-EXPRESSED OVER THE MODE'S LIST, exactly as
             // select_history_diff_flags_modified already re-expresses the live
             // selection model: out there the fold is
-            // `ctrl || (add_to_selection && !shift)` at run_marker_click_act's
-            // one toggle term, and in here the `!shift` half costs nothing to
-            // spell because SHIFT CANNOT REACH THIS ARM — the router's
+            // `ctrl || (add_to_selection && !shift && cell ==
+            // MarkerCell::Payload)` at run_marker_click_act's one toggle term,
+            // and in here BOTH of its extra halves cost nothing to spell,
+            // each because the structure already guarantees it.
+            // SHIFT CANNOT REACH THIS ARM — the router's
             // modified branch claims every shift and ctrl flag press above,
             // and the `if (ctrl || shift || alt) return true` line below it
-            // eats the rest, so PLAIN is all this arm ever sees. Adding a
-            // shift term here would restate a guarantee the structure already
-            // gives. THE EMPTY-LANE STRETCH IS UNTOUCHED, the lamp governing
+            // eats the rest, so PLAIN is all this arm ever sees. And A DIFF
+            // FLAG PAINTS NO CELLS: it publishes both cell boundaries at its
+            // own rect's right edge, so hit_test_flag_cell answers Payload
+            // over the whole of one and the payload half is vacuously true in
+            // here. Adding either term would restate a guarantee the structure
+            // already gives. THE EMPTY-LANE STRETCH IS UNTOUCHED, the lamp governing
             // FLAG presses alone as it does on the live lane
             // (AppState::add_to_selection's scope rule).
             if (app.add_to_selection)

@@ -2666,14 +2666,22 @@ enum class RedesignButton {
     // architect himself (2026-08-18: "add group selection icon ('Add to
     // Selection') after toggle inherit, before the separator"). Bare `k`, the
     // edit-select glyph, and a MODE rather than an act: while it is lit a
-    // plain flag click takes the CTRL BRANCH — toggle membership, land the
-    // playhead on the focus the toggle leaves, keep the rest of the selection
-    // — and the mode stands until bare `k` or this button puts it out, or an
-    // act SPENDS the selection it built (architect 2026-09-10 for the posture,
-    // 2026-09-12 for the acts; its six silent auto-clears stay deleted, being
-    // selection MUTATORS rather than acts). Nothing
-    // about the click is new; the mode only routes a plain press into the
-    // branch ctrl+click already ran. The whole contract, the shift rule and
+    // plain press on a flag's PAYLOAD BOX takes the CTRL BRANCH — toggle
+    // membership, land the playhead on the focus the toggle leaves, keep the
+    // rest of the selection — and the mode stands until bare `k` or this
+    // button puts it out, or an act SPENDS the selection it built (architect
+    // 2026-09-10 for the posture, 2026-09-12 for the acts; its six silent
+    // auto-clears stay deleted, being selection MUTATORS rather than acts).
+    // THE FOLD STOPS AT THAT BOX (architect 2026-09-19): a plain press on a
+    // LOWER or UPPER cell is the ordinary plain press however this lamp stands
+    // — single-select, address, land, and the bound value drag armed where the
+    // posture allows it — because the bound cells are grid iterations' own
+    // authoring surface, worked one marker at a time, and a lamp whose whole
+    // job is to BUILD a multi-marker selection has nothing to say about them.
+    // The term itself is at run_marker_click_act (input_pointer.cpp), which
+    // asks `cell == MarkerCell::Payload` beside the mode bit. Nothing
+    // about the click is new; the mode only routes a plain payload press into
+    // the branch ctrl+click already ran. The whole contract, the shift rule and
     // the posture are at AppState::add_to_selection.
     //
     // WHY GLASS NEEDS IT, in the architect's own words (2026-08-18): "none of
@@ -10678,10 +10686,13 @@ inline IterTieVerdict iter_tie_verdict_over(const std::vector<GuiM>& v,
 // IT TAKES THE AUDIO since 2026-09-19, for the PHASE column's window alone:
 // a hop window is a fact about the piece's length and the live warp map, so
 // the proposed tie's intersection needs the same pair its landing owner does.
-// The warp arm reads nothing new. Both of its readers already carry the
-// argument — the dispatch off the handler's own member and the button's face
-// off redesign_button_enabled's signature — so nothing grew a parameter to
-// reach it.
+// The warp arm reads nothing new. EVERY READER ALREADY CARRIED THE ARGUMENT,
+// so nothing grew a parameter to reach it: the CHORD'S DISPATCH takes it off
+// the handler's own member (run_iter_tie_toggle), and the two FACE readers
+// take it off redesign_button_enabled's and redesign_button_tooltip's own
+// signatures — the enabled arm through the wrapper below, and the STATEFUL
+// TOOLTIP off this verdict's `act`, which is what picks the Untie name from
+// the Tie one.
 inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a,
                                               const GuiAudio& audio) {
     // A TIE EXISTS ONLY WHERE BRACKETS DO: outside a lit lamp there is no
