@@ -151,11 +151,15 @@ struct Viewport {
     //    re-keys the profile (waveform_gain_profile_cached,
     //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
     //    with no gain-change kick of its own.
-    //    (The gain gate's other input is the AUDIO VIEW —
-    //    effective_waveform_gain_profile answers the empty profile in target
-    //    view — and the S/T flip owes no gain kick of its own: its own
-    //    unconditional kick_waveform_sync publishes the new picture. The zoom
-    //    is no input since 2026-09-17: magnification applies at every zoom.)
+    //    (The gain gate's other inputs are the AUDIO VIEW, the COLUMN and the
+    //    ZOOM — effective_waveform_gain_profile answers the empty profile in
+    //    target view, and in source view outside the magnification level
+    //    column it answers it coarser than the working zoom too — and NONE OF
+    //    THE THREE owes a gain kick of its own: the S/T flip and the column
+    //    switch run an unconditional kick_waveform_sync, and the three zoom
+    //    appliers (Viewport::apply_zoom_change, apply_strip_drag_zoom,
+    //    apply_zoom_to_start) each end their changed path in one, so the new
+    //    picture lands in the frame the switch or the zoom does.)
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and a level write takes the kick so the
@@ -255,17 +259,18 @@ struct Viewport {
 
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
     // inventory above): a level write kicks the synchronous rebuild ONLY WHEN
-    // THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile — empty in
-    // target view) ACTUALLY CHANGED
+    // THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile, which owns
+    // the gate that can answer flat) ACTUALLY CHANGED
     // across it. The caller
     // captures `waveform_gain_hash()` BEFORE its store write and hands it to
     // `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives here and
     // nowhere else. A write the picture cannot see — a level equal to the one
     // already in force —
     // changes the store and not the profile, and must not drain the worker and
-    // re-render the whole plate. (The M column authors in SOURCE VIEW alone,
-    // where the gate is open, so these callers never run against the flat
-    // answer.)
+    // re-render the whole plate. (Every caller runs with the MAGNIFICATION
+    // LEVEL COLUMN ACTIVE, which is source view by construction and the gate's
+    // one zoom-blind arm, so none of them ever runs against the flat answer at
+    // any zoom.)
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 

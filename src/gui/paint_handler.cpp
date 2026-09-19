@@ -8976,11 +8976,14 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // ceiling at the new width. The level ceiling and the viewport clamp both
     // live in clamp_viewport_start now; the resize keeps only its TRIGGER role
     // and delegates. When the level actually moved the reflow changed spp under
-    // the playback predictor, so re-anchor it. (A level move here changes no
-    // magnification: the gain profile has no zoom term since 2026-09-17,
-    // effective_waveform_gain_profile, so the synchronous gain rebuild this
-    // handler ran for a level crossing the working zoom is gone and every
-    // resize stays on the worker.)
+    // the playback predictor, so re-anchor it. (A level move here CAN change
+    // the magnification — outside the magnification level column the gain gate
+    // reads the working-zoom line, effective_waveform_gain_profile — and the
+    // resize still needs no rebuild of its own: the gain hash and the area
+    // dimensions are fields of ONE plate fingerprint, and a resize moves the
+    // dimensions unconditionally, so the tick's enqueue already re-renders and
+    // carries the new gain in that same plate. Geometry and gain arrive
+    // together, on the worker, as every resize's picture does.)
     const double old_zoom = app.zoom_level;
     clamp_viewport_start(app, audio);
     if (app.zoom_level != old_zoom && playback.is_playing())

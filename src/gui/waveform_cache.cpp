@@ -169,13 +169,15 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_w        = area.w;
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
-    // The waveform PICTURE's gain profile, at every zoom in source view and
-    // empty in target view
-    // (effective_waveform_gain_profile — the `h` view's plate
-    // included, it being the live plate), captured here
-    // with the geometry as an owned snapshot, so the worker reads no live
-    // store. Its HASH is the fingerprint field, which is what keeps a plate
-    // from being shown at a gain that is no longer live.
+    // The waveform PICTURE's gain profile — the gate's whole answer off the
+    // audio view, the column and the zoom (effective_waveform_gain_profile,
+    // which owns the rule; the `h` view's plate included, it being the live
+    // plate) — captured here with the geometry as an owned snapshot, so the
+    // worker reads no live store. Its HASH is the fingerprint field, which is
+    // what keeps a plate from being shown at a gain that is no longer live —
+    // and it sits beside the viewport geometry in that same fingerprint, so a
+    // zoom that crosses the working line dirties the plate on both counts at
+    // once and re-renders under one set of inputs.
     {
         const WaveformGainProfileCache& gain =
             effective_waveform_gain_profile(app);

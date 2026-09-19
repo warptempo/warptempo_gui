@@ -166,9 +166,10 @@ struct WaveformCache {
     // was font-derived then. The proxy died with the grid; the thing itself is
     // what the job takes.)
     int       fp_inset_px = -1;
-    // THE GAIN PROFILE'S HASH the live pixels were rendered under
-    // (effective_waveform_gain_profile — the per-section magnification in
-    // source view, or the empty profile in target view).
+    // THE GAIN PROFILE'S HASH the live pixels were rendered under — the
+    // per-section magnification, or the empty profile where the gate answers
+    // flat (effective_waveform_gain_profile, warp_frame_map_view.h, which owns
+    // that rule).
     // A FINGERPRINT FIELD in its own right, keyed
     // directly like the inset: the profile is an input to the tip mapping
     // alone, so nothing else about the plate would move if it changed by

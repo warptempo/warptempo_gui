@@ -290,8 +290,9 @@ inline int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
 // THE WAVEFORM GAIN PROFILE — the picture magnification over source time,
 // built from the magnification level markers column
 // (build_waveform_gain_profile, magnificationlevelmarkers.h, which states the
-// step rules) and gated by the AUDIO VIEW
-// (effective_waveform_gain_profile, warp_frame_map_view.h). A STEP FUNCTION OVER
+// step rules) and gated by the AUDIO VIEW, THE COLUMN AND THE ZOOM
+// (effective_waveform_gain_profile, warp_frame_map_view.h, which owns that
+// rule). A STEP FUNCTION OVER
 // SOURCE FRAMES: `breakpoints` is sorted strictly ascending by frame, each
 // entry's level holding from its frame up to the next entry's, and LEVEL 0
 // HOLDS BEFORE THE FIRST ENTRY (so level 0 everywhere is the empty

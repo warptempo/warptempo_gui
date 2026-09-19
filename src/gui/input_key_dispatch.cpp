@@ -260,20 +260,23 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // typed trim arm (settings_editor.cpp) were all deleted the same day, so the
 // whole trim family — keyboard, pointer and typed — is read-only-legal by ONE
 // rule with no site left to disagree with it.
-// THE LOCK HAS A FACE, AND THIS FUNCTION OWNS ITS MEMBERSHIP (architect
-// 2026-08-15): the roster buttons wearing the disabled face while the active
-// tab is locked — the FOUR marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N),
-// FLATTEN up in the icon row's iteration group (Ctrl+F, which this allowlist
-// drops like the four; its face is the one that does
-// not read the lock directly, tempo_flatten_actionable composing
-// authoring_locked itself, and it greys with them all the same),
-// the Edit flag button on the bottom row, the load-in-place
-// in the icon row, and since 2026-08-30 THE FOUR CARDINAL ARROWS (planner
-// decision 52: Up/Down, dropped outright here; Left/Right, dropped only in
-// the marker lane through the is_playhead_step entry, whose lane term is the
-// shared owner horizontal_arrow_step_lock_admits that the face reads too) —
-// are chords this allowlist drops, so the
-// toggle looks the way the `h` history view already looks. The drop's SHIFTED
+// THE LOCK HAS A FACE, AND THIS FUNCTION OWNS THE CHORD HALF OF IT (architect
+// 2026-08-15): a roster button wears the disabled face while the active tab is
+// locked exactly where its chord is one this allowlist drops, so the toggle
+// looks the way the `h` history view already looks. THE BUTTON SET IS
+// ENUMERATED ONCE, at redesign_button_enabled's read-only mode statement
+// (app_state.h); THE CHORDS, re-derived against the return below 2026-09-19,
+// are the FOUR marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N), FLATTEN in the
+// icon row's iteration group (Ctrl+F), the Edit flag opener on the bottom row
+// (bare Return), THE ITERATION PAIR that came back to that same group 2026-09-04
+// (Ctrl+B and bare `i`), UNDO and REDO (Ctrl+Z, Ctrl+Shift+Z), the LOAD IN PLACE
+// (bare `'`, dropped in the `h` view alone — the state-dependent entry above),
+// and THE FOUR CARDINAL ARROWS (Up/Down dropped outright; Left/Right dropped
+// only in the marker lane, through the is_playhead_step entry, whose lane term
+// is the shared owner horizontal_arrow_step_lock_admits that the face reads
+// too). FLATTEN is the one whose face does not read the lock directly —
+// tempo_flatten_actionable composes authoring_locked itself — and it greys
+// with the rest all the same. The drop's SHIFTED
 // chord (Shift+S, 2026-08-28) rides that face rather than asking for a second
 // one: the button is greyed by the same arm, and a greyed button's shift press
 // is consumed with its plain one.

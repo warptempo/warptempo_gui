@@ -178,18 +178,39 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app) {
+    // THE FLAT ANSWER — level 0 everywhere, hash 0. One immutable instance, so
+    // every road that answers flat answers the same object and the same hash.
+    static const WaveformGainProfileCache kUnmagnified = [] {
+        WaveformGainProfileCache c;
+        c.valid = true;
+        c.hash  = waveform_gain_profile_hash(c.profile);
+        return c;
+    }();
+
     // TARGET VIEW IS FLAT (the rule and its derivation are at the
     // declaration): the phase resets it authors move on the hop lattice, which
     // no magnified picture helps.
-    if (app.active_audio_view == 'T') {
-        static const WaveformGainProfileCache kUnmagnified = [] {
-            WaveformGainProfileCache c;
-            c.valid = true;
-            c.hash  = waveform_gain_profile_hash(c.profile);
-            return c;
-        }();
+    if (app.active_audio_view == 'T') return kUnmagnified;
+
+    // SOURCE VIEW: THE MAGNIFICATION LEVEL COLUMN IS THE ONE EXEMPTION, AND
+    // EVERY OTHER COLUMN TAKES THE AT-WORKING GATE. The M column's whole job
+    // IS the loudness — it authors the boundaries of the very thing being
+    // shown, and it shows them at every zoom so the sections can be read and
+    // placed whole. Any other column in source view is aiming at the audio
+    // itself, and the placement-instrument principle decides there: at the
+    // working zoom or finer the waveform is a placement instrument and
+    // magnification is what makes a quiet passage aimable, while COARSER it is
+    // a map — the broad picture of the piece, where everything drawn
+    // invariably loud hides the shape the reader came for. S+P is not a
+    // special case: it is another column, so it derives.
+    if (app.active_markers_view != 'M' &&
+        !zoom_level_at_or_finer_than_working(app.zoom_level))
         return kUnmagnified;
-    }
+
+    // A MAGNIFICATION-LEVEL-COLUMN DRAG shows the store as the release would
+    // leave it. It reaches this arm by construction: drag_mode is the column
+    // the press began on and 'M' exists in source view alone, which is also
+    // the column the exemption above just let through at any zoom.
     if (app.drag.active && app.drag.drag_mode == 'M')
         return waveform_gain_profile_drag_cached(app);
     return waveform_gain_profile_cached(app);

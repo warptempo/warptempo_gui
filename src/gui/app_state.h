@@ -12272,13 +12272,14 @@ enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 
 // WHICH SIDE OF THE WORKING ZOOM A LEVEL IS ON — true at the working zoom or
 // finer (a smaller level is finer), the line inclusive; false coarser. The
-// ONE AT-OR-FINER PREDICATE, the spelling TWO readers share, each deriving a
-// posture from the zoom (architect 2026-09-14): the Left/Right nudge's
-// held column (Viewport::hold_subject_column_after_nudge) and the bare Tab
-// walk's framing (marker_walk_frame, below). (The waveform gain gate was a
-// third from 2026-09-14 until 2026-09-17, when magnification began to apply at
-// every zoom; it is a function of the AUDIO VIEW now —
-// effective_waveform_gain_profile, warp_frame_map_view.h.)
+// ONE AT-OR-FINER PREDICATE, the spelling THREE readers share (re-grepped
+// 2026-09-19), each deriving a posture from the zoom by the
+// placement-instrument principle (zoom-viewport-strip.md): the Left/Right
+// nudge's held column (Viewport::hold_subject_column_after_nudge), the bare Tab
+// walk's framing (marker_walk_frame, below), and the WAVEFORM GAIN GATE
+// (effective_waveform_gain_profile, warp_frame_map_view.h), which reads it for
+// every source-view column but the magnification level column — the one view
+// whose job IS the loudness and which therefore magnifies at every zoom.
 inline bool zoom_level_at_or_finer_than_working(double level) {
     return level <= kWorkingZoomLevel;
 }
@@ -13884,21 +13885,25 @@ inline bool playback_launch_playable(const AppState& a,
 //     bound cells and the marker lane's absence — and its whole membership has
 //     one owner, iteration_lock_greys (above), which the arms alone read since
 //     2026-09-12 (the HINTS were its second reader until the refusal-reason
-//     tooltip class was deleted). SIX ARMS BELOW COMPOSE BOTH HALVES — Drop marker, Delete,
-//     Disable, Toggle inherit, Edit flag and the Up/Down pair, the
-//     last two admitted on a BOUND AXIS, where the cells are the mode's own
-//     authoring surface. ONE ASKS THE ITERATION HALF ALONE, having no
-//     read-only term to compose: TOGGLE HISTORY VIEW (the mode is claimed
-//     above the gate and a locked tab reads history as a writable one does)
-//     — TOGGLE MARKER COLUMN stood beside it on the same shape (bare `p` was
-//     on the base allowlist) until the architect deleted the button whole
-//     with its view lamp 2026-09-15. LEFT / RIGHT
-//     compose both halves around one lane term at their own arm. TWO ASK THE
-//     TAB'S BIT ALONE, and it is GRID ITERATIONS: the lamp
-//     that turns the mode off cannot be greyed by it (its OTHER term is the
-//     add-to-selection lamp, a different exclusion entirely). BPM ITERATIONS
-//     stood beside it as the mode's second exit until 2026-09-10, when the
-//     swap it performed was ruled out and the button joined the membership.
+//     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-09-19, the
+//     three shapes are these. SIX ARMS BELOW COMPOSE BOTH HALVES, EIGHT
+//     BUTTONS: Drop marker; Delete and Disable, sharing one arm; Edit flag;
+//     BPM Iterations; the LEFT / RIGHT pair, which composes them around one
+//     lane term; and the UP / DOWN pair, whose iteration half is admitted on a
+//     BOUND AXIS, where the cells are the mode's own authoring surface.
+//     TWO ARMS ASK THE ITERATION HALF ALONE, SIX BUTTONS, having no read-only
+//     term to compose: TOGGLE READ-ONLY and TOGGLE HISTORY VIEW, which share
+//     one arm (the padlock because under a lit lamp no tab is locked at all;
+//     the history view because its mode is claimed above the gate and a locked
+//     tab reads history as a writable one does), and THE VIEW BAR'S FOUR
+//     SELECTORS on one arm of their own. TWO ARMS ASK A READ-ONLY BIT WITH NO
+//     ITERATION TERM, AND THEY ASK TWO DIFFERENT BITS: TOGGLE INHERIT reads
+//     the ACTIVE TAB's, then FORKS on the lamp rather than greying on it —
+//     under a lit lamp its plain chord is dead and its shift twin, the tie, is
+//     the live half, so the face reads whichever verdict the state admits —
+//     and GRID ITERATIONS reads the PIECE's (any_tab_read_only), the lamp that
+//     turns the mode off being one the mode cannot grey; its other term is the
+//     magnification level column, where the lamp never lights.
 //     Undo and Redo take the mode through history_step_actionable instead, the
 //     predicate the keys' own refusal reads. THE
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
@@ -14477,11 +14482,27 @@ inline bool redesign_button_enabled(const AppState& a,
         // refuses on — never a restatement — and each named at its case
         // below. Read-only stays the first term for all seven: a mode entered
         // on purpose, invisible chrome state otherwise, changing only when `o`
-        // is pressed. THE LOCK'S SET IS ELEVEN BUTTONS since planner decision
-        // 52 the same day: these seven and the FOUR CARDINAL ARROWS, whose
-        // lock terms sit at the transport block below (Up/Down outright,
-        // Left/Right only while a selection stands, through the gate's own
-        // owner horizontal_arrow_step_lock_admits).
+        // is pressed.
+        //
+        // THE READ-ONLY LOCK'S BUTTON SET IS FIFTEEN, AND THIS IS THE ONE SITE
+        // THAT ENUMERATES IT (re-derived from the arms 2026-09-19; every other
+        // site states its own class and points here). In five groups, by HOW
+        // each asks:
+        //   * THESE SEVEN, whose arms are below — the bit their first term.
+        //     Six read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
+        //     (any_tab_read_only, its own arm's reason).
+        //   * THE FOUR CARDINAL ARROWS, at the transport block below: Up/Down
+        //     outright, Left/Right only while a selection stands, through the
+        //     gate's own owner horizontal_arrow_step_lock_admits.
+        //   * UNDO and REDO, at the toolbar block below, where the read-only
+        //     term is theirs alone among the four.
+        //   * LOAD IN PLACE, at the history group's arm, where the bit
+        //     composes with the mode and the walk's own admission.
+        //   * FLATTEN, which carries NO lock term at its arm at all: its face
+        //     reads tempo_flatten_actionable, and that predicate composes
+        //     authoring_locked — both halves of the lock — itself. It greys
+        //     with the rest and owns no term here, the same carve-out
+        //     iteration_lock_greys states for it.
         //
         // WHY THEY SIT ABOVE THE LOADING/BLANK GUARD rather than below it with
         // the other mirrored arms: the 2026-08-15 arm added ONE term and was
@@ -14739,9 +14760,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // was the icon row's Load in place button's until 2026-09-01, when the
         // BUTTON MOVED TO THE HISTORY GROUP and took its lock term with it:
         // its arm is with the companions' below, where the lock composes with
-        // the mode and the walk's own admission. The lock still reaches
-        // eleven buttons — the six left here, that one, and the four cardinal
-        // arrows — and only the count in this arm moved.)
+        // the mode and the walk's own admission. The move changed WHERE that
+        // button's term sits and nothing about the lock's reach; the set is
+        // enumerated once, at the read-only mode statement above.)
         // THE BOTTOM ROW IS TRUTHFUL SINCE 2026-08-30 (architect: "Make all the
         // icons truthful — disabled when a key is not pressable — even the
         // transport's back/forward when you're already at the home or the

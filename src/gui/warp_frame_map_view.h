@@ -264,36 +264,57 @@ const WaveformGainProfileCache& waveform_gain_profile_cached(
 const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
-// THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE:
-// MAGNIFICATION FOLLOWS THE AUDIO VIEW (architect 2026-09-17) — the picture is
-// magnified in SOURCE view and flat in TARGET view, and there is no switch of
-// any kind. SOURCE ('S') answers the LIVE magnification level store's memoized
-// profile (waveform_gain_profile_cached above); TARGET ('T') answers the EMPTY
-// profile, level 0 everywhere, hash 0.
+// THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE.
+// MAGNIFICATION IS THE MAGNIFICATION LEVEL COLUMN'S AT EVERY ZOOM AND EVERY
+// OTHER SOURCE-VIEW COLUMN'S AT THE WORKING ZOOM OR FINER (architect
+// 2026-09-19), and there is no switch of any kind:
 //
-// THE DERIVATION: magnification serves FINE HORIZONTAL PLACEMENT, and the two
-// SOURCE views are what author it — S+W's warp markers and S+M's own level
-// boundaries — while the target view's authored column, the phase resets, moves
-// on the HOP LATTICE in quantized steps that no superfine picture helps. So the
-// answer is DERIVED from what the view authors rather than held by hand; the
-// placement-instrument principle (zoom-viewport-strip.md) is where that test
-// lives.
+//   TARGET view ('T')                 — flat, at every zoom.
+//   SOURCE view, the M column         — the live profile, at every zoom.
+//   SOURCE view, any other column     — the live profile at the working zoom
+//                                       or finer, flat coarser.
 //
-// AN AUDIO-VIEW TERM AND NOTHING ELSE: no zoom term (magnification applies at
-// every zoom level, architect 2026-09-17) and no mode term — the `h` view
-// follows the audio view it stands in, its plate showing the LIVE store's gain,
-// never the viewed checkpoint's. ONE place, so the picture caches' existing
-// hash keys re-render on the S/T flip with no per-caller code (a live store
-// with no enabled level above 0 is hash 0 as well, and there the two answers
-// are rightly the same picture; the flip's own kick_waveform_sync is what
-// publishes it). DISPLAY-ONLY: the M column's authoring, its red cue, the drag
-// slot's own cache and the render never read this answer. READERS (re-grepped
-// 2026-09-17): the plate's render inputs (compute_waveform_render_inputs),
-// the plate FINGERPRINT's own gain field and the gain kick's hash
-// (Viewport::waveform_gain_hash). While a MAGNIFICATION-LEVEL-column marker
-// drag stands — source view alone, that column existing in no other — the live
-// answer is the DRAG SLOT's (waveform_gain_profile_drag_cached, above), so the
-// picture shows the store as the release would leave it.
+// The live answer is the magnification level store's memoized profile
+// (waveform_gain_profile_cached above); flat is the EMPTY profile, level 0
+// everywhere, hash 0.
+//
+// THE DERIVATION, TWO TERMS DECIDED BY WHAT THE VIEW IS FOR. The AUDIO VIEW
+// first: magnification serves FINE HORIZONTAL PLACEMENT against the audio, and
+// the SOURCE views are what author against it, while the target view's own
+// column, the phase resets, moves on the HOP LATTICE in quantized steps that no
+// superfine picture helps. Then the ZOOM, by the placement-instrument principle
+// (zoom-viewport-strip.md, where the test lives) applied PER COLUMN: at the
+// working zoom or finer the waveform is a PLACEMENT INSTRUMENT and magnifying
+// a quiet passage is what gives the hand something to aim at, while coarser it
+// is a MAP — the big picture the work starts from, where drawing everything
+// invariably loud hides the shape the reader came for. THE M COLUMN IS THE ONE
+// VIEW EXEMPT FROM THAT TEST, because its whole job IS the loudness: it authors
+// the section boundaries of the magnification itself, almost as a limiter does,
+// so it shows them everywhere they apply. S+P IS NOT A SPECIAL CASE — the
+// column and the audio view are independent axes, so source view with the phase
+// reset column is reachable, and it is simply another column that is not M and
+// therefore derives.
+//
+// NO MODE TERM — the `h` view follows the audio view, the column and the zoom it
+// stands in, its plate showing the LIVE store's gain, never the viewed
+// checkpoint's. ONE place, so the picture caches' existing hash keys re-render
+// on every flip with no per-caller code: the plate fingerprint carries this
+// hash beside the viewport geometry, so a zoom that crosses the working line
+// dirties it twice over and the three zoom appliers' own synchronous
+// kick_waveform_sync publishes the new picture in the frame the zoom lands in
+// (a live store with no enabled level above 0 is hash 0 as well, and there the
+// two answers are rightly the same picture). DISPLAY-ONLY: the M column's
+// authoring, its red cue, the drag slot's own cache and the render never read
+// this answer. THREE READERS, RE-GREPPED 2026-09-19: the plate's render inputs,
+// which is also where the fingerprint's gain field is captured
+// (compute_waveform_render_inputs, waveform_cache.cpp); the displayed plate's
+// staleness compare against that field (GuiPaintHandler::displayed_plate_gain_is_stale);
+// and the gain kick's hash (Viewport::waveform_gain_hash). While a
+// MAGNIFICATION-LEVEL-column marker drag stands — source view with the M column
+// active, that column existing in no other view — the live answer is the DRAG
+// SLOT's (waveform_gain_profile_drag_cached, above), so the picture shows the
+// store as the release would leave it; the exemption above is what carries that
+// drag past the zoom term at any zoom.
 const WaveformGainProfileCache& effective_waveform_gain_profile(
     const AppState& app);
 
