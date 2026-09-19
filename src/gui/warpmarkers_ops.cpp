@@ -1520,6 +1520,15 @@ bool iter_bound_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           MarkerCell side,
                                           int64_t delta) {
+    // A TIE FOLLOWER GREYS BOTH ARROWS (architect 2026-09-19, ahead of the
+    // column fork because the rule is one rule on both): the cell's numbers
+    // are the LEADER's and only the leader's cells step, so nothing visible
+    // would move. IT IS NOT THE INELIGIBLE-FOCUS SHAPE one line down — that
+    // keeps a LIVE face and lets the act card — because this refusal is the
+    // roster's ordinary division: the GREY is the button's message and the
+    // KEY still cards, the act asking this same predicate ahead of the wall
+    // test (kBoundCellTiedCard, app_state.h).
+    if (addressed_bound_cell_is_tie_follower(a)) return false;
     // (Asked with a bound cell addressed, which never happens on the
     // magnification level column — it paints none — so the fork is W or P.)
     // THE PHASE ARM: the same singleton compare in the hop domain. An
@@ -1550,7 +1559,7 @@ bool iter_bound_step_direction_actionable(const AppState& a,
     const int64_t start = side == MarkerCell::Upper
                               ? m.iter_end_cents.value_or(0)
                               : m.iter_start_cents.value_or(0);
-    return iter_bound_step_landing(m, side, delta_cents) != start;
+    return iter_bound_step_landing(mv, f, side, delta_cents) != start;
 }
 
 // THE SINGLETON'S KIND REFUSAL — the contract and the readers are at the
@@ -1598,6 +1607,14 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     // singleton selection by construction, so there is no size fork here.
     if (!iter_bound_step_actionable(app))
         return "Select a warp marker to change its range";
+    // THE TIE'S REFUSAL, RANKED AHEAD OF THE SILENT WALL (architect
+    // 2026-09-19): all acts are on the leader, so a follower's cell steps
+    // nothing — and it must be said in words, because the arrows' directional
+    // face greys on this very predicate and a greyed face's reason is the
+    // key's card. It ranks here and not below the wall test for that reason
+    // alone: the wall test answers false on a follower too, and a silent
+    // return there would leave the press unexplained.
+    if (addressed_bound_cell_is_tie_follower(app)) return kBoundCellTiedCard;
     // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
     // arms read this very predicate), so the key says nothing either — a
     // benign one-dimensional refusal already at its state, the cell's own
@@ -1622,7 +1639,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     if (f < 0 || f >= static_cast<int>(mv_const.size())) return std::nullopt;
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[static_cast<size_t>(f)];
-    const int64_t landing = iter_bound_step_landing(m, side, delta_cents);
+    // THE LANDING IS ASKED OF THE LIVE STORE, which is byte-equal to the copy
+    // at this point and is what the owner needs to see the tie's other
+    // members (iter_bound_tie_window, app_state.h).
+    const int64_t landing =
+        iter_bound_step_landing(mv_const, f, side, delta_cents);
     // Both bounds go through the one write site (iter_bound_step_write): a
     // blank bracket becomes [0, 0] with the step applied to its addressed
     // side, a set one keeps its partner as it was, and a pair that lands on

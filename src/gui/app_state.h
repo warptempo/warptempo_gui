@@ -10151,6 +10151,93 @@ inline bool iter_tie_toggle_actionable(const AppState& a) {
     return iter_tie_toggle_verdict(a).refusal == nullptr;
 }
 
+// -- ALL ACTS ARE ON THE LEADER (architect 2026-09-19) ----------------------
+//
+// A FOLLOWER'S TWO CELLS ARE ADDRESSABLE AND INERT. They paint greyed and
+// show the LEADER's numbers (iter_bracket_governor, warpmarkers.h), a plain
+// press addresses one and the Tab walk stops on it — which is what makes
+// Shift+`j` reachable from the keys — but nothing AUTHORS there: the bound
+// step, the bound editor's open and the value drag all refuse, because a
+// follower carries the bracket by proxy and its own pair is unread. Only the
+// leader's cells step, edit and drag, and a leader's step never touches the
+// selection: the followers are not selected while their bracket moves, which
+// is the whole of what the proxy buys.
+//
+// ONE PREDICATE, and every refusal and every face read it. `column` is the
+// column the cell is painted on and `idx` an index into that column's store;
+// the magnification level column paints no cells at all, so it answers no
+// through its own arm rather than through an absent store.
+inline bool bound_cell_is_tie_follower(const AppState& app, char column,
+                                       int idx) {
+    switch (column) {
+        case 'W':
+            return marker_is_tie_follower(app.warpmarkers.markers(), idx);
+        case 'P':
+            return marker_is_tie_follower(app.phaseresetmarkers.markers(),
+                                          idx);
+        // THE MAGNIFICATION LEVEL COLUMN CARRIES NO TIE, having no bracket to
+        // tie: grid iterations never lights on it, so no cell and no follower
+        // exists here (marker_paints_iter_cells' own 'M' arm).
+        case 'M':
+            return false;
+    }
+    return false;
+}
+
+// THE FOCUS-SHAPED FACE of the question above — is the cell the arrows, bare
+// Return and Shift+`j` are ADDRESSING a tie follower's? It is one derivation
+// and not a second reading: it asks the addressed axis, then hands the focus
+// and the live column to the one owner. The two shapes both exist because the
+// acts fork on the ADDRESSED cell while the pointer's two readers
+// (value_drag_target, GuiFlagEditor::enter_iter_bound_edit) ask about the cell
+// a press or a seed landed on, which is not the addressed one.
+inline bool addressed_bound_cell_is_tie_follower(const AppState& a) {
+    if (a.addressed_cell != MarkerCell::Lower &&
+        a.addressed_cell != MarkerCell::Upper) return false;
+    return bound_cell_is_tie_follower(a, a.active_markers_view,
+                                      a.last_selected_marker);
+}
+
+// THE FOLLOWER'S ONE SENTENCE, said by every act that refuses on the
+// predicate above and behind a GREYED face in each case — the roster's
+// standing division, the grey being the button's message and the KEY's card
+// carrying the reason. THREE READERS: the bound step's two bodies
+// (GuiWarpMarkersOps::adjust_iter_bound_cents and its phase twin) and bare
+// Return's bound arm (input_handler.cpp). THE VALUE DRAG IS SILENT and is not
+// a third: a pointer gesture's non-event is its own answer, the flag drag's
+// standing rule, so value_drag_target simply arms nothing there.
+constexpr const char* kBoundCellTiedCard = "Tied to an earlier marker";
+
+// WHERE Shift+`j` JUMPS ON THE TIE ROAD — the LEADER's index when a bound
+// cell is addressed on a tie FOLLOWER, and −1 when this road does not apply
+// (architect 2026-09-19: "he looks at the leader on the other tab without
+// losing his place among the followers on this one").
+//
+// IT FORKS ON THE ADDRESSED CELL and on nothing else, so the PAYLOAD axis
+// keeps the chord's own meaning exactly — the resolved value's source marker,
+// through payload_eligibility and value_source_marker — and none of those
+// payload gates applies here: a follower's eligibility is a fact about its
+// TIE, not about a resolved value, which is why this answers ahead of them
+// rather than inside them. It is live on BOTH columns that carry cells, the
+// jump's tail resolving its index against the ACTIVE column's store as the
+// bound editor's open does.
+//
+// THREE READERS: the act's head fork (GuiInputHandler::jump_to_value_source),
+// the Copy Resolved Value button's ENABLED arm — the twin rule, the face
+// staying lit where the shifted press would act although the plain one cards
+// — and its tooltip's second line, which must stand exactly where the shifted
+// press jumps.
+inline int jump_tie_leader_destination(const AppState& a) {
+    if (!addressed_bound_cell_is_tie_follower(a)) return -1;
+    const int f = a.last_selected_marker;
+    switch (a.active_markers_view) {
+        case 'W': return iter_tie_leader_index(a.warpmarkers.markers(), f);
+        case 'P':
+            return iter_tie_leader_index(a.phaseresetmarkers.markers(), f);
+    }
+    return -1;
+}
+
 // -- THE ITERATION BOUND STEP'S PREDICATES (architect 2026-09-04) -----------
 //
 // The vertical arrows' SECOND step body steps one bound of the focused
@@ -10203,34 +10290,87 @@ inline bool iter_bound_step_actionable(const AppState& app) {
     return tempo_cent_step_actionable(app);
 }
 
+// THE WARP BRACKET'S CLAMP WINDOW, ONE OWNER — the interval a bound may hold,
+// in the bracket's own delta domain, for the marker at `idx` AND EVERY MARKER
+// TIED TO IT.
+//
+// THE WINDOW IS THE TIE'S AND IT IS THE TIGHTEST MEMBER'S (architect
+// 2026-09-19). One sweep cell applies ONE delta to EVERY tied member, so a
+// bound that any member cannot take is a bound no cell may hold: the interval
+// is the INTERSECTION of the members' own windows, the low wall the greatest
+// of their `kTempoMinCents − base` and the high wall the least of their
+// `kTempoMaxCents − base`. An UNTIED marker walks one member and the answer is
+// its own window exactly as it was before ties existed.
+//
+// Each member's own window is [kTempoMinCents − base, kTempoMaxCents − base]:
+// every sweep cell renders that member's base plus the delta, so base plus
+// either bound must stay inside the tempo bracket. THE INTERSECTION ALWAYS
+// CONTAINS 0, because each member's own window does — the identity cell
+// renders the resting store — so a blank bracket's start is inside it and the
+// window clamp composes with the partner clamp exactly as it did for one
+// marker.
+//
+// THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (2026-09-10): a bracket
+// exists only while grid iterations is lit, and while it is lit the piece is
+// locked (authoring_locked), so no base tempo can be stepped or typed under
+// one — which is what retired the retroactive clamp that used to fold a
+// standing bracket onto a moved base. NOR CAN THE TIE MOVE under one: the
+// same lock holds the store still, so the membership this folds over is the
+// membership the bound was authored against.
+//
+// TWO READERS: the landing owner below, which CLAMPS into it, and the bound
+// editor's commit (GuiFlagEditor::commit_iter_bound_edit), which REFUSES
+// outside it — one test on both roads, so no sweep cell can ever hold a bound
+// a member refuses. Its phase twin is phase_iter_bound_tie_window below.
+struct IterBoundWindow {
+    int64_t lo = 0;
+    int64_t hi = 0;
+};
+
+inline IterBoundWindow iter_bound_tie_window(
+        const std::vector<GuiWarpMarker>& mv, int idx) {
+    // The identity-only window for a degenerate subject, the phase twin's own
+    // convention: nothing but the resting cell is legal on an index no member
+    // walk can reach.
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return {};
+    IterBoundWindow w{kTempoMinCents - kTempoMaxCents,
+                      kTempoMaxCents - kTempoMinCents};
+    for_each_iter_tie_member(mv, idx, [&](int i) {
+        const int64_t base = mv[static_cast<size_t>(i)].tempo_cents;
+        w.lo = std::max(w.lo, kTempoMinCents - base);
+        w.hi = std::min(w.hi, kTempoMaxCents - base);
+    });
+    return w;
+}
+
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
 // tempo_cent_step_landing in the bracket's delta domain. The start is the
 // bound's resting value, 0 for a blank bracket (a blank reads +0.00 in both
 // cells, so a step from blank starts there). Two walls, both inclusive: THE
-// TEMPO WINDOW, [kTempoMinCents − base, kTempoMaxCents − base] — every sweep
-// cell renders base + delta, so base plus either bound must stay inside the
-// tempo bracket — and the PARTNER bound, the lower never rising above the
-// upper, the upper never falling below the lower, the trim endcap's own clamp
-// at its partner. THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (2026-09-10):
-// a bracket exists only while grid iterations is lit, and while it is lit the
-// piece is locked (authoring_locked), so no base tempo can be stepped or typed
-// under one — which is what retired the retroactive clamp that used to fold a
-// standing bracket onto a moved base. The partner is inside the window for the
-// same reason (and 0 is inside it for a blank bracket, the window always
-// containing the zero delta), so clamping to the window and then to the
-// partner lands inside both. The act commits this number through
-// iter_bound_step_write below and the directional face compares it against the
-// resting value.
-inline int64_t iter_bound_step_landing(const GuiWarpMarker& m,
-                                       MarkerCell side,
+// TIE'S TEMPO WINDOW (iter_bound_tie_window above — the tightest member's,
+// because a cell applies one delta to every member) and the PARTNER bound,
+// the lower never rising above the upper, the upper never falling below the
+// lower, the trim endcap's own clamp at its partner. The partner is inside the
+// window (and 0 is, for a blank bracket, the intersection always containing
+// the zero delta), so clamping to the window and then to the partner lands
+// inside both. The act commits this number through iter_bound_step_write below
+// and the directional face compares it against the resting value.
+//
+// IT TAKES THE STORE AND AN INDEX rather than a marker by reference, the
+// phase twin's own shape: the window is a fact about the TIE and a marker
+// alone cannot see its fellows, and resolving the tie at each caller instead
+// would put the walk in three places.
+inline int64_t iter_bound_step_landing(const std::vector<GuiWarpMarker>& mv,
+                                       int idx, MarkerCell side,
                                        int64_t delta_cents) {
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return 0;
+    const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
     const int64_t lo = m.iter_start_cents.value_or(0);
     const int64_t hi = m.iter_end_cents.value_or(0);
     const int64_t start   = side == MarkerCell::Upper ? hi : lo;
     const int64_t partner = side == MarkerCell::Upper ? lo : hi;
-    const int64_t windowed =
-        std::clamp(start + delta_cents, kTempoMinCents - m.tempo_cents,
-                   kTempoMaxCents - m.tempo_cents);
+    const IterBoundWindow w = iter_bound_tie_window(mv, idx);
+    const int64_t windowed = std::clamp(start + delta_cents, w.lo, w.hi);
     return side == MarkerCell::Upper ? std::max(windowed, partner)
                                        : std::min(windowed, partner);
 }
@@ -10284,23 +10424,56 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
     m.iter_end_cents   = new_hi;
 }
 
+// THE HOP BRACKET'S CLAMP WINDOW ACROSS THE TIE — iter_bound_tie_window's
+// twin in the HOP domain (architect 2026-09-19), and the same rule: one sweep
+// cell displaces EVERY tied reset by the same hop count, so the interval is
+// the INTERSECTION of the members' own hop windows — the low wall the greatest
+// of their `k_min`, the high wall the least of their `k_max`. An untied reset
+// walks one member and the answer is phase_reset_hop_window's exactly as
+// before. THE INTERSECTION CONTAINS 0 because every member's own window does
+// (the identity cell renders the resting store), which is what keeps the
+// window clamp and the partner clamp composing.
+//
+// IT COSTS ONE HOP WINDOW PER MEMBER, each a walk of at most kIterHopMax
+// landings a side over the live map (phase_reset_hop_window,
+// warp_frame_map_view.h). A tie is a handful of resets and the map is the
+// memoized live one, so the face's per-tick read stays the same shape it had.
+//
+// TWO READERS, the warp twin's own pair: the landing owner below, which CLAMPS
+// into it, and the bound editor's commit
+// (GuiFlagEditor::commit_phase_iter_bound_edit), which REFUSES outside it.
+inline PhaseHopWindow phase_iter_bound_tie_window(const AppState& app,
+                                                  const GuiAudio& audio,
+                                                  int idx) {
+    const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(pv.size())) return {};
+    PhaseHopWindow w{-kIterHopMax, kIterHopMax};
+    for_each_iter_tie_member(pv, idx, [&](int i) {
+        const PhaseHopWindow own = phase_reset_hop_window(app, audio, i);
+        w.k_min = std::max(w.k_min, own.k_min);
+        w.k_max = std::min(w.k_max, own.k_max);
+    });
+    return w;
+}
+
 // WHERE A PHASE BOUND STEP WOULD LAND — iter_bound_step_landing's twin in the
 // HOP domain (2026-09-09), and the same two-wall shape: the start is the
 // bound's resting value, 0 for a blank bracket (a blank reads `+0` in both
-// cells, so a step from blank starts there), clamped first into the reset's
-// own hop window and then at the PARTNER bound — the lower never rises above
+// cells, so a step from blank starts there), clamped first into the TIE's hop
+// window and then at the PARTNER bound — the lower never rises above
 // the upper, the upper never falls below the lower, the trim endcap's own
 // clamp at its partner.
 //
 // WHAT DIFFERS FROM THE WARP LANDING IS WHICH WINDOW: there the clamp window
-// is a fact about one marker's base tempo, here it is
+// is a fact about the tied markers' base tempos, here it is
 // phase_reset_hop_window's — a fact about the piece's length and the live warp
 // map (a NEIGHBOURING RESET IS NOT A WALL since 2026-09-11: two ranges may
 // cross or meet and the sweep sorts each cell before the request) — so the
 // landing takes the app and the audio rather than a marker by reference. THE
 // WINDOW ALWAYS CONTAINS 0 (the identity cell renders the resting store), so a
 // blank bracket's start is inside it and the two clamps compose exactly as the
-// warp pair does.
+// warp pair does. IT IS THE TIE'S WINDOW on this column too
+// (phase_iter_bound_tie_window above).
 //
 // THE WINDOW CANNOT MOVE UNDER A STANDING BRACKET (2026-09-10): a bracket
 // exists only while grid iterations is lit, and while it is lit the piece is
@@ -10320,7 +10493,7 @@ inline int phase_iter_bound_step_landing(const AppState& app,
     const int hi = m.iter_end_hops.value_or(0);
     const int start   = side == MarkerCell::Upper ? hi : lo;
     const int partner = side == MarkerCell::Upper ? lo : hi;
-    const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
+    const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);
     const int windowed = std::clamp(start + delta_hops, w.k_min, w.k_max);
     return side == MarkerCell::Upper ? std::max(windowed, partner)
                                      : std::min(windowed, partner);
@@ -10704,8 +10877,15 @@ inline bool flag_editor_open_actionable(const AppState& app) {
     // no. Which of the two Return opens is the dispatch's own fork, on this
     // same column bit.
     case MarkerCell::Payload: return app.active_markers_view != 'P';
+    // A TIE FOLLOWER'S CELL HAS NO EDITOR (architect 2026-09-19): its pair is
+    // unread and the numbers it shows are the leader's, so a field opening
+    // there would edit one bracket while displaying another. The button greys
+    // on the tie's ONE predicate and bare Return cards its one sentence
+    // (kBoundCellTiedCard), ranked ahead of this gate at its own arm so the
+    // key says why rather than this predicate's shared "wants a marker".
     case MarkerCell::Lower:
-    case MarkerCell::Upper:   return true;
+    case MarkerCell::Upper:
+        return !addressed_bound_cell_is_tie_follower(app);
     }
     return false;
 }
@@ -11777,6 +11957,13 @@ inline bool value_drag_target(const AppState& a, const GuiAudio& audio,
     case MarkerCell::Lower:
     case MarkerCell::Upper:
         if (active_view_state(a).read_only) return false;
+        // A TIE FOLLOWER ARMS NOTHING (architect 2026-09-19): the cell paints
+        // and addresses, but the bracket under it is the LEADER's and the
+        // follower's own pair is unread, so a drag there would move a number
+        // nothing shows. The refusal is SILENT, the gesture's standing rule,
+        // and the cursor answers Arrow over the cell because the map reads
+        // this same predicate.
+        if (bound_cell_is_tie_follower(a, column, idx)) return false;
         return marker_paints_iter_cells(a, column, idx);
     }
     return false;
@@ -14729,8 +14916,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // same evening, so both backends publish and the term had no
         // producer left. What can still refuse is the per-press write, and
         // that CARDS (card_clipboard_refusal, input_key_dispatch.cpp).
+        // AND THE TIE ROAD HOLDS THE FACE LIT UNDER THE TWIN RULE
+        // (2026-09-19), which is the shape the backend term had the day it
+        // stood: with a bound cell addressed on a TIE FOLLOWER the shifted
+        // press jumps to the LEADER on the other tab — a fact about the tie
+        // and not about a resolved value — while the plain press still cards
+        // the copy's own refusal. The tooltip's second line reads the same
+        // owner, so a lit face and a standing line name one act.
         case RedesignButton::IconCopyValue:
-            if (!payload_eligible_marker(a, audio, a.last_selected_marker))
+            if (!payload_eligible_marker(a, audio, a.last_selected_marker) &&
+                jump_tie_leader_destination(a) < 0)
                 return false;
             break;
         // ADD TO SELECTION MIRRORS NOTHING AND NEVER GREYS (architect
@@ -16489,11 +16684,14 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {"Drop Marker (S)", nullptr};
             break;
         // COPY RESOLVED VALUE: the shift line exists iff the shifted press
-        // would jump, which is BOTH of the jump's own questions asked in the
-        // jump's own order — the eligibility verdict on the focus (the ONE
-        // gate both chords run first, and the face's own enabled term above)
-        // and then value_source_marker, which names the marker to land on or
-        // −1. Neither condition is restated here; each is read from its owner.
+        // would jump, which is ALL of the jump's own questions asked in the
+        // jump's own order — the TIE ROAD first since 2026-09-19
+        // (jump_tie_leader_destination, which answers for a bound cell on a
+        // follower and short-circuits the rest, exactly as the act's head
+        // fork does), then the eligibility verdict on the focus (the ONE gate
+        // both chords run first, and the face's own enabled term above) and
+        // then value_source_marker, which names the marker to land on or
+        // −1. No condition is restated here; each is read from its owner.
         // (THE STACK REFUSAL FORKED THE FIRST LINE from 2026-09-02 to
         // 2026-09-12, answering kValueInCollapsedStack plus the accelerator
         // where a pass or a ref inside a coincident-collapsed group greys the
@@ -16515,6 +16713,12 @@ inline RedesignTooltipText redesign_button_tooltip(
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         case RedesignButton::IconCopyValue: {
+            // THE TIE ROAD IS ASKED FIRST because it is the act's own first
+            // fork (2026-09-19): with a bound cell addressed on a follower the
+            // shifted press jumps to the leader and none of the payload
+            // questions below applies, so the line stands there whatever they
+            // would have answered.
+            if (jump_tie_leader_destination(a) >= 0) break;
             const PayloadEligibility verdict =
                 payload_eligibility(a, audio, a.last_selected_marker);
             // (AN ITERATION-LOCK TERM STOOD HERE for one afternoon on

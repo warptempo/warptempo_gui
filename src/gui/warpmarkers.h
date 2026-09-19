@@ -568,6 +568,32 @@ inline int iter_tie_group_size(const std::vector<GuiM>& v, int group) {
     return n;
 }
 
+// EVERY MEMBER OF `idx`'s TIE, in store order, `fn` taking each index —
+// `idx` alone when it is untied, and nothing at all when it is out of range.
+// So a caller that must act ACROSS the tie writes one loop whether or not a
+// tie stands, and the untied case is the loop's own degenerate form rather
+// than a branch at each caller.
+//
+// THE WALLS ARE ITS READERS (iter_bound_tie_window and its phase twin,
+// app_state.h): one sweep cell applies ONE delta to EVERY member, so a bound
+// that any member cannot take is a bound no cell may hold, and the window a
+// step clamps into is the INTERSECTION of the members' own windows. It reads
+// the group and nothing else, so it is one body for both columns like the
+// walk above it.
+template <typename GuiM, typename Fn>
+inline void for_each_iter_tie_member(const std::vector<GuiM>& v, int idx,
+                                     Fn&& fn) {
+    const int n = static_cast<int>(v.size());
+    if (idx < 0 || idx >= n) return;
+    const int group = v[static_cast<size_t>(idx)].iter_tie_group;
+    if (group == 0) {
+        fn(idx);
+        return;
+    }
+    for (int i = 0; i < n; ++i)
+        if (v[static_cast<size_t>(i)].iter_tie_group == group) fn(i);
+}
+
 // A GROUP ID NO MARKER IN THIS STORE CARRIES — the highest in use plus one,
 // so an id is never reused while the ties it named still stand. The ids are
 // per column and per session; nothing outside this store reads them.

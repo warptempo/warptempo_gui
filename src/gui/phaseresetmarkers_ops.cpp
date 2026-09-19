@@ -499,6 +499,11 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
     // wants a focused phase reset's range and has none.
     if (!iter_bound_step_actionable(app))
         return "Select a phase reset to change its range";
+    // THE TIE'S REFUSAL, RANKED AHEAD OF THE SILENT WALL — the warp twin's
+    // clause verbatim (architect 2026-09-19): all acts are on the leader, the
+    // arrows' directional face greys on this same predicate, and a greyed
+    // face's reason is the key's card.
+    if (addressed_bound_cell_is_tie_follower(app)) return kBoundCellTiedCard;
     // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
     // arms read this very predicate), so the key says nothing either — a
     // benign one-dimensional refusal already at its state, the cell's own

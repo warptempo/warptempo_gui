@@ -8728,6 +8728,18 @@ void GuiInputHandler::copy_focused_marker_value() {
 //     markers. BOTH TABS END FRAMED, each on its own half of the pair.
 // NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
 // anywhere in the product, so there is nothing here to push.
+//
+// IT HAS A SECOND SUBJECT SINCE 2026-09-19 AND ONE TAIL (architect): with a
+// BOUND CELL addressed on a TIE FOLLOWER the destination is that tie's LEADER
+// — "he looks at the leader on the other tab without losing his place among
+// the followers on this one" — and the five acts above run on it unchanged.
+// The fork is at the HEAD, ahead of the payload gates, and it is the whole
+// fork: a follower's eligibility is a fact about its TIE, not about a resolved
+// value, so an owner, a phase reset or a collapsed-stack member is a legal
+// subject on this road where the payload road refuses it. On the PAYLOAD axis
+// the chord keeps today's meaning exactly. The destination is an index into
+// the ACTIVE column's store on either road, which is what the tail's two
+// owners resolve against.
 void GuiInputHandler::jump_to_value_source() {
     // (AN ITERATION-LOCK REFUSAL STOOD HERE for one afternoon on 2026-09-10,
     // ahead of every other gate, because the act ENDS on the other tab and the
@@ -8736,50 +8748,65 @@ void GuiInputHandler::jump_to_value_source() {
     // while any tab is locked — so the jump switches tabs under a lit lamp
     // exactly as it always did, and the button's shift line came back with
     // it.)
-    switch (payload_eligibility(app, audio, app.last_selected_marker)) {
-        case PayloadEligibility::NoResolvedValue:
-            // THE COPY'S OWN GATE, in the JUMP's words: there is no resolved
-            // value here, so there is no marker the value came from either.
-            // It says "value" and not "value to copy" because this chord
-            // copies nothing (architect 2026-08-30).
+    //
+    // THE TIE ROAD, asked first and answering with the destination itself
+    // (jump_tie_leader_destination, app_state.h — the one owner the button's
+    // enabled arm and its tooltip's second line read too, so a lit face, a
+    // standing line and this act name one destination). A −1 is "not this
+    // road" and the payload gates below take the press.
+    int destination = jump_tie_leader_destination(app);
+    if (destination < 0) {
+        // THE PAYLOAD ROAD, unchanged: its gates answer only where the tie
+        // road did not, so neither road ever sees the other's refusals.
+        switch (payload_eligibility(app, audio, app.last_selected_marker)) {
+            case PayloadEligibility::NoResolvedValue:
+                // THE COPY'S OWN GATE, in the JUMP's words: there is no
+                // resolved value here, so there is no marker the value came
+                // from either. It says "value" and not "value to copy"
+                // because this chord copies nothing (architect 2026-08-30).
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "The focused marker has no resolved value");
+                return;
+            case PayloadEligibility::CollapsedStack:
+                // THE STACK'S OWN SENTENCE, the copy's verbatim: the value
+                // this marker would name a source for is one the render never
+                // applies, so there is no marker worth standing on (R-16).
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kValueInCollapsedStack);
+                return;
+            case PayloadEligibility::Eligible:
+                break;
+        }
+        // AN EMPTY PAYLOAD IS THE COPY'S OWN REFUSAL and the jump's too — an
+        // unresolvable ref or a carve-out with no successor — and a payload
+        // that names NO SOURCE is the value's own fallback (a first-marker
+        // pass, a walk that ended on a ref, a synthetic prior, a normalized
+        // ref): there is nothing to jump to, so the press is a consumed
+        // nothing.
+        // AND THEY SAY SO SINCE 2026-08-30, all three in ONE sentence:
+        // whichever of them answered, the fact the press needs is that this
+        // value names no marker to stand on. (The third is a belt — a source
+        // index past the store — and shares the sentence rather than earning
+        // one, since a separate wording would describe an invariant breach to
+        // the user.)
+        // THE THREE ARE ONE OWNER since 2026-09-01 — value_source_marker
+        // (app_state.cpp), which wraps the composer call this body made
+        // inline and which the Copy value button's shift line reads too, so
+        // the line drops exactly where this cards.
+        destination = value_source_marker(app, audio.total_frames());
+        if (destination < 0) {
             notifications.notify(AppState::NotificationClass::Normal,
-                                 "The focused marker has no resolved value");
+                                 "There is no source marker to jump to");
             return;
-        case PayloadEligibility::CollapsedStack:
-            // THE STACK'S OWN SENTENCE, the copy's verbatim: the value this
-            // marker would name a source for is one the render never
-            // applies, so there is no marker worth standing on (R-16).
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kValueInCollapsedStack);
-            return;
-        case PayloadEligibility::Eligible:
-            break;
+        }
     }
-    // AN EMPTY PAYLOAD IS THE COPY'S OWN REFUSAL and the jump's too — an
-    // unresolvable ref or a carve-out with no successor — and a payload that
-    // names NO SOURCE is the value's own fallback (a first-marker pass, a walk
-    // that ended on a ref, a synthetic prior, a normalized ref): there is
-    // nothing to jump to, so the press is a consumed nothing.
-    // AND THEY SAY SO SINCE 2026-08-30, all three in ONE sentence: whichever
-    // of them answered, the fact the press needs is that this value names no
-    // marker to stand on. (The third is a belt — a source index past the
-    // store — and shares the sentence rather than earning one, since a
-    // separate wording would describe an invariant breach to the user.)
-    // THE THREE ARE ONE OWNER since 2026-09-01 — value_source_marker
-    // (app_state.cpp), which wraps the composer call this body made inline
-    // and which the Copy value button's shift line reads too, so the line
-    // drops exactly where this cards.
-    const int source = value_source_marker(app, audio.total_frames());
-    if (source < 0) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "There is no source marker to jump to");
-        return;
-    }
+    // THE ONE TAIL, reached by both roads: the five acts in their ruled order.
     run_center_command();
     active_views.switch_active_tab_view_to(
         app.active_tab_view == 'A' ? 'B' : 'A');
-    selection.set_single_selection(source);
-    land_playhead_on_marker(app, audio, viewport, source);
+    selection.set_single_selection(destination);
+    land_playhead_on_marker(app, audio, viewport, destination);
     run_center_command();
 }
 

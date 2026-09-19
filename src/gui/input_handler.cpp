@@ -1662,6 +1662,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the editor wants a warp marker and does not have one — so the
         // card names the subject it needs rather than forking on which half
         // of the predicate said no. The greyed button never reaches it.
+        //
+        // THE TIE'S OWN SENTENCE, RANKED AHEAD OF THE SHARED ONE (architect
+        // 2026-09-19): a bound cell addressed on a TIE FOLLOWER greys this
+        // button through the predicate below, and the reason a grey does not
+        // carry is the key's to card — but the predicate's sentence names the
+        // subject the editor WANTS, which here it already has. So the tie
+        // answers first, in its own words, and the shared sentence keeps
+        // meaning what it always meant.
+        if (addressed_bound_cell_is_tie_follower(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kBoundCellTiedCard);
+            return;
+        }
         if (!flag_editor_open_actionable(app)) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  app.active_markers_view == 'M'

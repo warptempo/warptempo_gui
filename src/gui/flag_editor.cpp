@@ -249,6 +249,14 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     if (!iteration_column_lit(app, column)) return;
     if (phase ? !phase_reset_iter_eligible_marker(pmv, idx)
               : !iter_popup_eligible_marker(mv, idx)) return;
+    // A TIE FOLLOWER HAS NO FIELD (architect 2026-09-19): its cells show the
+    // LEADER's numbers and its own pair is unread, so a field here would edit
+    // one bracket while displaying another. The Edit Flag button greys on
+    // this same predicate (flag_editor_open_actionable) and bare Return cards
+    // kBoundCellTiedCard at its own arm; the DOUBLE-CLICK road is silent, a
+    // pointer gesture's non-event being its own answer, so this arm is the
+    // refusal for that road and the belt for the other.
+    if (bound_cell_is_tie_follower(app, column, idx)) return;
 
     if (text_editor::is_active(app.top_flag_editor) &&
         app.top_flag_editor.kind == text_editor::Kind::IterBound &&
@@ -277,14 +285,10 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     // THE SEED IS THE MARKER'S OWN TOKEN, in the one spelling the cell paints
     // on this column (format_iter_bound_cell's `+0.00` on the warp side,
     // format_phase_iter_bound_cell's `+0` on the phase side, each blank).
-    //
-    // IT READS THE MARKER AND NOT THE TIE'S GOVERNOR, so on a TIE FOLLOWER —
-    // whose cells show the LEADER's numbers (iter_bracket_governor,
-    // warpmarkers.h) — the field opens on the follower's own, unused bracket
-    // and commits into it. A follower's bracket is not its authoring surface
-    // at all and this editor has no business opening there; the refusal is
-    // the tie's own next step, and until it lands this is the one place a
-    // follower's cell and its field can disagree.
+    // READING THE MARKER RATHER THAN THE TIE'S GOVERNOR IS EXACT HERE, and
+    // the refusal above is why: past it the marker IS its tie's governor —
+    // untied, or the leader — so the seed and the cell's painted numbers are
+    // one number on every road that opens a field.
     const std::string seed =
         phase ? format_phase_iter_bound_cell(pmv[static_cast<size_t>(idx)],
                                              side)
@@ -370,18 +374,27 @@ void GuiFlagEditor::commit_iter_bound_edit() {
             return;
         }
         // THE WALLS, the landing owner's two, refused rather than clamped:
-        // THE TEMPO WINDOW — every sweep cell renders base + delta, so the
-        // base plus either bound must stay inside the tempo bracket — and the
-        // partner bound, the lower never above the upper and the upper never
-        // below the lower (0 for a blank bracket, the step's own start). The
-        // window cannot move under the bracket afterwards: while grid
-        // iterations stands the piece is locked and no base tempo can be
-        // authored (authoring_locked, app_state.h), which is what retired the
+        // THE TIE'S TEMPO WINDOW — every sweep cell renders base + delta for
+        // EVERY tied member, so each member's base plus either bound must stay
+        // inside the tempo bracket, and the interval is the tightest member's
+        // (iter_bound_tie_window, app_state.h, the step's own owner, so a
+        // typed bound and a stepped one are refused and clamped on ONE test
+        // and no sweep cell can ever refuse) — and the partner bound, the
+        // lower never above the upper and the upper never below the lower
+        // (0 for a blank bracket, the step's own start). Neither window nor
+        // tie can move under the bracket afterwards: while grid iterations
+        // stands the piece is locked and no base tempo can be authored
+        // (authoring_locked, app_state.h), which is what retired the
         // retroactive clamp this refusal used to name.
-        const int64_t lo_wall = kTempoMinCents - live.tempo_cents;
-        const int64_t hi_wall = kTempoMaxCents - live.tempo_cents;
-        if (value < lo_wall || value > hi_wall) {
-            refuse("the base tempo plus the bound leaves the tempo bracket [" +
+        //
+        // ONLY THE NOUN FORKS on whether a tie stands, the tie's own verdict
+        // owner's rule: the wall a typed bound broke may be another marker's.
+        const IterBoundWindow w = iter_bound_tie_window(mv_const, idx);
+        if (value < w.lo || value > w.hi) {
+            const bool tied = live.iter_tie_group != 0;
+            refuse(std::string(tied ? "a tied marker's base tempo"
+                                    : "the base tempo") +
+                   " plus the bound leaves the tempo bracket [" +
                    format_tempo_cents(kTempoMinCents) + ", " +
                    format_tempo_cents(kTempoMaxCents) + "]");
             return;
@@ -506,9 +519,19 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
         // NUMERIC bound the STEP clamps at, stopping at +/-9 there
         // (phase_iter_bound_step_landing) — it simply has no typed road, which
         // is why this site reads the interval and never a wall kind.
-        const PhaseHopWindow w = phase_reset_hop_window(app, audio, idx);
+        //
+        // AND IT IS THE TIE'S WINDOW (architect 2026-09-19): one cell
+        // displaces EVERY tied reset by the same hop count, so the interval is
+        // the tightest member's (phase_iter_bound_tie_window, app_state.h,
+        // the step's own owner, so a typed bound and a stepped one meet ONE
+        // test and no sweep cell can ever refuse). Only the noun forks on
+        // whether a tie stands — the edge a typed bound would run into may be
+        // another reset's.
+        const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);
         if (value < w.k_min || value > w.k_max) {
-            refuse("the cell would leave the piece");
+            refuse(live.iter_tie_group != 0
+                       ? "the cell would take a tied reset out of the piece"
+                       : "the cell would leave the piece");
             return;
         }
         // THE ONE WRITE SITE: the addressed side takes the value, the partner

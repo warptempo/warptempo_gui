@@ -195,8 +195,11 @@ void ValueDragOps::apply_motion(int mouse_y) {
         const MarkerCell cell = app.value_drag.cell;
         const GuiWarpMarker& before = mv[static_cast<size_t>(idx)];
         const int64_t cur = warp_bound_now(before, cell);
+        // The tempo window ACROSS THE TIE and the partner bound, both through
+        // the column's own landing owner, which reads the store because the
+        // window is the tie's (iter_bound_tie_window, app_state.h).
         const int64_t landing =
-            iter_bound_step_landing(before, cell, target - cur);
+            iter_bound_step_landing(mv, idx, cell, target - cur);
         if (landing == cur) return;
         // THE COLUMN'S ONE WRITE SITE, which carries the BLANK RULE with it: a
         // pair landing on [0, 0] CLEARS the bracket rather than resting there,
