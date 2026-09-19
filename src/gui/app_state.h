@@ -12975,8 +12975,8 @@ inline std::size_t history_walk_step_landing(
 // each, and it allocates nothing on a piece whose tempos carry no DEVIATION
 // CHAIN — the phase arm's window walk is at most kIterHopMax landings per
 // bracketed reset over a memoized map, and the warp arm's would-be-cell check
-// (CellWouldNotLoad, below) serializes and parses two lines per BRACKETED
-// CHAINED marker and none at all where there is no chain to respell.
+// (CellWouldNotLoad, below) serializes and parses two lines per CHAINED MEMBER
+// of a bracketed axis and none at all where there is no chain to respell.
 inline constexpr std::size_t kMaxIterSweepCells = 1000;
 
 // THE THREE SENTENCES, ONE SPELLING EACH. They live here rather than at the
@@ -13143,6 +13143,17 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         // disabled marker is invisible to the act, here as at the dispatch,
         // and carries no bracket of its own to count).
         if (!iter_popup_eligible_marker(mv, i)) continue;
+        // A TIE IS ONE AXIS (architect 2026-09-19): every cell applies the
+        // same delta to every tied member, so the tie folds ONE factor and it
+        // is the LEADER'S. A follower contributes nothing at all — it carries
+        // no bracket of its own, and the bracket that governs it is already
+        // counted at the leader — so it is skipped here rather than tested for
+        // a bracket it cannot have. The walk is the tie's one owner's
+        // (marker_is_tie_follower, warpmarkers.h); nothing here re-derives who
+        // leads. A tie whose leader carries a bracket still sets `any_swept`
+        // below, and one whose leader carries none contributes nothing,
+        // exactly as a lone unbracketed marker does.
+        if (marker_is_tie_follower(mv, i)) continue;
         const GuiWarpMarker& m = mv[static_cast<size_t>(i)];
         // An eligible marker with no bracket contributes the single zero
         // delta the dispatch gives it: a factor of one, nothing to multiply.
@@ -13191,11 +13202,18 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         // trailing row terminator dropped) handed to the reader that would
         // read them, so no third spelling of the payload exists to drift.
         //
-        // ONLY A CHAINED MARKER IS ASKED. An unchained marker's cell grows
-        // exactly ONE term, and that term's count (1), its magnitude (the
-        // walled bound) and the total it rides are all legal by construction —
-        // which is what keeps this per-tick face free of a parse in every
-        // piece that carries no chain.
+        // ONLY A CHAINED MARKER IS ASKED, and the question is asked of EVERY
+        // MEMBER OF THE TIE (2026-09-19): a tie's cell writes a line for each
+        // of its members, all carrying the SAME appended term, so any member
+        // at the term cap refuses the whole press. The gate stays per member —
+        // a member with no chain is still never asked — which is what keeps
+        // this per-tick face free of a parse in every piece that carries no
+        // chain. An unchained marker's cell grows exactly ONE term, and that
+        // term's count (1), its magnitude (the walled bound) and the total it
+        // rides are all legal by construction. The bounds are the LEADER'S,
+        // the tie's one bracket, and the members are the tie's own walk
+        // (for_each_iter_tie_member, warpmarkers.h), which yields the leader
+        // alone where no tie stands.
         //
         // IT IS ASKED AHEAD OF THE CAP because it is a verdict about ONE
         // marker's own payload and the cap is a verdict about the product:
@@ -13206,9 +13224,13 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         // moves the authored FRAME, an ordinary whole frame the sidecar
         // grammar takes by construction — so there is no line for a hop to
         // walk out of.
-        if (!m.tempo_deviation_cents.empty()) {
-            const auto cell_loads = [&m](int64_t bound) {
-                GuiWarpMarker cell = m;
+        bool member_refuses = false;
+        for_each_iter_tie_member(mv, i, [&](int j) {
+            if (member_refuses) return;
+            const GuiWarpMarker& member = mv[static_cast<size_t>(j)];
+            if (member.tempo_deviation_cents.empty()) return;
+            const auto cell_loads = [&member](int64_t bound) {
+                GuiWarpMarker cell = member;
                 cell.tempo_cents += bound;
                 if (bound != 0) cell.tempo_deviation_cents.push_back(bound);
                 std::string line = format_warpmarkers_text({cell});
@@ -13216,10 +13238,11 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
                 return warpmarkers_internal::parse_single_canonical_line(line)
                     .has_value();
             };
-            if (!cell_loads(start) || !cell_loads(end)) {
-                plan.refusal = IterationSweepRefusal::CellWouldNotLoad;
-                return plan;
-            }
+            if (!cell_loads(start) || !cell_loads(end)) member_refuses = true;
+        });
+        if (member_refuses) {
+            plan.refusal = IterationSweepRefusal::CellWouldNotLoad;
+            return plan;
         }
         const std::size_t span =
             start > end ? std::size_t{1}
@@ -13242,6 +13265,10 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
                             ? static_cast<int>(pv.size()) : 0;
     for (int i = 0; i < phase_n; ++i) {
         if (!phase_reset_iter_eligible_marker(pv, i)) continue;
+        // A TIE IS ONE AXIS on this column too, the warp arm's rule and its
+        // one walk: the leader folds the tie's single factor and every
+        // follower contributes nothing.
+        if (marker_is_tie_follower(pv, i)) continue;
         const GuiPhaseResetMarker& p = pv[static_cast<size_t>(i)];
         if (!p.iter_start_hops.has_value() || !p.iter_end_hops.has_value()) {
             continue;

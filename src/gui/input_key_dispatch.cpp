@@ -4655,12 +4655,13 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // backstop.
 
     // Snapshot markers in timeline order (the GuiWarpMarkers store is
-    // sorted by time_frame, with ties legal). For each owning, enabled
-    // marker build its per-cell delta list in integer cents: a single 0 when
-    // no iter range is authored, otherwise the cents enumeration from
-    // iter_start_cents to iter_end_cents inclusive. Deltas and tempos
-    // share the one integer-cents domain, so the per-cell base + delta
-    // below is plain integer addition — no conversion anywhere.
+    // sorted by time_frame, with coincident frames legal). For each AXIS —
+    // one owning, enabled marker, or a whole TIE of them — build its per-cell
+    // delta list in integer cents: a single 0 when no iter range is authored,
+    // otherwise the cents enumeration from iter_start_cents to iter_end_cents
+    // inclusive. Deltas and tempos share the one integer-cents domain, so the
+    // per-cell base + delta below is plain integer addition — no conversion
+    // anywhere.
     const std::vector<GuiWarpMarker> base_warp_markers =
         app.warpmarkers.markers();
     // Snapshot phase resets once too: every cell starts from this same
@@ -4692,11 +4693,27 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // vectors stay empty for the loops below to walk zero times.
     const bool phase_column = iteration_column_lit(app, 'P');
 
-    std::vector<int>                  eligible_indices;
+    // AN AXIS IS A TIE, AND A TIE MAY HOLD SEVERAL MARKERS (architect
+    // 2026-09-19), so each axis carries a LIST of store indices rather than
+    // one: the tie's members in store order, the LEADER FIRST, straight out of
+    // the tie's own walk (for_each_iter_tie_member, warpmarkers.h), which
+    // yields the marker alone where no tie stands. One cell of the grid
+    // chooses ONE value per axis and applies it to every index on that axis.
+    //
+    // THE AXES STAND IN STORE ORDER OF THEIR LEADERS, because the walks below
+    // visit the store in order and fold an axis only at a leader. That is what
+    // puts a tie's CSV entry at its FIRST member's position in the basename,
+    // with no sort and no second rule.
+    std::vector<std::vector<int>>     eligible_indices;
     std::vector<std::vector<int64_t>> per_marker_delta_cents;
     std::vector<bool>                 is_swept;
-    std::vector<int>                  phase_eligible_indices;
-    std::vector<std::vector<int64_t>> per_phase_cell_frames;
+    std::vector<std::vector<int>>     phase_eligible_indices;
+    // ONE FRAME LIST PER MEMBER PER AXIS — `per_phase_cell_frames[k][mp][c]`
+    // is the frame the axis's c-th hop puts the k-th axis's mp-th member on. A
+    // hop is a COUNT OF LATTICE STEPS, not a frame delta, so every member
+    // takes its own displacement for the axis's chosen count rather than the
+    // leader's.
+    std::vector<std::vector<std::vector<int64_t>>> per_phase_cell_frames;
     std::vector<std::vector<int>>     per_phase_hops;
     std::vector<bool>                 phase_is_swept;
 
@@ -4719,7 +4736,15 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // clears every bracket before ordinary disablement is reachable
         // again.
         if (!iter_popup_eligible_marker(base_warp_markers, i)) continue;
-        eligible_indices.push_back(i);
+        // A TIE IS ONE AXIS and the LEADER folds it: a follower carries no
+        // bracket of its own and its delta arrives through the axis its leader
+        // built, so it names no axis here. The plan's own walk skips it on the
+        // same predicate, which is what keeps the two counts one product.
+        if (marker_is_tie_follower(base_warp_markers, i)) continue;
+        std::vector<int> axis_members;
+        for_each_iter_tie_member(base_warp_markers, i,
+                                 [&](int j) { axis_members.push_back(j); });
+        eligible_indices.push_back(std::move(axis_members));
         const bool swept =
             m.iter_start_cents.has_value() && m.iter_end_cents.has_value();
         is_swept.push_back(swept);
@@ -4767,13 +4792,17 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // it carries no bracket, disablement and a standing bracket being
         // mutually unreachable (the warp arm above carries the whole reason).
         if (!phase_reset_iter_eligible_marker(base_phase_resets, i)) continue;
+        // A TIE IS ONE AXIS, the warp arm's rule and its one walk: the leader
+        // folds the axis and the followers ride it.
+        if (marker_is_tie_follower(base_phase_resets, i)) continue;
+        std::vector<int> axis_members;
+        for_each_iter_tie_member(base_phase_resets, i,
+                                 [&](int j) { axis_members.push_back(j); });
         const GuiPhaseResetMarker& p = base_phase_resets[i];
-        phase_eligible_indices.push_back(i);
         const bool swept =
             p.iter_start_hops.has_value() && p.iter_end_hops.has_value();
         phase_is_swept.push_back(swept);
-        std::vector<int>     hops;
-        std::vector<int64_t> frames;
+        std::vector<int> hops;
         if (swept) {
             const int lo = *p.iter_start_hops;
             const int hi = *p.iter_end_hops;
@@ -4781,17 +4810,33 @@ void GuiInputHandler::run_iteration_sweep_render() {
                 refuse_inverted_bracket("phase reset", i);
                 return;
             }
-            for (int k = lo; k <= hi; ++k) {
-                hops.push_back(k);
-                frames.push_back(phase_reset_hop_cell_frame(
-                    p.time_frame, k, sweep_map));
-            }
+            for (int k = lo; k <= hi; ++k) hops.push_back(k);
         } else {
             hops.push_back(0);
-            frames.push_back(p.time_frame);
         }
+        // EACH MEMBER TAKES ITS OWN DISPLACEMENT FOR THE AXIS'S HOP COUNT: a
+        // hop is a step of the analysis lattice, so the frame two hops later
+        // is a different distance for each reset. The unswept axis keeps its
+        // members' resting frames verbatim — that cell IS the piece at rest,
+        // and the lattice body is not asked where nothing moves.
+        std::vector<std::vector<int64_t>> member_frames;
+        member_frames.reserve(axis_members.size());
+        for (int mi : axis_members) {
+            const GuiPhaseResetMarker& member = base_phase_resets[mi];
+            std::vector<int64_t> frames;
+            frames.reserve(hops.size());
+            if (swept) {
+                for (int k : hops)
+                    frames.push_back(phase_reset_hop_cell_frame(
+                        member.time_frame, k, sweep_map));
+            } else {
+                frames.push_back(member.time_frame);
+            }
+            member_frames.push_back(std::move(frames));
+        }
+        phase_eligible_indices.push_back(std::move(axis_members));
         per_phase_hops.push_back(std::move(hops));
-        per_phase_cell_frames.push_back(std::move(frames));
+        per_phase_cell_frames.push_back(std::move(member_frames));
     }
 
     // THE VERDICT IS THE FACE'S OWN (architect 2026-09-02, the four-tier
@@ -4887,8 +4932,9 @@ void GuiInputHandler::run_iteration_sweep_render() {
 
     // The delta lists built above and the owner's count are the same product
     // by construction — the same two stores, the same two eligibility walks,
-    // the same bracket arithmetic — and a zero-length list can only come from
-    // an inverted bracket, which returned at the breach. So the count is taken
+    // THE SAME TIE SKIP (a follower names no axis on either road), the same
+    // bracket arithmetic — and a zero-length list can only come from an
+    // inverted bracket, which returned at the breach. So the count is taken
     // from the owner rather than re-accumulated, and it is at least one.
     const size_t total_cells = plan.cells;
 
@@ -4937,9 +4983,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // column's (2026-09-10), in that store's timeline order. `indices[k]` holds
     // the current cell coordinate along the k-th swept axis and the rightmost
     // dimension increments fastest, so consecutive cells differ in the last
-    // eligible marker's own value first. `dim_sizes` is the flat list of axis
-    // lengths, read straight out of whichever family was built above — the
-    // other one is empty, so the sum is that family's own count.
+    // axis's own value first. AN AXIS IS A TIE (2026-09-19), so the product is
+    // over TIES and not over markers — several tied markers spend one
+    // dimension between them. `dim_sizes` is the flat list of axis lengths,
+    // read straight out of whichever family was built above — the other one is
+    // empty, so the sum is that family's own count.
     const size_t num_dims =
         per_marker_delta_cents.size() + per_phase_hops.size();
     std::vector<size_t> dim_sizes(num_dims, 0);
@@ -4958,6 +5006,13 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // (format_signed_hops) — no double round-trip on either, and the
         // absent decimals are what tell a phase sweep's names from a warp
         // sweep's.
+        //
+        // ONE ENTRY PER AXIS, so a TIE spells ONE entry for all its members
+        // and it stands at the tie's FIRST member's position — which falls out
+        // of the axes standing in store order of their leaders (the build
+        // above) rather than out of a rule here. The walk and the spelling are
+        // unchanged: an axis was a marker and is now a tie, and the composer
+        // never asked which.
         std::string csv;
         for (size_t k = 0; k < num_dims; ++k) {
             if (!(phase_column ? phase_is_swept[k] : is_swept[k])) continue;
@@ -4980,7 +5035,6 @@ void GuiInputHandler::run_iteration_sweep_render() {
 
         std::vector<GuiWarpMarker> cell_warp_markers = base_warp_markers;
         for (size_t k = 0; k < per_marker_delta_cents.size(); ++k) {
-            const int mi = eligible_indices[k];
             // Per-cell tempo is a computed value, not an authored one, and
             // it needs no bracket gate HERE because it cannot leave the
             // bracket: the bracket rides the marker's resting tempo
@@ -5013,22 +5067,35 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // but the cell's chain is one term longer and a marker already at
             // the term cap would spell a line the strict parser refuses. The
             // plan asks the product's own loader about both ends of every
-            // chained marker's bracket and refuses the whole press when
+            // chained MEMBER of every axis and refuses the whole press when
             // either would not load (iteration_sweep_plan's CellWouldNotLoad
             // arm, app_state.h, which carries the rule) — so past that arm
             // this line is one the strict parse accepts and it re-parses to
             // exactly this total.
+            //
+            // THE AXIS'S ONE DELTA REACHES EVERY MEMBER OF THE TIE (architect
+            // 2026-09-19), each RELATIVE TO ITS OWN TEMPO: the same number is
+            // added to each member's own total and appended to each member's
+            // own chain, so a tie moves as one while the markers keep whatever
+            // they differ by. An untied marker is the loop's degenerate form —
+            // a one-member axis — so there is no second body here.
             const int64_t cell_delta_cents =
                 per_marker_delta_cents[k][indices[k]];
-            cell_warp_markers[mi].tempo_cents =
-                base_warp_markers[mi].tempo_cents + cell_delta_cents;
-            if (cell_delta_cents != 0)
-                cell_warp_markers[mi].tempo_deviation_cents.push_back(
-                    cell_delta_cents);
-            // The engine doesn't consume iter values; clear them
-            // so the request is quiet.
-            cell_warp_markers[mi].iter_start_cents.reset();
-            cell_warp_markers[mi].iter_end_cents.reset();
+            for (int mi : eligible_indices[k]) {
+                cell_warp_markers[mi].tempo_cents =
+                    base_warp_markers[mi].tempo_cents + cell_delta_cents;
+                if (cell_delta_cents != 0)
+                    cell_warp_markers[mi].tempo_deviation_cents.push_back(
+                        cell_delta_cents);
+                // The engine doesn't consume iter values; clear them
+                // so the request is quiet. THE TIE GOES WITH THE BRACKET
+                // (2026-09-19): it is the same kind of session state and
+                // travels the same way nowhere, so the cell carries neither —
+                // strip_iter_fields' own pairing, one scope over.
+                cell_warp_markers[mi].iter_start_cents.reset();
+                cell_warp_markers[mi].iter_end_cents.reset();
+                cell_warp_markers[mi].iter_tie_group = 0;
+            }
         }
 
         // THE PHASE CELL: each swept reset takes the authored frame its hop
@@ -5041,16 +5108,28 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // word.
         std::vector<GuiPhaseResetMarker> cell_phase_resets = base_phase_resets;
         for (size_t k = 0; k < per_phase_hops.size(); ++k) {
-            const int pi = phase_eligible_indices[k];
-            cell_phase_resets[pi].time_frame =
-                per_phase_cell_frames[k][indices[k]];
-            cell_phase_resets[pi].iter_start_hops.reset();
-            cell_phase_resets[pi].iter_end_hops.reset();
+            // THE AXIS'S ONE HOP COUNT DISPLACES EVERY MEMBER OF THE TIE, each
+            // by its own lattice distance for that count — resolved per member
+            // above, which is why the frame is read out of the member's own
+            // list rather than the leader's.
+            const std::vector<int>& axis_members = phase_eligible_indices[k];
+            for (size_t mp = 0; mp < axis_members.size(); ++mp) {
+                const int pi = axis_members[mp];
+                cell_phase_resets[pi].time_frame =
+                    per_phase_cell_frames[k][mp][indices[k]];
+                cell_phase_resets[pi].iter_start_hops.reset();
+                cell_phase_resets[pi].iter_end_hops.reset();
+                cell_phase_resets[pi].iter_tie_group = 0;
+            }
         }
         // THE VECTOR IS SORTED HERE because the cells MAY CROSS (architect
         // 2026-09-11): a neighbouring reset is not a wall any more, so two
         // adjacent ranges may cross or meet and a cell can displace a reset
-        // past the one beside it. A crossed cell is the user's own deliberate
+        // past the one beside it. A TIE REACHES MORE ROWS AT ONCE (2026-09-19)
+        // — one cell now displaces every member of its axis — so the sort has
+        // more to do and no new rule to learn: it is the same one pass over
+        // the whole vector, whatever moved it. A crossed cell is the user's
+        // own deliberate
         // contortion and renders exactly where its cells put the resets, in
         // swapped order; a cell where two enabled resets land on ONE frame
         // renders them as one reset, the parser's exact-coincidence collapse
