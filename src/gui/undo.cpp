@@ -1268,12 +1268,19 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
 // it can NAME which of its two terms refused — an empty stack, or a top entry
 // belonging to the locked other tab — and one press owes one card, so the
 // authoritative guard below stays the belt it always was.
-void Undo::do_undo() {
-    if (!history_entry_actionable(app.history.undo_stack)) return;
+//
+// SILENT IS NOT ANSWERLESS: each returns whether the restore RAN (the
+// contract and the car's reason for reading it are at the declaration). The
+// bail still leaves the entry on the stack, the view unchanged and the screen
+// unmarked; the bool is the caller's, not a message.
+bool Undo::do_undo() {
+    if (!history_entry_actionable(app.history.undo_stack)) return false;
     restore_history_entry(app.history.undo_stack, app.history.redo_stack, +1);
+    return true;
 }
 
-void Undo::do_redo() {
-    if (!history_entry_actionable(app.history.redo_stack)) return;
+bool Undo::do_redo() {
+    if (!history_entry_actionable(app.history.redo_stack)) return false;
     restore_history_entry(app.history.redo_stack, app.history.undo_stack, -1);
+    return true;
 }

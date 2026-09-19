@@ -4018,9 +4018,19 @@ private:
     // read-only tab cards the chord), the routers and the `h` view's gate
     // ranked above them being the caller's to drop. The gates' statement and
     // order are at the definition.
+    //
+    // BOTH ANSWER WHETHER A RESTORE RAN (architect 2026-09-18): false at every
+    // refusal arm of their own — the command's three (the iteration lock,
+    // history_step_actionable's pair, the restrict-undo lamp) and the
+    // key-less road's head gates — otherwise the ops' own answer
+    // (Undo::do_undo / do_redo, which return false on their belt). THE ANSWER
+    // IS THE CAR'S: with the render player closed the head unit's Previous and
+    // Next step the history AND THEN PLAY, and a step that restored nothing
+    // plays nothing (car_transport.h). on_key's own arm ignores the result —
+    // the keyboard has nothing to do with it and no [[nodiscard]] is wanted.
 public:
-    void run_undo_redo_command(bool redo, bool synthesized_repeat);
-    void run_undo_redo_without_key(bool redo);
+    bool run_undo_redo_command(bool redo, bool synthesized_repeat);
+    bool run_undo_redo_without_key(bool redo);
 
     // THE CAR'S PLAY ROAD (architect 2026-09-17 — each car button is its key,
     // so the head unit's play meets what bare SPACE meets): BARE SPACE'S HEAD

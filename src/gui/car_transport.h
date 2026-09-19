@@ -26,9 +26,10 @@ struct GuiInputHandler;
 // (PAUSE and PLAYPAUSE, the two kinds a console's own button sends against a
 // display that says PLAYING; a bare PLAY starts nothing at all and is the
 // audio route's reopen, the arm and its measured reason at the table below),
-// PREVIOUS IS UNDO and NEXT IS REDO (Ctrl+Z and Ctrl+Shift+Z
+// PREVIOUS IS UNDO and NEXT IS REDO AND THEN A PLAY (Ctrl+Z and Ctrl+Shift+Z
 // whole, 2026-09-17 — the console steps the piece's history and reads the
-// position back off its own display) — under the same dummy-track trick as
+// position back off its own display — the play tail added 2026-09-18, the
+// block "THE SKIPS PLAY WHAT THEY STEPPED TO" below) — under the same dummy-track trick as
 // the player (the session says PLAYING always, its clock always in motion),
 // with ONE DIFFERENCE from the GUI's own transport: A PLAY STARTED FROM THAT
 // BUTTON LOOPS THE TRIM FOREVER, in every view, ALWAYS FROM THE TRIM'S BEGIN
@@ -109,7 +110,8 @@ struct GuiInputHandler;
 //     pointer drag the chord is swallowed with the key's card, a read-only tab
 //     cards the chord, the iteration lock cards undo's own sentence — and then
 //     they meet the command's own refusals and cards (the empty stack, the
-//     other tab's lock, the restrict-undo lamp).
+//     other tab's lock, the restrict-undo lamp). Each of those refusals ends
+//     the press where it ends today and plays NOTHING (the block below).
 //   THE PLAY TAKES BARE SPACE'S GATES
 //     (GuiInputHandler::car_play_refused_by_key_gates) — the gates alone,
 //     because the ACT is the car's own loop rather than toggle_playback: under
@@ -132,6 +134,47 @@ struct GuiInputHandler;
 // is the held key's alone; the wheel does not repeat). A restore stops a live
 // session exactly as the key's does (the restore body's own stop), the car's
 // loop included.
+//
+// THE SKIPS PLAY WHAT THEY STEPPED TO (architect 2026-09-18; the pending play
+// approved 2026-09-19). His complaint from the car: Previous and Next stepped
+// the history and then he had to press play after every step, and that was
+// the cumbersome part. The project's undo stack is small and bounded and
+// HEARING THE STATE YOU JUST STEPPED TO IS THE ACT, so each skip runs its
+// chord whole and then THE CAR'S PLAY — the loop of the trim from its begin,
+// GuiPlaybackLifecycle::car_play_playback, the toggle's play arm reached
+// without its fork (the reason the two entries exist is at that declaration).
+// THE RENDER PLAYER'S OWN Previous / Next DELIBERATELY DO NOT (a RECORDED
+// ASYMMETRY, not an oversight): a sweep folder holds hundreds of files and
+// walking one must not make noise, so with the player standing a skip AT REST
+// stays a silent walk of the band and only a skip over a SOUNDING item
+// changes what sounds (GuiRenderPlayer::car_previous / car_next).
+//
+// TWO RULES, and the first is the whole safety of it:
+//   1. A REFUSED STEP PLAYS NOTHING, and leaves a running loop running.
+//      Nothing was stepped to, so there is nothing new to hear — an empty
+//      stack, the other tab's lock, the restrict-undo lamp, the iteration
+//      lock, a read-only tab, an open editor, a pointer drag: every one ends
+//      the press exactly where it ends today, with today's card and nothing
+//      else. The bool that carries the answer runs all the way from
+//      Undo::do_undo / do_redo through run_undo_redo_command to
+//      run_undo_redo_without_key, false at every refusal arm on the way.
+//   2. THE PENDING CAR PLAY. A restore triggers the target preview, which
+//      with an idle worker dispatches SYNCHRONOUSLY and often resolves on the
+//      render cache's reuse rung (an A->B->A walk of the history is exactly
+//      its shape), so in target view the preview is usually ready the instant
+//      the restore returns and the play fires at once. It is NOT ready for a
+//      state never previewed this session, which is what a POSITION edit
+//      leaves behind: drops, drags and nudges author in SOURCE view, where a
+//      trigger bumps the generation and dispatches nothing. Without a wait
+//      the feature would be dead in `A) T+W`, the view his console shows. So
+//      a skip whose play is refused FOR READINESS ALONE ARMS A ONE-SHOT and
+//      the tick fires it the moment the preview settles (PendingCarPlay,
+//      below, where the clears are enumerated). Nothing is carded for that
+//      wait: the refusal is the silent one-dimensional class row 8 already
+//      answers with `Updating...` (messaging.md), and the latch turns that
+//      silence into a wait rather than a refusal. It is asynchronous and it
+//      makes SOUND, not a popup — the 2026-09-15 no-async-popups ruling is
+//      about popups and stands.
 
 // THE TITLE'S ONE COMPOSER: WHERE THE SESSION STANDS, SPELLED AS A BATCH
 // CELL'S BASENAME IS (architect 2026-09-17, replacing the three-number line of
@@ -230,9 +273,11 @@ struct GuiCarTransport {
     //     key's kind alone.
     //   Previous -> car_previous(): run_undo_redo_without_key(false), UNDO
     //     WHOLE — Ctrl+Z's head gates, refusals and cards, then the restore
-    //     (which stops a live session, the car's loop included).
+    //     (which stops a live session, the car's loop included) — AND THEN
+    //     THE CAR'S PLAY (car_play_after_step, the tail and its two rules
+    //     below).
     //   Next -> car_next(): run_undo_redo_without_key(true), REDO WHOLE,
-    //     Ctrl+Shift+Z's.
+    //     Ctrl+Shift+Z's, and the same play tail.
     //   Stop -> the one stop body (stop_playback_if_playing): pause IS stop by
     //     ruling, and a console with a Stop button gets the same act.
     //   FocusLost / FocusLostTransient -> the one stop body iff a transport
@@ -243,6 +288,11 @@ struct GuiCarTransport {
     //     Accord's wheel sends Previous / Next; SeekTo has no scrub to answer
     //     on a dummy display that counts up from zero), and NOTHING RECOVERS
     //     BY ITSELF (the AAudio posture; the user presses play).
+    // EVERY COMMAND CLEARS THE PENDING CAR PLAY AT THIS HEAD, ahead of the
+    // switch (the latch's contract at its declaration): a Pause, a Play, a
+    // Stop, a seek or a focus loss from the console cancels a wait, which is
+    // his "any other transport act clears it". The two skips re-arm in their
+    // own tails if their new step is refused for readiness again.
     void on_media_command(GuiMediaCommand cmd);
 
     // THE PUBLISHER (the head comment's comparator), called from main.cpp's
@@ -250,7 +300,10 @@ struct GuiCarTransport {
     // or not the player stands: with the player active it remembers the
     // hand-over and returns (the player owns the wire then); otherwise it
     // derives the state and pushes iff the player just came down or a field
-    // but the position differs from the last push.
+    // but the position differs from the last push. IT ALSO RUNS THE PENDING
+    // CAR PLAY, ahead of the comparator, so the skip's sound lands on the
+    // first tick after the preview settles and the push that follows already
+    // carries the play (run_pending_play, the rules at the latch).
     void tick();
 
     // A LOOP WRAP HAPPENED — called by main.cpp's tick right after the wrap's
@@ -266,6 +319,17 @@ private:
     void car_toggle();
     void car_previous();
     void car_next();
+    // THE SKIPS' PLAY TAIL, reached only after a step that actually restored
+    // (the head comment's rule 1): the car's play, or the wait that stands in
+    // for it in target view. It asks NOTHING ELSE — in particular it does NOT
+    // re-ask the play's own key gates (car_play_refused_by_key_gates), and
+    // that is load-bearing rather than an economy: by construction they
+    // cannot refuse here, because a drag or an open keyboard-modal editor
+    // already stopped the STEP one line above with the undo chord's own card,
+    // and re-asking them could raise a SECOND card for one console press.
+    void car_play_after_step();
+    // The latch's tick body (the rules and every clear at its declaration).
+    void run_pending_play();
     GuiMediaState derive() const;
 
     // THE COMPARATOR'S RECORD: the last pushed state, plus the wrap epoch it
@@ -284,4 +348,38 @@ private:
     // the player's close (up to one tick of the player's last picture,
     // accepted).
     bool      handed_to_player_ = false;
+
+    // THE PENDING CAR PLAY (architect 2026-09-19) — armed by a skip whose
+    // play was refused FOR THE PREVIEW'S READINESS ALONE (car_play_after_step;
+    // the measured reason it exists is rule 2 of the head comment), and fired
+    // or dropped by tick(). The three fields are THE AXES THE WAIT IS ABOUT:
+    // a restore writes all three, so a later step, a view switch, a tab
+    // switch or a save makes this wait stale and the tick drops it rather
+    // than playing a state he has already left. `title` is
+    // car_transport_title_line(app.history) taken at the arm — the live
+    // state's own number, which every undo and redo moves — so it names WHICH
+    // state the wait is for.
+    struct PendingCarPlay {
+        bool        armed      = false;
+        char        audio_view = '\0';
+        char        tab        = '\0';
+        std::string title;
+    };
+    // THE CLEARS, ALL OF THEM, AND NOT ONE OF THEM IS A DURATION (nothing in
+    // this product decides a wait by a timer, and every state below is one
+    // the tick can read):
+    //   * THE PLAYER TOOK THE WIRE (tick's own early arm) — the head unit has
+    //     another owner now and this wait is not its business.
+    //   * !admits() — a prompt, the picker or the stats panel, a dialog
+    //     editor, the `h` view: the wait is over.
+    //   * THE SNAPSHOT MOVED — any of the three fields above.
+    //   * SOMETHING IS ALREADY SOUNDING — he started it himself at the glass.
+    //   * THE PREVIEW SETTLED (!is_updating) — the wait is over one way or
+    //     the other: clear, and play iff preview_ready(). A render that
+    //     settled with NO buffer (the failed preview, which cards on its own)
+    //     plays nothing.
+    //   * ANY CONSOLE COMMAND, at on_media_command's head (its own comment).
+    // It is per-project state and needs no clear at a reopen: this object is
+    // built inside run_project and dies with the project.
+    PendingCarPlay pending_play_;
 };

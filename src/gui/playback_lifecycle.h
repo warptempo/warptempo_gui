@@ -243,7 +243,15 @@ struct GuiPlaybackLifecycle {
 
     // THE CAR'S SPACE (architect 2026-09-17): the head unit's play/pause with
     // the render player CLOSED, reached from GuiCarTransport::car_toggle and
-    // nowhere else. STOP ARM: exactly toggle_playback's — the same transport-
+    // nowhere else. It is THE FORK AND THE PLAY BODY BELOW, split 2026-09-18
+    // when the console's skips gained a play tail of their own (Previous and
+    // Next undo and redo AND THEN PLAY, car_transport.h): THAT TAIL WANTS THE
+    // PLAY ALONE, never the fork. Hearing the state it just stepped to IS the
+    // act, so the sound is owed unconditionally; the fork would make it
+    // conditional on a transport bit the tail has no business re-deriving —
+    // the restore it just ran is what silenced the transport (the restore
+    // body's own stop), and any arm of that fork but the play is the feature
+    // failing to make a sound. STOP ARM: exactly toggle_playback's — the same transport-
     // live term (a live project play OR a standing A/B audition, a rest of the
     // act stopping as a play does) through the one stop body, and PAUSE IS THE
     // GUI'S STOP: no pause semantics, no resume point — the console's pause
@@ -278,8 +286,10 @@ struct GuiPlaybackLifecycle {
     // camera — main.cpp's tick).
     // A trim under two frames refuses in the body's own playable gate,
     // silently (the benign one-dimensional class: the playhead and the grey
-    // say it). The target view's preview-readiness gate is the caller's,
-    // as it is on_key's for Space (GuiCarTransport::car_toggle).
+    // say it). The target view's preview-readiness gate is THE CALLER'S on
+    // both roads in, as it is on_key's for Space — car_toggle asks it as
+    // Space's edge does, and the skips' tail asks it and WAITS on it (the
+    // pending car play, car_transport.h).
     //
     // THE LOOP IS A PROPERTY OF THIS LAUNCH, NOT A LAMP: any GUI act that
     // stops (Space, Home / End, a marker touch, a modal open, the S/T flip)
@@ -287,9 +297,22 @@ struct GuiPlaybackLifecycle {
     // play() once-through; a scrub) ends it, and every GUI launch plays once
     // as it always has. The head unit's Previous / Next are Undo / Redo whole
     // (GuiCarTransport), so a restore stops the loop exactly as Ctrl+Z does
-    // (the restore body's own stop) and the next car Play starts at the
-    // trim's begin again.
+    // (the restore body's own stop) — and since 2026-09-18 a restore that RAN
+    // relaunches it here, from the trim's begin again, while a refused step
+    // leaves a running loop running.
     void car_toggle_playback();
+    // THE CAR'S PLAY, WITHOUT THE FORK (architect 2026-09-18): the toggle
+    // above past its stop arm, the whole of it — the defensive chase clear,
+    // the device reopen and its card, the trim window and its two clamps, the
+    // always-from-the-begin start, the user-launch clear, the looping launch
+    // with the camera term, the follow lamp's spend. TWO CALLERS, both the
+    // console's: car_toggle_playback's play arm, and the skips' play tail
+    // (GuiCarTransport::car_play_after_step — directly, and again from the
+    // pending play the tick fires), which wants the play and not the fork for
+    // the reason stated above. It asks no transport bit of its own: a live
+    // session is the CALLER'S to end, the toggle's stop arm on one road and
+    // the restore's own stop body on the other.
+    void car_play_playback();
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the

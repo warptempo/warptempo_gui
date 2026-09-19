@@ -145,9 +145,14 @@ struct GuiTargetRender {
 
     // True iff a target render is currently in flight (worker busy
     // with the target render's request) OR a target-render dispatch is
-    // pending behind the cancellation of a prior render. Used by the two
-    // Space handlers (input_handler.cpp) in target view to refuse
-    // Space-to-play while an update is in progress.
+    // pending behind the cancellation of a prior render. It is what
+    // preview_ready() below asks first, and it is also asked ON ITS OWN by
+    // the callers that must tell "still settling" from "settled with
+    // nothing" — the scrub's silent target-view refusal
+    // (input_pointer.cpp), this class's own status and re-establishment
+    // paths, and, since 2026-09-18, THE PENDING CAR PLAY
+    // (GuiCarTransport::run_pending_play, which keeps WAITING while this is
+    // true and decides on preview_ready() the moment it goes false).
     bool is_updating() const {
         return pending_ || in_flight_;
     }
@@ -156,11 +161,15 @@ struct GuiTargetRender {
     // audio to play right now": no update in flight or pending (the bound
     // buffer is stale by definition while one is) AND a populated target
     // buffer (no successful preview render yet in this session means the bind
-    // would play stale source-domain samples). FOUR READERS as re-greped
-    // 2026-09-17: Space's play
+    // would play stale source-domain samples). FIVE READERS as re-greped
+    // 2026-09-18: Space's play
     // edge (input_handler.cpp, where Space-to-stop is honored first), THE
     // CAR'S OWN PLAY (GuiCarTransport::car_toggle, which asks this in exactly
-    // Space's shape and for exactly Space's reason, ahead of the launch), the A/B
+    // Space's shape and for exactly Space's reason, ahead of the launch), THE
+    // CAR'S SKIP TAIL (GuiCarTransport::car_play_after_step and the pending
+    // play its tick fires — the one reader that WAITS on this rather than
+    // refusing on it, is_updating() being how it tells settling from settled),
+    // the A/B
     // audition's press-time gate (GuiAbAudition, which asks it for BOTH tabs
     // before its first switch and again at every launch) and, since
     // 2026-08-30, the play/stop button's enabled face (redesign_button_enabled

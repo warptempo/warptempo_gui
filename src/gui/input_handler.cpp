@@ -2509,7 +2509,11 @@ bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
 // caller has already passed every head gate; `synthesized_repeat` is the
 // key's own repeat bit. The Undo / Redo roster buttons reach it through their
 // chord on on_key, so the gates above hold for them unchanged.
-void GuiInputHandler::run_undo_redo_command(bool redo,
+//
+// RETURNS WHETHER A RESTORE RAN (the contract and the car's reason at the
+// declaration): false at each of the three refusal arms below, otherwise the
+// ops' own answer. on_key's arm drops it on the floor.
+bool GuiInputHandler::run_undo_redo_command(bool redo,
                                             bool synthesized_repeat) {
     // THE ITERATION LOCK REFUSES FIRST (architect 2026-09-10: "They just
     // don't go in the undo stack at all; they're considered transient by
@@ -2531,7 +2535,7 @@ void GuiInputHandler::run_undo_redo_command(bool redo,
         notifications.notify(AppState::NotificationClass::Normal,
                              redo ? kIterationLockRedoCard
                                   : kIterationLockUndoCard);
-        return;
+        return false;
     }
     // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30). The
     // authoritative test is history_step_actionable (app_state.h), the
@@ -2558,7 +2562,7 @@ void GuiInputHandler::run_undo_redo_command(bool redo,
         // HeldRepeatDispatchScope. The held BUTTON never reaches this
         // line: its face greys on the same predicate and its burst rests
         // there (tick_chrome_press_repeat).
-        if (stack.empty() && synthesized_repeat) return;
+        if (stack.empty() && synthesized_repeat) return false;
         notifications.notify(
             AppState::NotificationClass::Normal,
             stack.empty()
@@ -2566,7 +2570,7 @@ void GuiInputHandler::run_undo_redo_command(bool redo,
                         : "There is nothing to undo")
                 : "That step belongs to the other tab, which is "
                   "read-only");
-        return;
+        return false;
     }
     // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S REFUSAL (architect 2026-09-04),
     // ranked behind the two terms above because emptiness and the other
@@ -2584,10 +2588,9 @@ void GuiInputHandler::run_undo_redo_command(bool redo,
         notifications.notify(AppState::NotificationClass::Normal,
                              redo ? kRedoOutsideViewCard
                                   : kUndoOutsideViewCard);
-        return;
+        return false;
     }
-    if (redo) undo.do_redo();
-    else      undo.do_undo();
+    return redo ? undo.do_redo() : undo.do_undo();
 }
 
 // THE CAR'S UNDO / REDO (architect 2026-09-17: the head unit's Previous and
@@ -2604,7 +2607,15 @@ void GuiInputHandler::run_undo_redo_command(bool redo,
 // and the `h` view's gate are the CALLER'S to drop (GuiCarTransport::admits),
 // and chord_is_bound answers true for both chords, which the helpers ask
 // anyway. Then the command itself, as a deliberate press (no repeat).
-void GuiInputHandler::run_undo_redo_without_key(bool redo) {
+//
+// IT ANSWERS THE CAR'S OWN QUESTION (architect 2026-09-18): true iff a
+// restore actually ran — false at each head gate below, otherwise the
+// command's answer, which is false at each of its three refusal arms and at
+// the ops' belt. THE SKIP PLAYS ONLY WHAT IT ACTUALLY STEPPED TO, so a
+// refused press ends here with today's card and nothing else, a running loop
+// left running (nothing new was stepped to, so there is nothing new to hear;
+// the tail is GuiCarTransport::car_previous / car_next).
+bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
     const GuiKey key = GuiKeys::Z;
     GuiInputState mods{};
     mods.ctrl  = true;
@@ -2616,23 +2627,23 @@ void GuiInputHandler::run_undo_redo_without_key(bool redo) {
     };
     if (no_audio_to_dispatch_on()) {
         card_bound(kNoAudioLoadedCard);
-        return;
+        return false;
     }
     if (app.editor_text_drag.active) {
         card_bound(kKeysDuringDrag);
-        return;
+        return false;
     }
     if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
         card_bound(modal_editor_swallow_card(key, mods));
-        return;
+        return false;
     }
     if (keyboard_owned_by_pointer_gesture()) {
         card_bound(kKeysDuringDrag);
-        return;
+        return false;
     }
-    if (authoring_lock_refuses_chord(key, mods)) return;
-    run_undo_redo_command(redo, /*synthesized_repeat=*/false);
+    if (authoring_lock_refuses_chord(key, mods)) return false;
+    return run_undo_redo_command(redo, /*synthesized_repeat=*/false);
 }
 
 // THE CAR'S PLAY MEETS SPACE'S OWN GATES (architect 2026-09-17: "look at how

@@ -391,13 +391,25 @@ void GuiPlaybackLifecycle::spend_follow_lamp() {
 // 2026-09-17). The stop arm is toggle_playback's own fork verbatim — the
 // sub-tick disagreement between the scanner bit and the audio thread's flag
 // recorded there is this arm's too — and PAUSE IS STOP: the one stop body,
-// nothing remembered.
+// nothing remembered. Past the fork the act is the play body below, which the
+// skips' tail also reaches on its own (the two entries' division of labour is
+// at the declarations).
 void GuiPlaybackLifecycle::car_toggle_playback() {
     if (playback.is_playing() ||
         app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle) {
         stop_playback_if_playing();
         return;
     }
+    car_play_playback();
+}
+
+// THE CAR'S PLAY, THE TOGGLE'S OWN PLAY ARM AND NOTHING ADDED (architect
+// 2026-09-18; contract at the declaration): the console's second entry, the
+// one the head unit's Previous and Next reach after a restore that actually
+// ran (GuiCarTransport::car_play_after_step). It asks no transport bit — the
+// caller that wants the fork calls the toggle above, and the caller that
+// wants the play calls this.
+void GuiPlaybackLifecycle::car_play_playback() {
     // The play arm's prologue is toggle_playback's, in its order: the
     // defensive chase clear ahead of every gate, then the device reopened at
     // the press (carding a failed reopen; the launch body's belt then finds
@@ -429,9 +441,11 @@ void GuiPlaybackLifecycle::car_toggle_playback() {
     // THE USER-LAUNCH CLEAR, owner (2) at GuiAuditionSequence: this entry is
     // the second road into the launch body that is not the act's, and it
     // clears ahead of the delegation, refused or not, exactly as
-    // launch_playback_from does. (The stop arm above already ends a standing
-    // act — a rest is transport-live — so this reaches the sub-tick window
-    // alone, as the view-end entry's clear does.)
+    // launch_playback_from does. (A standing act is already ended on both
+    // roads in — the toggle's stop arm ends it, a rest being transport-live,
+    // and the skips' restore runs the one stop body before it returns — so
+    // this reaches the sub-tick window alone, as the view-end entry's clear
+    // does.)
     clear_audition_sequence(app);
     // A trim under two frames refuses inside the body — playback_launch_
     // playable on the begin — and the publish's own loop belt refuses the same
