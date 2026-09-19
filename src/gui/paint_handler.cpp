@@ -6458,8 +6458,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this block's
 //   "no default face: this prompt system has no Enter answer, so every button
 //   is plain") — the LAST, the Escape sentinel, on every prompt but THE FOUR
-//   CONFIRMATIONS — the load, File → Revert and, since 2026-09-16, the two
-//   propagate pastes (phase reset and magnification level) — which are raised
+//   CONFIRMATION RAISES — the load's two, File → Revert's and, since
+//   2026-09-16, the phase reset paste's — which are raised
 //   on their FIRST (PromptState's PromptInitialFocus owns the choice); Enter answers whichever it is, the
 //   assignment site is a few dozen lines into the body below and the whole
 //   supersession is at PromptState.
@@ -7038,8 +7038,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // which is that the last button is always the ESCAPE SENTINEL). WHICH
     // button is the RAISE'S OWN CHOICE (PromptInitialFocus, carried on the
     // question since 2026-08-28): the last on every prompt but THE FOUR
-    // CONFIRMATIONS — the load, File → Revert and, since 2026-09-16, THE TWO
-    // PROPAGATE PASTES (phase reset and magnification level) — which ask for
+    // CONFIRMATION RAISES — the load's two, File → Revert's and, since
+    // 2026-09-16, THE PHASE RESET PASTE'S — which ask for
     // their FIRST, each being already the deliberate second step of an
     // explicit act, so its Enter confirms it.
     // The load's one prompt body carries both `'` subjects (the player's entry

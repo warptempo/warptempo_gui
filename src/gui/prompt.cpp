@@ -66,7 +66,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // FirstButton), so a bare Enter answers OK — the load confirmation's default
 // exactly (architect 2026-09-13: "revert should be just the same as load …
 // both should use the same default, OK"): each of the confirmations — three
-// since 2026-09-16, the load's, this one and the propagate pastes' (architect
+// kinds, the load's, this one and the phase reset paste's (architect
 // 2026-09-16, "align — paste should open on the equivalent of OK") — is
 // already the deliberate second step of an explicit act (the File row or its
 // chord here, the `'` press there, the paste chord or its Edit row), so the

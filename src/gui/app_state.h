@@ -3959,19 +3959,18 @@ enum class DialogTrigger {
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
 //        by construction rather than by convention. All SIX present() sites
-//        put '\x1b' last (re-grepped 2026-09-13, the revert confirmation
-//        joining): the unsaved-work prompt (Save / Discard /
+//        put '\x1b' last: the unsaved-work prompt (Save / Discard /
 //        CANCEL), its save-failed restatement (Retry / Discard / CANCEL), THE
-//        TWO PROPAGATE PASTE CONFIRMATIONS (Yes / CANCEL — the phase reset's
-//        and, since 2026-09-15, the magnification level's), THE LOAD
+//        PHASE RESET PASTE'S CONFIRMATION (Yes / CANCEL — the magnification
+//        level paste is purely additive and raises none), THE LOAD
 //        CONFIRMATION'S TWO RAISERS (OK / CANCEL — one prompt body, two
 //        subjects: the render player's highlighted entry and the `h` view's
 //        viewed walk member) and the revert confirmation (OK / CANCEL) —
-//        SEVEN raises, re-grepped 2026-09-16. So on a
+//        SIX raises, re-grepped 2026-09-19. So on a
 //        LastButton raise the key that answers without asking answers the way
-//        Esc already does; the five confirmations that raise on their FIRST
-//        button (the load's two, the revert's and the two pastes') put OK —
-//        or Yes — one Enter away by
+//        Esc already does; the four confirmations that raise on their FIRST
+//        button (the load's two, the revert's and the phase reset paste's)
+//        put OK — or Yes — one Enter away by
 //        choice, each being the deliberate second step of an explicit act.
 //   (ii) THE PAINTED GATE below already consumes every key until the prompt
 //        has been on screen, so an Enter queued behind a raise answers
@@ -6118,8 +6117,8 @@ struct AppState {
     //   PASSIVE is ASSIGNED, never walked onto. Two producers, and they are
     //   the whole list: a PROMPT'S RAISE (the painter, onto the button the
     //   raise named — the last, the Escape sentinel, on every prompt but the
-    //   five confirmations: the load's two raisers, the revert's and, since
-    //   2026-09-16, the two propagate pastes'; PromptState's
+    //   four confirmation raises: the load's two, the revert's and, since
+    //   2026-09-16, the phase reset paste's; PromptState's
     //   PromptInitialFocus owns the choice and why each is safe) and a
     //   FEINT (a press that armed a button, then dragged off it —
     //   update_modal_dialog_hover's leave edge; the rule is at

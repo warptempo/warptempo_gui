@@ -49,8 +49,11 @@ struct GuiInputHandler;
 //     2026-09-19). Every placement landing inside [0, total - 1] is
 //     materialized; the first one that does not stops the run and is reported
 //     on a notification card in the family's own register. A paste where
-//     everything fits is silent; a paste where NOTHING fits creates nothing,
-//     pushes no undo entry, moves nothing and cards.
+//     everything fits is silent. THE FIRST PLACEMENT ALWAYS LANDS — its
+//     offset is 0 by construction and the anchor is the in-domain playhead —
+//     so every paste materializes at least one marker and there is no
+//     produced-nothing case to answer (the derivation is at the assert in
+//     paste_apply).
 //   * A COINCIDENT LANDING SIMPLY PASTES. Nothing refuses and nothing
 //     de-duplicates: coincident markers are legal in the store, and a run of
 //     2+ ENABLED rows at one frame reads as the neutral level 0
@@ -73,13 +76,11 @@ struct GuiInputHandler;
 //     (waveform_gain_profile_cached, warp_frame_map_view.h), so that rebuild
 //     reads the new gain with no gain-change kick of its own, exactly as the
 //     three loads in place and the undo restore do (the inventory is at
-//     Viewport::kick_waveform_sync). A run that materialized nothing changed
-//     no store and owes nothing.
+//     Viewport::kick_waveform_sync).
 //
 // WHAT IS THE SIBLING'S, CLAUSE FOR CLAUSE: the selection spend on both acts
-// (selection_consumed, past every refusal), the paste ENDING WITH THE CREATED
-// MARKERS SELECTED, the first focused and the playhead landed on it, and the
-// produced-nothing stillness.
+// (selection_consumed, past every refusal) and the paste ENDING WITH THE
+// CREATED MARKERS SELECTED, the first focused and the playhead landed on it.
 struct MagnificationLevelPropagate {
     AppState&           app;
     Viewport&           viewport;
@@ -133,10 +134,9 @@ struct MagnificationLevelPropagate {
     // The paste's tail: land in SOURCE view with the M column active and the
     // newly created markers selected (the column's only view), the first
     // focused and the playhead landed on it. `created` is the exact
-    // post-insert index set of the markers the paste materialized. ONLY A RUN
-    // THAT MATERIALIZED A MARKER REACHES IT — a run that produced nothing
-    // says its sentence on a card and leaves the view exactly where it stands,
-    // the sibling's ruling read across. The two view switches are NO-OPS ON
+    // post-insert index set of the markers the paste materialized, and it is
+    // never empty — the paste's own assert carries that derivation. The two
+    // view switches are NO-OPS ON
     // EVERY ROAD, the act being an S+M act at the press; they stand because
     // this tail is where the paste names the view it ends in, and naming it
     // through the two chokepoints is what keeps that claim true if a road ever

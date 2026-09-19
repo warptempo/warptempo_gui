@@ -8983,8 +8983,8 @@ void GuiInputHandler::render_player_load_in_place() {
     // OK's letter.
     // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON — the ONE LOAD PROMPT,
     // raised from its TWO subjects (architect 2026-08-28), and File → Revert's
-    // confirmation (architect 2026-09-13) and the two propagate paste
-    // confirmations (architect 2026-09-16) take the same default: a bare ENTER
+    // confirmation (architect 2026-09-13) and the phase reset paste's
+    // confirmation (architect 2026-09-16) take the same default: a bare ENTER
     // here answers OK, because the prompt is already the deliberate second
     // step of an explicit act — the `'` press — so the question itself is the
     // safeguard and its Enter confirms the act just asked for (the load also

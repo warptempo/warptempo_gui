@@ -121,16 +121,22 @@ void MagnificationLevelPropagate::paste_apply() {
         created_indices.push_back(new_idx);
     }
 
-    if (created_indices.empty()) {
-        // A RUN THAT MATERIALIZED NOTHING SAYS SO WITHOUT MOVING — the
-        // sibling's produced-nothing stillness: no undo entry, no damage, no
-        // landing, and the card is the whole answer. Reachable one way only
-        // (the very first placement lands past the wall), which is why there
-        // is no second sentence to raise here.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             std::move(stop_message));
-        return;
-    }
+    // THE FIRST PLACEMENT ALWAYS LANDS, so this act has no produced-nothing
+    // arm and the belt is an assert rather than a card (an error arm exists
+    // iff a producer exists, validation_topology.md). Every link: the
+    // clipboard has ONE writer, copy_from_selection above, which measures
+    // every offset from the FIRST captured marker, so placements[0]
+    // .offset_frames is 0 by construction and placements is non-empty past
+    // the belt at the head; the column lives in source view alone
+    // (switch_active_markers_view_to refuses 'M' anywhere else), so the
+    // context is the identity and anchor_frame IS the playhead;
+    // clamp_playhead_to_live_domain holds the playhead inside
+    // [0, total - 1] on every writer's road; and a zero-frame source is
+    // refused at the wav layout owner, so total - 1 is a real frame. The
+    // first landing is therefore the in-domain playhead, which is at or
+    // under the wall — only a LATER placement can break the loop, and by
+    // then something is already inserted.
+    assert(!created_indices.empty());
 
     // A COINCIDENT LANDING SIMPLY PASTES (architect 2026-09-19): nothing
     // refuses and nothing de-duplicates, the standing coincidence posture.

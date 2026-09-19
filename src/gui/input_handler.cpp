@@ -225,9 +225,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // day, SUPERSEDING this gate's own "a prompt opens with no button
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
         // what makes it safe is that the focused button is the ESCAPE SENTINEL
-        // — on every prompt but the FIVE CONFIRMATIONS (the load's two
-        // raisers, File → Revert's and, since 2026-09-16, the two propagate
-        // pastes'), which ask for their OK — or Yes — deliberately, each
+        // — on every prompt but the FOUR CONFIRMATIONS (the load's two
+        // raisers, File → Revert's and the phase reset paste's), which ask for
+        // their OK — or Yes — deliberately, each
         // being the second step of an explicit
         // act (PromptState's PromptInitialFocus) — plus the
         // painted gate directly above (PromptState carries the supersession in
