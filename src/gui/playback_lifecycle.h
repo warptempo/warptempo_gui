@@ -264,6 +264,18 @@ struct GuiPlaybackLifecycle {
     // is not the act's), the launch through launch_playback_window with the
     // trim's begin as the loop target, and on success the follow lamp's spend
     // (spend_follow_lamp — the car's play IS the next project-audio launch).
+    // THE CAMERA STAYS WHERE IT IS UNLESS FOLLOW IS ARMED (architect
+    // 2026-09-18): this is the ONE launch that may start OFF SCREEN — the
+    // trim's begin is a fixed point and the passage he is working on is
+    // habitually a couple of screens downstream of it, so a page-in on every
+    // console press cost him a manual recentre per audition. The launch
+    // states `LaunchCamera::PageIn` iff app.follow_armed READ AT THE LAUNCH
+    // LINE (the spend runs in the success tail behind it, so the lamp still
+    // carries the user's arm there) and `LaunchCamera::Leave` otherwise —
+    // with the lamp armed, the spend hands the chase the paging it always
+    // had; with it dark nothing moves, at the launch or at any loop wrap
+    // (the wrap's consumer resyncs the predictor and damages, and writes no
+    // camera — main.cpp's tick).
     // A trim under two frames refuses in the body's own playable gate,
     // silently (the benign one-dimensional class: the playhead and the grey
     // say it). The target view's preview-readiness gate is the caller's,
@@ -398,13 +410,24 @@ private:
     // audition's road passes neither. The lamp's writer inventory is at
     // app.follow_armed, app_state.h.
     void spend_follow_lamp();
+    // THE LAUNCH'S CAMERA TERM, THE CALLER'S WORD (architect 2026-09-18):
+    //   * `PageIn` — if the launch position is offscreen, left-edge-align the
+    //     viewport on it before the scanner issues forth
+    //     (Viewport::follow_scroll_if_needed, the shape follow's own check
+    //     has). Every GUI launch road starts ON SCREEN by construction, so
+    //     this is a no-op on the ordinary press and a rescue on the rare one.
+    //   * `Leave` — the launch writes no camera at all.
+    // NO DEFAULT ARGUMENT: every caller states its own, as MarkerLandingFrame
+    // is stated at cycle_marker_focus (selection-model.md's precedent — a
+    // camera term that defaults is a camera term nobody reads).
+    enum class LaunchCamera { PageIn, Leave };
     // THE ONE LAUNCH BODY FOR THE PROJECT'S AUDIO (contract at the
     // definition): validate `start`, seed the scanner, and play [start, end)
     // — ONCE with `loop_begin` = kPlaybackNoLoop, or wrapping to `loop_begin`
     // forever (the car's loop of the trim, 2026-09-17; the parameter is
     // REQUIRED so every caller states which). Every launch OF THE PROJECT'S
     // WAVEFORM ends here — the view-end launch above, the bounded audition
-    // and the car's play — so the gates, the scanner seed, the follow check
+    // and the car's play — so the gates, the scanner seed, the camera term
     // and the launch damage are written once. It clears no sequence: the
     // view-end entry and the car's entry have already cleared it for a user
     // launch, and the bounded audition arrives with the act's phase already
@@ -421,5 +444,6 @@ private:
     // does not move, the scanner never runs, and the item's domain is the
     // buffer's own. The two share the ONE STOP BODY above, which carries the
     // player's fork.
-    bool launch_playback_window(int64_t start, int64_t end, int64_t loop_begin);
+    bool launch_playback_window(int64_t start, int64_t end, int64_t loop_begin,
+                                LaunchCamera camera);
 };

@@ -769,11 +769,14 @@ void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
 // ahead. Only the first move beyond vp_end triggers a scroll. Called
 // at launch too (right after the one launch body's seed — launch_playback_window
 // — sets the scanner to the launch position), so the same landing rule
-// left-edge-aligns the viewport on the launch position if it was offscreen —
-// the scanner always issues forth visible (Space's cursor launch and the A/B
-// audition's play, which launches from the same resting cursor, can both be
-// offscreen; a scrub click is a visible column already, so the launch call
-// no-ops there).
+// left-edge-aligns the viewport on the launch position if it was offscreen.
+// THE LAUNCH CALL IS THE CALLER'S WORD SINCE 2026-09-18
+// (GuiPlaybackLifecycle::LaunchCamera): every GUI road asks for it and starts
+// on screen anyway (Space's cursor launch is the one that a pan can have
+// carried out of view; a scrub click is a visible column already), while the
+// CAR'S play of the trim — the one launch that begins off screen by design —
+// asks for it only when the follow lamp is armed, so the camera stays where
+// the user left it.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;

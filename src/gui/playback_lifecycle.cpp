@@ -361,8 +361,11 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // which entry a launch reached it through. The edge inventory is at
     // GuiAuditionSequence (app_state.h), owner (2).
     clear_audition_sequence(app);
+    // PageIn: Space launches from the cursor and the scrub from a clicked
+    // column, so both roads start on screen except when the cursor has been
+    // left offscreen by a pan — which is exactly what the page-in rescues.
     if (!launch_playback_window(launch_pos, active_view_play_end(),
-                                kPlaybackNoLoop))
+                                kPlaybackNoLoop, LaunchCamera::PageIn))
         return false;
     // THE ONE-SHOT IS SPENT HERE, in the success tail (architect 2026-09-11):
     // the lamp says "the next play follows", this IS that next play, so the
@@ -433,7 +436,19 @@ void GuiPlaybackLifecycle::car_toggle_playback() {
     // A trim under two frames refuses inside the body — playback_launch_
     // playable on the begin — and the publish's own loop belt refuses the same
     // window one layer down; both silent, the benign one-dimensional class.
-    if (!launch_playback_window(begin, end, begin)) return;
+    //
+    // THE CAMERA IS THE LAMP'S (architect 2026-09-18; the ruling at the
+    // declaration): this is the one launch in the product that may start OFF
+    // SCREEN by design, the trim's begin being a fixed point while the
+    // passage under work sits screens downstream of it, so the page-in is
+    // the user's to ask for. app.follow_armed is read HERE, at the launch
+    // line, because spend_follow_lamp below moves it into follow_engaged —
+    // the lamp still carries the arm at this point, and the tick's chase
+    // takes over the paging the instant the launch succeeds.
+    if (!launch_playback_window(begin, end, begin,
+                                app.follow_armed ? LaunchCamera::PageIn
+                                                 : LaunchCamera::Leave))
+        return;
     // THE LAMP IS SPENT: the car's play is the next project-audio launch.
     spend_follow_lamp();
 }
@@ -469,7 +484,12 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     // every user launch takes is the two user entries' (launch_playback_from
     // and, since 2026-09-17, car_toggle_playback), the roads into the body
     // that are not the act's.
-    return launch_playback_window(start, end, kPlaybackNoLoop);
+    // PageIn: each of the act's four plays is framed by its own `c`
+    // (GuiAbAudition), so the start is centred by construction and the term
+    // is a no-op here — stated, not defaulted, because the body takes no
+    // default (the enum's contract at the declaration).
+    return launch_playback_window(start, end, kPlaybackNoLoop,
+                                  LaunchCamera::PageIn);
 }
 
 // THE ONE LAUNCH BODY: validate `start` — an ABSOLUTE position in the active
@@ -482,7 +502,10 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // (Space's play edge and the scrub, `end` = the view's end), the bounded
 // audition (`end` = start + span, clamped) and the car's launch
 // (car_toggle_playback, `end` = the trim's end and `loop_begin` its begin,
-// 2026-09-17). This body never writes the
+// 2026-09-17). `camera` is each caller's own word and takes no default — the
+// two GUI entries say PageIn, the car's says Leave unless follow is armed
+// (architect 2026-09-18; the enum's contract at the declaration). This body
+// never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
 // Callers run the defensive follow-override clear before delegating.
@@ -502,7 +525,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // the key retired, so every view plays at the source's own rate and there is
 // nothing left to force.)
 bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
-                                                  int64_t loop_begin) {
+                                                  int64_t loop_begin,
+                                                  LaunchCamera camera) {
     // THE A/B AUDITION IS NAMED BY ITS STATE HERE, NOT BY ITS ENTRY (architect
     // 2026-09-01): this body clears no sequence. A user launch arrives with
     // the sequence already Idle — the view-end entry launch_playback_from
@@ -612,13 +636,20 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     app.playhead_scanner_sample = start;
     app.playhead_scanner_precise = static_cast<double>(start);
     app.playhead_scanner_active = true;
-    // If the launch position is offscreen at play press, left-edge-align the
-    // viewport on it before the scanner issues forth (Space launches from the
-    // possibly-offscreen cursor; a scrub click is a visible column by
-    // construction, so this no-ops there). Follow's own check has exactly the
-    // right shape for it whether or not this play will chase, so always run it
-    // on press.
-    viewport.follow_scroll_if_needed();
+    // THE CAMERA IS THE CALLER'S WORD (architect 2026-09-18; the enum's
+    // contract at the declaration). Where the caller says PageIn and the
+    // launch position is offscreen, left-edge-align the viewport on it before
+    // the scanner issues forth — follow's own check has exactly the right
+    // shape for it whether or not this play will chase. EVERY GUI ROAD SAYS
+    // PageIn AND STARTS ON SCREEN ANYWAY: Space launches from the cursor, the
+    // scrub from a column the user just clicked, the A/B audition's plays
+    // from a half its own `c` has centred — so the page-in there is a rescue
+    // for a cursor a pan has carried offscreen and a no-op otherwise. THE
+    // CAR'S PLAY IS THE ONE LAUNCH THAT STARTS OFF SCREEN BY DESIGN: its
+    // position is the trim's BEGIN, a fixed point the worked passage sits
+    // screens downstream of, so it says Leave unless the follow lamp is
+    // armed and the camera stays where the user left it.
+    if (camera == LaunchCamera::PageIn) viewport.follow_scroll_if_needed();
     // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
     // the scanner line appearing at the launch column and the timestamp readout
