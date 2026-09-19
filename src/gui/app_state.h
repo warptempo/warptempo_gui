@@ -10221,17 +10221,16 @@ inline bool iter_bound_step_actionable(const AppState& app) {
 // one — which is what retired the retroactive clamp that used to fold a
 // standing bracket onto a moved base.
 //
-// THE TIE ACT IS THE ONE MOVER OF THIS WINDOW UNDER A STANDING BRACKET, and
-// it meets the window at its OWN VERDICT (2026-09-19). Ctrl+Shift+N is
-// admitted under the lock — it authors bracket state and nothing else — and
-// it changes the MEMBERSHIP this folds over, so a bracket authored against
-// one marker's window could otherwise survive a tie that brings in a tighter
-// one. It does not: iter_tie_toggle_verdict (below, past the two window
-// owners it reads) refuses a tie whose would-be leader's standing bracket
-// falls outside the intersection the PROPOSED membership would have, so the
-// window a bound rests in is the window it was authored against on every
-// road. It REFUSES rather than clamping, the retired retroactive clamp's own
-// reasoning — a sweep cell may never be authored and then quietly moved.
+// NOR CAN THE TIE ACT TIGHTEN THIS WINDOW UNDER A STANDING BRACKET
+// (architect 2026-09-19). Ctrl+Shift+N is the one gesture that moves the
+// MEMBERSHIP this folds over, and it is admitted under the lock — it authors
+// bracket state and nothing else — but its verdict REFUSES a tie in which ANY
+// selected marker already carries a range (iter_tie_toggle_verdict, below),
+// so a tie forms over blanks alone and the bracket its leader then authors is
+// authored against the very membership it will live under. THE UNTIE ONLY
+// WIDENS: a membership that shrinks intersects fewer windows, so the copy
+// each leaver keeps is inside its own window by construction. On every road,
+// then, the window a bound rests in is the window it was authored against.
 //
 // TWO READERS: the landing owner below, which CLAMPS into it, and the bound
 // editor's commit (GuiFlagEditor::commit_iter_bound_edit), which REFUSES
@@ -10242,48 +10241,20 @@ struct IterBoundWindow {
     int64_t hi = 0;
 };
 
-// HOW A TEMPO WINDOW IS INTERSECTED, ONE BODY FOR THIS COLUMN. `walk` yields
-// the member indices to fold — the tie's walk for a standing tie, a
-// selection's for a proposed one — and the fold itself is stated once, so the
-// two faces below cannot come to different arithmetic. An empty walk answers
-// the widest interval the domain allows, which is the identity of the fold
-// and never a verdict: every caller either walks at least one member or
-// answers its own degenerate case ahead of this.
-template <typename Walk>
-inline IterBoundWindow iter_bound_window_over(
-        const std::vector<GuiWarpMarker>& mv, Walk&& walk) {
-    IterBoundWindow w{kTempoMinCents - kTempoMaxCents,
-                      kTempoMaxCents - kTempoMinCents};
-    walk([&](int i) {
-        const int64_t base = mv[static_cast<size_t>(i)].tempo_cents;
-        w.lo = std::max(w.lo, kTempoMinCents - base);
-        w.hi = std::min(w.hi, kTempoMaxCents - base);
-    });
-    return w;
-}
-
 inline IterBoundWindow iter_bound_tie_window(
         const std::vector<GuiWarpMarker>& mv, int idx) {
     // The identity-only window for a degenerate subject, the phase twin's own
     // convention: nothing but the resting cell is legal on an index no member
     // walk can reach.
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return {};
-    return iter_bound_window_over(mv, [&](auto&& fn) {
-        for_each_iter_tie_member(mv, idx, fn);
+    IterBoundWindow w{kTempoMinCents - kTempoMaxCents,
+                      kTempoMaxCents - kTempoMinCents};
+    for_each_iter_tie_member(mv, idx, [&](int i) {
+        const int64_t base = mv[static_cast<size_t>(i)].tempo_cents;
+        w.lo = std::max(w.lo, kTempoMinCents - base);
+        w.hi = std::min(w.hi, kTempoMaxCents - base);
     });
-}
-
-// THE WINDOW A PROPOSED TIE WOULD HAVE — the same intersection over the
-// SELECTION instead of over a standing group, for the tie verdict's own test
-// (2026-09-19). The out-of-range indices a selection may carry are skipped
-// here exactly as every other tie walk skips them, so the membership this
-// folds over is the membership apply_iter_tie would write.
-inline IterBoundWindow iter_bound_selection_window(
-        const std::vector<GuiWarpMarker>& mv, const std::set<int>& selected) {
-    return iter_bound_window_over(mv, [&](auto&& fn) {
-        for (int i : selected)
-            if (i >= 0 && i < static_cast<int>(mv.size())) fn(i);
-    });
+    return w;
 }
 
 // WHERE A BOUND STEP WOULD LAND — the one landing owner, the twin of
@@ -10382,56 +10353,27 @@ inline void iter_bound_step_write(GuiWarpMarker& m, MarkerCell side,
 // warp_frame_map_view.h). A tie is a handful of resets and the map is the
 // memoized live one, so the face's per-tick read stays the same shape it had.
 //
-// THE TIE ACT IS THE ONE MOVER OF THIS WINDOW UNDER A STANDING BRACKET on
-// this column too, and it meets it at the same verdict (2026-09-19,
-// iter_bound_tie_window's own paragraph): Ctrl+Shift+N changes the membership
-// and iter_tie_toggle_verdict refuses a tie whose leader's standing bracket
-// falls outside the intersection the proposed membership would have.
+// NOR CAN THE TIE ACT TIGHTEN THIS WINDOW UNDER A STANDING BRACKET on this
+// column either, for the warp twin's own reason (2026-09-19,
+// iter_bound_tie_window's own paragraph): the tie refuses whenever any
+// selected marker already carries a range, so a tie forms over blanks and an
+// untie only widens what is left.
 //
 // TWO READERS, the warp twin's own pair: the landing owner below, which CLAMPS
 // into it, and the bound editor's commit
 // (GuiFlagEditor::commit_phase_iter_bound_edit), which REFUSES outside it.
-//
-// HOW A HOP WINDOW IS INTERSECTED, ONE BODY FOR THIS COLUMN — the warp fold's
-// twin, and the same contract: `walk` yields the member indices and the fold
-// is stated once, so the tie's window and the proposed tie's cannot come to
-// different arithmetic. An empty walk answers the digit wall alone, the fold's
-// identity.
-template <typename Walk>
-inline PhaseHopWindow phase_iter_bound_window_over(const AppState& app,
-                                                   const GuiAudio& audio,
-                                                   Walk&& walk) {
-    PhaseHopWindow w{-kIterHopMax, kIterHopMax};
-    walk([&](int i) {
-        const PhaseHopWindow own = phase_reset_hop_window(app, audio, i);
-        w.k_min = std::max(w.k_min, own.k_min);
-        w.k_max = std::min(w.k_max, own.k_max);
-    });
-    return w;
-}
-
 inline PhaseHopWindow phase_iter_bound_tie_window(const AppState& app,
                                                   const GuiAudio& audio,
                                                   int idx) {
     const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(pv.size())) return {};
-    return phase_iter_bound_window_over(app, audio, [&](auto&& fn) {
-        for_each_iter_tie_member(pv, idx, fn);
+    PhaseHopWindow w{-kIterHopMax, kIterHopMax};
+    for_each_iter_tie_member(pv, idx, [&](int i) {
+        const PhaseHopWindow own = phase_reset_hop_window(app, audio, i);
+        w.k_min = std::max(w.k_min, own.k_min);
+        w.k_max = std::min(w.k_max, own.k_max);
     });
-}
-
-// THE WINDOW A PROPOSED TIE WOULD HAVE on this column —
-// iter_bound_selection_window's twin, for the tie verdict's own test
-// (2026-09-19). Out-of-range indices are skipped as every other tie walk
-// skips them, so this folds the membership apply_iter_tie would write.
-inline PhaseHopWindow phase_iter_bound_selection_window(
-        const AppState& app, const GuiAudio& audio,
-        const std::set<int>& selected) {
-    const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
-    return phase_iter_bound_window_over(app, audio, [&](auto&& fn) {
-        for (int i : selected)
-            if (i >= 0 && i < static_cast<int>(pv.size())) fn(i);
-    });
+    return w;
 }
 
 // WHERE A PHASE BOUND STEP WOULD LAND — iter_bound_step_landing's twin in the
@@ -10564,11 +10506,6 @@ const char* iter_bound_step_kind_refusal(const AppState& a);
 // rather than a 3 x 3 x 2 one (the field's whole contract is at
 // GuiWarpMarker::iter_tie_group, warpmarkers.h).
 //
-// IT STANDS BELOW THE TWO BOUND WINDOWS because it READS THEM (2026-09-19):
-// the tie act moves the membership a window folds over, so its verdict asks
-// what the proposed membership's intersection would be
-// (iter_bound_selection_window and phase_iter_bound_selection_window above).
-//
 // ONE OWNER FOR THE SENTENCE AND THE DIRECTION, because the act and the face
 // must not disagree about either: the dispatch arm cards `refusal` and runs
 // `act` past it, and the Toggle inherit button's face — the chord's one
@@ -10591,22 +10528,17 @@ struct IterTieVerdict {
 
 // The column-agnostic half, over any store whose markers carry the tie field:
 // the walk is one rule on both columns (iter_tie_leader_index, warpmarkers.h)
-// and what forks per column arrives as three callables, each answering for
-// ONE index in that column's own terms while every SENTENCE stays here —
+// and what forks per column arrives as two callables, each answering for ONE
+// index in that column's own terms while every SENTENCE stays here —
 //   * `kind_refusal(idx)` — nullptr for a marker the sweep reads, that
 //     column's own words otherwise (the only per-column sentence);
 //   * `carries_bracket(idx)` — whether that marker holds a bracket of its
-//     own, in the column's bracket fields;
-//   * `bracket_fits_selection(leader)` — whether the leader's STANDING
-//     bracket lies inside the window the PROPOSED membership would have
-//     (iter_bound_selection_window and its phase twin), true when it carries
-//     none.
-template <typename GuiM, typename KindFn, typename CarriesFn, typename FitsFn>
+//     own, in the column's bracket fields.
+template <typename GuiM, typename KindFn, typename CarriesFn>
 inline IterTieVerdict iter_tie_verdict_over(const std::vector<GuiM>& v,
                                             const std::set<int>& selected,
                                             KindFn&& kind_refusal,
-                                            CarriesFn&& carries_bracket,
-                                            FitsFn&& bracket_fits_selection) {
+                                            CarriesFn&& carries_bracket) {
     // THE SPANNING TEST FIRST, ahead of the direction it decides: two groups
     // in one selection is neither a tie nor an untie.
     int group = 0;
@@ -10632,78 +10564,53 @@ inline IterTieVerdict iter_tie_verdict_over(const std::vector<GuiM>& v,
         if (const char* why = kind_refusal(idx)) return {why, IterTieAct::Tie};
     }
     // Past the kind loop every in-range member is one the sweep reads, so
-    // this count IS the count of eligible members. The LEADER falls out of
-    // the same walk — the EARLIEST in-range selected index, which is the act's
-    // own rule (apply_iter_tie, input_key_dispatch.cpp: the selection is a
-    // sorted set of store indices and the store is sorted by time), derived
-    // here rather than restated so the verdict and the write cannot name
-    // different leaders.
+    // this count IS the count of eligible members.
     int subjects = 0;
-    int leader   = -1;
-    for (int idx : selected) {
-        if (idx < 0 || idx >= static_cast<int>(v.size())) continue;
-        if (leader < 0) leader = idx;
-        ++subjects;
-    }
+    for (int idx : selected)
+        if (idx >= 0 && idx < static_cast<int>(v.size())) ++subjects;
     if (subjects < 2)
         return {"Select two or more markers to tie", IterTieAct::Tie};
-    // NO NON-LEADER MAY CARRY A BRACKET (2026-09-19). The tie keeps the
-    // LEADER's bracket and blanks the rest, so a tie over a bracketed
-    // follower would silently eat session work on the one surface the mode
-    // exists for — and a bracket is outside the undo domain by ruling, so
-    // nothing could put it back.
+    // NO SELECTED MARKER MAY CARRY A BRACKET, THE LEADER INCLUDED (architect
+    // 2026-09-19: "we should be symmetric"). A tie has ONE bracket, the
+    // LEADER's, governing every member's cells. A tie over a bracketed
+    // FOLLOWER would silently eat session work on the one surface the mode
+    // exists for, and a bracket is outside the undo domain by ruling, so
+    // nothing could put it back; a tie over a bracketed LEADER would carry a
+    // bound authored against that marker's own window into the tighter
+    // INTERSECTION of the members' — a window it was never measured against.
+    // One sentence refuses both.
     //
     // IT REFUSES RATHER THAN ADOPTING OR DISCARDING, and that is the
     // REVERSIBLE choice: the UNTIE direction already promises that NOTHING
     // POPS — every leaver keeps a copy of the bracket that governed it — and
     // a tie that ate a bracket would be that same gesture breaking that same
     // promise in the other direction. The cost is one press: the user blanks
-    // the follower's bracket first, which [0, 0] does at the column's one
-    // write site.
+    // the bracket first, which [0, 0] does at the column's one write site.
+    //
+    // THE SYMMETRY IS WHAT KEEPS THE WINDOWS HONEST, and it is why there is
+    // no second arm here asking whether a standing bracket still FITS the
+    // membership the tie would make. A tie forms over blanks alone, and a
+    // blank fits every membership by construction (the intersection always
+    // contains the zero delta), so no tie can carry a bound out of the window
+    // it was authored against; the other roads onto a standing tie's bracket
+    // hold it there themselves — a STEP clamps into the tie's own
+    // intersection, a TYPED bound refuses outside it, and an UNTIE only
+    // widens each leaver's window. A road that let a tie form AROUND a
+    // bracket already standing would need that fit test back.
     for (int idx : selected) {
         if (idx < 0 || idx >= static_cast<int>(v.size())) continue;
-        if (idx == leader) continue;
         if (carries_bracket(idx))
             return {"A selected marker already carries a range",
                     IterTieAct::Tie};
     }
-    // THE LEADER'S STANDING BRACKET MUST FIT THE MEMBERSHIP THE TIE WOULD
-    // MAKE (2026-09-19). Every other road onto a bound — the two landing
-    // owners, the two editor commits and the value drag — meets the tie's
-    // window (iter_bound_tie_window and its phase twin, above), but the TIE
-    // ACT moves the membership that window folds over, and without this arm a
-    // bracket authored against one marker could survive a tie that brings in
-    // a tighter one: the sweep would then write a cell the product's own
-    // loader refuses, which is the two-category rule's breach.
-    //
-    // IT REFUSES AND DOES NOT CLAMP, the retired retroactive clamp's own
-    // reasoning (2026-09-10): a bound the user authored may not be moved
-    // under him by a later gesture, and refusing keeps the walls' promise —
-    // no sweep cell ever refuses — true by construction rather than by the
-    // order in which he happens to bracket and tie.
-    //
-    // IT ALSO CLOSES THE UNTIE ROAD, and no second guard is owed there: with
-    // the leader's bracket inside the INTERSECTION it is inside EVERY
-    // member's own window, so the copy each leaver keeps (copy_iter_bracket,
-    // apply_iter_tie's untie arm) is legal for the marker that keeps it.
-    if (!bracket_fits_selection(leader))
-        return {"The range does not fit every selected marker",
-                IterTieAct::Tie};
     return {nullptr, IterTieAct::Tie};
 }
 
-// IT TAKES THE AUDIO since 2026-09-19, for the PHASE column's window alone:
-// a hop window is a fact about the piece's length and the live warp map, so
-// the proposed tie's intersection needs the same pair its landing owner does.
-// The warp arm reads nothing new. EVERY READER ALREADY CARRIED THE ARGUMENT,
-// so nothing grew a parameter to reach it: the CHORD'S DISPATCH takes it off
-// the handler's own member (run_iter_tie_toggle), and the two FACE readers
-// take it off redesign_button_enabled's and redesign_button_tooltip's own
-// signatures — the enabled arm through the wrapper below, and the STATEFUL
-// TOOLTIP off this verdict's `act`, which is what picks the Untie name from
-// the Tie one.
-inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a,
-                                              const GuiAudio& audio) {
+// IT IS A PURE FUNCTION OF THE APP STATE: the tie reads the selection, the
+// column's eligibility and whether a bracket stands, and nothing it asks is a
+// fact about the piece's length or the live map, so neither arm needs the
+// audio.
+inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a) {
     // A TIE EXISTS ONLY WHERE BRACKETS DO: outside a lit lamp there is no
     // sweep axis to tie, so the chord is a refusal naming the way in — the
     // iteration lock's own card read the other way round.
@@ -10725,23 +10632,6 @@ inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a,
                 const GuiPhaseResetMarker& m = pv[static_cast<size_t>(idx)];
                 return m.iter_start_hops.has_value() ||
                        m.iter_end_hops.has_value();
-            },
-            [&](int leader) {
-                const GuiPhaseResetMarker& m = pv[static_cast<size_t>(leader)];
-                // A BLANK BRACKET FITS ANY MEMBERSHIP: the intersection
-                // always contains 0 and a blank holds no bound at all.
-                if (!m.iter_start_hops.has_value() ||
-                    !m.iter_end_hops.has_value()) return true;
-                const PhaseHopWindow w = phase_iter_bound_selection_window(
-                    a, audio, a.selected_markers);
-                // BOTH BOUNDS AGAINST BOTH WALLS, the pair's order taken as
-                // no premise: an inverted bracket is an internal breach the
-                // sweep refuses loudly of its own, and this arm has no
-                // business reading one as if it were ordered.
-                return *m.iter_start_hops >= w.k_min &&
-                       *m.iter_start_hops <= w.k_max &&
-                       *m.iter_end_hops   >= w.k_min &&
-                       *m.iter_end_hops   <= w.k_max;
             });
     }
     const auto& mv = a.warpmarkers.markers();
@@ -10761,18 +10651,6 @@ inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a,
             const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
             return m.iter_start_cents.has_value() ||
                    m.iter_end_cents.has_value();
-        },
-        [&](int leader) {
-            const GuiWarpMarker& m = mv[static_cast<size_t>(leader)];
-            // A blank bracket fits any membership, the phase arm's own rule.
-            if (!m.iter_start_cents.has_value() ||
-                !m.iter_end_cents.has_value()) return true;
-            const IterBoundWindow w =
-                iter_bound_selection_window(mv, a.selected_markers);
-            return *m.iter_start_cents >= w.lo &&
-                   *m.iter_start_cents <= w.hi &&
-                   *m.iter_end_cents   >= w.lo &&
-                   *m.iter_end_cents   <= w.hi;
         });
 }
 
@@ -10781,9 +10659,8 @@ inline IterTieVerdict iter_tie_toggle_verdict(const AppState& a,
 // stand beside a lit lamp at all (the two are piece-wide exclusive —
 // authoring_locked's own record), so the button's arm composes read-only for
 // its OTHER chord and this predicate answers for this one.
-inline bool iter_tie_toggle_actionable(const AppState& a,
-                                       const GuiAudio& audio) {
-    return iter_tie_toggle_verdict(a, audio).refusal == nullptr;
+inline bool iter_tie_toggle_actionable(const AppState& a) {
+    return iter_tie_toggle_verdict(a).refusal == nullptr;
 }
 
 // IS THE A/B AUDITION STANDING — the act's one running bit in both halves
@@ -13429,17 +13306,17 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         // (for_each_iter_tie_member, warpmarkers.h), which yields the leader
         // alone where no tie stands.
         //
-        // WHAT MAKES THE TOTAL LEGAL FOR EVERY MEMBER IS THE TIE'S OWN
-        // VERDICT, not the mere fact that the bound was authored somewhere: a
-        // bound is walled into the INTERSECTION of the members' tempo windows
-        // by both of its authoring roads (iter_bound_tie_window's readers),
-        // and the TIE ACT, which is the one gesture that can move that
-        // membership under a standing bracket, refuses a tie whose leader's
-        // bracket falls outside the intersection the proposed membership
-        // would have (iter_tie_verdict_over). So base plus either bound is
-        // inside [kTempoMinCents, kTempoMaxCents] for every member the cell
-        // writes, whatever order the user bracketed and tied in, and the
-        // TERM COUNT is the only thing left for this parse to catch.
+        // WHAT MAKES THE TOTAL LEGAL FOR EVERY MEMBER IS THE MEMBERSHIP THE
+        // BOUND WAS AUTHORED AGAINST, not the mere fact that it was authored
+        // somewhere: a bound is walled into the INTERSECTION of the members'
+        // tempo windows by both of its authoring roads
+        // (iter_bound_tie_window's readers), and the TIE ACT, the one gesture
+        // that moves that membership, refuses whenever any selected marker
+        // already carries a range (iter_tie_verdict_over), so a tie forms over
+        // blanks and an untie only widens. So base plus either bound is inside
+        // [kTempoMinCents, kTempoMaxCents] for every member the cell writes,
+        // whatever order the user bracketed and tied in, and the TERM COUNT is
+        // the only thing left for this parse to catch.
         //
         // IT IS ASKED AHEAD OF THE CAP because it is a verdict about ONE
         // marker's own payload and the cap is a verdict about the product:
@@ -13452,10 +13329,10 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         // walk out of. WHAT KEEPS THE FRAME ITSELF ON THE PIECE is that
         // column's own window walk and the same tie verdict: every hop bound
         // is clamped or refused into the intersection of the members' hop
-        // windows (phase_iter_bound_tie_window), and a tie that would tighten
-        // that intersection under a standing bracket is refused rather than
-        // clamped, so a cell's displacement lands inside [0, total − 1] for
-        // every member it moves.
+        // windows (phase_iter_bound_tie_window), and no tie can tighten that
+        // intersection under a standing bracket — it refuses a selection in
+        // which any marker carries a range — so a cell's displacement lands
+        // inside [0, total − 1] for every member it moves.
         bool member_refuses = false;
         for_each_iter_tie_member(mv, i, [&](int j) {
             if (member_refuses) return;
@@ -14597,9 +14474,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // that owner).
         case RedesignButton::IconMarkerInherit:
             return !active_view_state(a).read_only &&
-                   (a.iteration_mode_enabled
-                        ? iter_tie_toggle_actionable(a, audio)
-                        : inherit_toggle_actionable(a));
+                   (a.iteration_mode_enabled ? iter_tie_toggle_actionable(a)
+                                             : inherit_toggle_actionable(a));
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
         // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
         // asks neither separately — the rule against a face restating an
@@ -16989,8 +16865,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // verdict owner in both arms, restated nowhere.
         case RedesignButton::IconMarkerInherit:
             if (a.iteration_mode_enabled) {
-                return {iter_tie_toggle_verdict(a, audio).act ==
-                                IterTieAct::Untie
+                return {iter_tie_toggle_verdict(a).act == IterTieAct::Untie
                             ? "Untie Markers (Ctrl+Shift+N)"
                             : "Tie Markers (Ctrl+Shift+N)",
                         nullptr};

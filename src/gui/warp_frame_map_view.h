@@ -737,11 +737,11 @@ struct PhaseHopWindow {
 // re-verification, which existed because nothing clamps this bracket
 // retroactively: the walls hold by construction now.
 //
-// ONE READER since 2026-09-19: phase_iter_bound_window_over (app_state.h),
-// the fold that INTERSECTS these windows across a tie's members — one sweep
+// ONE READER since 2026-09-19: phase_iter_bound_tie_window (app_state.h),
+// which INTERSECTS these windows across a tie's members — one sweep
 // cell displaces every tied reset by the same hop count, so a bound must fit
-// them all. The two roads onto a hop bound reach it through that fold's TIE
-// face rather than through this: the bound editor's commit REFUSES outside
+// them all. The two roads onto a hop bound reach it through that intersection
+// rather than through this: the bound editor's commit REFUSES outside
 // the tie's window (GuiFlagEditor::commit_phase_iter_bound_edit, which names
 // THE PIECE EDGE outright, that being the only wall a COMMITTED value can
 // break: the phase grammar is a sign and one digit under a two-byte field

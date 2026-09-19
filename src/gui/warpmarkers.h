@@ -498,9 +498,8 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // BLANK and not a dissolution: the tie is untouched, because a tie of blank
 // brackets is an ordinary state (the leader's blank governs its followers'
 // cells exactly as a set bracket would). Its twin on the phase-reset column
-// is the same name over the hop pair (phaseresetmarkers.h), which is what
-// lets the tie act (apply_iter_tie, input_key_dispatch.cpp) say
-// `clear_iter_bracket(m)` once for both columns.
+// is the same name over the hop pair (phaseresetmarkers.h), so a caller that
+// blanks either column's bracket writes one spelling.
 // THE CALLERS ARE THE BLANK'S OWN: the bound step's write site and the bound
 // editor's empty commit. A marker that LOSES ITS CARRIER clears the tie
 // beside this call, at the THREE sites that can produce one — the flag

@@ -891,10 +891,10 @@ namespace {
 // never describe different acts. Returns whether anything moved.
 //
 // IT IS ONE BODY FOR BOTH COLUMNS, over the tie's shared walk
-// (iter_tie_leader_index, warpmarkers.h) and the two same-named per-column
-// bracket helpers (clear_iter_bracket / copy_iter_bracket, one overload per
-// GUI marker type) — the naming-symmetry rule met by construction rather than
-// by a twin that could drift.
+// (iter_tie_leader_index, warpmarkers.h) and the same-named per-column bracket
+// copy the untie arm makes (copy_iter_bracket, one overload per GUI marker
+// type) — the naming-symmetry rule met by construction rather than by a twin
+// that could drift.
 template <typename GuiM>
 bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
                     bool untie) {
@@ -926,11 +926,12 @@ bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
         // once, ahead of any write.
         //
         // AND EVERY COPY IS LEGAL FOR THE MARKER THAT KEEPS IT, with no guard
-        // owed here: the TIE refused unless the leader's bracket lay inside
-        // the INTERSECTION of the members' windows (iter_tie_verdict_over,
-        // app_state.h), and inside the intersection is inside every member's
-        // own window — so a leaver's copy is a bracket that marker could have
-        // authored for itself.
+        // owed here: the bracket was authored on a STANDING tie, so both of
+        // its authoring roads walled it into the INTERSECTION of the members'
+        // windows (iter_bound_tie_window and its phase twin, app_state.h),
+        // and inside the intersection is inside every member's own window —
+        // so a leaver's copy is a bracket that marker could have authored for
+        // itself.
         const GuiM governing = v[static_cast<size_t>(leader)];
         if (leader_selected) {
             // THE LEADER DISSOLVES THE WHOLE GROUP: it is the tie's one
@@ -956,29 +957,23 @@ bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
                 if (m.iter_tie_group == group) m.iter_tie_group = 0;
         return true;
     }
-    // THE TIE. A fresh id, the EARLIEST selected marker leading (the selection
-    // is a sorted set of store indices and the store is sorted by time, so its
-    // first member is the earliest), and every follower's own bracket cleared
-    // — a follower carries none by rule, the leader's governing it.
+    // THE TIE. A fresh id on every selected marker, and NOTHING ELSE IS
+    // WRITTEN: the group the walk reads is the tie, and the leader falls out
+    // of it (iter_tie_leader_index, warpmarkers.h — the earliest member in
+    // store order, which is store time order) rather than out of a field.
     //
-    // THE CLEAR IS A BELT AND IT DESTROYS NOTHING: the verdict refused this
-    // press if any non-leader carried a bracket (iter_tie_verdict_over,
-    // app_state.h — a tie may not silently eat session work the undo domain
-    // cannot restore), so every marker this blanks is already blank. It stays
-    // because the FIELD's contract is that a follower holds no bracket of its
-    // own, and the write that makes a follower is the write that should say
-    // so.
-    const int fresh  = next_free_iter_tie_group(v);
-    int       leader = -1;
-    for (int idx : selected)
-        if (in_range(idx)) { leader = idx; break; }
-    if (leader < 0) return false;
+    // IT BLANKS NO BRACKET, because there is none to blank: the verdict
+    // refuses this press if ANY selected marker carries a range
+    // (iter_tie_verdict_over, app_state.h — a tie may not silently eat
+    // session work the undo domain cannot restore), so every member arrives
+    // blank and a clear here could never clear anything. The FIELD's contract
+    // — a follower holds no bracket of its own — is kept by the verdict, and
+    // a write that cannot write is residue.
+    const int fresh = next_free_iter_tie_group(v);
     bool changed = false;
     for (int idx : selected) {
         if (!in_range(idx)) continue;
-        GuiM& m = v[static_cast<size_t>(idx)];
-        m.iter_tie_group = fresh;
-        if (idx != leader) clear_iter_bracket(m);
+        v[static_cast<size_t>(idx)].iter_tie_group = fresh;
         changed = true;
     }
     return changed;
@@ -999,7 +994,7 @@ bool apply_iter_tie(std::vector<GuiM>& v, const std::set<int>& selected,
 // all that moved, the store's generation carrying the flag cache's rebuild. No
 // map input changed, so no image and no render.
 void GuiInputHandler::run_iter_tie_toggle() {
-    const IterTieVerdict verdict = iter_tie_toggle_verdict(app, audio);
+    const IterTieVerdict verdict = iter_tie_toggle_verdict(app);
     if (verdict.refusal) {
         notifications.notify(AppState::NotificationClass::Normal,
                              verdict.refusal);

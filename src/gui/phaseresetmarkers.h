@@ -100,10 +100,10 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
 inline constexpr int kIterHopMax = 9;
 
 // BLANK ONE RESET'S HOP BRACKET — clear_iter_bracket's twin on this column,
-// the SAME NAME over the hop pair so the tie act and the strip below can say
-// it once for both stores. It is the blank and never a dissolution: the tie
-// stands, a leader's blank bracket governing its followers' cells as a set
-// one would. The contract is at the warp body (warpmarkers.h).
+// the SAME NAME over the hop pair so a caller that blanks either column's
+// bracket writes one spelling. It is the blank and never a dissolution: the
+// tie stands, a leader's blank bracket governing its followers' cells as a
+// set one would. The contract is at the warp body (warpmarkers.h).
 inline void clear_iter_bracket(GuiPhaseResetMarker& m) {
     m.iter_start_hops.reset();
     m.iter_end_hops.reset();
