@@ -13829,19 +13829,25 @@ inline bool playback_launch_playable(const AppState& a,
 //     switch below rather than as a blanket line, because it is no longer a
 //     blanket fact. (It was one until this ruling, when "a locked tab greys the
 //     whole toolbar" was recorded here as code truth.) THE LOCK REACHES
-//     THIRTEEN MORE BUTTONS — seven since 2026-08-15 (the authoring chords it
-//     blocks that still have a face to grey, spread across the icon row and
-//     the bottom one since the 2026-08-18 relayout), the FOUR CARDINAL
+//     THIRTEEN MORE BUTTONS, re-derived from the arms 2026-09-19 — SIX since
+//     2026-08-15 (the authoring chords it blocks that still have a face to
+//     grey, spread across the icon row and the bottom one since the
+//     2026-08-18 relayout; they were seven until bare `/` went with the
+//     measures feature whole on 2026-09-16, which took the measure editor, its
+//     button and its chord together), the FOUR CARDINAL
 //     ARROWS since 2026-08-30 (planner decision 52 under the truthful-buttons
 //     ruling: Up/Down whenever the tab is locked, Left/Right only while a
-//     selection stands, the transport block's arrow arms) and THE ITERATION
+//     selection stands, the transport block's arrow arms), THE ITERATION
 //     PAIR since 2026-09-04, back in the icon row from the deleted Iterations
 //     menu with faces to grey again — and its own entry
-//     is below. THEY ARE NOT THIRTEEN ARMS: the
-//     LOAD IN PLACE moved to the history group on 2026-09-01 and took its lock
-//     term into THAT arm, where it composes with the mode and the walk's
-//     admission, so the read-only arm below holds eight and the button greys
-//     for the mode outside the view and for the lock inside it.
+//     is below — and FLATTEN since 2026-09-19. THEY ARE NOT THIRTEEN ARMS:
+//     the LOAD IN PLACE moved to the history group on 2026-09-01 and took its
+//     lock term into THAT arm, where it composes with the mode and the walk's
+//     admission, so the button greys for the mode outside the view and for the
+//     lock inside it; and FLATTEN carries no lock term at an arm at all, its
+//     face reading tempo_flatten_actionable, which composes authoring_locked
+//     itself. So the read-only arm below holds SEVEN — the count and its
+//     members are that arm's, restated here only as this sum's result.
 //   * Undo / Redo additionally take history_step_actionable on their own stack
 //     — the exact guard do_undo / do_redo run.
 //   * Save takes BOTH of its route's stable-state refusals (GuiSaveOps::save):
