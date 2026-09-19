@@ -4713,8 +4713,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // this verdict as it does on the other two — the grey is the roster's
         // whole message and this card is the key's.
         std::fprintf(stderr,
-            "warptempo_gui: render-iterations: a marker's tempo deviations "
-            "put a swept cell outside the tempo window; nothing rendered\n");
+            "warptempo_gui: render-iterations: a marker already carries the "
+            "most tempo deviation terms a payload may spell, so the term a "
+            "swept cell appends would spell one more than the loader accepts; "
+            "nothing rendered\n");
         notifications.notify(AppState::NotificationClass::Normal,
                              kIterSweepUnloadableCellCard);
         return;
@@ -4839,25 +4841,35 @@ void GuiInputHandler::run_iteration_sweep_render() {
             // (the `'` load-in-place) stays closed under the grammar by type AND
             // by VOCABULARY: the cell values a sweep can write are exactly
             // the values the strict sidecar parse accepts.
-            // A CELL MOVES THE TOTAL, so on a marker carrying a DEVIATION
-            // CHAIN it moves the DERIVED BASE and leaves the terms where
-            // they are — the cell's sidecar spells a different base beside
-            // the same chain, which is what a swept marker's file says it
-            // is. Nothing downstream can see the difference (the chain is
-            // spelling, never engine input). WHAT THE PARAGRAPH ABOVE
+            // A CELL MOVES THE TOTAL AND APPENDS ITS DELTA AS A DEVIATION
+            // TERM (architect 2026-09-19), and the two together leave the
+            // SPELLED BASE exactly where it was — the base is DERIVED at
+            // format time as the total less the chain's sum (warp_tempo_run,
+            // warpmarkers.h), so `1.23+0.01` swept at -0.02 writes
+            // `1.23+0.01-0.02`. The section's main speed never moves under a
+            // sweep, and the cell's sidecar spells the decision that produced
+            // it, so a `'` load in place of that cell brings the decision home
+            // written out. A ZERO delta appends NOTHING: that cell IS the
+            // resting marker — the `0` inside a bracket, and every
+            // unbracketed eligible marker — and its payload stays
+            // byte-identical to the resting one. WHAT THE PARAGRAPH ABOVE
             // PROMISES IS NOT THE CHAIN'S BY ITSELF: the bracket rides the
             // TOTAL, so the total lands in the tempo window by arithmetic,
-            // but the SPELLED BASE is that total less the chain's sum and
-            // can leave the window on its own. The plan asks the product's
-            // own loader about both ends of every chained marker's bracket
-            // and refuses the whole press when either would not load
-            // (iteration_sweep_plan's CellWouldNotLoad arm, app_state.h,
-            // which carries the rule) — so past that arm this line is one
-            // the strict parse accepts and it re-parses to exactly this
-            // total.
-            cell_warp_markers[mi].tempo_cents =
-                base_warp_markers[mi].tempo_cents +
+            // but the cell's chain is one term longer and a marker already at
+            // the term cap would spell a line the strict parser refuses. The
+            // plan asks the product's own loader about both ends of every
+            // chained marker's bracket and refuses the whole press when
+            // either would not load (iteration_sweep_plan's CellWouldNotLoad
+            // arm, app_state.h, which carries the rule) — so past that arm
+            // this line is one the strict parse accepts and it re-parses to
+            // exactly this total.
+            const int64_t cell_delta_cents =
                 per_marker_delta_cents[k][indices[k]];
+            cell_warp_markers[mi].tempo_cents =
+                base_warp_markers[mi].tempo_cents + cell_delta_cents;
+            if (cell_delta_cents != 0)
+                cell_warp_markers[mi].tempo_deviation_cents.push_back(
+                    cell_delta_cents);
             // The engine doesn't consume iter values; clear them
             // so the request is quiet.
             cell_warp_markers[mi].iter_start_cents.reset();

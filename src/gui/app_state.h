@@ -12572,15 +12572,15 @@ inline constexpr const char* kIterSweepOverCapCard =
     "Grid iterations refused: the marker brackets make more than 1000 cells";
 // THE THIRD SENTENCE (2026-09-19) — a cell whose warp payload the product's
 // own loader would refuse (CellWouldNotLoad below, where the whole rule is).
-// It NAMES THE CAUSE AND NOT A CURE: the cause is a deviation chain whose
-// spelled base the bound walks out of the tempo window, and what the user does
-// about it — narrow that bracket, or respell the tempo with fewer terms — is
-// his to choose, so the card says the one thing that is true of every road
+// It NAMES THE CAUSE AND NOT A CURE: the cause is a marker whose deviation
+// chain already stands at the term cap, so the term its cell appends spells
+// one more than a payload may carry, and what the user does about it —
+// respell that tempo with fewer terms, or leave the marker out of the sweep —
+// is his to choose, so the card says the one thing that is true of every road
 // out.
 // One clause in the cap sentence's shape, sentence case, no period.
 inline constexpr const char* kIterSweepUnloadableCellCard =
-    "Grid iterations refused: a marker's tempo deviations put a cell out of "
-    "range";
+    "Grid iterations refused: a marker carries too many tempo deviations";
 // (A FOURTH SENTENCE STOOD FOR ONE DAY — architect 2026-09-10. A phase
 // bracket standing OFF its walls was a refusal of the plan's on 2026-09-09,
 // on the reasoning that a dozen writers could move a wall under a standing
@@ -12724,40 +12724,48 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
         const int64_t end   = *m.iter_end_cents;
         // A SWEEP MAY ONLY AUTHOR CELLS THE PRODUCT CAN LOAD, AND THE JUDGE IS
         // THE LOADER ITSELF (2026-09-19, converting a Sol finding). A cell
-        // moves the marker's RESOLVED TOTAL and keeps its deviation chain, so
-        // on a chained marker it moves the SPELLED BASE — and the bound's own
-        // window walls the TOTAL alone (iter_bound_step_landing above, and the
-        // bound editor's commit), which is the right window for it to wall.
-        // `0.25+0.75` is a legal payload that the GUI commits (base 25, total
-        // 100, every wall passed) and a legal bound of -0.01 makes its cell's
-        // sidecar read `0.24+0.75`, which the strict parser refuses — the
-        // product writing a `.warpmarkers` it cannot read back, which `'` Load
-        // in place then reads. That is the two-category rule's own breach (a
-        // state the GUI can commit always loads), so the sweep refuses here,
-        // at the press, before any folder or request exists.
+        // moves the marker's RESOLVED TOTAL and APPENDS its delta to the
+        // deviation chain, so the SPELLED BASE cannot move under a sweep and
+        // the live cause of an unloadable cell is THE TERM COUNT: a marker
+        // already carrying kMaxTempoDeviationTerms terms spells a cell one
+        // term longer, which the strict parser refuses. That is the product
+        // writing a `.warpmarkers` it cannot read back, which `'` Load in
+        // place then reads — the two-category rule's own breach (a state the
+        // GUI can commit always loads) — so the sweep refuses here, at the
+        // press, before any folder or request exists.
         //
-        // IT ASKS THE LOADER RATHER THAN GROWING A WALL, deliberately. The
-        // bound's window is about the total and must stay that way; a writer
-        // that APPENDED its delta as a term instead of moving the base would
-        // want a different wall again, and a base wall on the bound would then
-        // refuse bounds that are perfectly safe. The parse is honest under
-        // either shape and covers every other line rule — the term cap, each
-        // term's own range, the total — for free. IF A FUTURE WRITER LEAVES
-        // THIS ARM WITH NO PRODUCER, the arm and its enum member go with it: a
-        // refusal nothing can raise is residue here.
+        // IT ASKS THE LOADER RATHER THAN GROWING A WALL, deliberately. A
+        // count wall spelled here would be a second statement of a line rule
+        // the parser already owns, free to drift from it, and the bound's own
+        // window (iter_bound_step_landing above, and the bound editor's
+        // commit) is about the TOTAL and must stay that way. The parse covers
+        // every rule of the line at once — the term cap, each term's own
+        // range, the total — and is honest about all of them.
         //
-        // TWO PARSES PER MARKER, NOT ONE PER CELL: base and total both move
-        // linearly with the delta and every wall they meet is an interval, so
-        // a bracket whose two ENDS load has no interior cell that does not.
-        // The line is the SERIALIZER'S OWN BYTES (format_warpmarkers_text over
-        // the one-marker cell, its trailing row terminator dropped) handed to
-        // the reader that would read them, so no third spelling of the payload
-        // exists to drift.
+        // THE APPENDED TERM NEEDS NO WALL OF ITS OWN. It is spelled by
+        // format_deviation_cents through warp_tempo_run (the serializer's own
+        // body) and its magnitude is the bracket bound, which both of the
+        // bound's authoring roads already wall at ±kIterDeltaMaxCents. A term
+        // past that wall therefore cannot be authored, and if one ever were,
+        // this parse refuses the whole press LOUDLY rather than writing a line
+        // the product could not read back.
         //
-        // ONLY A CHAINED MARKER IS ASKED. With no chain the spelled base IS
-        // the total, and the bound's window is exactly the total's, so the
-        // line cannot leave the grammar — which is also what keeps this
-        // per-tick face free of a parse in every piece that carries no chain.
+        // TWO PARSES PER MARKER, NOT ONE PER CELL: the base is invariant and
+        // the total rides the bracket, so the only thing a cell changes about
+        // its line's legality is the chain's LENGTH — one term longer, or
+        // unchanged at the bracket's zero. A bracket holding a nonzero cell
+        // has a nonzero END (only [0,0] holds none), so the longer line is
+        // always one of the two parsed here and a bracket whose two ENDS load
+        // has no interior cell that does not. The line is the SERIALIZER'S OWN
+        // BYTES (format_warpmarkers_text over the one-marker cell, its
+        // trailing row terminator dropped) handed to the reader that would
+        // read them, so no third spelling of the payload exists to drift.
+        //
+        // ONLY A CHAINED MARKER IS ASKED. An unchained marker's cell grows
+        // exactly ONE term, and that term's count (1), its magnitude (the
+        // walled bound) and the total it rides are all legal by construction —
+        // which is what keeps this per-tick face free of a parse in every
+        // piece that carries no chain.
         //
         // IT IS ASKED AHEAD OF THE CAP because it is a verdict about ONE
         // marker's own payload and the cap is a verdict about the product:
@@ -12772,6 +12780,7 @@ inline IterationSweepPlan iteration_sweep_plan(const AppState& a) {
             const auto cell_loads = [&m](int64_t bound) {
                 GuiWarpMarker cell = m;
                 cell.tempo_cents += bound;
+                if (bound != 0) cell.tempo_deviation_cents.push_back(bound);
                 std::string line = format_warpmarkers_text({cell});
                 if (!line.empty()) line.pop_back();
                 return warpmarkers_internal::parse_single_canonical_line(line)
