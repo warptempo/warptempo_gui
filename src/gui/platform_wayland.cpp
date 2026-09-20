@@ -1254,6 +1254,24 @@ int cursor_theme_size() {
     return size;
 }
 
+// THE OTHER HALF OF THAT FREEDESKTOP PAIR, and it sits here so the two are read
+// in one place: XCURSOR_THEME names the theme, XCURSOR_SIZE the size it is
+// loaded at, and libwayland-cursor reads NEITHER on a client's behalf — it
+// consults XCURSOR_PATH and XDG_DATA_HOME to FIND themes and nothing else. A
+// null name is the theme literally called "default", whatever the distro's
+// index.theme inherits, which is not the theme the user chose; passing the name
+// in is the client's job and is what every toolkit does. The cursors the product
+// shows are the user's own theme's, unmodified, and this is where that starts.
+//
+// XCURSOR_THEME if the user has set it; otherwise nullptr, the system default.
+// An EMPTY value names no theme, so it is UNSET — the size arm's own reading of
+// a value that resolves to nothing.
+const char* cursor_theme_name() {
+    const char* env = std::getenv("XCURSOR_THEME");
+    if (env && env[0] != '\0') return env;
+    return nullptr;
+}
+
 int cursor_kind_index(GuiCursorKind kind) {
     return static_cast<int>(kind);
 }
@@ -1268,11 +1286,13 @@ int cursor_kind_index(GuiCursorKind kind) {
 // comment holds the ruling.
 // `text` JOINED IT the same day with the Text kind, the editors' I-beam.)
 //
-// THE HOTSPOT IS THE FILE'S, NEVER A CENTRE WE COMPUTE, and the installed theme
-// is what settles it. What load_theme_cursor reads is wl_cursor_image's INTEGER
-// xhot/yhot, from the XCursor binary, at whatever the theme load resolved
-// (cursor_theme_size above: XCURSOR_SIZE, else 24) — and Breeze_Light serves
-// that default request from its 32x32 images, whose declared hotspots are:
+// THE HOTSPOT IS THE FILE'S, NEVER A CENTRE WE COMPUTE, and the theme that
+// loaded is what settles it. What load_theme_cursor reads is wl_cursor_image's
+// INTEGER xhot/yhot, from the XCursor binary, at whatever the theme load
+// resolved (the two env arms above: XCURSOR_THEME, else the system default;
+// XCURSOR_SIZE, else 24) — and Breeze_Light, the theme the authoring laptop's
+// XCURSOR_THEME names, serves a size-24 request from its 32x32 images, whose
+// declared hotspots are:
 //
 //     left_ptr 4,4   grab 16,16   zoom-in 15,15
 //     ew-resize 16,15   left_side 4,15   right_side 27,15   text 16,15
@@ -1286,7 +1306,7 @@ int cursor_kind_index(GuiCursorKind kind) {
 // — 4,15 and 27,15, which is the whole point of an edge cue — and left_ptr sits
 // at its tip. No single rule we could compute produces all three, which is
 // exactly why the file's declaration is taken verbatim. The numbers scale with
-// the resolved size, so they are the default load's, not constants.
+// the resolved size, so they are this load's, not constants.
 //
 // ARROW IS FIRST, and its position matters: it is the fallback every other kind
 // degrades to, and the only one whose absence is reported as a broken theme.
@@ -1370,10 +1390,12 @@ bool GuiPlatform::load_theme_cursor(GuiCursorKind kind,
 }
 
 bool GuiPlatform::load_cursor_theme() {
-    const int size = cursor_theme_size();
+    const char* theme_name = cursor_theme_name();
+    const int   size       = cursor_theme_size();
 
-    // Theme name NULL = "system default" per libwayland-cursor.
-    wl_cursor_theme_ = wl_cursor_theme_load(nullptr, size, wl_shm_);
+    // Both halves of the pair, read above: a name loads that theme, and a null
+    // name is "system default" per libwayland-cursor.
+    wl_cursor_theme_ = wl_cursor_theme_load(theme_name, size, wl_shm_);
     if (!wl_cursor_theme_) {
         std::fprintf(stderr,
             "warptempo_gui: wl_cursor_theme_load failed; "
