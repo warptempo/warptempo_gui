@@ -537,7 +537,7 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
     const int m = marker_walk_landing(a, audio, forward);
     if (m < 0) return {};
     // SHIFT+TAB ENTERS A MARKER FROM ITS RIGHT, so it comes to rest on the
-    // rightmost purple box the flag actually paints — the upper cell where
+    // rightmost walkable box the flag actually paints — the upper cell where
     // there are cells, the payload where there are none. Tab enters from the
     // left and always rests on the payload, which is also the axis every
     // focus write seats by itself (Selection::seat_focus).

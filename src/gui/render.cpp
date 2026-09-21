@@ -1030,7 +1030,7 @@ struct IterCellText {
 //
 // `iteration_on && iter_popup_eligible_marker` IS marker_paints_iter_cells
 // (app_state.h) spelled across this painter's parameter boundary: the Tab
-// walk asks that predicate whether a marker has purple cells to stop on, and
+// walk asks that predicate whether a marker has bound cells to stop on, and
 // the two readings compose the same two owners — the caller's one
 // iteration_column_lit read (waveform_cache.cpp, over the column this pass
 // paints) and the eligibility predicate below. This body cannot call it
@@ -1159,10 +1159,12 @@ struct FlagFace {
 // defaulted bool). The phase-reset flag box paints in the column's BLUE —
 // Breeze's highlight #3daee9 sampled, the other three RECORDED DERIVATIONS
 // off it (kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h); the warp flag
-// box and EVERY BOUND CELL ON EITHER COLUMN stay on kMarkerFlagFill's purple
-// — a bound cell's call site always passes `Warp` explicitly, with its own
-// comment there, "the flag's own class" being a warp-only phrase now that
-// the class has two flag boxes. THE THIRD FACE, MagnificationLevel (architect
+// box and the warp column's bound cells stay on kMarkerFlagFill's purple,
+// and THE PHASE-RESET COLUMN'S BOUND CELLS WEAR ITS BLUE (architect
+// 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
+// cells wear their own column's hue) — every bound-cell call site passes the
+// face of the column the cells belong to, the same `column_face` its flag box
+// takes. THE THIRD FACE, MagnificationLevel (architect
 // 2026-09-15), is the magnification level markers column's ORANGE — all four
 // sampled off the architect's own crops
 // (kMarkerMagnificationFill/Edge/FillSel/EdgeSel, render.h) — on its flag box
@@ -1410,11 +1412,10 @@ void render_flag_boxes_impl(
     // naming-symmetry ruling: warp is never the unmarked default) — render_flags
     // passes `FlagColumnFace::Warp`, render_phase_reset_flags passes
     // `FlagColumnFace::PhaseReset` (the phase-reset blue,
-    // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the ONE
-    // resting flag-box face below and nowhere else — the bound cells pass
-    // `FlagColumnFace::Warp` explicitly at their own call, "fine for now"
-    // being the architect's own words for the purple bound cells on either
-    // column.
+    // kPhaseResetFlagFill/Edge/FillSel/EdgeSel, render.h). It reaches the
+    // resting flag-box face below AND THE TWO BOUND CELLS (architect
+    // 2026-09-21: the cells wear their own column's hue — purple on W, blue
+    // on P).
     FlagColumnFace column_face) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
@@ -1641,9 +1642,9 @@ void render_flag_boxes_impl(
             // THE BOUND CELLS: the flag CONTINUED rightward, twice, in the
             // flag's OWN class — fill, top edge, seam column and ink all off
             // the same ladder, so a cell reads as another payload of the same
-            // flag and not as a second surface (a bound is tempo, and wears
-            // tempo's colour, purple on either column — a bound cell never
-            // reads as the phase-reset flag's own blue). Each cell resolves
+            // flag and not as a second surface (a bound cell wears
+            // its own column's hue — purple on the warp column, the phase-reset
+            // blue on the phase-reset column, architect 2026-09-21). Each cell resolves
             // its own face, because the selected pair is
             // the addressed cell's alone (above). The seam is the flag's own
             // left-border column laid on each cell's left edge. No budget and
@@ -1659,10 +1660,10 @@ void render_flag_boxes_impl(
                     paint_iter_bound_cell(
                         cr, lane, seam_x, fill_w, border_w, edge_h, pad_l,
                         baseline, crun,
-                        // ALWAYS `Warp`, ON EITHER COLUMN'S CELLS (architect
-                        // 2026-09-15, "fine for now"): a bound cell never wears the phase-reset
-                        // flag's blue, regardless of which store `mv`/`pmv`
-                        // this pass is painting.
+                        // THE CELLS WEAR THEIR OWN COLUMN'S HUE (architect
+                        // 2026-09-21, superseding the 2026-09-15 purple on
+                        // either column): the same `column_face` this pass's
+                        // flag box takes — purple on W, blue on P.
                         //
                         // A TIE FOLLOWER'S CELLS TAKE THE DISABLED FACE
                         // (architect 2026-09-19): they show the LEADER's
@@ -1679,7 +1680,7 @@ void render_flag_boxes_impl(
                         // about the cells alone.
                         resolve_flag_face(dis || cells.follower, red,
                                           cell_selected(which),
-                                          FlagColumnFace::Warp));
+                                          column_face));
                 };
                 paint_cell(lower_x, lower_w, cl.lower_run, MarkerCell::Lower);
                 // The upper cell is the lower's own right-hand neighbour, so it
@@ -2677,18 +2678,20 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const MarkerCell bright = idx == app.last_selected_marker
                                   ? app.addressed_cell : MarkerCell::Payload;
     const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
-    // `Warp` EXCEPT ON THE LEVEL FIELD. The payload editor is a
-    // warp-column surface by its own open gates, so the only field this ever
-    // reaches on the phase-reset column is a BOUND field, and a bound field
-    // stays on the purple pair, "fine for now"
-    // (architect 2026-09-15) — never the phase-reset flag's blue. THE
-    // MAGNIFICATION LEVEL FIELD IS THE EXCEPTION and takes its own column's
-    // ORANGE, because it IS that flag unrolled: the open editor must read as
-    // the same flag, only wider, which is the whole surface's promise.
+    // EVERY FIELD WEARS ITS OWN COLUMN'S HUE, because it IS its box unrolled:
+    // the open editor must read as the same flag or cell, only wider, which
+    // is the whole surface's promise. The payload editor is a warp-column
+    // surface by its own open gates, so the only field this reaches on the
+    // phase-reset column is a BOUND field, and it wears the phase-reset blue
+    // as the resting cell does (architect 2026-09-21, superseding the
+    // 2026-09-15 purple on either column); the magnification level field
+    // wears its column's ORANGE.
+    const FlagColumnFace column_face =
+        level_kind ? FlagColumnFace::MagnificationLevel
+        : phase    ? FlagColumnFace::PhaseReset
+                   : FlagColumnFace::Warp;
     FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell),
-                                      level_kind
-                                          ? FlagColumnFace::MagnificationLevel
-                                          : FlagColumnFace::Warp);
+                                      column_face);
     // The border column the box wears: the flag's own for the payload editor,
     // and the SEAM DIVIDER for the bound field — the
     // same constant, the same width, the same face.border, standing on the
@@ -2992,11 +2995,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             paint_iter_bound_cell(
                 cr, lane, cursor_x, cl.lower_w, border_w, edge_h, pad_l,
                 baseline, cl.lower_run,
-                // `Warp`: a riding bound cell stays purple on either column
-                // (architect 2026-09-15).
+                // Its own column's hue, as the field it rides (architect
+                // 2026-09-21).
                 resolve_flag_face(cell_dis, red_class,
                                   cell_selected(MarkerCell::Lower),
-                                  FlagColumnFace::Warp));
+                                  column_face));
             cursor_x += border_w + cl.lower_w;
         }
         const int upper_seam = cursor_x;
@@ -3004,10 +3007,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             paint_iter_bound_cell(
                 cr, lane, cursor_x, cl.upper_w, border_w, edge_h, pad_l,
                 baseline, cl.upper_run,
-                // `Warp`, same reason as the lower cell just above.
+                // Its own column's hue, as the lower cell just above.
                 resolve_flag_face(cell_dis, red_class,
                                   cell_selected(MarkerCell::Upper),
-                                  FlagColumnFace::Warp));
+                                  column_face));
             cursor_x += border_w + cl.upper_w;
         }
 

@@ -78,7 +78,7 @@
 // `ns-resize`, the vertical twin of the trim bridge's `ew-resize`, worn over a
 // flag box whose cell the VALUE DRAG can step wherever the view arms it
 // (value_drag_posture, app_state.h, since 2026-09-13) — the
-// tempo on an owning flag, a bound on a purple cell — and kept for the whole
+// tempo on an owning flag, a bound on a bound cell — and kept for the whole
 // gesture by the live-drag rule the marker and trim drags already
 // take. It is the second kind with an ALT NAME (`size_ver`), the same
 // two-conventional-spellings shape the I-beam has; Breeze ships a third

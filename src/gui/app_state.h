@@ -554,7 +554,7 @@ struct DragState {
 // architect: "we never allow multi-axis dragging; flags move up and down or
 // not at all"). What it steps is the cell the press landed on, through the
 // arrows' own landing owners: the BASE TEMPO on a warp flag's payload and a
-// BOUND on either column's purple cell.
+// BOUND on either column's bound cell.
 // The target rule is one predicate,
 // value_drag_target (below), read by the crossing AND by the cursor map, so
 // the cue promises exactly the gesture.
@@ -1017,8 +1017,8 @@ struct PendingMarkerPress {
     // motionless release — the same reason the POSITION is carried: the seed
     // describes the press, and only the release knows the press was a click.
     // TWO READERS SINCE 2026-09-10: that seed, and THE VALUE DRAG, whose
-    // subject IS the cell — the base tempo on a payload, a bound on a purple
-    // one — so the threshold crossing hands this field to value_drag_target
+    // subject IS the cell — the base tempo on a payload, a bound on a bound
+    // cell — so the threshold crossing hands this field to value_drag_target
     // and to ValueDragOps::begin. The horizontal MARKER drag still reads it
     // nowhere: that gesture is one act on one marker whatever cell started it.
     MarkerCell cell = MarkerCell::Payload;
@@ -12219,7 +12219,7 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
 // step naturally). It asks no disabled bit — the focus is the focus whatever
 // its state, and the disabled skip belongs to the scan past this seat.
 // TWO READERS: marker_walk_landing, whose in-group step it gates, and
-// marker_walk_step, which asks whether the seat has purple cells to step
+// marker_walk_step, which asks whether the seat has bound cells to step
 // through before it moves to another marker at all. Defined in app_state.cpp.
 int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
 

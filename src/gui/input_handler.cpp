@@ -2817,7 +2817,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     if (step.marker < 0) return;
 
     // A STEP BETWEEN THE CELLS OF ONE MARKER IS A COLLAPSE AND AN AXIS WRITE,
-    // AND NOTHING ELSE (architect 2026-09-10, the purple cells joining the
+    // AND NOTHING ELSE (architect 2026-09-10, the bound cells joining the
     // walk; the collapse the same day, the cells being "a separate system"
     // that "is by design targeting each marker individually"): the focus has
     // not moved, so there is no OTHER marker to select, the playhead is

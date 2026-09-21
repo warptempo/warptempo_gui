@@ -736,8 +736,10 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // THE SEAM COLUMN between a flag box and the cell to its right is a 1px
 // kMarkerFlagBorder column, the same dark rule that already sits one column
 // left of every flag and reads as a drop shadow there (architect 2026-08-20,
-// a standing ruling since 2026-09-02; kept under the purple-on-purple pairing
-// too, architect 2026-09-15: the boundary is worth marking). The rest of a
+// a standing ruling since 2026-09-02; kept under the same-hue pairing of a
+// flag and its own cells too, architect 2026-09-15: the boundary is worth
+// marking — purple on purple then, and blue on blue on the phase-reset
+// column since 2026-09-21). The rest of a
 // cell's anatomy is the flag's — a 1px edge over the fill across the whole
 // box, no right border (the flag's own open right edge).
 
@@ -773,12 +775,14 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // the colour its reset's stem wears (paint_phase_reset_overlay_ring,
 // paint_handler.cpp, through phase_reset_stem_color — architect 2026-09-17):
 // this calm fill, or the stem red for a reset in the column's red set. THE BOUND (hop) CELLS ON
-// THIS COLUMN DO NOT TAKE THIS PAIR: the architect kept them on the purple of
-// the warp column's own bound cells ("fine for now"), so every bound-cell
-// call site into resolve_flag_face passes `FlagColumnFace::Warp` EXPLICITLY —
-// the argument is required, never defaulted (warp is never the unmarked
-// default), so a bound cell's purple is a stated choice at its own call, not
-// an omission that happens to land on the warp pair.
+// THIS COLUMN WEAR THIS PAIR TOO (architect 2026-09-21: the cells wear their
+// own column's hue — superseding his 2026-09-15 "fine for now", which had
+// kept them on the warp column's purple): every bound-cell call site into
+// resolve_flag_face passes the face of the column the cells belong to — the
+// resting cells, the bound editor's field and the boxes riding it — through
+// the same class ladder as the reset's own flag box (disabled > red >
+// default, the addressed cell bright in the Sel pair). The argument stays
+// required, never defaulted (warp is never the unmarked default).
 inline constexpr GuiColor kPhaseResetFlagFill    = hex(0x3DAEE9);
 inline constexpr GuiColor kPhaseResetFlagEdge    = hex(0x226181);
 inline constexpr GuiColor kPhaseResetFlagFillSel = hex(0x73CFFF);
@@ -3291,18 +3295,18 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              every other stem; border kMarkerFlagBorder undamped, like every
 //              live class. RED STAYS RED ON ALL THREE COLUMNS — the column
 //              fork below never reaches this arm.
-//   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box (and on
-//              EVERY BOUND CELL, either column — the phase-reset column's own
-//              cells are its one exception to the fork below, architect
-//              2026-09-15: "fine for now"), or
+//   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box and its
+//              bound cells, or
 //              kPhaseResetFlagFill / kPhaseResetFlagEdge on the PHASE-RESET
-//              flag box, or kMarkerMagnificationFill / kMarkerMagnificationEdge
+//              flag box and its bound cells (architect 2026-09-21: the cells
+//              wear their own column's hue, superseding the 2026-09-15
+//              purple on either column), or kMarkerMagnificationFill / kMarkerMagnificationEdge
 //              on the MAGNIFICATION LEVEL flag box (`FlagColumnFace`,
 //              resolve_flag_face's fourth argument — REQUIRED, never
 //              defaulted, since warp is never the unmarked default: every call
-//              site names its column explicitly, and only the resting
-//              phase-reset and magnification level flag boxes pass
-//              `PhaseReset` / `MagnificationLevel`), swapping to the bright Sel
+//              site names its column explicitly — the phase-reset flag box
+//              and its cells pass `PhaseReset`, the magnification level flag
+//              box and its field `MagnificationLevel`), swapping to the bright Sel
 //              pair on any column when selected — SELECTION IS THAT SWAP AND NOTHING
 //              ELSE. The stem stays the CALM fill of whichever column's flag
 //              it belongs to, either way (the architect's explicit rule).

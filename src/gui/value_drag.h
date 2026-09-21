@@ -25,7 +25,7 @@ struct GuiTargetRender;
 // movement, and the press already put the playhead where it belongs.
 //
 // WHAT IT STEPS, and through whose arithmetic: the BASE TEMPO on a warp flag's
-// payload and a BOUND on either column's purple cell, each written through the
+// payload and a BOUND on either column's bound cell, each written through the
 // ARROWS' OWN LANDING OWNER as a delta from the value the store currently
 // holds (tempo_cent_step_landing / iter_bound_step_landing /
 // phase_iter_bound_step_landing, app_state.h). So the

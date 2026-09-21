@@ -2699,7 +2699,7 @@ private:
     //
     // THE STEP'S UNIT IS A CELL WHILE GRID ITERATIONS IS LIT (architect
     // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
-    // seat's purple boxes in painted order, then the next marker — and this
+    // seat's boxes in painted order, then the next marker — and this
     // body is its two acts. A SAME-MARKER step writes AppState::addressed_cell
     // and damages the marker lane, and does NOTHING else: no select, no
     // playhead land, no framing and no zoom, so `frame` governs
