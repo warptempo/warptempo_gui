@@ -1690,10 +1690,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 // whole family was deleted (marker_drag.h), and there is no fallback — with the
 // dispatch site in input_handler.cpp owning the routing.
 //
-// The wall regime over the identity map, one shape: the marker steps the
-// press's own count of PAINTED columns — one bare, three under shift, ten under
-// ctrl since 2026-08-31 (the step ladder, arrow_step_magnitude in gui_input.h)
-// — through stepped_anchor_frame (the guarantee and its numeric rationale live
+// The wall regime over the identity map, one shape: the marker steps ONE
+// PAINTED column per press — bare only since 2026-09-21, the horizontal ladder
+// retired (horizontal_arrow_step in gui_input.h) — through stepped_anchor_frame (the guarantee and its numeric rationale live
 // in the comment there), and its delta is CLAMPED into its own wall headroom, walls
 // exactly reachable — the unified wall policy, stated once at the head of
 // position_nudge.h. Crossing a neighbor is legal and goes through the

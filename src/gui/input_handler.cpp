@@ -2192,14 +2192,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (since 2026-09-13) and the group's wall greying AND carding beside it.
     //
     // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
-    // steps ONE cent, Shift THREE and Ctrl TEN, through the ladder's one owner
+    // steps ONE cent, Ctrl THREE and Shift TEN (the rungs swapped 2026-09-21,
+    // shift the long stride), through the ladder's one owner
     // arrow_step_magnitude (gui_input.h) — the vertical pair's alone since
     // 2026-09-21, the horizontal ladder being retired (the tempo is numeric,
     // placement graphical). THE ACT IS THE
     // SAME BODY at every magnitude: adjust_tempo_cents has taken a signed cent
     // count since it was written, so the three chords differ in nothing but
     // the number they hand it, and its own arms answer at the scaled size —
-    // the singleton CLAMPS into the tempo bracket (a Ctrl press three cents
+    // the singleton CLAMPS into the tempo bracket (a Shift press three cents
     // from the max lands ON the max, and one already resting there is the
     // silent walled no-op with the greyed button beside it), while the group
     // REFUSES WHOLE unless every selected member can take the FULL step

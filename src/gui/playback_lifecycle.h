@@ -103,7 +103,7 @@ struct GuiPlaybackLifecycle {
     //     selection and its span exactly as they stood, so the audition plays
     //     on under the edit; the bound arm collapses
     //     a group to its focus and stops nothing either. The step ladder's
-    //     magnitude (bare one cent, three shifted, ten with ctrl) changes the
+    //     magnitude (bare one cent, three with ctrl, ten shifted) changes the
     //     number and not the class.
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
     //     PageUp/PageDown — they move the window onto the audio,

@@ -720,8 +720,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // Undo's Ctrl+Z), while an ADMISSION is a press-time modifier the
     // lift moves into the dispatched chord — and the ladder is the second
     // kind. The bare row here is the one-unit step; on Up / Down a
-    // Shift-click dispatches Shift+arrow (three units) and a Ctrl-click
-    // Ctrl+arrow (ten), both through redesign_button_shift_admits /
+    // Shift-click dispatches Shift+arrow (ten units, the long stride since
+    // 2026-09-21) and a Ctrl-click Ctrl+arrow (three), both through redesign_button_shift_admits /
     // redesign_button_ctrl_admits (app_state.h) and both carried into the
     // HOLD-REPEAT's own chord so a held modified press repeats its own step.
     // LEFT / RIGHT ADMIT NEITHER since 2026-09-21 (the horizontal ladder
@@ -7798,7 +7798,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // THE CHORD IS THE LIFT'S MINUS ITS LONG-PRESS TERM, and it carries
         // BOTH press-time modifiers since 2026-08-31 (R12, the step ladder):
         // Up / Down are `repeats` rows that admit shift AND ctrl, so a
-        // Shift+hold walks three units a fire and a Ctrl+hold ten —
+        // Shift+hold walks ten units a fire and a Ctrl+hold three —
         // A HELD REPEAT CARRIES ITS MODIFIER, the burst continuing the gesture
         // the press began. Each carried bit is already narrowed to a button
         // that admits it (a shift press on a non-admitting button returned
@@ -8028,7 +8028,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // SHARING A TIMESTAMP IS NOT AN ORDERING: a lift delivered just past
         // the beat but before the next tick finds repeat_fired still false,
         // and without this term the release would dispatch a SHIFT
-        // three-step where the user was owed a plain one. So the exclusion is
+        // ten-step where the user was owed a plain one. So the exclusion is
         // read off kToolbarChords' own `repeats` column — the arm's
         // membership, never a second list — which makes it guaranteed instead
         // of timing-dependent, for every `repeats` row alike (Undo / Redo and
@@ -8139,7 +8139,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
         // THE FIRE CARRIES THE ARM'S OWN MODIFIERS, the arm-time chord build's
         // twin (arm_redesign_press) and the same expression: a HELD REPEAT
         // CARRIES ITS MODIFIER (2026-08-31, R12), so a Shift+hold on Up / Down
-        // fires the three-unit step and a Ctrl+hold the ten-unit one, every
+        // fires the ten-unit step and a Ctrl+hold the three-unit one, every
         // fire (Left / Right admit no modifier since 2026-09-21). Both bits
         // were narrowed at the press to a button that admits them, so this
         // restates no admission — it re-asks the ctrl one only

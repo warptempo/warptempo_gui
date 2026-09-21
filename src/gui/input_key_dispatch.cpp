@@ -4440,7 +4440,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
          key == GuiKeys::Comma || key == GuiKeys::Period))
         return true;
     // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31,
-    // R12): a HELD REPEAT CARRIES ITS MODIFIER, so a held Ctrl+Up walks ten
+    // R12): a HELD REPEAT CARRIES ITS MODIFIER, so a held Shift+Up walks ten
     // cents a fire — the burst continues the gesture the press began, which
     // is the whole meaning of a hold. Up / Down bind bare, Shift and Ctrl
     // (the ladder, arrow_step_magnitude); Left / Right bind BARE ALONE since

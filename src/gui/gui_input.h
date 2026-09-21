@@ -209,7 +209,8 @@ struct GuiInputState {
 // -- THE ARROW STEP LADDER (architect 2026-08-31, R12) -----------------------
 //
 // THE MODIFIER IS THE STEP'S MAGNITUDE ON THE VERTICAL ARROWS, AND ON THEM
-// ALONE: bare is ONE unit, Shift is THREE and Ctrl is TEN, and the unit is
+// ALONE: bare is ONE unit, Ctrl is THREE and Shift is TEN (the two rungs
+// swapped 2026-09-21, below), and the unit is
 // whatever the bare Up / Down's own act steps on the addressed cell — a CENT
 // on the tempo (singleton and group), a cent or a hop on a bound, a level on
 // the magnification level column's flag. The tempo is NUMERIC, so a count of
@@ -224,22 +225,26 @@ struct GuiInputState {
 // UNIT (horizontal_arrow_step below); key repeat and the buttons' hold-repeat
 // are the way to go further.
 //
-// THE ORDER bare < shift < ctrl IS DELIBERATE (the architect's own): shift is
-// the everyday coarse step and ctrl the long jump, so the modifier that is
-// harder to hold is the one that moves further.
+// SHIFT IS THE LONG STRIDE (architect 2026-09-21, swapping the 2026-08-31
+// order, which had shift the three and ctrl the ten): "shift becomes the long
+// stride. This is different than how e.g. VLC uses shift/ctrl for seeking
+// (there shift is 3 s and ctrl is 1 min) — so different context." The order is
+// bare < ctrl < shift; the names stay the modifiers' (kArrowStepShift is the
+// ten, kArrowStepCtrl the three).
 //
 // CTRL+SHIFT SPELLS NOTHING — strict modifier validation, so the pair is the
 // consumed no-op it is everywhere else and no arm composes a 30. Alt likewise.
 // The dispatch arms ask for the magnitude only after they have refused those
-// combinations; this function answers ctrl first and never sees the pair.
+// combinations; this function answers ctrl first and never sees the pair, so
+// the test order says nothing about which rung is longer.
 //
 // THE WALLS ARE THE BARE FORM'S, at the scaled size: a SINGLETON step clamps
 // onto its wall and a GROUP press refuses whole where any member could not
 // take the FULL step — the unified wall policy, stated at the head of
 // position_nudge.h and instanced at the group tempo scan
 // (tempo_cent_step_group_actionable).
-inline constexpr int64_t kArrowStepShift = 3;
-inline constexpr int64_t kArrowStepCtrl  = 10;
+inline constexpr int64_t kArrowStepShift = 10;
+inline constexpr int64_t kArrowStepCtrl  = 3;
 constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
     if (mods.ctrl)  return kArrowStepCtrl;
     if (mods.shift) return kArrowStepShift;
@@ -776,8 +781,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::IsoLeftTab: return bare || sh;
         // The value step on the addressed cell (the tempo, a bound or the
         // magnification level), IN THREE MAGNITUDES since 2026-08-31 (R12):
-        // bare one unit, Shift three, Ctrl ten (the ladder's owner is
-        // arrow_step_magnitude above). Ctrl+Shift spells nothing.
+        // bare one unit, Ctrl three, Shift ten since 2026-09-21 (the
+        // ladder's owner is arrow_step_magnitude above). Ctrl+Shift spells
+        // nothing.
         case GuiKeys::Up: case GuiKeys::Down:
             return bare || sh || cl;
         // The playhead / marker position step, BARE ONLY on every column

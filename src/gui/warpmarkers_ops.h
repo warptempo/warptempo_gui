@@ -143,8 +143,9 @@ struct GuiWarpMarkersOps {
     // stands.
     void flatten_tempo_deviations(TempoFlattenKind kind);
     // Steps the focused marker's tempo by `delta_cents` integer cents, signed
-    // by direction of travel — ONE cent per bare keypress, THREE under shift
-    // and TEN under ctrl since 2026-08-31 (the step ladder, one owner at
+    // by direction of travel — ONE cent per bare keypress, THREE under ctrl
+    // and TEN under shift (the step ladder since 2026-08-31, its rungs swapped
+    // 2026-09-21 — shift the long stride; one owner at
     // arrow_step_magnitude in gui_input.h; this body has taken a signed count
     // since it was written and needed no change for the magnitudes). With a 2+
     // selection it dispatches to the all-or-nothing group step below.

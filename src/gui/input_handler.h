@@ -4133,7 +4133,7 @@ private:
     // never moves the resting cursor. "Scrub" names that and only that.
     // ONE READER since 2026-08-30, the on_key dispatch (which picks the
     // lane); read_only_key_blocked's is_playhead_step entry — which admits the
-    // horizontal arrows, in all three of the step ladder's magnitudes, only in
+    // bare horizontal arrows (they bind no modifier since 2026-09-21) only in
     // the waveform lane, this gate being their
     // sole read-only defense — reads the lane through the lock's own owner
     // horizontal_arrow_step_lock_admits (app_state.h) instead, so the Left /
@@ -4160,8 +4160,8 @@ private:
     // One entry is
     // STATE-DEPENDENT: the horizontal arrows are admitted as navigation
     // only while playhead_in_marker_lane is false, since in the marker lane the
-    // same press authors — the lane decides, and the step ladder's modifier
-    // (bare / shift / ctrl, 2026-08-31) does not enter the decision.
+    // same press authors — the lane decides (the horizontal pair binds bare
+    // only since 2026-09-21, so no modifier enters the decision).
     bool read_only_key_blocked(GuiKey key, GuiInputState mods);
 
     // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason

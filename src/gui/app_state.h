@@ -2537,8 +2537,8 @@ enum class RedesignButton {
     // AppState::ChromePress.
     //
     // UP / DOWN ADMIT BOTH MODIFIERS since 2026-08-31 (architect, R12 — THE
-    // STEP LADDER): a SHIFT-click steps THREE units and a CTRL-click TEN on
-    // the addressed cell's own unit. They are the roster's only dual-modifier
+    // STEP LADDER): a CTRL-click steps THREE units and a SHIFT-click TEN on
+    // the addressed cell's own unit (shift the long stride since 2026-09-21). They are the roster's only dual-modifier
     // buttons and the one-modifier rule's one exception, the two admissions
     // being two RUNGS OF ONE LADDER rather than two acts, so their single
     // second tooltip line names both. A HELD MODIFIED PRESS REPEATS ITS OWN
@@ -9964,8 +9964,9 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 //
 // THE TWIN RULE IS RESOLVED, AND IT COSTS THIS PREDICATE NOTHING (2026-08-31,
 // R12, closing the note this declaration carried for the hours between the
-// faces commit and the ladder's): the modified steps are live — Ctrl+Up / Down
-// ten cents, Shift+Up / Down three — and a button with a live modified twin
+// faces commit and the ladder's): the modified steps are live — Shift+Up /
+// Down ten cents, Ctrl+Up / Down three (the rungs swapped 2026-09-21) — and a
+// button with a live modified twin
 // must stay ENABLED, so the honest question is "would ANY admitted variant
 // act". THE FACE STILL ASKS THE BARE ±1, because that question and this one
 // have the same answer in each direction:
@@ -10027,7 +10028,7 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 //     and the Up / Down buttons' MODIFIER LINE in the stateful tooltip
 //     overload below, which drops where it answers non-null (the plain, the
 //     shifted and the ctrl press all refuse alike, so "Press Shift for a
-//     3-step, Ctrl for 10." would name three rungs that do nothing different);
+//     10-step, Ctrl for 3." would name three rungs that do nothing different);
 //   * the INDEX form — tempo_cent_step_direction_actionable's singleton arm,
 //     THE UP / DOWN FACE, asked of the focus it has already range-checked;
 //     and value_drag_target below, the gesture's ONE predicate, which the
@@ -15904,8 +15905,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // on a reference and its definition is a reading gesture as much as a desk
 // one, and the panel has no shift key.)
 // (THE TWO VERTICAL ARROWS JOINED 2026-08-31 with the STEP LADDER — R12,
-// Shift+Up / Shift+Down = a THREE-unit step on the addressed cell — and they
-// are this set's ONLY MEMBERS THAT ALSO ADMIT CTRL, the ten-unit step
+// Shift+Up / Shift+Down = a TEN-unit step on the addressed cell since
+// 2026-09-21, a three until the architect made shift the long stride — and
+// they are this set's ONLY MEMBERS THAT ALSO ADMIT CTRL, the three-unit step
 // (redesign_button_ctrl_admits below, whose one-modifier-per-button walk
 // narrowed for them). Their one second tooltip line names both. LEFT AND
 // RIGHT JOINED WITH THEM AND LEFT 2026-09-21, when the architect retired the
@@ -15986,8 +15988,9 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // THE TWO ADMISSIONS WERE EXCLUSIVE UNTIL 2026-08-31, one modifier per button
 // on the reasoning that a button carries ONE second tooltip line and so can
 // honestly advertise one modified act and no more. THE STEP LADDER (R12) BROKE
-// THAT, deliberately and in one place: the vertical arrows carry a THREE-unit
-// step on shift AND a TEN-unit step on ctrl — one ladder, three rungs, and
+// THAT, deliberately and in one place: the vertical arrows carry a TEN-unit
+// step on shift AND a THREE-unit step on ctrl (the rungs swapped 2026-09-21,
+// shift the long stride) — one ladder, three rungs, and
 // splitting it across two buttons is not available — so their one second line
 // names BOTH acts in one sentence, which is what the line can honestly do when
 // the two acts are the same act at two sizes. The walk below holds the
@@ -16016,9 +16019,10 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // change anything. The succession is at the skips' case in
 // redesign_button_enabled and at their tooltip entry.
 // (THE VERTICAL ARROWS JOINED 2026-08-31, R12: their ctrl-click is the
-// ladder's TEN-unit step and dispatches Ctrl+Up / Ctrl+Down, the skips' own
-// shape — the button spells the keyboard's modifier and translates nothing.
-// They admit SHIFT as well, for the three-unit rung, which is why the
+// ladder's THREE-unit step since 2026-09-21 (the ten before shift became the
+// long stride) and dispatches Ctrl+Up / Ctrl+Down, the skips' own shape — the
+// button spells the keyboard's modifier and translates nothing. They admit
+// SHIFT as well, for the ten-unit rung, which is why the
 // exclusivity assert below became a walk with exactly this exception. THE
 // CTRL ROAD IS PLASTIC-ONLY, as the skips' is and for the same reason: the
 // shift long press is glass's one held modifier and it never reaches ctrl,
@@ -16601,7 +16605,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // UP / DOWN'S SECOND LINE NAMES BOTH RUNGS OF THE STEP LADDER
         // (2026-08-31, R12) and is the table's ONE two-act line, which is what
         // their exception to the one-modifier rule buys: shift is a
-        // three-unit step and ctrl a ten on the addressed cell's own unit, so
+        // ten-unit step and ctrl a three on the addressed cell's own unit
+        // (swapped 2026-09-21, shift the long stride), so
         // the line says "step" and lets the button's own name supply the
         // unit. The numbers are the ladder's (kArrowStepShift /
         // kArrowStepCtrl, gui_input.h) and this is the one place they are
@@ -16614,9 +16619,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the buttons admit no modifier (a held repeat outranks the long-press
         // shift — the principle at ToolbarChord::repeats, input_pointer.cpp).
         case RedesignButton::TransportDown:
-            return {"Down", "Press Shift for a 3-step, Ctrl for 10."};
+            return {"Down", "Press Shift for a 10-step, Ctrl for 3."};
         case RedesignButton::TransportUp:
-            return {"Up", "Press Shift for a 3-step, Ctrl for 10."};
+            return {"Up", "Press Shift for a 10-step, Ctrl for 3."};
         case RedesignButton::TransportLeft:
             return {"Left", nullptr};
         case RedesignButton::TransportRight:
@@ -17048,7 +17053,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         }
         // THE VERTICAL ARROWS' STEP-LADDER LINE drops where EVERY RUNG of the
         // ladder refuses alike (architect 2026-09-02, the four-tier review's
-        // R-17e): "Press Shift for a 3-step, Ctrl for 10." exists to say that
+        // R-17e): "Press Shift for a 10-step, Ctrl for 3." exists to say that
         // a modified press does something DIFFERENT, and in the two states
         // below the bare, the shifted and the ctrl press all raise the SAME
         // card. Each arm reads the act's own owner and restates nothing; the
@@ -17069,7 +17074,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // nullptr in source view while the source-view ref refused on every
         // rung all the same; the one owner closes that asymmetry. The BRACKET wall is deliberately not here: it is
         // directional and magnitude-DEPENDENT — a member three cents from the
-        // max takes the bare step and refuses the ctrl one — and it GREYS the
+        // max takes the bare step and refuses the shift one — and it GREYS the
         // face on the bare rung anyway (tempo_cent_step_direction_actionable),
         // so the line is owed for the twin. The GROUP arm is out for the same
         // reason: its wall scan walls a superset as the step grows.
