@@ -1533,6 +1533,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Return / keypad Enter are NOT playback keys; they open the flag editor,
     // handled further below.
     if (is_play_pause_key(key, mods)) {
+        // A GUI TRANSPORT PRESS, counted AHEAD OF THE REFUSAL below so a
+        // refused play supersedes a pending car play too (the rule at
+        // GuiCarTransport::PendingCarPlay, car_transport.h; the count's
+        // writers at AppState::gui_transport_press_count).
+        ++app.gui_transport_press_count;
         // Target-view playback gating: refuse Space-to-play while a
         // target render is in flight (current is stale by
         // definition). Space-to-stop is still honored — if playback
@@ -1627,6 +1632,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // and long press arrive here through the same chord
     // (redesign_button_shift_admits).
     if (is_ab_audition_key(key, mods)) {
+        // A GUI TRANSPORT PRESS, counted ahead of start()'s refusals (the
+        // rule at GuiCarTransport::PendingCarPlay, car_transport.h).
+        ++app.gui_transport_press_count;
         ab_audition.start();
         return;
     }

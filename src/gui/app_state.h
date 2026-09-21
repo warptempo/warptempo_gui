@@ -2611,9 +2611,10 @@ enum class RedesignButton {
     // (architect: "Any time a button would be a no-op, grey it" — reversing
     // the 2026-08-15 no-blink ruling under which their home-view and
     // empty-selection refusals stayed consumed no-ops behind a lit face):
-    // DELETE and DISABLE grey on an empty selection in both columns and off
-    // home in the P column (marker_selection_verb_actionable, the arms' own
-    // refusal), TOGGLE INHERIT greys in the P view and with no selection or
+    // DELETE and DISABLE grey on an empty selection in every column
+    // (marker_selection_verb_actionable, the arms' own refusal — their
+    // off-home arm in the P column went with S+P, 2026-09-21, the column
+    // standing in its one home), TOGGLE INHERIT greys in the P view and with no selection or
     // focus (inherit_toggle_actionable, the op's own leading return). THE
     // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
     // shift twin drops from ANY view, and that twin is the long press — glass's
@@ -4736,6 +4737,22 @@ struct AppState {
     // struct). Non-Idle exactly while the act STANDS — its four plays and the
     // three rests between them alike, one transport session throughout.
     GuiAuditionSequence audition_sequence;
+
+    // THE GUI TRANSPORT PRESS COUNT — session-only, never persisted, bumped
+    // by EVERY deliberate press of a project-transport launch road at the
+    // glass or the plastic, AT THE ROAD'S HEAD and so AHEAD OF ITS REFUSALS:
+    // bare Space's arm and Shift+Space's arm in on_key (input_handler.cpp;
+    // the Play button's lift and its shift press arrive there as those
+    // chords) and the waveform scrub's one act, scrub_act_at
+    // (input_pointer.cpp). Its one reader is the car's PENDING PLAY
+    // (GuiCarTransport::PendingCarPlay, car_transport.h, where the rule is
+    // stated): a wait armed from the console is stale the moment a GUI
+    // transport press lands, whether that press played, stopped or was
+    // refused — a refused press is still his answer to "what sounds now",
+    // and the answer is not the car's loop. The render player's launches do
+    // not bump it: the player takes the wire and that clear is the tick's
+    // own. The car's own bodies never bump it.
+    uint64_t gui_transport_press_count = 0;
 
     // (THE font_size FIELD IS GONE — architect approval 2026-08-01. It was the
     // GUI-wide monospace text size in points, and row 7 deleted the monospace

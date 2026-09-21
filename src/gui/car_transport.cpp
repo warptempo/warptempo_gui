@@ -147,6 +147,7 @@ void GuiCarTransport::car_play_after_step() {
         pending_play_.audio_view = app.active_audio_view;
         pending_play_.tab        = app.active_tab_view;
         pending_play_.state_id   = car_transport_title_line(app.history);
+        pending_play_.gui_press_count = app.gui_transport_press_count;
         return;
     }
     playback_lifecycle.car_play_playback();
@@ -164,9 +165,12 @@ void GuiCarTransport::run_pending_play() {
     }
     if (app.active_audio_view != pending_play_.audio_view ||
         app.active_tab_view   != pending_play_.tab ||
-        car_transport_title_line(app.history) != pending_play_.state_id) {
+        car_transport_title_line(app.history) != pending_play_.state_id ||
+        app.gui_transport_press_count != pending_play_.gui_press_count) {
         // A later step, a view switch, a tab switch or a save superseded the
-        // wait: the state it was for is not the state on screen.
+        // wait: the state it was for is not the state on screen. Or a GUI
+        // transport press landed, played or refused, and that press is the
+        // answer to what sounds now (the rule at the latch's declaration).
         pending_play_ = PendingCarPlay{};
         return;
     }

@@ -386,11 +386,24 @@ private:
     // writes them, so any restore that moved the column moved the STATE ID
     // with it and this wait is stale on that field — a column that moves with
     // the state id standing still can only be a deliberate view-selector press.
+    //
+    // THE FOURTH FIELD IS NOT AN AXIS OF THE SOUND BUT OF WHO IS ASKING:
+    // `gui_press_count` snapshots AppState::gui_transport_press_count, which
+    // every deliberate GUI transport press bumps AT ITS ROAD'S HEAD (the
+    // writers are at that field). A GUI TRANSPORT ACT SUPERSEDES THE CAR'S
+    // DEFERRED PLAY, WHETHER IT PLAYED OR WAS REFUSED (architect 2026-09-21,
+    // on Sol's finding): a scrub or a Space refused at the preview's own
+    // readiness gate sounds nothing, so the "something is already sounding"
+    // clear below never saw it, and the wait fired the car's loop from the
+    // trim when the preview settled — over a press that had asked for
+    // something else. The count is a snapshot compare, the same shape as the
+    // other three, so the latch needs no hook into the input cluster.
     struct PendingCarPlay {
         bool        armed      = false;
         char        audio_view = '\0';
         char        tab        = '\0';
         std::string state_id;
+        uint64_t    gui_press_count = 0;
     };
     // THE CLEARS, ALL OF THEM, AND NOT ONE OF THEM IS A DURATION (nothing in
     // this product decides a wait by a timer, and every state below is one
@@ -400,6 +413,10 @@ private:
     //   * !admits() — a prompt, the picker or the stats panel, a dialog
     //     editor, the `h` view: the wait is over.
     //   * THE SNAPSHOT MOVED — any of the three fields above.
+    //   * A GUI TRANSPORT PRESS LANDED — the fourth field above: bare Space,
+    //     Shift+Space (and the Play button's two presses, which are those
+    //     chords) and the waveform scrub, played OR REFUSED. This is the
+    //     rule's one statement; the writers point here.
     //   * SOMETHING IS ALREADY SOUNDING — he started it himself at the glass.
     //   * THE PREVIEW SETTLED (!is_updating) — the wait is over one way or
     //     the other: clear, and play iff preview_ready(). A render that

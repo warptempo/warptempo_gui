@@ -1725,7 +1725,8 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 //     the loop and plays ONCE from the click (launch_playback_from passes
 //     kPlaybackNoLoop). The console's own buttons and bodies are untouched
 //     (GuiCarTransport); its comparator simply publishes the new session, and
-//     a pending car play dies on the sound this launch starts.
+//     a pending car play dies at the click itself, launched or refused (the
+//     press count at the body's head).
 //   * FOLLOW: the stop clears the chase, and the lamp's spend is
 //     launch_playback_from's success tail as on every launch — an armed lamp
 //     is spent by the scrub's launch, a dark one leaves the play unchased.
@@ -1743,6 +1744,14 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // launchable frame launches. The target gate below carded from 2026-08-30
 // until 2026-09-04 and is silent now, by the rule stated at that gate.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
+    // A GUI TRANSPORT PRESS, counted FIRST so every ending of this act — the
+    // launch, the is_updating refusal below, a launch the device refuses —
+    // supersedes a pending car play (the rule at
+    // GuiCarTransport::PendingCarPlay, car_transport.h; the count's writers at
+    // AppState::gui_transport_press_count). Without it a refused scrub left
+    // the wait armed, and the car's loop started from the trim when the
+    // preview settled.
+    ++app.gui_transport_press_count;
     // The stop half, through the standing stop machinery — side-effect-clean
     // here (the scrub never moved the cursor) and the owner of the scanner's
     // visible-identity teardown. It runs FIRST so scrub_launch_at's defensive
