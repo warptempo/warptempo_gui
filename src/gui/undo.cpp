@@ -16,6 +16,7 @@
                                   // restore's map-change re-land
 
 #include <algorithm>
+#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -152,35 +153,6 @@ void Undo::recompute_dirty() {
     if (app.dirty != was_dirty) viewport.invalidate_status_cell_area();
 }
 
-// THE AUDIO TAG IS THE COLUMN'S OWN VIEW WHERE THE COLUMN HAS ONLY ONE
-// (architect 2026-09-21 for P, 2026-09-16 for M): the phase-reset column
-// exists in TARGET view alone and the magnification level column in SOURCE
-// view alone, so an entry naming either store as its column (op_mode) can be
-// restored honestly only into that view — the restore lands the column the
-// entry names, and the column writer refuses it anywhere else
-// (GuiActiveViews::switch_active_markers_view_to). THE TAG IS STAMPED HERE, at
-// the push, rather than read off the live view, because one producer files a
-// 'P' entry from another view: the phase-reset paste pair (Ctrl+Alt+P /
-// Ctrl+Alt+Shift+P, phase_reset_propagate.cpp) is a WARP-column act, source
-// view included, which pushes its entry BEFORE its landing crosses into T+P
-// (land_paste_in_target_view). Stamping at the one push owner makes "a 'P'
-// entry says 'T'" a property of every producer that exists or will exist,
-// where reordering that one caller would leave it a property of the caller;
-// and the view it names is the one the paste itself ended in, so the restore
-// synthesizes no view the user was never in. The 'M' arm restates what every
-// producer already guarantees (each 'M' push is gated on the M column, which
-// the column writer admits in source view alone) so the rule is one
-// statement over both single-view columns. W and the settings-only 'S' take
-// the live view: the warp column authors in both views and a settings entry
-// carries whatever view it was typed in.
-static char undo_entry_audio_view(char op_mode, char live_audio_view) {
-    switch (op_mode) {
-        case 'P': return 'T';
-        case 'M': return 'S';
-        default:  return live_audio_view;
-    }
-}
-
 // THE PUSH HELPERS ALL STRIP THE SESSION-ONLY ITERATION BRACKET from
 // both snapshots they build (architect 2026-09-10: "They just don't go in the
 // undo stack at all; they're considered transient by design"). It is done HERE
@@ -202,8 +174,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
     e.tab                = app.active_tab_view;
-    e.audio_view         = undo_entry_audio_view(e.op_mode,
-                                                 app.active_audio_view);
+    e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
@@ -222,8 +193,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
     e.tab                = app.active_tab_view;
-    e.audio_view         = undo_entry_audio_view(e.op_mode,
-                                                 app.active_audio_view);
+    e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
@@ -243,8 +213,7 @@ void Undo::push_undo_magnification_level(
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'M';
     e.tab                = app.active_tab_view;
-    e.audio_view         = undo_entry_audio_view(e.op_mode,
-                                                 app.active_audio_view);
+    e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
     e.touched_live       = std::move(touched_live);
     app.history.push(std::move(e));
@@ -265,8 +234,7 @@ void Undo::push_undo_both(
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
     e.tab                = app.active_tab_view;
-    e.audio_view         = undo_entry_audio_view(e.op_mode,
-                                                 app.active_audio_view);
+    e.audio_view         = app.active_audio_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
@@ -281,11 +249,20 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
     e.tab                = app.active_tab_view;
-    e.audio_view         = undo_entry_audio_view(e.op_mode,
-                                                 app.active_audio_view);
+    e.audio_view         = app.active_audio_view;
     app.history.push(std::move(e));
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
     recompute_dirty();
+}
+
+void Undo::stamp_top_entry_with_landing_view() {
+    // The caller's push is the precondition (the contract at the
+    // declaration): a press that pushed leaves its entry on top, so an empty
+    // stack is unreachable.
+    assert(!app.history.undo_stack.empty());
+    UndoEntry& top = app.history.undo_stack.back();
+    top.tab        = app.active_tab_view;
+    top.audio_view = app.active_audio_view;
 }
 
 bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
@@ -972,10 +949,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15; the
     // column's home flipped 2026-09-16: the magnification level markers
     // column is source view only, and the column writer refuses 'M' outside
-    // it). Its audio tag is 'S' — stamped at the push owner
-    // (undo_entry_audio_view) and true by construction besides, on ONE
-    // guarantee that covers every producer: an 'M' entry is filed only by an act gated on
-    // the M COLUMN, and the column writer refuses 'M' outside source view
+    // it). Its audio tag is 'S' — the view the act landed in, which the push
+    // helper reads off the live view (the landing-view rule and its one
+    // restamp are at Undo::stamp_top_entry_with_landing_view, undo.h) — on ONE
+    // guarantee that covers every producer: an 'M' entry is filed only by an
+    // act gated on the M COLUMN, and the column writer refuses 'M' outside source view
     // (GuiActiveViews::switch_active_markers_view_to) while the audio writer
     // lands the column on W before it leaves for target — so a press that
     // files one stood in S+M. (The magnification level PASTES needed a
@@ -992,12 +970,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // A 'P' ENTRY TAKES ITS AUDIO VIEW FIRST TOO, THE TWIN (architect
     // 2026-09-21: the phase-reset column is target view only, the column
     // writer refusing 'P' outside it and the audio writer landing T+P on W
-    // before it leaves for source). Its audio tag is 'T' BY STAMP, not by
-    // the view the push ran in: the push owner writes it for every 'P' entry
-    // (undo_entry_audio_view, above the push helpers), which is what covers
-    // the one producer that files from another view — the phase-reset paste
-    // pair, a warp-column act pressed from S+W or T+W that pushes BEFORE its
-    // landing crosses into T+P. The order is what lets the column write land:
+    // before it leaves for source). Its audio tag is 'T', the view the act
+    // landed in — read off the live view at the push for every act that
+    // stays where it is, and RESTAMPED after the landing for the one pair
+    // that pushes before crossing, the phase-reset pastes (the rule is at
+    // Undo::stamp_top_entry_with_landing_view, undo.h). The order is what
+    // lets the column write land:
     // restored from S+W, audio first enters target and then the writer
     // admits 'P', where column first would have been refused and left T+W.
     // Unlike M's road, entering target CAN refuse (the tripwire class); the
@@ -1035,7 +1013,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // column that did not land takes the empty set's own clear instead — the
     // phase-reset paste's landing guards its created set on the same
     // question (land_paste_in_target_view). The store itself is restored
-    // either way; only the selection's claim on it stands down.
+    // either way; only the selection's claim on it stands down. THE SAME ARM
+    // CONTAINS THE PASTE'S REFUSED LANDING: a phase paste from S+W whose
+    // target entry refused honestly records the view it ended in, S+W, over a
+    // 'P' entry, and its restore lands S, the column write refuses, and the
+    // selection clears here — so no tripwire guards the 'P'-says-'T' claim,
+    // which would only turn this contained case into a crash.
     if (entry.op_mode != 'S' && app.active_markers_view != entry.op_mode) {
         selection.clear_selection();
     } else if (entry.op_mode == 'P') {

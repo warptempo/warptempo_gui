@@ -256,13 +256,15 @@ struct UndoEntry {
     // under theirs, each with its identity hints, and the loads in place file
     // under the live column (push_undo_both) with none. An 'M' entry is filed
     // from S+M — the column's one view since 2026-09-16 (T+M for its first
-    // day) — so its audio tag is 'S' by construction.
+    // day) — so its audio tag is 'S' (the landing-view rule below).
     std::vector<GuiMagnificationLevelMarker> magnification_level_snapshot;
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
     char                      tab                  = 'A';
-    // The S/T audio view the op was authored in — the third context tag, and
-    // the one whose restore must go through the S/T chokepoint
+    // The S/T audio view the act LANDED in — the third context tag (with
+    // `tab`, the view tags; the landing-view rule and its one restamp are at
+    // Undo::stamp_top_entry_with_landing_view, undo.h), and the one whose
+    // restore must go through the S/T chokepoint
     // (GuiInputHandler::switch_active_audio_view_to) rather than a bare
     // assignment: the flip is a DOMAIN TRANSLATION of the playhead and the
     // viewport, not a bit.

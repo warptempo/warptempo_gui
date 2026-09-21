@@ -244,6 +244,29 @@ struct Undo {
     // dispatch. Markers are captured wholesale at push time (carry-
     // everywhere shape) so the restore is symmetric with marker entries.
     void push_settings_undo(SettingsSnapshot pre_state);
+    // AN ENTRY'S VIEW TAGS ARE THE VIEW THE ACT LANDED IN (architect
+    // 2026-09-21) — the A/B tab (`tab`) and the S/T audio view
+    // (`audio_view`), the two the restore writes back beside the column
+    // (the three-axis restore is at restore_history_entry, the rule's prose
+    // home selection-model.md). Every push helper above reads them off the
+    // live view, which IS the landing view for every act that stays where it
+    // is. THIS IS THE ONE REWRITE, for an act that pushes its entry and THEN
+    // crosses views: called after the landing, it restamps the TOP undo
+    // entry's two tags from the live view. The caller calls it only on a
+    // press that pushed (its own push condition), so it can never touch an
+    // older entry beneath. ITS CALLERS, re-grepped 2026-09-21: the two
+    // phase-reset pastes (paste_apply / paste_state_apply,
+    // phase_reset_propagate.cpp), W-column acts that land in T+P through
+    // land_paste_in_target_view — every other crossing act (Shift+S,
+    // Ctrl+Shift+S, bare `i`, the typed view keys) crosses before it pushes
+    // or pushes nothing. op_mode is NOT restamped: beyond naming the column
+    // the restore returns to, it names the store the entry changed, which
+    // recompute_dirty's per-column walk reads. Nothing between the push and
+    // this call reads the tags — the push clears the coalesce stamp, the
+    // dirty walk reads op_mode alone, and the saved reference counts
+    // entries — and the redo counter-entry copies them VERBATIM from the
+    // entry at restore time, so a redo lands the same view.
+    void stamp_top_entry_with_landing_view();
     void apply_post_restore_rules_warp(const UndoEntry& entry,
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,

@@ -577,6 +577,14 @@ void PhaseResetPropagate::paste_apply() {
     // post-insert indices.
     land_paste_in_target_view(
         std::set<int>(created_indices.begin(), created_indices.end()));
+    // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN, and this act pushed it
+    // BEFORE the crossing above, so its tags are rewritten now that the
+    // landing has run (the rule is at Undo::stamp_top_entry_with_landing_view,
+    // undo.h). ONLY ON A PRESS THAT PUSHED: store_changed is the push's own
+    // condition, so an entry is this press's exactly when it is true, and a
+    // byte-equal paste — which pushed nothing — leaves the older entry
+    // beneath untouched.
+    if (store_changed) undo.stamp_top_entry_with_landing_view();
 }
 
 void PhaseResetPropagate::paste_state_apply() {
@@ -799,6 +807,10 @@ void PhaseResetPropagate::paste_state_apply() {
     // there is no selection to set and the tail leaves none: the column swap it
     // runs clears the selection, and nothing restores one.
     land_paste_in_target_view({});
+    // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN — paste_apply's restamp
+    // read across, on this act's own push condition (any_change): a run that
+    // flipped no flag pushed nothing, and the entry beneath is not its.
+    if (any_change) undo.stamp_top_entry_with_landing_view();
 }
 
 // The architect inspects a propagate paste by eye instead of the old
