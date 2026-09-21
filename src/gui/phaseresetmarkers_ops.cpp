@@ -8,6 +8,7 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -88,10 +89,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     target_render.trigger();
 }
 
-// The phase column's drop, FORKED ON THE AUDIO VIEW (architect 2026-08-30 —
-// the P column authors in BOTH views since that ruling, and the two arms
-// seed differently by its own clause: "no lead-in at all, just like no
-// offset overlay").
+// The phase column's drop (it was FORKED ON THE AUDIO VIEW from 2026-08-30,
+// when the P column authored in both views, until 2026-09-21, when the column
+// became target view only and the source arm left with S+P — below).
 //
 // TARGET VIEW — the LEAD-IN drop: place the reset kPhaseResetLeadInSamples
 // (kN/2) OUTPUT samples BEFORE the playhead. THE DERIVATION'S ONE PROSE HOME
@@ -215,39 +215,27 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // playhead is an integer frame, so the offset is plain integer arithmetic
 // (no snap needed); clamped to 0.
 //
-// SOURCE VIEW — NO LEAD-IN AND NO MAP CONVERSION: the reset lands EXACTLY at
-// the playhead's source frame. S+P IS A STUB (architect 2026-09-02): it
-// exists so the marker-column lamp is not broken in source view, takes the
-// minimum —
-// no overlay, no lead-in — and no decision rests on it; the lead-in is
-// needed and wanted, and it lives in T+P. The kN/2 is an OUTPUT-domain
-// length the source cursor is not in (subtracting it here would take kN/2
-// SOURCE frames off a source cursor and seat the reset somewhere the lead-in
-// does not reach), and the offset's whole aim — the protected point on the
-// playhead — is only visible where the overlay is: the missing overlay and
-// the missing lead-in are the clues you are reading the wrong domain, and a
-// misplaced reset is harmless and adjusted in target view. The identity
-// domain needs no active_domain_to_source_frame call either — the cursor IS
-// a source frame there.
+// TARGET VIEW IS THE BODY'S ONE VIEW (architect 2026-09-21): the phase-reset
+// column exists in target view alone — a phase reset is heard accurately only
+// there, so S+P has no use and is load-fatal, the twin of T+M — and the
+// source-view arm that stood here (S+P's STUB of 2026-09-02: no lead-in, the
+// reset seated exactly at the source cursor) had no producer left and is
+// deleted; the assert below is its belt (an error arm exists iff a producer
+// exists, validation_topology.md). Every route reaches it with T+P standing:
+// bare `s` and the empty-lane double-click are P-column routes, and the
+// column writer refuses 'P' outside target view
+// (GuiActiveViews::switch_active_markers_view_to) while the audio writer lands
+// T+P on W before it leaves for source; SHIFT+S SWITCHES the session into T+P
+// first (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp)
+// and reads the audio switch back before it drops, so the column write that
+// follows cannot refuse.
 //
-// BOTH ARMS reuse drop_phase_reset_at_position, so the created reset takes
-// the full create path — the EOF wall (whose no-producer record holds in
-// both arms: the source arm authors AT the playhead, inside [0, total-1] by
-// every writer's clamp), undo, the single-select, and the playhead seat
-// (whose source_frame_to_active_domain is the identity in the source arm,
-// making the seat a same-value re-affirm there) — unchanged; only the seed
-// frame differs. The routes are three: bare `s` and the empty-lane
-// double-click, both P-column routes in EITHER audio view, and SHIFT+S,
-// which SWITCHES the session into T+P first
-// (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp) and
-// so always takes the target arm.
+// The body reuses drop_phase_reset_at_position, so the created reset takes the
+// full create path — the EOF wall, undo, the single-select and the playhead
+// seat — unchanged; only the seed frame is this body's.
 void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     if (audio.sample_rate() <= 0) return;
-    if (app.active_audio_view != 'T') {
-        drop_phase_reset_at_position(
-            static_cast<double>(app.playhead_cursor_sample));
-        return;
-    }
+    assert(app.active_audio_view == 'T');
     const int64_t ph = std::max<int64_t>(
         0, app.playhead_cursor_sample - kPhaseResetLeadInSamples);
     const int64_t src_frame = active_domain_to_source_frame(app, audio, ph);

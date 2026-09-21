@@ -5685,7 +5685,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Mouse authoring is home-view gated like the keyboard: the marker DRAG
     // never moves a warp flag in T+W — selecting and landing but MOVING
     // NOTHING, the one off-home state left since the P column opened to both
-    // audio views (2026-08-30) — the crossing's value-drag posture claiming
+    // audio views (2026-08-30; the column is target view only again since
+    // 2026-09-21, where it is home) — the crossing's value-drag posture claiming
     // that state whole since 2026-09-13. W+target used
     // to arm the TEMPO drag on an eligible marker instead of the reposition drag
     // (the pointer half of the home-view binding's tempo exception); that whole
@@ -6760,12 +6761,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
     // active_column_authoring_allowed admits W only in source view (warp
-    // drops legal there alone), P in EITHER audio view (architect
-    // 2026-08-30 — the drop body's own fork seeds with the lead-in in target
-    // view and exactly at the playhead in source view) and M wherever it
-    // exists, which is source view alone (2026-09-16; target view alone for
-    // its first day), so the view dispatch below needs no extra audio-view
-    // guard on any column.
+    // drops legal there alone), P wherever it exists, which is target view
+    // alone (2026-09-21; both audio views from 2026-08-30 until then), and M
+    // wherever it exists, which is source view alone (2026-09-16; target view
+    // alone for its first day), so the view dispatch below needs no extra
+    // audio-view guard on any column.
     if (app.active_markers_view == 'P')
         phase_resets.drop_phase_reset_lead_in_at_playhead();
     else if (app.active_markers_view == 'M')
@@ -10190,8 +10190,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // an entry, so grid iterations refuses it exactly as the read-only bit
         // does, and silently for the same reason. THE HOME-VIEW BINDING'S ONE
         // OFF-HOME FLAG DRAG — a WARP flag in target view (the tempo drag that
-        // once armed there is deleted, see marker_drag.h; the P column drags in
-        // both audio views since 2026-08-30) — is the posture fork's below.
+        // once armed there is deleted, see marker_drag.h; the P column drags
+        // wherever it stands, which is T+P alone since 2026-09-21) — is the
+        // posture fork's below.
         // THE VALUE DRAG FORKS AHEAD OF THE LOCK (architect 2026-09-10): wherever
         // the view makes it so — target view on the warp column, and the phase
         // column under grid iterations (value_drag_posture, app_state.h, where
@@ -10221,8 +10222,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 value_drag.apply_motion(mouse_y);
             return;
         }
-        // No home-view test: T+W is the posture's, so S+W, S+P, T+P with grid
-        // iterations dark and — since 2026-09-15 — the magnification level
+        // No home-view test: T+W is the posture's, so S+W, T+P with grid
+        // iterations dark (T+P the phase-reset column's only view since
+        // 2026-09-21) and — since 2026-09-15 — the magnification level
         // column (S+M since 2026-09-16, its only view) reach here, all of them
         // authoring views. THE MAGNIFICATION LEVEL COLUMN'S FLAG DRAG IS THIS
         // ONE (architect 2026-09-15: "horizontal move only"): the value drag's

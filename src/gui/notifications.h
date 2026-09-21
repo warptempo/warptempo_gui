@@ -112,7 +112,8 @@
 //     above).
 //   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
 //     DOUBLE-CLICK DROP (re-greped 2026-08-30; the WARP column's alone since
-//     the P column opened to both audio views that day, the four P-column
+//     the P column opened to both audio views that day — it stands in its
+//     target home alone since 2026-09-21 — the four P-column
 //     cards retiring with their refusals) — because a pointer gesture that
 //     never begins is its own
 //     answer: the flag does not move and no marker appears. The double-click

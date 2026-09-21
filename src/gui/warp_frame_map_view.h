@@ -271,8 +271,9 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
 //
 //   TARGET view ('T')                 — flat, at every zoom.
 //   SOURCE view, the M column         — the live profile, at every zoom.
-//   SOURCE view, any other column     — the live profile at the working zoom
-//                                       or finer, flat coarser.
+//   SOURCE view, the W column         — the live profile at the working zoom
+//                                       or finer, flat coarser (W is source
+//                                       view's only other column).
 //
 // The live answer is the magnification level store's memoized profile
 // (waveform_gain_profile_cached above); flat is the EMPTY profile, level 0
@@ -290,10 +291,9 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
 // invariably loud hides the shape the reader came for. THE M COLUMN IS THE ONE
 // VIEW EXEMPT FROM THAT TEST, because its whole job IS the loudness: it authors
 // the section boundaries of the magnification itself, almost as a limiter does,
-// so it shows them everywhere they apply. S+P IS NOT A SPECIAL CASE — the
-// column and the audio view are independent axes, so source view with the phase
-// reset column is reachable, and it is simply another column that is not M and
-// therefore derives.
+// so it shows them everywhere they apply. THE SOURCE VIEW'S OTHER COLUMN IS W
+// ALONE since 2026-09-21 (the phase-reset column is target view only, S+P no
+// state at all), so the at-working gate below has one reader column.
 //
 // NO MODE TERM — the `h` view follows the audio view, the column and the zoom it
 // stands in, its plate showing the LIVE store's gain, never the viewed

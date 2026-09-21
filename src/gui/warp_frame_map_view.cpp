@@ -201,8 +201,9 @@ const WaveformGainProfileCache& effective_waveform_gain_profile(
     // working zoom or finer the waveform is a placement instrument and
     // magnification is what makes a quiet passage aimable, while COARSER it is
     // a map — the broad picture of the piece, where everything drawn
-    // invariably loud hides the shape the reader came for. S+P is not a
-    // special case: it is another column, so it derives.
+    // invariably loud hides the shape the reader came for. That other column
+    // is W alone since 2026-09-21 (the phase-reset column is target view only);
+    // the test still asks "not M" so the fork names the exemption, not W.
     if (app.active_markers_view != 'M' &&
         !zoom_level_at_or_finer_than_working(app.zoom_level))
         return kUnmagnified;

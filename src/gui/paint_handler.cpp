@@ -2008,9 +2008,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // face reads the selected bit beside the enabled one, and what
             // greys is the three selectors the press can no longer reach.
             // face.selected is redesign_button_selected, the live audio-view x
-            // column combination (at most one of the four, none in S+P), so an
-            // S+P combination greys all four — the honest reading, none of them
-            // being where you stand.
+            // column combination — exactly one of the four since 2026-09-21,
+            // T+M and S+P being no states — so the selected one keeps its ink
+            // and the other three grey.
             //
             // IT READS THE ENABLED BIT AND NOT THE LOCK, which is the roster's
             // own rule (a face arm never restates an act's condition) and
@@ -5488,15 +5488,17 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
 // recorded here per CLAUDE.md). The seed grain is an OUTPUT-domain extent —
 // the engine's window, on the engine's output lattice — so target time is
 // where it is a fixed picture; source view would show a map-dependent,
-// varying width, misrepresenting it, and the S+P drop is a stub with no
-// lead-in to depict (the drop's comment), so the overlay is not drawn there.
+// varying width, misrepresenting it. Since 2026-09-21 the question no longer
+// arises: the phase-reset column exists in target view alone (S+P is
+// load-fatal, the twin of T+M), so the P-column gate below implies target view
+// and the source-view refusal that stood beside it is an assert.
 // A seed grain is a phase-reset-only concept, so there is nothing on the
 // warp axis to mirror.
 GuiPaintHandler::PhaseResetOverlayBand
 GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     PhaseResetOverlayBand out;
     // Visibility: always-on for the focused enabled marker while the global
-    // W/P mode is on P, in target view; never source view. Everything
+    // W/P mode is on P, which is target view by construction. Everything
     // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return out;
     if (area.w <= 0 || area.h <= 0) return out;
@@ -5550,7 +5552,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // only its proposal, so the ring and the stem share one class throughout.
     bool red_class = false;
     {
-        if (app.active_audio_view != 'T') return out;
+        assert(app.active_audio_view == 'T');   // P stands in target alone
 
         const auto& markers = app.phaseresetmarkers.markers();
         const int idx = app.last_selected_marker;

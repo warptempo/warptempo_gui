@@ -49,14 +49,16 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // CALLERS OWN WHAT HAPPENS NEXT, and this is their inventory:
 // select_active_markers_view (the column entry, below) runs the coincidence
 // auto-select; the S/T audio switch (input_handler.cpp) lands S+M on W before
-// it leaves for target view and runs nothing after;
+// it leaves for target view and T+P on W before it leaves for source view
+// (2026-09-21, the twin) and runs nothing after;
 // the two propagate families' landing tails — the phase-reset paste's into
 // target view (phase_reset_propagate.cpp) and the magnification level paste's
 // into source view (magnification_level_propagate.cpp) — each write their OWN
 // selection and land on that; the undo restore (undo.cpp) writes the entry's
 // column tag with its data already installed; and the two crossings — Shift+S
 // into T+P and Ctrl+Shift+S into S+M (input_handler.cpp) — each land their
-// own drop after the clear (re-grepped 2026-09-16: seven callers).
+// own drop after the clear (re-grepped 2026-09-21: seven callers, the audio
+// switch calling twice).
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
 // basis of the pixels it erases. Caller decides what further invalidations to
@@ -76,10 +78,23 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // and leaving target never refuses, so the refusal is reached only through a
 // caller that never crossed at all, and the caller's own read of the state is
 // the answer. An unknown letter is refused the same way.
+//
+// 'P' IS REFUSED OUTSIDE TARGET VIEW, THE TWIN (architect 2026-09-21: a phase
+// reset is heard accurately only in target view, so S+P has no use and is
+// load-fatal as T+M is) — the column axis's half of the S-never-pairs-with-P
+// invariant, the audio switch landing the column on W before it leaves TARGET
+// being the other. Every caller that names 'P' crosses to target first and
+// reads the column back (the view selectors, the settings editor's typed
+// `active_markers_view=P`, the undo restore of a 'P' entry, Shift+S and the
+// phase-reset paste's landing). The one asymmetry with 'M' is the direction
+// of the crossing: ENTERING target CAN refuse (the tripwire class), so a
+// caller whose crossing refused meets this refusal, and each reads the state
+// back rather than acting on a column it did not get.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
     if (target_mode != 'W' && target_mode != 'P' && target_mode != 'M') return;
     if (target_mode == 'M' && app.active_audio_view != 'S') return;
+    if (target_mode == 'P' && app.active_audio_view != 'T') return;
     selection.clear_selection();
     // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
     // at the writer — rather than in the `p` toggle below, which is where codex
@@ -216,11 +231,12 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 // reach it directly (its inventory).
 //
 // THE TAIL RUNS WHENEVER THE COLUMN IS THE TARGET AFTER THE WRITE, whichever
-// writer moved it: bare 2 or 3 from S+M finds the column already on W, the
-// audio switch having landed it there on its way into target view (bare 1,
-// S+W, changes the column itself with the audio untouched), and still owes the
-// column entry's coincidence auto-select. A write the writer REFUSED ('M'
-// outside source view) leaves the column elsewhere, and the tail does not run.
+// writer moved it: bare 3 from S+M finds the column already on W, the audio
+// switch having landed it there on its way into target view, and bare 1 from
+// T+P likewise on its way into source view (2026-09-21, the twin), and each
+// still owes the column entry's coincidence auto-select. A write the writer
+// REFUSED ('M' outside source view, 'P' outside target view) leaves the column
+// elsewhere, and the tail does not run.
 void GuiActiveViews::select_active_markers_view(char target_mode) {
     this->switch_active_markers_view_to(target_mode);
     if (app.active_markers_view != target_mode) return;   // refused

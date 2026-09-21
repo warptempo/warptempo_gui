@@ -68,7 +68,8 @@
 // playhead's own musical instant rather than a focus.
 // THE POSITIONAL FAMILY IS NOT HERE and stays source-only IN THE WARP
 // COLUMN — the one block left since the P column opened to both audio views
-// (architect 2026-08-30) — refusing in T+W at its own DISPATCH site, through
+// (architect 2026-08-30; it stands in its target home alone since
+// 2026-09-21) — refusing in T+W at its own DISPATCH site, through
 // the one predicate (the keyboard members on a card, the two POINTER members
 // silent; the split is recorded at the predicate): the drop (drop_marker / drop_copy_previous_at_playhead),
 // the flag drag (marker_drag.cpp), the bare Left/Right nudge

@@ -192,7 +192,9 @@ struct SettingsFile {
     char   active_markers_view     = 'W';   // W | P | M (M with S alone,
                                             // architect approval 2026-09-16 —
                                             // the same grant as the validator's
-                                            // flip; it read T until then)
+                                            // flip; it read T until then — and
+                                            // P with T alone, its twin,
+                                            // architect approval 2026-09-21)
     char   active_tab_view         = 'A';   // A | B
     // (NINE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with

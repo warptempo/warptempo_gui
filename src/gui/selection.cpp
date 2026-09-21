@@ -3,6 +3,7 @@
 #include "audio.h"
 #include "warp_frame_map_view.h"
 
+#include <cassert>
 #include <cstdint>
 #include <optional>
 #include <set>
@@ -14,7 +15,9 @@ namespace {
 // declaration, selection.h).
 std::optional<int64_t> overlay_subject(const AppState& app) {
     // Mirror phase_reset_overlay_band's SELECTION-STATE visibility guards
-    // (paint_handler.cpp) exactly: P view + target view, selection under the
+    // (paint_handler.cpp) exactly: the P column (which stands in target view
+    // alone since 2026-09-21, so the target-view term both sites carried is an
+    // assert on each side now), selection under the
     // 2-member suppression, and the focused marker a valid ENABLED phase reset.
     // The geometry guards there (area size, samples-per-
     // pixel, sub-pixel forward width) are NOT selection state — they cannot
@@ -38,7 +41,7 @@ std::optional<int64_t> overlay_subject(const AppState& app) {
     // conclusion never needed it.) The derivation is at the band
     // (paint_handler.cpp) and the shown/hidden model at RegionState.
     if (app.active_markers_view != 'P') return std::nullopt;
-    if (app.active_audio_view != 'T') return std::nullopt;
+    assert(app.active_audio_view == 'T');
     if (app.selected_markers.size() >= 2) return std::nullopt;
     const auto& markers = app.phaseresetmarkers.markers();
     const int idx = app.last_selected_marker;

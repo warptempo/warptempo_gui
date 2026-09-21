@@ -952,7 +952,25 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // never refuses, so on this road the column write always lands; the
     // shape is kept as the audio restore's own best-effort rule, which goes
     // on in the view it has whenever a switch refuses.
-    if (entry.op_mode == 'M') {
+    //
+    // A 'P' ENTRY TAKES ITS AUDIO VIEW FIRST TOO, THE TWIN (architect
+    // 2026-09-21: the phase-reset column is target view only, the column
+    // writer refusing 'P' outside it and the audio writer landing T+P on W
+    // before it leaves for source). Every act gated on the P column stands in
+    // T+P, so such an entry's audio tag is 'T' — except the phase-reset
+    // pastes, which file their 'P' entry from the view the paste was pressed
+    // in (a WARP-column act, source view included) BEFORE their landing
+    // crosses into T+P. In the common case the order is what lets the column
+    // write land: restored from S+W, audio first enters target and then the
+    // writer admits 'P', where column first would have been refused and left
+    // T+W. On the paste's 'S'-tagged entry the audio restore lands source
+    // (T+P leaving on W) and the column write then refuses, so the restore
+    // ends in S+W, the view the paste was pressed in — the column tag of that
+    // entry names the store it touched rather than a view the user stood in.
+    // Unlike M's road, entering target CAN refuse (the tripwire class); the
+    // column write then refuses in turn and the restore goes on in the view
+    // it has, the audio restore's best-effort rule.
+    if (entry.op_mode == 'M' || entry.op_mode == 'P') {
         selection.clear_selection();
         if (input) input->switch_active_audio_view_to(entry.audio_view);
     }
@@ -1022,12 +1040,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // entry is already popped.
     //
     // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
-    // recorded, a restore lands the combination the op was AUTHORED in; the
-    // keyless S+P now arrives when, and only when, the op was authored there
-    // (reachable by leaving T+P for source view, the phase-reset column
-    // authoring in both audio views). Before this tag existed
-    // the restore MANUFACTURED S+P out of a T+P entry undone from S+W, which is
-    // the defect it closes.
+    // recorded, a restore lands the combination the op was AUTHORED in. Before
+    // this tag existed the restore MANUFACTURED S+P out of a T+P entry undone
+    // from S+W, which is the defect it closed; since 2026-09-21 S+P is no
+    // state at all (the phase-reset column is target view only), the two
+    // writers holding it unreachable on this road as on every other — a 'P'
+    // or 'M' entry has taken its audio view above, and this call is then the
+    // same-view no-op, while any other entry leaving T+P for source lands the
+    // column on W inside the switch.
     if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual

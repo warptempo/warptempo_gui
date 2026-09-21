@@ -534,9 +534,10 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //     `i`'s own, the undo restore's tag and the two propagate pastes' audio
 //     half), below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P/M writer, below
-//     its same-mode and M-outside-source refusals (the four view selectors and the
-//     settings key through select_active_markers_view, the S/T writer's
-//     landing of S+M on W, the two propagate pastes, which reach this helper
+//     its same-mode, M-outside-source and P-outside-target refusals (the four
+//     view selectors and the settings key through select_active_markers_view,
+//     the S/T writer's two landings on W — S+M's and T+P's — the two
+//     crossings, the two propagate pastes, which reach this helper
 //     direct, and
 //     Undo's column restore, which reached it 2026-08-28 when the hand-kept copy
 //     of this body in restore_history_entry was deleted for it).
@@ -3905,10 +3906,15 @@ private:
     // target view while the magnification level markers column stands lands
     // the column on W first, through its writer and PAST the target entry's
     // refusal (a refused entry moves no column), the column writer's own
-    // refusal of 'M' outside source view being the invariant's other half.
+    // refusal of 'M' outside source view being the invariant's other half —
+    // AND ITS TWIN, THE S-NEVER-PAIRS-WITH-P LANDING (architect 2026-09-21: a
+    // phase reset is heard accurately only in target view): leaving target
+    // view while the phase-reset column stands lands the column on W first,
+    // the column writer refusing 'P' outside target view.
     // The SET-TO form exists for the callers that name a view rather than
     // an axis: the four absolute view selectors (and the settings editor's
-    // typed `active_markers_view=M`, which crosses to source through it), the
+    // typed `active_markers_view=M` and `=P`, which cross to source and to
+    // target through it), the
     // phase-reset propagate's land-in-target tail and the magnification level
     // propagate's land-in-source tail, and — both since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag

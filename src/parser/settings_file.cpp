@@ -284,9 +284,11 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         // THE THIRD COLUMN, M — the magnification level markers (architect
         // approval 2026-09-15, the column made visible): one ASCII letter per
         // column, W / P / M. M is SOURCE VIEW ONLY (architect approval
-        // 2026-09-16; target view only from 2026-09-15 until then), a PAIR
-        // rule this per-key grammar cannot see; read_settings_file refuses
-        // active_audio_view=T beside it once the whole file has scanned.
+        // 2026-09-16; target view only from 2026-09-15 until then) and P is
+        // TARGET VIEW ONLY, its twin (architect approval 2026-09-21) — two
+        // PAIR rules this per-key grammar cannot see; read_settings_file
+        // refuses active_audio_view=T beside M and active_audio_view=S beside
+        // P once the whole file has scanned.
         if (value != "W" && value != "P" && value != "M")
             return err("must be W, P or M");
         out.c = value[0];
@@ -467,6 +469,18 @@ std::expected<SettingsFile, std::string> read_settings_file(
     if (out.active_markers_view == 'M' && out.active_audio_view == 'T') {
         return std::unexpected<std::string>(
             "active_markers_view=M requires active_audio_view=S");
+    }
+    // S+P IS ITS TWIN, A STATE THE GUI CAN NEVER PRODUCE EITHER (architect
+    // approval 2026-09-21, a granted parser touch): the phase-reset column
+    // belongs to TARGET view — a phase reset is heard accurately only there,
+    // and S+P has no use — so every GUI road into source view lands the
+    // column on W first and every road into P crosses to target first, the
+    // mirror of the T+M pair above. A file carrying the pair is adversarial
+    // by the same two-category rule — load-fatal in both products, no
+    // migration — and whole-file for the same reason.
+    if (out.active_markers_view == 'P' && out.active_audio_view == 'S') {
+        return std::unexpected<std::string>(
+            "active_markers_view=P requires active_audio_view=T");
     }
     return out;
 }

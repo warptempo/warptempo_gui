@@ -1103,7 +1103,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Keyboard authoring is HOME-VIEW gated in the WARP column, not
     // view-blind: warp markers author in source view, while the phase-reset
-    // column authors in BOTH audio views since 2026-08-30, via the one
+    // column authors wherever it stands — target view alone since
+    // 2026-09-21, both audio views from 2026-08-30 until then — via the one
     // predicate active_column_authoring_allowed consulted at the individual
     // handlers below beside the read-only check above.
     // WHAT IT GATES IS THE POSITIONAL FAMILY (architect 2026-08-24): the
@@ -1143,10 +1144,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-09-19; the record is in tempo-and-home-view.md). They
     // name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
     // consumed no-op — that is the whole difference from the deleted `t` and
-    // `p` toggles. (S+P deliberately has NO key: phase resets author in target view,
-    // so S+P is the one combination that is display-only on both axes, and the
-    // architect gave the four keys to the four worth reaching directly; the
-    // view bar's four buttons synthesize them in the same order.)
+    // `p` toggles. The four are the product's WHOLE view space: T+M and S+P
+    // are no states at all (the magnification level column is source view
+    // only, the phase-reset column target view only — architect 2026-09-16
+    // and 2026-09-21, both load-fatal), and the view bar's four buttons
+    // synthesize the four keys in the same order.
     //
     // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very chokepoint
     // its own key used to use — switch_active_audio_view_to for S/T (the body
@@ -1193,9 +1195,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // THE COLUMN ENTRY IS ASKED BEFORE THE AUDIO SWITCH AND RUN AFTER IT.
     // Leaving S+M for T+P or T+W, the audio switch itself lands the column on
-    // W (its T-never-pairs-with-M owner, switch_active_audio_view_to), so a
-    // test read after it would find the column already right (bare 3) and
-    // skip the entry's coincidence auto-select; the column change is what
+    // W (its T-never-pairs-with-M owner, switch_active_audio_view_to), and
+    // leaving T+P for S+W or S+M it lands W the same way (the twin,
+    // 2026-09-21), so a test read after it would find the column already
+    // right (bare 3 from S+M, bare 1 from T+P) and skip the entry's
+    // coincidence auto-select; the column change is what
     // this press asked for, so it is decided off the state the press started
     // in, and the entry (GuiActiveViews::select_active_markers_view) is
     // idempotent on its writer and runs its own tail whichever writer moved
@@ -1893,10 +1897,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (!ctrl && !shift && !alt) {
             // T+W SAYS SO (architect 2026-08-30, the strictness ruling; the
             // P column dropped its half of this gate the same day — bare `s`
-            // in the phase column drops in BOTH audio views, the drop body's
-            // own fork seeding without the lead-in in source view — so the
-            // only refusal left here is the warp column's and the card
-            // needs no fork). THE DROP BUTTON NEVER GREYS ON THIS REFUSAL
+            // in the phase column drops wherever the column stands, which is
+            // T+P alone since 2026-09-21 — so the only refusal left here is
+            // the warp column's and the card needs no fork). THE DROP BUTTON NEVER GREYS ON THIS REFUSAL
             // (the twin rule, recorded at its arm in
             // redesign_button_enabled): in T+W its shift twin above — the
             // long press, glass's only road — still crosses and drops, so
@@ -2059,7 +2062,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // active_column_authoring_allowed, app_state.h) and its op's tail
         // carries the target-view re-warp and playhead re-land. The
         // PHASE-RESET arm carried the home-view gate until the P column
-        // opened to both audio views (architect 2026-08-30), so BOTH ARMS'
+        // opened to both audio views (architect 2026-08-30; the column is
+        // target view only again since 2026-09-21, its home), so BOTH ARMS'
         // ONE LEADING REFUSAL is the empty selection
         // (marker_selection_verb_actionable, app_state.h), which the Disable
         // button's face reads too, and the one card names the missing
@@ -2138,7 +2142,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // gate, its op's tail carrying the target-view re-warp and the
         // playhead re-land. The PHASE-RESET arm carried the home-view gate
         // until the P column opened to both audio views (architect
-        // 2026-08-30). BOTH ARMS' ONE LEADING REFUSAL is the empty selection
+        // 2026-08-30; target view only again since 2026-09-21, its home).
+        // BOTH ARMS' ONE LEADING REFUSAL is the empty selection
         // (marker_selection_verb_actionable, app_state.h — the Ctrl+D arm's
         // twin), which the Delete button's face reads too; the card names
         // the missing subject — "Phase resets are deleted in target view"
@@ -2451,7 +2456,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // spelling of it: this site hand-wrote the rule until 2026-08-29, and
         // a one-owner rule with a hand copy beside it is a rule waiting to
         // drift. ONE refusal is left since the P column opened to both audio
-        // views (architect 2026-08-30) — a WARP marker in target view, which
+        // views (architect 2026-08-30; it stands in its target home alone
+        // since 2026-09-21) — a WARP marker in target view, which
         // lost the tempo-image step with the whole tempo drag family — so the
         // card needs no column fork; "Phase resets are moved in target view"
         // retired with the P gate.
@@ -4021,6 +4027,20 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     if (target_view == 'T' && app.active_markers_view == 'M') {
         active_views.switch_active_markers_view_to('W');
     }
+    // AND SOURCE VIEW NEVER PAIRS WITH THE PHASE-RESET COLUMN, THE TWIN
+    // (architect 2026-09-21: a phase reset is heard accurately only in target
+    // view, so S+P has no use and is load-fatal as T+M is). Leaving T+P for
+    // source view LANDS THE COLUMN ON W FIRST, through the same writer, so
+    // every road that names 'S' inherits it: bare 1 and the backtick, the
+    // settings editor's typed `active_audio_view=S`, the undo/redo restore of
+    // an entry authored in source view and Ctrl+Shift+S's crossing. Leaving
+    // target never refuses, so the placement past the refusal above is the
+    // M landing's shape rather than a need of its own. With the selection
+    // cleared by the writer, the translation below has no focus to
+    // re-express, exactly as on the M landing.
+    if (target_view == 'S' && app.active_markers_view == 'P') {
+        active_views.switch_active_markers_view_to('W');
+    }
 
     // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH, exactly as it clears
     // on a `,` / `.` step and for the identical reason — it is an ordinal into
@@ -4385,11 +4405,11 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //
 // THE SWITCHES COME FIRST AND THE DROP LAST, and that is decided rather than
 // chosen. This act means the TARGET-VIEW drop — the lead-in seed is its
-// point — and the one drop body forks on the audio view (its source arm,
-// since 2026-08-30, takes no lead-in at all:
-// drop_phase_reset_lead_in_at_playhead, phaseresetmarkers_ops.cpp), so the
-// switches must run first for the body to take the target arm, whose kN/2
-// OUTPUT-sample offset is only meaningful there. Going to target first hands the
+// point — and the one drop body (drop_phase_reset_lead_in_at_playhead,
+// phaseresetmarkers_ops.cpp) exists in target view alone since the phase-reset
+// column became target view only (architect 2026-09-21), its kN/2
+// OUTPUT-sample offset meaningful only there, so the switches must run first
+// or the column write refuses. Going to target first hands the
 // body the instant the user stood on, already re-expressed — the S/T
 // chokepoint translates the playhead through the live warp frame map — so
 // there is nothing here to convert by hand and no second drop body to keep in
@@ -4441,8 +4461,8 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     if (app.loading || audio.total_frames() <= 0) return;
     // ALREADY CROSSED, NOTHING TO DO (architect 2026-08-30): the chord IS
     // the crossing from the warp column, so with the P column standing the
-    // act refuses WHOLE — before any view switch, in T+P and S+P alike —
-    // and says so. Bare `s` is untouched (in T+P it is the drop). The Drop
+    // act refuses WHOLE — before any view switch — and says so (the P column
+    // stands in T+P alone since 2026-09-21). Bare `s` is untouched (in T+P it is the drop). The Drop
     // button's shift lift and the glass long press synthesize this same
     // chord and meet this same refusal; its face NEVER greys past the lock
     // (one form is always live since the P column opened, the twin rule's

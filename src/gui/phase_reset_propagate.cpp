@@ -104,8 +104,10 @@ namespace {
 // reset's anchor is "near the marker" rather than on it; the paste carries
 // that nearness across as a musical offset and the destination's own seed
 // quantizes it back onto its lattice — linear is the accepted approximation. A
-// reset dropped in S+P took no lead-in at all; the round trip is uniform
-// either way and stays self-consistent, its only residue the second-order
+// reset dropped in S+P while that view existed (it left the product
+// 2026-09-21, the phase-reset column becoming target view only) took no
+// lead-in at all, and such resets still stand in authored files; the round
+// trip is uniform either way and stays self-consistent, its only residue the second-order
 // difference in the lead-in's SOURCE length between the two sections.
 //
 // A REFUSED MAP IS THE IDENTITY IN BOTH LEGS, AND NO BRANCH SPELLS IT. The
@@ -874,6 +876,14 @@ void PhaseResetPropagate::paste_state_apply() {
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input) input->switch_active_audio_view_to('T');
     active_views.switch_active_markers_view_to('P');
+    // A REFUSED TARGET ENTRY MOVES NO COLUMN (the column writer refuses 'P'
+    // outside target view since 2026-09-21, the phase-reset column's one
+    // view): the entry can fail only its tripwire-class validity gate, and
+    // then the session stays where the paste was pressed with its own
+    // selection standing, so the created-set arm below — whose indices name
+    // PHASE-RESET rows — must not install them over another column. The paste
+    // itself has landed in the store; the kick at the tail still paints it.
+    const bool landed_in_phase_reset_view = (app.active_markers_view == 'P');
     // (THE TAIL'S OWN OVERLAY HIDE IS DELETED, 2026-08-19, with the call-site
     // inventory it belonged to.) The CREATED-SET arm below still hides, where
     // the rule puts it: it LANDS the playhead on the first created reset, and
@@ -882,7 +892,7 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // a paste that materialized no reset moved no playhead and touched no
     // marker, and the overlay it may leave standing derives from the tab's own
     // trim, unchanged by the paste.
-    if (!created.empty()) {
+    if (!created.empty() && landed_in_phase_reset_view) {
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
         // restore — focuses the earliest for the same reason: all members are

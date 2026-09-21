@@ -92,9 +92,8 @@ struct GuiMagnificationLevelMarkersOps {
     // The drop at the playhead — the column's one create body, reached by bare
     // `s` in S+M and by Ctrl+Shift+S's crossing. NO LEAD-IN OF ANY KIND: the
     // frame IS the anchor (a level is a picture boundary, not a synthesis
-    // event), so unlike the phase column's drop this takes no audio-view fork
-    // and subtracts nothing — the playhead's own instant, inverse-mapped to a
-    // source frame.
+    // event), so unlike the phase column's target-view drop this subtracts
+    // nothing — the playhead's own instant, inverse-mapped to a source frame.
     void drop_magnification_level_at_playhead();
     void delete_selected_magnification_levels();
     void toggle_magnification_level_disabled();

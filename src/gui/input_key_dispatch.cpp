@@ -8022,8 +8022,10 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // AND THE MODE LIVES IN TARGET VIEW ALONE (architect 2026-09-13), so
         // the ON edge pressed in SOURCE view CROSSES TO TARGET FIRST — Shift+S's
         // crossing shape (drop_phase_reset_in_target_view, input_handler.cpp),
-        // below, past every refusal. The column is unchanged (S+W lights in
-        // T+W, S+P in T+P). While the lamp stands the lock refuses every road
+        // below, past every refusal. The column is unchanged: S+W lights in
+        // T+W, and S+W is the one source view this crossing starts from (the
+        // P column stands in target alone since 2026-09-21, and S+M refuses
+        // `i` ahead of here). While the lamp stands the lock refuses every road
         // back to source (the four selectors are iteration_lock_key_blocked's
         // delta (a)), so the OFF edge always runs in target and needs no
         // crossing;

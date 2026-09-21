@@ -984,7 +984,8 @@ inline bool is_sync_external_key(GuiKey key, GuiInputState mods) {
 // THE P COLUMN THE CHORD REFUSES WHOLE since 2026-08-30 (architect): the
 // command IS the crossing from warp view, so with phase resets already
 // showing there is nothing to cross and the act answers "Already in phase
-// reset view" before any switch — T+P and S+P alike, bare `s` untouched
+// reset view" before any switch (the P column stands in T+P alone since
+// 2026-09-21), bare `s` untouched
 // (the leading refusal is phase_reset_drop_crossing_actionable,
 // app_state.h).
 // The same two readers as the Space pair above — on_key's dispatch arm

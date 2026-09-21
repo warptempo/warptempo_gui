@@ -351,8 +351,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // the view selectors reach this same body now. A typed `T` from S+M
         // lands the column on W inside that body (its T-never-pairs-with-M
         // owner, past the target entry's refusal — a refused entry moves no
-        // column), with no coincidence auto-select — a typed audio view is no
-        // column entry.
+        // column), and a typed `S` from T+P lands it on W the same way (the
+        // twin, 2026-09-21), each with no coincidence auto-select — a typed
+        // audio view is no column entry.
         input->handle_active_audio_view_toggle();
         applied(); return true;
     }
@@ -398,6 +399,16 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (gv.c == 'M') {
             input->switch_active_audio_view_to('S');
             if (app.active_audio_view != 'S') { unchanged(); return true; }
+        }
+        // AND THE TYPED `P` CROSSES TO TARGET FIRST, THE TWIN (architect
+        // 2026-09-21: the phase-reset column is target view only) — bare 2's
+        // shape, the audio switch before the column entry. Entering target
+        // CAN refuse (the tripwire class, silent on screen with its stderr
+        // line), and a refused crossing changes nothing, so the commit reports
+        // unchanged rather than applying a column the writer would refuse.
+        if (gv.c == 'P') {
+            input->switch_active_audio_view_to('T');
+            if (app.active_audio_view != 'T') { unchanged(); return true; }
         }
         // The absolute column entry the four view selectors take
         // (GuiActiveViews::select_active_markers_view).
