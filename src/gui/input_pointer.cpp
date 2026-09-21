@@ -837,7 +837,7 @@ bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
     if (mods.shift) return true;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (redesign_button_hit(app, tc.id, x, y))
-            return !redesign_button_ctrl_admits(tc.id);
+            return !redesign_button_ctrl_admits_in(app, tc.id);
     }
     return true;
 }
@@ -7799,7 +7799,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         if (tc.repeats) {
             GuiInputState chord{};
             chord.ctrl  = tc.ctrl ||
-                          (mods.ctrl && redesign_button_ctrl_admits(tc.id));
+                          (mods.ctrl &&
+                           redesign_button_ctrl_admits_in(app, tc.id));
             chord.shift = tc.shift || mods.shift;
             chord.alt   = tc.alt;
             if (repeat_eligible(tc.key, chord))
@@ -8032,7 +8033,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // that gate.
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl ||
-                      (arm.ctrl && redesign_button_ctrl_admits(tc.id));
+                      (arm.ctrl && redesign_button_ctrl_admits_in(app, tc.id));
         chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
         on_key(tc.key, chord);
@@ -8128,7 +8129,7 @@ void GuiInputHandler::tick_chrome_press_repeat() {
         // exactly what one expression in two places prevents.
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl ||
-                      (arm.ctrl && redesign_button_ctrl_admits(tc.id));
+                      (arm.ctrl && redesign_button_ctrl_admits_in(app, tc.id));
         chord.shift = tc.shift || arm.shift;
         chord.alt   = tc.alt;
         if (!repeat_eligible(tc.key, chord)) {

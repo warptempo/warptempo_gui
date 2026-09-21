@@ -515,7 +515,7 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // pixel domain (its left_x feeds shaped-text placement, never an int).
 //
 // THE ONE INT64 SIBLING IS ALSO EXEMPT AND COUNTED (2026-08-22):
-// move_playhead_pixels (viewport.cpp) spells this same recovery expression
+// playhead_pixel_step_landing (viewport.cpp) spells this same recovery expression
 // inline in the INT64 domain — its column walk composes with
 // displayed_grid_position_at_column's int64 col and cannot take this owner's
 // int return — and is recorded at its own site ("the recovery nearbyint is
@@ -617,7 +617,8 @@ int64_t authored_frame_at_column(
 // falls in source frames under the map a render would use. They were the
 // painter's alone until 2026-09-09, when the phase-reset column got its own
 // iteration bracket and the walls, the editor's refusal, the arrows' landing
-// and the sweep all had to ask the same lattice the overlay band paints.
+// and the sweep all had to ask the same lattice the overlay band paints; the
+// P column's Shift+Left / Shift+Right hop step (2026-09-21) asks it too.
 
 // THE ENGINE'S SEED FRAME FOR A RESET, mirrored in the GUI (2026-09-02): the
 // schedule index m the engine seeds at for a reset authored at source frame
@@ -649,42 +650,53 @@ int64_t phase_reset_seed_frame_index(
 int64_t phase_reset_window_centre_frame(
     int64_t m, const std::vector<WarpFrameMapSegment>& map);
 
-// THE HOP CELL'S AUTHORED FRAME: where a phase reset resting at source frame
-// `S` is authored in the iteration cell `k` hops away, under `map`.
+// THE HOP STEP'S AUTHORED FRAME: where a phase reset resting at source frame
+// `S` lands `k` hops away, under `map`. ONE OWNER FOR BOTH ROADS THAT MOVE A
+// RESET BY HOPS — the iteration cells (k in [-kIterHopMax, +kIterHopMax]) and
+// the P column's Shift+Left / Shift+Right HOP STEP (k = +/-1, reached through
+// position_nudge_landing's hop arm, position_nudge.h) — because two meanings
+// of "one hop" on one column would be an asymmetry.
 //
-// HIS MINIMUM-DISPLACEMENT RULE (architect 2026-09-09): "for the phase reset
-// overlay, the amount of change added by each hop should be the MINIMUM amount
-// to get to that hop, so that we stay as close to the original starting point
-// of the phase reset as possible". The derivation is the seed rule read
-// backwards: with C(m) the window centre above, seed(S) = max{ m : C(m) <= S },
-// so the frames that seed at m are exactly the half-open interval
-// [C(m), C(m+1)) — and the nearest member of the interval k hops away from
-// m0 = seed(S) is that interval's NEAR END. Hence
-//   k == 0  ->  S itself (the identity cell renders the resting store),
-//   k > 0   ->  C(m0 + k),         the SMALLEST frame whose seed is m0 + k,
-//   k < 0   ->  C(m0 + k + 1) - 1, the LARGEST frame whose seed is m0 + k.
+// THE RULE IS TRANSLATION (architect 2026-09-21, superseding the
+// minimum-displacement rule of 2026-09-09, under which a cell landed on the
+// near end of the window k hops away): the reset's target image moves by
+// exactly k hops, t' = map_source_to_target(S) + k * kRs, and the landing is
+// the authored frame of map_target_to_source(t') through snap_authored_frame
+// (the one double-to-authored route, banker's rounding). The reset's offset
+// inside its window travels with it, so Shift+Right then Shift+Left returns it
+// to where it started, give or take a frame of rounding — the minimum rule
+// threw that offset away and the round trip landed up to a hop off. The phase
+// cells had never been used, so nothing was lost by their following.
+//   k == 0  ->  S itself, byte for byte (the identity cell renders the resting
+//               store; no arithmetic, so no rounding moves it).
 //
-// TWO CONSEQUENCES, both wanted. A cell either way moves the reset by at least
-// one frame and at most about a hop (plus the map's local rounding), so a
-// bracket of nine is nine hops of displacement and not nine hops plus a
-// residue. And NEITHER DIRECTION CARRIES THE SUB-HOP RESIDUE the resting reset
-// holds between C(m0) and S: a positive cell restarts at its own interval's
-// floor and a negative one at its own interval's ceiling, so the cells are a
-// clean walk of the lattice rather than the resting offset translated k times.
+// THE MEANING WINS OVER THE ROUNDING: a step of k must change the seed window
+// by exactly k. With C(m) the window centre above and m0 = seed(S), the frames
+// seeding at m0 + k are [C(m0+k), C(m0+k+1) - 1], and the rounded landing is
+// clamped into that interval. That clamp bites only in the rare case where a
+// landing sits within a frame of a window boundary; the round trip is then off
+// by a frame, which the architect accepts.
 //
-// THE RESULT IS AN INTEGER SOURCE FRAME BY CONSTRUCTION — llrint plus integer
-// terms, never a fractional authored position — so snap_authored_frame is not
-// called and is not owed one: it is the single double-to-authored conversion
-// route (app_state.h), and no double-to-authored conversion happens here.
+// THE PIECE'S EDGES ARE THE CALLERS' WALLS, and the owner answers so they can
+// close: m0 + k < 0 has no frame of the piece seeding there (every authored
+// frame seeds at m >= 0), so the owner answers -1, the frame just below the
+// piece; a landing past the map's last anchor extrapolates on the identity
+// slope the map functions use there and may answer a frame past
+// total_frames - 1. The cell walls (phase_reset_hop_window below) close a side
+// at the first k that leaves [0, total_frames - 1]; the hop step clamps onto
+// that same wall, the unified wall policy (position_nudge.h).
 //
 // THE LATTICE IS THE MAP'S, AND THE MAP EVERY CALLER PASSES IS THE LIVE ONE
-// (live_warp_frame_map below) — the map the sweep's own cells render under. A
-// sweep is ONE COLUMN'S since 2026-09-10, so a phase sweep rewrites no tempo
-// and moves no lattice: the displacement is computed under the same map the
-// overlay band SHOWS, the walls were checked under and every cell renders
-// under, once per reset per k. Each cell's sidecar carries an ordinary whole
-// authored frame and re-parses normally.
-int64_t phase_reset_hop_cell_frame(
+// (live_warp_frame_map below) — the map the render uses, and the map the
+// sweep's own cells render under. A sweep is ONE COLUMN'S since 2026-09-10, so
+// a phase sweep rewrites no tempo and moves no lattice: the displacement is
+// computed under the same map the walls were checked under and every cell
+// renders under, once per reset per k. The hop step asks the same map, because
+// a hop is the RENDER's quantum and not a painted one — it makes no pixel
+// claim (the one-column-per-press guarantee at stepped_anchor_frame is the
+// column step's alone). Each landing is an ordinary whole authored frame and
+// re-parses normally.
+int64_t phase_reset_hop_step_frame(
     int64_t reset_source_frame, int k,
     const std::vector<WarpFrameMapSegment>& map);
 
@@ -722,7 +734,7 @@ struct PhaseHopWindow {
 
 // THE PHASE BRACKET'S WALLS, ONE OWNER. Walks k outward from 0 on each side
 // under the live map, landing each candidate through
-// phase_reset_hop_cell_frame, and stops at the first k that breaks a wall — at
+// phase_reset_hop_step_frame, and stops at the first k that breaks a wall — at
 // most kIterHopMax steps a side. THE WALLS ARE TWO:
 //
 //   THE PIECE: 0 <= F <= total_frames - 1, the drop's own EOF wall

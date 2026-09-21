@@ -235,7 +235,7 @@ void GuiMagnificationLevelMarkersOps::toggle_magnification_level_disabled() {
 // check carries.
 GuiOpRefusal
 GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
-        int step_columns, bool synthesized_repeat) {
+        HorizontalArrowStep step, bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable, which reads the ACTIVE
     // column's store — this one), then the coalesce verdict, then THE COLLAPSE
@@ -243,7 +243,7 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // rule and for their reason (GuiOpRefusal, warpmarkers_ops.h).
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
-        GestureKind::MagnificationLevelNudge, synthesized_repeat, step_columns);
+        GestureKind::MagnificationLevelNudge, synthesized_repeat, step);
     if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     const auto& mv = app.magnificationlevelmarkers.markers();
@@ -260,7 +260,7 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // identity — the warp twin's home — while the phase-reset twin's home is
     // a real map; the shared owner asks the displayed basis either way.
     int64_t committed_f =
-        position_nudge_landing(app, audio, orig_f, step_columns);
+        position_nudge_landing(app, audio, orig_f, step);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP, the twins' rule verbatim: a press
     // already resting on its wall writes NOTHING — no undo push, no damage, no
     // playback stop — and says nothing, the unmoved flag being its own answer.

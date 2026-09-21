@@ -4851,7 +4851,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
             frames.reserve(hops.size());
             if (swept) {
                 for (int k : hops)
-                    frames.push_back(phase_reset_hop_cell_frame(
+                    frames.push_back(phase_reset_hop_step_frame(
                         member.time_frame, k, sweep_map));
             } else {
                 frames.push_back(member.time_frame);
@@ -9249,7 +9249,13 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 // THE WAVEFORM-LANE PLAYHEAD STEP, one act owner for all three magnitudes
 // (architect 2026-08-31, R12 — the step ladder: bare one painted column,
 // Shift three, Ctrl ten, resolved at the dispatch through
-// arrow_step_magnitude, gui_input.h). TWO CALLERS, and they are two SITES of
+// arrow_step_magnitude, gui_input.h) AND FOR THE PHASE-RESET COLUMN'S HOP
+// STEP (architect 2026-09-21: there Shift moves the cursor exactly one hop,
+// kRs target frames, and Ctrl is unbound — horizontal_arrow_step, the
+// recorded exception at the ladder). The step arrives in its own unit and the
+// landing owner forks on it (playhead_arrow_step_landing, app_state.h);
+// everything below — the stop, the clear, the held column, the overlay hide
+// — is the same for both units. TWO CALLERS, and they are two SITES of
 // one act rather than two acts: handle_plain_bare_keys' Left / Right case
 // below (the bare form, where the bare road has always ended) and on_key's
 // modified-arrow arm (the shift and ctrl forms, which must be claimed above
@@ -9261,7 +9267,7 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 // IT IS REACHED ONLY WITH AN EMPTY SELECTION, because on_key's marker-lane
 // branch claims the press first and returns — in every magnitude, the two
 // arms carrying the same lane fork.
-void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
+void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step) {
     // The membership half of the clear below is therefore already satisfied;
     // the FOCUS half is not — last_selected_marker survives an empty selection
     // (a ctrl-toggle that empties the set repairs the focus rather than
@@ -9278,7 +9284,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
         viewport.invalidate_waveform_area();
     }
     // Navigation playhead step: the overlay hide is the MOVEMENT OWNER's,
-    // reached through move_playhead_pixels -> move_playhead_to (the rule at
+    // reached through move_playhead_by_arrow_step -> move_playhead_to (the rule at
     // clear_region_highlight, input_handler.h). The playhead is leaving the
     // overlay, and hiding discards nothing. AT THE WALL the landing is the
     // cursor itself (playhead_pixel_step_landing, the owner the Left
@@ -9302,7 +9308,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(int step_columns) {
     // this body, so the column holds at each step.
     const int64_t cursor_before = app.playhead_cursor_sample;
     const int64_t viewport_start_before = app.viewport_start_sample;
-    viewport.move_playhead_pixels(step_columns);
+    viewport.move_playhead_by_arrow_step(step);
     if (app.playhead_cursor_sample != cursor_before)
         viewport.hold_subject_column_after_nudge(cursor_before,
                                                  viewport_start_before);
@@ -9345,10 +9351,10 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // through the act owner directly above this dispatch, which the two
         // MODIFIED forms reach from on_key's own arm (the ladder's contract is
         // at that owner). The whole body lived here until 2026-08-31.
-        run_waveform_lane_playhead_step(-1);
+        run_waveform_lane_playhead_step(HorizontalArrowStep::columns(-1));
         break;
     case GuiKeys::Right:
-        run_waveform_lane_playhead_step(+1);
+        run_waveform_lane_playhead_step(HorizontalArrowStep::columns(+1));
         break;
     case GuiKeys::F:
         // Toggle follow. The whole body — the fork between ARMING THE LAMP for

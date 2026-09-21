@@ -29,7 +29,7 @@ PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
-    GestureKind kind, bool synthesized_repeat, int step_columns) {
+    GestureKind kind, bool synthesized_repeat, HorizontalArrowStep step) {
     PositionNudgePrologue r;
     // EVERY REFUSAL HERE IS SILENT, AND EACH FOR ITS OWN REASON (re-derived
     // 2026-08-30 under the strictness ruling "a card for every silent
@@ -70,10 +70,11 @@ PositionNudgePrologue position_nudge_prologue(
     // supersession of the "an early call must poison for a press that goes on
     // to refuse" clause is recorded at Undo::coalesce_gesture.
     // AND IT IS ASKED OF THIS PRESS'S OWN STEP, not of a bare sign: the
-    // predicate takes a signed column count and the act hands it the one it is
-    // about to commit (the FACE hands it the bare ±1, which is the same answer
-    // — the invariance is argued at position_nudge_landing).
-    if (!marker_nudge_actionable(app, audio, step_columns)) return r;
+    // predicate takes the signed step in its unit and the act hands it the one
+    // it is about to commit (the FACE hands it the bare one-column step, which
+    // is the same answer for the column rungs and the hop step alike — the
+    // invariance is argued at position_nudge_landing).
+    if (!marker_nudge_actionable(app, audio, step)) return r;
     // The undo-coalescing verdict, now the FIRST thing past the refusals. It
     // reads the press's own repeat bit to pick its arm — a held key's
     // continuation presses carry synthesized_repeat and merge by identity, a
@@ -122,26 +123,39 @@ int64_t stepped_anchor_frame(
 }
 
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
-                               int64_t orig_frame, int step_columns) {
+                               int64_t orig_frame, HorizontalArrowStep step) {
     // The prologue's geometry refusals, asked here so a caller that has NOT
     // run the prologue — the buttons' face — gets the same answer the press
     // would give: nothing moves (the declaration says why).
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return orig_frame;
     if (current_samples_per_pixel(app, audio) <= 0.0) return orig_frame;
-    // The anchoring map is the DISPLAYED paint basis —
-    // displayed_or_live_target_map, the SAME map the flag/trim painters read —
-    // so the moved marker travels exactly the commanded pixel column against
-    // WHAT IS PAINTED, even inside a worker publish window where the displayed
-    // map lags the live one. In warp's SOURCE home that map is the empty
-    // identity map and every commit is a plain integer frame; in phase's
-    // TARGET home it is a real map.
-    const std::vector<WarpFrameMapSegment>& map =
-        displayed_or_live_target_map(app, audio);
     const int64_t wall = audio.total_frames() - 1;
-    // (1) the commanded painted columns, as a plain integer delta.
-    int64_t D =
-        stepped_anchor_frame(app, audio, map, orig_frame, step_columns) -
-        orig_frame;
+    int64_t D = 0;
+    if (step.unit == HorizontalArrowStep::Unit::Hops) {
+        // (1') THE HOP STEP, the phase-reset column's Shift rung: `count` hops
+        // of the engine's analysis lattice through the one hop owner the
+        // iteration cells land through, under the LIVE map — the render's,
+        // because a hop is the render's quantum and not a painted one. It may
+        // answer a frame off the piece (below 0 when no window lies that far
+        // left, past the end beyond the map's last anchor); the clamp below
+        // is what lands it on the wall.
+        D = phase_reset_hop_step_frame(orig_frame, step.count,
+                                       live_warp_frame_map(app, audio)) -
+            orig_frame;
+    } else {
+        // The anchoring map is the DISPLAYED paint basis —
+        // displayed_or_live_target_map, the SAME map the flag/trim painters
+        // read — so the moved marker travels exactly the commanded pixel
+        // column against WHAT IS PAINTED, even inside a worker publish window
+        // where the displayed map lags the live one. In warp's SOURCE home
+        // that map is the empty identity map and every commit is a plain
+        // integer frame; in phase's TARGET home it is a real map.
+        const std::vector<WarpFrameMapSegment>& map =
+            displayed_or_live_target_map(app, audio);
+        // (1) the commanded painted columns, as a plain integer delta.
+        D = stepped_anchor_frame(app, audio, map, orig_frame, step.count) -
+            orig_frame;
+    }
     // (2) walls win by clamping, in this marker's own headroom.
     if (D < -orig_frame)        D = -orig_frame;
     if (D > wall - orig_frame)  D = wall - orig_frame;
@@ -158,9 +172,9 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // PROLOGUE'S OWN, so the face and the press agree at every one of them; the
 // full reasoning — why a 2+ selection stays lit, why the geometry guards are
 // terms, and why the BARE step the face hands it answers for the shifted and
-// ctrl ones too — is at the declaration.
+// ctrl ones and the hop step too — is at the declaration.
 bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
-                             int step_columns) {
+                             HorizontalArrowStep step) {
     if (a.loading || audio.total_frames() <= 0) return false;
     if (!marker_selection_standing(a)) return false;
     if (!marker_focus_standing(a)) return false;
@@ -178,7 +192,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
     // (active_column_authoring_allowed's 'M' arm is unconditional), and the
     // selector answers each column's own frame.
     const int64_t orig = active_marker_time_frame(a, f);
-    return position_nudge_landing(a, audio, orig, step_columns) != orig;
+    return position_nudge_landing(a, audio, orig, step) != orig;
 }
 
 void finish_position_nudge(

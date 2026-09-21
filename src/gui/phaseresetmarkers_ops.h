@@ -46,10 +46,13 @@ struct GuiPhaseResetMarkersOps {
     // Returns the refusal's own sentence for the dispatcher to card, or
     // std::nullopt for "nothing to say" (GuiOpRefusal, warpmarkers_ops.h —
     // the contract is stated once there).
-    // `step_columns` is the press's signed PAINTED-COLUMN count (±1 bare, ±3
-    // shifted, ±10 with ctrl since 2026-08-31 — the step ladder, one owner at
-    // arrow_step_magnitude in gui_input.h), the warp twin's own parameter.
-    GuiOpRefusal nudge_selected_phase_resets(int step_columns,
+    // `step` is the press's signed step in its unit (horizontal_arrow_step,
+    // gui_input.h), the warp twin's own parameter: bare one PAINTED COLUMN,
+    // and on this column alone Shift the HOP STEP — one hop of the engine's
+    // analysis lattice through phase_reset_hop_step_frame — with Ctrl unbound
+    // and never reaching here (architect 2026-09-21, the recorded exception
+    // at arrow_step_magnitude).
+    GuiOpRefusal nudge_selected_phase_resets(HorizontalArrowStep step,
                                              bool synthesized_repeat);
     // THE VERTICAL ARROWS' SECOND STEP BODY ON THIS COLUMN (2026-09-09), the
     // twin of GuiWarpMarkersOps::adjust_iter_bound_cents clause for clause in

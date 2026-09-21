@@ -1700,7 +1700,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 // reorder-and-remap below; the render boundary collapses an exact-frame tie to one
 // 1.00 owner.
 GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
-        int step_columns, bool synthesized_repeat) {
+        HorizontalArrowStep step, bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable — the state and geometry
     // guards, the focused-index belt and THE WALL, all of it ahead of the
@@ -1712,10 +1712,10 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // gate's card already (the loading gate's, the dispatch's home-view card),
     // a belt against an invariant the selection layer keeps, or the wall, whose
     // silence is paired with a greyed button — the prologue's own declaration
-    // names each. `step_columns` is passed for the wall term alone.
+    // names each. `step` is passed for the wall term alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
-        GestureKind::WarpNudge, synthesized_repeat, step_columns);
+        GestureKind::WarpNudge, synthesized_repeat, step);
     if (!pro.ok) return std::nullopt;
     const bool merge = pro.merge;
     const auto& mv = app.warpmarkers.markers();
@@ -1735,7 +1735,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // authoring-grid bit-exactness claims (all source-view) hold. Crossing a
     // neighbor is legal and goes through the reorder-and-remap below.
     int64_t committed_f =
-        position_nudge_landing(app, audio, orig_f, step_columns);
+        position_nudge_landing(app, audio, orig_f, step);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall
     // (or one whose column step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop

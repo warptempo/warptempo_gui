@@ -10761,7 +10761,7 @@ inline bool transport_session_live(const AppState& a) {
 // nothing here) — the target column's frame through the one column->frame owner,
 // pre-clamped into the live domain exactly as move_playhead_to would clamp
 // it. Defined in viewport.cpp beside the skip landing it is the twin of;
-// the arithmetic and its rationale are at Viewport::move_playhead_pixels,
+// the arithmetic and its rationale are at Viewport::move_playhead_by_arrow_step,
 // which reads this for its landing. TWO READERS (planner decision 60,
 // 2026-08-30): that act, and horizontal_arrow_step_actionable below, whose
 // waveform-lane branch greys the Left / Right buttons where the landing IS
@@ -10771,6 +10771,23 @@ inline bool transport_session_live(const AppState& a) {
 // itself (the act's own early return), so the face greys there too.
 int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
                                     int delta_px);
+
+// WHERE ONE HORIZONTAL ARROW STEP WOULD LAND THE CURSOR in the WAVEFORM lane,
+// in either unit of the step (HorizontalArrowStep, gui_input.h): COLUMNS is
+// playhead_pixel_step_landing above, verbatim; HOPS is the phase-reset
+// column's HOP STEP (architect 2026-09-21), the cursor moved by exactly
+// `count` × kRs frames of the active domain — the target domain, the P column
+// being target view's alone — in pure integer arithmetic, no map and no
+// rounding, and pre-clamped through the SAME live-domain clamp the pixel
+// landing takes, so the walls are one wall. A blank piece answers the cursor
+// itself, the pixel landing's own degenerate answer. THE HOP'S WALL IS THE
+// PIXEL LANDING'S VERDICT TOO: kRs frames is never zero, so off a wall the hop
+// moves the cursor and at the wall it lands where it stands — which is why the
+// Left / Right face may keep asking the bare column step
+// (horizontal_arrow_step_actionable). ONE READER: Viewport::move_playhead_by_-
+// arrow_step, the waveform-lane act's landing.
+int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
+                                    HorizontalArrowStep step);
 
 // WOULD ONE MARKER NUDGE THIS WAY CHANGE ANYTHING — the MARKER lane's own
 // wall term, both columns (architect 2026-08-31, R3 of the refinement arc:
@@ -10796,9 +10813,10 @@ int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
 // degenerate grid the same way.
 // THE TWIN RULE IS RESOLVED HERE TOO, AND FOR FREE (2026-08-31, R12, closing
 // this declaration's own deferral): the modified steps are live — Ctrl+Left /
-// Right ten painted columns, Shift+Left / Right three — and `step_columns` is
-// a SIGNED COLUMN COUNT rather than a sign, which the ACT hands its own press's
-// value. THE FACE HANDS IT THE BARE ±1 and that is the widest admitted answer,
+// Right ten painted columns, Shift+Left / Right three — and `step` is a
+// SIGNED COUNT IN ITS UNIT rather than a sign, which the ACT hands its own
+// press's value. THE FACE HANDS IT THE BARE ONE-COLUMN STEP and that is the
+// widest admitted answer,
 // because this arm is MAGNITUDE-INVARIANT in a given direction: the column
 // mapping is monotonic and every commanded step moves at least one whole frame
 // (the one-column-per-press guarantee at stepped_anchor_frame), while the
@@ -10808,8 +10826,18 @@ int64_t playhead_pixel_step_landing(const AppState& a, const GuiAudio& audio,
 // lands ON the end); a marker AT the end greys every variant that way. The
 // skips reach the same rule by asking both forms
 // (playhead_end_jump_actionable); this one reaches it by proof.
+// AND THE PROOF COVERS THE HOP STEP (architect 2026-09-21, the phase-reset
+// column's Shift rung, `step` in the Hops unit): the hop owner's landing for
+// k = +1 lies in the seed window above the resting one, whose first frame is
+// past the resting frame by the seed rule's own definition, and for k = -1 in
+// the window below, whose last frame is before it — or off the piece where no
+// window lies below (phase_reset_hop_step_frame, warp_frame_map_view.h). So
+// the hop always moves the reset by at least one frame, and after the same
+// headroom clamp its landing equals the resting frame iff that headroom is
+// zero: the bare step's verdict again, which is why the face may keep asking
+// the bare one-column step on the P column too.
 bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
-                             int step_columns);
+                             HorizontalArrowStep step);
 
 // THE HORIZONTAL ARROW STEP'S COMPOSED REFUSAL PREDICATE, two readers
 // (architect 2026-08-30): Left / Right's lane fork is the waveform-lane
@@ -10831,7 +10859,7 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // is a split of OWNERS rather than a lost reader: each ACT reads the owner its
 // own refusal is about, and the composition is what a truthful FACE owes on
 // top of them. The waveform-lane act reads the landing owner through
-// Viewport::move_playhead_pixels; the marker-lane DISPATCH reads
+// Viewport::move_playhead_by_arrow_step; the marker-lane DISPATCH reads
 // active_column_authoring_allowed directly for its card ("Markers are moved in
 // source view" — a HOME-VIEW sentence, which must not be raised for a wall)
 // and the two nudge twins read position_nudge_landing for the wall, whose
@@ -10871,14 +10899,20 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // magnitude-invariant in a given direction — the two landing owners clamp into
 // the same domain the long steps clamp into, so a landing that equals the
 // resting position for the bare step equals it for every step (the proofs are
-// at marker_nudge_actionable and at run_waveform_lane_playhead_step). So no
-// variant is asked twice here, and none needs to be.
+// at marker_nudge_actionable and at run_waveform_lane_playhead_step). THE
+// PHASE-RESET COLUMN'S HOP STEP (architect 2026-09-21) is inside the same
+// proofs — both hop landings clamp into the same domains the column landings
+// do and move by at least one frame off a wall — so it needs no ask of its own
+// either, and the ctrl rung it replaces there is unbound (the buttons admit no
+// ctrl-click there, redesign_button_ctrl_admits_in). So no variant is asked
+// twice here, and none needs to be.
 inline bool horizontal_arrow_step_actionable(const AppState& app,
                                              const GuiAudio& audio,
                                              int direction) {
     if (marker_selection_standing(app))
         return active_column_authoring_allowed(app) &&
-               marker_nudge_actionable(app, audio, direction);
+               marker_nudge_actionable(
+                   app, audio, HorizontalArrowStep::columns(direction));
     return transport_session_live(app) ||
            playhead_pixel_step_landing(app, audio, direction) !=
                app.playhead_cursor_sample;
@@ -16031,6 +16065,25 @@ inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
            b == RedesignButton::TransportLeft ||
            b == RedesignButton::TransportRight;
 }
+// THE ADMISSION IN THE STANDING STATE, and the one the pointer's four runtime
+// readers ask (the band's modifier gate, the arm's and the fire's repeat
+// chord, the lift's chord build, all in input_pointer.cpp): the roster's
+// capability above, minus the LEFT / RIGHT pair ON THE PHASE-RESET COLUMN,
+// where Ctrl+Left / Ctrl+Right bind nothing (architect 2026-09-21 — the ctrl
+// rung is unbound there for the marker and the playhead alike, the recorded
+// exception at arrow_step_magnitude, gui_input.h). So a ctrl-click on either
+// arrow there is refused at the band's gate exactly as a ctrl press on any
+// button that admits none is — the strict consumed no-op, silent as the
+// unbound chord is. The constexpr capability stays the walk's subject below,
+// the one-modifier rule being about what a button CAN carry.
+inline bool redesign_button_ctrl_admits_in(const AppState& app,
+                                           RedesignButton b) {
+    if (app.active_markers_view == 'P' &&
+        (b == RedesignButton::TransportLeft ||
+         b == RedesignButton::TransportRight))
+        return false;
+    return redesign_button_ctrl_admits(b);
+}
 // THE ONE-MODIFIER RULE, WALKED RATHER THAN LISTED (2026-08-31): it named the
 // two skips by hand until the arrows joined both sets, which is the discipline
 // gap the standing rule refuses — a third dual-modifier button would have been
@@ -17141,11 +17194,25 @@ inline RedesignTooltipText redesign_button_tooltip(
         // horizontal_arrow_step_actionable), so a walled press greys the face
         // for every rung and the ladder's line names nothing this test could
         // add.
+        //
+        // AND ON THE PHASE-RESET COLUMN THE LINE NAMES THE HOP STEP (architect
+        // 2026-09-21): there Shift is the hop step and Ctrl binds nothing, for
+        // the marker and the playhead alike (horizontal_arrow_step,
+        // gui_input.h — the fork this arm reads is the one the act reads, the
+        // active column), so the ladder's sentence would name a ctrl rung that
+        // does not exist. The line is FORKED to the shift act alone rather than
+        // dropped, the ctrl half being the part that went; it stays a second
+        // line on a button the table already binds one to. The T+W drop above
+        // it cannot meet this arm (the P column is target view's), and a
+        // walled face keeps the line as it does on every column.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
             if (marker_selection_standing(a) &&
                 !active_column_authoring_allowed(a))
                 return {redesign_button_tooltip(b).line1, nullptr};
+            if (a.active_markers_view == 'P')
+                return {redesign_button_tooltip(b).line1,
+                        "Press Shift for a hop step."};
             break;
         // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on
         // the member the bare press ALREADY reaches — one step from a wall,

@@ -34,11 +34,12 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // seeds a reset at the last schedule window whose centre is at or before
     // the authored frame, so a reset nudged inside one hop cell renders the
     // same bytes. One step of this bracket is therefore ONE HOP OF THE
-    // ANALYSIS LATTICE, and a cell at +k displaces the reset by THE SMALLEST
-    // AMOUNT that seeds k hops away (phase_reset_hop_cell_frame,
-    // warp_frame_map_view.h — his "the amount of change added by each hop
-    // should be the MINIMUM amount to get to that hop, so that we stay as
-    // close to the original starting point of the phase reset as possible").
+    // ANALYSIS LATTICE, and a cell at +k TRANSLATES the reset by k hops of
+    // the target domain, its offset inside its window travelling with it
+    // (phase_reset_hop_step_frame, warp_frame_map_view.h — the one owner the
+    // P column's Shift+Left / Shift+Right hop step lands through too; the
+    // minimum-displacement rule of 2026-09-09 was superseded by translation
+    // 2026-09-21).
     //
     // A SINGLE DIGIT EACH WAY (kIterHopMax below, his "past nine it is no
     // longer the phase reset it was"). nullopt means "blank" (both cells read
@@ -94,7 +95,7 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
 // hops from the resting seed in either direction, because "past nine it is no
 // longer the phase reset it was". It is the range of the authored value, not
 // of the displacement — how far nine hops move a reset in FRAMES depends on
-// the map (phase_reset_hop_cell_frame). The bound editor's byte cap is derived
+// the map (phase_reset_hop_step_frame). The bound editor's byte cap is derived
 // from it (kMaxPendingCharsIterHop, text_editor.h, with the assert that pins
 // the derivation).
 inline constexpr int kIterHopMax = 9;

@@ -83,9 +83,11 @@ struct GuiTargetRender;
 // THE WALL POLICY, ONE RULE FOR THE WHOLE PRODUCT (architect 2026-07-30) — stated
 // ONCE here, every arm carrying only its own class plus a pointer back:
 //   * A SINGLETON STEP CLAMPS ONTO ITS WALL. A position nudge moves one painted
-//     column = samples-per-pixel FRAMES, so a press starting near an edge can
-//     overshoot mid-step; clamping is what makes the song edges EXACTLY REACHABLE
-//     by keyboard, in both columns. Both position twins clamp (the warp twin
+//     column = samples-per-pixel FRAMES (or, on the phase-reset column's Shift
+//     rung, one HOP of the engine's analysis lattice — below), so a press
+//     starting near an edge can overshoot mid-step; clamping is what makes the
+//     song edges EXACTLY REACHABLE by keyboard, in every column. The hop step,
+//     being the longer stride, clamps sooner than the bare nudge does. Both position twins clamp (the warp twin
 //     always did; the phase twin joined with this ruling, replacing a whole-press
 //     refusal). The SINGLETON TEMPO STEP's constructive clamp
 //     (adjust_tempo_cents, warpmarkers_ops.cpp) already conformed and is
@@ -120,6 +122,21 @@ struct GuiTargetRender;
 // free functions collapse only the type-free parts: no templates, no
 // callbacks, no policy structs (the naming-symmetry doctrine resists
 // genericity — this is plain extraction of the shared flesh).
+//
+// TWO UNITS OF STEP, ONE ROAD (architect 2026-09-21). Every press carries a
+// HorizontalArrowStep (gui_input.h), a signed count in its unit: PAINTED
+// COLUMNS on every column's bare press and on the W and M columns' modified
+// ones, or — on the PHASE-RESET column's Shift rung, and there alone — HOPS,
+// the HOP STEP, which moves the reset by exactly one hop of the engine's
+// analysis lattice through phase_reset_hop_step_frame (warp_frame_map_view.h,
+// the owner the iteration cells land through: a translation of the reset's
+// target image by kRs, so Shift+Right then Shift+Left returns it where it
+// started give or take a frame). Ctrl is unbound on that column. The hop step
+// is the recorded exception between columns (arrow_step_magnitude, gui_input.h
+// — only the P column has an engine lattice). It takes the prologue, the
+// landing owner's walls, the post-clamp identity no-op and the commit tail
+// exactly as the column step does; only the landing's step arithmetic forks,
+// in position_nudge_landing, and the hop makes no pixel claim.
 
 // Result of the shared guard prologue.
 struct PositionNudgePrologue {
@@ -188,30 +205,34 @@ struct PositionNudgePrologue {
 // approach) is supplied by the audition scrub instead. The twins keep their own
 // GestureKind (WarpNudge / PhaseResetNudge).
 // `synthesized_repeat` is the dispatching key event's platform repeat bit,
-// consumed by the coalesce verdict alone. `step_columns` is the press's own
-// SIGNED PAINTED-COLUMN COUNT — ±1 bare, ±3 shifted, ±10 with ctrl since
+// consumed by the coalesce verdict alone. `step` is the press's own SIGNED
+// STEP IN ITS UNIT — ±1 / ±3 / ±10 painted columns bare / shifted / ctrl since
 // 2026-08-31 (the step ladder, one owner at arrow_step_magnitude in
-// gui_input.h) — consumed by the wall term at (1) alone, which is what makes
-// the refusal DIRECTIONAL, the marker at frame 0 refusing Left and taking
-// Right. IT WAS A BARE SIGN NAMED `direction` UNTIL THE LADDER LANDED and the
-// magnitude changed nothing else on this road: every arm below reads it as an
-// integer column delta already. The store size is no longer a parameter: the
-// wall predicate reads the ACTIVE column's store, which is the calling twin's
-// own (the dispatch picks the twin by that same bit), and owns the stale-index
-// belt with it.
+// gui_input.h), or ±1 hop on the phase-reset column's Shift rung since
+// 2026-09-21 (horizontal_arrow_step) — consumed by the wall term at (1) alone,
+// which is what makes the refusal DIRECTIONAL, the marker at frame 0 refusing
+// Left and taking Right. IT WAS A BARE SIGN NAMED `direction` UNTIL THE LADDER
+// LANDED, and an int column count until the hop step gave it a unit. The store
+// size is no longer a parameter: the wall predicate reads the ACTIVE column's
+// store, which is the calling twin's own (the dispatch picks the twin by that
+// same bit), and owns the stale-index belt with it.
 PositionNudgePrologue position_nudge_prologue(
     AppState& app, const GuiAudio& audio,
     GuiPlaybackLifecycle& playback_lifecycle, Selection& selection,
     Viewport& viewport, Undo& undo,
-    GestureKind kind, bool synthesized_repeat, int step_columns);
+    GestureKind kind, bool synthesized_repeat, HorizontalArrowStep step);
 
-// THE pixel-column step, and the ONLY position derivation either nudge uses:
-// read the marker's currently painted column (painted_column_of_source_frame —
-// the stem painters' own math against the displayed paint basis) and commit the
+// THE pixel-column step, and the ONLY COLUMN derivation any nudge uses: read
+// the marker's currently painted column (painted_column_of_source_frame — the
+// stem painters' own math against the displayed paint basis) and commit the
 // frame at cf + step_columns (authored_frame_at_column, which funnels through
 // snap_authored_frame, the one fractional-to-authored route). Returns the
-// committed frame RAW — walls are NOT this helper's business: each twin applies
-// its own regime to the result. Exactly one call per press, on the focus.
+// committed frame RAW — walls are NOT this helper's business: the landing
+// owner applies them to the result. Exactly one call per COLUMN press, on the
+// focus. THE PHASE-RESET COLUMN'S HOP STEP (2026-09-21) IS NOT A COLUMN STEP
+// and never reaches here: it lands through phase_reset_hop_step_frame under
+// the LIVE map, a hop being the render's quantum rather than a painted one,
+// and it makes no pixel claim — nothing below speaks for it.
 //
 // THE COMMANDED COLUMN COUNT IS THE MODIFIER'S since 2026-08-31 (R12): ±1
 // bare, ±3 shifted, ±10 with ctrl. The arithmetic is unchanged — a signed
@@ -234,7 +255,7 @@ PositionNudgePrologue position_nudge_prologue(
 // stronger (a column is at least 27.5625 whole frames, error at most 0.5 frame,
 // about 0.018 px). Either way each press still advances at least one whole frame.
 //
-// ONE PAINTED COLUMN PER PRESS IS A POSITION-NUDGE PROPERTY AND NOTHING ELSE, and
+// ONE PAINTED COLUMN PER PRESS IS A COLUMN-STEP PROPERTY AND NOTHING ELSE, and
 // the trap it documents already bit once: the only other gesture that ever claimed
 // it was the W+target bare Left/Right TEMPO-IMAGE STEP, which authored CENTS — a
 // grid COARSER than the pixel grid on ordinary spans (one cent moves the image
@@ -255,9 +276,14 @@ int64_t stepped_anchor_frame(
 // and the EOF wall is the SAME wall in both columns, total_frames - 1, the
 // single marker wall stated at drop_phase_reset_at_position). Given the
 // marker's resting frame it returns the frame the press would commit:
-//   (1) THE STEP, `step_columns` painted columns through stepped_anchor_frame
-//       (the one-column-per-press guarantee and its numbers are at that
-//       declaration), as a plain integer delta;
+//   (1) THE STEP, as a plain integer delta, forked on the step's UNIT and on
+//       nothing else: COLUMNS takes `count` painted columns through
+//       stepped_anchor_frame over the DISPLAYED map (the one-column-per-press
+//       guarantee and its numbers are at that declaration); HOPS, the
+//       phase-reset column's hop step (architect 2026-09-21), takes `count`
+//       hops through phase_reset_hop_step_frame over the LIVE map
+//       (live_warp_frame_map — the render's, the map the iteration cells
+//       land under), which may answer a frame off the piece;
 //   (2) WALLS WIN BY CLAMPING, in the marker's own headroom [0 - orig,
 //       wall - orig] — integer arithmetic, non-empty because every stored
 //       marker rests in [0, wall] — so a press that would overshoot lands ON
@@ -283,8 +309,8 @@ int64_t stepped_anchor_frame(
 // marker_nudge_actionable (app_state.h), the Left / Right buttons' marker-lane
 // wall term, which compares this landing against the resting frame.
 //
-// THE MAGNITUDE IS THE PRESS'S OWN since 2026-08-31 (R12): `step_columns` is
-// the signed painted-column count, ±1 bare, ±3 shifted, ±10 with ctrl, and
+// THE MAGNITUDE IS THE PRESS'S OWN since 2026-08-31 (R12): the column step's
+// count is the signed painted-column count, ±1 bare, ±3 shifted, ±10 with ctrl, and
 // (1) simply commands that many columns while (2) clamps the result the way it
 // always did — so a long step near a wall lands exactly ON the wall, the
 // unified wall policy at the scaled size. IT IS DIRECTION-INVARIANT AT THE
@@ -293,9 +319,13 @@ int64_t stepped_anchor_frame(
 // stepped_anchor_frame), so `landing == orig_frame` iff the headroom in that
 // direction is zero — the same answer for ±1, ±3 and ±10. That is why
 // marker_nudge_actionable may ask the BARE step and still speak for all three
-// (the twin rule's resolution, recorded at its declaration).
+// (the twin rule's resolution, recorded at its declaration). THE HOP STEP IS
+// INSIDE THE SAME ARGUMENT: its landing leaves the resting seed window by
+// exactly one in the pressed direction, so off a wall it moves at least one
+// frame, and the same headroom clamp makes it equal the resting frame iff that
+// headroom is zero (the proof is at marker_nudge_actionable, app_state.h).
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
-                               int64_t orig_frame, int step_columns);
+                               int64_t orig_frame, HorizontalArrowStep step);
 
 // The shared type-free COMMIT TAIL. Each twin calls this AFTER it has: run its
 // regime middle, mutated its store, run reorder_markers_by_time +
