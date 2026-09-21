@@ -322,20 +322,19 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     target_render.trigger();
 }
 
-// Nudge the FOCUSED phase reset by the press's own step, negative for earlier
-// and positive for later. BARE, ONE on-screen pixel column — symmetric with
-// nudge_selected_markers: the moved reset is its own pixel-column anchor
-// (stepped_anchor_frame — the one-column-per-press derivation and its numeric
-// rationale live in the comment there), and both columns share
-// painted_column_of_source_frame, so the anchored column is the painted one.
-// SHIFT, THE HOP STEP (architect 2026-09-21): ONE HOP of the engine's analysis
-// lattice, kRs samples of the TARGET domain, landed through
+// Nudge the FOCUSED phase reset by ONE HOP, negative for earlier and positive
+// for later — THE P COLUMN'S ARROW UNIT IS A HOP (architect 2026-09-21, the
+// recorded exception between columns at horizontal_arrow_step, gui_input.h,
+// where the rationale lives: the render depends only on the window a reset
+// seeds in, so a column step here was almost always silent). One hop of the
+// engine's analysis lattice, kRs samples of the TARGET domain, landed through
 // phase_reset_hop_step_frame under the LIVE map — the owner the iteration
-// cells land through — so Shift+Right then Shift+Left returns the reset to
-// where it started give or take a frame, and each step changes its seed window
-// by exactly one. CTRL IS UNBOUND on this column and never reaches here. The
-// column's ladder is the recorded exception at arrow_step_magnitude
-// (gui_input.h); every committed value is a whole source frame either way.
+// cells land through — so Right then Left returns the reset to where it
+// started give or take a frame, and each step changes its seed window by
+// exactly one. Bare only: the horizontal ladder is retired and Shift / Ctrl
+// never reach here. Every committed value is a whole source frame. The warp
+// and magnification twins take the same road with one painted column instead
+// (stepped_anchor_frame).
 //
 // HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
 // 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
@@ -382,16 +381,13 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // 2026-08-31 — THE WARP TWIN'S OWN CALL, not a copy of its shape
     // (position_nudge_landing, position_nudge.h; the painted-column step, the
     // headroom clamp with its exact integer compares, and the walls-win belt
-    // are all argued at its declaration). The anchoring basis is the DISPLAYED
-    // map, so the moved reset travels exactly the commanded pixel column
-    // against WHAT IS PAINTED even inside a worker publish window; phase
-    // resets author in their TARGET home view only (the home-view binding,
-    // architect 2026-07-22), a mapped (non-identity) domain, and the EOF wall
-    // is the one both columns share. THE HOP STEP LANDS THROUGH THE SAME
-    // OWNER (its hop arm, which asks the LIVE map instead — a hop is the
+    // are all argued at its declaration). This column's step is ALWAYS A HOP
+    // (the landing owner's hop arm, which asks the LIVE map — a hop is the
     // render's quantum, not a painted one — and then clamps onto the same
-    // walls). Crossing a neighbor is legal and goes through the
-    // reorder-and-remap below.
+    // walls the column step clamps onto); phase resets author in their TARGET
+    // home view only (the home-view binding), a mapped (non-identity) domain,
+    // and the EOF wall is the one every column shares. Crossing a neighbor is
+    // legal and goes through the reorder-and-remap below.
     int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step);
     // POST-CLAMP IDENTITY IS A SILENT NO-OP: a press already resting on its wall

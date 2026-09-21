@@ -436,8 +436,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // no audio, so this reader hands the inventory the state it is in and
         // the term never varies — passing the bit rather than a literal keeps
         // the six readers one shape.
-        if (chord_is_bound(key, mods, app.history_mode.active,
-                           app.active_markers_view))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  kNoAudioLoadedCard);
         return;
@@ -495,8 +494,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // `v` mid-drag with the `h` view down — binds nothing here either,
             // and telling it a drag swallowed it would claim a key was taken
             // that nothing would have run.
-            if (chord_is_bound(key, mods, app.history_mode.active,
-                               app.active_markers_view))
+            if (chord_is_bound(key, mods, app.history_mode.active))
                 notifications.notify(AppState::NotificationClass::Normal,
                                      kKeysDuringDrag);
             return;
@@ -576,8 +574,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // readers: all seven of the view's shapes are PRINTABLE (`g`, `u`, `v`,
         // `,`, `.` and the two shifted spellings), so the editor consumes them
         // as typed characters above this line and none of them ever reaches it.
-        if (chord_is_bound(key, mods, app.history_mode.active,
-                           app.active_markers_view))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  modal_editor_swallow_card(key, mods));
         return;
@@ -731,8 +728,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // handed over below: a mode-only chord outside its mode — bare `,`
         // during a grab-pan with the `h` view down — is unbound in this state
         // like any other, and the drag is not what stopped it.
-        if (chord_is_bound(key, mods, app.history_mode.active,
-                           app.active_markers_view))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  kKeysDuringDrag);
         return;
@@ -833,8 +829,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // one, the seven shapes included; that is the same answer it gave when
         // the predicate was state-blind, and the sentence above is why it costs
         // nothing.
-        if (chord_is_bound(key, mods, app.history_mode.active,
-                           app.active_markers_view))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  spell_chord(key, mods) +
                                      " is not available in the history view");
@@ -2198,8 +2193,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //
     // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
     // steps ONE cent, Shift THREE and Ctrl TEN, through the ladder's one owner
-    // arrow_step_magnitude (gui_input.h) — which the horizontal pair below
-    // reads too, the ruling being one ladder over both axes. THE ACT IS THE
+    // arrow_step_magnitude (gui_input.h) — the vertical pair's alone since
+    // 2026-09-21, the horizontal ladder being retired (the tempo is numeric,
+    // placement graphical). THE ACT IS THE
     // SAME BODY at every magnitude: adjust_tempo_cents has taken a signed cent
     // count since it was written, so the three chords differ in nothing but
     // the number they hand it, and its own arms answer at the scaled size —
@@ -2433,36 +2429,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // a consumed no-op. Read-only
     // tabs refuse both routes upstream: the allowlist admits the
     // horizontal arrows only when playhead_in_marker_lane is false, so a locked
-    // tab with a selection drops them at the gate — in all three magnitudes,
-    // the lock's lane term reading its one owner and no modifier.
+    // tab with a selection drops them at the gate, the lock's lane term
+    // reading its one owner.
     //
-    // THE MODIFIER IS THE MAGNITUDE since 2026-08-31 (architect, R12): bare
-    // moves ONE painted column, Shift THREE and Ctrl TEN, through the ladder's
-    // one owner arrow_step_magnitude (gui_input.h) — the same ladder the
-    // vertical pair reads, on WHATEVER the arrow's subject is. Here that
-    // subject is the focused marker; the WAVEFORM lane's twin sits in the arm
-    // directly below and steps the cursor by the identical count. The step
-    // travels as a signed count in its unit the whole way down (the
-    // HorizontalArrowStep at the prologue, the landing owner and every twin),
-    // so nothing but the number changes: the landing still clamps into the
-    // marker's own headroom,
-    // which is what makes a Ctrl press near the song's end land exactly ON the
-    // wall. CTRL+SHIFT spells nothing and falls to the strict-modifier tail.
-    //
-    // ON THE PHASE-RESET COLUMN THE LADDER IS THE LATTICE'S (architect
-    // 2026-09-21, the recorded exception at arrow_step_magnitude): Shift is
-    // the HOP STEP, one hop of the engine's analysis lattice, and Ctrl is
-    // UNBOUND — the press is dropped here in silence, as every gate above
-    // already treated it (chord_is_bound's column term). The step travels as a
-    // HorizontalArrowStep, its unit beside its count, so the hop step reaches
-    // the same twin, prologue and landing owner as the column step and takes
-    // everything else the nudge does.
-    if (!alt && !(ctrl && shift) &&
+    // BARE ONLY, AND ONE STEP IN THE ACTIVE COLUMN'S UNIT (architect
+    // 2026-09-21, the horizontal ladder retired on every column): Shift and
+    // Ctrl spell nothing on Left / Right and fall to the strict-modifier tail
+    // in silence (chord_is_bound, gui_input.h). The unit is
+    // horizontal_arrow_step's — one painted column on W and M, ONE HOP on the
+    // phase-reset column — and it travels as a HorizontalArrowStep, its unit
+    // beside its count, so the hop step reaches the same twin, prologue and
+    // landing owner as the column step and takes everything else the nudge
+    // does. The WAVEFORM lane's twin is handle_plain_bare_keys' Left / Right
+    // case, which asks the same fork.
+    if (!alt && !ctrl && !shift &&
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
-        const std::optional<HorizontalArrowStep> step = horizontal_arrow_step(
-            mods, key == GuiKeys::Left ? -1 : +1, app.active_markers_view);
-        if (!step) return;
+        const HorizontalArrowStep step = horizontal_arrow_step(
+            key == GuiKeys::Left ? -1 : +1, app.active_markers_view);
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
@@ -2503,35 +2487,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             card_op_refusal(
                 notifications,
                 magnification_levels.nudge_selected_magnification_levels(
-                    *step, rpt));
+                    step, rpt));
             return;
         }
         card_op_refusal(notifications,
                         app.active_markers_view == 'P'
                             ? phase_resets.nudge_selected_phase_resets(
-                                  *step, rpt)
-                            : warpops.nudge_selected_markers(*step, rpt));
-        return;
-    }
-
-    // THE WAVEFORM LANE'S MODIFIED STEP (architect 2026-08-31, R12) — the arm
-    // above claimed every marker-lane press, so anything reaching here is the
-    // cursor's own step with no selection standing, and this arm carries the
-    // TWO MODIFIED forms alone: the BARE one is handle_plain_bare_keys' Left /
-    // Right case, which it has been since before the ladder existed, and both
-    // roads call the ONE act owner (run_waveform_lane_playhead_step,
-    // input_key_dispatch.cpp) so the stop, the stale-focus clear and the step
-    // are written once. The split of SITES is the dispatch's own shape — the
-    // bare road ends in that switch — and not a second act.
-    // CTRL+SHIFT and ALT spell nothing and fall to the strict-modifier tail.
-    // ON THE PHASE-RESET COLUMN the shifted form is the playhead's HOP STEP and
-    // the ctrl form is unbound and dropped in silence (horizontal_arrow_step,
-    // gui_input.h — the column decides, never the subject).
-    if (!alt && (ctrl != shift) &&
-        (key == GuiKeys::Left || key == GuiKeys::Right)) {
-        const std::optional<HorizontalArrowStep> step = horizontal_arrow_step(
-            mods, key == GuiKeys::Left ? -1 : +1, app.active_markers_view);
-        if (step) run_waveform_lane_playhead_step(*step);
+                                  step, rpt)
+                            : warpops.nudge_selected_markers(step, rpt));
         return;
     }
 
@@ -2616,8 +2579,7 @@ bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
     const bool iteration_says_no =
         app.iteration_mode_enabled && iteration_lock_key_blocked(key, mods);
     if (!read_only_says_no && !iteration_says_no) return false;
-    if (chord_is_bound(key, mods, app.history_mode.active,
-                       app.active_markers_view))
+    if (chord_is_bound(key, mods, app.history_mode.active))
         notifications.notify(AppState::NotificationClass::Normal,
                              read_only_says_no
                                  ? read_only_chord_card(spell_chord(key, mods))
@@ -2741,8 +2703,7 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
     mods.ctrl  = true;
     mods.shift = redo;
     const auto card_bound = [&](std::string sentence) {
-        if (chord_is_bound(key, mods, app.history_mode.active,
-                           app.active_markers_view))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(sentence));
     };
@@ -2800,8 +2761,7 @@ bool GuiInputHandler::car_play_refused_by_key_gates() {
     const GuiKey key = GuiKeys::Space;
     GuiInputState mods{};
     const auto card_bound = [&](std::string sentence) {
-        if (chord_is_bound(key, mods, app.history_mode.active,
-                           app.active_markers_view))
+        if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
                                  std::move(sentence));
     };

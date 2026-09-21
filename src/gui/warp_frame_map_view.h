@@ -618,7 +618,7 @@ int64_t authored_frame_at_column(
 // painter's alone until 2026-09-09, when the phase-reset column got its own
 // iteration bracket and the walls, the editor's refusal, the arrows' landing
 // and the sweep all had to ask the same lattice the overlay band paints; the
-// P column's Shift+Left / Shift+Right hop step (2026-09-21) asks it too.
+// P column's Left / Right, whose unit is a hop (2026-09-21), asks it too.
 
 // THE ENGINE'S SEED FRAME FOR A RESET, mirrored in the GUI (2026-09-02): the
 // schedule index m the engine seeds at for a reset authored at source frame
@@ -653,7 +653,7 @@ int64_t phase_reset_window_centre_frame(
 // THE HOP STEP'S AUTHORED FRAME: where a phase reset resting at source frame
 // `S` lands `k` hops away, under `map`. ONE OWNER FOR BOTH ROADS THAT MOVE A
 // RESET BY HOPS — the iteration cells (k in [-kIterHopMax, +kIterHopMax]) and
-// the P column's Shift+Left / Shift+Right HOP STEP (k = +/-1, reached through
+// the P column's Left / Right, whose unit is a HOP (k = +/-1, reached through
 // position_nudge_landing's hop arm, position_nudge.h) — because two meanings
 // of "one hop" on one column would be an asymmetry.
 //
@@ -663,7 +663,7 @@ int64_t phase_reset_window_centre_frame(
 // exactly k hops, t' = map_source_to_target(S) + k * kRs, and the landing is
 // the authored frame of map_target_to_source(t') through snap_authored_frame
 // (the one double-to-authored route, banker's rounding). The reset's offset
-// inside its window travels with it, so Shift+Right then Shift+Left returns it
+// inside its window travels with it, so Right then Left returns it
 // to where it started, give or take a frame of rounding — the minimum rule
 // threw that offset away and the round trip landed up to a hop off. The phase
 // cells had never been used, so nothing was lost by their following.

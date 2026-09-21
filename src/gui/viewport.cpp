@@ -364,9 +364,10 @@ void Viewport::clamp_display_state_to_live_domain() {
 }
 
 // WHERE ONE PIXEL STEP WOULD LAND — the contract is at the declaration
-// (app_state.h); the arithmetic is move_playhead_by_arrow_step' own, which reads this
-// for its landing since 2026-08-30 (planner decision 60), the Left / Right
-// buttons' face being the second reader. The two degenerate cases the act
+// (app_state.h); the arithmetic is move_playhead_by_arrow_step's own, which
+// reads this for its landing since 2026-08-30 (planner decision 60) through
+// playhead_arrow_step_landing's Columns arm, the Left / Right buttons' face
+// reading the same owner. The two degenerate cases the act
 // used to return on — no audio, no painted grid — answer the resting cursor
 // itself, so a step there is the no-op it always was and the face greys.
 int64_t playhead_pixel_step_landing(const AppState& app, const GuiAudio& audio,
@@ -419,10 +420,11 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // (planner decision 60), the Left / Right buttons' face reading the same
     // landing; a step at a wall still reaches move_playhead_to, whose
     // unconditional overlay hide is the KEY's to keep (the greyed button
-    // forgoes it, the skips' own shape). THE PHASE-RESET COLUMN'S HOP STEP
-    // (architect 2026-09-21) takes the same road in its own unit: exactly
-    // kRs target frames a hop, no grid and no rounding, the landing owner's
-    // Hops arm.
+    // forgoes it, the skips' own shape). ON THE PHASE-RESET COLUMN THE UNIT
+    // IS A HOP (architect 2026-09-21, horizontal_arrow_step): the same road in
+    // its own unit, exactly kRs target frames, no grid and no rounding, the
+    // landing owner's Hops arm — everything said above about columns is the
+    // Columns arm's.
     move_playhead_to(playhead_arrow_step_landing(app, audio, step));
 }
 

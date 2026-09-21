@@ -100,11 +100,10 @@ struct GuiMagnificationLevelMarkersOps {
     // `synthesized_repeat` is the dispatching key event's platform repeat bit,
     // read only by the undo-coalesce verdict (undo.h). Returns the refusal's
     // own sentence for the dispatcher to card, or std::nullopt for "nothing to
-    // say" (GuiOpRefusal, warpmarkers_ops.h). `step` is the press's signed
-    // step in its unit (horizontal_arrow_step, gui_input.h), on this column
-    // always PAINTED COLUMNS (±1 bare, ±3 shifted, ±10 with ctrl — the step
-    // ladder, one owner at arrow_step_magnitude), the two twins' own
-    // parameter.
+    // say" (GuiOpRefusal, warpmarkers_ops.h). `step` is the press's one step
+    // in its unit (horizontal_arrow_step, gui_input.h), on this column always
+    // ONE PAINTED COLUMN (bare only — the horizontal ladder is retired), the
+    // two twins' own parameter.
     GuiOpRefusal nudge_selected_magnification_levels(HorizontalArrowStep step,
                                                      bool synthesized_repeat);
     // THE VALUE STEP ON THIS COLUMN — bare Up/Down (and the plain wheel over an

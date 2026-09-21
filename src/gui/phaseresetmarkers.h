@@ -37,7 +37,7 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // ANALYSIS LATTICE, and a cell at +k TRANSLATES the reset by k hops of
     // the target domain, its offset inside its window travelling with it
     // (phase_reset_hop_step_frame, warp_frame_map_view.h — the one owner the
-    // P column's Shift+Left / Shift+Right hop step lands through too; the
+    // P column's Left / Right, whose unit is a hop, lands through too; the
     // minimum-displacement rule of 2026-09-09 was superseded by translation
     // 2026-09-21).
     //

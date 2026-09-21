@@ -334,8 +334,8 @@ struct Viewport {
     // moving in the music.
     void reseat_playhead_to(int64_t new_sample);
     // The waveform lane's Left / Right step, in the step's own unit
-    // (playhead_arrow_step_landing, app_state.h): painted columns, or the
-    // phase-reset column's hop step.
+    // (playhead_arrow_step_landing, app_state.h): one painted column, or on
+    // the phase-reset column one hop.
     void move_playhead_by_arrow_step(HorizontalArrowStep step);
     void apply_zoom_change(double new_zoom_level);
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,

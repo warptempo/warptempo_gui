@@ -2825,15 +2825,13 @@ private:
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
     // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31, R12): the
-    // stop, the stale-focus clear and the signed step, shared by the bare
-    // form (handle_plain_bare_keys' Left / Right arms below) and the two
-    // modified ones (on_key's own arm, which must claim them above the bare
-    // dispatch). `step` is the press's signed step in its unit
-    // (horizontal_arrow_step, gui_input.h) — ±1 / ±3 / ±10 painted columns,
-    // or on the phase-reset column the Shift rung's one-hop step, Ctrl being
-    // unbound there. Reached only with an empty
-    // selection: the marker-lane branch claims the press first in every
-    // magnitude. The full contract is at the definition.
+    // stop, the stale-focus clear and the signed step, called by the bare
+    // form alone (handle_plain_bare_keys' Left / Right arms below — the
+    // horizontal pair binds bare only since 2026-09-21). `step` is the
+    // press's one step in the active column's unit (horizontal_arrow_step,
+    // gui_input.h) — one painted column, or ONE HOP on the phase-reset
+    // column. Reached only with an empty selection: the marker-lane branch
+    // claims the press first. The full contract is at the definition.
     void run_waveform_lane_playhead_step(HorizontalArrowStep step);
 
     // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /

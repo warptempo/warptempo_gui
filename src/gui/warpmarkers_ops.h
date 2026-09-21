@@ -178,10 +178,10 @@ struct GuiWarpMarkersOps {
     // target-view refusal — a bracket is target-legal. Never stops playback,
     // for the tempo step's own reason.
     GuiOpRefusal adjust_iter_bound_cents(MarkerCell side, int64_t delta_cents);
-    // `step` is the press's signed step in its unit (horizontal_arrow_step,
-    // gui_input.h): on this column always PAINTED COLUMNS (±1 bare, ±3
-    // shifted, ±10 with ctrl — the ladder above), which the shared road reads
-    // as a plain column delta the whole way down.
+    // `step` is the press's one step in its unit (horizontal_arrow_step,
+    // gui_input.h): on this column always ONE PAINTED COLUMN (bare only — the
+    // horizontal ladder is retired, the vertical one above standing), which
+    // the shared road reads as a plain column delta the whole way down.
     GuiOpRefusal nudge_selected_markers(HorizontalArrowStep step,
                                         bool synthesized_repeat);
 

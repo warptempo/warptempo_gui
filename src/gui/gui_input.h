@@ -1,7 +1,6 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <string>
 
 // Platform-neutral keyboard / mouse input types. Backends translate native
@@ -209,16 +208,21 @@ struct GuiInputState {
 
 // -- THE ARROW STEP LADDER (architect 2026-08-31, R12) -----------------------
 //
-// THE MODIFIER IS THE STEP'S MAGNITUDE, ON THE ARROWS' EVERY SUBJECT: bare is
-// ONE unit, Shift is THREE and Ctrl is TEN, and the unit is whatever the bare
-// arrow's own act steps — a painted COLUMN for Left / Right (the playhead in
-// the waveform lane, the focused marker in the marker lane, both columns) and
-// for Up / Down the addressed cell's own unit — a CENT on the tempo (singleton
-// and group), a cent or a hop on a bound, a level on the magnification level
-// column's flag.
-// ONE OWNER for
-// all four arms, because the ladder is one ruling and not two: a second
-// spelling in the vertical arm could drift from the horizontal one.
+// THE MODIFIER IS THE STEP'S MAGNITUDE ON THE VERTICAL ARROWS, AND ON THEM
+// ALONE: bare is ONE unit, Shift is THREE and Ctrl is TEN, and the unit is
+// whatever the bare Up / Down's own act steps on the addressed cell — a CENT
+// on the tempo (singleton and group), a cent or a hop on a bound, a level on
+// the magnification level column's flag. The tempo is NUMERIC, so a count of
+// cents is a number the user thinks in.
+//
+// THE HORIZONTAL PAIR HAS NO LADDER (architect 2026-09-21, retiring the
+// 2026-08-31 horizontal rungs on every column): horizontal placement is
+// GRAPHICAL — "three columns" or "ten columns" is a number nobody thinks in —
+// so Shift+Left / Shift+Right and Ctrl+Left / Ctrl+Right are UNBOUND on every
+// column, for the marker and the playhead alike (chord_is_bound), and silent
+// as every unbound chord is. Left / Right take ONE STEP IN THE ACTIVE COLUMN'S
+// UNIT (horizontal_arrow_step below); key repeat and the buttons' hold-repeat
+// are the way to go further.
 //
 // THE ORDER bare < shift < ctrl IS DELIBERATE (the architect's own): shift is
 // the everyday coarse step and ctrl the long jump, so the modifier that is
@@ -230,26 +234,10 @@ struct GuiInputState {
 // combinations; this function answers ctrl first and never sees the pair.
 //
 // THE WALLS ARE THE BARE FORM'S, at the scaled size: a SINGLETON step clamps
-// onto its wall (so a 10-column press near the end lands exactly on the end)
-// and a GROUP press refuses whole where any member could not take the FULL
-// step — the unified wall policy, stated at the head of position_nudge.h and
-// instanced at the group tempo scan (tempo_cent_step_group_actionable).
-//
-// THE RECORDED EXCEPTION BETWEEN COLUMNS (architect 2026-09-21): ON THE
-// PHASE-RESET COLUMN THE HORIZONTAL PAIR'S MODIFIERS MEAN SOMETHING ELSE —
-// Shift+Left / Shift+Right is the HOP STEP (one hop of the engine's analysis
-// lattice, kRs target samples, horizontal_arrow_step below) and Ctrl+Left /
-// Ctrl+Right is UNBOUND (chord_is_bound's column term), for the marker and the
-// playhead alike, bare staying one painted column. Only that column has an
-// engine lattice: the engine seeds a reset on the hop grid, so frame precision
-// below a hop means nothing to it and a reset's useful neighbourhood is a few
-// hops — a coarse tool, and the ladder's coarse rung takes the lattice's own
-// unit there. WITHIN each column a modifier means one thing whatever it moves
-// (the meaning is keyed on the COLUMN, never on the subject). This function
-// stays the ladder's magnitude for every other arm — the vertical pair on
-// every column, the horizontal pair on W and M — and horizontal_arrow_step is
-// its one reader on the horizontal pair. The inventory of recorded
-// asymmetries is in conventions.md.
+// onto its wall and a GROUP press refuses whole where any member could not
+// take the FULL step — the unified wall policy, stated at the head of
+// position_nudge.h and instanced at the group tempo scan
+// (tempo_cent_step_group_actionable).
 inline constexpr int64_t kArrowStepShift = 3;
 inline constexpr int64_t kArrowStepCtrl  = 10;
 constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
@@ -259,13 +247,14 @@ constexpr int64_t arrow_step_magnitude(GuiInputState mods) {
 }
 
 // ONE HORIZONTAL ARROW PRESS'S STEP, as the dispatch hands it to the act, the
-// landing owners and the faces: a signed COUNT in one of two UNITS. COLUMNS is
-// the painted-column step every column's bare press takes and the W and M
-// columns' modified presses take (the one-column-per-press guarantee at
-// stepped_anchor_frame, position_nudge.h); HOPS is the phase-reset column's
-// hop step, a count of the engine's analysis hops measured in the TARGET
-// domain, which makes no pixel claim at all. The unit travels beside the count
-// so no landing owner ever reads a magic number as the other unit.
+// landing owners and the faces: a signed COUNT in one of two UNITS, the count
+// always ±1 since the horizontal ladder retired (the direction; the struct
+// keeps a count so the landing arithmetic reads one number in one unit).
+// COLUMNS is the painted-column step (the one-column-per-press guarantee at
+// stepped_anchor_frame, position_nudge.h); HOPS is the hop step, one hop of
+// the engine's analysis lattice measured in the TARGET domain, which makes no
+// pixel claim at all. The unit travels beside the count so no landing owner
+// ever reads a magic number as the other unit.
 struct HorizontalArrowStep {
     enum class Unit : uint8_t { Columns, Hops };
     Unit unit  = Unit::Columns;
@@ -278,22 +267,25 @@ struct HorizontalArrowStep {
     }
 };
 
-// THE HORIZONTAL LADDER, keyed on the ACTIVE COLUMN (`markers_view`, the
-// column letter): `direction` is -1 for Left and +1 for Right, and `mods` has
-// already been refused Ctrl+Shift and Alt by the dispatch. Answers the step
-// the press takes, or NOTHING on the phase-reset column under Ctrl — THAT
-// RUNG IS UNBOUND there (chord_is_bound says so to every gate), so the
-// dispatch drops the press in silence and the Left / Right buttons admit no
-// ctrl-click there (redesign_button_ctrl_admits_in, app_state.h).
-constexpr std::optional<HorizontalArrowStep> horizontal_arrow_step(
-    GuiInputState mods, int direction, char markers_view) {
-    if (markers_view == 'P') {
-        if (mods.ctrl)  return std::nullopt;
-        if (mods.shift) return HorizontalArrowStep::hops(direction);
-        return HorizontalArrowStep::columns(direction);
-    }
-    return HorizontalArrowStep::columns(
-        direction * static_cast<int>(arrow_step_magnitude(mods)));
+// THE ONE FORK OF THE HORIZONTAL ARROW'S UNIT, keyed on the ACTIVE COLUMN
+// (`markers_view`, the column letter) and never on the subject: `direction`
+// is -1 for Left and +1 for Right. One painted COLUMN on W and M; on the
+// PHASE-RESET column ONE HOP — THE P COLUMN'S ARROW UNIT IS A HOP (architect
+// 2026-09-21, the recorded exception between columns, conventions.md), for
+// the focused reset and the playhead with an empty selection alike. The unit
+// follows from the engine's lattice, which only P has: the render depends
+// only on the window a reset seeds in (S - N/2, the engine seeding at the
+// last window at or before it), so a column nudge on P is almost always
+// SILENT — about seventeen of eighteen at working zoom re-render identical
+// audio — and the hop is the only arrow move there that changes what is
+// heard. Every reader of the horizontal pair's step asks this: the marker-
+// and waveform-lane dispatch, and the Left / Right face
+// (horizontal_arrow_step_actionable, app_state.h), so the face asks the step
+// the press will take.
+constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
+                                                    char markers_view) {
+    if (markers_view == 'P') return HorizontalArrowStep::hops(direction);
+    return HorizontalArrowStep::columns(direction);
 }
 
 // -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03, codex) -------------
@@ -648,16 +640,8 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 // until 2026-08-31, when the blocks were deleted for want of a producer); and
 // every modifier decoration no arm spells, which is strict modifier
 // validation's whole no-op class.
-//
-// THE ACTIVE MARKER COLUMN IS ITS SECOND STATE TERM (architect 2026-09-21),
-// `markers_view` the column letter (W / P / M, AppState::active_markers_view):
-// on the PHASE-RESET column Ctrl+Left / Ctrl+Right bind nothing, the ctrl
-// rung of the horizontal ladder being unbound there for the marker and the
-// playhead alike (the recorded exception at arrow_step_magnitude). The term
-// only ever REMOVES a binding, so a reader asking the ordinary 'W' state
-// asks the widest inventory.
 constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
-                              bool history_view, char markers_view) {
+                              bool history_view) {
     const bool ctrl = mods.ctrl, alt = mods.alt, shift = mods.shift;
     const bool bare  = !ctrl && !alt && !shift;   // no modifier at all
     const bool sh    = !ctrl && !alt &&  shift;   // Shift alone
@@ -791,19 +775,17 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // live walk admits it.
         case GuiKeys::IsoLeftTab: return bare || sh;
         // The value step on the addressed cell (the tempo, a bound or the
-        // magnification level), and the playhead / marker position
-        // step —
-        // EACH IN THREE MAGNITUDES since 2026-08-31 (R12): bare one unit,
-        // Shift three, Ctrl ten, on whatever the bare arrow's own subject is
-        // (the ladder's owner is arrow_step_magnitude above). Ctrl+Shift
-        // spells nothing on any of the four.
-        // ON THE PHASE-RESET COLUMN the horizontal pair's ctrl rung is
-        // unbound and its shift rung is the HOP STEP (architect 2026-09-21,
-        // horizontal_arrow_step below).
+        // magnification level), IN THREE MAGNITUDES since 2026-08-31 (R12):
+        // bare one unit, Shift three, Ctrl ten (the ladder's owner is
+        // arrow_step_magnitude above). Ctrl+Shift spells nothing.
         case GuiKeys::Up: case GuiKeys::Down:
             return bare || sh || cl;
+        // The playhead / marker position step, BARE ONLY on every column
+        // (architect 2026-09-21: the horizontal ladder is retired — placement
+        // is graphical; the step's unit is the active column's,
+        // horizontal_arrow_step above).
         case GuiKeys::Left: case GuiKeys::Right:
-            return bare || sh || (cl && markers_view != 'P');
+            return bare;
         // The trim bounds, and the whole-piece ends under ctrl.
         case GuiKeys::Home: case GuiKeys::End: return bare || cl;
         // The viewport's stepped scroll.
@@ -817,112 +799,107 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 // above must keep, so a careless widening trips at compile time. The chords
 // that read no mode term are pinned OUTSIDE the view (the ordinary state), and
 // the three anchors that follow them pin the term itself, both ways.
-static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false, 'W'),
+static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
-static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false, 'W') &&
-                  chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false, 'W') &&
-                  chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false, 'W') &&
-                  !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false, 'W') &&
-                  !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false, 'W'),
+static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
               "the bare backtick is the S+M view selector, bare 1 the S+W one "
               "and bare 3 the T+W one; digits 4..9 are unbound");
-static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false, 'W'),
+static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "
               "arms (the notification stack's clear), and its top-level "
               "silence is that arm's own, reached only with no card standing");
 static_assert(!chord_is_bound(GuiKeys::Escape,
-                              GuiInputState{true, false, false}, false, 'W') &&
+                              GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
-                                  GuiInputState{true, true, false}, false, 'W') &&
+                                  GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Escape,
-                                  GuiInputState{false, true, false}, false, 'W'),
+                                  GuiInputState{false, true, false}, false),
               "Esc is bare-exact: no modified Escape binds anywhere, Ctrl+Esc "
               "included since it retired on 2026-09-01");
-static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false, 'W') &&
+static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
-                                 GuiInputState{false, true, false}, false, 'W') &&
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Space,
-                                  GuiInputState{true, false, false}, false, 'W'),
+                                  GuiInputState{true, false, false}, false),
               "Space binds bare and shifted only — strict modifier validation");
-static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false, 'W') &&
+static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
-                                  GuiInputState{true, false, false}, false, 'W'),
+                                  GuiInputState{true, false, false}, false),
               "Synchronize is bare backslash and no decoration of it");
 // `l` is the one letter whose two forms are two contents of one band, so its
 // anchor witnesses the "only" whole: the two positives, then EVERY non-bare,
 // non-shift-only combination of the three modifiers as a negative. A widening
 // onto any of them trips here rather than at the next review.
-static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false, 'W') &&
+static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::L,
-                                 GuiInputState{false, true, false}, false, 'W') &&
+                                 GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{true, false, false}, false, 'W') &&
+                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{false, false, true}, false, 'W') &&
+                                  GuiInputState{false, false, true}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{true, true, false}, false, 'W') &&
+                                  GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{true, false, true}, false, 'W') &&
+                                  GuiInputState{true, false, true}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{false, true, true}, false, 'W') &&
+                                  GuiInputState{false, true, true}, false) &&
                   !chord_is_bound(GuiKeys::L,
-                                  GuiInputState{true, true, true}, false, 'W'),
+                                  GuiInputState{true, true, true}, false),
               "`l` binds bare and shifted only — the render player and its "
               "shifted twin the AV sync stats panel — and none of the six "
               "other modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
 // Ctrl+Alt File → Revert — and no shifted spelling of any of them.
 static_assert(chord_is_bound(GuiKeys::O,
-                             GuiInputState{true, false, true}, false, 'W') &&
+                             GuiInputState{true, false, true}, false) &&
                   chord_is_bound(GuiKeys::O,
-                                 GuiInputState{true, false, true}, true, 'W') &&
+                                 GuiInputState{true, false, true}, true) &&
                   !chord_is_bound(GuiKeys::O,
-                                  GuiInputState{true, true, true}, false, 'W') &&
+                                  GuiInputState{true, true, true}, false) &&
                   !chord_is_bound(GuiKeys::O,
-                                  GuiInputState{false, false, true}, false, 'W'),
+                                  GuiInputState{false, false, true}, false),
               "Revert is Ctrl+Alt+O exactly, bound in both modes; "
               "Ctrl+Alt+Shift+O and Alt+O spell nothing");
-static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false, 'W') &&
+static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{false, true, false}, false, 'W') &&
+                                 GuiInputState{false, true, false}, false) &&
                   chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{true, false, false}, false, 'W') &&
+                                 GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Up,
-                                  GuiInputState{true, true, false}, false, 'W'),
-              "an arrow binds bare, Shift and Ctrl — the step ladder's three "
+                                  GuiInputState{true, true, false}, false),
+              "a vertical arrow binds bare, Shift and Ctrl — the step ladder's three "
               "magnitudes — and Ctrl+Shift spells no fourth");
-static_assert(chord_is_bound(GuiKeys::Left,
-                             GuiInputState{false, true, false}, false, 'P') &&
+static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Left,
-                                  GuiInputState{true, false, false}, false,
-                                  'P') &&
+                                  GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Right,
-                                  GuiInputState{true, false, false}, false,
-                                  'P') &&
-                  chord_is_bound(GuiKeys::Up,
-                                 GuiInputState{true, false, false}, false,
-                                 'P'),
-              "on the phase-reset column Shift+Left / Shift+Right are the hop "
-              "step and Ctrl+Left / Ctrl+Right bind nothing; the vertical "
-              "pair keeps its ctrl rung there");
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Right,
+                                  GuiInputState{false, true, false}, true),
+              "Left / Right bind bare only on every column — the horizontal "
+              "ladder is retired, Shift and Ctrl spell nothing there");
 // THE MODE TERM, pinned in both directions (2026-09-01, U4). Bare `v` is the
 // architect's own instance — the revert act, which binds nothing outside the
 // view, so the gates below it must say nothing there.
-static_assert(!chord_is_bound(GuiKeys::V, GuiInputState{}, false, 'W') &&
-                  chord_is_bound(GuiKeys::V, GuiInputState{}, true, 'W'),
+static_assert(!chord_is_bound(GuiKeys::V, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::V, GuiInputState{}, true),
               "bare `v` is the `h` view's revert act and binds nothing outside "
               "it: unbound with the view down, bound with it up");
-static_assert(!chord_is_bound(GuiKeys::Comma, GuiInputState{}, false, 'W') &&
-                  chord_is_bound(GuiKeys::Comma, GuiInputState{}, true, 'W') &&
+static_assert(!chord_is_bound(GuiKeys::Comma, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Comma, GuiInputState{}, true) &&
                   !chord_is_bound(GuiKeys::Comma,
-                                  GuiInputState{false, true, false}, false, 'W') &&
+                                  GuiInputState{false, true, false}, false) &&
                   chord_is_bound(GuiKeys::Comma,
-                                 GuiInputState{false, true, false}, true, 'W'),
+                                 GuiInputState{false, true, false}, true),
               "the walk's `,` carries the mode term in BOTH its spellings — "
               "the bare step and the shifted jump alike");
-static_assert(chord_is_bound(GuiKeys::H, GuiInputState{}, false, 'W') &&
-                  chord_is_bound(GuiKeys::H, GuiInputState{}, true, 'W'),
+static_assert(chord_is_bound(GuiKeys::H, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::H, GuiInputState{}, true),
               "bare `h` is the toggle and is bound in both modes: it is what "
               "opens the view and what closes it, so it reads no mode term");
 
@@ -939,11 +916,10 @@ static_assert(chord_is_bound(GuiKeys::H, GuiInputState{}, false, 'W') &&
 // (0xfe20 for the shifted Tab, 0xff00..0xffff for the rest), so a case label
 // outside these ranges would need a GuiKeys value outside them — the day this
 // range grows with it. Eight modifier combinations per key × BOTH VALUES OF THE
-// MODE BIT (2026-09-01, U4) × THE THREE MARKER COLUMNS (2026-09-21), which is
-// the whole space a press can present: strict modifier validation bounds the
-// first factor, and the other two are the state terms the inventory carries,
-// so a binding added on a mode-only or column-only key with no name breaks the
-// build exactly as an ordinary one does.
+// MODE BIT (2026-09-01, U4), which is the whole space a press can present:
+// strict modifier validation bounds the first factor, and the second is the one
+// state term the inventory carries, so a binding added on a mode-only key with
+// no name breaks the build exactly as an ordinary one does.
 consteval bool every_bound_key_is_spellable() {
     auto spellable = [](GuiKey k) {
         return spell_key_name(k) != nullptr || (k > 0x20 && k < 0x7f);
@@ -955,13 +931,9 @@ consteval bool every_bound_key_is_spellable() {
             for (int bits = 0; bits < 8; ++bits) {
                 const GuiInputState mods{(bits & 1) != 0, (bits & 2) != 0,
                                          (bits & 4) != 0};
-                for (const char view : {'W', 'P', 'M'}) {
-                    if (chord_is_bound(key, mods, /*history_view=*/false,
-                                       view) ||
-                        chord_is_bound(key, mods, /*history_view=*/true,
-                                       view))
-                        return false;
-                }
+                if (chord_is_bound(key, mods, /*history_view=*/false) ||
+                    chord_is_bound(key, mods, /*history_view=*/true))
+                    return false;
             }
         }
         return true;

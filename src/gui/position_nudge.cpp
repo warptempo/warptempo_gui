@@ -70,10 +70,9 @@ PositionNudgePrologue position_nudge_prologue(
     // supersession of the "an early call must poison for a press that goes on
     // to refuse" clause is recorded at Undo::coalesce_gesture.
     // AND IT IS ASKED OF THIS PRESS'S OWN STEP, not of a bare sign: the
-    // predicate takes the signed step in its unit and the act hands it the one
-    // it is about to commit (the FACE hands it the bare one-column step, which
-    // is the same answer for the column rungs and the hop step alike — the
-    // invariance is argued at position_nudge_landing).
+    // predicate takes the step in its unit and the act hands it the one it is
+    // about to commit — the same step the FACE hands it, both asking
+    // horizontal_arrow_step for the active column (gui_input.h).
     if (!marker_nudge_actionable(app, audio, step)) return r;
     // The undo-coalescing verdict, now the FIRST thing past the refusals. It
     // reads the press's own repeat bit to pick its arm — a held key's
@@ -132,7 +131,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
     const int64_t wall = audio.total_frames() - 1;
     int64_t D = 0;
     if (step.unit == HorizontalArrowStep::Unit::Hops) {
-        // (1') THE HOP STEP, the phase-reset column's Shift rung: `count` hops
+        // (1') THE HOP, the phase-reset column's arrow unit: `count` hops
         // of the engine's analysis lattice through the one hop owner the
         // iteration cells land through, under the LIVE map — the render's,
         // because a hop is the render's quantum and not a painted one. It may
@@ -171,8 +170,8 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // defined here beside the landing it compares. The order of its terms is the
 // PROLOGUE'S OWN, so the face and the press agree at every one of them; the
 // full reasoning — why a 2+ selection stays lit, why the geometry guards are
-// terms, and why the BARE step the face hands it answers for the shifted and
-// ctrl ones and the hop step too — is at the declaration.
+// terms, and why the step the face hands it is the press's own — is at the
+// declaration.
 bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
                              HorizontalArrowStep step) {
     if (a.loading || audio.total_frames() <= 0) return false;
