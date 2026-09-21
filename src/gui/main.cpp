@@ -1503,8 +1503,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // tail landing in S+M (source view, the column's home since 2026-09-16).
     magnification_level_propagate.input = &input_handler;
     // And Undo's, for the same chokepoint: a restore puts the reader back in the
-    // authoring view the entry recorded, and the S/T axis of it is the input
-    // handler's (the other two are GuiActiveViews', which Undo holds outright).
+    // view the entry recorded (selection-model.md), and the S/T axis of it is
+    // the input handler's (the other two are GuiActiveViews', which Undo holds
+    // outright).
     // Its one reader is recorded at the member, undo.h.
     undo.input = &input_handler;
     // The prefetch's ready fd is wired HERE rather than beside the other three,

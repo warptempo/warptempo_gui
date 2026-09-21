@@ -218,22 +218,26 @@ struct SettingsSnapshot {
 // singleton land / group region, not a remembered anchor).
 //
 // Every entry also carries the pre-mutation phase reset and magnification
-// level snapshots and the mode the operation was performed in. All three lists
+// level snapshots and the view the act landed in. All three lists
 // are always restored on undo/redo so the inverse is symmetric regardless of
 // which list the op actually touched.
 //
-// THE AUTHORING VIEW IS THREE TAGS, NOT TWO (architect bug report 2026-08-28):
+// THE VIEW TAGS ARE THREE, NOT TWO (architect bug report 2026-08-28):
 // `op_mode` is the W/P/M column, `tab` the A/B tab and `audio_view` the S/T audio
-// view — the three axes the product's view state has, captured together at every
-// push and restored together at every restore, as visual feedback for what is
-// being undone. The third one was missing until that report, and its absence had
+// view — the three axes the product's view state has, restored together at every
+// restore, as visual feedback for what is being undone. The third one was
+// missing until that report, and its absence had
 // a name: a restore could only half-restore, so undoing a T+P op from S+W landed
 // the COLUMN in P and left the audio view at S — the keyless S+P combination, all
 // three view lamps dark, the phase-reset lane drawn over the source-domain
 // waveform, and (until the P column opened on 2026-08-30) the authoring
 // predicate false for the column just handed
-// back. With the third tag recorded, a restore lands the combination the op was
-// AUTHORED in and can synthesize no other. S+P itself is no state since
+// back. With the third tag recorded, a restore lands the view the act LANDED in
+// and can synthesize no other (architect 2026-09-21 — the tags are read off the
+// live view at push, which is the landing view for every act that stays where
+// it is; the one class that pushes and then crosses, the two phase-reset paste
+// bodies, restamps its own entry's tab/audio-view tags after the landing;
+// selection-model.md is authoritative). S+P itself is no state since
 // 2026-09-21 (the phase-reset column is target view only, the twin of the
 // magnification level column's source-only rule): a 'P' entry takes its audio
 // view before its column at the restore, as an 'M' entry does, and the two

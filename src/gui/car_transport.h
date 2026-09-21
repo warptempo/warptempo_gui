@@ -389,8 +389,10 @@ private:
     //
     // THE FOURTH FIELD IS NOT AN AXIS OF THE SOUND BUT OF WHO IS ASKING:
     // `gui_press_count` snapshots AppState::gui_transport_press_count, which
-    // every deliberate GUI transport press bumps AT ITS ROAD'S HEAD (the
-    // writers are at that field). A GUI TRANSPORT ACT SUPERSEDES THE CAR'S
+    // a project-transport LAUNCH press bumps AT ITS ROAD'S HEAD — bare
+    // Space's arm, Shift+Space's arm and the waveform scrub's one act, never
+    // the bottom-row Home/End skips (the owner and its writer inventory are
+    // at the field, app_state.h ~4743). A GUI TRANSPORT ACT SUPERSEDES THE CAR'S
     // DEFERRED PLAY, WHETHER IT PLAYED OR WAS REFUSED (architect 2026-09-21,
     // on Sol's finding): a scrub or a Space refused at the preview's own
     // readiness gate sounds nothing, so the "something is already sounding"

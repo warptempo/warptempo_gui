@@ -4000,7 +4000,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // 'T' inherits it with no refusal of its own: bare 2 and 3 (whose own
     // column entry then runs its coincidence auto-select), the settings
     // editor's typed `active_audio_view=T`, the undo/redo restore of an entry
-    // authored in target view, Shift+S's crossing from S+M and bare `i`'s
+    // tagged target view, Shift+S's crossing from S+M and bare `i`'s
     // crossing (which never reaches here from M — its own refusal stands
     // first, input_key_dispatch.cpp). PLACED PAST THE REFUSAL ABOVE, and the
     // placement carries weight now that the landing is on the road INTO
@@ -4022,7 +4022,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // source view LANDS THE COLUMN ON W FIRST, through the same writer, so
     // every road that names 'S' inherits it: bare 1 and the backtick, the
     // settings editor's typed `active_audio_view=S`, the undo/redo restore of
-    // an entry authored in source view and Ctrl+Shift+S's crossing. Leaving
+    // an entry tagged source view and Ctrl+Shift+S's crossing. Leaving
     // target never refuses, so the placement past the refusal above is the
     // M landing's shape rather than a need of its own. With the selection
     // cleared by the writer, the translation below has no focus to
@@ -4430,9 +4430,10 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     playhead onto it, and nothing after it touches either.
 //   * ONE UNDO ENTRY, and it is the DROP'S OWN push — this body adds none.
 //     The entry's three view tags are therefore T / P / the standing tab, the
-//     view the reset was authored in, which is where Ctrl+Z lands the reader:
-//     a restore puts him back where the op happened, and the op happened in
-//     T+P (the restore's contract is at UndoEntry, app_state.h). The view he
+//     view the act LANDED in, which is where Ctrl+Z lands the reader: a
+//     restore puts him back where the act landed, and the act landed in
+//     T+P (the restore's contract is at UndoEntry, app_state.h;
+//     selection-model.md is authoritative). The view he
 //     pressed the key IN is not recoverable from a phase-reset entry —
 //     op_mode is that entry's KIND as well as its column tag — and the whole
 //     act is one press either way.

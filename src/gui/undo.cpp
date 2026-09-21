@@ -796,7 +796,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // The three context tags travel VERBATIM onto the counter rather than being
     // re-captured from live state: they describe the OP, and the counter is the
     // same op in the opposite direction, so redoing it must land the same
-    // authoring view undoing it did.
+    // view undoing it did (selection-model.md).
     counter.audio_view          = entry.audio_view;
     // THE COUNTER NEEDS NO ITER STRIP OF ITS OWN, though it is built from the
     // LIVE stores and not from a push helper: a bracket exists only while grid
@@ -825,9 +825,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // destination cannot overflow.
     if (app.history.saved_valid) app.history.saved_distance += saved_distance_delta;
 
-    // -- THE AUTHORING VIEW, ALL THREE AXES, EACH THROUGH ITS OWN OWNER -----
+    // -- THE VIEW, ALL THREE AXES, EACH THROUGH ITS OWN OWNER ---------------
     //
-    // A restore puts the reader back where the op was authored, and the view has
+    // A restore puts the reader back in the view the op LANDED in (the rule and
+    // its one exception, the phase-reset pastes' restamp, are in
+    // selection-model.md), and the view has
     // THREE axes, not two (architect bug report 2026-08-28; the field list and
     // the defect the third one closes are at UndoEntry, app_state.h). Each is
     // written by the chokepoint that owns it — the same body its own key runs —
@@ -1072,7 +1074,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // entry is already popped.
     //
     // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
-    // recorded, a restore lands the combination the op was AUTHORED in. Before
+    // recorded, a restore lands the combination the op LANDED in. Before
     // this tag existed the restore MANUFACTURED S+P out of a T+P entry undone
     // from S+W, which is the defect it closed; since 2026-09-21 S+P is no
     // state at all (the phase-reset column is target view only), the two
