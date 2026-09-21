@@ -1703,37 +1703,51 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }
 
-// One scrub ACT: STOP, THEN START ON THE NEXT CLICK (architect 2026-07-27,
-// superseding the kill-and-revive of 2026-07-23). A scrub click
-// WHILE AUDIO PLAYS is a pure STOP — it does not relaunch, so the audition
-// ends where the user interrupted it. The NEXT click then lands on a stopped
-// session and launches a fresh one from wherever it fell, re-capturing its
-// end_sample at that launch — so a scrub after a mid-session
-// trim edit auditions the NEW window instead of riding a stale capture. The
-// audition then plays ONCE to that end and stops; no GUI launch loops (the
-// two sanctioned exceptions are the render player's Repeat One and the car's
-// loop of the trim, neither a road from here).
-// The old exact-same-frame skip is GONE with the relaunch it existed to
-// avoid: it kept an in-place audition uninterrupted, and the playing case now
-// always stops, so there is no in-place audition left to preserve — and it
-// cannot migrate to the stopped case, whose scanner fields are stale by
-// contract (a stopped scanner is deactivated immediately; no non-playing
-// validity window exists). A refused launch (out-of-window frame; target
-// update in flight; a dead device) leaves playback stopped, the launch body's
-// own sentence answering the dead device under it — this scrub is the one
-// launch road with no outer gate of its own — and a later click at a
+// One scrub ACT: THE SCRUB ALWAYS PLAYS (architect 2026-09-21, superseding
+// the 2026-07-27 "stop, then start on the next click", which had itself
+// superseded the kill-and-revive of 2026-07-23). EVERY scrub click launches
+// from the clicked frame: a click over a LIVE session first ends it through
+// the one stop body and then launches at the click IN THE SAME ACT, so the
+// click never merely stops. Each launch re-captures its end_sample there — so
+// a scrub after a mid-session trim edit auditions the NEW window instead of
+// riding a stale capture — and plays ONCE to that end; no GUI launch loops
+// (the two sanctioned exceptions are the render player's Repeat One and the
+// car's loop of the trim, neither a road from here).
+// WHAT THE STOP ENDS, stated here because the click now always goes on to
+// launch:
+//   * THE A/B AUDITION (Shift+Space) is one transport session, and the stop
+//     body clears it ahead of its own guard (GuiAuditionSequence's inventory,
+//     app_state.h), so a scrub over the act — mid-play or in a rest — ends
+//     it and plays once from the click; the launch entry's own user-launch
+//     clear would end it too.
+//   * THE CAR'S LOOP OF THE TRIM (car_toggle_playback) is a property of its
+//     launch and any GUI stop ends it: a scrub over a running car loop stops
+//     the loop and plays ONCE from the click (launch_playback_from passes
+//     kPlaybackNoLoop). The console's own buttons and bodies are untouched
+//     (GuiCarTransport); its comparator simply publishes the new session, and
+//     a pending car play dies on the sound this launch starts.
+//   * FOLLOW: the stop clears the chase, and the lamp's spend is
+//     launch_playback_from's success tail as on every launch — an armed lamp
+//     is spent by the scrub's launch, a dark one leaves the play unchased.
+//   * COST: the stop's quiescence fence is now paid on EVERY click over a
+//     live session (at most one per click; a stopped session pays none).
+// The stop body is called unconditionally: it is a no-op on a stopped
+// session past its audition clear, which the launch entry makes anyway.
+// The old exact-same-frame skip stays GONE: every click relaunches, so there
+// is no in-place audition to preserve, and a stopped scanner's fields are
+// stale by contract (no non-playing validity window exists). A refused launch
+// (out-of-window frame; target update in flight; a dead device) ends the
+// click STOPPED — a live session it interrupted is not revived — the launch
+// body's own sentence answering the dead device under it (this scrub is the
+// one launch road with no outer gate of its own), and a later click at a
 // launchable frame launches. The target gate below carded from 2026-08-30
 // until 2026-09-04 and is silent now, by the rule stated at that gate.
 void GuiInputHandler::scrub_act_at(int64_t frame) {
-    if (playback.is_playing()) {
-        // The pure stop, through the standing stop machinery — side-effect-
-        // clean here (the scrub never moved the cursor) and the owner of the
-        // scanner's visible-identity teardown. `frame` is deliberately unused
-        // on this arm: a click over a live session says only "stop", never
-        // where to play from.
-        playback_lifecycle.stop_playback_if_playing();
-        return;
-    }
+    // The stop half, through the standing stop machinery — side-effect-clean
+    // here (the scrub never moved the cursor) and the owner of the scanner's
+    // visible-identity teardown. It runs FIRST so scrub_launch_at's defensive
+    // live-session guard always finds the session stopped.
+    playback_lifecycle.stop_playback_if_playing();
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target
     // buffer, which Space refuses — so the scrub launch refuses it too, and
@@ -1748,7 +1762,9 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
     // the shared kTargetPreviewNotReadyCard deleted with both raises. The
     // gate itself is unchanged: the click is still consumed, and
     // chord_is_bound and spell_chord are untouched, so nothing about this
-    // silence says the road is unbound.
+    // silence says the road is unbound. It is asked AFTER the stop above
+    // (architect 2026-09-21), so a click over a live session while the
+    // preview updates ends STOPPED, as every refused launch below does.
     if (app.active_audio_view == 'T' && target_render.is_updating()) {
         return;
     }
@@ -1772,12 +1788,12 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // does nothing further, and CROSSING the threshold cancels the act outright by
 // making the gesture a pan (each click pays scrub_act_at's stop quiescence
 // fence AT MOST once — a stopped session's launch pays none — and the
-// per-column fence cadence class is structurally gone). NOTHING BETWEEN THE
-// PRESS AND THE ACT CAN KILL THE SESSION: the press claims nothing and stops
-// nothing, and the drag-modal gate swallows every chord while the pending
-// stands, so the act still sees the LIVE session — load-bearing for the
-// stop-then-start ruling, whose whole point is that the interrupting click is a
-// stop rather than a launch.
+// per-column fence cadence class is structurally gone). The press claims
+// nothing and stops nothing, and the drag-modal gate swallows every chord
+// while the pending stands, so the act sees the session as it stands at the
+// release; since the scrub always plays (architect 2026-09-21) that reading
+// decides only whether the act pays the stop's fence, never whether it
+// launches.
 void GuiInputHandler::scrub_press_at(int click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.

@@ -316,7 +316,8 @@ struct GuiPlaybackLifecycle {
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
-    // START half of its stop-then-start), which is also the gesture for
+    // launch that follows its stop in the same click, the scrub always
+    // playing since 2026-09-21), which is also the gesture for
     // previewing a SHOWN trim region overlay: click inside it and it auditions
     // from there, the overlay left standing. That act has ONE entry since 2026-08-13 (the lower-half plain
     // press's MOTIONLESS RELEASE — its press-time dispatch moved to the lift
@@ -335,7 +336,7 @@ struct GuiPlaybackLifecycle {
     // ABSENT DEVICE still cards there, being the one refusal the screen cannot
     // show. A live session never
     // launches (defensive; the caller reaches here only with
-    // playback stopped — a scrub act over a live session STOPS it and returns).
+    // playback stopped — the scrub act runs the one stop body first).
     void scrub_launch_at(int64_t frame);
     // THE BOUNDED AUDITION (architect 2026-08-26), the A/B audition's play:
     // launch the scanner from `start` — an ABSOLUTE position in the active
@@ -372,7 +373,7 @@ struct GuiPlaybackLifecycle {
     // actually moving (place_playhead_at_click_column, the ONE caller,
     // compares the sample against the entry playhead); this function
     // unconditionally reseeks when called. The scrub paths no longer come
-    // here — a scrub act only stops or launches (scrub_act_at). Samples outside
+    // here — a scrub act stops and relaunches (scrub_act_at). Samples outside
     // the active view's range — the song in source view, the target buffer's
     // domain in target view — fall back to playback.stop(): keep-alive intent is
     // well-defined for in-range positions only.

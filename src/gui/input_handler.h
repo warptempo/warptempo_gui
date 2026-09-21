@@ -3673,13 +3673,15 @@ private:
     void set_trim_bound_at_click_then_arm_drag(bool is_begin, int mouse_x,
                                                int mouse_y);
 
-    // One scrub ACT at an active-domain frame: STOP, THEN START ON THE NEXT
-    // CLICK (architect 2026-07-27, superseding the 2026-07-23 kill-and-revive).
-    // A click while audio PLAYS is a pure stop — the frame is ignored and
-    // nothing relaunches; a click on a stopped session runs the launch path
-    // (the target-view is_updating gate + scrub_launch_at) at the given frame,
-    // capturing its end_sample freshly there and playing once to it. Sole caller:
-    // the one-shot scrub body (scrub_press_at).
+    // One scrub ACT at an active-domain frame: THE SCRUB ALWAYS PLAYS
+    // (architect 2026-09-21, superseding the 2026-07-27 stop-then-start, which
+    // had superseded the 2026-07-23 kill-and-revive). A live session is ended
+    // through the one stop body and then, in the same act, the launch path
+    // runs (the target-view is_updating gate + scrub_launch_at) at the given
+    // frame, capturing its end_sample freshly there and playing once to it; a
+    // refused launch leaves the click stopped. What the stop ends (the A/B
+    // audition, the car's loop of the trim) is stated at the definition.
+    // Sole caller: the one-shot scrub body (scrub_press_at).
     void scrub_act_at(int64_t frame);
 
     // The scanner scrub body. ONE CALLER since 2026-08-13: the DEFERRED CLICK
@@ -3692,7 +3694,7 @@ private:
     // full-height entry of 2026-08-01 died 2026-08-12 with the right button's
     // unbinding; the marker-text lane's empty-spot scrub was DELETED
     // 2026-07-27.) Given the click's waveform-relative column, run ONE scrub
-    // act (scrub_act_at — stop a live session, else launch) at that column's
+    // act (scrub_act_at — stop a live session, then launch) at that column's
     // frame — the scrub is ONE-SHOT per click (architect 2026-07-23, the
     // Ableton model): the press arms only the pending click, a held press does
     // nothing further, and a drag past the threshold replaces the act with the
@@ -3708,9 +3710,8 @@ private:
     // the overlay and overrides follow, and this one does none of the three.
     // Playback stays alive from the press to the act (the press claims nothing
     // and stops nothing, and the drag-modal gate swallows every chord while the
-    // pending stands), so the act sees the LIVE session — load-bearing for the
-    // stop-then-start ruling: a route that let the session die first would turn
-    // the interrupting click into a launch.
+    // pending stands); since the scrub always plays (architect 2026-09-21),
+    // what the act finds decides only whether it pays the stop's fence.
     void scrub_press_at(int click_rel_x);
 
     // THE POINTER CURSOR'S ZONE MAP — the kind the pointer should be showing at

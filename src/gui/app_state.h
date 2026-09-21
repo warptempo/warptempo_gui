@@ -1222,7 +1222,8 @@ struct TrimDragState {
 //     press-time placement did: deselect-all (the mode-focus clear in the `h`
 //     view), the overlay hide, playhead to the column, live-playback reseek,
 //     follow override. LOWER half — ONE AUDITION SCRUB ACT at the column (stop
-//     a live session, else launch), which touches no selection, no region, no
+//     a live session, then launch — the scrub always plays, 2026-09-21),
+//     which touches no selection, no region, no
 //     cursor and no follow state: that pair of omissions is the halves' one
 //     difference, read honestly as two, and both predate this ruling.
 //     Playback state is read AT the
@@ -1648,8 +1649,9 @@ struct TouchNavZoomState {
 // waveform") — the right button is fully unbound again, a right press a
 // consumed nothing everywhere. The marker-text lane's own scrub was
 // deleted (architect 2026-07-27, and the lane itself in row 5). The act
-// is a ONE-SHOT (scrub_act_at: stop a live session,
-// else start one at the clicked frame), issued once per click — a held press
+// is a ONE-SHOT (scrub_act_at: stop a live session, then start one at the
+// clicked frame — the scrub always plays, architect 2026-09-21, superseding
+// the 2026-07-27 stop-then-start), issued once per click — a held press
 // does nothing further and a drag past the threshold replaces the act with the
 // pan (architect 2026-07-23, the Ableton model; the former
 // per-column re-scrub drag and its drag-state struct are removed — each

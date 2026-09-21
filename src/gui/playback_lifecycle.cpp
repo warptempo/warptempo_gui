@@ -289,8 +289,9 @@ bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
                                     a.playhead_cursor_sample);
 }
 
-// The audition launch entry, the scrub act's stop-then-start START
-// half: begin the scanner from `frame` — an
+// The audition launch entry, the scrub act's launch (which always follows its
+// stop, the scrub always playing since 2026-09-21): begin the scanner from
+// `frame` — an
 // absolute active-paint-domain position (the caller hands it in already
 // clamped to the live domain) — with the resting cursor, selection, region, and
 // follow all untouched. The SCANNER, not the cursor, is what the gesture
@@ -303,9 +304,9 @@ bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
 // the header declaration) — and each launch re-captures the end bound freshly,
 // the point of the fresh-session semantic.
 void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
-    // Defensive: a live session never launches — a scrub act over a live
-    // session STOPS it and returns without reaching here, so the caller always
-    // arrives stopped. This guard only
+    // Defensive: a live session never launches — the scrub act runs the one
+    // stop body before calling here (architect 2026-09-21), so the caller
+    // always arrives stopped. This guard only
     // keeps a future caller from stacking play() over a live run.
     if (playback.is_playing()) return;
     // The same defensive clear toggle_playback's play edge runs (the launch
@@ -343,13 +344,13 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // THE USER-LAUNCH CLEAR (architect 2026-08-26 at the launch body's head;
     // moved up to this entry 2026-09-01): every launch of the user's own
     // transport begins a fresh session, so the A/B audition sequence ends
-    // here whoever asked and whether or not the body below refuses — a scrub
-    // launched DURING ONE OF THE ACT'S RESTS, or inside the sub-tick window
+    // here whoever asked and whether or not the body below refuses — any
+    // launch DURING ONE OF THE ACT'S RESTS, or inside the sub-tick window
     // after a bounded play's natural end (bare Space reads `phase != Idle` as
-    // transport-live and takes the stop side there; the scrub's own fork reads
-    // the audio thread's flag alone, so it is the launch that reaches this
-    // entry with the act standing), can then never be taken for the act's own
-    // play when IT ends. It sits ahead of the delegation exactly as both
+    // transport-live and takes the stop side there; the scrub runs the stop
+    // body first since 2026-09-21, which clears the act ahead of its own
+    // guard, so this clear is its second), can then never be taken for the
+    // act's own play when IT ends. It sits ahead of the delegation exactly as both
     // callers' defensive follow-override clear sits ahead of validation, so a
     // REFUSED user launch still ends a standing act — the guarantee the head
     // clear gave, one call up. THIS ENTRY IS THE ONLY ROAD INTO THE BODY THAT
@@ -715,10 +716,11 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
 // exactly those routes' point
 // (reposition the running audition under the freshly-placed cursor without a
 // restart glitch). The
-// scrub paths never come here: a scrub act over a LIVE session is a pure STOP
-// (scrub_act_at — the clicked frame is ignored, and the NEXT click launches a
-// fresh session from where it lands), so only a stopped session ever reaches
-// scrub_launch_at and no scrub ever repositions a running one.
+// scrub paths never come here: a scrub act over a LIVE session STOPS it and
+// then launches a fresh session at the clicked frame (scrub_act_at — the scrub
+// always plays, architect 2026-09-21, superseding the 2026-07-27
+// stop-then-start), so only a stopped session ever reaches scrub_launch_at and
+// no scrub ever repositions a running one.
 // Both arms carry the same two-frame remainder gate as the launch body (see
 // the rationale at its source arm): a reseek that would leave fewer than two
 // playable frames is out of range, so a live-playback click at the last frame
