@@ -318,8 +318,11 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // (Viewport::displayed_plate_gain_is_stale — its published gain hash
     // against the live effective profile's) answers both halves at once: a
     // camera move that rendered leaves the fingerprint current and nothing more
-    // is owed; a hold that moved no viewport, or none at all coarser than
-    // working, leaves it stale exactly when the profile moved. No hash fallback is kept
+    // is owed; a hold whose offset already matched (or a bare press's
+    // edge-align that found the subject already on screen) moves no viewport
+    // and leaves it stale exactly when the profile moved — at every zoom,
+    // since the hold and the edge-align both run there now (architect
+    // 2026-09-22, the placement-instrument zoom gate retired). No hash fallback is kept
     // for the unwired case: the predicate is wired in main.cpp ahead of the
     // loop, and the drag's release relies on the same wiring; with no plate
     // displayed it answers false and the tick's dirty-detect renders the first

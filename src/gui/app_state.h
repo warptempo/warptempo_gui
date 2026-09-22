@@ -1838,8 +1838,8 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-22 against kDropdownMenus and the chord table (44 chord
-// rows + 3 anchors = 47 = kRedesignButtonCount, re-counted 2026-09-22);
+// re-greped 2026-09-22 against kDropdownMenus and the chord table (45 chord
+// rows + 3 anchors = 48 = kRedesignButtonCount, re-counted 2026-09-22);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -10995,9 +10995,16 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // PRESS WILL TAKE, horizontal_arrow_step(direction, active column) — a
 // painted column on W and M, a hop on the phase-reset column (architect
 // 2026-09-21, the horizontal ladder retired on every column and the P
-// column's arrow unit a hop). The buttons admit no modifier (their keys bind
-// bare only), so the twin rule has no second variant to ask about here, and
-// the face is exact by construction rather than by a proof.
+// column's arrow unit a hop). SINCE 2026-09-22 THIS PREDICATE SERVES FOUR
+// BUTTONS — TransportLeft/Right (bare Left/Right) and their hold-column
+// twins TransportHoldLeft/Right (Ctrl+Left/Right, their own base chords, not
+// an admission) — but Ctrl chooses only the camera term (NudgeCamera::
+// HoldColumn) that finish_position_nudge reads, never the step, so all four
+// ask this predicate identically; none of the four admits a SECOND modifier
+// (redesign_button_shift_admits and redesign_button_ctrl_admits both refuse
+// all four, app_state.h), so the twin rule still has no second variant to ask
+// about on any one button, and each face is exact by construction rather
+// than by a proof.
 inline bool horizontal_arrow_step_actionable(const AppState& app,
                                              const GuiAudio& audio,
                                              int direction) {
