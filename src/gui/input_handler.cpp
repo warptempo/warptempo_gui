@@ -1731,15 +1731,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE ZOOM STEP ON BARE `=` AND BARE `-`: `=` steps the horizontal ZOOM
     // in and `-` out, one level per press (Viewport::zoom_in / zoom_out,
-    // anchored on the playhead through apply_zoom_change). DELETED 2026-09-14
+    // ABOUT THE VIEWPORT'S CENTRE through apply_zoom_step, never the playhead
+    // — architect 2026-09-22). DELETED 2026-09-14
     // for Ctrl+drag and the pinch, RESTORED 2026-09-22 (architect): the
     // tablet's pen has no pinch — the panel refuses a second finger while the
     // pen is down — so the zoom needed a road a single contact can press.
     // BOTH SPELLINGS ARE EXACT, no shift, ctrl or alt: Shift+=, Ctrl+= /
     // Ctrl+- and the keypad KP_Add / KP_Subtract bind nothing, one spelling
-    // per act. The pair is a consumed no-op where the viewport clamp leaves it
-    // nothing to do, and ZOOM OUT'S BUTTON GREYS THERE (zoom_out_step_actionable);
-    // Zoom in stays lit because its floor arm recentres.
+    // per act. Each is a SILENT consumed no-op at its wall — `=` at the floor,
+    // `-` at the per-file ceiling, the benign one-dimensional refusal — and its
+    // button greys there (zoom_in_step_actionable / zoom_out_step_actionable,
+    // the acts' own leading returns).
     //
     // A HELD STEPPING KEY WALKS THE ZOOM at the platform's repeat rate (both
     // spellings are repeat_eligible); the zoom is a camera act with no history,

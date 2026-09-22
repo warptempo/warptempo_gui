@@ -1975,15 +1975,17 @@ enum class RedesignButton {
     // THE STEPPING PAIR WAS DELETED 2026-09-14 (Ctrl+drag and the pinch being
     // the zoom) AND RESTORED WHOLE 2026-09-22 (architect): the tablet's PEN
     // has no pinch — the panel refuses a second finger while the pen is down —
-    // so the pen could zoom out with `0` and never back in. None of these four
+    // so the pen could zoom out with `0` and never back in. The step zooms
+    // ABOUT THE VIEWPORT'S CENTRE, never the playhead (architect 2026-09-22,
+    // Viewport::apply_zoom_step). None of these four
     // BUTTONS hold-repeats (the keys repeat).
     // Every one is a momentary navigation act and LIVE in the `h` view (all
     // four chords are on the mode's allowlist or its own vocabulary, so the
-    // derived partition answers live with nothing hand-listed). THREE NEVER
-    // GREY because each always acts — zoom in recentres on the playhead at
-    // the deepest level, `0` runs `c` at the ceiling, `c` always frames — and
-    // ZOOM OUT GREYS AT THE PER-FILE CEILING (zoom_out_step_actionable, the
-    // arm at redesign_button_enabled). They are the zoom commands' pointer
+    // derived partition answers live with nothing hand-listed). TWO NEVER
+    // GREY because each always acts — `0` runs `c` at the ceiling, `c` always
+    // frames — and THE STEPPING PAIR GREY AT THEIR WALLS, Zoom In at the floor
+    // and Zoom Out at the per-file ceiling (zoom_in_step_actionable /
+    // zoom_out_step_actionable, the arms at redesign_button_enabled). They are the zoom commands' pointer
     // home (the Navigation dropdown that once duplicated them was deleted
     // 2026-08-15).
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
@@ -4615,9 +4617,12 @@ struct AppState {
     //     viewport write AND its level write, the drag's zoom being SONG-ANCHORED
     //     and so carrying the view off the scanner the same way a pan does (a
     //     level change can leave the viewport start bit-identical, which is why
-    //     the site tests both). A pure keyboard ZOOM
-    //     is deliberately NOT a producer: it centers on the scanner during
-    //     playback, so it never leaves the chase.
+    //     the site tests both). THE ZOOM STEP (bare `=` / `-` and its two
+    //     buttons) rides that applier since 2026-09-22 (Viewport::
+    //     apply_zoom_step) and is a producer through it: it zooms about the
+    //     viewport's centre, not the scanner, so it too carries the view off
+    //     the chase. `c` and `0` are not producers — apply_zoom_change centres
+    //     on the scanner during playback, so they never leave the chase.
     //   * the PLACEMENT (place_playhead_at_click_column, input_pointer.cpp),
     //     which moves the cursor and reseeks. The click IS AN AIMING GESTURE
     //     and takes the camera on follow's own precedent — the user placed the
@@ -11431,19 +11436,24 @@ double  effective_max_zoom_level(int waveform_width_px,
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
 
-// WOULD ONE ZOOM-OUT STEP MOVE THE LEVEL? The step asks for one whole level
-// shallower and SATURATES at the per-file ceiling, so it moves nothing exactly
-// when the clamp hands the current level back — read off clamp_zoom_level,
-// the one owner of the level-bounds pair, never a restated number. The
-// live-frames term is that owner's own no-op branch made explicit: with no
-// live frames it returns the level untouched (so as not to stomp a load in
-// progress), and a step on a blank piece is the consumed no-op on_key's
-// loading guard already makes it. TWO READERS: Viewport::zoom_out (the act,
-// whose leading return this IS) and the icon row's ZOOM OUT button's face
-// (redesign_button_enabled). ZOOM IN HAS NO TWIN OF THIS, deliberately: at
-// the deepest level its press RECENTRES on the playhead (Viewport::zoom_in's
-// floor arm), so the button always acts and stays lit — the shape bare `0`
-// has, whose ceiling arm runs the `c` command.
+// WOULD ONE ZOOM STEP MOVE THE LEVEL? Each step asks for one whole level
+// (deeper for Zoom In, shallower for Zoom Out) and SATURATES at its wall — the
+// floor kMinZoom, the per-file ceiling — so it moves nothing exactly when the
+// clamp hands the current level back: read off clamp_zoom_level, the one
+// owner of the level-bounds pair, never a restated number. The live-frames
+// term is that owner's own no-op branch made explicit: with no live frames it
+// returns the level untouched (so as not to stomp a load in progress), and a
+// step on a blank piece is the consumed no-op on_key's loading guard already
+// makes it. TWO READERS EACH: the act (Viewport::zoom_in / zoom_out, whose
+// leading return this IS — a silent no-op at the wall, the benign
+// one-dimensional refusal) and the icon row's button face
+// (redesign_button_enabled), which greys there. THE TWO ARE MIRRORS
+// (architect 2026-09-22, deleting Zoom In's floor arm that recentred on the
+// playhead: the step is a zoom and nothing else).
+inline bool zoom_in_step_actionable(const AppState& a, const GuiAudio& audio) {
+    return live_total_frames(a, audio) > 0 &&
+           clamp_zoom_level(a, audio, a.zoom_level - 1.0) < a.zoom_level;
+}
 inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
     return live_total_frames(a, audio) > 0 &&
            clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
@@ -13819,10 +13829,10 @@ inline bool playback_launch_playable(const AppState& a,
 // on that effect. The effect this rule was written for is the undo-coalescing
 // stamp, and the three wall-refusing acts now run their wall test ahead of it
 // (the rule and its discriminator — the face, not the card — are at
-// Undo::coalesce_gesture). The ladder ends of the zoom: Zoom out greys at
-// the per-file ceiling (zoom_out_step_actionable); Zoom in, `0` and `c` stay
-// lit because each always acts (the first recentres at the floor, the second
-// runs `c` at the ceiling).
+// Undo::coalesce_gesture). The ladder ends of the zoom: Zoom in greys at the
+// floor (zoom_in_step_actionable) and Zoom out at the per-file ceiling
+// (zoom_out_step_actionable); `0` and `c` stay lit because each always acts
+// (`0` runs `c` at the ceiling).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -14397,26 +14407,26 @@ inline bool redesign_button_enabled(const AppState& a,
         // (row 3 is the A/B tabs in every state).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
-        // THE ZOOM GROUP: three of the four MIRROR NOTHING (2026-08-12)
-        // because each always acts on a loaded file — ZOOM IN steps a level
-        // or, at the deepest level, RECENTRES on the playhead
-        // (Viewport::zoom_in's floor arm), FULL ZOOM OUT (bare `0`) runs the
-        // `c` command once it is there, and `c` always frames. FULL ZOOM OUT'S
-        // SHIFT TWIN (Shift+0, Reset Trim, since 2026-09-22) needs no term by
-        // the twin rule: the plain press is always live, and the shifted
-        // press refusing over a full window is the key's own silent no-op.
-        // ZOOM OUT is the one whose press CAN be a consumed no-op — at the
-        // per-file ceiling Viewport::zoom_out returns having moved nothing —
-        // and it GREYS THERE (the truthful-buttons ruling), reading
-        // zoom_out_step_actionable, the act's own leading return over
-        // clamp_zoom_level's bounds; it greys during a load on that owner's
-        // live-frames term too, where the chord drops at on_key's guard. All
-        // four are LIVE in the `h` view — the derived partition finds them on
-        // the mode's allowlist or its own vocabulary.
-        case RedesignButton::IconZoomIn:
+        // THE ZOOM GROUP: two of the four MIRROR NOTHING (2026-08-12)
+        // because each always acts on a loaded file — FULL ZOOM OUT (bare
+        // `0`) runs the `c` command once it is there, and `c` always frames.
+        // FULL ZOOM OUT'S SHIFT TWIN (Shift+0, Reset Trim, since 2026-09-22)
+        // needs no term by the twin rule: the plain press is always live, and
+        // the shifted press refusing over a full window is the key's own
+        // silent no-op. THE STEPPING PAIR are the two whose press CAN be a
+        // consumed no-op — at the floor Viewport::zoom_in, at the per-file
+        // ceiling Viewport::zoom_out, returns having moved nothing — and each
+        // GREYS THERE (the truthful-buttons ruling; Zoom In's floor arm that
+        // recentred on the playhead was deleted 2026-09-22), reading the act's
+        // own leading return over clamp_zoom_level's bounds; both grey during
+        // a load on that owner's live-frames term too, where the chord drops
+        // at on_key's guard. All four are LIVE in the `h` view — the derived
+        // partition finds them on the mode's allowlist or its own vocabulary.
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
             return true;
+        case RedesignButton::IconZoomIn:
+            return zoom_in_step_actionable(a, audio);
         case RedesignButton::IconZoomOut:
             return zoom_out_step_actionable(a, audio);
         // FOLLOW MIRRORS NOTHING: bare `f` always does something on a loaded
@@ -16283,11 +16293,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // category: their axes are the four view selectors' and the view bar's
         // alone now.)
         // THE ZOOM GROUP (2026-08-12); the accelerators are the table's own
-        // convention — a key names its own cap. THREE OF THE FOUR ARE
-        // STATE-FREE HERE ONLY (2026-09-01, the overload): Zoom in at the
-        // floor recentres on the playhead, Full zoom out at the ceiling is the
-        // recall, and Center with nothing focused centers on the playhead —
-        // each press does something, and the overload names which. FULL ZOOM
+        // convention — a key names its own cap. The stepping pair's names are
+        // fixed (each greys at its wall rather than meaning something else
+        // there). TWO OF THE FOUR ARE STATE-FREE HERE ONLY (2026-09-01, the
+        // overload): Full zoom out at the ceiling is the recall, and Center
+        // with nothing focused centers on the playhead — each press does
+        // something, and the overload names which. FULL ZOOM
         // OUT CARRIES THE ONE SECOND LINE (2026-09-22): its shifted twin is
         // Shift+0, RESET TRIM, the words the Show trim region button's line
         // carried for the same act until that button's deletion the same day;
@@ -16773,8 +16784,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
 //   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
-//   Play reads "Stop (Space)" while the transport is live, Zoom in reads
-//   "Center on Playhead (=)" at the floor, Full zoom out reads "Back to
+//   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
 //   Working Zoom (0)" or "Back to Previous Zoom (0)" at the ceiling, Center
 //   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
 //   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
@@ -16972,12 +16982,6 @@ inline RedesignTooltipText redesign_button_tooltip(
             }
             return {redesign_button_tooltip(b).line1, line2};
         }
-        // ZOOM IN AT THE FLOOR recentres on the playhead — Viewport::zoom_in's
-        // second arm, whose compare this is; the button never greys for it.
-        case RedesignButton::IconZoomIn:
-            if (!(a.zoom_level > kMinZoom))
-                return {"Center on Playhead (=)", nullptr};
-            break;
         // CENTER WITH NOTHING FOCUSED centers on the playhead —
         // run_center_command's own fork (center_command_lands_on_focus, the
         // live focus atom outside the `h` view and the mode's own range

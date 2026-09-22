@@ -430,8 +430,9 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
 }
 
 // Apply a zoom change. The numeric target is derived inside; this helper
-// handles the playhead-centered viewport recompute every discrete zoom
-// shares.
+// handles the playhead-centered viewport recompute its callers share (`c`,
+// `0` and the framing acts — the zoom step anchors on the viewport's centre
+// instead, apply_zoom_step).
 void Viewport::apply_zoom_change(double new_zoom_level) {
     if (audio.total_frames() <= 0) return;
     // Pre-clamp the requested level to the per-file window so (a) a c/0 request
@@ -531,19 +532,20 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // on EITHER STRIP AXIS having moved — not on the viewport alone. The ZOOM
     // axis is a first-class producer here: this zoom is SONG-ANCHORED (the
     // grabbed sample stays pinned at its column), so it carries the view off the
-    // scanner just as the pan axis does — unlike the keyboard zoom, which
-    // centers ON the scanner during playback and therefore suppresses nothing.
+    // scanner just as the pan axis does — the zoom STEP included, which rides
+    // this applier about the viewport's centre (apply_zoom_step).
     // The level test is not redundant with the viewport test: a level change can
     // leave viewport_start_sample bit-identical (the anchor pinned at column 0,
     // or the recompute rounding/clamping back onto the same grid point), and
     // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
     // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: BOTH callers —
+    // `level_changed` reports a real move, not a request: ALL THREE callers —
     // the nav drag's zoom phase (apply_nav_zoom_at,
-    // which joined 2026-08-14 with the live-ctrl model) and the two-finger
+    // which joined 2026-08-14 with the live-ctrl model), the two-finger
     // touch-nav body
     // (apply_touch_nav_update, which joined 2026-08-11 driving this same
-    // chokepoint per touch frame) —
+    // chokepoint per touch frame) and the zoom step (apply_zoom_step,
+    // 2026-09-22) —
     // pre-clamp new_level into the same
     // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
     // below, so the pre-assignment compare cannot read a wall-saturated no-op as
@@ -566,7 +568,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // continuous pan's release; mid-gesture events do NOT resync (the predictor
     // keeps extrapolating smoothly for the drag's duration). Repaint dispatch:
     // EVERY frame of the drag takes one SYNCHRONOUS full rebuild — the exact
-    // cost a keyboard zoom pays per press, capped at once per pointer frame by
+    // cost a zoom step pays per press, capped at once per pointer frame by
     // the platform's motion coalescing. Level-changed and pan-only frames are
     // no longer distinguished: the incremental shift-and-strip fast-path the
     // pan-only frames used was retired 2026-07-26, so the drag renders the same
@@ -626,32 +628,49 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     kick_waveform_sync();
 }
 
-// ZOOM IN ALWAYS ACTS, which is why its button has no ladder-end face: at the
-// deepest level the press recentres on the playhead instead of stepping, the
-// second arm below — the step's own anchor with a zero change.
+// THE ZOOM STEP ZOOMS ABOUT THE VIEWPORT'S CENTRE (architect 2026-09-22): the
+// frame under the waveform's centre column before the step is placed at that
+// same column after it, through the strip-drag family's applier — the pinch
+// and the ctrl-drag's own "hold this frame at this column" placement, here
+// with the column fixed at the centre and one terminating event per press.
+// No playhead and no scanner term: the step is a camera act about what the
+// user is looking at. clamp_viewport_start, inside the applier, still wins —
+// near the song's ends the centre frame slides off the centre column, and at
+// the ceiling the whole song is visible. The applier pays what every zoom
+// pays (the synchronous rebuild, the damage, the predictor resync while
+// playing) and clears the whole-song bit on a level move; as a song-anchored
+// camera move it also takes the camera from a follow chase in flight, as the
+// pinch and the ctrl-drag do. Neither step writes `0`'s recall stamp. The
+// caller has already pre-clamped the level (the applier's contract) and
+// asked its actionable predicate, so the level moves.
+void Viewport::apply_zoom_step(double new_zoom_level) {
+    const GuiRect wf_area = waveform_area(app);
+    const double spp = current_samples_per_pixel(app, audio);
+    if (wf_area.w <= 0 || spp <= 0.0) return;
+    const double centre_col = static_cast<double>(wf_area.w) / 2.0;
+    const double centre_frame =
+        static_cast<double>(app.viewport_start_sample) + centre_col * spp;
+    apply_strip_drag_zoom(new_zoom_level, centre_frame, centre_col,
+                          /*final=*/true);
+}
+
+// THE LEADING RETURNS ARE ONE OWNER EACH (zoom_in_step_actionable and
+// zoom_out_step_actionable, app_state.h, which the two buttons' faces read
+// too): at the floor or the effective ceiling the step is a consumed, silent
+// no-op and its button greys.
 void Viewport::zoom_in() {
-    if (app.zoom_level > kMinZoom) {
-        // One whole level deeper from the current (possibly fractional) rung,
-        // clamped constructively at the zoom-in floor.
-        double target = app.zoom_level - 1.0;
-        if (target < kMinZoom) target = kMinZoom;
-        apply_zoom_change(target);
-    } else {
-        // Already at the deepest zoom-in: recenter on the playhead.
-        center_viewport_on_playhead();
-    }
+    if (!zoom_in_step_actionable(app, audio)) return;
+    // One whole level deeper from the current (possibly fractional) rung,
+    // saturating at the floor; clamp_zoom_level is the bounds' one owner, and
+    // past the return above it hands back a level strictly below the current.
+    apply_zoom_step(clamp_zoom_level(app, audio, app.zoom_level - 1.0));
 }
 
 void Viewport::zoom_out() {
-    // THE LEADING RETURN IS ONE OWNER (zoom_out_step_actionable, app_state.h,
-    // which the ZOOM OUT button's face reads too): already at the effective
-    // ceiling, the step is a consumed no-op.
     if (!zoom_out_step_actionable(app, audio)) return;
     // One whole level shallower, saturating at the effective per-file ceiling
-    // (there is nothing beyond it — full zoom-out is whole-song-visible);
-    // clamp_zoom_level is the bounds' one owner, and past the return above it
-    // hands back a level strictly above the current one.
-    apply_zoom_change(clamp_zoom_level(app, audio, app.zoom_level + 1.0));
+    // (there is nothing beyond it — full zoom-out is whole-song-visible).
+    apply_zoom_step(clamp_zoom_level(app, audio, app.zoom_level + 1.0));
 }
 
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {

@@ -341,13 +341,14 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // TWO callers (re-greped 2026-09-16):
+    // THREE callers (re-greped 2026-09-22):
     // the nav drag's zoom phase apply_nav_zoom_at
-    // (pure zoom about the seated pivot — the viewport arrives unpanned) and
+    // (pure zoom about the seated pivot — the viewport arrives unpanned),
     // the two-finger touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the content under the previous finger centroid, placed at
-    // the current one). Both
+    // the current one) and the zoom step apply_zoom_step (the viewport's
+    // centre frame held at the centre column, one final event per press). All
     // pre-clamp the level; this
     // places the anchor at
     // the new level and clamps. For a pure pan
@@ -374,12 +375,16 @@ struct Viewport {
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
     // THE ZOOM STEP (bare `=` / `-` and the icon row's Zoom In / Zoom Out,
     // restored 2026-09-22 — the tablet's pen has no pinch): one whole level
-    // per press through apply_zoom_change, so the step ANCHORS ON THE
-    // PLAYHEAD, centring it (the scanner while playing), and clears the
-    // tab's whole-song state as every level-moving write does. Neither
-    // writes `0`'s recall stamp.
+    // per press, ZOOMING ABOUT THE VIEWPORT'S CENTRE (architect 2026-09-22) —
+    // the frame at the centre column stays there, no playhead or scanner
+    // term — and clearing the tab's whole-song state as every level-moving
+    // write does. Each is a silent no-op at its wall (zoom_in_step_actionable
+    // at the floor, zoom_out_step_actionable at the ceiling), where its
+    // button greys. Neither writes `0`'s recall stamp. apply_zoom_step is the
+    // pair's one applier (contract at the definition, viewport.cpp).
     void zoom_in();
     void zoom_out();
+    void apply_zoom_step(double new_zoom_level);
     // `continuous` marks a drag-driven scroll, which suppresses the per-event
     // playback predictor resync (re-anchored once at gesture end). There is no
     // longer a `synchronous` flag: it selected between the two pan drivers, and
