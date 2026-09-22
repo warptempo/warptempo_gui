@@ -18,9 +18,11 @@ std::string car_transport_title_line(const UndoHistory& history) {
         s += '?';
         return s;
     }
-    // to_string spells a negative with its minus and a zero bare, which is the
-    // distance's whole spelling.
-    s += std::to_string(-static_cast<int64_t>(history.saved_distance));
+    // ALWAYS SIGNED, as a sweep cell's hop entry is (format_signed_hops): the
+    // sign then the magnitude, a zero carrying '+'.
+    const int64_t distance = -static_cast<int64_t>(history.saved_distance);
+    s += distance < 0 ? '-' : '+';
+    s += std::to_string(distance < 0 ? -distance : distance);
     return s;
 }
 

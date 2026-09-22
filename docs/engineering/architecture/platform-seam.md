@@ -1013,7 +1013,7 @@ under a static_assert on one side and `MEDIA_KIND_COUNT` on the other):
   −1 puts no duration key at all, which is Android's "unknown". **WITH THE
   PLAYER CLOSED THE SAME THREE FIELDS CARRY THE PROJECT TRANSPORT'S OWN LINES**
   (architect 2026-09-17): ALBUM stays the project's name, TITLE is WHERE THE
-  SESSION STANDS spelled as a batch cell's basename is (`5_2` — the live
+  SESSION STANDS spelled as a batch cell's basename is (`5_+2` — the live
   state's number in the session walk and its distance from the save) and
   ARTIST is THE A/B TAB AND THE VIEW (`A) T+W`), with the duration THE TRIM
   WINDOW'S LENGTH while the car's loop sounds and unknown at rest —

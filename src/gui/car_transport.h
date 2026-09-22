@@ -62,7 +62,7 @@ struct GuiInputHandler;
 // which carries no tab term of its own), and the TITLE, the big line, is
 // WHERE THE SESSION STANDS, SPELLED AS A BATCH CELL'S BASENAME IS —
 // "<index>_<distance>", the live state's number in the session walk's counting
-// and its distance from the save ("5_2", "3_0", "1_-2" —
+// and its distance from the save ("5_+2", "3_+0", "1_-2" —
 // car_transport_title_line, the formula and the spelling at its declaration) —
 // so a Previous or Next reads back on the console as both numbers stepping
 // together. ONE COMPOSER PER LINE, so a respelling is one edit.
@@ -192,20 +192,21 @@ struct GuiInputHandler;
 // against.
 //
 // <distance> IS HOW FAR THE LIVE STATE STANDS FROM THE SAVE — positive after
-// it, 0 at it, negative behind it — which is −saved_distance under
+// it, zero at it, negative behind it — which is −saved_distance under
 // UndoHistory's sign convention (the saved state is d steps from the live one:
 // 0 at the save, negative when the save lies |d| undos back, positive when it
 // lies d redos ahead; every push, pop, restore and eviction moves it with the
 // stacks). PROJECT OPEN COUNTS AS THE SAVE until the first save: `saved_distance`
 // starts at 0 with `saved_valid` true, so an untouched fresh project reads
-// "1_0". WITH NO SAVE IN REACH (saved_valid false: a push that orphaned a save
+// "1_+0". WITH NO SAVE IN REACH (saved_valid false: a push that orphaned a save
 // lying on the redo side, the cap's eviction of the state it named, or a
 // coalesced burst's net-zero pop at the save) the distance reads `?`, the
 // index still standing.
 //
-// SPELLING: to_string's own — a negative carries its minus, a zero is bare
-// "0", a positive carries no sign. HIS EXAMPLE: open, drop two, save, drop two
-// -> "5_2"; Previous twice -> "3_0"; Previous twice more -> "1_-2".
+// SPELLING: ALWAYS SIGNED (architect 2026-09-22), as a sweep cell's hop entry
+// is (format_signed_hops spells `+2`) — "+2" after the save, "+0" at it, "-2"
+// behind it. HIS EXAMPLE: open, drop two, save, drop two -> "5_+2"; Previous
+// twice -> "3_+0"; Previous twice more -> "1_-2".
 std::string car_transport_title_line(const UndoHistory& history);
 
 struct GuiCarTransport {
@@ -362,8 +363,8 @@ private:
     // not called `title`: it is spelled by car_transport_title_line, whose
     // `<index>_<distance>` line HAPPENS TO SPELL exactly the identity this
     // latch needs — the live state's own number, which every undo and redo
-    // moves — and a retune of that line's spelling (it changed once already,
-    // 2026-09-17) must be read as a change to a wire string and never as a
+    // moves — and a retune of that line's spelling (it changed on 2026-09-17
+    // and again on 2026-09-22) must be read as a change to a wire string and never as a
     // silent change to this staleness test.
     //
     // WHY THE COMPOSITE AND NOT THE BARE UNDO DEPTH: undo, then author a new

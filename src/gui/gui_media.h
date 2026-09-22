@@ -145,7 +145,7 @@ struct GuiMediaState {
     // auto-advance.
     //
     // WITH THE PLAYER CLOSED: WHERE THE SESSION STANDS, SPELLED AS A BATCH
-    // CELL'S BASENAME IS — "<index>_<distance>", "5_2" (the live state's
+    // CELL'S BASENAME IS — "<index>_<distance>", "5_+2" (the live state's
     // number in the session walk's counting and its distance from the save),
     // composed by car_transport_title_line (car_transport.h, the formula
     // there).
