@@ -661,14 +661,11 @@ struct GuiPaintHandler {
     // transform and walks no warp map. NOTHING IS STORED and there is no
     // endpoint pair to normalize — do not reintroduce either; the overlay cannot
     // drift from the 10 px bar because both read the one trim.
-    // THREE consumers, and the last is why this is PUBLIC: paint_region_ground
-    // and paint_region_ink draw the overlay's two halves from it — the ground
-    // and the ink cannot disagree about where it is — and
-    // GuiInputHandler::region_manipulation_hit (input_pointer.cpp) HIT-TESTS the
-    // shown overlay's move zone and its two grab bands from the same call on the
-    // same PLATE basis — so a grabbed bound is exactly a painted one, by
-    // construction rather than by two derivations agreeing. It stays a named
-    // helper because the column pair is a rule, not an inline expression.
+    // TWO consumers: paint_region_ground and paint_region_ink draw the
+    // overlay's two halves from it, so the ground and the ink cannot disagree
+    // about where it is. (A third, the overlay's hit test, left with the
+    // overlay's resting drags on 2026-09-22.) It stays a named helper because
+    // the column pair is a rule, not an inline expression.
     struct RegionColumns {
         int lo_col = 0;
         int hi_col = 0;
@@ -772,9 +769,10 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-two
-    // view/mode/action buttons since the IGNORE WAVEFORM MAGNIFICATION lamp joined
-    // them 2026-09-22, twenty-one from the FLATTEN button's arrival from the
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-one
+    // view/mode/action buttons since the Show trim region button's deletion
+    // later on 2026-09-22, twenty-two from the IGNORE WAVEFORM MAGNIFICATION
+    // lamp's arrival that day, twenty-one from the FLATTEN button's arrival from the
     // bottom row 2026-09-19, twenty from the two view lamps' whole-category
     // deletion 2026-09-15 and twenty-two before that —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout,

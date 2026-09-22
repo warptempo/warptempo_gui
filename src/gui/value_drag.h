@@ -18,7 +18,7 @@ struct GuiTargetRender;
 // move up and down or not at all."
 //
 // THE PRESS IS THE MARKER DRAG'S: run_marker_click_act runs at the press
-// (stop, select, land, address the cell, hide the trim overlay) and arms
+// (stop, select, land, address the cell) and arms
 // PendingMarkerPress; the crossing of the shared drag threshold forks on the
 // posture and begins exactly one of the two gestures. So this unit owns no press
 // path, no selection write and no playhead write — a value change is not a

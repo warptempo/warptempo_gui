@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "input_handler.h"      // land_playhead_on_marker (the collapse's
-                                // land, which owns the overlay hide)
+                                // land)
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // painted_column_of_source_frame,
                                   // authored_frame_at_column,
@@ -251,13 +251,11 @@ void finish_position_nudge(
     if (camera == NudgeCamera::HoldColumn)
         viewport.hold_subject_column_after_nudge(prior_subject_sample,
                                                  prior_viewport_start);
-    // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
-    // exactly like the marker click that would have selected that singleton,
-    // and discarding nothing — the trim stands behind it. IT NEEDS NO CALL OF
-    // ITS OWN since 2026-08-19: the follow at (e) and the prologue's collapse
-    // land both go through a movement owner, which owns the hide (the rule at
-    // clear_region_highlight, input_handler.h). Groups are never moved (the
-    // doctrine at the declarations), so there is no extent to maintain here.
+    // (g) A POSITION NUDGE ENDS AN A/B AUDITION, needing no call of its own:
+    // the follow at (e) and the prologue's collapse land both go through a
+    // movement owner (the rule at Viewport::move_playhead_to, viewport.cpp).
+    // Groups are never moved (the doctrine at the declarations), so there is
+    // no extent to maintain here.
     // (h) view-independent target preview — ON THE TWO COLUMNS THAT REACH ONE.
     // The pointer is null exactly on the magnification level column, whose
     // positions are display-only (the rule and why it is a pointer are at the

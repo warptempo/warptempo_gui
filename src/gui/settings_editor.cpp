@@ -495,20 +495,17 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             // THE NAVIGATION-JUMP CLASS (architect 2026-07-29, no exemptions):
             // this is a playhead jump to an arbitrary typed position — a
             // non-marker spot — so it LEAVES the marker lane exactly as Home/End
-            // do, and it clears the SELECTION and HIDES THE OVERLAY the way they do
+            // do, and it clears the SELECTION the way they do
             // (the precedent and its rationale live at the Home/End arms in
             // input_key_dispatch.cpp: a flag left selected would go on claiming
             // to be the playhead at its own position, and the next bare arrow
             // would tow the playhead back onto the marker, silently discarding
-            // the jump). Collapse is cheap; leaving the overlay standing across
-            // an arbitrary jump is worth less than the confusion it buys, and
-            // hiding it discards nothing. THE HIDE IS THE MOVEMENT OWNER'S since
-            // 2026-08-19 — it rides move_playhead_to below, the rule at
-            // clear_region_highlight (input_handler.h) — so this arm spells only
-            // its selection clear. The INACTIVE arm
+            // the jump). Collapse is cheap. The movement is move_playhead_to's
+            // below, which ends an A/B audition as every movement does, so this
+            // arm spells only its selection clear. The INACTIVE arm
             // below writes the other tab's stored cursor, moves nothing live,
-            // and stays out of this entirely (it reaches no owner, so it hides
-            // nothing, which is exactly right).
+            // and stays out of this entirely (it reaches no owner, which is
+            // exactly right).
             if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
                 selection.clear_selection();
                 viewport.invalidate_waveform_area();
@@ -601,7 +598,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // fails the SHARED validator (validate_gui_setting, settings_file.h —
         // the same grammar the whole-file load runs, so a spelling is loadable
         // iff it commits) and red-flashes like any other invalid value, with no
-        // second spelling of the refusal here. Shift+[ is the maximizer.
+        // second spelling of the refusal here. Shift+0 is the maximizer.
         const int64_t v = gv.i64;
         // Per-bound walls, exactly the load guard's compare: both bounds
         // 0..EOF-1, the unified inclusive [0, total-1] authored domain.
@@ -844,11 +841,8 @@ void GuiSettingsEditor::commit() {
     viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
     // (THE ENGINE COMMIT'S WHOLESALE OVERLAY HIDE IS DELETED, 2026-08-19, with
-    // the call-site inventory it belonged to. THE OVERLAY HIDES WHEN THE
-    // PLAYHEAD'S POSITION IN THE MUSIC CHANGES, WHEN A MARKER IS TOUCHED AND
-    // WHEN THE SWEEP ENDS —
-    // the rule at clear_region_highlight, input_handler.h — and a typed engine
-    // key does none of the three. It stood here from 2026-07-29 on the argument that the
+    // the call-site inventory it belonged to; the resting overlay itself went
+    // on 2026-09-22. It stood here from 2026-07-29 on the argument that the
     // scale is a warp-map input, so the commit rebuilds the target map
     // underneath a span measured against the OLD map; that argument died on
     // 2026-08-18 when the region became the trim, the span being DERIVED from
@@ -897,8 +891,8 @@ void GuiSettingsEditor::commit() {
     // re-land exists to prevent, and left an edit-then-undo landing the cursor
     // where neither the edit nor the undo put it. THROUGH THE RESEAT, never a
     // movement owner: an image moving out from under a resting cursor is a
-    // TRANSLATION, so the trim region overlay must stand (the rule at
-    // clear_region_highlight, input_handler.h). Source view needs nothing —
+    // TRANSLATION, not a movement in the music (the rule at
+    // Viewport::move_playhead_to, viewport.cpp). Source view needs nothing —
     // the identity domain, where the inverse above and this forward map are
     // both identity and the write is the value the cursor already holds.
     if (app.active_audio_view == 'T') {

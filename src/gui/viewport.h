@@ -154,7 +154,7 @@ struct Viewport {
     //    re-keys the profile (waveform_gain_profile_cached,
     //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
     //    with no gain-change kick of its own.
-    //    (The gain gate's other inputs are the AUDIO VIEW and the `]` LAMP —
+    //    (The gain gate's other inputs are the AUDIO VIEW and the `[` LAMP —
     //    effective_waveform_gain_profile answers the empty profile in target
     //    view, and in source view while the lamp is lit. The S/T flip owes no
     //    gain kick of its own, running an unconditional kick_waveform_sync;
@@ -270,7 +270,7 @@ struct Viewport {
     // changes the store and not the profile, and must not drain the worker and
     // re-render the whole plate. (Every level-writing caller runs with the
     // MAGNIFICATION LEVEL COLUMN ACTIVE, which is source view by construction;
-    // while the `]` lamp is lit the gate answers flat on both sides of its
+    // while the `[` lamp is lit the gate answers flat on both sides of its
     // write, so the hashes agree and nothing renders — the picture being
     // flat, that is the right answer.)
     uint64_t waveform_gain_hash() const;
@@ -319,16 +319,14 @@ struct Viewport {
     }
 
     // Viewport mutators.
-    // THE MOVEMENT OWNER — the cursor's live chokepoint, and since 2026-08-19
-    // one of the TWO sites that HIDE the trim region overlay (the other being
-    // land_playhead_on_source_frame). A command that reaches this function is
-    // moving the playhead's position in the music, which is the whole hide rule;
-    // the rule and its exemptions are stated once at clear_region_highlight
-    // (input_handler.h). The hide is UNCONDITIONAL — a Home that lands on the
-    // frame the cursor already holds still hides, which is the 2026-08-15 ruling
-    // the bottom row's ungreyed skip buttons rest on.
+    // THE MOVEMENT OWNER — the cursor's live chokepoint, and one of the TWO
+    // owners that END THE A/B AUDITION (the other being the land). A command
+    // that reaches this function is moving the playhead's position in the
+    // music; the rule and its exemptions are stated once at the definition
+    // (viewport.cpp). UNCONDITIONAL — a write onto the frame the cursor already
+    // holds still ends the act.
     void move_playhead_to(int64_t new_sample);
-    // THE RESEAT — the identical write with NO hide, for the callers whose write
+    // THE RESEAT — the identical write with NO audition end, for the callers whose write
     // is not a movement (contract at the definition, viewport.cpp). Named rather
     // than spelled as a flag on the mover: "skip the rule this time" would be the
     // old hand-listed inventory in disguise. Its callers are named at the

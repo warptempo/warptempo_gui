@@ -395,7 +395,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
-    // IGNORE WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-22): a display
+    // IGNORE WAVEFORM MAGNIFICATION, bare `[` (architect 2026-09-22): a display
     // posture about the picture, authoring nothing the lock protects, so it
     // is admitted on a locked tab — and under the grid-iterations lock, whose
     // gate falls through to this list and which stands in target view alone,
@@ -454,11 +454,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // persistent, so both are read-only-safe like every one of Esc's bindings (the
     // authoritative enumeration is at its dispatch point in on_key,
     // input_handler.cpp; no count belongs here), and dropping Esc at this gate
-    // would break it. THE REGION HIDE WAS THE OTHER ADMISSION UNTIL 2026-08-21
-    // (a locked tab can raise the trim region overlay, bare `[` and its button
-    // being read-only-legal on the trim band ruling, so Esc had to be able to
-    // put it down again) — with the hide retired, `[` itself is that road both
-    // ways and is admitted on its own arm.
+    // would break it. (THE REGION HIDE WAS THE OTHER ADMISSION UNTIL
+    // 2026-08-21; the resting trim overlay it hid is itself deleted since
+    // 2026-09-22.)
     const bool is_esc =
         (key == GuiKeys::Escape && !ctrl && !shift && !alt);
     const bool is_ctrl_q =
@@ -502,28 +500,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_render_misc =
         (ctrl && alt && shift && key == GuiKeys::R);
-    // THE TRIM GESTURES (architect 2026-08-07): Shift+[ maximizes the trim
-    // window back to the full song, and bare `[` SHOWS AND HIDES THE TRIM
-    // REGION OVERLAY — the other half of the same surface. Trim is BAND, not
-    // content (the header), so both are admitted, and their internal behavior
-    // is untouched: the maximizer's identity guard, the setter's deselect, the
+    // RESET TRIM (architect 2026-08-07, on its key since 2026-09-22): Shift+0
+    // maximizes the trim window back to the full song. Trim is BAND, not
+    // content (the header), so it is admitted, and its internal behavior is
+    // untouched: the maximizer's identity guard, the setter's deselect, the
     // playhead park and the trim-mutation playback stop are all the same code
-    // taking the same decisions. The TOGGLE is the easier of the two to admit —
-    // it writes no trim bound at all, only a session visibility bit and then
-    // the viewport, which is strictly less than the write the band ruling was
-    // argued over, the SET act it replaced on 2026-08-18 having written a
-    // bound. THE PAIR MOVED ONTO THE BRACKET ON 2026-08-24 (the architect's
-    // reason is at the dispatch arms, input_handler.cpp) and the terms below
-    // are named for the ACTS rather than for a key, which is what kept this
-    // move to a spelling change. Of the keys the pair left, Shift+X answers
-    // nothing here or anywhere, as Ctrl+Shift+X has not since 2026-08-18 (the
-    // strict-modifier rule makes an unbound combination a no-op everywhere),
-    // and so does bare `x` since 2026-09-13 (the VALUE DRAG LAMP's chord from
-    // 2026-09-10, deleted with that lamp for a posture the view derives).
-    const bool is_trim_region_toggle =
-        (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft);
-    const bool is_trim_maximize =
-        (!ctrl && shift && !alt && key == GuiKeys::BracketLeft);
+    // taking the same decisions. The term is named for the ACT rather than a
+    // key, which is what kept each of its moves (x → Shift+[ on 2026-08-24,
+    // Shift+[ → Shift+0 on 2026-09-22) a spelling change here. The trim
+    // region toggle that was admitted beside it is deleted (2026-09-22).
+    const bool is_trim_maximize = is_trim_maximize_key(key, mods);
     // ADD TO SELECTION (architect 2026-08-18), and it is admitted on the
     // header's own standard rather than a new one: the chord flips a session
     // bit that changes what a PLAIN FLAG CLICK means, and the click it enables
@@ -608,7 +594,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // absent (blocked here); `'` LEFT that list on 2026-09-01 for a
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
-    // 2026-08-07 — see is_trim_region_toggle above.
+    // 2026-08-07 — see is_trim_maximize above.
     return !(is_o || is_open_project || is_revert_project || is_sync_external ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
@@ -621,7 +607,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
              is_save || is_render || is_render_misc ||
-             is_trim_region_toggle || is_trim_maximize ||
+             is_trim_maximize ||
              is_add_to_selection ||
              is_play_renders || is_av_sync_stats ||
              is_load_in_place_player ||
@@ -1109,12 +1095,9 @@ void GuiInputHandler::close_history_mode() {
     // class. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR MUTATION
     // CONCERN: it is a view preference about whether the user is looking at the
     // trim, and this view neither touches the trim nor offers a way to raise or
-    // lower the overlay — bare `[` is consumed in the mode and its button greys
-    // — so an overlay shown before `h` must survive the visit intact or the
-    // user gets it back only by pressing a key the mode has taken away. The
-    // 2026-08-05 view-local reading it inherited died with the view-local span
-    // itself on 2026-08-18. The mode's PLAYHEAD-MOVING and SELECTION-CHANGING
-    // routes still hide, exactly as their live twins do.)
+    // lower the overlay. The 2026-08-05 view-local reading it inherited died
+    // with the view-local span itself on 2026-08-18, and the resting overlay
+    // itself on 2026-09-22 — it stands only while a sweep draws it.)
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
     // counts VISITS rather than describing one: letting it fall back to zero
     // would let a close-then-open pair reissue a number the flag cache has
@@ -1314,8 +1297,8 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // THE ORDER IS FIXED at every caller, and it is ONE rule at all four now that
 // the view writes no viewport anywhere: this call comes LAST of the acts that
 // change what the lane should show. In view that is the state write (the walk
-// index, or the source/reading pair), the focus clear, the stash drop and the
-// region hide, THEN this; at the exit it is the whole-struct reset, the stash
+// index, or the source/reading pair), the focus clear and the stash drop,
+// THEN this; at the exit it is the whole-struct reset, the stash
 // drop, THEN this. Everything the rebuild reads must already be true —
 // `history_mode.active` decides which arm of the flag cache runs, and the
 // index, focus and compare fields decide what that arm publishes, so a call
@@ -1633,7 +1616,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // commits" stays true, no cancel semantics appear, and by the time the mode
 // resets the gate's invariant holds again exactly as it does for a key. It runs
 // BEFORE the close so each gesture ends against the state it was made in, and
-// the close's own region hide and band restore then land over the top.
+// the close's own band restore then lands over the top.
 //
 // ONE PRODUCER, and it is narrow: a view opened mid-scan ON A BOOTSTRAPPED
 // REMOTE WALK whose run then fails. A run that had already failed lands the
@@ -2028,10 +2011,7 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // writes.
     clear_history_mode_focus(app.history_mode);
     app.history_mode.focus = there;
-    // THE LAND HIDES THE TRIM REGION OVERLAY (2026-08-19 — it is one of the
-    // rule's two movement owners; the rule is at clear_region_highlight,
-    // input_handler.h), so the walk's own hide is deleted with the inventory
-    // it belonged to. Every branch that reaches here lands, so nothing is lost.
+    // Every branch that reaches here lands, through the movement owner.
     land_playhead_on_source_frame(
         app, audio, viewport,
         app.history_mode.flags[static_cast<std::size_t>(there)].time_frame);
@@ -2187,7 +2167,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // own bit through the same switch owner the walk toggle above uses, so a
     // reading change is
     // the SAME MODE EDGE a walk change is — focus and selection cleared, lane
-    // stash dropped, region hideed, lane republished synchronously, window
+    // stash dropped, lane republished synchronously, window
     // damaged — and the two can never come to do different amounts of work.
     //
     // ONE-SHOT, NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the bare
@@ -2317,14 +2297,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // (architect 2026-08-05). Each is the live arm's gesture read against the
     // mode's own data — the diff-flag list and the mode's own focus — never the
     // live-marker machinery, which navigates by markers the lane is not showing.
-    // THEY KEEP THE LIVE ARMS' PLAYBACK AND REGION REGIMES: a keyboard command
-    // that commits a new cursor position stops a live audition and HIDES the
-    // trim region overlay (the keyboard stop rule at stop_playback_if_playing,
-    // whose cursor-moving navigation class names Home/End and the Tab family;
-    // the hide follows from the movement owners these arms write through, the
-    // rule at clear_region_highlight). That is where they part from the mode's
-    // diff-flag CLICK on the STOP alone — the click's own land hides just as
-    // these do, and it is the stop it deliberately omits.
+    // THEY KEEP THE LIVE ARMS' PLAYBACK REGIME: a keyboard command that
+    // commits a new cursor position stops a live audition (the keyboard stop
+    // rule at stop_playback_if_playing, whose cursor-moving navigation class
+    // names Home/End and the Tab family) and writes through the movement
+    // owners. That is where they part from the mode's diff-flag CLICK on the
+    // STOP alone — the click lands through the same owner, and it is the stop
+    // it deliberately omits.
     // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
     // (recorded at the arms 2026-08-06, where the docs had carried it alone):
     // the entry owner stops any session running before `h` and nothing in the
@@ -2490,8 +2469,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             forks on the mode bit, so the second arm reads the
 //                             diff-flag focus like every other mode-local
 //                             re-expression — 2026-08-05). That arm is not a
-//                             pure viewport move: it is `c`, region hide, stop
-//                             and land included, admitted on exactly the reason
+//                             pure viewport move: it is `c`, stop and land
+//                             included, admitted on exactly the reason
 //                             `c` itself is claimed one line above the gate.
 //   - PageUp/PageDown       → the paged viewport scroll
 //     (bare)                  — the three above are NAVIGATION, which is the
@@ -2538,8 +2517,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             moves `t` can make (its selection-gated re-land)
 //                             are navigation, which is already this mode's
 //                             vocabulary — its own diff-flag click lands the
-//                             playhead too. The region hide is a visibility
-//                             bit that discards nothing, the
+//                             playhead too. The
 //                             playback stop is running state, and the flag-
 //                             editor teardown is unreachable here (no editor can
 //                             be open while this gate is reached at all — see
@@ -2754,9 +2732,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             frozen now side is untouched — the same argument
 //                             the read-only allowlist admits Esc on. (The REGION
 //                             HIDE was the other one the admission bought until
-//                             2026-08-21, when it retired: an overlay carried in
-//                             from before `h` now leaves by the rule or by bare
-//                             `[` outside the view.)
+//                             2026-08-21, when it retired; the resting overlay
+//                             it hid is itself deleted since 2026-09-22.)
 //                             IT CANNOT CLOSE THE VIEW, structurally rather than
 //                             by refusal: the toggle is handle_history_mode_key's,
 //                             and that function's whole vocabulary
@@ -4103,8 +4080,8 @@ void GuiInputHandler::run_history_revert() {
         // cursor's NUMBER was expressed in, and keeping that number would move
         // the cursor in the music. THROUGH THE RESEAT and never a movement
         // owner — an image moving out from under a resting cursor is a
-        // TRANSLATION, so the trim region overlay stands (the rule at
-        // clear_region_highlight, input_handler.h). THE PHASE ARM IS CARVED OUT
+        // TRANSLATION, not a movement (the rule at Viewport::move_playhead_to,
+        // viewport.cpp). THE PHASE ARM IS CARVED OUT
         // BY THE MAP: phase resets are no warp-map input, so a phase revert
         // moves no image and the cursor's number still names the same instant;
         // a reseat there would only pay the inverse's rounding for nothing.
@@ -8381,8 +8358,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // The playhead land rides enter_text_edit (the shared open chokepoint):
         // it lands on `owner`, the EARLIEST selected, while the focus that built
         // this span sits wherever the multi-select click left it (those clicks
-        // land on their focus — land_playhead_on_marker, input_pointer.cpp), and
-        // it hides the trim region overlay as every point command does. The
+        // land on their focus — land_playhead_on_marker, input_pointer.cpp). The
         // open also collapsed the selection to {owner} on the way through. The
         // re-insert below restores the MEMBERSHIP only — std::set::insert leaves
         // last_selected_marker alone — so the focus stays `owner`. NOTHING
@@ -8438,9 +8414,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // the mode's DIFF flags: a plain diff-flag press then runs the mode's ctrl
     // body, the only road onto that multi-selection a finger has. The view
     // consumed the chord until that day, when the lamp produced nothing in it.
-    // It stops no playback and hides no overlay: turning
-    // the mode on IS NOT a selection act — the click that follows is, and that
-    // click runs the marker act's own stop and region hide.
+    // It stops no playback: turning the mode on IS NOT a selection act — the
+    // click that follows is, and that click runs the marker act's own stop.
     //
     // THE REPAINT IS THE BOTTOM LANE'S — the button's lamp lives there, so
     // this takes the row's own damage fork (invalidate_rect on
@@ -8826,9 +8801,8 @@ void GuiInputHandler::copy_focused_marker_value() {
 //     previously parked marker;
 //   * land_playhead_on_marker on that same index — the landing owner the plain
 //     click uses, the selection road above landing nothing of its own — and,
-//     being one of the two MOVEMENT owners, it stops playback, ends a standing
-//     audition and hides the trim region overlay, so this body writes none of
-//     that;
+//     being one of the two MOVEMENT owners, it ends a standing audition, so
+//     this body writes none of that;
 //   * run_center_command AGAIN, now on the tab that landed, which puts the
 //     working zoom on the FOCUSED marker — the source, by the single-select
 //     above, so the camera and the cursor cannot come to name two different
@@ -9223,14 +9197,12 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // architect 2026-08-24). Both come back pre-clamped, and the clamp is idempotent
 // on what move_playhead_to would clamp anyway.
 //
-// THE THREE STEPS STILL RUN UNGATED past the head refusal: the audition stop,
-// the lane exit's selection clear and the overlay hide are unconditional
-// wherever the body runs, and the head refusal fires only when all three
-// WOULD do nothing and the jump would not move — the actionability owner's
-// terms are this body's own writes, so the two cannot disagree. The hide is
-// unconditional AT ITS OWNER (move_playhead_to hides before it writes,
-// whatever the write turns out to be — the rule at clear_region_highlight,
-// input_handler.h); the trim it derives from is untouched by any of this.
+// THE STEPS STILL RUN UNGATED past the head refusal: the audition stop and
+// the lane exit's selection clear are unconditional wherever the body runs,
+// and the head refusal fires only when both WOULD do nothing and the jump
+// would not move — the actionability owner's terms are this body's own
+// writes, so the two cannot disagree. (A third step, the trim overlay's hide,
+// left with the overlay's resting form on 2026-09-22.)
 // THE SUCCESSION: the skips did not grey from 2026-08-15 to 2026-08-30 (a
 // landing-only grey promised less than this body delivers, and gating the
 // three steps to make it honest would change behaviour); the truthful-buttons
@@ -9246,8 +9218,8 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
     // already at its state says nothing — the playhead is one mark in one
     // place, and the glance that asks "did it move?" is the same glance that
     // answers it; the greyed skip button is the standing cue. The owner's
-    // terms are exactly this body's writes — the stop, the clear, the mover's
-    // overlay hide and the landing — so past this return at least one act
+    // terms are exactly this body's writes — the stop, the clear and the
+    // landing — so past this return at least one act
     // below does real work or the jump moves.
     if (!playhead_end_jump_actionable(app, audio, forward, whole_piece)) {
         return;
@@ -9268,8 +9240,8 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 // column on W and M, ONE HOP — kRs target frames — on the phase-reset column,
 // the recorded exception keyed on the column and never on the subject. The
 // landing owner forks on the unit (playhead_arrow_step_landing, app_state.h);
-// everything below — the stop, the clear, the camera, the overlay hide —
-// is the same for both. TWO CALLERS, one per camera (NudgeCamera, gui_input.h
+// everything below — the stop, the clear, the camera — is the same for
+// both. TWO CALLERS, one per camera (NudgeCamera, gui_input.h
 // — architect 2026-09-22): handle_plain_bare_keys' Left / Right case below
 // (FollowEdge) and on_key's Ctrl+Left / Ctrl+Right arm (HoldColumn). It was
 // written inline in that switch until the ladder gave it a second site, and
@@ -9295,13 +9267,11 @@ void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step,
         selection.clear_selection();
         viewport.invalidate_waveform_area();
     }
-    // Navigation playhead step: the overlay hide is the MOVEMENT OWNER's,
-    // reached through move_playhead_by_arrow_step -> move_playhead_to (the rule at
-    // clear_region_highlight, input_handler.h). The playhead is leaving the
-    // overlay, and hiding discards nothing. AT THE WALL the landing is the
-    // cursor itself (playhead_pixel_step_landing, the owner the Left
-    // button's face reads since planner decision 60): the key still runs
-    // the stop, the clear and the hide, the greyed button none of them. THE
+    // Navigation playhead step, through the MOVEMENT OWNER
+    // (move_playhead_by_arrow_step -> move_playhead_to). AT THE WALL the
+    // landing is the cursor itself (playhead_pixel_step_landing, the owner the
+    // Left button's face reads since planner decision 60): the key still runs
+    // the stop and the clear, the greyed button neither of them. THE
     // WALL IS THE SAME WALL IN BOTH UNITS — the landing owner clamps into the
     // live domain, so a hop near the end lands exactly ON the end and one
     // already resting there moves nothing; the buttons' face asks the same
@@ -9393,7 +9363,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
         break;
-    case GuiKeys::BracketRight:
+    case GuiKeys::BracketLeft:
         // Toggle the Ignore Waveform Magnification lamp (architect
         // 2026-09-22): dark shows the magnification in source view, lit
         // flattens it. The

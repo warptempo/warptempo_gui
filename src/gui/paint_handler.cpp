@@ -315,7 +315,7 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     "Synchronize to External Storage", "Paste Phase Reset State", "AV Sync
 //     Stats"), a modal row's WORD button ("Copy to
 //     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
-//     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Trim Region ([)").
+//     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Follow (F)").
 //     The evidence is kdenlive's own: the Title Case hover on an icon button
 //     IS the QAction's name echoed back by Qt, while every tooltip kdenlive
 //     writes by hand is a sentence. A LAMP'S "Toggle <Mode> (<key>)" IS A NAME
@@ -356,7 +356,7 @@ constexpr double kMenuPillRadiusPx = 5.0;    // the crop's AA fits r ~ 4.6
 //     set"), and the routing/category tokens that are data rather than prose.
 //   * KEY NAMES ARE QT'S, and so kdenlive's — Esc, Del, Return, Backspace,
 //     PgUp, PgDown, Space, Tab, Home, End — with a BARE LETTER UPPERCASE and
-//     punctuation naming the CAP rather than the stamped symbol ("Shift+[").
+//     punctuation naming the CAP rather than the stamped symbol ("Shift+/").
 //     The spelling's one owner is spell_chord's head (gui_input.h).
 //   * AN APPENDED REASON IS LOWERCASE: "<Act> refused: <reason>" is ONE
 //     sentence, so its tail starts no second one. A producer whose string is
@@ -971,38 +971,24 @@ constexpr IconRowDef kIconRowButtons[] = {
     // joined the zoom group, dissolving two separator-led groups into it; the
     // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
-    // carries the current count — TWENTY-TWO in FIVE.)
-    // THE ZOOM GROUP OPENS HERE SINCE 2026-08-27 (architect), on the
-    // separator the TRIM GROUP had held since 2026-08-11 — the scissors opened
-    // it then, the Show trim region button filled it on 2026-08-16 and led it
-    // later that day, the scissors were deleted on 2026-08-18 leaving it one
-    // member, and this ruling merged that one member into the zoom buttons
-    // behind it by DELETING THE BOUNDARY IN FRONT OF THEM. The architect's
-    // 2026-08-11 placement ("place it after the warp/phase radio buttons,
-    // create a new separator") is where the merged group still sits, and the
-    // group he opened it as — a home for VIEWPORT-RELATED ACTS — is what the
-    // merge finishes: the trim overlay, the two zoom commands and
-    // FOLLOW, all in one separator-led run (the vertical magnification pair
-    // that stood among them retired 2026-09-14). THIS TABLE IS THE
+    // carries the current count — TWENTY-ONE in FIVE.)
+    // THE ZOOM GROUP OPENS HERE, on the separator the TRIM GROUP held from
+    // 2026-08-11 — the scissors opened it then, the Show trim region button
+    // filled it on 2026-08-16, the scissors were deleted on 2026-08-18, and on
+    // 2026-08-27 (architect) that one member merged with the zoom buttons
+    // behind it by DELETING THE BOUNDARY IN FRONT OF THEM. The Show trim
+    // region button itself — bare `[`, wearing tool-rect-selection — was
+    // deleted on 2026-09-22 (the tablet's pen reaches the trim bar, so the
+    // overlay stands only while a sweep draws it), and FULL ZOOM OUT leads
+    // the group since: one box and one 2px gap off the walk, no separator
+    // moving. What the group collects is the VIEWPORT CLASS — the two zoom
+    // commands, the magnification lamp, FOLLOW and RESTRICT UNDO — all in
+    // one separator-led run. THIS TABLE IS THE
     // ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
     // plus the group's leader in redesign_button_opens_icon_group
     // (app_state.h) and the roster enum's own order, which the three keep in
     // step. No count, no gap and no width follows a swap.
-    //   bare `[`, the trim region toggle (bare `x` until 2026-08-24,
-    //   Ctrl+Shift+X until 2026-08-18). The glyph is TOOL-RECT-SELECTION,
-    //   the marching-ants rectangle — the
-    //   architect's pick, taken at 22px though he named the 24px path (same
-    //   rectangle, and 22 is the set's convention). A TOGGLE with a lamp on the
-    //   overlay's visibility, and NO SECOND GLYPH for the hidden half: every
-    //   eye-shaped alternative collides with ViewHidden, which is already
-    //   IconMarkerDisable (the ruling is at the roster entry, app_state.h).
-    // (THE SCISSORS SAT SECOND HERE — bare `x`, set trim from region, wearing
-    // Breeze's EDIT-CUT — from 2026-08-11 until the architect retired the
-    // BUTTON on 2026-08-18 ("remove the 'set trim from region' icon"). The
-    // chord is untouched; the glyph went with the row, having had no other
-    // consumer.)
-    {RedesignButton::IconShowRegion, icons::Icon::ToolRectSelection},
     // THE ZOOM PAIR (2026-08-12, the grand relayout — the architect's live
     // placement, "the rest in the icon row, after the trim"): full zoom out
     // (bare `0`) and working-zoom center (bare `c`), the commands' pointer
@@ -1013,7 +999,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // and no separator moving.
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22), the `]` lamp, between
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22), the `[` lamp, between
     // Center and Follow in the same group: Breeze's zoom-out-y, the magnifier
     // with a ruler on its dial — the picture's vertical scale. It joins the
     // group rather than opening one, so it adds one box and one 2px gap to the
@@ -2699,15 +2685,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-TWO members
+    // separator-divided groups of 32x32 buttons — TWENTY-ONE members
     // in FIVE groups (the width math below is the count's
     // one statement), RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE ZOOM
     // GROUP — the VIEWPORT CLASS whole since the
-    // architect's 2026-08-27 merge: the Show trim region button leading (it
-    // had a group of its own from 2026-08-11, when the scissors opened it,
-    // until that ruling), then the zoom pair (2026-08-12), THE IGNORE
+    // architect's 2026-08-27 merge: the zoom pair (2026-08-12) leading since
+    // the Show trim region button that led it was deleted on 2026-09-22, THE IGNORE
     // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW, which came
     // in from the
     // dissolved mass-marker group the same day, and THE RESTRICT UNDO TO VIEWPORT LAMP closing
@@ -2724,7 +2709,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-two paint on every
+    // hiding/showing icons in top icon row"): all twenty-one paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2739,33 +2724,33 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY-TWO MEMBERS IN FIVE GROUPS, the IGNORE
-    // WAVEFORM MAGNIFICATION lamp having joined the zoom group between Center and
-    // Follow on 2026-09-22 (one box and one gap onto the walk, no separator):
-    //   8 + 22·32 + (22−5)·2 + (5−1)·9 = 8 + 704 + 34 + 36 = 782px,
+    // minus groups): TWENTY-ONE MEMBERS IN FIVE GROUPS, the Show trim region
+    // button having left the zoom group's head on 2026-09-22 (one box and one
+    // gap off the walk, no separator — Full zoom out took the lead):
+    //   8 + 21·32 + (21−5)·2 + (5−1)·9 = 8 + 672 + 32 + 36 = 748px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 790.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 756.
     //
-    // THE TABLET FIT CEILING IS 295 (re-derived 2026-09-22 at that arrival),
-    // and it is taken off THE PAINTED WALK, not off 782·factor: every element
+    // THE TABLET FIT CEILING IS 307 (re-derived 2026-09-22 at that departure),
+    // and it is taken off THE PAINTED WALK, not off 748·factor: every element
     // above is its own scaled_px, rounded on its own, so the walk's device
-    // width is 8s + 22·[32s] + 17·[2s] + 4·(2·[4s] + [1s]) with each bracket
-    // a banker's rounding. At 295 that is 24 + 22·94 + 17·6 + 4·(24 + 3) =
-    // 2302 of 2304, and at 296 it is 2324 (the box rounds up to 95). The
-    // unrounded product would say 294 (782·2.94 = 2299.08, 782·2.95 =
-    // 2306.9), the boxes rounding down at 295 being what buys the one more.
-    // (Counting the trailing pad the ceiling is 292 — 2302 at 292, the pad
+    // width is 8s + 21·[32s] + 16·[2s] + 4·(2·[4s] + [1s]) with each bracket
+    // a banker's rounding. At 307 that is 25 + 21·98 + 16·6 + 4·(24 + 3) =
+    // 2287 of 2304, and at 308 it is 2308 (the box rounds up to 99). The
+    // unrounded product would say 308 (748·3.07 = 2296.4, 748·3.08 =
+    // 2303.8), the boxes rounding up at 308 being what costs the one more.
+    // (Counting the trailing pad the ceiling is 304 — 2289 at 304, the pad
     // being ground, not ink, so the icons themselves are the thing measured.)
-    // The tablet's first-run 225 paints the walk 1750 device px wide, clearing
-    // the panel by 554 — 242 of its 1024 logical px at that scale, 782
-    // authored. The laptop clears it outright at 790 of 1920. The row's width
+    // The tablet's first-run 225 paints the walk 1674 device px wide, clearing
+    // the panel by 630 — 276 of its 1024 logical px at that scale, 748
+    // authored. The laptop clears it outright at 756 of 1920. The row's width
     // succession is in git history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 225% paint as 76
     // and 92 device px (the box's 72 and the gap's 4.5 rounding to 4; the
-    // separator's 9 + 2 + 9 ahead of the leader's box) — room for SEVEN more
-    // members at 225% (1750 + 7·76 = 2282 of 2304), an eighth cropping (2358).
+    // separator's 9 + 2 + 9 ahead of the leader's box) — room for EIGHT more
+    // members at 225% (1674 + 8·76 = 2282 of 2304), a ninth cropping (2358).
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
     // darkens to, so there is nothing for it to change to (redesign_row_ground
@@ -2918,7 +2903,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // statements — that is what earns them the face, a refusal alone never
         // does. Since 2026-08-14 EVERY
         // button in this row the view consumes wears it — Undo / Redo /
-        // Render, the Show trim region button, FOLLOW (the mass-marker
+        // Render, FOLLOW (the mass-marker
         // category's one survivor since the 2026-08-27 relocation),
         // listen, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
@@ -3225,7 +3210,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // arrows and the four history companions first (a glyph blinking on every
 // marker selection restates what the selection already shows), then the two
 // SKIPS (bare Home / End are not pure jumps — each also stops a live audition,
-// clears the selection and hides the trim region overlay, no-op jump included, so a grey
+// clears the selection, no-op jump included, so a grey
 // promised less than the key delivers), then PLAY and STOP last, on the reason
 // that covers those ten: "there's not a whole lot of value derived from
 // the icon faces changing, and it is a little distracting... the user is
@@ -5280,8 +5265,8 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
     // DERIVED FROM THE TRIM, not from a stored span (2026-08-18 — the region IS
     // the trim; the model is at RegionState, app_state.h). trim_overlay_span is
     // the one owner of "where the overlay is": it crosses both bounds into the
-    // active display domain and hands them back ordered, so this pass and the
-    // hit test read the same two numbers on the same frame with nothing cached
+    // active display domain and hands them back ordered, so the ground and
+    // the ink read the same two numbers on the same frame with nothing cached
     // between them.
     const TrimOverlaySpan span = trim_overlay_span(app, audio);
     const int64_t lo = span.lo;
@@ -8999,7 +8984,7 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // and delegates. When the level actually moved the reflow changed spp under
     // the playback predictor, so re-anchor it. (A level move here cannot
     // change the magnification — the gain gate reads the audio view and the
-    // `]` lamp and no zoom term, effective_waveform_gain_profile — so the
+    // `[` lamp and no zoom term, effective_waveform_gain_profile — so the
     // resize owes the gain nothing; its picture re-renders because a resize
     // moves the area dimensions, fields of the one plate fingerprint, and the
     // tick's enqueue carries that.)

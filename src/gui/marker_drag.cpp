@@ -366,11 +366,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
     viewport.move_playhead_to(sample);
-    // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
-    // marker and HID the trim region overlay, so a marker drag runs with the
-    // overlay already down, and the movement owner above hides again (the rule
-    // at clear_region_highlight, input_handler.h) — a guarded
-    // no-op on every motion event. The group live-track that used to re-derive an extent span per
+    // NO REGION WORK OWED HERE: the trim overlay stands only while a sweep
+    // draws it, and no sweep runs beside a marker drag. The group live-track
+    // that used to re-derive an extent span per
     // motion event died with the group drag (architect 2026-07-29 — groups are
     // never moved; the doctrine is at the head of position_nudge.h).
     viewport.invalidate_waveform_area();
@@ -382,7 +380,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // frame — through the gain category's one owner, which renders nothing when
     // the hash did not move (a warp or phase-reset drag, a motion within one
     // column, two neighbouring sections at the same level, any motion while
-    // the `]` lamp is lit and the gate answers flat on both sides). An M drag
+    // the `[` lamp is lit and the gate answers flat on both sides). An M drag
     // stands in SOURCE VIEW alone, the only view that column exists in, so the
     // kick never runs against target view's flat answer.
     //
@@ -603,9 +601,8 @@ void MarkerDragOps::commit_drag() {
     // invalidate_waveform_area above: the drag shifts its frame, so its
     // always-on stem repaints at the committed column (every enabled marker
     // stems since row 5 — nothing here keys on selection).
-    // NO REGION WORK OWED HERE: the ARMING PRESS's click act single-selected the
-    // marker and HID the trim region overlay, nothing during the drag shows one,
-    // and the commit re-land above carries the movement owner's hide regardless.
+    // NO REGION WORK OWED HERE: the trim overlay stands only while a sweep
+    // draws it, and no sweep runs beside a marker drag.
     // The extent re-derive that used to snap a live-tracked group span back to its
     // resting extent here died with the group drag (architect 2026-07-29 — groups
     // are never moved; the doctrine is at the head of position_nudge.h).

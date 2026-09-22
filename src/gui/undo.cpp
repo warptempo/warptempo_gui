@@ -1,7 +1,6 @@
 #include "undo.h"
 
-#include "input_handler.h"        // land_playhead_on_marker (which owns the
-                                  // restore's overlay hide),
+#include "input_handler.h"        // land_playhead_on_marker,
                                   // GuiInputHandler::switch_active_audio_view_to
                                   // — the S/T tag's restore chokepoint,
                                   // bring_span_into_view — the restore visual
@@ -1111,21 +1110,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // matching arm (a group entry sanitized down to one member lands as a
     // singleton; a removal cleared to empty is the size == 0 no-op).
     //
-    // THE OVERLAY HIDE IS NO LONGER THE TAIL'S OWN. It discards NOTHING either
-    // way — the overlay is DERIVED from the trim (RegionState, app_state.h),
-    // which the restore does not touch at all, trim being outside the undo
-    // stacks by ruling.
-    //
-    // (THE RESTORE'S OWN OVERLAY HIDE IS DELETED, 2026-08-19, with the call-site
-    // inventory it belonged to.) A MARKER restore still hides, and does it where
-    // the rule says: both marker arms LAND the playhead on the restored focus
-    // below, and the land is one of the rule's two movement owners
-    // (clear_region_highlight, input_handler.h). A SETTINGS-ONLY ('S') restore
-    // lands nothing and hides nothing now — it moves no playhead and touches no
-    // marker, and its old argument (the rebuilt map under a shown overlay) died
-    // on 2026-08-18 when the region became the trim: the span is DERIVED from
-    // source-domain trim bounds every frame, so a rebuilt map re-derives the
-    // overlay rather than stranding it.
+    // Both marker arms LAND the playhead on the restored focus below, through
+    // the land, a movement owner. A SETTINGS-ONLY ('S') restore lands nothing —
+    // it moves no playhead and touches no marker. (The restore hid the trim
+    // region overlay until 2026-08-19 at its own site and through the land
+    // until the resting overlay was deleted on 2026-09-22; trim is outside the
+    // undo stacks by ruling.)
     // The 'S' gate stands
     // exactly as it did: a settings restore still must not select and must not
     // SHOW an overlay, and the whole land/framing block stays inside it. The
@@ -1151,10 +1141,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 in_range ? active_marker_time_frame(app, t) : 0;
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
-                // move — and THE OVERLAY HIDE RIDES IT since 2026-08-19, the land
-                // being one of the rule's two movement owners (the rule at
-                // clear_region_highlight, input_handler.h), which is what
-                // replaced this tail's own call. Playback is already
+                // move, through the movement owner. Playback is already
                 // stopped above, so land's scanner-inactive premise holds.
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
                 // OFFSCREEN -> plain recenter at the CURRENT zoom (no framer, no
@@ -1234,8 +1221,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // ceiling/half-pixel exception to the framer's no-op guard, and the
             // accepted duplicate render) lives at bring_span_into_view's
             // definition, input_handler.cpp; it was hoisted verbatim out of
-            // this spot when the Show trim region button asked for the same
-            // behaviour, so this arm is unchanged in effect and only its home
+            // this spot when the Show trim region button (deleted 2026-09-22)
+            // asked for the same behaviour, so this arm is unchanged in effect and only its home
             // moved. WHAT IS THIS SITE'S OWN: it hands the owner an
             // ACTIVE-DOMAIN extent derived just below, and the unconditional
             // invalidate + kick_waveform_sync at the tail of this body is the

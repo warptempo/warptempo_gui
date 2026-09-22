@@ -158,12 +158,9 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // longer the identity one: land_playhead_on_marker translates through the
     // ACTIVE domain itself (source_frame_to_active_domain at its body), so the
     // land is right in target view with nothing to add here.
-    // THE LAND HIDES THE TRIM REGION OVERLAY: an open moves the playhead onto
-    // one marker, so the overlay goes with it — unconditionally, never gated on
-    // the land having moved anything, and discarding nothing (the trim stands
-    // and a later `[` re-shows the same overlay). Since 2026-08-19 that is the
-    // LAND'S own act rather than a second call here (the rule and its two
-    // movement owners are at clear_region_highlight, input_handler.h). This one
+    // THE LAND IS A MOVEMENT OWNER: an open moves the playhead onto one
+    // marker, which ends an A/B audition as every movement does (the rule at
+    // Viewport::move_playhead_to, viewport.cpp). This one
     // chokepoint covers every open and retarget (bare Return, the pointer
     // double-click, `m`, a pointer retarget of the live editor); `m` re-derives
     // NOTHING after it since
@@ -937,9 +934,9 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // whose spans then change duration and shift everything downstream — the
     // edited marker's own image included — so the FOCUS (which is this
     // editor's target, single-selected at the open) re-lands on its post-commit
-    // image through reseat_playhead_to, a TRANSLATION that must leave the trim
-    // region overlay standing (the rule at clear_region_highlight,
-    // input_handler.h). SOURCE VIEW NEEDS NOTHING: identity domain, no image
+    // image through reseat_playhead_to, a TRANSLATION and no movement (the
+    // rule at Viewport::move_playhead_to, viewport.cpp). SOURCE VIEW NEEDS
+    // NOTHING: identity domain, no image
     // moves.
     // AND canonical_changed IS THE SECOND TERM, which is exactly the map-input
     // set (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /

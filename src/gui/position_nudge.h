@@ -42,9 +42,9 @@ struct GuiTargetRender;
 //     the Up/Down cent step, Delete) and, reading the span, `m`, Ctrl+P, the
 //     zoom framing, and the undo/redo + paste
 //     restores (which DEFINE a group selection). (The trim region toggle READ
-//     a span until 2026-08-18 — the trim-scratch region's — and reads none
-//     now: the region IS the trim and bare `[` shows and hides its overlay,
-//     the record being at RegionState, app_state.h. Space left this list on 2026-07-30, its
+//     a span until 2026-08-18 — the trim-scratch region's — and the toggle
+//     itself is deleted since 2026-09-22, the record being at RegionState,
+//     app_state.h. Space left this list on 2026-07-30, its
 //     left-bound region launch dropped for an unconditional
 //     play-from-the-playhead;)
 //   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is
@@ -366,14 +366,11 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     marker — the twins return on the post-clamp identity no-op first — so a
 //     walled press moves no camera, and a held key's or button's repeats each
 //     run the tail with the camera their chord carries.
-// (g) THE REGION: a position nudge HIDES the trim region overlay,
-//     unconditionally — exactly like the marker click that selects that
-//     singleton — and it discards nothing, the trim standing behind it. It owes
-//     no call of its own: (e) above and the prologue's collapse land are both
-//     movement owners and hide there (the rule at clear_region_highlight,
-//     input_handler.h).
-//     There is no overlay-preserving arm any more: the extent re-derive died
-//     with the group nudge.
+// (g) THE A/B AUDITION: a position nudge ENDS it, unconditionally — (e) above
+//     and the prologue's collapse land are both playhead movement owners and
+//     end it there (the rule at Viewport::move_playhead_to, viewport.cpp), so
+//     the nudge owes no call of its own. (They also hid the trim region
+//     overlay until its resting form was deleted on 2026-09-22.)
 // (h) target_render->trigger(), IFF THE COLUMN REACHES A RENDER INPUT — the
 //     pointer is REQUIRED and may be NULL, which is the magnification level
 //     column's answer (architect 2026-09-15). Warp and phase reset positions
@@ -399,11 +396,11 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // slightly differently (warp: push -> record -> ... -> playhead -> region;
 // phase: playhead -> push -> record -> ... -> region). The unified order
 // gives both the WARP shape (push in the twin, then this tail: record,
-// invalidate, playhead, region). The COMMITTED BYTES are identical for every
+// invalidate, playhead). The COMMITTED BYTES are identical for every
 // input: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
 // only — not the cursor), the playhead follow does not read undo
-// state, and the region hide reads only the region. ONE
+// state. ONE
 // knowingly-accepted delta rides the unification, phase-only (the warp twin
 // already had this shape) and harmless, recorded here so the next reader need
 // not re-derive it; a second one dissolved with the coalesce clock and is kept

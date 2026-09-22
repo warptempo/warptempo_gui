@@ -312,109 +312,46 @@ struct UndoEntry {
 };
 
 // THE REGION IS THE TRIM (architect 2026-08-18, uniting two loose ends into one
-// state): the trim bar is 10 px — right for a mouse, unusable with a fingertip —
-// so trim gained a SECOND, LARGE surface on the waveform, summoned when needed
-// and dismissed after. There is no "set trim from region" any more, because
-// SETTING THE REGION IS SETTING THE TRIM. One state, two painted surfaces: the
-// bar that is always there, and this overlay, which is shown and hidden.
+// state), AND THE OVERLAY IS THE SWEEP'S LIVE PICTURE (architect 2026-09-22).
+// There is no "set trim from region", because SETTING THE REGION IS SETTING
+// THE TRIM. One state, two painted surfaces: the 10 px trim bar that is always
+// there, and the waveform overlay, which stands exactly while a SWEEP — the
+// shift+drag former or the touch region hold — is drawing a window.
 //
 // DERIVE, DO NOT STORE, and everything else follows from it: the overlay is
 // painted FROM THE TRIM every frame, exactly as the bar already is, and no span
-// rests anywhere. The consequences are all free — a tempo change in target view
-// re-derives the overlay on the next frame (nothing to invalidate), the two
-// surfaces cannot drift, and hiding the overlay is a visibility bit while trim
-// stays always-set. SO THIS STRUCT IS THAT BIT AND NOTHING ELSE; the span's
-// owner is trim_overlay_span (below), which converts the resting trim bounds
-// into the ACTIVE-domain frames the painter and the hit test both want.
-// (The a_frame / b_frame pair this carried until 2026-08-18 — active-domain
-// endpoints in drag order, normalized at read time — is deleted with the model
-// that needed it: a free scratch span the SET-FROM-REGION act committed to
-// trim. THE ACT went, not the KEY: with setting the region being setting the
-// trim there was nothing left to commit, so the key was REPOINTED onto this struct's
-// own show/hide toggle — handle_toggle_trim_region, which owns that record and
-// is the one place to read it. Git holds the deleted model.)
+// rests anywhere. The sweep writes the moving pair straight into the trim per
+// motion event (write_trim_from_sweep, input_trim.cpp), ordered lo/hi, holding
+// its ANCHOR alone (RegionDragState::anchor_source_frame), so even mid-gesture
+// the overlay derives from the trim like everything else and tracks the stroke
+// live. SO THIS STRUCT IS ONE VISIBILITY BIT AND NOTHING ELSE; the span's owner
+// is trim_overlay_span (below), which converts the trim bounds into the
+// ACTIVE-domain frames the painter wants. (The a_frame / b_frame pair this
+// carried until 2026-08-18 — a free scratch span the SET-FROM-REGION act
+// committed to trim — is deleted with the model that needed it.)
 //
-// THE LIVE SWEEP IS THE ONE THING NOT AT REST, and it stores no span either:
-// the former holds its ANCHOR alone (RegionDragState::anchor_source_frame) and
-// writes
-// the moving pair straight into the trim per motion event, ordered lo/hi, so
-// even mid-gesture the overlay derives from the trim like everything else. The
-// ruling is about the RESTING state; this gesture simply turned out to need
-// nothing extra to keep.
+// THE BIT HAS ONE RAISE AND ONE HIDE: RAISED at the sweep's FIRST ACCEPTED
+// TRIM WRITE through show_trim_region_overlay (input_handler.h — its one
+// caller, the `h` carve-out and the no-framing rule are stated there), and
+// HIDDEN by the sweep's end owner, commit_region_sweep (input_pointer.cpp),
+// unconditionally at every end path. The FILE LOAD resets it in place besides,
+// so a new piece starts clean.
 //
-// THREE MOTIONS WRITE THE TRIM ON THIS SURFACE, each routed through trim's OWN
-// tail rather than re-deriving trim's rules here:
-//   * a BOUND drag IS the single-bound endcap drag — it clamps INCLUSIVELY at
-//     its partner, and a coincident release resets to the full window through
-//     auto_clear_crossed_trim, which is the drag's own route to clearing the
-//     trim and, since 2026-08-19, EVERY former's: the sweep's coincident
-//     release lands on the same compare;
-//   * a drag INSIDE is the BRIDGE drag (rigid delta, invariant gap, no partner
-//     wall);
-//   * a SWEEP — the shift+drag former and the touch region hold — is a direct
-//     trim write under no width rule at all (write_trim_from_sweep,
-//     input_trim.cpp), whose own coincident release reaches that same
-//     whole-song reset.
-// All three take the trim-write class whole: the setter's deselect, the
-// trim-mutation playback stop, and the playhead parked at the new trim start AT
-// THE RELEASE ONLY (a per-frame cursor chase would fight the gesture moving the
-// bounds — the rule and its membership are at the head of input_trim.cpp).
-//
-// THE VISIBILITY BIT'S WRITERS. SHOWN by BARE `[` and the icon row's
-// IconShowRegion button, one toggle over one act (handle_toggle_trim_region,
-// input_trim.cpp), which since 2026-09-04 MOVES NO VIEWPORT on either half —
-// its show ran bring_span_into_view until the architect deleted the framing,
-// the trim bar answering where the trim is instead; by THE
-// SWEEP'S FIRST ACCEPTED TRIM WRITE through the one raise owner
-// show_trim_region_overlay (input_handler.h, which carries its whole call-site
-// inventory, the no-framing rule and the `h` carve-out) — its ONE caller, at
-// the write since 2026-08-21 rather than at the arm, since the overlay derives
-// from the RESTING trim and a press-time raise could only show the window the
-// stroke was replacing (the 10 px band's three press claims had left that
-// inventory on 2026-08-20, a lane touched by a pointer being its own display of
-// the trim while the big surface exists for glass).
-// HIDDEN by that same toggle, by the FILE LOAD (which resets this struct in
-// place, so a new piece starts hidden rather than greeting the user with a
-// stranger's window already lit), by THE SWEEP'S COMMIT (commit_region_sweep,
-// input_pointer.cpp — unconditional at every end path, so the raise is
-// bracketed by the stroke that earned it), and by clear_region_highlight,
-// whose declaration (input_handler.h) states THE RULE: the overlay hides when
-// the playhead's position in the music changes, when a marker is touched and
-// when the sweep ends, and at no other time. HIDING DISCARDS NOTHING — the trim
-// persists and re-showing restores an identical overlay, which is what makes
-// the rule safe to state as a rule. The trim's other gestures never hide, and
-// need no exclusion to say so: they write the cursor direct and so reach
-// neither movement owner.
-//
-// ONLY THE WAVEFORM ANSWERS, by the architect's ruling: the RULER and the
-// MARKER LANE stay plain navigation surface throughout, which is what keeps a
-// pan and a zoom reachable while the overlay covers the waveform entirely. The
-// hit verdict's owner is GuiInputHandler::region_manipulation_hit
-// (input_pointer.cpp).
+// WHAT WENT ON 2026-09-22 (architect — he uses the tablet's pen, which reaches
+// the trim bar, so the overlay's finger accommodations are no longer wanted):
+// the RESTING overlay and everything that existed for it — bare `[` and the
+// icon row's Show trim region button (the show/hide toggle, 2026-08-16),
+// region_manipulation_hit with the overlay's own endcap and BRIDGE drags on
+// the waveform (2026-08-15/18), their cursor cues and their touch pan-zone
+// clause, and THE HIDE RULE (clear_region_highlight, 2026-08-19), which put a
+// resting overlay away when the playhead moved in the music or a marker was
+// touched. The trim's writing surfaces are the trim bar and the sweep.
 //
 // READ-ONLY-LEGAL, exactly as the trim bar's own gestures are: trim is BAND,
 // not authored content (the ruling at read_only_key_blocked).
 struct RegionState {
-    bool shown = false;   // the overlay's visibility — the whole of the state
+    bool shown = false;   // a sweep is drawing — the whole of the state
 };
-
-// The hit verdict over the waveform overlay. Its owner is
-// GuiInputHandler::region_manipulation_hit (input_pointer.cpp), which is
-// meaningful only while app.region.shown; the two bounds are the DERIVED span's
-// endpoints projected to columns on the DISPLAYED (plate) basis — the same
-// basis the overlay paints on, through the painter's own region_columns owner,
-// so a grabbed bound is exactly a painted one. BoundLo / BoundHi are the trim's
-// begin and end respectively: a resting trim pair is always ordered (a crossed
-// one resets to the full window at every commit), so left/right and begin/end
-// are the same distinction here.
-//
-// THE GRAB BAND is trim_endcap_grab_px() per side — the SAME 10 px the trim
-// endcaps take, on purpose. OVERLAP resolves
-// NEARER-BOUND-WINS with ties to the LO bound (the trim sort's own tie-break
-// over two fixed candidates), which keeps both bounds reachable down to a 1 px span. Inside the span
-// but outside both bands is Move. An OFFSCREEN bound is simply not grabbable:
-// clamping it to the edge would manufacture a handle where nothing is painted.
-enum class RegionHit { None, Move, BoundLo, BoundHi };
 
 // Marker reposition drag state (begun by a plain flag drag past the shared
 // threshold). ONE MARKER, ALWAYS — GROUPS ARE NEVER MOVED (architect 2026-07-29,
@@ -858,7 +795,7 @@ struct UndoHistory {
 // too (architect 2026-08-19: the enforced minimum was distracting and too short
 // to be worth its machinery), so the sweep has no width rule of any kind left —
 // a stroke that collapses onto its own anchor clears the trim to the whole song
-// at the release, and Shift+[ is the way back from anything else.
+// at the release, and Shift+0 is the way back from anything else.
 //
 // ESC DOES NOTHING TO A DRAG IN FLIGHT: pointer gestures have no cancel, so a
 // mid-drag Esc is swallowed by the drag-modal gate and the sweep keeps writing
@@ -958,7 +895,7 @@ struct EditorTextDragState {
 // write. The whole model is at run_marker_click_act, input_pointer.cpp).
 //
 // THE PRESS ACTS AND ARMS. run_marker_click_act runs at the press (stop, the
-// three-way selection fork, the land, the region hide, and the plain arm's
+// three-way selection fork, the land, and the plain arm's
 // double-click consume-open); the PLAIN shape then arms this record. SHIFT and
 // CTRL arm nothing — they have no drag to become and their click has already
 // committed — and a CONSUMED double-click open arms nothing either (the editor
@@ -1079,17 +1016,11 @@ struct PendingTrimDrag {
     bool both     = false;  // the inter-endcap bridge (pair) drag
     int  press_x  = 0;      // press position (window px): the gate + begin anchor
     int  press_y  = 0;
-    // ARMED FROM THE WAVEFORM OVERLAY rather than from the trim bar
-    // (2026-08-18, when the region became the trim): the bound and bridge drags
-    // are the SAME drags on a second surface, so the arm is the same pending —
-    // but on that surface a MOTIONLESS press-release is not a manipulation at
-    // all. It falls to the waveform's ORDINARY CLICK ACT, exactly what a press
-    // one pixel outside the overlay would have done, which is what keeps the
-    // hide-by-clicking escape reachable under a full-window overlay. The bar's
-    // own presses leave this false and stay the consumed nothing they have been
-    // since 2026-07-30. THE CLEAN RELEASE ALONE runs it: a lost button and the
-    // force-end finalizer are not clicks (the standing abnormal-end rule).
-    bool waveform_click_act = false;
+    // (A `waveform_click_act` field marked an arm taken on the WAVEFORM
+    // OVERLAY from 2026-08-18, whose motionless lift fell to the waveform's
+    // click act. The overlay's drags were deleted with its resting form on
+    // 2026-09-22, so the trim bar is the one surface that arms this, and its
+    // motionless lift is the consumed nothing of 2026-07-30.)
 };
 
 // Which act a PendingClickAct is holding. None = nothing armed.
@@ -1129,9 +1060,8 @@ enum class PendingClickKind {
 // ctrl-press-and-drag is byte-for-byte the gesture it has always been (set at
 // the click, then drag that bound live) and only the timing of a motionless
 // click is the lift's. The set's whole tail travels as one unit — the
-// strictly-inside refusal, the playback stop, the commit tail's playhead park
-// (and NOT an overlay hide — the trim writes are that inventory's one excluded
-// class since 2026-08-18), the setter's deselect — because they are one act
+// strictly-inside refusal, the playback stop, the commit tail's playhead park,
+// the setter's deselect — because they are one act
 // (set_trim_bound_at_click).
 //
 // Session-only, never serialized. Cleared on the crossing (the trim drag takes
@@ -1224,10 +1154,10 @@ struct TrimDragState {
 //     CLICK ACT at the press column, forked on the pressed half
 //     (run_nav_click_act, input_pointer.cpp). UPPER half — everything the old
 //     press-time placement did: deselect-all (the mode-focus clear in the `h`
-//     view), the overlay hide, playhead to the column, live-playback reseek,
+//     view), playhead to the column, live-playback reseek,
 //     follow override. LOWER half — ONE AUDITION SCRUB ACT at the column (stop
 //     a live session, then launch — the scrub always plays, 2026-09-21),
-//     which touches no selection, no region, no
+//     which touches no selection, no
 //     cursor and no follow state: that pair of omissions is the halves' one
 //     difference, read honestly as two, and both predate this ruling.
 //     Playback state is read AT the
@@ -1811,7 +1741,7 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's FOUR, row 3's two
-// TABS, row 4's TWENTY-TWO
+// TABS, row 4's TWENTY-ONE
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -1838,8 +1768,8 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-22 against kDropdownMenus and the chord table (45 chord
-// rows + 3 anchors = 48 = kRedesignButtonCount, re-counted 2026-09-22);
+// re-greped 2026-09-22 against kDropdownMenus and the chord table (44 chord
+// rows + 3 anchors = 47 = kRedesignButtonCount, re-counted 2026-09-22);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -2025,60 +1955,13 @@ enum class RedesignButton {
     // group order was built on — keeping the history opener's x fixed across
     // the toggle — is answered by construction now rather than by placement.
     Save, Undo, Redo, Render,
-    // THE SHOW TRIM REGION BUTTON (architect 2026-08-16 as "Show region",
-    // given its settled name on 2026-08-19 — the one the enumerator carried
-    // throughout): THE ZOOM GROUP'S LEADER SINCE 2026-08-27, and the second
-    // VIEWPORT-CLASS act the architect's 2026-08-11 slot was
-    // opened for, which took the lead later on 2026-08-16 ("reverse the order
-    // of the icons — show region first, then the scissors") and was alone in
-    // its own group once the scissors were retired ("remove the 'set trim from
-    // region' icon").
-    //
-    // IT JOINED THE ZOOM GROUP ON 2026-08-27 (architect), and it kept its
-    // slot and its separator doing it: the TRIM GROUP dissolved by having the
-    // boundary in front of the zoom buttons DELETED, so the two groups merged into
-    // one at this button's own leader position and nothing here moved a pixel
-    // to the left. What the merged group collects is the VIEWPORT CLASS whole
-    // — the overlay that frames the trim, the two zoom commands and
-    // FOLLOW, which came into it from the dissolved mass-marker group the same
-    // day (the vertical magnification pair that sat between them retired
-    // 2026-09-14).
-    //
-    // IT INHERITED THE SCISSORS' CHORD AND THEIR SHIFT ADMISSION, hours after
-    // their button was deleted, because the region became the trim the same
-    // day: the scissors' key had SET THE TRIM FROM A REGION, setting the region
-    // IS setting the trim now, and the architect gave the free key to the act
-    // that needed a home. THE CHORD IS BARE `[` SINCE 2026-08-24, the whole trim
-    // family having moved onto the bracket — the key it left "is too easy to hit
-    // accidentally instead of `c`, and it can mess up the viewport", the show
-    // half FRAMING the trim span then; the framing left the act on 2026-09-04
-    // and `[` stands on its mnemonic alone, looking like the begin-trim endcap.
-    // Of the chords it has left behind, Ctrl+Shift+X is unbound, and so is
-    // bare `x` since 2026-09-13 (the VALUE DRAG LAMP's chord from 2026-09-10
-    // until that lamp's deletion).
-    //
-    // A TOGGLE WITH A LAMP, where the 2026-08-16 ruling made it deliberately
-    // MOMENTARY and stateless. The hole that ruling avoided cannot occur under
-    // the derived model and the record is worth keeping because it is easy to
-    // re-invent: the old lamp would have read a SPAN'S EXISTENCE, so a span
-    // scrolled offscreen left the button lit with only a clearing press
-    // available — "the region toggle is on, but the region view can't be
-    // accessed because the toggle is already on". This lamp reads the overlay's
-    // VISIBILITY, so every press changes what is painted and the toggle can
-    // never stick. The offscreen case is answered by the PICTURE rather than by
-    // the camera since 2026-09-04, when the framing left the act: the trim bar
-    // shows where the window is, and its
-    // double-click is the gesture that brings the camera to it.
-    //
-    // SHIFT REACHES Shift+[, THE MAXIMIZER (redesign_button_shift_admits), by
-    // shift-click or by a long press at kChromeShiftHoldMs — the admission the
-    // scissors carried, for the reason it was written: without it a keyboardless
-    // panel could set a trim window and never get back out of it.
-    //
-    // Always enabled, by the settled face policy — there is no refusal to
-    // mirror; the `h` view's grey is the derived partition's and its derivation
-    // is stated once at this button's case in redesign_button_enabled below.
-    IconShowRegion,
+    // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
+    // until the architect deleted it whole on 2026-09-22 with its bare `[`
+    // chord: the tablet's pen reaches the trim bar, so the waveform overlay
+    // that the toggle showed at rest was a finger's accommodation no longer
+    // wanted, and the overlay stands only while a sweep draws it. Its shift
+    // admission was Reset Trim's pointer road; that act is Shift+0 alone now.
+    // FULL ZOOM OUT leads the zoom group since.)
     // THE ZOOM PAIR (2026-08-12, the grand relayout's roster commit): full
     // zoom out (bare `0`, whose ceiling arm runs the `c` command) and
     // working-zoom center (bare `c`). The discrete zoom STEP they once stood
@@ -2092,7 +1975,7 @@ enum class RedesignButton {
     // pointer home (the Navigation dropdown that once duplicated them was
     // deleted 2026-08-15).
     IconZoomFitBest, IconZoomOriginal,
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `]` lamp,
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `[` lamp,
     // between Center and Follow, a MANUAL OVERRIDE. A DISPLAY POSTURE and
     // nothing else: dark (the default), the SOURCE-VIEW waveform picture
     // carries the magnification level markers column's per-section gain
@@ -2101,9 +1984,9 @@ enum class RedesignButton {
     // undo and every sidecar are untouched. The bit is
     // AppState::ignore_waveform_magnification, DARK AT EVERY PROJECT OPEN like
     // the rest of this group's lamps. IT GREYS IN TARGET VIEW, where the lamp
-    // has no effect and bare `]` cards (waveform_magnification_toggle_actionable,
+    // has no effect and bare `[` cards (waveform_magnification_toggle_actionable,
     // the face and the key's one verdict); LIVE on a locked tab and under the
-    // read-only lock; DEAD in the `h` view, whose allowlist does not name `]`
+    // read-only lock; DEAD in the `h` view, whose allowlist does not name `[`
     // (Follow's and Restrict Undo to Viewport's answer there), through the
     // derived partition. (It revives the 2026-09-14 / 2026-09-17 lamp's name
     // and sense, now scoped to source view with no zoom term.)
@@ -2847,17 +2730,18 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-22, when
-// the walk pair merged into one button and the two hold-column nudges joined
-// the bottom row's walk group): SEVEN in row 1 (the
-// three menu anchors and the view bar's four), two in row 3, TWENTY-TWO in
-// row 4 and SEVENTEEN in the bottom row — 48. Of those, FORTY-FIVE carry a chord in
+// the Show trim region button was deleted, later the same day the walk pair
+// merged into one button and the two hold-column nudges joined the bottom
+// row's walk group): SEVEN in row 1 (the
+// three menu anchors and the view bar's four), two in row 3, TWENTY-ONE in
+// row 4 and SEVENTEEN in the bottom row — 47. Of those, FORTY-FOUR carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 48;
+inline constexpr int kRedesignButtonCount = 47;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2928,7 +2812,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Redo:
         case RedesignButton::IconRestrictUndo:
         case RedesignButton::Render:
-        case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconIgnoreWaveformMagnification:
@@ -3073,8 +2956,9 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE FIVE GROUPS, in painted order: the toolbar four,
-// THE VIEWPORT-CLASS GROUP (the Show trim region button leading the zoom pair,
-// FOLLOW and the restrict-undo lamp), THE ITERATION GROUP (the BPM opener,
+// THE VIEWPORT-CLASS GROUP (the zoom pair leading since the Show trim region
+// button's deletion on 2026-09-22, the magnification lamp, FOLLOW and the
+// restrict-undo lamp), THE ITERATION GROUP (the BPM opener,
 // the grid-iterations lamp and, since 2026-09-19, FLATTEN), the
 // render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
@@ -3122,7 +3006,8 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // buttons stopped opening a group (so the one-member trim group and the zoom
 // buttons
 // merged behind the Show trim region button, which was already a leader and
-// stays one), and IconBpm stopped opening one — its own button and IconIter's
+// stayed one until its own deletion on 2026-09-22 passed the lead to Full zoom
+// out), and IconBpm stopped opening one — its own button and IconIter's
 // leaving the roster entirely with the SERIES relocation, so Follow, the
 // survivor, falls into the group on its left. The row lost two boxes and two
 // separators with that; the WIDTH arithmetic has ONE owner and it is the
@@ -3153,16 +3038,17 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         case RedesignButton::Save:
-        // THE ZOOM GROUP'S LEADER, and the merged group's since 2026-08-27:
-        // the boundary that used to stand in front of the zoom buttons is deleted,
-        // so this one separator now opens the whole viewport class. (The
+        // THE ZOOM GROUP'S LEADER since 2026-09-22, when the Show trim
+        // region button that had led the merged viewport-class group since
+        // 2026-08-27 was deleted and the leadership fell to the member behind
+        // it — a group survives losing one, the scissors' precedent. (The
         // MASS-MARKER GROUP'S LEADER was IconCopy from the row's first day and
         // IconBpm from 2026-08-20, when the propagate relocation deleted copy
         // and paste; the Series relocation deleted IconBpm and IconIter in
         // turn, and rather than move the leadership onto Follow — the last
         // survivor, and a lone button behind a divider — the architect put
         // that survivor in this group and the boundary went with the pair.)
-        case RedesignButton::IconShowRegion:
+        case RedesignButton::IconZoomFitBest:
         // THE ITERATION GROUP'S LEADER SINCE 2026-09-04, and it is the same
         // button that led the mass-marker group from 2026-08-20 until the
         // Series relocation deleted it: the BPM opener (Ctrl+B since
@@ -4169,7 +4055,7 @@ struct PromptState {
 // A MODAL BUTTON'S TOOLTIP TEXT (architect 2026-08-13, the ruling that retired
 // the bracketed accelerators: "we just do a tooltip just like the regular icon
 // tooltips"). The FORMAT IS THE ROSTER'S OWN — "<word> (<key>)", exactly
-// "Toggle Trim Region ([)" — and so is the accelerator's SPELLING, the product's
+// "Toggle Follow (F)" — and so is the accelerator's SPELLING, the product's
 // one convention (spell_chord's head, gui_input.h): a bare letter UPPERCASE,
 // a named key by Qt's own English name ("Del", "Esc", "Return").
 //
@@ -4576,19 +4462,21 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         body ahead of them and no other caller reaches them with an act
 //         standing (the reachability argument is written out at both sites).
 //     (4) THE TWO MOVEMENT OWNERS (architect 2026-08-26) — three call sites,
-//         each beside that owner's trim-region hide and unconditional there for
-//         the same reason: Viewport::move_playhead_to (viewport.cpp) and the
-//         two land entry points land_playhead_on_marker /
-//         land_playhead_on_source_frame (input_pointer.cpp), which do not wrap
-//         one another but share a seat body the NON-hiding entries also use, so
-//         the clear rides the entry points and not the seat.
-//         THE ACT ENDS WHEN THE PLAYHEAD'S POSITION IN THE MUSIC CHANGES: that
-//         is the trim overlay's hide rule exactly (clear_region_highlight,
-//         input_handler.h), and it is this act's rule for the same reason —
-//         each pair of plays is identical only because the cursor it launches
-//         from cannot move. So a MOVEMENT interrupts, while a TRANSLATION
-//         (Viewport::reseat_playhead_to and reseat_playhead_on_marker, the
-//         named non-hiding entries) and a RESTORE (the tab switch's band swap,
+//         each unconditional at its entry: Viewport::move_playhead_to
+//         (viewport.cpp) and the two land entry points
+//         land_playhead_on_marker / land_playhead_on_source_frame
+//         (input_pointer.cpp), which do not wrap one another but share a seat
+//         body the NON-movement entries also use, so the clear rides the entry
+//         points and not the seat.
+//         A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION — THE ACT ENDS WHEN THE
+//         PLAYHEAD'S POSITION IN THE MUSIC CHANGES, the rule stated at
+//         Viewport::move_playhead_to's definition (viewport.cpp): each pair of
+//         plays is identical only because the cursor it launches from cannot
+//         move. (The trim overlay's hide rule shared these owners from
+//         2026-08-26 until that rule was deleted on 2026-09-22.) So a MOVEMENT
+//         interrupts, while a TRANSLATION (Viewport::reseat_playhead_to and
+//         reseat_playhead_on_marker, the named non-movement entries) and a
+//         RESTORE (the tab switch's band swap,
 //         which writes app.playhead_cursor_sample direct) do not — and the act
 //         needs both of those exemptions, its own two tab switches being
 //         restores and its own advance running strictly after them.
@@ -4758,7 +4646,7 @@ struct AppState {
     // other act — it only decides whether one step runs at all.
     bool    restrict_undo_to_viewport = false;
 
-    // IGNORE WAVEFORM MAGNIFICATION — the lamp on bare `]` (architect
+    // IGNORE WAVEFORM MAGNIFICATION — the lamp on bare `[` (architect
     // 2026-09-22), a manual override. A
     // session posture in this family: per-project, DARK AT EVERY PROJECT OPEN
     // (run_project builds this AppState fresh, so the default IS the reset),
@@ -5484,18 +5372,11 @@ struct AppState {
     // on file load.
     PendingClickAct pending_click;
 
-    // THE TRIM REGION OVERLAY'S VISIBILITY — the whole of the region state
-    // since 2026-08-18, the span itself being DERIVED from the trim every frame
-    // (the model is at RegionState). IT HIDES WHEN THE PLAYHEAD'S POSITION IN
-    // THE MUSIC CHANGES, WHEN A MARKER IS TOUCHED AND WHEN THE SWEEP ENDS, and
-    // at no other time — the rule, its two movement owners, its other call
-    // sites and everything it
-    // deliberately leaves standing are stated once at clear_region_highlight
-    // (input_handler.h). BARE `[` IS THE ONE MANUAL ROAD onto and off it, its
-    // durable show and its durable hide (bare Esc hid it too until 2026-08-21,
-    // when the second road was retired). The hides that stay IN PLACE rather
-    // than going through the helper are `[`'s own and the FILE LOAD's, which
-    // pairs it with a whole new piece.
+    // THE TRIM REGION OVERLAY'S VISIBILITY — the whole of the region state,
+    // the span itself being DERIVED from the trim every frame (the model is at
+    // RegionState). Up exactly while a sweep draws: raised at its first
+    // accepted trim write, taken down by commit_region_sweep, and reset in
+    // place by the file load.
     RegionState region;
 
     // Live trim boundary drag (endcap / inter-endcap bridge). Cleared on button
@@ -7819,9 +7700,8 @@ struct AppState {
     // same window painted a second time — the ctrl / ctrl+shift bound-set
     // clicks, the SWEEP (shift+drag or the touch region hold, which writes the
     // pair in one stroke under no width rule at all; it replaced the
-    // set-from-region arm when the region became the trim, and that key's
-    // successor now shows and hides the overlay and writes no trim at all), the
-    // Shift+[ MAXIMIZER (writes the full window), and the settings editor's
+    // set-from-region arm when the region became the trim), the
+    // Shift+0 MAXIMIZER (writes the full window), and the settings editor's
     // `:tab_X_trim_*=` commits — it is NOT part of the selection system (no
     // bound selection, no Tab stop, no Delete arm). It is ALWAYS SET: the full
     // ruling is at the TrimState store.
@@ -11436,9 +11316,9 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
 //
 // ORDERED ON THE WAY OUT. A resting trim pair is ordered by construction (a
 // crossed or coincident one resets to the full window at every commit) and the
-// display map is monotone, so the min/max only ever states that fact; the
-// consumers — the painter's column projection and the hit test's two grab bands
-// — want lo/hi and must not have to ask.
+// display map is monotone, so the min/max only ever states that fact (a live
+// sweep writes its pair ordered too); the consumer — the painter's column
+// projection — wants lo/hi and must not have to ask.
 struct TrimOverlaySpan {
     int64_t lo = 0;   // active-domain frame of the trim BEGIN
     int64_t hi = 0;   // active-domain frame of the trim END
@@ -11471,8 +11351,8 @@ inline TrimOverlaySpan trim_overlay_span(const AppState& a,
 // times: the buttons read the bare compare for one revision of 2026-08-15
 // and the architect ruled that half out the same day — a Home / End press is
 // not a pure jump (each also stops a live audition, clears the marker
-// selection and hides the trim region overlay, even when the jump moves
-// nothing), so a greyed skip promised less than its key delivers; the
+// selection and, until 2026-09-22, hid the trim region overlay, even when the
+// jump moves nothing), so a greyed skip promised less than its key delivers; the
 // truthful-buttons ruling of 2026-08-30 named the skips outright ("even the
 // transport's back/forward when you're already at the home or the beginning
 // of the trim") and the compare came back for the morning, knowingly
@@ -11511,9 +11391,9 @@ int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
 // selection-or-focus pair; inside the `h` view the MODE's diff-flag
 // focus/selection, the mode arm's own clear, read through
 // history_mode_revert_subject_standing — the same two fields
-// clear_history_mode_focus tests), a SHOWN trim region overlay for the
-// mover's unconditional hide (RegionState::shown), or a landing that
-// differs from the resting cursor. Every term is an act write read from the
+// clear_history_mode_focus tests), or a landing that differs from the
+// resting cursor (a shown trim overlay was a term until 2026-09-22, when the
+// mover stopped hiding it). Every term is an act write read from the
 // act's own owner, never a restatement. FOUR READERS: run_playhead_end_jump
 // and the `h` view's own jump arm (each refusing SILENTLY when its form would
 // change nothing — a benign one-dimensional refusal already at its state, the
@@ -11635,7 +11515,7 @@ inline const ViewState& active_view_state(const AppState& a) {
 //
 // EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO WITH
 // TWO NAMED EXCEPTIONS, and nearly everything it admits the iteration lock
-// admits: navigation, playback, the trim gestures and `[` / `Shift+[`,
+// admits: navigation, playback, the trim gestures and `Shift+0`,
 // Ctrl+S, both render chords, Synchronize, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
@@ -12132,8 +12012,8 @@ inline bool magnification_level_step_direction_actionable(const AppState& a,
 // pixels of vertical travel, up increasing — and the horizontal marker drag is
 // OFF on every flag ("we never allow multi-axis dragging; flags move up and
 // down or not at all"). THE PRESS ITSELF IS UNTOUCHED: it still stops
-// playback, selects, lands the playhead, addresses the cell and hides the trim
-// region overlay at the press (run_marker_click_act), and ctrl-click and
+// playback, selects, lands the playhead and addresses the cell at the press
+// (run_marker_click_act), and ctrl-click and
 // shift-click act at the press and arm nothing, so neither can become a drag.
 // The posture says WHETHER the gesture is armed; value_drag_target below says
 // ON WHAT, and a press on a non-target — a label ref, a phase reset's
@@ -13310,7 +13190,7 @@ inline constexpr const char* kRedoOutsideViewCard =
 // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE VERDICT (architect 2026-09-22):
 // the lamp governs SOURCE VIEW alone — target view is flat whatever it says
 // (effective_waveform_gain_profile, warp_frame_map_view.h) — so the toggle is
-// actionable exactly in source view. TWO READERS: bare `]`'s arm
+// actionable exactly in source view. TWO READERS: bare `[`'s arm
 // (handle_plain_bare_keys, input_key_dispatch.cpp), which cards
 // kMagnificationSourceViewOnlyCard on a false answer and leaves the bit as it
 // stands, and the lamp's face (redesign_button_enabled's
@@ -13948,8 +13828,8 @@ inline bool playback_launch_playable(const AppState& a,
 // watched: "every time I selected a marker, that pair would blink in and out,
 // and it would be distracting"), the two SKIPS next (their honest arm rested
 // on the premise that bare Home / End are pure jumps, when each also stops a
-// live audition, clears the selection and hides the trim region overlay
-// unconditionally, so a greyed skip promised LESS than its key delivers), and
+// live audition, clears the selection and — until 2026-09-22 — hid the trim
+// region overlay unconditionally, so a greyed skip promised LESS than its key delivers), and
 // PLAY / STOP last, on the strict-user-knowledge line above. A
 // FULL-TRUTHFULNESS EXPERIMENT for the icon row followed and was REVERSED
 // UNBUILT once the cost exceptions were laid out — refusal classes that cannot
@@ -14481,22 +14361,6 @@ inline bool redesign_button_enabled(const AppState& a,
         // (row 3 is the A/B tabs in every state).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
-        // THE TRIM REGION TOGGLE MIRRORS NOTHING (2026-08-16, unchanged when
-        // it became a toggle on 2026-08-18), and for a stronger reason than
-        // the trim scissors it outlived: it HAS no refusal to mirror. Its one
-        // act — show the overlay and frame it, or hide it — is always
-        // meaningful on a loaded piece, and the case that would tempt a face
-        // (an overlay already fully in view) is a harmless nothing rather than
-        // a refusal, the framing owner's first arm simply writing no viewport.
-        // The `h` view greys it through the derived partition above, RE-DERIVED
-        // 2026-08-18 against the chord's repointing and unchanged by it and by
-        // the 2026-08-24 move: bare
-        // `[` is neither history_mode_owns_key's own vocabulary nor on
-        // history_mode_key_blocked's allowlist, so the mode consumes it and the
-        // partition finds nothing to keep the face live. Nothing hand-listed —
-        // which is also where trim's freeze in that view is expressed for this
-        // button.
-        case RedesignButton::IconShowRegion:
         // THE ZOOM PAIR MIRRORS NOTHING (2026-08-12) because each always acts
         // on a loaded file — FULL ZOOM OUT (bare `0`) runs the `c` command
         // once it is there, and `c` always frames. Both are LIVE in the `h`
@@ -14511,11 +14375,11 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconFollow:
             return true;
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP GREYS IN TARGET VIEW (architect
-        // 2026-09-22): the lamp governs source view alone, so there bare `]`
+        // 2026-09-22): the lamp governs source view alone, so there bare `[`
         // refuses on its card and the bit keeps its state — this face reads
         // the verdict that refusal reads, waveform_magnification_toggle_actionable.
         // The lock admits the chord (a display posture authors nothing), and
-        // the `h` view greys it through the derived partition above, bare `]`
+        // the `h` view greys it through the derived partition above, bare `[`
         // being off that mode's allowlist as `f` and `z` are.
         case RedesignButton::IconIgnoreWaveformMagnification:
             return waveform_magnification_toggle_actionable(a);
@@ -15157,8 +15021,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // a landing-only grey for one revision of 2026-08-15 and the
         // architect took it back because a Home / End press is not a pure
         // jump — every form also STOPS A LIVE AUDITION, CLEARS THE MARKER
-        // SELECTION (the marker lane's exit repair) and HIDES THE TRIM
-        // REGION OVERLAY, even when the jump moves nothing
+        // SELECTION (the marker lane's exit repair) and — until 2026-09-22 —
+        // HID THE TRIM REGION OVERLAY, even when the jump moves nothing
         // (run_playhead_end_jump and the `h` arm, input_key_dispatch.cpp) —
         // so that grey promised LESS than the key delivered; his second
         // reason was that the cursor's rest on a trim bound is VISIBLE ON
@@ -15725,7 +15589,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconRestrictUndo:
             return a.restrict_undo_to_viewport;
         // The Ignore Waveform Magnification lamp (architect 2026-09-22): the
-        // same toggle pattern, reading the live bit bare `]` flips — lit is
+        // same toggle pattern, reading the live bit bare `[` flips — lit is
         // ignoring, the picture flat in source view. In target view
         // the face is greyed and still reads the bit, which keeps its state
         // there untouched.
@@ -15738,22 +15602,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // give the mode — this product's dropdowns carry no checkboxes by
         // ruling — which is one of the things the button's return puts back.
         case RedesignButton::IconIter: return a.iteration_mode_enabled;
-        // THE TRIM REGION TOGGLE'S LAMP (2026-08-18), the same pattern as the
-        // two above: it reads the OVERLAY'S VISIBILITY, which is exactly the
-        // bit bare `[` flips, so the lit face and the surface on screen
-        // cannot drift. IT IS A TOGGLE AGAIN, where the 2026-08-16 ruling made
-        // this button deliberately MOMENTARY and stateless, and the hole that
-        // ruling avoided cannot occur under the new model — which is the part
-        // worth keeping, because the hole is easy to re-invent. The old design
-        // lit the lamp from a SPAN'S EXISTENCE, so a span scrolled offscreen
-        // left the button lit with only a clearing press available and the one
-        // thing the user wanted out of reach. This lamp reads VISIBILITY, so a
-        // press always changes what is painted and the state it reports is
-        // always the state a press leaves. The framing that used to back this
-        // paragraph left the act on 2026-09-04 and is not missed: where the
-        // window IS is the trim bar's answer, and its
-        // double-click is the camera's.
-        case RedesignButton::IconShowRegion: return a.region.shown;
         // ADD TO SELECTION IS THE BOTTOM ROW'S ONE LAMP (2026-08-18), on the
         // same toggle pattern as the two above: it reads the live bit bare `k`
         // flips, so the lit face and the sticky ctrl cannot drift. IT IS THE
@@ -15981,8 +15829,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // time three more had joined without the word moving). Each member is here for
 // that one reason: Render (Ctrl+Alt+R renders the
 // deliverable into `render/`, Ctrl+Alt+Shift+R a numbered cell inside a
-// `_miscellaneous` batch folder under `tmp/`), Show trim
-// region (Shift+[ the MAXIMIZER — reset the trim to the whole song), THE
+// `_miscellaneous` batch folder under `tmp/`), THE
 // WALK'S TWO ARROWS since 2026-08-07, whose shifted twins are the walk's WALL
 // JUMPS: bare `,` steps one checkpoint older and Shift+`,` goes to the oldest,
 // bare `.` steps one newer and Shift+`.` goes to the newest
@@ -15995,19 +15842,13 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // on_key like every other roster member. The admission is what gives glass
 // the act at all — the panel has no Shift and no Space.
 //
-// SHOW TRIM REGION CARRIES THE FOURTH, THE SAME ADMISSION ON A DIFFERENT
-// BUTTON. The trim scissors carried it from 2026-08-15 until their
-// button was retired on 2026-08-18, and the reason is a hole rather than a
-// preference: the twin is Shift+[ the MAXIMIZER (reset the trim to the whole
-// song), and the admission superseded the 2026-08-11 "the maximizer stays
-// keyboard-only" clause on the glass rig's account — the maximizer had no
-// pointer route at all, so a keyboardless panel could set a trim window and
-// never get back out of it. The scissors' deletion re-opened that hole for
-// hours; the architect closed it the same day by REPOINTING their chord onto
-// the Show trim region button and moving the admission with it, so a
-// SHIFT-CLICK or a LONG PRESS on that button is the maximizer. The pair is
-// honest here in a way it was not on the scissors: `[` and Shift+[ are the two
-// halves of one trim surface — show the window, or throw it away.
+// (SHOW TRIM REGION WAS A MEMBER from 2026-08-18 until its button's deletion
+// on 2026-09-22, its twin Shift+[ the MAXIMIZER — reset the trim to the whole
+// song — inherited from the trim scissors, which carried it from 2026-08-15:
+// the maximizer had no other pointer route, so a keyboardless panel could set
+// a trim window and never get back out of it. The architect's pen reaches the
+// trim bar now, where dragging a bound onto its partner resets to the whole
+// song; the maximizer itself is Shift+0 and has no button.)
 //
 // THIS STAYS THE STRUCTURAL FACT — "the keyboard spells a twin for this chord"
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
@@ -16110,7 +15951,6 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::TabA ||
            b == RedesignButton::TabB ||
-           b == RedesignButton::IconShowRegion ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
            b == RedesignButton::TransportPlayStop ||
@@ -16283,7 +16123,7 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // THE CASE IS THE PRODUCT'S TWO-CLASS RULE, NOT THIS TABLE'S (the
 // capitalization block, paint_handler.cpp, owns it and this comment states
 // only its own class): LINE 1 IS ALWAYS A NAME and so always TITLE CASE
-// ("Drop Marker (S)", "Toggle Trim Region ([)"), and LINE 2 IS ALWAYS A
+// ("Drop Marker (S)", "Toggle Follow (F)"), and LINE 2 IS ALWAYS A
 // SENTENCE. It read sentence case throughout from 2026-09-01 until the evening
 // of 2026-09-03, when the rule that explains kdenlive's own strings landed;
 // the sentence-case LINE 1 that rule admitted — a state or a reason — has had
@@ -16295,12 +16135,13 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // which way the next press goes, and the text never has to swap between a
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
 // every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
-// line 1 begins "Toggle " and which redesign_button_selected lights: trim
-// region, follow, restrict undo to viewport, grid iterations, read-only,
+// line 1 begins "Toggle " and which redesign_button_selected lights: follow,
+// ignore waveform magnification, restrict undo to viewport, grid iterations, read-only,
 // history view, history walk, cumulative and add to selection — and by the
 // render player's Repeat one. Until then those rows named a CONSTANT ACT while
 // the lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
-// which read "Show trim region" over a lit lamp whose press HIDES it, the lie
+// which read "Show trim region" (the since-deleted button's) over a lit lamp
+// whose press HIDES it, the lie
 // the ruling retired; a RADIO's unlit half still names its own act, a press
 // on the lit half being the consumed nothing the lamp shows.
 //
@@ -16310,7 +16151,7 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // its spelled-out modifiers in the fixed order ("(Ctrl+S)", "(Ctrl+Alt+R)",
 // "(Ctrl+Shift+Z)"), a NAMED KEY by Qt's own English name ("(Esc)", "(Del)",
 // "(Return)", "(Home)", "(Space)", "(Tab)"), and punctuation naming the CAP
-// rather than the stamped symbol ("(,)", "(.)", "(')", "([)", "(Shift+[)").
+// rather than the stamped symbol ("(,)", "(.)", "(')", "([)").
 // This table writes literals rather than calling the speller — it advertises a
 // BOUND chord in advance where the speller names a press that just happened —
 // but it writes the same spelling, and the shift ambiguity a capital carries is
@@ -16379,24 +16220,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
         // category: their axes are the four view selectors' and the view bar's
         // alone now.)
-        // THE TRIM REGION TOGGLE, TWO LINES: its twin IS Shift+[ the
-        // maximizer, so the hint says so and the shift admission and the line
-        // are the one fact the static_assert below keeps together. The
-        // accelerator is the bare `[` key and so names its own cap, this
-        // table's rule (it read "(x)" until the family moved to `[` on
-        // 2026-08-24). THE TEXT NAMES THE TOGGLE (the lamp rule at this
-        // table's head, architect 2026-09-01): it read "Show trim region" —
-        // the architect's own words of 2026-08-19, "Show region" from
-        // 2026-08-16 and "Trim region" for one day between — over a lit lamp
-        // whose press HIDES, the read-only precedent's constant-act shape,
-        // and the enumerator keeps that name. There is no second glyph
-        // either (every eye-shaped alternative collides with ViewHidden,
-        // which is already IconMarkerDisable). The SHIFT LINE is the trim
-        // scissors' own words, inherited with their admission; THE OVERLOAD
-        // DROPS IT over a full trim window, where the maximizer's own guard
-        // refuses (trim_is_full_window, handle_trim_clear_both's head).
-        case RedesignButton::IconShowRegion:
-            return {"Toggle Trim Region ([)", "Press Shift for the whole song."};
         // THE ZOOM PAIR (2026-08-12), both one-line; the accelerators are the
         // table's own convention — a key names its own cap. BOTH ARE
         // STATE-FREE HERE ONLY (2026-09-01, the overload): Full zoom out at
@@ -16408,10 +16231,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconZoomOriginal:
             return {"Center on Focus (C)", nullptr};
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22), one
-        // line: bare `]` toggles and has no shifted twin; the name is the
+        // line: bare `[` toggles and has no shifted twin; the name is the
         // toggle's.
         case RedesignButton::IconIgnoreWaveformMagnification:
-            return {"Toggle Ignore Waveform Magnification (])", nullptr};
+            return {"Toggle Ignore Waveform Magnification ([)", nullptr};
         // THE FOLLOW LAMP, one line: bare `f` toggles and has no shifted twin.
         // Its text NAMES THE TOGGLE (the lamp rule at this table's head,
         // architect 2026-09-01): it read "Follow (F)" until that day.
@@ -17054,15 +16877,6 @@ inline RedesignTooltipText redesign_button_tooltip(
     // where the modified press would do nothing different. Each condition is
     // the act's or the face's own predicate — none is restated here.
     switch (b) {
-        // THE TRIM REGION TOGGLE'S SHIFT LINE drops over a full trim window:
-        // the maximizer's own guard (trim_is_full_window at
-        // handle_trim_clear_both's head, input_trim.cpp) refuses there, so
-        // "Press Shift for the whole song" would name a press that does
-        // nothing under a face the plain toggle keeps lit.
-        case RedesignButton::IconShowRegion:
-            if (trim_is_full_window(a.trim, total_frames))
-                return {"Toggle Trim Region ([)", nullptr};
-            break;
         // FULL ZOOM OUT AT THE CEILING is the recall — `c` at the stamped
         // level, or plain `c` when nothing usable is stamped — through the
         // act's one resolve (overview_command_target, run_overview_command's

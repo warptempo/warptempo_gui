@@ -751,8 +751,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-two view/mode/action buttons since the IGNORE WAVEFORM
-// MAGNIFICATION lamp joined them 2026-09-22 — twenty-one from the FLATTEN
+// ICON row (the twenty-one view/mode/action buttons since the Show trim region
+// button's deletion later on 2026-09-22, twenty-two from the IGNORE WAVEFORM
+// MAGNIFICATION lamp's arrival that day — twenty-one from the FLATTEN
 // button's arrival from the bottom row 2026-09-19, twenty from the two view
 // lamps' whole-category deletion 2026-09-15, twenty-two before that — the deleted toolbar
 // row's four lead them since the 2026-08-12 relayout, whose roster commit

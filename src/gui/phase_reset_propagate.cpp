@@ -825,11 +825,10 @@ void PhaseResetPropagate::paste_state_apply() {
 // below reading straight across.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
-// wholesale region hide, then the selection set (the playhead land rides with
-// it, after the swap):
+// selection set (the playhead land rides with it, after the swap):
 //   * switch_active_audio_view_to is the SAME chokepoint the view selectors run
 //     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
-//     the region hide, kick_waveform_sync, and target_render.ensure_ready all
+//     kick_waveform_sync, and target_render.ensure_ready all
 //     fire exactly once). It is the SET-TO spelling, so naming 'T' from a
 //     session already in target view is the chokepoint's own no-op and this
 //     tail spells no guard of its own.
@@ -851,8 +850,8 @@ void PhaseResetPropagate::paste_state_apply() {
 //     re-express of wherever the cursor happened to be, and the only playhead cue
 //     left, since the swap's clear means no flag claims the position. Running it
 //     first keeps the heavier re-express (and its full-window invalidate) ahead of
-//     the lightweight mode swap and leaves every side effect (region hide, hover
-//     clear, the selection clear) coherent.
+//     the lightweight mode swap and leaves every side effect (hover clear, the
+//     selection clear) coherent.
 //
 // Invalidation, and why the tail ends in a SYNCHRONOUS rebuild rather than plain
 // damage: on_redraw is blit-only, and the run loop services the frame callback
@@ -896,14 +895,10 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // PHASE-RESET rows — must not install them over another column. The paste
     // itself has landed in the store; the kick at the tail still paints it.
     const bool landed_in_phase_reset_view = (app.active_markers_view == 'P');
-    // (THE TAIL'S OWN OVERLAY HIDE IS DELETED, 2026-08-19, with the call-site
-    // inventory it belonged to.) The CREATED-SET arm below still hides, where
-    // the rule puts it: it LANDS the playhead on the first created reset, and
-    // the land is one of the rule's two movement owners (clear_region_highlight,
-    // input_handler.h). The NO-CREATED arm lands nothing and hides nothing —
-    // a paste that materialized no reset moved no playhead and touched no
-    // marker, and the overlay it may leave standing derives from the tab's own
-    // trim, unchanged by the paste.
+    // The CREATED-SET arm below LANDS the playhead on the first created reset,
+    // through the land, a movement owner. The NO-CREATED arm lands nothing — a
+    // paste that materialized no reset moved no playhead and touched no
+    // marker.
     if (!created.empty() && landed_in_phase_reset_view) {
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set

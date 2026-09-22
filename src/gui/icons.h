@@ -10,41 +10,32 @@
 // icon is crisp at every gui_scale, exactly like every other redesigned
 // dimension.
 //
-// THE INTERPRETER HAS GROWN EXACTLY FOUR FEATURES past the plain filled path
+// THE INTERPRETER HAS GROWN EXACTLY TWO FEATURES past the plain filled path
 // it started as, each with a committed producer and each taken so that the `d`
 // string in the table stays VERBATIM rather than being flattened by hand:
 //   - a per-path TRANSLATE (dialog-ok-apply's and dialog-cancel's transform);
-//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05);
-//   - the STROKED PATH (boost's four open polylines, 2026-08-15 — RESTORED
-//     rather than invented: the arm lived for part of 2026-08-11 for
-//     distortionfx, went producer-less when the architect reglyphed that
-//     button hours later, and came back with a real producer; the per-path
-//     LINE CAP boost brought with it was deleted with boost on 2026-09-14,
-//     and tool-rect-selection is the arm's one producer since);
-//   - the STROKE'S OWN WIDTH AND DASH (tool-rect-selection, 2026-08-16), which
-//     is a widening of the third rather than a fourth kind of thing: the pen
-//     had been hard-coded to boost's implicit defaults, and the marching-ants
-//     rectangle is the first file to state either attribute.
+//   - the SMOOTH CUBIC `s` (document-revert's arrow lobes, 2026-08-05).
 // Each is described where it is implemented (icons.cpp's table header and its
-// `d`-interpreter header). A general per-path MATRIX was grown alongside the
-// stroke for distortionfx and did NOT come back with it — no stroked file
-// carried a transform — so that one is still git history alone.
+// `d`-interpreter header). THE STROKED PATH, with its per-path width and dash,
+// was a third and left on 2026-09-22 with tool-rect-selection, its last
+// producer (the Show trim region button's glyph, deleted with the button); it
+// had lived for distortionfx and for boost before that, and a general per-path
+// MATRIX grown beside it for distortionfx is git history too.
 //
-// THREE FILES DEPART FROM THE VERBATIM RULE and they are stated here as well
+// TWO FILES DEPART FROM THE VERBATIM RULE and they are stated here as well
 // as at their table entries, because the rule is what this header promises:
-// tool-rect-selection's geometry is a `<rect>` element, not a `<path>`, so
-// there is no `d` in the file to copy and its row holds a four-number
-// derivation instead, and since 2026-08-29 the two dialog glyphs' PLATES
-// (dialog-information, dialog-error) are `<rect rx="2">` elements under a
-// verbatim glyph path, their rows spelling the rounded rectangle SVG defines
-// for that rx. A `<rect>` parser was declined for one file and stays
-// declined for three.
+// since 2026-08-29 the two dialog glyphs' PLATES (dialog-information,
+// dialog-error) are `<rect rx="2">` elements under a verbatim glyph path, so
+// there is no `d` in the file to copy for the plate and each row spells the
+// rounded rectangle SVG defines for that rx. A `<rect>` parser was declined
+// for those files (and for tool-rect-selection before them) and stays
+// declined.
 //
 // PROVENANCE: the SVGs the tables were transcribed from are committed under
 // assets/icons/breeze/. They are the record of what this code draws; the
 // d-strings here are copied from them VERBATIM, so a diff between the two is a
-// transcription bug and nothing else — with the ONE `<rect>` file's derivation
-// as the stated exception just above. They are read by no code at runtime — the
+// transcription bug and nothing else — with the two `<rect>` plates'
+// derivations as the stated exception just above. They are read by no code at runtime — the
 // product ships no icon files and reads none.
 //
 // EVERY ENTRY IS A ROW'S. The icons here are painted by the redesigned rows and
@@ -125,23 +116,13 @@ enum class Icon {
     // unpainted. It served the trim button from 2026-08-11 and was the
     // architect's own pick from the rendered candidate sheet, over the first
     // cut's planner-picked transform-crop; both are git history now.)
-    // THE SHOW TRIM REGION BUTTON'S GLYPH (architect 2026-08-16), and the trim
-    // group's ONE member since the scissors left on 2026-08-18 — the button
-    // that inherited their chord hours later (bare `x` then, bare `[` since
-    // 2026-08-24): Breeze's
-    // TOOL-RECT-SELECTION, the marching-ants
-    // rectangle — a dashed box says "a selected span" everywhere, and the
-    // button's whole job is to put one on the waveform. Taken at 22 though the
-    // architect named the 24px path: the two files hold the SAME rectangle (24
-    // wraps it in a translate inside a 24 viewBox) and 22 is this set's
-    // convention. It is the table's ONE `<rect>` file, so its `d` is a
-    // four-number derivation rather than a verbatim copy — stated at the table
-    // entry, which also records the two stroke attributes it brought (a
-    // non-default width and the dash).
-    ToolRectSelection,   // Toggle trim region (bare `[`)
+    // (TOOL-RECT-SELECTION, the marching-ants rectangle, was the Show trim
+    // region button's glyph from 2026-08-16 and left with that button on
+    // 2026-09-22 — enumerator, def and asset together, and the interpreter's
+    // stroked arm with it, the file having been that arm's last producer.)
     // THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's
-    // roster commit — the icon row's viewport-class group, behind the trim
-    // region toggle). Breeze's own magnifier family: the fit frame (full zoom
+    // roster commit — the icon row's viewport-class group, which Full zoom
+    // out leads since 2026-09-22). Breeze's own magnifier family: the fit frame (full zoom
     // out — bare `0`'s whole-song arm) and the 1:1 original (working-zoom
     // center, bare `c`). The plain zoom-in / zoom-out magnifiers that stood
     // beside them left with the Zoom In / Zoom Out buttons on 2026-09-14
@@ -153,7 +134,7 @@ enum class Icon {
     // minus): worn by the Ignore Waveform Magnification lamp between Center
     // and Follow (architect 2026-09-22), restored with its def and asset for the
     // third time — the lamp's stands of 2026-09-14 and 2026-09-17 wore it too.
-    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `]`)
+    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `[`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -400,8 +381,8 @@ enum class Icon {
     // actions/22/media-repeat-single — the loop with a "1" — worn in BOTH
     // states by the modal row's one lamp, "a plain toggle: off is the
     // unpressed face, on is the pressed/lit face", so the glyph never
-    // changes and the LAMP carries the state (the trim region toggle's own
-    // precedent; the text names the toggle since 2026-09-01, the rule at
+    // changes and the LAMP carries the state (the since-deleted trim region
+    // toggle's precedent; the text names the toggle since 2026-09-01, the rule at
     // redesign_button_tooltip's head). Breeze spells "repeat one" as media-repeat-single /
     // media-playlist-repeat-song, two names for one artwork; there is no
     // media-repeat-one.
@@ -454,8 +435,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 51 SINCE 2026-09-22's walk-group change, re-counted off the enumerators
-// above: bboxprev left with the Previous marker button and go-previous-context
+// 50 SINCE the Show trim region button's deletion later on 2026-09-22,
+// re-counted off the enumerators above: tool-rect-selection left with the
+// button that wore it. It was 51 from that day's walk-group change:
+// bboxprev left with the Previous marker button and go-previous-context
 // / go-next-context joined with the two hold-column nudges. It was 50 earlier
 // that day, re-counted rather than adjusted: zoom-out-y came back with the Ignore Waveform Magnification lamp
 // that wears it (architect 2026-09-22), and merge had joined on 2026-09-19
@@ -473,7 +456,7 @@ enum class Icon {
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 51;
+inline constexpr int kIconCount = 50;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

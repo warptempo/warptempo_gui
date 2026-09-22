@@ -170,7 +170,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     // The waveform PICTURE's gain profile — the gate's whole answer off the
-    // audio view and the `]` lamp (effective_waveform_gain_profile, which owns
+    // audio view and the `[` lamp (effective_waveform_gain_profile, which owns
     // the rule; the `h` view's plate included, it being the live plate) —
     // captured here with the geometry as an owned snapshot, so the worker
     // reads no live store. Its HASH is the fingerprint field, which is what

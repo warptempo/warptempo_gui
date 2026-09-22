@@ -1,7 +1,6 @@
 #include "viewport.h"
 
 #include "audio.h"
-#include "input_handler.h"   // clear_region_highlight (the movement owner's hide)
 #include "notifications.h"   // notification_stack_bound (the stack's damage rect)
 #include "playback.h"
 #include "render.h"
@@ -114,9 +113,10 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
 // read from that write's own owner: the stop's (transport_session_live), the
 // selection clear's (the live arms' selection-or-focus pair, or the mode
 // arm's diff-flag pair through history_mode_revert_subject_standing — the
-// same two fields clear_history_mode_focus tests), the trim overlay hide's
-// (RegionState::shown, which Viewport::move_playhead_to hides
-// unconditionally), and the landing compare against the resting cursor.
+// same two fields clear_history_mode_focus tests), and the landing compare
+// against the resting cursor. (A shown trim overlay was a fourth term until
+// 2026-09-22, when the movement owner stopped hiding it: the overlay stands
+// only while a sweep draws it.)
 bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
                                   bool forward, bool whole_piece) {
     if (transport_session_live(app)) return true;
@@ -125,7 +125,6 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
             ? history_mode_revert_subject_standing(app.history_mode)
             : (marker_selection_standing(app) || marker_focus_standing(app));
     if (clear_would_act) return true;
-    if (app.region.shown) return true;
     return playhead_skip_landing_frame(app, audio, forward, whole_piece) !=
            app.playhead_cursor_sample;
 }
@@ -195,25 +194,26 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
     }
 }
 
-// move_playhead_to: THE MOVEMENT OWNER — the trim region overlay's HIDE and the
-// A/B audition's END in front of the reseat below. Reaching this function means
-// the playhead's POSITION IN THE MUSIC is changing, and that is the whole hide
-// rule; the rule, its second owner and its exemptions are stated once at
-// clear_region_highlight (input_handler.h). UNCONDITIONAL, never gated on
-// whether the write moved anything: a Home pressed on the frame the cursor
-// already holds still hides, which is what the bottom row's ungreyed skip
-// buttons promise (architect 2026-08-15, the record at their case in
-// redesign_button_enabled).
+// move_playhead_to: THE MOVEMENT OWNER — the A/B audition's END in front of the
+// reseat below. A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION: what the act
+// promises is that the pair of plays it makes on each tab is identical, which
+// is exactly a resting cursor that cannot move under it. Reaching this function
+// means the playhead's POSITION IN THE MUSIC is changing. THE RULE'S SECOND
+// OWNER is the land (land_playhead_on_marker / land_playhead_on_source_frame,
+// input_pointer.cpp), and it has THREE EXEMPTIONS, none of which reaches an
+// owner: a TRANSLATION (reseat_playhead_to below and
+// reseat_playhead_on_marker — the S/T flip, the map-change re-lands, the
+// coincidence auto-select's no-op), a RESTORE (the tab switch's band swap,
+// which writes the cursor direct — the act's own two tab switches are
+// restores) and THE CAMERA, which writes no playhead at all. The trim family
+// writes the cursor direct too (park_playhead_at_trim_start, the sweep's
+// carry), and a trim write stops playback through the one stop body, which
+// ends the act anyway. UNCONDITIONAL, never gated on whether the write moved
+// anything. (From 2026-08-19 to 2026-09-22 these owners also hid the trim
+// region overlay; that hide was deleted with the overlay's resting form.) This
+// is a class statement: the complete clearing-owner inventory is at
+// GuiAuditionSequence (app_state.h) and is not to be restated here.
 void Viewport::move_playhead_to(int64_t new_sample) {
-    clear_region_highlight(app, *this);
-    // A PLAYHEAD MOVEMENT ENDS THE A/B AUDITION, and it is the hide rule's own
-    // membership: what the act promises is that the pair of plays it makes on
-    // each tab is identical, which is exactly a resting cursor that cannot move
-    // under it. So the two rules share these movement owners, and a TRANSLATION
-    // (reseat_playhead_to, below) or a RESTORE (the tab switch's band swap,
-    // which writes the cursor direct) ends neither. This is a class statement:
-    // the complete clearing-owner inventory is at GuiAuditionSequence
-    // (app_state.h) and is not to be restated here.
     clear_audition_sequence(app);
     reseat_playhead_to(new_sample);
 }
@@ -223,8 +223,8 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 // range; trim is purely cosmetic so the playhead is free to sit
 // outside the trim window.
 //
-// THE WRITE ALONE, WITH NO HIDE IN IT, and the callers who want it that way are
-// the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP
+// THE WRITE ALONE, WITH NO AUDITION END IN IT, and the callers who want it
+// that way are the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP
 // 2026-09-02 — NINE, in two families:
 //   * THE MAP-CHANGE RE-LANDS, all in a target-view re-warp tail: both arms of
 //     the Up/Down tempo cent step (warpmarkers_ops.cpp) and, since 2026-08-25,
@@ -256,7 +256,8 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 //     whole trim family is exempt the same way — park_playhead_at_trim_start
 //     writes direct too — so the trim's surfaces take no suppression, they
 //     simply do not pass through here.
-// EVERY OTHER CALLER GOES THROUGH move_playhead_to and inherits the hide.
+// EVERY OTHER CALLER GOES THROUGH move_playhead_to and inherits the audition
+// end.
 //
 // The [0, total - 1] live-domain clamp is the shared ruling spelled at
 // clamp_playhead_to_live_domain (app_state.h) — this gesture route funnels
@@ -419,7 +420,7 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // WHOLE ARITHMETIC LIVES AT playhead_pixel_step_landing since 2026-08-30
     // (planner decision 60), the Left / Right buttons' face reading the same
     // landing; a step at a wall still reaches move_playhead_to, whose
-    // unconditional overlay hide is the KEY's to keep (the greyed button
+    // unconditional audition end is the KEY's to keep (the greyed button
     // forgoes it, the skips' own shape). ON THE PHASE-RESET COLUMN THE UNIT
     // IS A HOP (architect 2026-09-21, horizontal_arrow_step): the same road in
     // its own unit, exactly kRs target frames, no grid and no rounding, the

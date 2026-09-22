@@ -143,14 +143,14 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // which is a superset of the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
     // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19. It was
-    // an IN-PLACE reset here and never a call of clear_region_highlight's. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
+    // an IN-PLACE reset here. THE OVERLAY'S VISIBILITY IS NOT A PLAYHEAD, SELECTION OR
     // MUTATION CONCERN — it is a view preference about whether the user is
     // looking at the trim, and the ENTERING tab has a trim of its own for the
     // overlay to derive from, so a switch has nothing to put away. Hiding
     // discarded nothing either way, which is exactly why it bought nothing.)
     // The SEATED PINCH's anchor IS cleared here, this function being the A/B
     // WRITER and so a member of that rule in its own right — and it outlived
-    // the overlay hide above because it answers a different question, a stale
+    // the deleted overlay hide because it answers a different question, a stale
     // song frame rather than a view preference (codex round 20, moved
     // onto the writers at round 21; the argument, the whole membership and the
     // do-not-do-this note are at clear_touch_zoom_seat's declaration,
@@ -245,17 +245,9 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // lane the cursor IS the playhead and keeps its own value, and the playhead is
     // genuinely untouched across the flip.
     // (THE SWAP'S OVERLAY HIDE IS DELETED, 2026-08-19, with the A/B tab
-    // switch's and the S/T flip's. THE OVERLAY HIDES WHEN THE PLAYHEAD'S
-    // POSITION IN THE MUSIC CHANGES, WHEN A MARKER IS TOUCHED AND WHEN THE
-    // SWEEP ENDS — the rule at
-    // clear_region_highlight, input_handler.h — and a COLUMN SWITCH does none
-    // of the three: the swap empties the selection, so there is no focus to
-    // re-express and the playhead is genuinely untouched across the flip, and no
-    // marker is touched by a change of which column is drawn. Its 2026-07-29
-    // argument was "the user has turned to the other column"; the trim belongs
-    // to the TAB rather than the column, so the overlay re-derives unchanged
-    // across the flip and there was nothing to turn away from. It discarded
-    // nothing either way, which is why it bought nothing.)
+    // switch's and the S/T flip's: the trim belongs to the TAB rather than the
+    // column, so there was nothing to turn away from. The resting overlay
+    // itself went on 2026-09-22.)
     //
     // COINCIDENCE AUTO-SELECT, the column-entry chokepoint (the rule, the formula
     // and the authoritative call-site inventory live at

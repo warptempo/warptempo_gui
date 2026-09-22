@@ -4,8 +4,7 @@
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "notifications.h"      // kTabReadOnlyCard (the value steps' lock)
-#include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse,
-                                // which owns the overlay hide with it)
+#include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -46,8 +45,8 @@
 //   2. The playhead RE-LAND, through Viewport::reseat_playhead_to and NEVER
 //      through a movement owner: the marker's IMAGE moved out from under a
 //      resting cursor and the cursor follows it, which is a TRANSLATION and
-//      not a movement, so the trim region overlay must stand (the rule at
-//      clear_region_highlight, input_handler.h). The three sites that keep a
+//      not a movement (the rule at Viewport::move_playhead_to, viewport.cpp).
+//      The three sites that keep a
 //      focus re-land on ITS post-change image; the delete keeps none and
 //      re-lands the playhead's own musical instant instead (its site says how).
 //      THE DELETE'S FORM IS THE WHOLE-MAP REWRITE'S, and it is not this
@@ -178,17 +177,14 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.move_playhead_to(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
     // earlier keep-the-highlight behavior): it seats the playhead on the marker
-    // it creates and single-selects it, so the trim region overlay goes with it.
-    // SINCE 2026-08-19 THE SEAT ABOVE OWNS THAT — move_playhead_to is one of the
-    // rule's two movement owners (the rule at clear_region_highlight,
-    // input_handler.h) — so this site's own call is deleted with the inventory
-    // it belonged to, and the drop's answer is unchanged. PAST EVERY REFUSAL by
-    // construction, which still matters because the seat is what hides: the
+    // it creates and single-selects it, the seat above being a movement owner.
+    // PAST EVERY REFUSAL by
+    // construction, which still matters because the seat is a movement: the
     // callers' gates (read-only, active_column_authoring_allowed, the
     // double-click's own in-area test) return before calling at all, and this
     // function's own two refusals — no sample rate, and a drop_frame past the
     // EOF wall — return above, before the insert. So a refused drop reaches
-    // neither the insert nor the seat, and hides nothing.
+    // neither the insert nor the seat.
 
     // No synchronous re-warp, and THIS OP ALONE IS WHAT THAT CLAIM COVERS: a
     // DROP is a PLACEMENT, which is exactly what the home-view binding gates
@@ -421,20 +417,10 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // as the whole selection, so with 3,4,5 selected, the focus at 5 and the
     // playhead resting anywhere else, the lane would rest with the flag at 5
     // claiming to be the playhead while Space played from that other spot. Land on
-    // the focus — through land_playhead_on_marker, WHICH HIDES THE TRIM REGION
-    // OVERLAY since 2026-08-19 (the rule at clear_region_highlight,
-    // input_handler.h). That is a membership CHANGE for this gesture and a
-    // deliberate one: the rule reads "the playhead's position in the music
-    // changes, or a marker is touched", and a Ctrl+N collapse does both — it
-    // moves the cursor onto the focus from wherever it stood and it freezes
-    // inheritance on markers. Its old non-member argument ("a value edit is not
-    // a turn to other work") was a call-site judgement, and call-site judgements
-    // are what the rule replaced. It discards nothing, the trim standing behind
-    // the hidden overlay.
-    // (The belt that stood here — "a region rests only beside an EMPTY
-    // selection, and Ctrl+N needs a focus" — is retired, 2026-08-18: bare `[`
-    // shows the overlay and writes no selection, so a shown overlay may rest
-    // beside any selection.)
+    // the focus — through land_playhead_on_marker, a movement owner: a Ctrl+N
+    // collapse moves the cursor onto the focus from wherever it stood. (It hid
+    // the trim region overlay from 2026-08-19 until the resting overlay was
+    // deleted on 2026-09-22.)
     // The land sits at THIS caller and not inside collapse_to_focused, because the
     // site that hands the lane a new focus is the site that owes it a land — and
     // not every caller does: the singleton tempo step has no focus change to land
@@ -693,9 +679,9 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
 // THE RE-LAND IS A TRANSLATION, NOT A MOVEMENT, which is why it goes through
 // reseat_playhead_to and never through a movement owner: the focus did not
 // change and the playhead did not leave it — the marker's IMAGE moved under a
-// resting cursor and the cursor follows it — so the trim region overlay must
-// stand (the rule at clear_region_highlight, input_handler.h), and the
-// reseat's keep-visible scroll is what this tail wants. Usually the image
+// resting cursor and the cursor follows it — so it is no movement (the rule
+// at Viewport::move_playhead_to, viewport.cpp), and the reseat's keep-visible
+// scroll is what this tail wants. Usually the image
 // cannot move at all (a marker's own tempo shapes only the segment AFTER it),
 // but a LABEL DEFINITION reprices every reference to it, including references
 // EARLIER in the timeline, whose spans then change duration and shift
@@ -705,14 +691,10 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
 // never moved — which is the same split every member of the family takes.
 //
 // NO REGION WORK AT ALL, and none is owed: the overlay is DERIVED from the
-// trim every frame (trim_overlay_span, app_state.h), so a write that re-warps
-// the target re-derives it in the new domain on the next frame with nothing to
-// maintain. (Two retired belts are recorded rather than re-invented: "a region
-// rests only beside an EMPTY selection, and a tempo step needs a selection",
-// retired 2026-08-18 when bare `[` began showing the overlay without writing a
-// selection; and the group arm's own extent re-derive, which died with the
-// SPAN FORM on 2026-07-30. The #16 trim-highlight re-sync went with the
-// highlight itself.)
+// trim every frame (trim_overlay_span, app_state.h) and stands only while a
+// sweep draws it. (The group arm's own extent re-derive died with the SPAN
+// FORM on 2026-07-30; the #16 trim-highlight re-sync went with the highlight
+// itself.)
 //
 // NO SELECTION-DRIVEN STEM WORK EITHER: stems are class-coloured and always
 // on, so no selection change moves one, and the kick below repaints the moved

@@ -34,18 +34,16 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // seam are at reset_displayed_target_basis (app_state.h); the ruling is at
     // the selector.
     reset_displayed_target_basis(app);
-    // THE LOAD PATH HIDES THE TRIM REGION OVERLAY. It discards nothing — the
-    // overlay is DERIVED from the trim (RegionState, app_state.h) and the load
-    // brings its own — but a piece arriving with a stranger's window already lit
-    // on the waveform is the wrong greeting, and hiding is what every other
-    // turn-to-other-work route does. THE SOURCE LOAD IS ITS WHOLE POPULATION
-    // since 2026-08-24: the `'` load-in-place stopped sharing this routine when
-    // it stopped writing anything a source load writes beyond the engine block,
-    // and it hides nothing — it brings no trim of its own to greet the user
-    // with, the resting window being the one that was already on screen.
+    // THE LOAD PATH RESETS THE TRIM REGION OVERLAY'S BIT, so a new piece starts
+    // clean (the overlay is DERIVED from the trim and stands only while a sweep
+    // draws it — RegionState, app_state.h — and the load runs from the startup
+    // tick, before any input exists, so this is a belt over a bit that is
+    // down by construction). THE SOURCE LOAD IS ITS WHOLE POPULATION since
+    // 2026-08-24: the `'` load-in-place stopped sharing this routine when it
+    // stopped writing anything a source load writes beyond the engine block.
     app.region = RegionState{};
     // AND THE SEATED PINCH'S ANCHOR, for the same structural reason and on the
-    // same line of argument the region hide above makes (codex round 21): the
+    // same line of argument the region reset above makes (codex round 21): the
     // three assignments below REPLACE the active view state wholesale, and this
     // routine is where that write lives — so the clear lives here rather than at
     // the caller. THE VALUES-ONLY CONTRACT STILL HOLDS otherwise: this is a
@@ -734,9 +732,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // therefore a HAND-EDITED pair only — the shape the load boundary otherwise
     // hard-fails (the -1 spelling, font_size, a past-EOF bound). The architect
     // ruled the exception deliberately: a crossed pair is a plausible
-    // slip of the hand in an editable file, and the answer to it is the Shift+[
+    // slip of the hand in an editable file, and the answer to it is the Shift+0
     // full-window reset applied at load rather than a refused source. This is
-    // the ONE crossed-pair recovery, and it is semantically Shift+[ — the same
+    // the ONE crossed-pair recovery, and it is semantically Shift+0 — the same
     // full window, through the same full_trim_window formula.
     //
     // Deliberately AFTER the adversarial past-EOF

@@ -195,9 +195,8 @@ void MagnificationLevelPropagate::land_paste_in_source_view(
     // the selection chokepoint, and then the lane's own land (the marker lane
     // owns the playhead; land_playhead_on_marker's rule). FOR THE PASTE THE
     // LAND MOVES NOTHING, the playhead already standing on the first created
-    // marker's frame, and it runs anyway because it is one of the
-    // overlay-hide rule's two movement owners (clear_region_highlight,
-    // input_handler.h) and this act has always gone through it; for the
+    // marker's frame, and it runs anyway because it is the lane's movement
+    // owner and this act has always gone through it; for the
     // GENERATE act it is a real move, onto the first generated marker.
     selection.replace_selection(created, *created.begin());
     land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());

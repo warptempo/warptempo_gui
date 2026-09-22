@@ -13,48 +13,15 @@ namespace {
 //
 // One row per committed SVG (assets/icons/breeze/), each holding that file's
 // path elements in file order. `d` is copied VERBATIM from the file; `ink` is
-// the color the file resolves to — the FILL source for an ordinary path and the
-// STROKE source for a stroked one (`stroked`, below).
+// the color the file resolves to, and every path is FILLED in it.
 //
-// NEARLY EVERY PATH HERE IS FILLED, and there is ONE STROKED FILE since
-// 2026-09-14: tool-rect-selection's (2026-08-16, the icon row's Show trim
-// region button), the marching-ants selection rectangle. (boost's, the bottom
-// row's walk-both-tabs glyph from 2026-08-15, was the first — its group
-// carried `fill="none" stroke="currentColor"`, so its open polylines would
-// have come out as filled slivers under the fill arm — and it left with its
-// button on 2026-09-14, taking the per-path LINE CAP its arrowheads were the
-// only producers of.) THE ARM IS RESTORED, NOT NEW: it lived in draw() for
-// part of 2026-08-11 for the set's first stroked file (distortionfx, row 4's
-// Warp radio for those hours), went producer-less when the architect
-// reglyphed that button to speedometer the same day, and came back verbatim
-// with boost. The general per-path MATRIX that was grown beside it did NOT
-// come back: no stroked file carried a transform, so that feature is
-// still git history alone and this table's `xform` is still translates only.
-//
-// TOOL-RECT-SELECTION BROUGHT TWO MORE STROKE ATTRIBUTES AND ONE DEPARTURE,
-// and the departure is the part worth reading twice (2026-08-16):
-//   * A STROKE WIDTH THAT IS NOT 1. Its `stroke-width="1.043"` is the table's
-//     first non-default, so the width is a per-path field now rather than the
-//     literal boost took. It is still in PATH UNITS and still set inside the
-//     viewBox transform, so the pen scales with the geometry exactly as
-//     before.
-//   * A DASH. `stroke-dasharray="2.08599997,2.08599997"` with
-//     `stroke-dashoffset="4.9125299"` is what makes it read as a SELECTION
-//     rectangle rather than a plain box, so the dash is the glyph's whole
-//     identity and not decoration. Both numbers are in path units like the
-//     width, so cairo's CTM scales them with everything else.
-//   * THE DEPARTURE: THIS FILE'S GEOMETRY IS A `<rect>`, NOT A `<path>`, so
-//     there is no `d` string in it to copy and the property this table
-//     otherwise holds — that a diff against the committed file is a
-//     transcription bug and nothing else — DOES NOT HOLD FOR THIS ONE ROW.
-//     What holds instead is weaker and is stated so a reader checks the right
-//     thing: every NUMBER in the `d` below is a number in the file, in the
-//     file's own spelling, laid out as `m x,y h width v height h -width z` —
-//     the four rect attributes read in the order the element writes them. A
-//     `<rect>` parser was weighed against this and declined: it would be a
-//     second geometry vocabulary in the interpreter for one file, and the
-//     four-number derivation is checkable by eye at the site, which the
-//     interpreter's own coverage would not make truer.
+// THERE IS NO STROKED FILE since 2026-09-22, and so no stroked arm:
+// tool-rect-selection (the Show trim region button's marching-ants rectangle,
+// 2026-08-16) was the last, and it left with its button, taking the per-path
+// stroke width and dash it had been the only producer of. The arm had lived
+// for distortionfx (part of 2026-08-11) and for boost (2026-08-15 to
+// 2026-09-14) before it; a future stroked file brings it back, its record in
+// git history.
 //
 // THE COLORS ARE HARD-CODED, per the redesign's color ruling (the carve-out is
 // recorded at render.h's palette-block header): they are the SVGs' own values,
@@ -97,31 +64,9 @@ constexpr IconTransform icon_translate(double tx, double ty) {
 }
 
 struct IconPath {
-    GuiColor      ink;      // fill source, or stroke source when `stroked`
+    GuiColor      ink;      // fill source
     const char*   d;
     IconTransform xform{};  // identity unless the file carries a transform
-    bool          stroked = false;
-    // (THE LINE CAP was a per-path field here from 2026-08-15 to 2026-09-14,
-    // boost's two square-capped arrowheads its only producers; it left with
-    // boost. The stroked arm sets SVG's and cairo's default BUTT, which is what
-    // tool-rect-selection says by saying nothing.)
-    // THE STROKE WIDTH, read only on a stroked path, in PATH UNITS (2026-08-16).
-    // SVG's default is 1 and boost's group said nothing, so 1.0 transcribes
-    // "no stroke-width attribute"; tool-rect-selection's `stroke-width="1.043"`
-    // is the field's one producer. Per-PATH like the cap, because the attribute
-    // is per-element in SVG.
-    double        stroke_width = 1.0;
-    // THE DASH, read only on a stroked path, in PATH UNITS (2026-08-16).
-    // `dash_on <= 0` means SOLID and transcribes a file with no
-    // stroke-dasharray — which is every path but tool-rect-selection's, whose
-    // `stroke-dasharray="2.08599997,2.08599997"` is a UNIFORM two-value array
-    // and so needs exactly these two numbers plus the offset. A longer or
-    // odd-length array would need a real array here; the two-value form is what
-    // the one producer writes, and a third value would fail to transcribe
-    // loudly rather than quietly, which is the right failure.
-    double        dash_on     = 0.0;
-    double        dash_off    = 0.0;
-    double        dash_offset = 0.0;   // stroke-dashoffset
 };
 
 struct IconDef {
@@ -788,40 +733,6 @@ constexpr IconPath kGoUpPaths[] = {
 // trim button from 2026-08-11 and was the architect's own pick over the first
 // cut's planner-picked transform-crop; both are git history.)
 
-// THE SHOW TRIM REGION BUTTON'S GLYPH (architect 2026-08-16, the icon row's
-// one viewport-class group, alone in it since the scissors left on
-// 2026-08-18): TOOL-RECT-SELECTION, the
-// MARCHING-ANTS rectangle — a dashed box is the universal "here is a selected
-// span" mark, and this button's whole job is to put a selectable span on the
-// waveform. THE ARCHITECT NAMED THE 24px FILE and this is the 22px one: the
-// two are the SAME rectangle (24 wraps it in `translate(1,1)` inside a 24
-// viewBox), 22 is every other row in this table, and taking 24 would have
-// bought a viewBox exception and a transform for nothing.
-//
-// IT IS THE TABLE'S ONE `<rect>` FILE, so the `d` below is a DERIVATION rather
-// than a verbatim copy and the header states exactly what survives of the
-// verbatim property. The rect's four attributes, in the element's own order and
-// spelling: x=2.5215156, y=3.5311673, width=16.952848, height=14.931264 — laid
-// out as a relative move to the corner, then across, down, back, close. The
-// closing `z` is what draws the fourth side, so the file's four sides are four
-// sides here too and no number is repeated.
-//
-// STROKED, and every stroke attribute comes off the element: `stroke-width`
-// 1.043 (the table's first non-default), `stroke-dasharray` 2.08599997 on /
-// 2.08599997 off and `stroke-dashoffset` 4.9125299. The default BUTT cap
-// (nothing is said in the file) is what puts a clean dash end at each corner.
-// The 22px file's own `stroke-miterlimit` is absent (its 16px sibling carries
-// one); the arm's SVG-default 4 is what a miter join takes anyway, and a dashed
-// rectangle has no joins left to miter.
-constexpr IconPath kToolRectSelectionPaths[] = {
-    {kIconText,
-     "m2.5215156,3.5311673 h16.952848 v14.931264 h-16.952848 z",
-     {}, /*stroked=*/true,
-     /*stroke_width=*/1.043,
-     /*dash_on=*/2.08599997, /*dash_off=*/2.08599997,
-     /*dash_offset=*/4.9125299},
-};
-
 // -- THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's roster
 // commit) ---------------------------------------------------------------------
 //
@@ -1037,8 +948,8 @@ constexpr IconPath kGoNextContextPaths[] = {
 // since media-record — and the second colour is NEW TO THE TABLE: both
 // dialog files paint a rounded plate (`<rect ... rx="2">` in a scheme class)
 // under a glyph filled with the literal `#fff`. The PLATE is transcribed as
-// the four-number derivation the table's one `<rect>` file established
-// (tool-rect-selection: there is no `d` in the file to copy), spelled as the
+// the four-number derivation tool-rect-selection established (the table's
+// first `<rect>` file, deleted 2026-09-22: there is no `d` to copy), spelled as the
 // rounded rectangle SVG defines for rx = ry = 2 — four straight edges and
 // four quarter arcs, `a2 2 0 0 1` — so the plate's pixels are the file's; the
 // GLYPH's `d` is copied verbatim. #fff is NOT kIconText's #fcfcfc: the file
@@ -1057,8 +968,8 @@ constexpr IconPath kGoNextContextPaths[] = {
 // is two zero-area line segments FILLED (the group carries no stroke), so it
 // draws nothing — view-hidden's artifact precedent, transcribed verbatim
 // rather than edited out — and the second is the X's outline that shows.
-// The cap attribute is read only on a stroked path and neither is stroked,
-// so it transcribes as nothing.
+// The cap attribute belongs to stroking, which this table does not do, so
+// it transcribes as nothing.
 constexpr GuiColor kIconPlainWhite = hex(0xFFFFFF);
 
 constexpr IconPath kDialogInformationPaths[] = {
@@ -1140,7 +1051,6 @@ constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
 constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
-constexpr IconDef kToolRectSelection  {22.0, kToolRectSelectionPaths,   1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
 constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
 constexpr IconDef kZoomOutY           {22.0, kZoomOutYPaths,            1};
@@ -1193,7 +1103,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DialogCancel:        return kDialogCancel;
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
-        case Icon::ToolRectSelection:   return kToolRectSelection;
         case Icon::ZoomFitBest:         return kZoomFitBest;
         case Icon::ZoomOriginal:        return kZoomOriginal;
         case Icon::ZoomOutY:            return kZoomOutY;
@@ -1236,11 +1145,10 @@ const IconDef& icon_def(Icon icon) {
 // though media-record's four arcs are circular: arcs recur in this icon set and
 // a circle-only shortcut would be a trap for the next icon.
 //
-// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's other two
-// grown features are the PATH ELEMENT's, not the string's, and live where they
-// are used: the per-path translate at IconPath's `xform`, and the stroked arm
-// (with its line cap) in draw(). Neither can reach this walk, which appends
-// geometry in the path's own units either way.
+// THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's other
+// grown feature is the PATH ELEMENT's, not the string's, and lives where it is
+// used: the per-path translate at IconPath's `xform`. It cannot reach this
+// walk, which appends geometry in the path's own units either way.
 struct PathCursor {
     const char* p;
     const char* end;
@@ -1619,53 +1527,10 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
         // The path's own color, retained by keep_own and made up with
         // mixed_with — the disabled face. keep_own == 1 (the default every
         // enabled caller takes) returns the table's color bit-identically, so
-        // the enabled path is unchanged by the existence of this one. It is the
-        // SOURCE either way, so a stroked path dims exactly as a filled one
-        // does and the disabled face needs no arm of its own.
+        // the enabled path is unchanged by the existence of this one.
         const GuiColor c = mix_color(p.ink, mixed_with, keep_own);
         cairo_set_source_rgb(cr, c.r, c.g, c.b);
-        if (p.stroked) {
-            // THE STROKED ARM (tool-rect-selection since 2026-08-16; boost
-            // from 2026-08-15 to 2026-09-14 — RESTORED with that producer,
-            // having lived producer-less hours for distortionfx on
-            // 2026-08-11): the line
-            // width is in PATH units and is set INSIDE the transform above, so
-            // cairo's CTM scales the PEN exactly as it scales the geometry.
-            // That is what SVG itself does with stroke-width, and it is what
-            // keeps a stroked glyph's weight on the gui_scale axis like every
-            // filled limb in the table. THE WIDTH IS THE PATH'S OWN since the
-            // second file arrived: tool-rect-selection says 1.043, and a file
-            // saying nothing would take SVG's default of 1 through the field's
-            // default (boost did, until it left).
-            //
-            // The pen is SET rather than inherited, every parameter of it:
-            // this cairo_t is the caller's and its stroke state is not ours to
-            // assume — which is why the DASH is set on both arms of its own
-            // fork rather than only where a dash exists. Miter join is SVG's
-            // default and cairo's both; the miter limit differs (SVG 4, cairo
-            // 10) and is stated for fidelity. THE CAP IS BUTT, SVG's default:
-            // the rectangle says nothing, and its butt ends are what square
-            // off each dash at a corner (boost's square-capped arrowheads, the
-            // per-path cap's only producers, left on 2026-09-14).
-            //
-            // THE DASH IS IN PATH UNITS TOO, so it rides the same CTM: a dash
-            // that scaled independently of the geometry would break up
-            // differently at every gui_scale, which is the whole reason it is
-            // set here and not in device units.
-            cairo_set_line_width(cr, p.stroke_width);
-            cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
-            cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
-            cairo_set_miter_limit(cr, 4.0);
-            if (p.dash_on > 0.0) {
-                const double dashes[2] = {p.dash_on, p.dash_off};
-                cairo_set_dash(cr, dashes, 2, p.dash_offset);
-            } else {
-                cairo_set_dash(cr, nullptr, 0, 0.0);
-            }
-            cairo_stroke(cr);
-        } else {
-            cairo_fill(cr);
-        }
+        cairo_fill(cr);
         cairo_restore(cr);
     }
     cairo_restore(cr);

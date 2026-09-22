@@ -124,7 +124,8 @@ struct GuiInputHandler;
 // transport-live, which is the same end by the same owner. Every path is a
 // clearing owner listed at GuiAuditionSequence, whose inventory is the one
 // authoritative copy; the class that matters here is that A PLAYHEAD MOVEMENT
-// IS ONE OF THEM (the trim overlay's hide rule's own two movement owners),
+// IS ONE OF THEM (the two movement owners, the rule at
+// Viewport::move_playhead_to),
 // which is what makes "the resting playhead cannot move under a standing act"
 // structural rather than a list of routes — while a TRANSLATION and a RESTORE
 // are not, which is what lets the act's own two tab switches run inside it.

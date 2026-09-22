@@ -271,7 +271,7 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
 //   TARGET view ('T') — flat, whatever the lamp says.
 //   SOURCE view ('S') — the live profile UNLESS the Ignore Waveform
 //                       Magnification lamp (AppState::ignore_waveform_magnification,
-//                       bare `]`, dark at every project open) is lit, then flat
+//                       bare `[`, dark at every project open) is lit, then flat
 //                       — on every column and at every zoom.
 //
 // The live answer is the magnification level store's memoized profile

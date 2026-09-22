@@ -310,194 +310,48 @@ std::expected<std::vector<WarpFrameMapSegment>, std::string>
 validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
                            double scale, int sample_rate, long total_frames);
 
-// HIDE THE TRIM REGION OVERLAY, damaging the waveform so the recolored ground
-// repaints away. A no-op when it is not shown. It was a CLEAR until 2026-08-18
-// and is a HIDE since, and that is the whole of the change: the region IS the
-// trim now, so there is nothing left to discard.
+// SHOW THE TRIM REGION OVERLAY — THE ONE RAISE (architect 2026-08-19). THE
+// OVERLAY IS THE SWEEP'S LIVE PICTURE (architect 2026-09-22): the surface you
+// are drawing on should be visible while you draw it, so the sweep raises it
+// at its FIRST ACCEPTED TRIM WRITE, and since the overlay is DERIVED from the
+// trim every frame (trim_overlay_span; the model at RegionState, app_state.h)
+// it then tracks the rest of the stroke live. Its one counterpart is the
+// sweep's end owner, commit_region_sweep (input_pointer.cpp), which takes it
+// down at every end path; nothing else raises or hides it. A no-op when it
+// already stands, which is what lets its one caller sit on a per-motion path.
 //
-// WHAT THE OVERLAY IS, so the rule below reads as one thing: THE TRIM, painted a
-// second time (architect 2026-08-18). The 10 px bar is right for a mouse and
-// unusable with a fingertip, so trim gained a large waveform surface — one
-// state, two painted surfaces, the span DERIVED from the trim every frame and
-// stored nowhere (the model is at RegionState, app_state.h). It is not a
-// playhead form, not a selection visual and not free scratch: the cursor
-// playhead paints straight across it and the singleton stem is never
-// suppressed.
-//
-// HIDING IS SAFE BY CONSTRUCTION: it DISCARDS NOTHING, because the trim persists
-// and bare `[` re-shows an identical overlay. That is what lets the rule below
-// be a rule rather than a negotiation — no site has to weigh what a hide costs.
-//
-// ============ THE RULE (architect 2026-08-19, amended 2026-08-20) ============
-// THE OVERLAY HIDES WHEN THE PLAYHEAD'S POSITION IN THE MUSIC CHANGES, WHEN A
-// MARKER IS TOUCHED, AND WHEN THE SWEEP ENDS. Nothing else hides it, and this
-// comment is the ONE statement of that — there is no call-site inventory any
-// more, because the calls are FIVE, in THREE CLASSES, and the first class is a
-// pair of OWNERS every future caller inherits from (re-derived by grep
-// 2026-08-21). The three clauses are now EXACTLY the surviving hides: the bare
-// Esc hide that used to sit outside them retired 2026-08-21, so the rule needs
-// no fourth clause and no exception.
-// The model is the DAW instinct the architect named: moving the
-// playhead, or touching an event, collapses the region — and the third clause
-// is the same instinct read forward, a stroke that has just said "this exact
-// region" having nothing left to look at.
-//
-// SPATIALLY, which is how he arrived at it: the TIMELINE is the ruler, the
-// marker lane and the waveform — the part of the GUI a drag pans left and
-// right. Anything in the timeline hides the overlay, EXCEPT touching the trim
-// itself. The trim bar is lane 3, ABOVE the
-// timeline, so the carve-out is a different BAND rather than an exception, and
-// the layout needs no special case for it.
-//
-// THREE THINGS THE RULE SAYS THAT A LIST COULD NOT:
-//   * A TRANSLATION IS NOT A MOVEMENT. The `t` flip maps the same musical
-//     instant into the other domain — "the closest thing it can do to not moving
-//     it" — and every MAP-CHANGE RE-LAND does the same for a marker whose IMAGE
-//     moved under a resting cursor: the tempo cent step's target-view tail, and
-//     since 2026-08-25 the warp status/value family's tails beside it (Ctrl+D,
-//     Ctrl+N, Delete and the flag editor's payload commit, admitted in W+target
-//     as the home-view binding's fifth ruled exception). The delete's subject
-//     is the cursor's own musical instant rather than a focus's image, the
-//     delete leaving no focus, but the reading is the same. All take the RESEAT
-//     entry points (reseat_playhead_on_marker, Viewport::reseat_playhead_to),
-//     whose caller inventory is at the latter's definition (viewport.cpp).
-//   * A RESTORE IS NOT A MOVEMENT. The A/B tabs are two virtual playheads over
-//     one piece and a switch brings the other one forward; it writes the entering
-//     tab's stored cursor direct and never reaches an owner.
-//   * THE CAMERA IS NEVER A MOVEMENT. The grab-pan, the wheel pan, every zoom,
-//     and the `h` view's edges move the
-//     WINDOW, not the cursor. None of them writes a playhead at all.
-// And THE TRIM'S OWN SURFACES ARE EXEMPT BY CONSTRUCTION: touching the thing the
-// overlay depicts cannot be a reason to stop depicting it. That exemption needs
-// no suppression anywhere, because the trim family writes the cursor DIRECT —
-// park_playhead_at_trim_start and the sweep's per-motion carry — and so passes
-// through neither owner. THE SWEEP'S END IS THE ONE HIDE INSIDE THAT FAMILY and
-// it is no leak but an explicit CALL, the third clause of the rule: the exempt
-// thing is touching the trim, and a stroke that has ENDED is no longer touching
-// it.
-//
-// THE THREE CLASSES, five calls:
-//   * THE MOVEMENT OWNERS — two owners in three entry points, which is where the
-//     rule's first half lives and
-//     where every future caller inherits it: Viewport::move_playhead_to (the
-//     cursor's live chokepoint — the Left/Right step, Home/End, the drops, the
-//     nudges, the typed `playhead_cursor=`, the navigation click's placement,
-//     the `h` mode's Home/End) and land_playhead_on_marker /
-//     land_playhead_on_source_frame (the land owner — the whole Tab family, `c`,
-//     the marker click, the editor opens, the undo/redo restore, the propagate
-//     paste, the Ctrl+N collapse, the `h` mode's Tab cycle and diff-flag
-//     clicks — the marker and frame forms each carrying the call, since they
-//     share only the write below them). ALL HIDE UNCONDITIONALLY, never gated on whether the write moved
-//     anything: a Home pressed on the frame the cursor already holds still
-//     hides, which is what the bottom row's ungreyed skip buttons promise
-//     (architect 2026-08-15).
-//   * THE MARKER TOUCH, one site — run_marker_click_act (input_pointer.cpp),
-//     which hides on all three arms even where the arm lands nothing (a
-//     ctrl-toggle that empties the selection). This is the rule's SECOND CLAUSE
-//     and the reason it is not simply "the playhead moved": touching a flag is
-//     an act on the timeline whether or not the cursor was already on it.
-//   * THE SWEEP'S COMMIT, one site — commit_region_sweep (input_pointer.cpp),
-//     the sweep's ONE end owner, which hides UNCONDITIONALLY at every end path
-//     it serves (the clean release, the button-lost arm, the touch hook's end
-//     and the force-end finalizer) and whatever the stroke wrote. This is the
-//     rule's THIRD CLAUSE (architect 2026-08-20): "shift+drag or longpress+drag
-//     on the waveform should collapse the region as soon as it is set — this
-//     method usually indicates 'this exact region'." The sweep's raise is
-//     therefore bracketed by the stroke — up at its first accepted trim write,
-//     down here — and the definition carries the reading
-//     of each end case — the `h` view's carved-out playhead sweep included,
-//     which collapses an overlay carried into the view precisely because that
-//     former moves the playhead in the music and only ever escaped the rule by
-//     writing the cursor direct.
-// A FOURTH CLASS STOOD HERE AND IS RETIRED: BARE ESC, the one route that hid
-// and did nothing else (joined 2026-07-30 as a clear, a hide from 2026-08-18,
-// retired 2026-08-21). The durable show's twin is the durable hide, so a second
-// key aimed at the same surface was a second road; bare `[` is that road now,
-// both ways. Esc's own enumeration lives at its dispatch point in on_key
-// (input_handler.cpp).
-//
-// THE TWO NON-CALLERS WORTH NAMING, because both write the visibility bit
-// themselves rather than through this helper:
-//   * BARE `[` (handle_toggle_trim_region, input_trim.cpp) — the toggle, and
-//     since 2026-08-21 the ONE MANUAL ROAD onto and off the overlay, its hide
-//     half being the user asking for it outright;
-//   * THE FILE LOAD (file_loader.cpp) — an in-place reset that pairs the hide
-//     with a whole new piece, a stranger's window already lit on the waveform
-//     being the wrong greeting.
-//
-// WHAT THE RULE DELIBERATELY LEAVES STANDING, since a reader will look for
-// each: the grab-pan and the wheel pan; every zoom, bare `0` included; the
-// A/B tab switch, the
-// S/T flip and the `p` W/P swap; entering, walking and leaving the `h` history
-// view; the scrub, which auditions without moving the cursor; the playback
-// scanner, auditioning being not a cursor move; every trim and region gesture
-// including the ones that PARK the playhead at the new trim start — EXCEPT THE
-// SWEEP'S END, which hides by its own class above; the settings
-// engine commit and the settings-only ('S') undo/redo entry, both of which
-// rebuild the map the overlay re-derives against and neither of which lands a
-// playhead; the propagate paste's no-created arm; and any
-// chrome that dispatches no playhead command. None of these is an exception
-// written anywhere — each simply never reaches an owner.
-// ==========================================================================
-void clear_region_highlight(AppState& app, Viewport& viewport);
-
-// SHOW THE TRIM REGION OVERLAY — the hide's counterpart and the ONE raise every
-// gesture uses (architect 2026-08-19). THE SURFACE YOU ARE DRAWING ON SHOULD BE
-// VISIBLE WHILE YOU DRAW IT: the sweep has just written the trim under it, and
-// since the overlay is DERIVED from the trim every frame it then tracks the
-// rest of the stroke live. A no-op when it already stands, which is what lets
-// its one caller sit on a per-motion path.
-//
-// IT DOES NOT FRAME, and since 2026-09-04 NEITHER DOES ANY OTHER RAISE: bare
-// `[`'s show half ran bring_span_into_view from 2026-08-16 until the architect
-// deleted the framing (handle_toggle_trim_region, input_trim.cpp, carries the
-// ruling), so NO ROAD THAT SHOWS THIS OVERLAY MOVES THE VIEWPORT and the
-// distinction this paragraph used to draw has nothing left to draw it against.
-// THE ARGUMENT HERE IS UNCHANGED AND STILL ITS OWN: the caller is a LIVE
-// POINTER GESTURE, already under the pointer or the finger, so moving the
-// viewport out from under it would be the wrong answer whatever the toggle
-// does — about the gesture, not about the event's phase, which is why it
-// survived the raise moving off the press.
-//
-// CALL SITES, RE-DERIVED BY GREP 2026-08-21 — ONE, and it is a MOTION BODY:
+// CALL SITES, RE-DERIVED BY GREP 2026-09-22 — ONE, and it is a MOTION BODY:
 //   * THE SWEEP'S FIRST ACCEPTED TRIM WRITE (apply_region_drag_motion,
 //     input_pointer.cpp), the one motion path all three of its arms share, so
 //     the shift former and the touch region hold raise it alike.
 //
-// IT MOVED THERE FROM THE ARM ON 2026-08-21 (architect, on his first drive):
-// "on shift+click on empty waveform, current region is highlighted ... the
-// first part is incorrect." The overlay is DERIVED from the RESTING trim, so a
-// press-time raise necessarily showed the OLD window until the stroke wrote its
-// own. Raising inside the accepted-write branch means the surface that comes up
-// is always a span the stroke itself authored — and a motionless shift click,
-// which writes nothing, now shows nothing at all.
+// IT DOES NOT FRAME: the caller is a LIVE POINTER GESTURE, already under the
+// pointer or the finger, so moving the viewport out from under it would be
+// the wrong answer.
 //
-// THE TRIM BAR'S THREE PRESSES LEFT THIS INVENTORY ON 2026-08-20 (architect,
-// partly reversing his own 2026-08-19 "touching the trim shows the trim"):
-// "touching the tiny lane means I'm on the laptop, and the region exists mostly
-// for the touchscreen." The 10 px band under a POINTER is already its own
-// display of the trim window; the big surface exists for GLASS, where that lane
-// is unusable. So the plain endcap/bridge/bare-band press and the two
-// Ctrl / Ctrl+Shift bound-set presses raise nothing at all now, and a laptop
-// press that does want the big surface asks for it with bare `[`.
+// IT MOVED OFF THE PRESS ON 2026-08-21 (architect, on his first drive): "on
+// shift+click on empty waveform, current region is highlighted ... the first
+// part is incorrect." The overlay is DERIVED from the RESTING trim, so a
+// press-time raise necessarily showed the OLD window until the stroke wrote
+// its own. Raising inside the accepted-write branch means the surface that
+// comes up is always a span the stroke itself authored — and a motionless
+// shift click, which writes nothing, shows nothing at all.
 //
-// AND THE ONE RAISE LEFT IS STROKE-SCOPED, which is this owner's counterpart
-// (architect 2026-08-20): commit_region_sweep collapses the overlay
-// unconditionally at every end path, so the overlay stands for exactly as long
-// as the stroke is drawing a region of its own.
-// Bare `[` is the recall, and hiding discards nothing.
-// The waveform overlay's own three presses need no call — they are reachable
-// only through region_manipulation_hit, which answers None while it is hidden.
+// WHAT WENT ON 2026-09-22 (architect — he uses the tablet's pen, which reaches
+// the trim bar, so the accommodations the big surface carried for fingers are
+// no longer wanted): bare `[` and its Show trim region button, which showed
+// and hid the overlay at rest; the overlay's own endcap and BRIDGE drags on
+// the waveform (region_manipulation_hit), with their cursor cues and their
+// pan-zone clause; and THE HIDE RULE — clear_region_highlight, called by the
+// two playhead movement owners and the marker click, which put a resting
+// overlay away whenever the playhead moved in the music or a marker was
+// touched. With nothing at rest there was nothing left for it to hide.
 //
 // THE `h` VIEW IS CARVED OUT HERE, once and inside the owner rather than at the
 // caller: trim is FROZEN in that view and its sweep writes no trim to derive an
-// overlay from, so a raise in there could only put up a surface no gesture in
-// the view can move.
-// Bare `[` is consumed in the mode besides, so nothing can take it down again.
-// The carve-out is BELT AND BRACES since the raise moved into the write branch
-// — that view's former is excluded from the write itself and so never reaches
-// this owner at all — and it stays, being the owner's own promise rather than
-// the caller's.
+// overlay from. The carve-out is BELT AND BRACES — that view's former is
+// excluded from the write itself and so never reaches this owner at all — and
+// it stays, being the owner's own promise rather than the caller's.
 void show_trim_region_overlay(AppState& app, Viewport& viewport);
 
 // THE SEATED PINCH'S CLEAR, AND ITS DAMAGE — one body rather than the bare
@@ -513,7 +367,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
 // own mode edges spell.
 //
-// FREE, AND BESIDE clear_region_highlight, SINCE codex round 20 — AND ON THE
+// FREE, AND BESIDE show_trim_region_overlay, SINCE codex round 20 — AND ON THE
 // VIEW-STATE WRITERS RATHER THAN THE COMMANDS SINCE ROUND 21: the seat is an
 // ACTIVE-DOMAIN song frame taken against a particular view, so A WRITE OF THE
 // ACTIVE VIEW STATE KILLS IT. The one body cannot be a member of GuiActiveViews
@@ -601,17 +455,19 @@ void clear_touch_zoom_seat(AppState& app, Viewport& viewport);
 // LAND the playhead exactly onto marker `hit` of the ACTIVE column with NO
 // viewport move (the two-step placement basis source_frame_to_active_domain then
 // clamp_playhead_to_live_domain, a direct cursor write). It touches no
-// selection. IT HIDES THE TRIM REGION OVERLAY (2026-08-19): this is one of the
-// rule's two movement owners, the other being Viewport::move_playhead_to, and
-// the hide is no longer any caller's to spell — the rule and the whole exemption
-// set live at clear_region_highlight above. Read-only allowed. Definition in
+// selection. IT ENDS THE A/B AUDITION: this is one of the two playhead
+// movement owners, the other being Viewport::move_playhead_to, and the end is
+// no caller's to spell — the rule and its exemptions live at
+// Viewport::move_playhead_to's definition (viewport.cpp). Read-only allowed.
+// Definition in
 // input_pointer.cpp, whose comment is the AUTHORITATIVE statement of the
 // marker-lane-owns-the-playhead rule and the one
 // enumeration of the landing sites — do not restate either here.
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit);
 
-// THE SAME LAND WITHOUT THE HIDE — the non-hiding entry point for the two
+// THE SAME LAND WITHOUT THE AUDITION END — the non-movement entry point for
+// the two
 // callers whose write is a RESEAT rather than a movement: the S/T flip's
 // re-express of a surviving focus (a translation) and the coincidence
 // auto-select's provable no-op. Both are argued at the definition
@@ -622,12 +478,12 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
 
 // The same land with the store lookup taken off the front: place the playhead on
 // an authored SOURCE frame directly, through the identical two-step basis, the
-// identical damage and the identical hide. It exists for the callers holding a
+// identical damage and the identical audition end. It exists for the callers holding a
 // frame that belongs to no store entry — the `h` history mode's focus click,
 // whose removed diff flags name frames the session no longer has — and
 // land_playhead_on_marker shares its write, so the marker route and the frame
 // route cannot drift. Same contract otherwise: playhead write plus the movement
-// owner's hide, no selection, read-only allowed.
+// owner's audition end, no selection, read-only allowed.
 void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t src_frame);
 
@@ -775,8 +631,7 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 // and did not come back on 2026-08-18 when the region became the trim: a sync is
 // a CONTINUOUS INVARIANT binding two states, and there is only one state now —
 // the overlay is DERIVED from the trim every frame and nothing is published into
-// anything (its contract is at clear_region_highlight above and at RegionState,
-// app_state.h). What survives is
+// anything (its contract is at RegionState, app_state.h). What survives is
 // the DESELECT half (architect 2026-07-29, "agree" 2026-07-30): EVERY TRIM SETTER
 // CLEARS THE SELECTION as it commits — the trim-bar click is the sibling of the
 // plain waveform click's deselect-all: clicking trim means ready to move on.
@@ -793,9 +648,7 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 //   * THE SWEEP (write_trim_from_sweep), which deselects at its first accepted
 //     write, idempotently across the gesture's later events — the drag arms'
 //     own arrangement below. (This list's first member was the SET-FROM-REGION
-//     act, which retired with the free scratch span it committed; the key it
-//     used is the trim region TOGGLE's now and writes no bound at all, at
-//     handle_toggle_trim_region.);
+//     act, which retired with the free scratch span it committed.);
 //   * the ctrl (BEGIN) and ctrl+shift (END) BOUND-SET clicks on the trim bar, ONE
 //     function (set_trim_bound_at_click) and so one deselect — REINSTATED
 //     2026-08-01 with the strictly-inside guard, which is simply a fourth refusal
@@ -813,8 +666,8 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 //     the list has read "two in settings_editor.cpp" since 2026-07-30, counting
 //     the keys). JOINED
 //     2026-07-30, architect: "a typed commit is a commit", the sibling
-//     playhead_cursor= key having already cleared the selection and hidden the
-//     overlay under the no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
+//     playhead_cursor= key having already cleared the selection under the
+//     no-exemptions rule. Their INACTIVE-tab arm is not a member and never was:
 //     it writes a parked band and changes nothing visible. (settings_editor.cpp's
 //     other two clear_selection calls — the playhead_cursor= navigation jump and
 //     the engine-key commit — write no trim bound and are not members.)
@@ -826,7 +679,7 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb);
 // unchanged value all write no bound and so deselect nothing. (The read-only
 // arms of that list — the refused bound set and the refused settings commit —
 // are gone with the 2026-08-07 reclassification of trim as band.)
-// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+[, the dedicated trim MAXIMIZER,
+// THE NON-SETTER IS EXACTLY ONE ROUTE: Shift+0, the dedicated trim MAXIMIZER,
 // which widens the window to the whole song rather than claiming one, so there is
 // no window for a deselect to hand the user (the architect's 2026-07-29
 // exemption, kept verbatim through the 2026-07-30 re-pose). Everything else
@@ -1324,9 +1177,8 @@ struct GuiInputHandler {
     void end_touch_nav();
     // (THE SEATED PINCH'S CLEAR is a FREE function since codex round 20 — the
     // view switches clear the seat too and they are not this class's:
-    // clear_touch_zoom_seat(app, viewport), declared with clear_region_highlight
-    // near the top of this header, which is the spelling it now sits beside at
-    // those sites.)
+    // clear_touch_zoom_seat(app, viewport), declared beside
+    // show_trim_region_overlay near the top of this header.)
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
     // GROWN to the navigation surface by pan-primary's touch half, the
     // eighth glass ruling 2026-08-12, and to the WHOLE WAVEFORM by the
@@ -1346,22 +1198,11 @@ struct GuiInputHandler {
     // asymmetry the architect named ("finger down works in the upper half by
     // waiting for the finger up, but on the lower half it immediately
     // dispatches the scanner") is gone.
-    // THE ZONE YIELDS INSIDE A LIVE REGION (2026-08-15): where
-    // region_manipulation_hit answers non-None the zone answers FALSE, so the
-    // finger resolves to the POINTER translation and reaches the region's own
-    // move / bound drags — the flag box carve-out's exact shape, and it MUST be
-    // here rather than beside it, because the surface this feature exists for is
-    // the glass. It is the same one predicate the mouse press claim and the
-    // cursor map read, so the two can never disagree about where a region
-    // begins. THE CONSEQUENCE FOR THE REGION HOLD IS RECORDED AND ACCEPTED: the
-    // hold-beat hold is a PAN-ZONE gesture, so a hold INSIDE an existing
-    // region no longer reaches it — it is a pointer press on the region's
-    // editor instead, and a motionless one lifts into the ordinary click act,
-    // which destroys the
-    // region. Drawing a fresh region over a standing one therefore needs one tap
-    // to clear it first, or a hold started OUTSIDE it (the sweep may then run
-    // through it freely — only the DOWN point is asked). THE BODY IS THE
-    // CARVE-OUT'S ONE INVENTORY: the region above, the notification cards, the
+    // (THE ZONE YIELDED INSIDE A SHOWN TRIM REGION OVERLAY from 2026-08-15
+    // until 2026-09-22, when the overlay's endcap and bridge drags were
+    // deleted with its resting form — the tablet's pen reaches the trim bar.)
+    // THE BODY IS THE
+    // CARVE-OUT'S ONE INVENTORY: the notification cards, the
     // on-screen keyboard's band, the folder overlay's band, and since
     // 2026-09-05 the OPEN MARKER-LANE EDITOR'S BOX — the edited flag publishes
     // no hit rect while its editor stands, so the flag-box carve-out could not
@@ -1409,8 +1250,7 @@ struct GuiInputHandler {
     // finger's DOWN point, forking on the `h` history mode exactly as the
     // shift press does: LIVE = the one placement body
     // (place_playhead_and_arm_region — deselect-all, playhead seated at the
-    // down column, live-session reseek, the overlay hide at the arm, the drag
-    // arm); the
+    // down column, live-session reseek, the drag arm); the
     // MODE = the view-local former's recipe (clear the mode focus +
     // selection through the pair clearer, the shared placement body, the
     // same arm) — EVERY REGION FORMER DROPS THE SELECTION ITS SURFACE OWNS,
@@ -1527,7 +1367,7 @@ struct GuiInputHandler {
     // could not be enumerated and kept enumerated. Two review rounds each found
     // a class the previous derivation had missed, and whole classes had no event
     // to hang a call on at all (a keyboard zoom moving the trim endcaps under a
-    // resting pointer, the zoom and navigation keys, `[`/`Shift+[`, an undo
+    // resting pointer, the zoom and navigation keys, the trim keys, an undo
     // restoring trim, `o`, a gui_scale relayout, every keyboard editor open and
     // close, the dropdown item click). A LOOP BOUNDARY IS AFTER EVERY SETTLE BY
     // DEFINITION, so the "call this after your state has settled" rule that each
@@ -1564,7 +1404,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's four, row 3's two tabs, row 4's twenty-two (the
+    // the view bar's four, row 3's two tabs, row 4's twenty-one (the
     // toolbar four included since the 2026-08-12 relayout, the IGNORE
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
@@ -1827,34 +1667,11 @@ struct GuiInputHandler {
     // any_pointer_gesture_active: the held button IS a live pointer act, and
     // the band claims arm no gesture that predicate names.
     void tick_chrome_press_repeat();
-    // THE TRIM REGION OVERLAY'S HIT VERDICT (the whole model, and why it
-    // exists, are at RegionState, app_state.h).
-    //
-    // region_manipulation_hit: the ONE hit owner, and the ONE spelling of
-    // "inside the shown overlay" the whole product reads — THREE consumers, so
-    // it cannot drift: the plain waveform press claim (which asks it BEFORE
-    // arming the nav drag, and arms the TRIM drags on a non-None answer), the
-    // pointer cursor map's region arm, and THE TOUCH PAN ZONE, which must
-    // answer false wherever this answers non-None or the finger would become
-    // the phone-model pan and never reach the drag at all.
-    // It is Y-GATED TO THE WAVEFORM RECT ALONE — the ruler and the marker lane
-    // answer None even where the span covers their columns, the architect's
-    // ruling and the reason a pan stays reachable while a full-width overlay
-    // stands — and it answers None while the `h` history view stands, where the
-    // press claim never reaches this arm and trim is frozen (one gate, so the
-    // cue and the touch zone cannot promise a gesture the router does not run).
-    //
-    // THE SPAN IT MEASURES AGAINST IS DERIVED (trim_overlay_span) and projected
-    // to columns on the DISPLAYED (PLATE) BASIS through the painter's own
-    // region_columns owner — the very call paint_region_ground makes — so a
-    // grabbed bound is exactly a painted one by construction rather than by two
-    // derivations agreeing.
-    //
-    // (The gesture's own motion body and column->frame conversion lived here
-    // until 2026-08-18. They are DELETED: the move and the two bound drags are
-    // the TRIM bridge and endcap drags now, armed from this surface and running
-    // trim's own machinery, so there is no second editor to keep in step.)
-    RegionHit region_manipulation_hit(int x, int y) const;
+    // (THE TRIM REGION OVERLAY'S HIT VERDICT, region_manipulation_hit, is
+    // DELETED — architect 2026-09-22: the overlay stands only while a sweep
+    // draws it, so there is no resting overlay to grab and its endcap and
+    // bridge drags went with it. The trim bar's own endcaps and bridge are
+    // trim's pointer surface.)
 
     // THE TOP FLAG EDITOR'S GUARD-FREE CLOSE — the LEFT press's (a right press
     // is a consumed nothing everywhere since the button's unbinding,
@@ -2132,8 +1949,7 @@ struct GuiInputHandler {
     // point). The LOWER half is on the sweep's surface too since 2026-08-13
     // ("shift plus drag to map out a region should also be allowed in the
     // lower half, for consistency"); its PLAIN press is the pending click,
-    // whose motionless release runs the one-shot scrub and leaves the overlay
-    // alone.
+    // whose motionless release runs the one-shot scrub.
     void arm_region_drag_at(int anchor_col, int x, int y);
 
     // THE SWEEP'S ONE MOTION PATH, hoisted for its two drivers (2026-08-12, the
@@ -2166,18 +1982,18 @@ struct GuiInputHandler {
     // per-frame cursor chase being a cursor fighting the gesture that is moving
     // the bounds. A sweep that wrote nothing — motionless, refused by geometry,
     // or run inside the `h` view — runs none of that tail.
-    // IT COLLAPSES THE TRIM REGION OVERLAY UNCONDITIONALLY though, on every one
-    // of those paths (architect 2026-08-20): the sweep's raise is scoped to the
-    // stroke — up at its first accepted trim write — and this is its other
-    // bracket, a guarded no-op where the stroke raised nothing. The reasoning
-    // and the per-case reading are at the definition; bare `[` is the recall.
+    // IT TAKES THE TRIM REGION OVERLAY DOWN UNCONDITIONALLY though, on every
+    // one of those paths: the overlay is the sweep's live picture — up at its
+    // first accepted trim write — and this is its other bracket and its only
+    // hide, a guarded no-op where the stroke raised nothing. The per-case
+    // reading is at the definition.
     void commit_region_sweep();
 
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
     // and the `h` history mode's own have in common: drop the
     // playhead at the clicked column, reseek a live scanner to it (keeping the
     // session alive) and override follow for that session. NO selection, NO
-    // overlay hide, NO drag arm — each caller owns those, which is what lets the
+    // drag arm — each caller owns those, which is what lets the
     // mode reuse this recipe without inheriting a sweep it must not have.
     // FOUR ROUTES REACH IT since 2026-08-12 (re-derived 2026-08-13 at the
     // two-halves ruling, which added no route — the lower half's release runs
@@ -2212,8 +2028,7 @@ struct GuiInputHandler {
     // the marker selection, run the body above, and arm the sweep. THE ARM
     // RAISES NOTHING since 2026-08-21: the overlay's one raise sits inside
     // apply_region_drag_motion's accepted-write branch, so a motionless shift
-    // press shows nothing at all and the press's own hide (through the movement
-    // owner in the body above) simply stands. The clear runs ahead of
+    // press shows nothing at all. The clear runs ahead of
     // the body's gutter return, so an inert-gutter click still deselects but
     // seats no playhead and arms no drag. (The plain presses that shared this
     // body left it 2026-08-12 for the pending pan — the eighth glass ruling.)
@@ -2285,14 +2100,14 @@ struct GuiInputHandler {
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
     // whole body, running THE PRESSED HALF'S OWN ACT: the audition scrub
-    // (lower half), or deselect (live) / mode-focus clear (`h` view), the
-    // overlay hide, then the placement above at the press column, playback state
+    // (lower half), or deselect (live) / mode-focus clear (`h` view), then
+    // the placement above at the press column, playback state
     // read at the act. The full contract is at the definition
     // (input_pointer.cpp).
     void run_nav_click_act(int press_x, bool history, bool scrub_release);
 
     // THE MARKER CLICK ACT, AT THE PRESS (2026-08-17) — stop, the three-way
-    // selection fork, the land, the region hide, the PLAIN shape's
+    // selection fork, the land, the PLAIN shape's
     // double-click consume-open (against the press-time candidate snapshot,
     // its three gates read live), and the plain arm of PendingMarkerPress for
     // the drag the press may become and the seed its motionless release owes
@@ -2304,8 +2119,8 @@ struct GuiInputHandler {
                               const DoubleClickCandidate& dc_at_press);
 
     // THE PLAIN MARKER SELECT (2026-09-14) — the plain click's act whole (the
-    // stop, the single-select, the land, the addressed cell `cell`, the trim
-    // region overlay's hide) and NOTHING the press arms: no PendingMarkerPress,
+    // stop, the single-select, the land, the addressed cell `cell`) and
+    // NOTHING the press arms: no PendingMarkerPress,
     // no double-click seed or consume. TWO callers: run_marker_click_act's
     // plain arm and run_flag_cell_wheel. Definition in input_pointer.cpp.
     void run_marker_plain_select(int hit, MarkerCell cell);
@@ -2841,14 +2656,14 @@ private:
 
     // THE Home / End JUMP, one body for every route that spells it. A form
     // that would change NOTHING — no live transport to stop, no selection to
-    // clear, no shown overlay to hide, a landing the cursor already rests on
+    // clear, a landing the cursor already rests on
     // (playhead_end_jump_actionable, the acts' one owner) — refuses at the
     // head with a card naming its own rest; past that, its three acts are
     // UNCONDITIONAL and deliberately not gated on the jump moving anything:
     // stop a live audition, clear the marker selection (the marker
     // lane's exit — the rule is at land_playhead_on_marker, input_pointer.cpp)
-    // and land through Viewport::move_playhead_to, which owns the trim region
-    // overlay's hide. `forward` picks End over Home; `whole_piece` asks the
+    // and land through Viewport::move_playhead_to, the movement owner.
+    // `forward` picks End over Home; `whole_piece` asks the
     // landing owner for the piece's own ends instead of the trim bounds, which
     // is what the CTRL forms and the skip buttons' modified arm pass
     // (playhead_skip_landing_frame, app_state.h, states the two arms).
@@ -3269,7 +3084,7 @@ private:
     // reset store, the magnification level store (architect 2026-09-15: `'`
     // "definitely" carries the M column) and the engine settings — what
     // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
-    // Shift+[ is its recovery), and so do the S/T bit, the W/P bit, the A/B
+    // Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
     // tab, the camera, follow and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
@@ -3430,11 +3245,8 @@ private:
     // commit gate.
     //
     // (SET THE TRIM FROM A FREE SCRATCH SPAN is RETIRED with the two-step model
-    // it completed: setting the region IS setting the trim now. The key it used
-    // was repointed onto the overlay's show/hide toggle,
-    // handle_toggle_trim_region, which writes no bound and is not a member of
-    // anything on this page. The MAXIMIZER survives unchanged as the recovery
-    // route.)
+    // it completed: setting the region IS setting the trim now. The MAXIMIZER
+    // survives unchanged as the recovery route.)
     bool write_trim_from_sweep(int64_t anchor_source, int64_t moving_source);
 
     // THE SWEEP'S ONE COLUMN->TRIM ROUTE: the whole SOURCE frame a
@@ -3458,8 +3270,9 @@ private:
     // floor at a gesture: the render boundary owns whether a window is
     // honorable, and it answers with an untrimmed render, not a refusal.)
 
-    // Shift+[ MAXIMIZES the trim to the full window [0, total-1] (architect
-    // 2026-07-25 for the act, re-posed 2026-07-30 under always-set: the full
+    // Shift+0 MAXIMIZES the trim to the full window [0, total-1] — RESET TRIM
+    // (architect 2026-07-25 for the act, re-posed 2026-07-30 under always-set,
+    // on Shift+0 since 2026-09-22 — Shift+[ before, x before that: the full
     // window IS the old unset state — it renders untrimmed and plays to the
     // natural end). Read-only admits it (trim is band, the ruling at
     // read_only_key_blocked); the body then delegates WHOLE to
@@ -3470,37 +3283,13 @@ private:
     // partner.
     void handle_trim_maximize();
 
-    // BARE `[` SHOWS AND HIDES THE TRIM REGION OVERLAY (architect 2026-08-16
-    // for the act, made a TOGGLE on 2026-08-18 when the region became the trim
-    // and the set-from-region act stopped existing; Ctrl+Shift+X carried the
-    // show act for two days before that and is UNBOUND, a no-op everywhere
-    // under strict modifier validation) —
-    // the icon row's
-    // IconShowRegion button and its keyboard twin. ONE ACT, TWO HALVES over the
-    // one visibility bit that is the whole region state: SHOW, or HIDE. It
-    // writes NO TRIM, no selection, no playhead AND NO VIEWPORT — the show half
-    // framed the span through bring_span_into_view until 2026-09-04, when the
-    // architect deleted the framing because the trim bar shows where the
-    // trim is and a user should not be walked through zoom levels to look at a
-    // window (the ruling and what replaced it are at the definition,
-    // input_trim.cpp) — and HIDING DISCARDS NOTHING: the trim persists and a
-    // later show restores an identical overlay, which is what makes a toggle
-    // safe here where the 2026-08-16 existence-lamp design was not (that
-    // record, and why its hole cannot recur, are at the definition and at the
-    // roster entry, app_state.h). Read-only-LEGAL (its entry is on
-    // read_only_key_blocked's allowlist), and the `h` view simply consumes it —
-    // not on that mode's allowlist, so the derived partition greys the button
-    // with nothing hand-listed, which is where trim's freeze in that view is
-    // expressed for this act.
-    void handle_toggle_trim_region();
-
     // Write the FULL window [0, total-1]. Silent no-op when the window is
     // ALREADY full (the identity guard that replaced the old has-a-bound refusal
-    // gate — an already-maximized Shift+[ stops nothing, repaints nothing and
+    // gate — an already-maximized Shift+0 stops nothing, repaints nothing and
     // triggers nothing). The caller is handle_trim_maximize.
     void handle_trim_clear_both();
 
-    // Field-reset core shared by handle_trim_clear_both (the Shift+[ maximizer)
+    // Field-reset core shared by handle_trim_clear_both (the Shift+0 maximizer)
     // and the crossed-commit reset below: write the canonical full pair for the
     // loaded source through the one seeding owner, full_trim_window
     // (app_state.h). No invalidation and no trigger — callers own their repaint
@@ -3518,7 +3307,7 @@ private:
     void auto_clear_crossed_trim();
 
     // EVERY TRIM WRITE PARKS THE PLAYHEAD AT THE NEW TRIM START (architect
-    // 2026-08-05, generalizing the trim region toggle's own 2026-07-30 land).
+    // 2026-08-05, generalizing a 2026-07-30 land of the retired region form).
     // Reads the COMMITTED
     // begin out of the store — never a caller's local — so a crossed pair that
     // the commit tail has just RESET to the full window parks the playhead at
@@ -3526,12 +3315,9 @@ private:
     // other and needs no arm of its own. Lands through
     // land_playhead_on_marker's placement basis (source frame → active domain →
     // live-domain clamp) with NO viewport move, so a trim start offscreen
-    // leaves the view where the user left it. IT DOES NOT HIDE THE TRIM REGION
-    // OVERLAY: the region IS the trim, so hiding here would hide the overlay the
-    // instant its own bound was dragged — and since 2026-08-19 that exemption is
-    // structural, this function writing the cursor DIRECT and so reaching
-    // neither of the rule's two movement owners (the rule at
-    // clear_region_highlight; the argument at this function's definition).
+    // leaves the view where the user left it. It writes the cursor DIRECT and
+    // so reaches neither playhead movement owner: a trim write is not a
+    // movement in the music (the argument at this function's definition).
     // Callers own the refusals above it: a route that
     // writes no bound must not call this. The full per-route inventory is at
     // the head of input_trim.cpp.
@@ -3543,8 +3329,7 @@ private:
     // target-render trigger, then the playhead park above), and this member is
     // their one spelling. FOUR
     // CALLERS (re-derived 2026-08-18, when the SET-FROM-REGION act retired and
-    // the sweep took its place; the trim region toggle calls none of this —
-    // handle_toggle_trim_region writes no trim)
+    // the sweep took its place)
     // — the SWEEP's release (commit_region_sweep, input_pointer.cpp),
     // the drag release (commit_trim_drag) and the bound-set click
     // (set_trim_bound_at_click), the last two in
@@ -3554,7 +3339,7 @@ private:
     // Callers own everything around it: their refusals, the playback stop and
     // the setter's deselect, which differ per route by
     // ruling. ONE DELIBERATE NON-CALLER, a different tail by design:
-    // handle_trim_clear_both (the Shift+[ maximizer resets rather than
+    // handle_trim_clear_both (the Shift+0 maximizer resets rather than
     // auto-clears — a non-setter), which calls the park directly instead.
     void commit_trim_mutation();
 
@@ -3591,15 +3376,12 @@ private:
 
     bool route_trim_bar_press(int mouse_x, int mouse_y);
     // Arm the pending trim endcap/bridge drag (pending+threshold): the begin runs
-    // only once on_motion crosses drag_moved_threshold_px() from the press. TWO
-    // SURFACES ARM IT since 2026-08-18 (the region IS the trim): the 10 px bar's
-    // endcaps and bridge, and the waveform OVERLAY's bounds and interior, which
-    // pass `waveform_click_act` so that a motionless lift there falls to the
-    // waveform's ordinary click act instead of the bar's consumed nothing (the
-    // field's contract is at PendingTrimDrag, app_state.h). Same drag, same
-    // rules, armed from two places.
+    // only once on_motion crosses drag_moved_threshold_px() from the press.
+    // ONE SURFACE ARMS IT, the 10 px bar's endcaps and bridge (the waveform
+    // overlay armed it too from 2026-08-18 until its resting form was deleted
+    // on 2026-09-22).
     void arm_pending_trim_drag(bool is_begin, bool both, int press_x,
-                               int press_y, bool waveform_click_act = false);
+                               int press_y);
     void begin_trim_drag(TrimHit which, int mouse_x, bool both = false);
     void update_trim_drag(int mouse_x);   // motion: writes the live store
     // mouse_x → source-domain frame double, the single conversion both the
@@ -4107,7 +3889,7 @@ private:
     void set_restrict_undo_to_viewport(bool desired);
 
     // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect
-    // 2026-09-22) — the restrict-undo lamp's shape with ONE road: bare `]`,
+    // 2026-09-22) — the restrict-undo lamp's shape with ONE road: bare `[`,
     // which the icon row's button reaches by synthesizing that press, and
     // whose arm reaches here only in SOURCE VIEW (target view refuses at the
     // arm, carding). The bit (AppState::ignore_waveform_magnification) is a
@@ -4168,8 +3950,8 @@ private:
     // carries the ruling, and it is the model's ONE authoritative home.
     // Authoring-mutation chords (Delete, undo/redo, the propagate commands, `;`,
     // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
-    // renders and the `[` / Shift+[ trim gestures are ADMITTED — a save writes
-    // the state the tab already holds, a render reads it, and trim is band.
+    // renders and the Shift+0 trim reset are ADMITTED — a save writes the state
+    // the tab already holds, a render reads it, and trim is band.
     // One entry is
     // STATE-DEPENDENT: the horizontal arrows are admitted as navigation
     // only while playhead_in_marker_lane is false, since in the marker lane the

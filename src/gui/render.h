@@ -1718,9 +1718,9 @@ inline int tab_row_h_px() {
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
-// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-TWO view/mode/action buttons since
-// 2026-09-22, when the IGNORE WAVEFORM MAGNIFICATION lamp joined the zoom group
-// between Center and Follow — the
+// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-ONE view/mode/action buttons since
+// 2026-09-22, when the Show trim region button left the zoom group's head the
+// same day the IGNORE WAVEFORM MAGNIFICATION lamp joined it — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
 // icons::kIconCount is a
@@ -3024,33 +3024,22 @@ double displayed_trim_ms(int64_t frame,
 GuiRect trim_endcap_rect(bool is_begin, int strip_x, int col, GuiRect row);
 
 // Grab tolerance added to EACH SIDE of the drawn endcap for hit-testing. The
-// caps are 2px, so this makes the target 2 + 2*10 = 22px. TWO CONSUMERS read
-// it (re-grepped 2026-09-16): the TRIM BAR's endcaps (hit_test_trim_endcap)
-// and — since the region became the trim —
-// the WAVEFORM OVERLAY's two bounds (region_manipulation_hit,
-// input_pointer.cpp), so a retune moves both surfaces together. THAT
-// IS BY CONSTRUCTION AND NOT COINCIDENCE: both are THE SAME GESTURE ON THE
-// SAME SHAPE — a 1-2px vertical edge dragged absolutely along
-// x to move one bound while the other holds — so whatever tolerance a fingertip
-// needs on one of them it needs on the other, and a second constant here would
-// only be a way for them to drift apart.
+// caps are 2px, so this makes the target 2 + 2*10 = 22px. ONE CONSUMER reads
+// it (re-grepped 2026-09-22): the TRIM BAR's endcaps (hit_test_trim_endcap).
+// The WAVEFORM OVERLAY's two bounds read it too from 2026-08-18 until the
+// resting overlay and its drags were deleted on 2026-09-22 (the tablet's pen
+// reaches the trim bar).
 //
-// 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY IS THE
-// REASON IT CAME BACK UP: the waveform overlay's bound bands exist precisely
+// 10 SINCE 2026-08-19, AND SETTLED THERE (architect). THE OVERLAY WAS THE
+// REASON IT CAME BACK UP: the waveform overlay's bound bands existed precisely
 // because the 10 px trim bar is unusable with a fingertip, so 5 per side
 // reproduced ON THE FINGER'S OWN SURFACE the very problem that surface was
-// built to solve — while 15 was more than the THIN trim lane wants. 10 is the
-// value that serves both. The walk: 4 from row 5's landing, chosen to
+// built to solve — while 15 was more than the THIN trim lane wants. The walk: 4 from row 5's landing, chosen to
 // reproduce the retired square chip's width; 10 on 2026-08-14 (architect:
 // "endcaps are very useful and currently too small", leaning 6 to 10 and ruling
 // 10 — THE TOUCH PANEL IS THE REASON, a fingertip being nothing like a 10px
 // target); 15 on 2026-08-15, once both lanes had been driven on glass; 5 on
 // 2026-08-18, narrowing that after driving the unified region/trim.
-//
-// A NARROWER BAND GIVES BACK EXACTLY WHAT A WIDER ONE TOOK: on the waveform
-// overlay a narrower band leaves
-// more of the span as its MOVE zone. Widening spends exactly that, which is
-// what the fingertip is being paid.
 //
 // WHAT THE BAND'S WIDTH DECIDES, checked against every neighbour the endcap
 // claim can overlap, because that claim OUTRANKS everything else in the lane

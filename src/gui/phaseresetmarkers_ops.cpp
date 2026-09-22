@@ -77,11 +77,8 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     viewport.move_playhead_to(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, drop_marker's twin —
     // see the fuller statement there): it seats the playhead on the reset it
-    // creates and single-selects it, so the trim region overlay goes with it —
-    // through the SEAT above since 2026-08-19, move_playhead_to being one of the
-    // rule's two movement owners (the rule at clear_region_highlight,
-    // input_handler.h), so this site's own call is deleted and the answer is
-    // unchanged. PAST EVERY
+    // creates and single-selects it, the seat above being a movement owner.
+    // PAST EVERY
     // REFUSAL: the callers' read-only / home-view gates and the wrapper's own
     // sample-rate test return before this runs, and this function's two refusals
     // — no sample rate, a drop_frame past the EOF wall — return above, before the
