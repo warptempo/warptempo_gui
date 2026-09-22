@@ -387,7 +387,9 @@ struct Viewport {
     // clamped into the waveform's first and last columns, IFF the zoom is at
     // working or finer (zoom_level_at_or_finer_than_working), never changing
     // the zoom; coarser the camera holds. No centring, no lamp, no view term.
-    // The clamp derivation and the two callers are at the definition.
+    // The PHASE RESET nudge is exempt at every zoom and pages in instead
+    // (architect 2026-09-22). The clamp derivation, the exemption's reason and
+    // the two callers are at the definition.
     void hold_subject_column_after_nudge(int64_t prior_subject_sample,
                                          int64_t prior_viewport_start);
     // The changed-path tail the two one-shot playhead camera jumps above share.

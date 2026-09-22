@@ -9329,7 +9329,10 @@ void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step) 
     // the zoom), in every view, target view on the warp column included; a
     // walled step moved nothing and moves no camera. Every press and every
     // held repeat — the key's and the Left / Right buttons' — runs through
-    // this body, so the column holds at each step.
+    // this body, so the column holds at each step. THE P COLUMN INCLUDED:
+    // only the phase reset MARKER nudge leaves the hold for a page-in
+    // (architect 2026-09-22, the reason at the hold's definition); the
+    // playhead's hop step keeps it.
     const int64_t cursor_before = app.playhead_cursor_sample;
     const int64_t viewport_start_before = app.viewport_start_sample;
     viewport.move_playhead_by_arrow_step(step);

@@ -302,7 +302,8 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // (the pointer's contract is at finish_position_nudge's declaration).
     finish_position_nudge(app, audio, viewport, undo,
                           GestureKind::MagnificationLevelNudge, merge,
-                          orig_f, committed_f, /*target_render=*/nullptr);
+                          orig_f, committed_f, NudgeCamera::HoldColumn,
+                          /*target_render=*/nullptr);
     // THE PICTURE IS REPAID ONLY WHERE THE DISPLAYED PLATE IS STALE (architect
     // 2026-09-16, "prefer the correct way"): the M drag's release rule
     // (MarkerDragOps::commit_drag's tail) rather than the cluster's pre-write

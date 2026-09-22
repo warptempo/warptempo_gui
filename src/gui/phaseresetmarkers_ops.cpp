@@ -440,12 +440,14 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
     // the nudged reset's always-on stem), playhead follow (committed_f is
-    // reorder-independent; the target home maps), the point command's region
-    // collapse, and the view-independent target trigger. Ordering rationale at the
-    // declaration.
+    // reorder-independent; the target home maps), the PAGE-IN camera — never
+    // the held column, a hop being no one-column delta (architect 2026-09-22) —
+    // the point command's region collapse, and the view-independent target
+    // trigger. Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, merge,
-                                orig_f, committed_f, &target_render);
+                                orig_f, committed_f, NudgeCamera::PageIn,
+                                &target_render);
     return std::nullopt;
 }
 

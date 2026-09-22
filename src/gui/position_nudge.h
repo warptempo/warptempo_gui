@@ -344,24 +344,37 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     for the RESOLVED READOUT this tail's selection used to move; that
 //     readout retired whole with the one-day status bar that carried it, and
 //     the call went with it.);
-// (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
-//     through the two-step placement basis (source_frame_to_active_domain —
-//     identity in warp's source home, a real map in phase's target home;
-//     committed_focused_frame is reorder-independent). The movement owner owns
-//     the clamp, invalidation, and keep-visible edge-align, writing the
-//     cursor field only (playback was stopped by the prologue, past its
-//     refusal verdict and ahead of the first write, so this tail always runs
-//     stopped).
-// (f) THE HELD COLUMN: Viewport::hold_subject_column_after_nudge, which at the
-//     working zoom or finer places the viewport so the playhead (e) just
-//     landed paints in the column the marker painted in before the nudge
-//     (prior_focused_frame, the twin's pre-write frame, taken into the active
-//     domain against the viewport as it stood ahead of (e)'s edge-align),
-//     clamped to the waveform's edge columns (the rule at its declaration,
-//     viewport.h). Every press that reaches this tail moved its marker — the
-//     twins return on the post-clamp identity no-op first — so a walled press
-//     moves no camera, and a held key's or button's repeats each run the tail
-//     and hold the column at every step.
+// (e) PLAYHEAD FOLLOW to the nudged marker's committed frame
+//     (committed_focused_frame, reorder-independent) through a movement
+//     owner, taken into the active domain through the two-step placement
+//     basis (source_frame_to_active_domain — identity in warp's and
+//     magnification's source home, a real map in phase's target home). The
+//     owner is the camera arm's (f): HoldColumn lands through move_playhead_to,
+//     which owns the clamp, invalidation and keep-visible edge-align; PageIn
+//     through land_playhead_on_source_frame, the Tab walk's land, which writes
+//     with no edge-align. Either writes the cursor field only (playback was
+//     stopped by the prologue, past its refusal verdict and ahead of the first
+//     write, so this tail always runs stopped).
+// (f) THE CAMERA, the caller's REQUIRED NudgeCamera (no default), stated per
+//     column:
+//     * HoldColumn — the W and M columns: Viewport::
+//       hold_subject_column_after_nudge, which at the working zoom or finer
+//       places the viewport so the playhead (e) just landed paints in the
+//       column the marker painted in before the nudge (prior_focused_frame,
+//       the twin's pre-write frame, taken into the active domain against the
+//       viewport as it stood ahead of (e)'s edge-align), clamped to the
+//       waveform's edge columns (the rule at its declaration, viewport.h).
+//       Every press that reaches this tail moved its marker — the twins return
+//       on the post-clamp identity no-op first — so a walled press moves no
+//       camera, and a held key's or button's repeats each run the tail and
+//       hold the column at every step.
+//     * PageIn — the P column (architect 2026-09-22): the bare arrow's unit
+//       there is a whole HOP, so holding the reset's column would jump the
+//       waveform a hop's width under it at every press. Instead the camera is
+//       the coarse Tab walk's FollowPage at EVERY zoom: Viewport::
+//       follow_scroll_if_needed after the edge-align-free land, holding while
+//       the reset stays on screen and paging it in at follow's lead when a
+//       hop carries it off. prior_focused_frame is unread on this arm.
 // (g) THE REGION: a position nudge HIDES the trim region overlay,
 //     unconditionally — exactly like the marker click that selects that
 //     singleton — and it discards nothing, the trim standing behind it. It owes
@@ -430,7 +443,9 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // clock at all. The ordering itself stands as it was, the unified tail adopting the
 // warp shape verbatim to minimize warp/phase divergence, and record_gesture reads
 // nothing the playhead move writes.
+enum class NudgeCamera { HoldColumn, PageIn };
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, bool merged, int64_t prior_focused_frame,
-    int64_t committed_focused_frame, GuiTargetRender* target_render);
+    int64_t committed_focused_frame, NudgeCamera camera,
+    GuiTargetRender* target_render);

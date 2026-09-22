@@ -755,13 +755,24 @@ void Viewport::invalidate_all() {
 // Both nudges have stopped playback before their write, so the cursor is the
 // subject. TWO CALLERS: the marker nudge's commit tail (finish_position_nudge,
 // position_nudge.cpp — the focused marker's pre-write frame in the active
-// domain) and the waveform-lane playhead step
+// domain — on its NudgeCamera::HoldColumn arm, which the W and M columns
+// state) and the waveform-lane playhead step
 // (GuiInputHandler::run_waveform_lane_playhead_step — the cursor before the
 // step). A held key's repeats and a held arrow button's fires reach both
 // through the same act bodies, so the hold runs at every step. NO VIEW TERM:
 // in target view on the warp column the marker nudge is refused upstream
 // (active_column_authoring_allowed) and never arrives, while the playhead step
 // holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE.
+//
+// THE PHASE RESET NUDGE NEVER REACHES THIS BODY, AT ANY ZOOM (architect
+// 2026-09-22): the P column's bare arrow moves the reset a whole HOP
+// (phase_reset_hop_step_frame), and holding a hop-stepped subject still slides
+// the whole waveform a hop's width under it at every press — the hold was made
+// for a one-column delta. Its tail states NudgeCamera::PageIn instead, the
+// coarse Tab walk's FollowPage (follow_scroll_if_needed): the camera holds
+// while the reset stays on screen and pages it in when a hop carries it off.
+// The playhead step keeps the hold on every column, P included — the W and M
+// columns and the playhead keep it exactly as it stands.
 void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
                                                int64_t prior_viewport_start) {
     if (!zoom_level_at_or_finer_than_working(app.zoom_level)) return;

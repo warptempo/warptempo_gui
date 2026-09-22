@@ -12400,7 +12400,9 @@ enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 // ONE AT-OR-FINER PREDICATE, the spelling TWO readers share (re-grepped
 // 2026-09-22), each deriving a posture from the zoom by the
 // placement-instrument principle (zoom-viewport-strip.md): the Left/Right
-// nudge's held column (Viewport::hold_subject_column_after_nudge) and the bare
+// nudge's held column (Viewport::hold_subject_column_after_nudge — the W and
+// M marker nudges and the playhead step; the phase reset nudge pages in at
+// every zoom, architect 2026-09-22) and the bare
 // Tab walk's framing (marker_walk_frame, below). (The waveform gain gate read
 // it from 2026-09-19 to 2026-09-22, when magnification in source view became
 // the `]` lamp's — effective_waveform_gain_profile, warp_frame_map_view.h.)
