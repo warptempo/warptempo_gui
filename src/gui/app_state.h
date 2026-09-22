@@ -40,9 +40,11 @@ struct GuiTargetRender;
 // include above.
 //
 // The zoom level is a real-valued exponent resting anywhere in the ONE
-// continuous domain [kMinZoom, kMaxZoom] (Ableton-style free rest). There is no
-// discrete zoom step: the level moves only under the continuous zoom gestures
-// (below) and the two absolute commands `0` and `c`, and every write saturates
+// continuous domain [kMinZoom, kMaxZoom] (Ableton-style free rest). The level
+// moves under the continuous zoom gestures (below), the two absolute commands
+// `0` and `c`, and the ZOOM STEP on bare `=` / `-` (one whole level from the
+// current rung, deleted 2026-09-14 and restored 2026-09-22 for the tablet's
+// pen, which has no pinch), and every write saturates
 // at the per-file effective ceiling (effective_max_zoom_level), where full
 // zoom-out rests at whole-song-visible. There is no fit-file mode and no
 // sentinel level. Bare-digit keys are unbound
@@ -1741,7 +1743,7 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's FOUR, row 3's two
-// TABS, row 4's TWENTY-ONE
+// TABS, row 4's TWENTY-THREE
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -1910,8 +1912,10 @@ enum class RedesignButton {
     // 2026-08-12 grand relayout dissolved that lane — same chords, same face
     // machinery, the FACE now a glyph in the 32px box and the old labels
     // living on as the tooltips), THE VIEWPORT-CLASS GROUP — the Show trim
-    // region button leading the zoom pair (2026-08-12, the architect's live
-    // placement "after the trim"), Follow and the three lamps behind
+    // region button leading the zoom four (2026-08-12, the architect's live
+    // placement "after the trim"; the stepping pair out 2026-09-14 and back
+    // 2026-09-22, and the Show trim region button gone that same day, so Zoom
+    // In leads), Follow and the three lamps behind
     // them, the last of which arrived from the toolbar group later on
     // 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
@@ -1960,21 +1964,29 @@ enum class RedesignButton {
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
     // that the toggle showed at rest was a finger's accommodation no longer
     // wanted, and the overlay stands only while a sweep draws it. Its shift
-    // admission was Reset Trim's pointer road; that act is Shift+0 alone now.
-    // FULL ZOOM OUT leads the zoom group since.)
-    // THE ZOOM PAIR (2026-08-12, the grand relayout's roster commit): full
-    // zoom out (bare `0`, whose ceiling arm runs the `c` command) and
-    // working-zoom center (bare `c`). The discrete zoom STEP they once stood
-    // beside — Zoom In and Zoom Out on bare `=` / `-` — is deleted whole
-    // (architect 2026-09-14): the zoom gestures are the ctrl-drag and the
-    // pinch.
-    // Both are momentary navigation acts, LIVE in the `h` view (both chords
-    // are on the mode's allowlist, so the derived partition answers live with
-    // nothing hand-listed), and NEITHER GREYS because each always acts — `0`
-    // runs `c` at the ceiling, `c` always frames. They are the zoom commands'
-    // pointer home (the Navigation dropdown that once duplicated them was
-    // deleted 2026-08-15).
-    IconZoomFitBest, IconZoomOriginal,
+    // admission was Reset Trim's pointer road, which is Full zoom out's
+    // shift press now. FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
+    // front of it the same evening.)
+    // THE ZOOM FOUR (2026-08-12, the grand relayout's roster commit): zoom in
+    // (bare `=`), zoom out (bare `-`), full zoom out (bare `0`, whose ceiling
+    // arm runs the `c` command, and whose SHIFT-CLICK and long press are
+    // Shift+0 RESET TRIM since 2026-09-22 — `0` is the whole song for the
+    // camera and, shifted, for the trim) and working-zoom center (bare `c`).
+    // THE STEPPING PAIR WAS DELETED 2026-09-14 (Ctrl+drag and the pinch being
+    // the zoom) AND RESTORED WHOLE 2026-09-22 (architect): the tablet's PEN
+    // has no pinch — the panel refuses a second finger while the pen is down —
+    // so the pen could zoom out with `0` and never back in. None of these four
+    // BUTTONS hold-repeats (the keys repeat).
+    // Every one is a momentary navigation act and LIVE in the `h` view (all
+    // four chords are on the mode's allowlist or its own vocabulary, so the
+    // derived partition answers live with nothing hand-listed). THREE NEVER
+    // GREY because each always acts — zoom in recentres on the playhead at
+    // the deepest level, `0` runs `c` at the ceiling, `c` always frames — and
+    // ZOOM OUT GREYS AT THE PER-FILE CEILING (zoom_out_step_actionable, the
+    // arm at redesign_button_enabled). They are the zoom commands' pointer
+    // home (the Navigation dropdown that once duplicated them was deleted
+    // 2026-08-15).
+    IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
     // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `[` lamp,
     // between Center and Follow, a MANUAL OVERRIDE. A DISPLAY POSTURE and
     // nothing else: dark (the default), the SOURCE-VIEW waveform picture
@@ -2730,18 +2742,18 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-22, when
-// the Show trim region button was deleted, later the same day the walk pair
-// merged into one button and the two hold-column nudges joined the bottom
-// row's walk group): SEVEN in row 1 (the
-// three menu anchors and the view bar's four), two in row 3, TWENTY-ONE in
-// row 4 and SEVENTEEN in the bottom row — 47. Of those, FORTY-FOUR carry a chord in
+// Zoom In and Zoom Out were restored, later the same day the Show trim region
+// button was deleted, the walk pair merged into one button and the two
+// hold-column nudges joined the bottom row's walk group): SEVEN in row 1 (the
+// three menu anchors and the view bar's four), two in row 3, TWENTY-THREE in
+// row 4 and SEVENTEEN in the bottom row — 49. Of those, FORTY-SIX carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 49;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2812,6 +2824,8 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::Redo:
         case RedesignButton::IconRestrictUndo:
         case RedesignButton::Render:
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconIgnoreWaveformMagnification:
@@ -2956,9 +2970,9 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // reader now — paint_icon_row's layout walk.
 //
 // THE FIVE GROUPS, in painted order: the toolbar four,
-// THE VIEWPORT-CLASS GROUP (the zoom pair leading since the Show trim region
-// button's deletion on 2026-09-22, the magnification lamp, FOLLOW and the
-// restrict-undo lamp), THE ITERATION GROUP (the BPM opener,
+// THE VIEWPORT-CLASS GROUP (the zoom four leading since the Show trim region
+// button's deletion on 2026-09-22, Zoom In at their head, the magnification
+// lamp, FOLLOW and the restrict-undo lamp), THE ITERATION GROUP (the BPM opener,
 // the grid-iterations lamp and, since 2026-09-19, FLATTEN), the
 // render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
@@ -3041,14 +3055,16 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
         // THE ZOOM GROUP'S LEADER since 2026-09-22, when the Show trim
         // region button that had led the merged viewport-class group since
         // 2026-08-27 was deleted and the leadership fell to the member behind
-        // it — a group survives losing one, the scissors' precedent. (The
+        // it — Full zoom out for the hours until Zoom In and Zoom Out were
+        // restored in front of it that evening, which moved the lead onto
+        // Zoom In and no separator. (The
         // MASS-MARKER GROUP'S LEADER was IconCopy from the row's first day and
         // IconBpm from 2026-08-20, when the propagate relocation deleted copy
         // and paste; the Series relocation deleted IconBpm and IconIter in
         // turn, and rather than move the leadership onto Follow — the last
         // survivor, and a lone button behind a divider — the architect put
         // that survivor in this group and the boundary went with the pair.)
-        case RedesignButton::IconZoomFitBest:
+        case RedesignButton::IconZoomIn:
         // THE ITERATION GROUP'S LEADER SINCE 2026-09-04, and it is the same
         // button that led the mass-marker group from 2026-08-20 until the
         // Series relocation deleted it: the BPM opener (Ctrl+B since
@@ -4219,8 +4235,8 @@ struct ViewState {
     // stamps on the way. A stamp STRANDED above a ceiling that has since fallen
     // spends as an empty slot too, and is left standing rather than cleared —
     // the reasoning is at the spending arm, which is where the ceiling is known.
-    // run_overview_command (input_handler.cpp) is the ONE writer: `c` does
-    // not stamp, the wheel does not, no drag or
+    // run_overview_command (input_handler.cpp) is the ONE writer: a manual
+    // `=`/`-` step does not stamp, `c` does not, the wheel does not, no drag or
     // touch gesture does, and nothing clears it — that is what makes the round
     // trip predictable.
     // SESSION SCRATCH, DELIBERATELY ABSENT FROM kSettingsOrder (settings_io.cpp):
@@ -11415,6 +11431,24 @@ double  effective_max_zoom_level(int waveform_width_px,
 // mid-assignment.
 double  clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level);
 
+// WOULD ONE ZOOM-OUT STEP MOVE THE LEVEL? The step asks for one whole level
+// shallower and SATURATES at the per-file ceiling, so it moves nothing exactly
+// when the clamp hands the current level back — read off clamp_zoom_level,
+// the one owner of the level-bounds pair, never a restated number. The
+// live-frames term is that owner's own no-op branch made explicit: with no
+// live frames it returns the level untouched (so as not to stomp a load in
+// progress), and a step on a blank piece is the consumed no-op on_key's
+// loading guard already makes it. TWO READERS: Viewport::zoom_out (the act,
+// whose leading return this IS) and the icon row's ZOOM OUT button's face
+// (redesign_button_enabled). ZOOM IN HAS NO TWIN OF THIS, deliberately: at
+// the deepest level its press RECENTRES on the playhead (Viewport::zoom_in's
+// floor arm), so the button always acts and stays lit — the shape bare `0`
+// has, whose ceiling arm runs the `c` command.
+inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
+    return live_total_frames(a, audio) > 0 &&
+           clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
+}
+
 // WHAT BARE `0` WOULD DO — the whole-song zoom command's one fork and its one
 // resolve, named 2026-09-01 (architect, the truthful-tooltips ruling: at the
 // ceiling the press is the RECALL, "Full zoom out" being a lie there). BELOW
@@ -13785,8 +13819,10 @@ inline bool playback_launch_playable(const AppState& a,
 // on that effect. The effect this rule was written for is the undo-coalescing
 // stamp, and the three wall-refusing acts now run their wall test ahead of it
 // (the rule and its discriminator — the face, not the card — are at
-// Undo::coalesce_gesture). The zoom pair `0` and `c` stays lit because
-// each always acts (`0` runs `c` at the ceiling).
+// Undo::coalesce_gesture). The ladder ends of the zoom: Zoom out greys at
+// the per-file ceiling (zoom_out_step_actionable); Zoom in, `0` and `c` stay
+// lit because each always acts (the first recentres at the floor, the second
+// runs `c` at the ceiling).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -13968,7 +14004,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the VIEW BAR'S FOUR
-//     (the backtick and bare 1/2/3), the zoom pair, follow, the
+//     (the backtick and bare 1/2/3), the zoom four, follow, the
 //     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
@@ -14361,13 +14397,28 @@ inline bool redesign_button_enabled(const AppState& a,
         // (row 3 is the A/B tabs in every state).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
-        // THE ZOOM PAIR MIRRORS NOTHING (2026-08-12) because each always acts
-        // on a loaded file — FULL ZOOM OUT (bare `0`) runs the `c` command
-        // once it is there, and `c` always frames. Both are LIVE in the `h`
-        // view — the derived partition finds them on the mode's allowlist.
+        // THE ZOOM GROUP: three of the four MIRROR NOTHING (2026-08-12)
+        // because each always acts on a loaded file — ZOOM IN steps a level
+        // or, at the deepest level, RECENTRES on the playhead
+        // (Viewport::zoom_in's floor arm), FULL ZOOM OUT (bare `0`) runs the
+        // `c` command once it is there, and `c` always frames. FULL ZOOM OUT'S
+        // SHIFT TWIN (Shift+0, Reset Trim, since 2026-09-22) needs no term by
+        // the twin rule: the plain press is always live, and the shifted
+        // press refusing over a full window is the key's own silent no-op.
+        // ZOOM OUT is the one whose press CAN be a consumed no-op — at the
+        // per-file ceiling Viewport::zoom_out returns having moved nothing —
+        // and it GREYS THERE (the truthful-buttons ruling), reading
+        // zoom_out_step_actionable, the act's own leading return over
+        // clamp_zoom_level's bounds; it greys during a load on that owner's
+        // live-frames term too, where the chord drops at on_key's guard. All
+        // four are LIVE in the `h` view — the derived partition finds them on
+        // the mode's allowlist or its own vocabulary.
+        case RedesignButton::IconZoomIn:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
             return true;
+        case RedesignButton::IconZoomOut:
+            return zoom_out_step_actionable(a, audio);
         // FOLLOW MIRRORS NOTHING: bare `f` always does something on a loaded
         // piece — it arms or disarms the lamp at rest, and turns the chase on
         // or off for a play in flight — and the lock admits it (follow is
@@ -15668,6 +15719,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // disable toggle deliberately carries no lamp either: it acts on the
         // SELECTION, whose members' own flags show the state per marker,
         // and a single lamp could not say which.
+        case RedesignButton::IconZoomIn:
+        case RedesignButton::IconZoomOut:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconMarkerDrop:
@@ -15947,8 +16000,17 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // button, it rides the plain one. The plain press is bare Tab and the shifted
 // press Shift+Tab, the reverse walk — the drop's and the copy's rule once
 // more — and the long press reaches it on glass, the button not repeating.)
+// (FULL ZOOM OUT JOINED 2026-09-22 with Shift+0, RESET TRIM (architect: `0`
+// is the whole song, full zoom out and, shifted, full trim out). The act had
+// ridden the Show trim region button's shift press until that button's
+// deletion the same day left it keyboard-only — the hole the scissors'
+// deletion had opened once before, a keyboardless panel able to set a trim
+// window and never get back out of it — and the drop's rule puts it on the
+// button whose bare form is `0`. The plain press never greys, so the face
+// needs no twin term; the long press is the tablet's road.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
+           b == RedesignButton::IconZoomFitBest ||
            b == RedesignButton::TabA ||
            b == RedesignButton::TabB ||
            b == RedesignButton::HistoryOlder ||
@@ -16220,14 +16282,23 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
         // category: their axes are the four view selectors' and the view bar's
         // alone now.)
-        // THE ZOOM PAIR (2026-08-12), both one-line; the accelerators are the
-        // table's own convention — a key names its own cap. BOTH ARE
-        // STATE-FREE HERE ONLY (2026-09-01, the overload): Full zoom out at
-        // the ceiling is the recall, and Center with nothing focused centers
-        // on the playhead — each press does something, and the overload names
-        // which.
+        // THE ZOOM GROUP (2026-08-12); the accelerators are the table's own
+        // convention — a key names its own cap. THREE OF THE FOUR ARE
+        // STATE-FREE HERE ONLY (2026-09-01, the overload): Zoom in at the
+        // floor recentres on the playhead, Full zoom out at the ceiling is the
+        // recall, and Center with nothing focused centers on the playhead —
+        // each press does something, and the overload names which. FULL ZOOM
+        // OUT CARRIES THE ONE SECOND LINE (2026-09-22): its shifted twin is
+        // Shift+0, RESET TRIM, the words the Show trim region button's line
+        // carried for the same act until that button's deletion the same day;
+        // the overload drops it over a full trim window, where the maximizer's
+        // own guard refuses.
+        case RedesignButton::IconZoomIn:
+            return {"Zoom In (=)", nullptr};
+        case RedesignButton::IconZoomOut:
+            return {"Zoom Out (-)", nullptr};
         case RedesignButton::IconZoomFitBest:
-            return {"Full Zoom Out (0)", nullptr};
+            return {"Full Zoom Out (0)", "Press Shift to reset the trim."};
         case RedesignButton::IconZoomOriginal:
             return {"Center on Focus (C)", nullptr};
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22), one
@@ -16702,7 +16773,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
 //   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
-//   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
+//   Play reads "Stop (Space)" while the transport is live, Zoom in reads
+//   "Center on Playhead (=)" at the floor, Full zoom out reads "Back to
 //   Working Zoom (0)" or "Back to Previous Zoom (0)" at the ceiling, Center
 //   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
 //   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
@@ -16881,16 +16953,31 @@ inline RedesignTooltipText redesign_button_tooltip(
         // level, or plain `c` when nothing usable is stamped — through the
         // act's one resolve (overview_command_target, run_overview_command's
         // own fork), so the word cannot pick the level the act will not.
+        //
+        // ITS SHIFT LINE (Reset Trim, 2026-09-22) DROPS OVER A FULL TRIM
+        // WINDOW, in either name: the maximizer's own guard
+        // (trim_is_full_window at handle_trim_clear_both's head,
+        // input_trim.cpp) refuses there, so the line would name a press that
+        // does nothing.
         case RedesignButton::IconZoomFitBest: {
             const OverviewCommandTarget t = overview_command_target(a, audio);
+            const char* line2 = trim_is_full_window(a.trim, total_frames)
+                                    ? nullptr
+                                    : redesign_button_tooltip(b).line2;
             if (t.at_ceiling) {
                 return {t.level == kWorkingZoomLevel
                             ? "Back to Working Zoom (0)"
                             : "Back to Previous Zoom (0)",
-                        nullptr};
+                        line2};
             }
-            break;
+            return {redesign_button_tooltip(b).line1, line2};
         }
+        // ZOOM IN AT THE FLOOR recentres on the playhead — Viewport::zoom_in's
+        // second arm, whose compare this is; the button never greys for it.
+        case RedesignButton::IconZoomIn:
+            if (!(a.zoom_level > kMinZoom))
+                return {"Center on Playhead (=)", nullptr};
+            break;
         // CENTER WITH NOTHING FOCUSED centers on the playhead —
         // run_center_command's own fork (center_command_lands_on_focus, the
         // live focus atom outside the `h` view and the mode's own range

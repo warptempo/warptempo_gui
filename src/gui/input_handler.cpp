@@ -897,6 +897,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     (no mods)                stepped-pan step. Pure navigation, same
     //                              family as the playhead-step and Home/End
     //                              entries.
+    //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → full zoom-out, else the `c` command
     //                              (run_overview_command)
     //   - f (no mods)            → follow mode toggle
@@ -1728,6 +1729,28 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // THE ZOOM STEP ON BARE `=` AND BARE `-`: `=` steps the horizontal ZOOM
+    // in and `-` out, one level per press (Viewport::zoom_in / zoom_out,
+    // anchored on the playhead through apply_zoom_change). DELETED 2026-09-14
+    // for Ctrl+drag and the pinch, RESTORED 2026-09-22 (architect): the
+    // tablet's pen has no pinch — the panel refuses a second finger while the
+    // pen is down — so the zoom needed a road a single contact can press.
+    // BOTH SPELLINGS ARE EXACT, no shift, ctrl or alt: Shift+=, Ctrl+= /
+    // Ctrl+- and the keypad KP_Add / KP_Subtract bind nothing, one spelling
+    // per act. The pair is a consumed no-op where the viewport clamp leaves it
+    // nothing to do, and ZOOM OUT'S BUTTON GREYS THERE (zoom_out_step_actionable);
+    // Zoom in stays lit because its floor arm recentres.
+    //
+    // A HELD STEPPING KEY WALKS THE ZOOM at the platform's repeat rate (both
+    // spellings are repeat_eligible); the zoom is a camera act with no history,
+    // so a burst pushes no undo entries to merge.
+    if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
+        viewport.zoom_in(); return;
+    }
+    if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
+        viewport.zoom_out(); return;
+    }
+
     // Bare 0 goes to FULL ZOOM OUT, and runs the `c` command once it is already
     // there (run_overview_command — architect 2026-08-05, no longer a toggle;
     // the second arm was a bare center for one day). The trim-bar double-click
@@ -2287,9 +2310,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // trim. The one predicate is is_trim_maximize_key (gui_input.h). It
     // arrives as the `0` key plus the shift bit, never as a `)` keysym:
     // key_from_keycode (platform_wayland.cpp) reads LEVEL 0 of the keymap, so
-    // the shifted level is never consulted. It has NO POINTER ROUTE since the
-    // toggle's button went — its shift-click and long press were the
-    // maximizer's — and a bound dragged onto its partner on the trim bar is the
+    // the shifted level is never consulted. ITS POINTER ROUTE IS FULL ZOOM
+    // OUT'S SHIFT-CLICK AND LONG PRESS (redesign_button_shift_admits, the
+    // bare `0` button's shifted twin), as it was the toggle's until that
+    // button went; a bound dragged onto its partner on the trim bar is the
     // other road to the whole song (auto_clear_crossed_trim, input_trim.cpp).
     //
     // The playhead is an OUTPUT of every trim write, never an input: each parks
@@ -3142,7 +3166,7 @@ void GuiInputHandler::run_overview_command() {
     // and answered directly). Nothing is cleared on the way back: the stamp
     // stays the level `0` was most recently pressed at, and the next press below
     // the ceiling overwrites it. THIS FUNCTION IS THE STAMP'S ONE WRITER — no
-    // wheel, no drag, no `c`, no touch gesture and no load
+    // manual `=`/`-`, no wheel, no drag, no `c`, no touch gesture and no load
     // path writes it (the field's own note, app_state.h, carries the rest).
     // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
     // run_span_framing_command): it zooms to the trim / whole-song
@@ -3156,7 +3180,8 @@ void GuiInputHandler::run_overview_command() {
     // scratch about the zoom itself, and paints nothing.
     // A selection span's endpoints are
     // ACTIVE-DOMAIN frames and a zoom changes no domain, so a group and its extent
-    // survive the overview exactly as they survive the zoom gestures and the
+    // survive the overview exactly as they survive `=` / `-`, the zoom
+    // gestures and the
     // wheel.
     // The family is the group-verb doctrine (position_nudge.h): `0` sits with the
     // zoom framing on the span-READ side, not with the collapse+land verbs. It does
@@ -3486,7 +3511,7 @@ void GuiInputHandler::run_span_framing_command() {
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
 // caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
-// and its keys bare `0` and `c`.
+// its keys bare `=` / `-` (the step, restored 2026-09-22), `0` and `c`.
 //
 // Every OTHER combination is a swallowed no-op (strict modifier validation):
 // ctrl, alt, shift and every mixed chord alike. Pure viewport move otherwise:

@@ -769,9 +769,10 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-one
-    // view/mode/action buttons since the Show trim region button's deletion
-    // later on 2026-09-22, twenty-two from the IGNORE WAVEFORM MAGNIFICATION
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-three
+    // view/mode/action buttons since Zoom In and Zoom Out were restored
+    // later on 2026-09-22, twenty-one from the Show trim region button's
+    // deletion that day, twenty-two from the IGNORE WAVEFORM MAGNIFICATION
     // lamp's arrival that day, twenty-one from the FLATTEN button's arrival from the
     // bottom row 2026-09-19, twenty from the two view lamps' whole-category
     // deletion 2026-09-15 and twenty-two before that —

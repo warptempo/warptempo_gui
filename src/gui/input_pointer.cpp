@@ -243,25 +243,30 @@ constexpr ToolbarChord kToolbarChords[] = {
     // which reaches the trim bar, so the waveform overlay stands only while a
     // sweep draws it and a toggle for it at rest has nothing left to show.
     // Its shift admission — Shift+[ the maximizer — went with the button;
-    // Reset Trim is Shift+0 and has no button road. The trim scissors' row
+    // Reset Trim is Shift+0 and rides Full zoom out's shift press. The trim
+    // scissors' row
     // before it was deleted on 2026-08-18.) THIS TABLE DOES NOT DECIDE
     // PAINTED ORDER — every one of its readers matches by id or by published
     // rect, never by position — but it is kept in the row's order so nobody
     // reads a mismatch here as the layout's truth; that truth is the
     // painter's kIconRowButtons, with each group's leader at
     // redesign_button_opens_icon_group (app_state.h).
-    // THE ZOOM PAIR (2026-08-12, the grand relayout): two momentary
-    // navigation chords, the commands' pointer home, no radio, no shift
-    // admission, click face like the rest of the row. Both stay LIVE in the
-    // `h` view — `0` is on the mode's allowlist and `c` is its own vocabulary
-    // — which the derived partition answers with nothing hand-listed. No
-    // button here ADMITS a modifier (redesign_button_ctrl_admits names only
-    // the two skips and Up / Down), so a ctrl or shift click is refused at
-    // the band gate.
-    // NEITHER REPEATS: the `repeats` column is unset on both rows. (The zoom
-    // STEP that stood beside them — Zoom In / Zoom Out on bare `=` / `-` — is
-    // deleted whole, architect 2026-09-14: the zoom gestures are the
-    // ctrl-drag and the pinch.)
+    // THE ZOOM FOUR (2026-08-12, the grand relayout): four momentary
+    // navigation chords, the commands' pointer home, no radio, click face like
+    // the rest of the row. All four stay LIVE in the `h` view — `=`, `-` and
+    // `0` are on the mode's allowlist and `c` is its own vocabulary — which
+    // the derived partition answers with nothing hand-listed. THE STEPPING
+    // PAIR (bare `=` / `-`) WAS DELETED 2026-09-14 AND RESTORED 2026-09-22
+    // (architect): the tablet's pen has no pinch, so these two buttons are the
+    // pen's zoom in and out. ONE ADMITS A MODIFIER: Full zoom out takes SHIFT
+    // since 2026-09-22 (redesign_button_shift_admits), its shift-click or long
+    // press dispatching Shift+0, RESET TRIM; the other three are refused a
+    // modified click at the band gate. NONE REPEATS: the `repeats` column is
+    // unset on all four rows (the keys repeat).
+    {RedesignButton::IconZoomIn,
+     GuiKeys::Equal,  false, false, false, false, true},                            // bare =
+    {RedesignButton::IconZoomOut,
+     GuiKeys::Minus,  false, false, false, false, true},                            // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
     // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — bare `[` (bare
@@ -1207,8 +1212,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
-//   THE ZOOM PAIR since the 2026-08-12 relayout (bare `0` is the
-//   allowlist's own zoom admission and bare `c`
+//   THE ZOOM FOUR since the 2026-08-12 relayout (bare `=`, bare `-` and
+//   bare `0` are the allowlist's own zoom admissions and bare `c`
 //   is the mode's vocabulary — pure navigation, live with nothing hand-listed),
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
@@ -7107,10 +7112,11 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's four, row 3's two
-// tabs, row 4's twenty-one — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
 // the iteration group since 2026-09-19, the IGNORE WAVEFORM MAGNIFICATION lamp in the
-// zoom group since 2026-09-22 — and the bottom row's
+// zoom group since 2026-09-22 and the ZOOM IN / ZOOM OUT pair back at its head
+// the same day — and the bottom row's
 // seventeen: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member

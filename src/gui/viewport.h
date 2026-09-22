@@ -372,6 +372,14 @@ struct Viewport {
     // makes the target differ and this re-frames. The sole caller is the
     // trim-bar double-click (run_span_framing_command).
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
+    // THE ZOOM STEP (bare `=` / `-` and the icon row's Zoom In / Zoom Out,
+    // restored 2026-09-22 — the tablet's pen has no pinch): one whole level
+    // per press through apply_zoom_change, so the step ANCHORS ON THE
+    // PLAYHEAD, centring it (the scanner while playing), and clears the
+    // tab's whole-song state as every level-moving write does. Neither
+    // writes `0`'s recall stamp.
+    void zoom_in();
+    void zoom_out();
     // `continuous` marks a drag-driven scroll, which suppresses the per-event
     // playback predictor resync (re-anchored once at gesture end). There is no
     // longer a `synchronous` flag: it selected between the two pan drivers, and

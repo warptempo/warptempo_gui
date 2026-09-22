@@ -733,23 +733,24 @@ constexpr IconPath kGoUpPaths[] = {
 // trim button from 2026-08-11 and was the architect's own pick over the first
 // cut's planner-picked transform-crop; both are git history.)
 
-// -- THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's roster
+// -- THE ZOOM FOUR (architect-picked 2026-08-12, the grand relayout's roster
 // commit) ---------------------------------------------------------------------
 //
 // Breeze's magnifier family, transcribed byte-verbatim from breeze-dark's
-// actions/22/: zoom-fit-best and zoom-original share one magnifier
-// construction (the 8/7 double circle ring — media-record's nonzero hole
-// idiom — plus the handle's rounded 1x1 arc stub) and differ in the dial's
-// content: the fit frame, and the 1:1 corner-arrow dial. Both are single
-// `.ColorScheme-Text` paths resolving to #fcfcfc, relative m/l/h/v with `a`
-// arcs, glued negative-after-flag arc arguments ("0 0-8 8" — a flag is one
-// digit, media-record's own producer form) and implicit repetition; every
-// family has a committed producer already, so nothing here asked the
-// interpreter for anything new. (The plus and minus magnifiers of the same
-// file family left with the Zoom In / Zoom Out buttons on 2026-09-14 and
-// zoom-in-y with the per-marker Magnification button on 2026-09-15 — each
-// asset deleted with the button it was drawn for, enumerators, defs and
-// assets together. This is the roster's record of which files came and went
+// actions/22/: zoom-in, zoom-out, zoom-fit-best and zoom-original share one
+// magnifier construction (the 8/7 double circle ring — media-record's nonzero
+// hole idiom — plus the handle's rounded 1x1 arc stub) and differ in the
+// dial's content: a plus, a minus, the fit frame, and the 1:1 corner-arrow
+// dial. All four are single `.ColorScheme-Text` paths resolving to #fcfcfc,
+// relative m/l/h/v with `a` arcs, glued negative-after-flag arc arguments
+// ("0 0-8 8" — a flag is one digit, media-record's own producer form) and
+// implicit repetition; every family has a committed producer already, so
+// nothing here asked the interpreter for anything new. (The plus and minus
+// magnifiers left with the Zoom In / Zoom Out buttons on 2026-09-14 and came
+// back with them on 2026-09-22, the tablet's pen having no pinch; zoom-in-y
+// left with the per-marker Magnification button on 2026-09-15 — each asset
+// deleted with the button it was drawn for, enumerators, defs and assets
+// together. This is the roster's record of which files came and went
 // and makes no claim about what magnification does; that rule lives at
 // effective_waveform_gain_profile.) ZOOM-OUT-Y, the vertical magnifier's
 // minus, is the Ignore Waveform Magnification lamp's glyph (architect
@@ -758,6 +759,24 @@ constexpr IconPath kGoUpPaths[] = {
 // byte-verbatim from breeze-dark's actions/22/. It is back for the third
 // time: it wore the same-named `]` lamp of 2026-09-14 and of 2026-09-17, and
 // left each evening with the lamp.
+
+constexpr IconPath kZoomInPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
+     "7-7zm-1 3v3h-3v2h3v3h2v-3h3v-2h-3v-3h-2z"},
+};
+
+constexpr IconPath kZoomOutPaths[] = {
+    {kIconText,
+     "m11 3a8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 "
+     "4.892578-1.693359l3.400391 3.40039a1 1 0 0 0 1.414062 0 1 1 0 0 0 "
+     "0-1.414062l-3.40039-3.400391a8 8 0 0 0 1.693359-4.892578 8 8 0 0 "
+     "0-8-8zm0 1a7 7 0 0 1 7 7 7 7 0 0 1-7 7 7 7 0 0 1-7-7 7 7 0 0 1 "
+     "7-7zm-4 6v2h8v-2h-8z"},
+};
 
 constexpr IconPath kZoomFitBestPaths[] = {
     {kIconText,
@@ -1051,6 +1070,8 @@ constexpr IconDef kMediaSkipForward   {22.0, kMediaSkipForwardPaths,    1};
 constexpr IconDef kDialogCancel       {22.0, kDialogCancelPaths,        1};
 constexpr IconDef kGoDown             {22.0, kGoDownPaths,              1};
 constexpr IconDef kGoUp               {22.0, kGoUpPaths,                1};
+constexpr IconDef kZoomIn             {22.0, kZoomInPaths,              1};
+constexpr IconDef kZoomOut            {22.0, kZoomOutPaths,             1};
 constexpr IconDef kZoomFitBest        {22.0, kZoomFitBestPaths,         1};
 constexpr IconDef kZoomOriginal       {22.0, kZoomOriginalPaths,        1};
 constexpr IconDef kZoomOutY           {22.0, kZoomOutYPaths,            1};
@@ -1103,6 +1124,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::DialogCancel:        return kDialogCancel;
         case Icon::GoDown:              return kGoDown;
         case Icon::GoUp:                return kGoUp;
+        case Icon::ZoomIn:              return kZoomIn;
+        case Icon::ZoomOut:             return kZoomOut;
         case Icon::ZoomFitBest:         return kZoomFitBest;
         case Icon::ZoomOriginal:        return kZoomOriginal;
         case Icon::ZoomOutY:            return kZoomOutY;

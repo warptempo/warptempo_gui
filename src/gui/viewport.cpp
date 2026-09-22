@@ -626,6 +626,34 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     kick_waveform_sync();
 }
 
+// ZOOM IN ALWAYS ACTS, which is why its button has no ladder-end face: at the
+// deepest level the press recentres on the playhead instead of stepping, the
+// second arm below — the step's own anchor with a zero change.
+void Viewport::zoom_in() {
+    if (app.zoom_level > kMinZoom) {
+        // One whole level deeper from the current (possibly fractional) rung,
+        // clamped constructively at the zoom-in floor.
+        double target = app.zoom_level - 1.0;
+        if (target < kMinZoom) target = kMinZoom;
+        apply_zoom_change(target);
+    } else {
+        // Already at the deepest zoom-in: recenter on the playhead.
+        center_viewport_on_playhead();
+    }
+}
+
+void Viewport::zoom_out() {
+    // THE LEADING RETURN IS ONE OWNER (zoom_out_step_actionable, app_state.h,
+    // which the ZOOM OUT button's face reads too): already at the effective
+    // ceiling, the step is a consumed no-op.
+    if (!zoom_out_step_actionable(app, audio)) return;
+    // One whole level shallower, saturating at the effective per-file ceiling
+    // (there is nothing beyond it — full zoom-out is whole-song-visible);
+    // clamp_zoom_level is the bounds' one owner, and past the return above it
+    // hands back a level strictly above the current one.
+    apply_zoom_change(clamp_zoom_level(app, audio, app.zoom_level + 1.0));
+}
+
 void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     if (audio.total_frames() <= 0) return;
     const int64_t old_vp = app.viewport_start_sample;

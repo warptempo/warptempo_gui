@@ -789,6 +789,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the `h` view's allowlist) it refuses on a card rather than falling
         // silent. Every modified `[` and the whole of `]` are unbound.
         case GuiKeys::BracketLeft: return bare;
+        // The zoom step, bare alone (deleted 2026-09-14, restored 2026-09-22
+        // — the tablet's pen has no pinch). The ctrl and shift forms bind
+        // nothing.
+        case GuiKeys::Equal: case GuiKeys::Minus: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it
@@ -1172,7 +1176,9 @@ inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
 // which carries the GuiKey and the modifier bits the same way. Bare `0` is
 // full zoom out and is untouched. One-shot. TWO READERS: on_key's dispatch arm
 // (input_handler.cpp) and the read-only allowlist (read_only_key_blocked,
-// which ADMITS it — trim is band, not content). The `h` view's allowlist does
+// which ADMITS it — trim is band, not content); the Full zoom out button's
+// shift-click and long press reach the first through on_key
+// (redesign_button_shift_admits). The `h` view's allowlist does
 // not name it: trim is frozen there, so the view cards it.
 inline bool is_trim_maximize_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Digit0 && mods.shift && !mods.ctrl && !mods.alt;

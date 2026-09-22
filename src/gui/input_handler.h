@@ -1404,8 +1404,9 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's four, row 3's two tabs, row 4's twenty-one (the
-    // toolbar four included since the 2026-08-12 relayout, the IGNORE
+    // the view bar's four, row 3's two tabs, row 4's twenty-three (the
+    // toolbar four included since the 2026-08-12 relayout, the zoom four
+    // whole again since 2026-09-22, the IGNORE
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
