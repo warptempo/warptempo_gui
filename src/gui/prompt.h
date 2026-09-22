@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app_state.h"
+#include "magnification_level_propagate.h"
 #include "phase_reset_propagate.h"
 #include "platform.h"
 #include "playback_lifecycle.h"
@@ -9,8 +10,10 @@
 #include "viewport.h"
 
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
-// unsaved-work dialog and the paste-confirm dialog, and ANSWERS the load
-// confirmation (LOAD_IN_PLACE_CONFIRM — one prompt body over two subjects,
+// unsaved-work dialog and the paste-confirm dialog, ANSWERS the generate
+// magnification level markers confirmation (GENERATE_MAGNIFICATION_CONFIRM,
+// raised by MagnificationLevelPropagate::open_generate_confirmation) and ANSWERS
+// the load confirmation (LOAD_IN_PLACE_CONFIRM — one prompt body over two subjects,
 // raised by GuiInputHandler::render_player_load_in_place in the player and by
 // GuiInputHandler::history_load_in_place in the `h` view, and answered back
 // through the input-handler back-pointer below). Two entry points are exposed:
@@ -47,6 +50,10 @@ struct GuiPrompt {
     GuiPlatform&          gui;
     Viewport&             viewport;
     PhaseResetPropagate&  phase_reset_propagate;
+    // The generate magnification level markers confirmation's two answers
+    // (GENERATE_MAGNIFICATION_CONFIRM): OK runs generate_apply, Cancel drops
+    // the parked breakpoints (cancel_generate_confirmation).
+    MagnificationLevelPropagate& magnification_level_propagate;
     GuiSaveOps&           save_ops;
     GuiPlaybackLifecycle& playback_lifecycle;
     // THE RENDER PLAYER, held for one line of request_close: a close gesture
@@ -73,6 +80,7 @@ struct GuiPrompt {
               GuiPlatform&          gui_,
               Viewport&             viewport_,
               PhaseResetPropagate&  phase_reset_propagate_,
+              MagnificationLevelPropagate& magnification_level_propagate_,
               GuiSaveOps&           save_ops_,
               GuiPlaybackLifecycle& playback_lifecycle_,
               GuiRenderPlayer&      render_player_)
@@ -80,6 +88,7 @@ struct GuiPrompt {
           gui(gui_),
           viewport(viewport_),
           phase_reset_propagate(phase_reset_propagate_),
+          magnification_level_propagate(magnification_level_propagate_),
           save_ops(save_ops_),
           playback_lifecycle(playback_lifecycle_),
           render_player(render_player_) {}
@@ -147,7 +156,8 @@ struct GuiPrompt {
     // WHAT SURVIVES THIS STRUCT ARE THE QUESTIONS ALONE — the unsaved-work
     // question with its save-failed rung, the phase reset paste's
     // confirmation, the
-    // load confirmation and, since 2026-09-13, the revert confirmation — so EVERY
+    // load confirmation, since 2026-09-13 the revert confirmation and, since
+    // 2026-09-22, the generate magnification level markers confirmation — so EVERY
     // PROMPT IN THE PRODUCT IS NOW A QUESTION, which is the messaging split's
     // own rule read back into the type.
     //

@@ -17,10 +17,11 @@
 #include <vector>
 
 // THE MAGNIFICATION LEVEL PROPAGATE — copy a group of magnification level
-// markers and lay the same shape down again from the playhead. The whole
-// model, and every way it parts from the phase reset propagate beside it, is
-// stated once at the header; the comments below carry only what each body
-// does.
+// markers and lay the same shape down again from the playhead — and, sharing
+// its landing, GENERATE MAGNIFICATION LEVEL MARKERS at the end of the file. The
+// whole model, and every way it parts from the phase reset propagate beside
+// it, is stated once at the header; the comments below carry only what each
+// body does.
 
 void MagnificationLevelPropagate::copy_from_selection() {
     const auto& lv = app.magnificationlevelmarkers.markers();
@@ -183,7 +184,7 @@ void MagnificationLevelPropagate::paste_apply() {
 // and this unconditional rebuild is what reads it (the header's rule).
 void MagnificationLevelPropagate::land_paste_in_source_view(
         const std::set<int>& created) {
-    // The precondition the header states, held by the one caller: this tail
+    // The precondition the header states, held by both callers: this tail
     // focuses and lands on the first created marker, so an empty set would
     // have nothing to name.
     assert(!created.empty());
@@ -192,11 +193,12 @@ void MagnificationLevelPropagate::land_paste_in_source_view(
     // FIRST created marker as the focus — a PROGRAMMATIC group selection, the
     // earliest focused as undo/redo's touched-set restore focuses it — through
     // the selection chokepoint, and then the lane's own land (the marker lane
-    // owns the playhead; land_playhead_on_marker's rule). THE LAND MOVES
-    // NOTHING under this model, the playhead already standing on the first
-    // created marker's frame, and it runs anyway because it is one of the
+    // owns the playhead; land_playhead_on_marker's rule). FOR THE PASTE THE
+    // LAND MOVES NOTHING, the playhead already standing on the first created
+    // marker's frame, and it runs anyway because it is one of the
     // overlay-hide rule's two movement owners (clear_region_highlight,
-    // input_handler.h) and this act has always gone through it.
+    // input_handler.h) and this act has always gone through it; for the
+    // GENERATE act it is a real move, onto the first generated marker.
     selection.replace_selection(created, *created.begin());
     land_playhead_on_marker(app, viewport.audio, viewport, *created.begin());
     viewport.invalidate_top_strip();
@@ -204,5 +206,152 @@ void MagnificationLevelPropagate::land_paste_in_source_view(
     // LAST, after the created selection is installed, so the flag cache
     // rebuilds against the final column AND the final selection hash in one
     // pass — and the plate against the store this paste wrote.
+    viewport.kick_waveform_sync();
+}
+
+// -- GENERATE MAGNIFICATION LEVEL MARKERS (architect 2026-09-22) --------------
+// The rule is stated once at the header; the bodies below carry only what each
+// does.
+
+namespace {
+
+// The confirmation's question, in the architect's words. Both counts are
+// always shown, zero included; the one grammatical agreement is the singular
+// of each noun at a count of exactly one.
+std::string generate_confirmation_text(int deleted, int inserted) {
+    return "Replace the " + std::to_string(deleted) +
+           (deleted == 1 ? " magnification level" : " magnification levels") +
+           " in the trim with " + std::to_string(inserted) +
+           (inserted == 1 ? " generated one?" : " generated ones?");
+}
+
+}  // namespace
+
+void MagnificationLevelPropagate::open_generate_confirmation() {
+    // THE BELTS, silent: the dispatch arm cards the column gate, and a source
+    // with no samples is refused at the load (a zero-frame source never opens,
+    // the wav layout owner's refusal), so neither has a producer that could
+    // earn a card here (validation_topology.md).
+    if (app.active_markers_view != 'M') return;
+    const float* samples = audio.samples_ptr();
+    const int64_t total = audio.total_frames();
+    if (samples == nullptr || total <= 0 || audio.sample_rate() <= 0) return;
+    // The detector reads interleaved stereo; the product admits stereo sources
+    // alone (the load's shape rule), so this holds by construction.
+    assert(audio.channels() == 2);
+
+    // THE WHOLE SONG, WHATEVER THE TRIM: the detector's windows see the audio
+    // on both sides of the trim's edges, so the breakpoints inside it are the
+    // ones a full-song analysis puts there.
+    const std::vector<GuiDetectedMagnificationLevel> detected =
+        detect_magnification_levels(samples, total, audio.sample_rate());
+
+    std::vector<GuiDetectedMagnificationLevel> inside;
+    for (const auto& d : detected)
+        if (trim_contains_source_frame(app.trim, d.frame)) inside.push_back(d);
+
+    int deleted = 0;
+    for (const auto& m : app.magnificationlevelmarkers.markers())
+        if (trim_contains_source_frame(app.trim, m.time_frame)) ++deleted;
+    const int inserted = static_cast<int>(inside.size());
+
+    pending_generated_ = std::move(inside);
+    // A modal surface is opening: the shared modal stop, past every belt
+    // above (a refused open leaves a listening session running).
+    playback_lifecycle.stop_playback_for_modal_open();
+    // OK / Cancel, Cancel LAST as the escape sentinel, and THE RAISE'S
+    // PASSIVE FOCUS IS THE FIRST BUTTON: the question is the deliberate second
+    // step of an act already asked for — the chord or its Edit row — exactly
+    // as the load, revert and phase reset paste confirmations are
+    // (PromptInitialFocus, app_state.h). `o` is OK's letter, theirs.
+    app.prompt.present(generate_confirmation_text(deleted, inserted),
+                       {'o', '\x1b'},
+                       {"OK", "Cancel"},
+                       DialogTrigger::GENERATE_MAGNIFICATION_CONFIRM,
+                       PromptInitialFocus::FirstButton);
+    viewport.invalidate_all();
+}
+
+void MagnificationLevelPropagate::generate_apply() {
+    // Nothing parked: the answer has no subject (a belt — the confirmation is
+    // the one raise that parks, and both its answers clear).
+    if (!pending_generated_) return;
+    const std::vector<GuiDetectedMagnificationLevel> inside =
+        std::move(*pending_generated_);
+    pending_generated_.reset();
+    // THE COLUMN BELT: the modal prompt held every view switch off while it
+    // stood, so the press's M column is still the active one.
+    if (app.active_markers_view != 'M') return;
+
+    // THE SELECTION IS SPENT, the pastes' own placement: the confirmation is
+    // answered and the act is running (selection_consumed, app_state.h). The
+    // membership is replaced below, by the landing or by the clear.
+    selection_consumed(app);
+
+    // THE PROPOSED COLUMN, built whole before anything is written, so the
+    // net-zero question can be asked of it. The store is frame-ascending and
+    // the trim is one inclusive interval, so the rows it keeps are a prefix
+    // (before the trim) and a suffix (after it), and the generated rows —
+    // strictly ascending, every one inside — stand between them. No kept row
+    // can share a frame with a generated one, so the order is unambiguous.
+    const std::vector<GuiMagnificationLevelMarker>& live =
+        app.magnificationlevelmarkers.markers();
+    std::vector<GuiMagnificationLevelMarker> proposed;
+    proposed.reserve(live.size() + inside.size());
+    std::vector<int> deleted_pre;   // the removed rows, in the live (pre) store
+    std::vector<int> created;       // the generated rows, in the proposed store
+    std::size_t i = 0;
+    for (; i < live.size() && live[i].time_frame < app.trim.begin_frame; ++i)
+        proposed.push_back(live[i]);
+    for (const auto& d : inside) {
+        // The detector emits 1..4, inside the column's one range.
+        assert(d.level >= 1 && d.level <= kMarkerMagnificationMax);
+        GuiMagnificationLevelMarker nm;
+        nm.time_frame = d.frame;
+        nm.level      = static_cast<uint8_t>(d.level);
+        nm.disabled   = false;
+        created.push_back(static_cast<int>(proposed.size()));
+        proposed.push_back(nm);
+    }
+    for (; i < live.size(); ++i) {
+        if (trim_contains_source_frame(app.trim, live[i].time_frame)) {
+            deleted_pre.push_back(static_cast<int>(i));
+            continue;
+        }
+        proposed.push_back(live[i]);
+    }
+
+    // THE NET-ZERO RUN PUSHES NOTHING: the column push takes an entry
+    // unconditionally (Undo::push_undo_magnification_level), so the act asks
+    // the question itself, with the column's one row comparator — nothing in
+    // the trim before and after, or a re-run that regenerates exactly what is
+    // there, writes nothing, pushes nothing and leaves the dirty mark alone.
+    if (!magnification_level_rows_equal(proposed, live)) {
+        std::vector<GuiMagnificationLevelMarker> pre_state = live;
+        app.magnificationlevelmarkers.markers_mut() = std::move(proposed);
+        // THE IDENTITY HINTS, BOTH SIDES (restore_touched_indices,
+        // app_state.h): the act is a delete and an insert in one entry, so it
+        // hints the deletes' way on the SNAPSHOT side (the removed rows, which
+        // an undo puts back and re-selects) and the paste's way on the LIVE
+        // side (the generated rows, which a redo re-selects).
+        undo.push_undo_magnification_level(std::move(pre_state),
+                                           std::move(deleted_pre),
+                                           created);
+        undo.recompute_dirty();
+    }
+    viewport.invalidate_waveform_area();
+
+    // THE LANDING. Generated markers end SELECTED through the paste's own tail
+    // — the first focused, the playhead landed on it and the unconditional
+    // synchronous rebuild that repaints the picture. With NONE generated there
+    // is nothing to select or focus: the selection rests empty, the playhead
+    // stays, and the rebuild is paid here, since markers may have been
+    // deleted and the store's generation re-keys the gain profile.
+    if (!created.empty()) {
+        land_paste_in_source_view(std::set<int>(created.begin(), created.end()));
+        return;
+    }
+    selection.clear_selection();
+    viewport.invalidate_top_strip();
     viewport.kick_waveform_sync();
 }

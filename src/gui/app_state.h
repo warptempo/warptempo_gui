@@ -3455,18 +3455,20 @@ inline constexpr CommandPopupItem kFilePopupItems[] = {
 inline constexpr int kFilePopupItemCount =
     static_cast<int>(std::size(kFilePopupItems));
 
-// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE PROPAGATE COMMANDS,
-// the MAGNIFICATION LEVEL family's two and then the PHASE RESET family's
-// three, each family in its own order: copy, then paste, then (where the
-// family has one) the variant paste. One category, no separator; THE ITEM IS
-// ITS CHORD on all five.
+// THE EDIT DROPDOWN'S ITEMS (architect 2026-08-20) — THE PROPAGATE COMMANDS
+// and, since 2026-09-22, the GENERATE act: SIX ROWS IN TWO CATEGORIES over one
+// separator (on Copy Phase Resets, architect 2026-09-22). The MAGNIFICATION
+// LEVEL category's three — Generate Magnification Level Markers first, then
+// the family's copy and paste — and then the PHASE RESET family's three,
+// copy, then paste, then the variant paste. THE ITEM IS ITS CHORD on all six.
 //
 // THE MAGNIFICATION ROWS COME FIRST (architect 2026-09-19): the magnification
 // level view took first place in the view bar and the backtick the same day,
 // because it is the view a piece is set up in and then left behind, and this
 // menu's order reflects the bar's.
 //
-// THIS MENU IS THE FIVE COMMANDS' ONE POINTER HOME. IconCopy and IconPaste were
+// THIS MENU IS THE SIX COMMANDS' ONE POINTER HOME (the generate act took no
+// icon-row button either, architect 2026-09-22). IconCopy and IconPaste were
 // deleted from the icon row in the same ruling, so nothing here duplicates a
 // button: the no-second-road doctrine is SATISFIED rather than amended, which
 // is the zoom group's history run in reverse (there, four BUTTONS took the
@@ -3482,8 +3484,8 @@ inline constexpr int kFilePopupItemCount =
 // with it), so the relocation removed no pointer road from the family.
 //
 // EVERY ROW DISPLAYS ITS HOTKEY, the accelerator column File's one row has
-// carried alone since 2026-08-15 — the column has NINE producers today
-// (re-derived 2026-09-19: File's four rows and this menu's five), and its
+// carried alone since 2026-08-15 — the column has TEN producers today
+// (re-derived 2026-09-22: File's four rows and this menu's six), and its
 // metrics and layout term are unchanged throughout every move of that number.
 // The spelling convention is the crop's: modifiers spelled out with `+`, and a
 // non-letter key written as itself (`\`).
@@ -3491,23 +3493,29 @@ inline constexpr int kFilePopupItemCount =
 // AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
 // command that cannot act right now — wrong mode, wrong selection, an empty
 // clipboard, a locked tab — still dispatches, and its own arm answers exactly
-// as the key does, which for all five of these is a notification card naming
+// as the key does, which for all six of these is a notification card naming
 // the rule it failed (2026-08-30, the strictness ruling; they were silent
 // no-ops before it). So there is nothing here that could lie the way the
 // deleted Navigation menu's one ruled exception could — the row acts, and the
 // act says what it found.
 inline constexpr CommandPopupItem kEditPopupItems[] = {
-    // THE MAGNIFICATION LEVEL FAMILY (architect 2026-09-15): TWO rows, not
-    // the phase three's shape on another letter — it copies a group of
-    // magnification level markers and lays the same frame distances down
-    // again from the playhead, and there is nothing for a state paste to
+    // THE MAGNIFICATION LEVEL CATEGORY. GENERATE MAGNIFICATION LEVEL MARKERS
+    // leads it (architect 2026-09-22): it replaces the M markers inside the
+    // trim with the detector's, behind a confirmation, and rides the chord the
+    // deleted state paste freed. Then the family's copy and paste (architect
+    // 2026-09-15), not the phase three's shape on another letter — they copy a
+    // group of magnification level markers and lay the same frame distances
+    // down again from the playhead, and there is nothing for a state paste to
     // align onto (magnification_level_propagate.h carries the model).
+    {"Generate Magnification Level Markers", "Ctrl+Alt+Shift+M", GuiKeys::M,
+     true,  true,  true,  false},
     {"Copy Magnification Levels",       "Ctrl+M",           GuiKeys::M,
      true,  false, false, false},
     {"Paste Magnification Levels",      "Ctrl+Alt+M",       GuiKeys::M,
      true,  false, true,  false},
+    // THE PHASE RESET CATEGORY, under the menu's one separator.
     {"Copy Phase Resets",      "Ctrl+P",           GuiKeys::P,
-     true,  false, false, false},
+     true,  false, false, true},
     {"Paste Phase Resets",     "Ctrl+Alt+P",       GuiKeys::P,
      true,  false, true,  false},
     {"Paste Phase Reset State", "Ctrl+Alt+Shift+P", GuiKeys::P,
@@ -3923,6 +3931,16 @@ enum class DialogTrigger {
     // button focused, the load confirmation's default, so a bare Enter
     // answers OK (PromptInitialFocus owns the choice and its reason).
     REVERT_CONFIRM,
+    // GENERATE MAGNIFICATION LEVEL MARKERS' CONFIRMATION (architect
+    // 2026-09-22): "Replace the N magnification levels in the trim with M
+    // generated ones?", OK / Cancel, raised by
+    // MagnificationLevelPropagate::open_generate_confirmation after the
+    // detection has run, the in-trim breakpoints parked on that struct. OK
+    // applies the replacement (generate_apply); Cancel drops the parked list.
+    // Its own trigger rather than a second subject on PASTE_CONFIRM, which is
+    // the phase reset paste's alone. Raised with its FIRST button focused —
+    // a confirmation of an act already asked for (PromptInitialFocus).
+    GENERATE_MAGNIFICATION_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -3970,19 +3988,21 @@ enum class DialogTrigger {
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. All SIX present() sites
+//        by construction rather than by convention. All SEVEN present() sites
 //        put '\x1b' last: the unsaved-work prompt (Save / Discard /
 //        CANCEL), its save-failed restatement (Retry / Discard / CANCEL), THE
 //        PHASE RESET PASTE'S CONFIRMATION (Yes / CANCEL — the magnification
 //        level paste is purely additive and raises none), THE LOAD
 //        CONFIRMATION'S TWO RAISERS (OK / CANCEL — one prompt body, two
 //        subjects: the render player's highlighted entry and the `h` view's
-//        viewed walk member) and the revert confirmation (OK / CANCEL) —
-//        SIX raises, re-grepped 2026-09-19. So on a
+//        viewed walk member), the revert confirmation (OK / CANCEL) and,
+//        since 2026-09-22, the GENERATE MAGNIFICATION LEVEL MARKERS
+//        confirmation (OK / CANCEL) — SEVEN raises, re-grepped 2026-09-22.
+//        So on a
 //        LastButton raise the key that answers without asking answers the way
-//        Esc already does; the four confirmations that raise on their FIRST
-//        button (the load's two, the revert's and the phase reset paste's)
-//        put OK — or Yes — one Enter away by
+//        Esc already does; the five confirmations that raise on their FIRST
+//        button (the load's two, the revert's, the phase reset paste's and
+//        the generate act's) put OK — or Yes — one Enter away by
 //        choice, each being the deliberate second step of an explicit act.
 //   (ii) THE PAINTED GATE below already consumes every key until the prompt
 //        has been on screen, so an Enter queued behind a raise answers
@@ -4049,10 +4069,11 @@ enum class DialogTrigger {
 //                 "revert should be just the same as load … both should use
 //                 the same default, OK") and, since 2026-09-16, THE TWO
 //                 PROPAGATE PASTE CONFIRMATIONS (architect: "align — paste
-//                 should open on the equivalent of OK"). Each prompt is
-//                 already the deliberate second step of an explicit act — the
-//                 `'` press, the Revert row or its chord, the paste chord or
-//                 its Edit row — so the question itself is the safeguard and
+//                 should open on the equivalent of OK"), and since
+//                 2026-09-22 GENERATE MAGNIFICATION LEVEL MARKERS'. Each
+//                 prompt is already the deliberate second step of an explicit
+//                 act — the `'` press, the Revert row or its chord, the paste
+//                 chord, the generate chord or their Edit rows — so the question itself is the safeguard and
 //                 its Enter confirms the act just asked for; the `'` roads
 //                 answer Enter the same way rather than opposite ways, and
 //                 the revert and the pastes answer it as they do.
@@ -4078,12 +4099,13 @@ struct PromptState {
     // one assignment site.
     PromptInitialFocus       initial_focus = PromptInitialFocus::LastButton;
 
-    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — SIX call sites
-    // (re-grepped 2026-09-13: the unsaved-work prompt, the
+    // THE ONE ROUTE THAT PUTS A QUESTION ON THIS STATE — SEVEN call sites
+    // (re-grepped 2026-09-22: the unsaved-work prompt, the
     // paste confirmation, the LOAD CONFIRMATION at BOTH its subjects'
     // raisers since 2026-08-29 — the render player's entry and the `h`
     // view's viewed walk member, one prompt body forked at
-    // confirm_load_in_place — and the REVERT CONFIRMATION since 2026-09-13;
+    // confirm_load_in_place — the REVERT CONFIRMATION since 2026-09-13 and
+    // the GENERATE MAGNIFICATION LEVEL MARKERS confirmation since 2026-09-22;
     // the error notice's raise retired with the kind on 2026-08-30) and the
     // save-failed rung's in-place restatement, which is a raise as far as
     // this bit is concerned (a new question the user has not seen). Structural
@@ -4209,6 +4231,20 @@ struct TrimState {
 // forwarder, not a second compare).
 inline bool trim_is_full_window(const TrimState& t, int64_t total_frames) {
     return trim_window_is_full(t.begin_frame, t.end_frame, total_frames);
+}
+
+// WHETHER A SOURCE FRAME LIES INSIDE THE TRIM — the store's own contract read
+// as membership: both bounds are INCLUSIVE whole source frames (data-model.md's
+// domain ruling — the end frame is the last frame inside the authored window,
+// the frame End lands on and the endcap sits on), so the full window
+// [0, total-1] contains every frame a marker can stand on. It is the AUTHORED
+// window, not Viewport::trim_range's navigation pair (end-exclusive on a
+// sub-window) nor the render's end-exclusive crop. ONE READER, the generate
+// act (MagnificationLevelPropagate, magnification_level_propagate.h), which
+// runs in source view alone, so the source-frame pair is its domain as it
+// stands.
+inline bool trim_contains_source_frame(const TrimState& t, int64_t frame) {
+    return frame >= t.begin_frame && frame <= t.end_frame;
 }
 
 // Seed a trim pair to the canonical FULL window for a source of `total_frames`
@@ -12415,6 +12451,9 @@ inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
 //     ::paste_state_apply) and the magnification level family's one paste
 //     (MagnificationLevelPropagate::paste_apply), each past its own last
 //     refusal;
+//   * GENERATE MAGNIFICATION LEVEL MARKERS (2026-09-22), at its confirmation's
+//     OK (MagnificationLevelPropagate::generate_apply), past its belts and
+//     ahead of its net-zero test — the pastes' own placement;
 //   * THE BPM OPENER, Ctrl+B (GuiFlagEditor::enter_bpm_mode, at the flag flip
 //     past its five bails; the chord was bare `m` until 2026-09-15);
 //   * THE GRID ITERATIONS LAMP'S ON EDGE (bare `i`, input_key_dispatch.cpp),
@@ -12654,7 +12693,11 @@ inline bool magnification_level_row_fields_differ(
 //           same reason), and the two propagate placement pastes
 //           (PhaseResetPropagate::paste_apply and, since 2026-09-15,
 //           MagnificationLevelPropagate::paste_apply) hint their materialized
-//           rows on the LIVE side. Shift+S's lead-in drop, Ctrl+Shift+S's
+//           rows on the LIVE side. GENERATE MAGNIFICATION LEVEL MARKERS
+//           (MagnificationLevelPropagate::generate_apply, 2026-09-22) is a
+//           delete and an insert in one entry and hints BOTH sides — its
+//           removed rows on the snapshot side as the deletes do, its
+//           generated rows on the live side as the pastes do. Shift+S's lead-in drop, Ctrl+Shift+S's
 //           crossing and the `s` drop are
 //           not separate producers: every drop road funnels through the drop
 //           bodies named.

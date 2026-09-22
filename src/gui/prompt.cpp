@@ -21,7 +21,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
         break;
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
-        // Both are dispatched directly by activate_response, outside
+    case DialogTrigger::GENERATE_MAGNIFICATION_CONFIRM:
+        // All three are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -65,11 +66,13 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // THE RAISE'S PASSIVE FOCUS IS THE FIRST BUTTON (PromptInitialFocus::
 // FirstButton), so a bare Enter answers OK — the load confirmation's default
 // exactly (architect 2026-09-13: "revert should be just the same as load …
-// both should use the same default, OK"): each of the confirmations — three
-// kinds, the load's, this one and the phase reset paste's (architect
-// 2026-09-16, "align — paste should open on the equivalent of OK") — is
+// both should use the same default, OK"): each of the confirmations — four
+// kinds, the load's, this one, the phase reset paste's (architect
+// 2026-09-16, "align — paste should open on the equivalent of OK") and, since
+// 2026-09-22, the generate magnification level markers act's — is
 // already the deliberate second step of an explicit act (the File row or its
-// chord here, the `'` press there, the paste chord or its Edit row), so the
+// chord here, the `'` press there, the paste or generate chord or its Edit
+// row), so the
 // question itself is the safeguard and its Enter confirms the act the user
 // just asked for; the three-way Save / Discard / Cancel prompts above and
 // below are no such confirmation and keep the last button. `o` is OK's letter,
@@ -96,8 +99,8 @@ void GuiPrompt::open_revert_confirm() {
 // did, one stderr line and nothing on screen, because its refusals are
 // unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
 // QUESTIONS ALONE now: the unsaved-work question with its save-failed rung,
-// the phase reset paste's confirmation, the load confirmation and the revert
-// confirmation.)
+// the phase reset paste's confirmation, the load confirmation, the revert
+// confirmation and the generate magnification level markers confirmation.)
 
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
@@ -148,6 +151,28 @@ void GuiPrompt::activate_response(char k) {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->cancel_load_in_place();
+            return;
+        }
+        return;
+    }
+
+    if (trigger == DialogTrigger::GENERATE_MAGNIFICATION_CONFIRM) {
+        // GENERATE MAGNIFICATION LEVEL MARKERS (architect 2026-09-22): `o` is
+        // OK and applies the replacement from the breakpoints the press
+        // parked; Escape drops them. BOTH CLOSE ROADS CLEAR THE PARKED LIST —
+        // generate_apply spends it, cancel_generate_confirmation discards it —
+        // so it cannot reach a later answer. The prompt closes first either
+        // way, so the act runs on the ordinary modal state.
+        if (k == 'o') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            magnification_level_propagate.generate_apply();
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            magnification_level_propagate.cancel_generate_confirmation();
             return;
         }
         return;

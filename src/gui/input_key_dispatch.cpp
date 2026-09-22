@@ -761,8 +761,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     EVERY PASTE STAYS REFUSED by the base — the phase family's Ctrl+Alt+P
 //     and Ctrl+Alt+Shift+P and the magnification family's Ctrl+Alt+M, three
 //     since 2026-09-19 — each rewriting a store and pushing, which is exactly
-//     what the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
-//     arm's own spelling — so the alt-bearing pastes cannot reach this
+//     what the lock holds back, AND SO DOES THE GENERATE ACT on
+//     Ctrl+Alt+Shift+M (2026-09-22), which replaces the M markers inside the
+//     trim and pushes. Ctrl-exact, no shift and no alt, the dispatch
+//     arm's own spelling — so the alt-bearing chords cannot reach this
 //     admission by widening it. THE EDIT MENU'S TWO COPY ROWS come back with
 //     it and needed no edit of their own: each synthesizes its chord through
 //     on_key, so the row is the key.
@@ -861,7 +863,8 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
     // The clipboard copies, ctrl-exact as their dispatch arms are — which is
-    // what keeps the three ALT-bearing pastes out of this admission. Ctrl+M,
+    // what keeps the three ALT-bearing pastes and the generate act out of this
+    // admission. Ctrl+M,
     // the magnification level copy (2026-09-15), on Ctrl+P's own standard: a
     // copy writes a session clipboard and no store.
     if ((key == GuiKeys::P || key == GuiKeys::M) && ctrl && !shift && !alt)
@@ -7922,7 +7925,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // -- THE MAGNIFICATION LEVEL PROPAGATE: two arms on the letter M, and it
+    // -- THE MAGNIFICATION LEVEL PROPAGATE: two arms on the letter M (the
+    // generate act's third follows them, 2026-09-22), and it
     // is NOT the three above with a letter swapped (architect 2026-09-19).
     // The phase three are W-column acts that carry a labeled phrase's resets
     // from one occurrence of a label to another; these two are M-COLUMN acts
@@ -7985,6 +7989,25 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             return true;
         }
         magnification_level_propagate.paste_apply();
+        return true;
+    }
+
+    // Ctrl+Alt+Shift+M: GENERATE MAGNIFICATION LEVEL MARKERS (architect
+    // 2026-09-22) — the letter's third chord, and NOT a state paste (the
+    // header states why the family has none). It replaces the M markers inside
+    // the trim with the detector's, behind an OK / Cancel confirmation; the
+    // whole rule is at MagnificationLevelPropagate (magnification_level_-
+    // propagate.h). ONE GATE, the column, carded in the paste's own register;
+    // the locks and the `h` view refuse it upstream, at the allowlists this
+    // chord is on none of, exactly as they refuse Ctrl+Alt+M.
+    if (key == GuiKeys::M && ctrl && shift && alt) {
+        if (app.active_markers_view != 'M') {
+            notifications.notify(
+                AppState::NotificationClass::Normal,
+                "Magnification levels are generated in the magnification level view");
+            return true;
+        }
+        magnification_level_propagate.open_generate_confirmation();
         return true;
     }
 

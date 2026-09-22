@@ -6058,10 +6058,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the SIX keyboard Ctrl+Alt
+        // proceeds. ALT survives ONLY in the SEVEN keyboard Ctrl+Alt
         // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P,
-        // Ctrl+Alt+Shift+P, Ctrl+Alt+M, and since 2026-09-13
-        // File → Revert's Ctrl+Alt+O)
+        // Ctrl+Alt+Shift+P, Ctrl+Alt+M, since 2026-09-13
+        // File → Revert's Ctrl+Alt+O, and since 2026-09-22 Generate
+        // Magnification Level Markers' Ctrl+Alt+Shift+M)
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to

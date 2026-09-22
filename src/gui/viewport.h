@@ -147,7 +147,10 @@ struct Viewport {
     //    tail), the undo/redo restore (Undo::restore_history_entry's tail)
     //    and, since 2026-09-15, THE MAGNIFICATION LEVEL PROPAGATE'S PASTE,
     //    whose every store-writing run ends in
-    //    land_paste_in_source_view's kick — and the store's generation
+    //    land_paste_in_source_view's kick, and since 2026-09-22 THE GENERATE
+    //    ACT (MagnificationLevelPropagate::generate_apply), which ends in that
+    //    same landing or, with nothing generated, in a kick of its own — and
+    //    the store's generation
     //    re-keys the profile (waveform_gain_profile_cached,
     //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
     //    with no gain-change kick of its own.

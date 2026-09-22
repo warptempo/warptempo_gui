@@ -225,8 +225,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // day, SUPERSEDING this gate's own "a prompt opens with no button
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
         // what makes it safe is that the focused button is the ESCAPE SENTINEL
-        // — on every prompt but the FOUR CONFIRMATIONS (the load's two
-        // raisers, File → Revert's and the phase reset paste's), which ask for
+        // — on every prompt but the FIVE CONFIRMATIONS (the load's two
+        // raisers, File → Revert's, the phase reset paste's and Generate
+        // Magnification Level Markers'), which ask for
         // their OK — or Yes — deliberately, each
         // being the second step of an explicit
         // act (PromptState's PromptInitialFocus) — plus the
@@ -871,7 +872,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+M, ctrl-exact (each reads a
     // selection into a session clipboard and pushes nothing, so the undo domain
     // this lock protects has no interest in them; the THREE ALT-BEARING PASTES
-    // stay refused). That
+    // and the generate act, Ctrl+Alt+Shift+M, stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
