@@ -154,15 +154,13 @@ struct Viewport {
     //    re-keys the profile (waveform_gain_profile_cached,
     //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
     //    with no gain-change kick of its own.
-    //    (The gain gate's other inputs are the AUDIO VIEW, the COLUMN and the
-    //    ZOOM — effective_waveform_gain_profile answers the empty profile in
-    //    target view, and in source view outside the magnification level
-    //    column it answers it coarser than the working zoom too — and NONE OF
-    //    THE THREE owes a gain kick of its own: the S/T flip and the column
-    //    switch run an unconditional kick_waveform_sync, and the three zoom
-    //    appliers (Viewport::apply_zoom_change, apply_strip_drag_zoom,
-    //    apply_zoom_to_start) each end their changed path in one, so the new
-    //    picture lands in the frame the switch or the zoom does.)
+    //    (The gain gate's other inputs are the AUDIO VIEW and the `]` LAMP —
+    //    effective_waveform_gain_profile answers the empty profile in target
+    //    view, and in source view while the lamp is dark. The S/T flip owes no
+    //    gain kick of its own, running an unconditional kick_waveform_sync;
+    //    the lamp's one setter, GuiInputHandler::set_waveform_magnification_lit,
+    //    takes the before/after hash kick above. The column and the zoom are no
+    //    inputs since 2026-09-22.)
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and a level write takes the kick so the
@@ -270,10 +268,11 @@ struct Viewport {
     // nowhere else. A write the picture cannot see — a level equal to the one
     // already in force —
     // changes the store and not the profile, and must not drain the worker and
-    // re-render the whole plate. (Every caller runs with the MAGNIFICATION
-    // LEVEL COLUMN ACTIVE, which is source view by construction and the gate's
-    // one zoom-blind arm, so none of them ever runs against the flat answer at
-    // any zoom.)
+    // re-render the whole plate. (Every level-writing caller runs with the
+    // MAGNIFICATION LEVEL COLUMN ACTIVE, which is source view by construction;
+    // while the `]` lamp is dark the gate answers flat on both sides of its
+    // write, so the hashes agree and nothing renders — the picture being
+    // flat, that is the right answer.)
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 

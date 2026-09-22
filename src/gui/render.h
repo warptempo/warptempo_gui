@@ -1718,9 +1718,9 @@ inline int tab_row_h_px() {
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
-// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-ONE view/mode/action buttons since
-// 2026-09-19, when the FLATTEN button came up from the bottom row into the
-// ITERATION GROUP — the
+// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-TWO view/mode/action buttons since
+// 2026-09-22, when the WAVEFORM MAGNIFICATION lamp joined the zoom group
+// between Center and Follow — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
 // icons::kIconCount is a

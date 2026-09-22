@@ -754,6 +754,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
         case GuiKeys::BracketLeft: return bare || sh;
+        // Toggle Waveform Magnification (architect 2026-09-22), bound in both
+        // modes as `f` and `z` are: outside source view (target view, and the
+        // `h` view's allowlist) it refuses on a card rather than falling
+        // silent.
+        case GuiKeys::BracketRight: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it
@@ -835,6 +840,14 @@ static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Space,
                                   GuiInputState{true, false, false}, false),
               "Space binds bare and shifted only — strict modifier validation");
+static_assert(chord_is_bound(GuiKeys::BracketRight, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::BracketRight, GuiInputState{}, true) &&
+                  !chord_is_bound(GuiKeys::BracketRight,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::BracketRight,
+                                  GuiInputState{true, false, false}, false),
+              "Toggle Waveform Magnification is bare `]` in both modes and no "
+              "decoration of it");
 static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
                                   GuiInputState{true, false, false}, false),
@@ -1082,6 +1095,26 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // is) — and the same one-owner reason.
 inline bool is_magnification_level_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && mods.ctrl && mods.shift && !mods.alt;
+}
+
+// True for the chord that toggles THE WAVEFORM MAGNIFICATION LAMP (architect
+// 2026-09-22): BARE `]` exactly — no ctrl, no shift, no alt. The bracket pair
+// is the picture's own letter pair: bare `[` shows and hides the trim region
+// overlay and bare `]` shows and hides the magnification, both display
+// postures that author nothing. One-shot (repeat-ineligible: a held toggle
+// would flicker). The lamp governs SOURCE VIEW alone — target view is always
+// flat — so in target view the chord is a bound key that REFUSES on a card,
+// the lamp keeping its state (the arm is BracketRight's case in
+// handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
+// reaches). ITS ONE READER is the read-only allowlist (read_only_key_blocked,
+// which ADMITS it — a view posture, like Follow — and which the
+// grid-iterations lock's gate falls through to). The `h` view's allowlist
+// (history_mode_key_blocked) deliberately does NOT name it: Follow and
+// Restrict Undo to Viewport, its group's other two lamps, are refused there
+// too, so the view cards it like every chord it does not name.
+inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::BracketRight && !mods.ctrl && !mods.shift &&
+           !mods.alt;
 }
 
 // True for the chord that opens and closes the AV sync stats panel (architect

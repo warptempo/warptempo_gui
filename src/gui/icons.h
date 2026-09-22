@@ -149,6 +149,11 @@ enum class Icon {
     // other button wearing them.
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
+    // ZOOM-OUT-Y, the vertical magnifier (the ruler on its dial beside a
+    // minus): worn by the Waveform Magnification lamp between Center and
+    // Follow (architect 2026-09-22), restored with its def and asset for the
+    // third time — the lamp's stands of 2026-09-14 and 2026-09-17 wore it too.
+    ZoomOutY,            // Toggle Waveform Magnification (bare `]`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -441,11 +446,14 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 48 SINCE 2026-09-17 EVENING, when waveform magnification became a function
-// of the audio view (architect 2026-09-17): zoom-out-y left with the `]` lamp
-// that wore it — enumerator, def and asset together, no other button wearing
-// it — the align-horizontal-center precedent of 2026-09-14. It was 49 for
-// that one day, zoom-out-y having come back with the lamp that morning. It was
+// 50 SINCE 2026-09-22, re-counted off the enumerators above rather than
+// adjusted: zoom-out-y came back that day with the Waveform Magnification lamp
+// that wears it (architect 2026-09-22), and merge had joined on 2026-09-19
+// with the Flatten button without this number moving, so the count was 49
+// against a stated 48 until the recount. It was 48 from 2026-09-17 evening,
+// when waveform magnification became a function of the audio view and
+// zoom-out-y left with the `]` lamp that wore it — enumerator, def and asset
+// together — having been 49 for that one day. It was
 // 48 from 2026-09-16, THE MEASURES FEATURE'S DELETION (architect
 // 2026-09-16): minuet-scales left with the Marker Measure button that wore
 // it — enumerator, def and asset together. It was 49 from 2026-09-15, the
@@ -455,7 +463,7 @@ enum class Icon {
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 48;
+inline constexpr int kIconCount = 50;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

@@ -291,12 +291,17 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ctrl-drag and the pinch.)
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
+    // WAVEFORM MAGNIFICATION (architect 2026-09-22) — bare `]`, a TOGGLE with
+    // a lamp, right after `c` and ahead of Follow. Live on a locked tab and
+    // under the read-only lock (a display posture on that allowlist), greyed
+    // in target view where the key cards, and DEAD in the `h` view, whose
+    // allowlist does not name it.
+    {RedesignButton::IconWaveformMagnification,
+     GuiKeys::BracketRight, false, false, false, false, true},                     // bare ]
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain is a per-section profile resolved from the
-    // magnification level markers column now. THE `]` MAGNIFICATION LAMP'S ROW
-    // went the same way on 2026-09-17, with its button, when magnification
-    // became a function of the audio view; `]` is unbound.)
+    // magnification level markers column now.)
     // FOLLOW — the ZOOM GROUP'S LAST MEMBER since 2026-08-27, and the last
     // survivor of the mass-marker category. Bare `f`, a TOGGLE with a lamp,
     // consumed by the `h` view and greyed in there.
@@ -7338,9 +7343,10 @@ void GuiInputHandler::finalize_active_drags() {
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
 // (row 1's three menu anchors and the view bar's four, row 3's two
-// tabs, row 4's twenty-one — the toolbar four included since the 2026-08-12
+// tabs, row 4's twenty-two — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
-// the iteration group since 2026-09-19 — and the bottom row's
+// the iteration group since 2026-09-19, the WAVEFORM MAGNIFICATION lamp in the
+// zoom group since 2026-09-22 — and the bottom row's
 // sixteen: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member

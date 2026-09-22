@@ -2327,10 +2327,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // two drags on the waveform overlay plus the SWEEP that writes it in one
     // stroke; trim is outside the selection system, so there is no Delete arm.
     // The bracket carries no other binding: Ctrl+[ and every alt form are
-    // unbound, and BracketRight is unbound in EVERY form since magnification
-    // became a function of the audio view (architect 2026-09-17). `]` joins
-    // the keysym table's other unbound punctuation, re-grepped against
-    // chord_is_bound: `*`, `+`, `-`, `/`, `:`, `=` and `@`.
+    // unbound. BARE BracketRight binds the Waveform Magnification lamp
+    // (architect 2026-09-22, handle_plain_bare_keys), its every modified form
+    // unbound.
     if (!ctrl && !shift && !alt && key == GuiKeys::BracketLeft) {
         handle_toggle_trim_region();
         return;
@@ -4583,4 +4582,13 @@ void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
     // synthesizing that press, and there is nothing else: there is no settings
     // key to commit it from.
     app.restrict_undo_to_viewport = desired;
+}
+
+void GuiInputHandler::set_waveform_magnification_lit(bool desired) {
+    // The contract — sole writer, per-project, history-less, the gain kick —
+    // is at the declaration (input_handler.h). The ONE caller is the bare-`]`
+    // arm, which the icon row's button reaches by synthesizing that press.
+    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
+    app.waveform_magnification_lit = desired;
+    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
 }

@@ -394,6 +394,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
+    // WAVEFORM MAGNIFICATION, bare `]` (architect 2026-09-22): a display
+    // posture about the picture, authoring nothing the lock protects, so it
+    // is admitted on a locked tab — and under the grid-iterations lock, whose
+    // gate falls through to this list and which stands in target view alone,
+    // so there the press reaches the arm's own target-view card.
+    const bool is_waveform_magnification =
+        is_waveform_magnification_key(key, mods);
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
@@ -607,7 +614,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_home_end || is_page_updown ||
              is_zero ||
              is_follow ||
-             is_restrict_undo ||
+             is_restrict_undo || is_waveform_magnification ||
              is_center ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -9392,6 +9399,23 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // History-less, one-shot — and nothing moves at the press: the bit is read at the NEXT Ctrl+Z, through
         // undo_step_permitted_by_viewport_lamp, and by nothing else.
         set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
+        break;
+    case GuiKeys::BracketRight:
+        // Toggle the Waveform Magnification lamp (architect 2026-09-22). The
+        // one bare form reaches here (is_waveform_magnification_key, the
+        // caller having gated on no modifiers). In TARGET VIEW the lamp has no
+        // effect, so the press refuses on its card and the bit keeps its state
+        // (waveform_magnification_toggle_actionable, the face's own verdict).
+        // The setter is GuiInputHandler::set_waveform_magnification_lit,
+        // shared with the icon-row button's synthesized chord and with nothing
+        // else. History-less, one-shot, legal on a locked tab and under the
+        // read-only lock; refused in the `h` view at that mode's allowlist.
+        if (!waveform_magnification_toggle_actionable(app)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kMagnificationSourceViewOnlyCard);
+            break;
+        }
+        set_waveform_magnification_lit(!app.waveform_magnification_lit);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

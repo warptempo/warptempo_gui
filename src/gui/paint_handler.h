@@ -772,8 +772,9 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-one
-    // view/mode/action buttons since the FLATTEN button came up from the
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-two
+    // view/mode/action buttons since the WAVEFORM MAGNIFICATION lamp joined
+    // them 2026-09-22, twenty-one from the FLATTEN button's arrival from the
     // bottom row 2026-09-19, twenty from the two view lamps' whole-category
     // deletion 2026-09-15 and twenty-two before that —
     // the deleted toolbar row's four lead them since the 2026-08-12 relayout,

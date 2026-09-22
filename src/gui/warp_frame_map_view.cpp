@@ -187,31 +187,17 @@ const WaveformGainProfileCache& effective_waveform_gain_profile(
         return c;
     }();
 
-    // TARGET VIEW IS FLAT (the rule and its derivation are at the
-    // declaration): the phase resets it authors move on the hop lattice, which
-    // no magnified picture helps.
+    // TARGET VIEW IS FLAT whatever the lamp says (the rule and its reason are
+    // at the declaration): the phase resets it authors move on the hop
+    // lattice, which no magnified picture helps.
     if (app.active_audio_view == 'T') return kUnmagnified;
 
-    // SOURCE VIEW: THE MAGNIFICATION LEVEL COLUMN IS THE ONE EXEMPTION, AND
-    // EVERY OTHER COLUMN TAKES THE AT-WORKING GATE. The M column's whole job
-    // IS the loudness — it authors the boundaries of the very thing being
-    // shown, and it shows them at every zoom so the sections can be read and
-    // placed whole. Any other column in source view is aiming at the audio
-    // itself, and the placement-instrument principle decides there: at the
-    // working zoom or finer the waveform is a placement instrument and
-    // magnification is what makes a quiet passage aimable, while COARSER it is
-    // a map — the broad picture of the piece, where everything drawn
-    // invariably loud hides the shape the reader came for. That other column
-    // is W alone since 2026-09-21 (the phase-reset column is target view only);
-    // the test still asks "not M" so the fork names the exemption, not W.
-    if (app.active_markers_view != 'M' &&
-        !zoom_level_at_or_finer_than_working(app.zoom_level))
-        return kUnmagnified;
+    // SOURCE VIEW: THE LAMP ALONE DECIDES, on every column and at every zoom.
+    if (!app.waveform_magnification_lit) return kUnmagnified;
 
-    // A MAGNIFICATION-LEVEL-COLUMN DRAG shows the store as the release would
-    // leave it. It reaches this arm by construction: drag_mode is the column
-    // the press began on and 'M' exists in source view alone, which is also
-    // the column the exemption above just let through at any zoom.
+    // A MAGNIFICATION-LEVEL-column DRAG shows the store as the release would
+    // leave it. drag_mode is the column the press began on, and 'M' exists in
+    // source view alone, so the drag reaches this arm whenever the lamp is lit.
     if (app.drag.active && app.drag.drag_mode == 'M')
         return waveform_gain_profile_drag_cached(app);
     return waveform_gain_profile_cached(app);
