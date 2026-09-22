@@ -103,9 +103,11 @@ struct GuiMagnificationLevelMarkersOps {
     // own sentence for the dispatcher to card, or std::nullopt for "nothing to
     // say" (GuiOpRefusal, warpmarkers_ops.h). `step` is the press's one step
     // in its unit (horizontal_arrow_step, gui_input.h), on this column always
-    // ONE PAINTED COLUMN (bare only — the horizontal ladder is retired), the
-    // two twins' own parameter.
+    // ONE PAINTED COLUMN (the horizontal ladder is retired), the two twins'
+    // own parameter; `camera` is the press's (NudgeCamera, gui_input.h),
+    // forwarded to the shared tail untouched.
     GuiOpRefusal nudge_selected_magnification_levels(HorizontalArrowStep step,
+                                                     NudgeCamera camera,
                                                      bool synthesized_repeat);
     // THE VALUE STEP ON THIS COLUMN — bare Up/Down (and the plain wheel over an
     // M flag) stepping the LEVEL DIGIT by `delta` through the same arrow

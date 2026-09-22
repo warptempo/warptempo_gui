@@ -380,16 +380,14 @@ struct Viewport {
     // with the incremental path retired every scroll renders synchronously.
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
-    // THE NUDGE HOLDS ITS SUBJECT'S COLUMN (architect 2026-09-17): a
-    // Left/Right nudge that moved something places the viewport so the
-    // playhead it just landed paints in the column the subject painted in
-    // before the nudge (prior subject sample against the prior viewport start),
-    // clamped into the waveform's first and last columns, IFF the zoom is at
-    // working or finer (zoom_level_at_or_finer_than_working), never changing
-    // the zoom; coarser the camera holds. No centring, no lamp, no view term.
-    // The PHASE RESET nudge is exempt at every zoom and pages in instead
-    // (architect 2026-09-22). The clamp derivation, the exemption's reason and
-    // the two callers are at the definition.
+    // CTRL+LEFT / CTRL+RIGHT HOLD THEIR SUBJECT'S COLUMN (architect
+    // 2026-09-17; at every zoom and on the ctrl press alone since 2026-09-22):
+    // a step that moved something places the viewport so the playhead it just
+    // landed paints in the column the subject painted in before the step
+    // (prior subject sample against the prior viewport start), clamped into
+    // the waveform's first and last columns, never changing the zoom. No
+    // centring, no lamp, no view term. The clamp derivation and the two
+    // callers are at the definition.
     void hold_subject_column_after_nudge(int64_t prior_subject_sample,
                                          int64_t prior_viewport_start);
     // The changed-path tail the two one-shot playhead camera jumps above share.

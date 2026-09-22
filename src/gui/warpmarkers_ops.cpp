@@ -1699,7 +1699,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 // reorder-and-remap below; the render boundary collapses an exact-frame tie to one
 // 1.00 owner.
 GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
-        HorizontalArrowStep step, bool synthesized_repeat) {
+        HorizontalArrowStep step, NudgeCamera camera, bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable — the state and geometry
     // guards, the focused-index belt and THE WALL, all of it ahead of the
@@ -1800,6 +1800,6 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, merge, orig_f, committed_f,
-                                NudgeCamera::HoldColumn, &target_render);
+                                camera, &target_render);
     return std::nullopt;
 }

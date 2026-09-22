@@ -1572,10 +1572,10 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's sixteen — the transport three, then the right block's
+    // row's seventeen — the transport three, then the right block's
     // MARKER-VERB GROUP of seven (kMarkerVerbGroup, paint_handler.cpp, owns
-    // that membership), two walk
-    // steps and four cardinal arrows. EVERY ONE OF THEM
+    // that membership), the walk group's three (the walk and the two
+    // hold-column nudges) and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside
@@ -2667,13 +2667,9 @@ private:
                       bool alt, bool inside_waveform, bool inside_top);
 
     // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
-    // playback and move the playhead onto the newly focused marker. At the
-    // working zoom or coarser the zoom is untouched (architect 2026-08-05, "no
-    // zoom on Tab", reverting the same-day working-zoom landing this carried
-    // for one commit); a MARKER step handed Center from a level strictly finer
-    // than working sets the working zoom and centres its landing, `c`'s own
-    // tail (architect 2026-09-15 — a same-marker cell step and a refused press
-    // take no zoom). `c`
+    // playback and move the playhead onto the newly focused marker. The zoom
+    // is untouched at every level (architect 2026-08-05, "no zoom on Tab";
+    // the finer-to-working return of 2026-09-15 went 2026-09-22). `c`
     // remains the direct route to
     // kWorkingZoomLevel from any level, and `0`'s second arm reaches it through
     // `c` when its tab has stamped no return level. A step that focuses
@@ -2681,11 +2677,10 @@ private:
     //
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
-    // about the camera beyond what `frame` states (the finer-level return to
-    // working rides a stated Center) and reads no preference of its own —
-    // follow mode never gated it. The zoom governs the BARE Tab walk's framing alone (architect
-    // 2026-09-13), so the three bare arms pass
-    // marker_walk_frame(app) (app_state.h, its one owner) while the
+    // about the camera beyond what `frame` states and reads no preference of
+    // its own — follow mode never gated it. The three bare arms pass
+    // MarkerLandingFrame::FollowPage at every zoom (architect 2026-09-22, no
+    // camera derived from the zoom) while the
     // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::NoFrame
     // outright and frames each step through run_center_command behind it
     // (architect 2026-09-14, the march runs plain `c`, the one framing owner
@@ -2696,8 +2691,7 @@ private:
     // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
-    // this rule, over its own list (handle_history_mode_key), the finer-level
-    // return to working on a Center step included.
+    // this rule, over its own list (handle_history_mode_key).
     //
     // THE STEP'S UNIT IS A CELL WHILE GRID ITERATIONS IS LIT (architect
     // 2026-09-10): marker_walk_step (app_state.h) owns the whole rule — the
@@ -2726,9 +2720,7 @@ private:
     // whose `c` behind each step frames).
     // The zoom belongs to the caller too, and the callers differ in it: `c`
     // sets the working zoom right after this returns, the Tab family sets
-    // nothing (2026-08-05) but for a Center step from a level finer than
-    // working, which cycle_marker_focus takes to working right after this
-    // returns (architect 2026-09-15).
+    // nothing (2026-08-05, at every level since 2026-09-22).
     // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
@@ -2828,14 +2820,16 @@ private:
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
     // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31, R12): the
-    // stop, the stale-focus clear and the signed step, called by the bare
-    // form alone (handle_plain_bare_keys' Left / Right arms below — the
-    // horizontal pair binds bare only since 2026-09-21). `step` is the
-    // press's one step in the active column's unit (horizontal_arrow_step,
+    // stop, the stale-focus clear, the signed step and the camera, called by
+    // the bare form (handle_plain_bare_keys' Left / Right arms below) and the
+    // ctrl form (on_key's Ctrl+Left / Ctrl+Right arm, 2026-09-22). `step` is
+    // the press's one step in the active column's unit (horizontal_arrow_step,
     // gui_input.h) — one painted column, or ONE HOP on the phase-reset
-    // column. Reached only with an empty selection: the marker-lane branch
-    // claims the press first. The full contract is at the definition.
-    void run_waveform_lane_playhead_step(HorizontalArrowStep step);
+    // column — and `camera` the press's (NudgeCamera, gui_input.h). Reached
+    // only with an empty selection: the marker-lane branch claims the press
+    // first. The full contract is at the definition.
+    void run_waveform_lane_playhead_step(HorizontalArrowStep step,
+                                         NudgeCamera camera);
 
     // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
     // Home-End / trim begin-end. Caller gates on no modifiers held. Its
@@ -4741,7 +4735,7 @@ private:
     // the given direction, treating the camera as the REQUIRED `frame` says
     // (MarkerLandingFrame, app_state.h — the live walk's own type). Two
     // callers, both in handle_history_mode_key: its Tab arm, which states
-    // Center, and its Ctrl+Shift+Tab march, which states NoFrame and runs
+    // FollowPage (at every zoom since 2026-09-22), and its Ctrl+Shift+Tab march, which states NoFrame and runs
     // run_center_command behind each step exactly as the live march does
     // (architect 2026-09-14). Every walk rule it obeys is stated at those arms.
     void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);

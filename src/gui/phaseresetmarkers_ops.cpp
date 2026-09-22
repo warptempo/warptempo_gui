@@ -354,7 +354,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // below). Crossing a neighbor is legal and goes through the reorder-and-remap
 // path below.
 GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
-        HorizontalArrowStep step, bool synthesized_repeat) {
+        HorizontalArrowStep step, NudgeCamera camera, bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable — the state and geometry
     // guards, the focused-index belt and THE WALL, all of it ahead of the
@@ -440,13 +440,12 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
     // the nudged reset's always-on stem), playhead follow (committed_f is
-    // reorder-independent; the target home maps), the PAGE-IN camera — never
-    // the held column, a hop being no one-column delta (architect 2026-09-22) —
-    // the point command's region collapse, and the view-independent target
-    // trigger. Ordering rationale at the declaration.
+    // reorder-independent; the target home maps), the point command's region
+    // collapse, and the view-independent target trigger. Ordering rationale at the
+    // declaration.
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, merge,
-                                orig_f, committed_f, NudgeCamera::PageIn,
+                                orig_f, committed_f, camera,
                                 &target_render);
     return std::nullopt;
 }

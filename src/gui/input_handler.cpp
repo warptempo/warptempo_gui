@@ -886,8 +886,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              lamp, which is what keeps the two locks
     //                              from ever standing together
     //   - Space (no mods)        → playback toggle
-    //   - Left/Right (no mods)   → playhead-by-pixel step, and ONLY with an
-    //                              EMPTY selection (the waveform lane): with one
+    //   - Left/Right (bare or    → playhead step, and ONLY with an
+    //     Ctrl)                    EMPTY selection (the waveform lane): with one
     //                              the same press also carries the marker — the
     //                              marker-lane position nudge — which
     //                              is authoring and drops here
@@ -2184,9 +2184,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs,
     // framing each step through plain `c`; Tab / Shift+Tab / IsoLeftTab cycle
-    // marker focus, framing per the zoom at the landing (marker_walk_frame —
-    // centred at the working zoom or finer, a finer marker step first
-    // returning to working, paged in only when offscreen coarser).
+    // marker focus, paging an offscreen landing in and otherwise holding the
+    // camera, at every zoom (architect 2026-09-22).
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
@@ -2441,21 +2440,25 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tab with a selection drops them at the gate, the lock's lane term
     // reading its one owner.
     //
-    // BARE ONLY, AND ONE STEP IN THE ACTIVE COLUMN'S UNIT (architect
-    // 2026-09-21, the horizontal ladder retired on every column): Shift and
-    // Ctrl spell nothing on Left / Right and fall to the strict-modifier tail
-    // in silence (chord_is_bound, gui_input.h). The unit is
+    // BARE OR CTRL, AND ONE STEP IN THE ACTIVE COLUMN'S UNIT (architect
+    // 2026-09-21, the horizontal ladder retired on every column): Shift spells
+    // nothing on Left / Right and falls to the strict-modifier tail in silence
+    // (chord_is_bound, gui_input.h), while CTRL IS THE CAMERA (architect
+    // 2026-09-22): the same step, holding the subject's screen column where
+    // the bare press follows the edge — nudge_camera's answer, carried to the
+    // shared tail and changing nothing else the act does. The unit is
     // horizontal_arrow_step's — one painted column on W and M, ONE HOP on the
     // phase-reset column — and it travels as a HorizontalArrowStep, its unit
     // beside its count, so the hop step reaches the same twin, prologue and
     // landing owner as the column step and takes everything else the nudge
     // does. The WAVEFORM lane's twin is handle_plain_bare_keys' Left / Right
     // case, which asks the same fork.
-    if (!alt && !ctrl && !shift &&
+    if (!alt && !shift &&
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
         const HorizontalArrowStep step = horizontal_arrow_step(
             key == GuiKeys::Left ? -1 : +1, app.active_markers_view);
+        const NudgeCamera camera = nudge_camera(mods);
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).
         const bool rpt = mods.synthesized_repeat;
@@ -2496,14 +2499,31 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             card_op_refusal(
                 notifications,
                 magnification_levels.nudge_selected_magnification_levels(
-                    step, rpt));
+                    step, camera, rpt));
             return;
         }
         card_op_refusal(notifications,
                         app.active_markers_view == 'P'
                             ? phase_resets.nudge_selected_phase_resets(
-                                  step, rpt)
-                            : warpops.nudge_selected_markers(step, rpt));
+                                  step, camera, rpt)
+                            : warpops.nudge_selected_markers(step, camera,
+                                                             rpt));
+        return;
+    }
+
+    // CTRL+LEFT / CTRL+RIGHT IN THE WAVEFORM LANE (architect 2026-09-22): the
+    // bare waveform-lane step (handle_plain_bare_keys' Left / Right case) with
+    // the held-column camera — the same act body, unit, walls and stop, the
+    // camera alone differing (NudgeCamera, gui_input.h). The marker-lane arm
+    // above claimed the press first when a selection stands, so this is the
+    // empty-selection road; the read-only lock admits it there on the bare
+    // form's own lane term (read_only_key_blocked).
+    if (ctrl && !alt && !shift &&
+        (key == GuiKeys::Left || key == GuiKeys::Right)) {
+        run_waveform_lane_playhead_step(
+            horizontal_arrow_step(key == GuiKeys::Left ? -1 : +1,
+                                  app.active_markers_view),
+            NudgeCamera::HoldColumn);
         return;
     }
 
@@ -2808,7 +2828,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // THE WALK REFUSES WHOLE AT A WALL (architect 2026-08-30, the strictness
     // ruling), and the test is THE STEP OWNER'S — marker_walk_step
     // (app_state.h), whose `marker` field marker_walk_actionable is the one-bit
-    // face of and the Walk previous / Walk next buttons wear. A step with
+    // face of and the walk button wears. A step with
     // nothing ahead writes NOTHING: no select, no playhead land, no recentre.
     // It used to fall through to the jump below, which — with a focus standing
     // — re-landed the playhead on that same focus and recentred on it, so a
@@ -2835,9 +2855,7 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // reason. `frame` GOVERNS
     // MARKER-TO-MARKER STEPS ALONE for the same reason: there is no new marker
     // to frame, and a recentre here would move the camera under a user reading
-    // the cell he just stepped onto. The same goes for the zoom: a cell step
-    // from a level finer than working stays at that level (the return to
-    // working below is a framing act, and this arm frames nothing).
+    // the cell he just stepped onto.
     //
     // THE COLLAPSE IS WHAT KEEPS A BOUND AXIS SINGLETON, which every road onto
     // one now does (the plain cell press and the bound editor's open both
@@ -2869,58 +2887,30 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     //
     // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
     // (architect 2026-09-04). The walk moves focus and lands the playhead; the
-    // camera is its caller's statement, forwarded untouched. The zoom governs
-    // the BARE Tab walk's framing alone (architect 2026-09-13), so the three
-    // bare arms hand this marker_walk_frame(app) while the Ctrl+Shift+Tab
-    // paired march — a different act, which runs plain `c` behind each step
-    // (architect 2026-09-14) — hands it MarkerLandingFrame::NoFrame, the
-    // `c` behind it being the step's one framing. Putting the policy read in here is what made
-    // the march inherit it, which is the shape the required parameter exists
-    // to prevent: framing cannot be acquired by saying nothing.
-    // Otherwise byte-identical to the `c` gesture's marker jump — the zoom is
-    // what separates the two commands: `c` sets the working level whatever
-    // the level was, a Tab walk keeps the level the user is reading at unless
-    // it is finer than working (below).
+    // camera is its caller's statement, forwarded untouched: the three bare
+    // arms state FollowPage at every zoom (architect 2026-09-22 — no camera is
+    // derived from the zoom, so the walk never centres and never changes the
+    // zoom), while the Ctrl+Shift+Tab paired march — a different act, which
+    // runs plain `c` behind each step (architect 2026-09-14) — states
+    // MarkerLandingFrame::NoFrame, the `c` behind it being the step's one
+    // framing. Putting a policy read in here is what made the march inherit
+    // it, which is the shape the required parameter exists to prevent:
+    // framing cannot be acquired by saying nothing. `c` remains the direct
+    // route to the working zoom; `0`'s second arm reaches it through `c`
+    // whenever its tab has stamped no return level
+    // (ViewState::zoom_recall_level).
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.
-    //
-    // NO ZOOM ON TAB AT WORKING OR COARSER (architect 2026-08-05): the walk is
-    // navigation and must not re-frame the view under the user, so it lands at
-    // the level it was pressed at there. `c` remains the direct route to the
-    // working zoom; `0`'s second arm reaches it through `c` whenever its tab
-    // has stamped no return level (ViewState::zoom_recall_level).
     // The jump's own false return — a missing or out-of-range focus — cannot
     // happen behind the gate above: the select just focused the landing that
     // gate proved. Nothing here reads it; the return exists for the other
     // caller (run_center_command).
     // A step is a movement like any other through the land owner.
-    //
-    // A FRAMING STEP FROM A FINER ZOOM RETURNS TO WORKING (architect
-    // 2026-09-15: each centring behaviour has ONE act, and centring on the
-    // next marker is Tab's): when the stated frame is Center and the level is
-    // strictly finer than working, the step lands WITHOUT framing, sets the
-    // working zoom and then centres the marker it landed on — `c`'s own tail
-    // (run_center_command's live recipe), so the result is the `c` framing
-    // about that marker. The landing takes NoFrame there because a Center
-    // landing at the finer level would render a plate the zoom replaces at
-    // once, two synchronous renders for one resting view; the trailing centre
-    // is a no-op after a real zoom change and still frames a short file whose
-    // ceiling is finer than working, where the zoom request saturates and
-    // changes nothing (apply_zoom_change's clamp). ONLY HERE, past the wall
-    // refusal and the same-marker return, so a refused press and a cell step
-    // move no camera and no zoom. Center comes from the three bare arms alone
-    // (marker_walk_frame, which answers Center at working or finer); the
-    // Ctrl+Shift+Tab paired march states NoFrame and runs `c` behind each
-    // step, which sets the working zoom itself, so nothing here fires for it.
-    if (frame == MarkerLandingFrame::Center &&
-        app.zoom_level < kWorkingZoomLevel) {
-        jump_playhead_to_focused_marker(MarkerLandingFrame::NoFrame);
-        viewport.apply_zoom_change(kWorkingZoomLevel);
-        viewport.center_viewport_on_playhead();
-    } else {
-        jump_playhead_to_focused_marker(frame);
-    }
+    // (A FRAMING STEP FROM A FINER ZOOM RETURNED TO WORKING here from
+    // 2026-09-15 to 2026-09-22, on a Center the zoom-derived walk stated; it
+    // went with that derivation.)
+    jump_playhead_to_focused_marker(frame);
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because
     // every Selection mutator resets the axis to the payload as it seats the
@@ -2990,11 +2980,10 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
-    // working zoom right after this returns, the Tab family sets nothing here
-    // (architect 2026-08-05, "no zoom on Tab") but for a Center step from a
-    // level finer than working, which cycle_marker_focus takes to working right
-    // after this returns, `c`'s way — so this tail frames the stop at whatever
-    // level it was called at, and only those zoom writes re-center after it. Follow mode does not gate it either (architect
+    // working zoom right after this returns, the Tab family sets nothing
+    // (architect 2026-08-05, "no zoom on Tab", at every level since
+    // 2026-09-22) — so this tail frames the stop at whatever level it was
+    // called at, and only `c`'s zoom write re-centres after it. Follow mode does not gate it either (architect
     // 2026-07-19, reversing the earlier follow-only rule).
     // center_viewport_on_playhead is the SOLE viewport write in this arm: it
     // reads the cursor we just set and scrolls once to center it, emitting one
@@ -3018,9 +3007,9 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // caller frames behind it.
     //
     // WHO PASSES WHAT, re-grepped 2026-09-16: `c` (run_center_command) states
-    // Center; the FOUR bare Tab arms state marker_walk_frame(app), the zoom's
-    // answer (Center or FollowPage) — the live walk's three and the `h` view's
-    // one over its diff-flag cycle, which joined them on 2026-09-16; the Ctrl+Shift+Tab paired march states
+    // Center; the FOUR bare Tab arms state FollowPage at every zoom (architect
+    // 2026-09-22) — the live walk's three and the `h` view's one over its
+    // diff-flag cycle, which joined them on 2026-09-16; the Ctrl+Shift+Tab paired march states
     // NoFrame at each walk step and then runs run_center_command, so every
     // landing, on screen or off, is framed once, by `c`, and no FollowPage
     // page-render lands for `c` to supersede at once.

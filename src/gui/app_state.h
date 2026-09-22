@@ -55,9 +55,7 @@ struct GuiTargetRender;
 // `0` had been out and back, and while the state stands the level follows
 // whatever the live ceiling becomes. And `c` jumps to
 // the working zoom centered on the playhead (or on the focused marker) — the
-// Tab walk changes no zoom at the working zoom or coarser and, on a step that
-// frames a new marker from a FINER level, sets the working zoom as it centres
-// (GuiInputHandler::cycle_marker_focus). Smaller level = less file per window
+// Tab walk changes no zoom at any level (architect 2026-09-22). Smaller level = less file per window
 // = more zoomed in. kMinZoom (1.2 s) is the deepest zoom-in the continuous
 // zoom gestures reach; kWorkingZoomLevel (2.4 s, one step shallower) is the
 // fine-tuning rest point `c` lands on, where the working-zoom authoring-grid
@@ -1817,12 +1815,12 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's SIXTEEN (re-counted 2026-09-19, when the
-// FLATTEN button left this row for the icon row's iteration group) — the
+// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-22, when
+// the walk pair merged and the two hold-column nudges joined its group) — the
 // transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership and its succession), the
-// MARKER-WALK two
-// (2026-08-15) and the four cardinal arrows. It exists ONCE, here, because
+// MARKER-WALK GROUP'S THREE (2026-08-15; the walk and the two hold-column
+// nudges since 2026-09-22) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -2146,8 +2144,8 @@ enum class RedesignButton {
     IconFollow,
     // (The Center on next marker lamp on bare `n` stood here from 2026-09-04
     // to 2026-09-13, when the Tab walk's framing became a function of the zoom
-    // at the landing, marker_walk_frame, and the lamp, its chord and this box
-    // were deleted.)
+    // at the landing, and the lamp, its chord and this box were deleted; since
+    // 2026-09-22 the walk never centres at all.)
     //
     // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the `z` lamp, closing
     // the viewport-class group behind Follow, because
@@ -2458,7 +2456,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SIXTEEN buttons in four groups, in painted order (the enum
+    // detection. SEVENTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2475,8 +2473,9 @@ enum class RedesignButton {
     // bare `x` stood behind it from 2026-09-10 to 2026-09-13, and the FLATTEN
     // button between Toggle inherit and Edit flag for the hours of 2026-09-19
     // before it took the icon row's iteration group)),
-    // THE MARKER-WALK GROUP (2026-08-15 — previous = Shift+Tab,
-    // next = Tab), and the
+    // THE MARKER-WALK GROUP (2026-08-15; since 2026-09-22 the walk = Tab,
+    // its shifted press Shift+Tab, then the hold-column nudges = Ctrl+Left /
+    // Ctrl+Right), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
     // the row's first day) — which inherit the bare arrows' whole
@@ -2804,11 +2803,17 @@ enum class RedesignButton {
     // It keeps the group's Icon* naming: a roster
     // id names the button, not the lane it sits in.
     IconAddToSelection,
-    // THE MARKER-WALK GROUP (architect 2026-08-15, the row's new right
-    // cluster, behind a separator and ahead of the four arrows): previous
-    // marker (Shift+Tab) and next marker (Tab). Two buttons, TWO CHORDS —
-    // each is its own chord through the ordinary table, with no hold, no
-    // double-click and no modifier gesture on the surface.
+    // THE MARKER-WALK GROUP (architect 2026-08-15, the row's right cluster,
+    // behind a separator and ahead of the four arrows) — THREE BUTTONS SINCE
+    // 2026-09-22: THE WALK, then the two HOLD-COLUMN nudges.
+    //
+    // THE WALK IS ONE BUTTON (architect 2026-09-22, merging Previous marker and
+    // Next marker, two buttons over two chords since 2026-08-15): its plain
+    // press is bare Tab, the next marker, and its shift-click and long press
+    // are Shift+Tab, the previous one — A SHIFT-MODIFIED FORM NEVER HAS ITS
+    // OWN BUTTON, IT RIDES THE PLAIN ONE (redesign_button_shift_admits, whose
+    // static_assert binds the tooltip's second line to the admission). It
+    // greys only where neither direction would act, the twin rule.
     //
     // (WALK BOTH TABS, the group's third button on Ctrl+Shift+Tab, stood here
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
@@ -2820,31 +2825,39 @@ enum class RedesignButton {
     // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
     // the reason is mechanical rather than a preference: EVERY double-click
     // surface in this product acts on its FIRST click too, so a double-click
-    // on "next" would step one marker AND THEN walk both tabs, landing the
+    // on the walk would step one marker AND THEN walk both tabs, landing the
     // user somewhere he did not ask to be. Making the first click not fire
     // would mean delaying EVERY single click by the double-click window, which
     // is exactly what the act-at-lift work exists to avoid.
     //
-    // The `h` view's DERIVED partition needs no hand entry for either: BOTH
-    // ARE THE MODE'S OWN VOCABULARY in there (history_mode_owns_key answers
-    // for each), so both stay lit and step the diff-flag cycle. Outside the
-    // view each greys on its own landing (marker_walk_actionable, at
-    // redesign_button_enabled).
-    TransportWalkPrev, TransportWalkNext,
+    // The `h` view's DERIVED partition needs no hand entry for it: BOTH
+    // CHORDS ARE THE MODE'S OWN VOCABULARY in there (history_mode_owns_key
+    // answers for each), so it stays lit and steps the diff-flag cycle.
+    // Outside the view it greys on the walk's own landing in both directions
+    // (marker_walk_actionable, at redesign_button_enabled).
+    TransportWalk,
+    // THE HOLD-COLUMN NUDGES (architect 2026-09-22): Ctrl+Left and
+    // Ctrl+Right, the Left / Right step with the held-column camera
+    // (NudgeCamera, gui_input.h) — the same act, unit, walls, refusals and
+    // faces as the arrow pair beside them, the camera alone differing. They
+    // HOLD-REPEAT as those do (kToolbarChords' `repeats` column), their table
+    // rows carrying ctrl as their own base chord (Undo's shape), and admit no
+    // modifier. Breeze's go-previous-context / go-next-context.
+    TransportHoldLeft, TransportHoldRight,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-22, when
-// the IGNORE WAVEFORM MAGNIFICATION lamp joined row 4's zoom group between Center and
-// Follow): SEVEN in row 1 (the
+// the walk pair merged into one button and the two hold-column nudges joined
+// the bottom row's walk group): SEVEN in row 1 (the
 // three menu anchors and the view bar's four), two in row 3, TWENTY-TWO in
-// row 4 and SIXTEEN in the bottom row — 47. Of those, FORTY-FOUR carry a chord in
+// row 4 and SEVENTEEN in the bottom row — 48. Of those, FORTY-FIVE carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2942,8 +2955,9 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
-        case RedesignButton::TransportWalkPrev:
-        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalk:
+        case RedesignButton::TransportHoldLeft:
+        case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
@@ -2953,7 +2967,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SIXTEEN since 2026-09-19: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-22: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
 // the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button
@@ -2962,15 +2976,17 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // group from 2026-09-10 to its deletion 2026-09-13, the MARKER
 // MAGNIFICATION from 2026-09-14 to 2026-09-15, and the FLATTEN BUTTON for the
 // hours of 2026-09-19 before it went up to the icon row's iteration group),
-// the MARKER-WALK GROUP's two (2026-08-15; three
-// until Walk Both Tabs left on 2026-09-14) and the four
+// the MARKER-WALK GROUP's three (2026-08-15; three
+// until Walk Both Tabs left on 2026-09-14, two until 2026-09-22, when the
+// walk pair merged into one button and the two hold-column nudges joined
+// it) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
 // until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these sixteen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -2997,8 +3013,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerEditFlag:
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
-        case RedesignButton::TransportWalkPrev:
-        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalk:
+        case RedesignButton::TransportHoldLeft:
+        case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
@@ -10911,7 +10928,8 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
 // step in the active column's unit (horizontal_arrow_step, gui_input.h) — one
 // painted column on W and M, ONE HOP on the phase-reset column — and the face
 // and the act are handed the same value, so there is no variant to reason
-// about: the horizontal pair binds bare only since the ladder retired. Both
+// about: the ladder retired, and the ctrl form (2026-09-22) is the same step
+// with another camera, so its buttons ask this with the arrows' own value. Both
 // units move a resting marker by at least one frame off a wall (the
 // one-column-per-press guarantee at stepped_anchor_frame; the hop owner's
 // landing lies in the seed window one over, phase_reset_hop_step_frame), so
@@ -10998,9 +11016,9 @@ inline bool horizontal_arrow_step_actionable(const AppState& app,
 // ADMITS Left / Right only in the WAVEFORM lane, where the step is pure
 // navigation — in the MARKER lane (a standing selection) the same press
 // nudges the focused marker, which is authoring, and the lock drops it.
-// It reads the lane and no modifier — the horizontal pair binds bare only
-// since 2026-09-21 (the ladder retired), and the gate's own is_playhead_step
-// term admits that bare form alone; the card that answers a marker-lane
+// It reads the lane and no modifier — the horizontal pair binds bare and
+// ctrl (the ladder retired 2026-09-21; ctrl the held-column camera since
+// 2026-09-22), and the gate's own is_playhead_step term admits both; the card that answers a marker-lane
 // press names the chord that was pressed.
 // READERS: read_only_key_blocked's is_playhead_step entry (the gate — the
 // dispatch's sole read-only defense on the nudge, position_nudge_prologue
@@ -11862,8 +11880,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // now, and the tab is NOT a member: its plain press is Ctrl+Tab, live
         // under the lock, so under the twin rule the button stays lit and the
         // shifted lift reaches the key's own refusal and its card.)
-        // The two SINGLE-tab walk buttons are NOT members: bare Tab and
-        // Shift+Tab step the cells, which is the mode's own surface.
+        // The walk button is NOT a member: bare Tab and Shift+Tab step the
+        // cells, which is the mode's own surface.
         // (THE TWO TAB BUTTONS WERE MEMBERS FOR ONE AFTERNOON, 2026-09-10,
         // when the lock refused Ctrl+Tab INTO A LOCKED TAB and each button
         // greyed on its own tab's bit. The piece-wide exclusion ruled that
@@ -11887,9 +11905,12 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // LEFT / RIGHT ARE THE LANE'S, through the gate's own owner: in the
         // marker lane the press is a position nudge and pushes, in the
         // waveform lane it is the playhead's step and the lock has nothing to
-        // protect from it.
+        // protect from it. The two HOLD-COLUMN buttons (2026-09-22) are the
+        // same step with another camera and grey with them.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
+        case RedesignButton::TransportHoldLeft:
+        case RedesignButton::TransportHoldRight:
             return !horizontal_arrow_step_lock_admits(a);
         // A DEFAULT RATHER THAN AN EXHAUSTIVE SWITCH, unlike the roster
         // classification below: the members are the lock's, not the roster's,
@@ -12297,8 +12318,8 @@ inline int64_t active_marker_time_frame(const AppState& a, int idx) {
 // app_state.cpp. TWO READERS: Selection::cycle_selection, whose whole
 // landing decision this IS, and marker_walk_step below — the MARKER half of
 // one Tab step, wrapped since 2026-09-10 in the cell walk that may come to
-// rest on the seat instead. Everything downstream reads the step: the Walk
-// previous / Walk next buttons' face and, since 2026-08-30, the ACT's own
+// rest on the seat instead. Everything downstream reads the step: the walk
+// button's face (both directions since the pair merged, 2026-09-22) and, since 2026-08-30, the ACT's own
 // leading gate (GuiInputHandler::cycle_marker_focus), so the face,
 // the refusal and the landing are one answer and an all-disabled store or
 // "nothing ahead in this direction" greys exactly where the step refuses. IT
@@ -12349,8 +12370,8 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                                 bool forward);
 
 // WOULD A MARKER-WALK STEP THIS WAY ACT? The step owner's answer in one
-// bit. TWO READERS, and that is the point of it: the Walk previous / Walk next
-// buttons' disabled face, and the ACT's own leading gate since 2026-08-30
+// bit. TWO READERS, and that is the point of it: the walk button's disabled
+// face (asked in both directions, the twin rule), and the ACT's own leading gate since 2026-08-30
 // (GuiInputHandler::cycle_marker_focus, where the refusal's card and its
 // rationale sit) — a walk with nothing ahead writes nothing at all now, so the
 // greyed button and the dead key agree. Its count-only form (an empty store
@@ -12371,10 +12392,11 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 
 // How a marker landing treats the camera, stated by the caller that asks for
 // the landing (architect 2026-09-04). `Center` recenters the viewport on the
-// landing at the standing zoom, which is what the Tab walk and `c` have always
-// done; `FollowPage` leaves the camera where it stands and merely pages an
+// landing at the standing zoom — `c`'s framing, the one deliberate centre;
+// `FollowPage` leaves the camera where it stands and merely pages an
 // offscreen landing into view through follow's own body
-// (Viewport::follow_scroll_if_needed); `NoFrame` (2026-09-14) moves no camera
+// (Viewport::follow_scroll_if_needed) — THE BARE TAB WALK'S, AT EVERY ZOOM
+// (architect 2026-09-22: no camera is derived from the zoom); `NoFrame` (2026-09-14) moves no camera
 // at all — the focus and the playhead land and nothing scrolls, even for an
 // offscreen landing. NoFrame exists for exactly ONE composition, the
 // Ctrl+Shift+Tab PAIRED MARCH in both of its forms (the live march over
@@ -12395,49 +12417,14 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 // none.
 enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
 
-// WHICH SIDE OF THE WORKING ZOOM A LEVEL IS ON — true at the working zoom or
-// finer (a smaller level is finer), the line inclusive; false coarser. The
-// ONE AT-OR-FINER PREDICATE, the spelling TWO readers share (re-grepped
-// 2026-09-22), each deriving a posture from the zoom by the
-// placement-instrument principle (zoom-viewport-strip.md): the Left/Right
-// nudge's held column (Viewport::hold_subject_column_after_nudge — the W and
-// M marker nudges and the playhead step; the phase reset nudge pages in at
-// every zoom, architect 2026-09-22) and the bare
-// Tab walk's framing (marker_walk_frame, below). (The waveform gain gate read
-// it from 2026-09-19 to 2026-09-22, when magnification in source view became
-// the `]` lamp's — effective_waveform_gain_profile, warp_frame_map_view.h.)
-inline bool zoom_level_at_or_finer_than_working(double level) {
-    return level <= kWorkingZoomLevel;
-}
-
-// THE BARE TAB WALK'S FRAMING IS THE ZOOM AT ITS LANDING (architect
-// 2026-09-13: at the working zoom the view is too narrow and a walk almost
-// always wants to centre; coarser, the reader wants the global picture). AT
-// THE WORKING ZOOM OR FINER the walk answers Center, recentering the viewport
-// on the marker it lands on — a FINER level first set to the working zoom by
-// the walk's marker step (architect 2026-09-15; the act and its placement are
-// at GuiInputHandler::cycle_marker_focus); COARSER it answers FollowPage, landing without
-// moving the camera unless the landing is offscreen, where follow's own page
-// (Viewport::follow_scroll_if_needed) brings it in. No stored bit, no writer,
-// no record: the active tab's live level is the whole answer.
-//
-// It is the bare Tab / Shift+Tab / IsoLeftTab arms' own answer — the live
-// walk's three and, since 2026-09-16, the `h` view's one over its diff-flag
-// cycle (handle_history_mode_key, input_key_dispatch.cpp; architect
-// 2026-09-16, the mode's walk mirroring the live walk's landing arm for arm)
-// — and nobody else's. It lives out here rather than inside the walk so the
-// walk carries no framing policy at all: the four bare arms call this by
-// name (re-grepped 2026-09-16), the Ctrl+Shift+Tab paired march, live and
-// `h`, states MarkerLandingFrame::NoFrame at both of its walk steps and runs
-// `c` behind each (architect 2026-09-14), and `c` states Center. `c`,
-// Shift+`j`, the A/B audition and the march frame through run_center_command,
-// and marker clicks land through their own act owner; none of them asks
-// this. A fifth caller would be a second act claiming the walk's policy.
-inline MarkerLandingFrame marker_walk_frame(const AppState& a) {
-    return zoom_level_at_or_finer_than_working(a.zoom_level)
-               ? MarkerLandingFrame::Center
-               : MarkerLandingFrame::FollowPage;
-}
+// NO CAMERA IS DERIVED FROM THE ZOOM (architect 2026-09-22): the camera is the
+// key's choice. The bare Tab walk states FollowPage at every level (its four
+// arms say so by name), and the Left/Right nudge follows the edge bare and
+// holds its column under Ctrl (NudgeCamera, gui_input.h). So the at-or-finer
+// predicate `zoom_level_at_or_finer_than_working` and the walk's zoom-derived
+// `marker_walk_frame` (Center at working or finer, FollowPage coarser,
+// 2026-09-13 to 2026-09-22) are DELETED with the placement-instrument
+// principle they served (zoom-viewport-strip.md keeps its record).
 
 // THE SELECTION HAS BEEN SPENT (architect 2026-09-12, the lamps resolved by use
 // case, superseding "cards, never swaps" for this pair: "most of the conflicts
@@ -14958,18 +14945,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // theirs — so the face and the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW GREYS, re-derived 2026-09-19 with the Flatten button
-        // gone up to the icon row. IN THE `h` VIEW, all
+        // WHAT THE ROW GREYS, re-derived 2026-09-22 with the walk group's
+        // change. IN THE `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
-        // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on
-        // its allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
+        // AND THE TWO HOLD-COLUMN NUDGES (bare Up/Down/Left/Right and
+        // Ctrl+Left/Right are neither the mode's vocabulary nor on its
+        // allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
         // FLAG BUTTON (bare `j` and
         // bare Return are consumed in there like the
-        // verbs' own chords) — ELEVEN of the sixteen. ADD TO SELECTION
+        // verbs' own chords) — THIRTEEN of the seventeen. ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. The two SKIPS and
-        // the MARKER-WALK GROUP'S TWO stay lit, being the mode's own
+        // THE WALK stay lit, being the mode's own
         // absolute jumps and its diff-flag cycle (the tab row's shifted press
         // carries the march that composes that cycle with the A/B switch, the
         // tabs being never-grey); the architect
@@ -14979,7 +14967,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // on a locked tab, their own gate, stated at their arm above — and,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
         // inherit and Edit flag (that same arm), on UP / DOWN,
-        // LEFT / RIGHT, the two WALK STEPS and COPY VALUE (this block), and
+        // LEFT / RIGHT and the hold-column pair, THE WALK and COPY VALUE
+        // (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
         // UP / DOWN, the nudged marker's frame walls under LEFT / RIGHT in the
@@ -15199,14 +15188,22 @@ inline bool redesign_button_enabled(const AppState& a,
         // iteration half is the membership predicate's (iteration_lock_greys,
         // which the pair's HINT reads too) and only the read-only half is the
         // tab's bare bit.
+        //
+        // THE HOLD-COLUMN PAIR (Ctrl+Left / Ctrl+Right, 2026-09-22) ASKS THE
+        // SAME THREE QUESTIONS: ctrl changes the camera and nothing the step
+        // does, so its face is the arrow's face exactly.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
+        case RedesignButton::TransportHoldLeft:
+        case RedesignButton::TransportHoldRight:
             if (active_view_state(a).read_only &&
                 !horizontal_arrow_step_lock_admits(a))
                 return false;
             if (iteration_lock_greys(a, b)) return false;
             if (!horizontal_arrow_step_actionable(
-                    a, audio, b == RedesignButton::TransportLeft ? -1 : +1))
+                    a, audio,
+                    (b == RedesignButton::TransportLeft ||
+                     b == RedesignButton::TransportHoldLeft) ? -1 : +1))
                 return false;
             break;
         case RedesignButton::TransportUp:
@@ -15267,24 +15264,24 @@ inline bool redesign_button_enabled(const AppState& a,
                 return false;
             break;
         }
-        // THE MARKER-WALK GROUP (2026-08-15's always-on policy until
-        // 2026-08-30): the `h` view's derived partition greys NEITHER, both
-        // chords being the mode's OWN vocabulary in there (the diff-flag cycle
-        // on bare Tab / Shift+Tab). OUTSIDE THE VIEW THE TWO STEPS GREY
-        // DIRECTIONALLY on the cycle's own landing
+        // THE WALK (2026-08-15's always-on policy until 2026-08-30): the `h`
+        // view's derived partition leaves it lit, both of its chords being
+        // the mode's OWN vocabulary in there (the diff-flag cycle on bare Tab
+        // / Shift+Tab). OUTSIDE THE VIEW IT GREYS on the cycle's own landing
         // (marker_walk_actionable over marker_walk_landing, planner decision
         // 59 — an empty store, an all-disabled store, no enabled marker past
         // the playhead this way; the morning's count-only face was the
-        // audit's false premise). (WALK BOTH TABS, the group's third until
-        // 2026-09-14, greyed on the iteration lock alone; the march is the
-        // tab row's shifted press now, whose face is the tabs' never-grey
-        // arm.)
-        case RedesignButton::TransportWalkPrev:
-            if (!marker_walk_actionable(a, audio, /*forward=*/false))
-                return false;
-            break;
-        case RedesignButton::TransportWalkNext:
-            if (!marker_walk_actionable(a, audio, /*forward=*/true))
+        // audit's false premise) — IN BOTH DIRECTIONS since the pair merged
+        // into one button (2026-09-22): the plain press walks forward and the
+        // shifted one back, so under the twin rule the face stays lit while
+        // either would act, and a plain lift whose own direction is walled
+        // reaches the key's silent refusal. (WALK BOTH TABS, the group's
+        // third until 2026-09-14, greyed on the iteration lock alone; the
+        // march is the tab row's shifted press now, whose face is the tabs'
+        // never-grey arm.)
+        case RedesignButton::TransportWalk:
+            if (!marker_walk_actionable(a, audio, /*forward=*/true) &&
+                !marker_walk_actionable(a, audio, /*forward=*/false))
                 return false;
             break;
         // COPY VALUE (2026-08-29) is the VERB GROUP'S ONE MEMBER OUTSIDE THE
@@ -15594,16 +15591,18 @@ inline bool redesign_button_enabled(const AppState& a,
             return ab_audition_preflight_ok(a, audio, playback,
                                             target_render);
         default:
-            // REACHED BY EXACTLY EIGHT IDS, re-derived by walking the first
-            // switch 2026-09-14 (nine from 2026-09-13 until Walk Both Tabs
+            // REACHED BY EXACTLY NINE IDS, re-derived by walking the first
+            // switch 2026-09-22 (the walk pair merged into one and the two
+            // hold-column nudges joined; eight from 2026-09-14,
+            // nine from 2026-09-13 until Walk Both Tabs
             // left on 2026-09-14; ten from 2026-09-10 while the VALUE DRAG
             // lamp stood beside Add to selection; nine named on 2026-08-30;
             // twelve earlier that day, before the transport three took arms
             // of their own above) — the bottom
             // row's members that break out of the first switch to take the
             // loading/blank guard and have nothing further to say here: the
-            // marker-walk two, the four arrows, COPY VALUE and ADD TO
-            // SELECTION. All eight
+            // marker-walk three, the four arrows, COPY VALUE and ADD TO
+            // SELECTION. All nine
             // refuse ahead of that break on their own predicate since the
             // truthful-buttons ruling — Add to selection on the iteration
             // lock's membership; the ruling, the 2026-08-15 reversal it
@@ -15862,8 +15861,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // between the Cumulative toggle going back up to the icon row and ADD
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
-        // two skips, the marker-walk two, the four arrows and the
-        // marker verbs are all acts
+        // two skips, the walk, the two hold-column nudges, the four arrows
+        // and the marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
         // row's only lamp for the hours it was a RADIO PAIR, lit on
@@ -15876,8 +15875,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::TransportSkipBack:
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
-        case RedesignButton::TransportWalkPrev:
-        case RedesignButton::TransportWalkNext:
+        case RedesignButton::TransportWalk:
+        case RedesignButton::TransportHoldLeft:
+        case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -16094,6 +16094,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // is the live half, outside it the tie refuses and the plain act is, so the
 // button's arm asks whichever chord the state admits and the other half's
 // press cards (redesign_button_enabled).)
+// (THE WALK JOINED 2026-09-22, when the architect merged Previous Marker and
+// Next Marker into one button: a shift-modified form never has its own
+// button, it rides the plain one. The plain press is bare Tab and the shifted
+// press Shift+Tab, the reverse walk — the drop's and the copy's rule once
+// more — and the long press reaches it on glass, the button not repeating.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::TabA ||
@@ -16107,6 +16112,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconCopyValue ||
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::IconListen ||
+           b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
@@ -16195,9 +16201,15 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportRight) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportLeft) &&
-                  !redesign_button_ctrl_admits(RedesignButton::TransportRight),
-    "Left / Right admit no modifier: the horizontal ladder is retired and "
-    "their keys bind bare only (chord_is_bound, gui_input.h)");
+                  !redesign_button_ctrl_admits(RedesignButton::TransportRight) &&
+                  !redesign_button_shift_admits(RedesignButton::TransportHoldLeft) &&
+                  !redesign_button_shift_admits(RedesignButton::TransportHoldRight) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportHoldLeft) &&
+                  !redesign_button_ctrl_admits(RedesignButton::TransportHoldRight),
+    "Left / Right and their hold-column pair admit no modifier: the "
+    "horizontal ladder is retired, Shift binds nothing there, and Ctrl+Left / "
+    "Ctrl+Right are their own two buttons rather than a ctrl-click "
+    "(chord_is_bound, gui_input.h)");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -16721,20 +16733,27 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // way, a tooltip naming the act and never a state.
         case RedesignButton::IconAddToSelection:
             return {"Toggle Add to Selection (K)", nullptr};
-        // THE MARKER-WALK GROUP (2026-08-15). "Previous marker" / "Next
+        // THE MARKER-WALK GROUP (2026-08-15). "Next marker" / "previous
         // marker" are HELP's own words for the bare Tab cycle, and the group's
-        // buttons (three until Walk Both Tabs left on 2026-09-14, its words
-        // living on in the tabs' shift line above) are what made the
-        // Navigation dropdown a duplicate path and got it deleted hours later
-        // — so the names outlived the surface they were matched to, and are
-        // kept because they are the act's words. Neither admits shift —
-        // Shift+Tab is the PREVIOUS button's own base chord rather than a
-        // twin, which is Redo's shape (a shift press on it is a consumed
-        // nothing, exactly as on Redo).
-        case RedesignButton::TransportWalkPrev:
-            return {"Previous Marker (Shift+Tab)", nullptr};
-        case RedesignButton::TransportWalkNext:
-            return {"Next Marker (Tab)", nullptr};
+        // buttons are what made the Navigation dropdown a duplicate path and
+        // got it deleted hours later — so the names outlived the surface they
+        // were matched to, and are kept because they are the act's words.
+        // THE WALK IS ONE BUTTON since 2026-09-22 and ADMITS SHIFT: the
+        // plain press is Tab and the shifted one Shift+Tab, so the second
+        // line names the reverse walk, this table's rule for second lines
+        // (the act and the modifier, not a key).
+        case RedesignButton::TransportWalk:
+            return {"Next Marker (Tab)",
+                    "Press Shift for the previous marker."};
+        // THE HOLD-COLUMN PAIR (2026-09-22): the arrow's step with the held
+        // column, named as an act with its chord in parentheses — the arrows'
+        // bare direction word cannot serve, the key being Ctrl+ that word.
+        // One line each, the pair admitting no modifier. The P column's
+        // stateful name (a hop) is at the overload below, beside the arrows'.
+        case RedesignButton::TransportHoldLeft:
+            return {"Nudge Left Holding Column (Ctrl+Left)", nullptr};
+        case RedesignButton::TransportHoldRight:
+            return {"Nudge Right Holding Column (Ctrl+Right)", nullptr};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps the direction alone (one word, which the
@@ -16755,8 +16774,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // refuses alike (2026-09-02, R-17e): on the step's kind refusals; the
         // reasoning is at that arm.
         // LEFT / RIGHT CARRY NO SECOND LINE since 2026-09-21: the horizontal
-        // ladder is retired on every column, their keys bind bare only and
-        // the buttons admit no modifier (a held repeat outranks the long-press
+        // ladder is retired on every column, their ctrl form is its own two
+        // buttons (the hold-column pair) and the buttons admit no modifier (a held repeat outranks the long-press
         // shift — the principle at ToolbarChord::repeats, input_pointer.cpp).
         case RedesignButton::TransportDown:
             return {"Down", "Press Shift for a 10-step, Ctrl for 3."};
@@ -17289,6 +17308,8 @@ inline RedesignTooltipText redesign_button_tooltip(
         // The key returns in parentheses because the name is no longer the
         // key's own word — the bound cells' "Lower Bound Up (Up)" shape. The
         // table's bare direction word stands on W and M.
+        // The HOLD-COLUMN PAIR (2026-09-22) forks on the same predicate for
+        // the same reason: its step is the arrow's, a hop on P.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
         {
@@ -17296,6 +17317,17 @@ inline RedesignTooltipText redesign_button_tooltip(
             if (horizontal_arrow_step(left ? -1 : +1, a.active_markers_view)
                     .unit == HorizontalArrowStep::Unit::Hops)
                 return {left ? "Hop Left (Left)" : "Hop Right (Right)", nullptr};
+            break;
+        }
+        case RedesignButton::TransportHoldLeft:
+        case RedesignButton::TransportHoldRight:
+        {
+            const bool left = b == RedesignButton::TransportHoldLeft;
+            if (horizontal_arrow_step(left ? -1 : +1, a.active_markers_view)
+                    .unit == HorizontalArrowStep::Unit::Hops)
+                return {left ? "Hop Left Holding Column (Ctrl+Left)"
+                             : "Hop Right Holding Column (Ctrl+Right)",
+                        nullptr};
             break;
         }
         // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on

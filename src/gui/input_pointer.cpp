@@ -66,10 +66,12 @@ namespace {
 // table, which is what makes "the table's length plus those three IS the
 // roster" a build-time fact rather than a remembered list of names.
 //
-// The `shift` column is each button's OWN chord — TWO rows set it: Redo's
-// Ctrl+Shift+Z and, since 2026-08-15, the marker walk's Shift+Tab (previous
-// marker); Ctrl+Shift+Tab (walk both tabs) was a third until its button was
-// deleted on 2026-09-14, the chord being the TABS' admitted shift now. It is not
+// The `shift` column is each button's OWN chord — ONE row sets it since
+// 2026-09-22: Redo's Ctrl+Shift+Z. The marker walk's Shift+Tab (previous
+// marker) was a second from 2026-08-15 until the walk pair merged into one
+// button, whose shift is an ADMISSION now; Ctrl+Shift+Tab (walk both tabs)
+// was a third until its button was deleted on 2026-09-14, the chord being the
+// TABS' admitted shift now. It is not
 // the whole shift story: the SHIFT-ADMITTING buttons OR a shift-exact press
 // into this field to reach their twins, and which buttons those are lives at
 // redesign_button_shift_admits (app_state.h), which the tooltip's own table is
@@ -136,16 +138,18 @@ struct ToolbarChord {
     //
     // MEMBERSHIP (the bottom row's four
     // cardinal arrows from 2026-08-16, joined by UNDO AND REDO on 2026-09-13 —
-    // see below; the waveform magnification pair carried it from 2026-08-26
-    // until its deletion on 2026-09-14). The
+    // see below — and by the two HOLD-COLUMN nudges, Ctrl+Left / Ctrl+Right,
+    // on 2026-09-22; the waveform magnification pair carried it from
+    // 2026-08-26 until its deletion on 2026-09-14). The
     // press arms the burst
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
     // suppresses the lift's own act. Defaulted, so the rows that do not repeat
-    // need no eighth column. SIX ROWS CARRY IT since 2026-09-14 (eight from
-    // 2026-09-13, the waveform magnification pair leaving with its setting):
-    // the four arrows; and UNDO / REDO (architect
+    // need no eighth column. EIGHT ROWS CARRY IT since 2026-09-22 (six from
+    // 2026-09-14, the waveform magnification pair leaving with its setting,
+    // eight from 2026-09-13): the four arrows; the two hold-column nudges
+    // (the arrows' step with another camera); and UNDO / REDO (architect
     // 2026-09-13, "like the Left/Right nudge") — stepping through history is
     // the continuous step gesture their held chords already were at
     // repeat_eligible, and the buttons are glass's only road to it. Neither
@@ -492,7 +496,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // SIXTEEN
+    // SEVENTEEN
     // chords, every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -687,31 +691,39 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
-    // behind a separator and ahead of the arrows. TWO BUTTONS, TWO CHORDS
-    // — no hold, no double-click, no modifier gesture on the surface — and the
-    // declined double-click rule's mechanical reason is recorded at the roster
-    // entry (every double-click surface in this product acts on its FIRST
-    // click too, so a double-click on "next" would step a marker AND THEN walk
-    // both tabs). WALK BOTH TABS was the third, on Ctrl+Shift+Tab, until the
-    // architect deleted it on 2026-09-14: the march is the TABS' shifted press
-    // now (the rows above, and redesign_button_shift_admits).
+    // behind a separator and ahead of the arrows — THE WALK and, since
+    // 2026-09-22, the two HOLD-COLUMN nudges. The declined double-click
+    // rule's mechanical reason is recorded at the roster entry (every
+    // double-click surface in this product acts on its FIRST click too).
+    // WALK BOTH TABS was a member on Ctrl+Shift+Tab until the architect
+    // deleted it on 2026-09-14: the march is the TABS' shifted press now (the
+    // rows above, and redesign_button_shift_admits).
     //
-    // PREV'S SHIFT IS ITS OWN CHORD, not an admission: Shift+Tab is the
-    // reverse marker cycle's own spelling, so the `shift` column carries it
-    // exactly as Redo's carries Ctrl+Shift+Z, and this row is the SECOND
-    // producer that column has ever had. A SHIFT press on the button is
-    // therefore a consumed nothing (redesign_button_shift_admits says no), and
-    // that is Redo's behaviour too. The reverse cycle's other spelling,
-    // IsoLeftTab, is deliberately NOT a second row: the dispatch is
-    // synthesized, so it goes out in the Tab spelling every reader accepts.
+    // THE WALK IS ONE ROW (architect 2026-09-22, merging Previous marker —
+    // whose row carried Shift+Tab as its own base chord, Redo's shape — and
+    // Next marker): the row is bare Tab and SHIFT IS AN ADMISSION
+    // (redesign_button_shift_admits), so the shift-click and the long press
+    // dispatch Shift+Tab, the reverse walk. A shift-modified form never has
+    // its own button. The reverse cycle's other spelling, IsoLeftTab, is
+    // deliberately NOT a row: the dispatch is synthesized, so it goes out in
+    // the Tab spelling every reader accepts. It does NOT repeat: its long
+    // press is its shift (a held repeat would outrank it, ToolbarChord::repeats).
     //
-    // BOTH ARE LIVE INSIDE THE `h` VIEW and the derived partition says so
-    // with nothing hand-listed — history_mode_owns_key claims bare Tab and
+    // IT IS LIVE INSIDE THE `h` VIEW and the derived partition says so with
+    // nothing hand-listed — history_mode_owns_key claims bare Tab and
     // Shift+Tab as the diff-flag cycle forward and back.
-    {RedesignButton::TransportWalkPrev,
-     GuiKeys::Tab,    false, true,  false, false, true},                             // Shift+Tab
-    {RedesignButton::TransportWalkNext,
+    {RedesignButton::TransportWalk,
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
+    // THE HOLD-COLUMN NUDGES (architect 2026-09-22): Ctrl+Left and
+    // Ctrl+Right as their OWN BASE CHORDS, the `ctrl` column set (Undo's
+    // shape), and REPEATING like the four arrows — the held button walks
+    // with the held column at every fire, the key's own hold. They admit no
+    // modifier. In the `h` view the chord is refused as bare Left / Right
+    // is, so the derived partition greys them with the arrows.
+    {RedesignButton::TransportHoldLeft,
+     GuiKeys::Left,   true,  false, false, false, true, true},                       // Ctrl+Left
+    {RedesignButton::TransportHoldRight,
+     GuiKeys::Right,  true,  false, false, false, true, true},                       // Ctrl+Right
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone. The eighth
@@ -730,7 +742,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // redesign_button_ctrl_admits (app_state.h) and both carried into the
     // HOLD-REPEAT's own chord so a held modified press repeats its own step.
     // LEFT / RIGHT ADMIT NEITHER since 2026-09-21 (the horizontal ladder
-    // retired; their one step is the active column's unit, a hop on P).
+    // retired; their one step is the active column's unit, a hop on P), and
+    // their CTRL form — the same step holding the column, 2026-09-22 — is
+    // its own two buttons above rather than a ctrl-click here.
     // Setting a column here instead would make the modified form the
     // button's ONLY act.
     {RedesignButton::TransportDown,
@@ -7347,7 +7361,7 @@ void GuiInputHandler::finalize_active_drags() {
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
 // the iteration group since 2026-09-19, the IGNORE WAVEFORM MAGNIFICATION lamp in the
 // zoom group since 2026-09-22 — and the bottom row's
-// sixteen: the enum's
+// seventeen: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

@@ -416,7 +416,7 @@ int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
 // reference is now an explicit argument.
 // THE MARKER WALK'S LANDING — contract at the declaration (app_state.h). This
 // body is Selection::cycle_selection's own scan, hoisted whole on 2026-08-30
-// (planner decision 59) so the act and the Walk previous / Walk next faces
+// (planner decision 59) so the act and the walk button's face
 // read one landing; the act calls it and selects what it returns.
 int marker_walk_landing(const AppState& a, const GuiAudio& audio,
                         bool forward) {

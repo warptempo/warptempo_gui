@@ -219,11 +219,14 @@ struct GuiInputState {
 // THE HORIZONTAL PAIR HAS NO LADDER (architect 2026-09-21, retiring the
 // 2026-08-31 horizontal rungs on every column): horizontal placement is
 // GRAPHICAL — "three columns" or "ten columns" is a number nobody thinks in —
-// so Shift+Left / Shift+Right and Ctrl+Left / Ctrl+Right are UNBOUND on every
-// column, for the marker and the playhead alike (chord_is_bound), and silent
-// as every unbound chord is. Left / Right take ONE STEP IN THE ACTIVE COLUMN'S
-// UNIT (horizontal_arrow_step below); key repeat and the buttons' hold-repeat
-// are the way to go further.
+// so Shift+Left / Shift+Right are UNBOUND on every column, for the marker and
+// the playhead alike (chord_is_bound), and silent as every unbound chord is.
+// Left / Right take ONE STEP IN THE ACTIVE COLUMN'S UNIT (horizontal_arrow_step
+// below); key repeat and the buttons' hold-repeat are the way to go further.
+// CTRL IS THE CAMERA MODIFIER, NOT A RUNG (architect 2026-09-22): Ctrl+Left /
+// Ctrl+Right take the SAME step and hold the subject's screen column where the
+// bare press follows the edge (NudgeCamera below), so this function is never
+// asked about them.
 //
 // SHIFT IS THE LONG STRIDE (architect 2026-09-21, swapping the 2026-08-31
 // order, which had shift the three and ctrl the ten): "shift becomes the long
@@ -291,6 +294,29 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
                                                     char markers_view) {
     if (markers_view == 'P') return HorizontalArrowStep::hops(direction);
     return HorizontalArrowStep::columns(direction);
+}
+
+// THE HORIZONTAL ARROW'S CAMERA IS THE KEY'S CHOICE (architect 2026-09-22: no
+// camera behaviour is derived from the zoom level). Two answers, at every zoom,
+// on every column and for the playhead alike:
+//   * FollowEdge — BARE Left / Right: the camera holds while the subject is
+//     on screen, and a step that would carry it off the window scrolls the
+//     viewport so it stands at the edge column and walks there — the
+//     movement owner's own keep-visible edge-align (Viewport::move_playhead_to
+//     / reseat_playhead_to), nothing called beyond it;
+//   * HoldColumn — CTRL+Left / Ctrl+Right: the subject keeps the screen
+//     column it painted in before the step and the waveform slides under it
+//     (Viewport::hold_subject_column_after_nudge).
+// Ctrl changes the camera and NOTHING ELSE: the step, its unit, its walls,
+// its refusals, its cards, its locks and its undo coalescing are the bare
+// press's — the GestureKind is the column's either way, so a held Ctrl+Left
+// burst coalesces exactly as a bare one does and a ctrl tap and a bare tap on
+// one subject merge in the tap window like two bare taps. The one owner of the
+// fork is nudge_camera, read by both dispatch arms (the marker lane's and the
+// waveform lane's).
+enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
+constexpr NudgeCamera nudge_camera(GuiInputState mods) {
+    return mods.ctrl ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
 }
 
 // -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03, codex) -------------
@@ -793,12 +819,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // nothing.
         case GuiKeys::Up: case GuiKeys::Down:
             return bare || sh || cl;
-        // The playhead / marker position step, BARE ONLY on every column
+        // The playhead / marker position step, BARE AND CTRL on every column
         // (architect 2026-09-21: the horizontal ladder is retired — placement
         // is graphical; the step's unit is the active column's,
-        // horizontal_arrow_step above).
+        // horizontal_arrow_step above). Ctrl is the camera, not a rung
+        // (2026-09-22, NudgeCamera above); Shift spells nothing.
         case GuiKeys::Left: case GuiKeys::Right:
-            return bare;
+            return bare || cl;
         // The trim bounds, and the whole-piece ends under ctrl.
         case GuiKeys::Home: case GuiKeys::End: return bare || cl;
         // The viewport's stepped scroll.
@@ -896,14 +923,17 @@ static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
               "a vertical arrow binds bare, Shift and Ctrl — the step ladder's three "
               "magnitudes — and Ctrl+Shift spells no fourth");
 static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Left,
+                                 GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::Left,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Right,
-                                  GuiInputState{true, false, false}, false) &&
+                                  GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Right,
                                   GuiInputState{false, true, false}, true),
-              "Left / Right bind bare only on every column — the horizontal "
-              "ladder is retired, Shift and Ctrl spell nothing there");
+              "Left / Right bind bare and Ctrl (the held-column camera) on "
+              "every column — the horizontal ladder is retired, so Shift and "
+              "Ctrl+Shift spell nothing there");
 // THE MODE TERM, pinned in both directions (2026-09-01, U4). Bare `v` is the
 // architect's own instance — the revert act, which binds nothing outside the
 // view, so the gates below it must say nothing there.

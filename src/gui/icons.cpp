@@ -74,11 +74,12 @@ namespace {
 // `xform` carries the path element's own SVG `transform` attribute, applied
 // around the path so `d` can stay VERBATIM — baking a transform into the
 // numbers by hand would destroy the property that a diff between this table and
-// the file is a transcription bug and nothing else. TWO committed files need
-// one, and both are TRANSLATES: dialog-ok-apply.svg, whose author drew the
+// the file is a transcription bug and nothing else. THREE committed files need
+// one, and all are TRANSLATES: dialog-ok-apply.svg, whose author drew the
 // check mark at its document coordinates and translated it back into the
-// viewBox, and dialog-cancel.svg (row 8, 2026-08-11), whose `translate(-1-1)`
-// spells the glued-negative form the SVG grammar admits. `icon_translate` is
+// viewBox, dialog-cancel.svg (row 8, 2026-08-11), whose `translate(-1-1)`
+// spells the glued-negative form the SVG grammar admits, and
+// go-previous-context.svg (2026-09-22) the same way. `icon_translate` is
 // the one producer, named rather than raw so a translate READS as a translate
 // at its site. (A general `icon_matrix` constructor lived here for part of
 // 2026-08-11, for distortionfx's rotate-and-scale; it went with that file. The
@@ -963,35 +964,70 @@ constexpr IconPath kMergePaths[] = {
 
 // -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
 //
-// bboxprev (Shift+Tab, previous marker) and bboxnext (Tab, next marker). The
-// architect's reasons for the picks are
-// at the enum entries in icons.h — they are about this row's crowding, which
-// is a roster fact rather than a transcription one.
+// bboxnext (the walk: Tab, and Shift+Tab on its shifted press). The
+// architect's reasons for the pick are at the enum entry in icons.h — they are
+// about this row's crowding, which is a roster fact rather than a
+// transcription one.
 //
-// THE TWO BBOX FILES ARE ORDINARY FILLED PATHS, one `.ColorScheme-Text` each.
+// THE BBOX FILE IS AN ORDINARY FILLED PATH, one `.ColorScheme-Text`.
 // Command coverage: relative `m` with implicit relative-lineto repetition
-// (comma-separated pairs — "0,1 -2,0 0,14" is three linetos), one absolute `M`
-// and one relative `l` per file, and NO `z` at all — the fill closes each
-// subpath implicitly, six committed files' precedent. bboxprev spells its
-// x-coordinates as 7.9999995 and 9.9999995 and they are copied AS THEY STAND:
-// a hand-rounded 8 and 10 would read better and would break the property that
-// a diff against the committed file is a transcription bug and nothing else.
+// (comma-separated pairs — "0,1 -2,0 0,14" is three linetos), one relative
+// `m`, one absolute `L`, and NO `z` at all — the fill closes each subpath
+// implicitly, six committed files' precedent.
 //
-// (BOOST, the group's third file — the set's first STROKED one, whose two
-// arrowhead paths were the only producers of a per-path LINE CAP — is DELETED
-// with the Walk Both Tabs button that wore it, 2026-09-14: its row, its def,
-// its committed asset and the cap field went together.)
-constexpr IconPath kBboxPrevPaths[] = {
-    {kIconText,
-     "m 7.9999995,3 0,1 -2,0 0,14 2,0 0,1 -5,0 0,-1 2,0 0,-14 -2,0 0,-1 5,0 "
-     "M 19,7 l 0,3 0,2 0,3 -1,0 0,-3 -4,0 0,2 L 9.9999995,11 14,8 l 0,2 4,0 "
-     "0,-3 1,0"},
-};
-
+// (BBOXPREV, the Previous marker button's glyph, is DELETED with that button
+// on 2026-09-22, when the walk pair merged into one; so is BOOST, the group's
+// third file for Walk Both Tabs — the set's first STROKED one, whose two
+// arrowhead paths were the only producers of a per-path LINE CAP — deleted
+// with its button 2026-09-14.)
 constexpr IconPath kBboxNextPaths[] = {
     {kIconText,
      "m 14,3 0,1 2,0 0,14 -2,0 0,1 5,0 0,-1 -2,0 0,-14 2,0 0,-1 -5,0 m -11,4 "
      "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
+};
+
+// THE HOLD-COLUMN NUDGES (architect 2026-09-22), the walk group's second and
+// third: go-previous-context and go-next-context, each ONE filled path under
+// `.ColorScheme-Text`, `d` verbatim. go-previous-context carries the file's own
+// transform="translate(-378.85714-540.07647)" (the glued-negative form
+// dialog-cancel's translate already spells), carried as data so the `d` stays
+// byte-identical; go-next-context has none. Command coverage: m, v, h, l and
+// relative c with leading-dot decimals chained without separators — all
+// inside the interpreter's subset.
+constexpr IconPath kGoPreviousContextPaths[] = {
+    {kIconText,
+     "m398.85714 543.07647v16h-14l-4-8 4-8h14m-5.42773 4v.5918c.7107 0 "
+     ".7207.23916.7207 1.10547v1.01757c0 .41547.12362 1.03272.72266 "
+     "1.28907-.59904.25635-.72266.87555-.72266 1.29101v1.00781c0 "
+     ".86631-.001 1.10547-.7207 1.10547v.5918c1.06609 0 1.51367-.35225 "
+     "1.51367-1.25391v-1.22265c0-.55691.0205-1.20117.60937-1.20117h.30469v-"
+     ".64454h-.30469c-.58887 0-.60937-.64426-.60937-1.20117v-1.22265c0-"
+     ".90166-.44758-1.25391-1.51367-1.25391m-3.13672 0c-1.0661 0-1.52149"
+     ".35225-1.52149 1.25391v1.22265c.00001.55691-.0404 1.20117-.61914 "
+     "1.20117h-.29492v.64454h.29492c.57874 0 .61914.64426.61914 1.20117v"
+     "1.22265c.00001.90166.45539 1.25391 1.52149 1.25391v-.5918c-.71082 "
+     "0-.72852-.23916-.72852-1.10547v-1.00781c0-.41546-.12361-1.03466-"
+     ".72265-1.29101.59904-.25635.72265-.8736.72265-1.28907v-1.01757c0-"
+     ".86631.0178-1.10547.72852-1.10547v-.5918",
+     icon_translate(-378.85714, -540.07647)},
+};
+
+constexpr IconPath kGoNextContextPaths[] = {
+    {kIconText,
+     "m2 3v16h14l4-8-4-8h-14m5.427734 4v.591797c-.7107 0-.720703.239159-"
+     ".720703 1.105469v1.017578c0 .41547-.123616 1.032712-.722656 "
+     "1.289062.59904.25635.722656.875556.722656 1.291016v1.00781c0 "
+     ".86631.009983 1.105469.720703 1.105469v.591797c-1.06609 0-1.513672-"
+     ".352246-1.513672-1.253906v-1.222656c0-.556911-.020485-1.201172-"
+     ".609375-1.201172h-.304688v-.644532h.304688c.58887 0 .609375-.644261"
+     ".609375-1.201171v-1.222656c0-.90166.447582-1.253906 1.513672-1.253906"
+     "m3.136719 0c1.0661 0 1.521485.352246 1.521485 1.253906v1.222656c-"
+     ".00001.556911.0404 1.201171.61914 1.201171h.294922v.644532h-.294922c-"
+     ".57874 0-.61914.644261-.61914 1.201172v1.222656c-.00001.90166-.455385 "
+     "1.253906-1.521485 1.253906v-.591797c.71082 0 .728516-.239159.728516-"
+     "1.105469v-1.00781c0-.41546.123606-1.034666.722656-1.291016-.59905-"
+     ".25635-.722656-.873592-.722656-1.289062v-1.017578c0-.86631-.017786-"
+     "1.105469-.728516-1.105469v-.591797"},
 };
 
 // -- THE NOTIFICATION CARDS' THREE (2026-08-29) -------------------------------
@@ -1113,8 +1149,9 @@ constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kMerge              {22.0, kMergePaths,               1};
-constexpr IconDef kBboxPrev           {22.0, kBboxPrevPaths,            1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
+constexpr IconDef kGoPreviousContext  {22.0, kGoPreviousContextPaths,   1};
+constexpr IconDef kGoNextContext      {22.0, kGoNextContextPaths,       1};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
@@ -1165,8 +1202,9 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ViewHidden:          return kViewHidden;
         case Icon::InsertLink:          return kInsertLink;
         case Icon::Merge:               return kMerge;
-        case Icon::BboxPrev:            return kBboxPrev;
         case Icon::BboxNext:            return kBboxNext;
+        case Icon::GoPreviousContext:   return kGoPreviousContext;
+        case Icon::GoNextContext:       return kGoNextContext;
         case Icon::DialogOkApply:       break;
         case Icon::DialogInformation:   return kDialogInformation;
         case Icon::DialogError:         return kDialogError;

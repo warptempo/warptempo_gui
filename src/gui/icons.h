@@ -337,7 +337,7 @@ enum class Icon {
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
     // THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15 from a
     // rendered candidate sheet, the row's right cluster ahead of the four
-    // arrows): previous marker (Shift+Tab) and next marker (Tab). HIS OWN
+    // arrows): the walk (Tab, and Shift+Tab on its shifted press). HIS OWN
     // REASONS, kept because they are about this row's crowding rather than
     // about the glyphs in isolation:
     //   bbox-prev / bbox-next are AN ARROW MEETING A BAR, which is the Tab
@@ -351,8 +351,16 @@ enum class Icon {
     // the tab row's shifted press now. It was the file that brought the
     // interpreter's stroked arm back and the one producer of the per-path line
     // cap, which went with it.)
-    BboxPrev,            // Previous marker (Shift+Tab)
-    BboxNext,            // Next marker (Tab)
+    // (BBOXPREV, the Previous marker button's glyph, is DELETED with that
+    // button on 2026-09-22, when the walk pair merged into one button wearing
+    // bboxnext — its enumerator, its def and its committed asset.)
+    BboxNext,            // The walk (Tab; Shift+Tab on the shifted press)
+    // THE HOLD-COLUMN NUDGES' GLYPHS (architect 2026-09-22), the walk group's
+    // second and third: Breeze's go-previous-context / go-next-context, a
+    // tag-shaped arrow carrying a pair of braces — the chevron's direction
+    // with a mark that it is not the plain arrow two slots away.
+    GoPreviousContext,   // Ctrl+Left, the held-column nudge left
+    GoNextContext,       // Ctrl+Right, the held-column nudge right
     // THE EDIT FLAG BUTTON'S GLYPH (2026-08-27), the bottom row's verb group
     // after Toggle inherit: text-field, Breeze's own
     // TEXT CURSOR — a serif I-beam standing on a field's underline rule.
@@ -446,8 +454,10 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 50 SINCE 2026-09-22, re-counted off the enumerators above rather than
-// adjusted: zoom-out-y came back that day with the Ignore Waveform Magnification lamp
+// 51 SINCE 2026-09-22's walk-group change, re-counted off the enumerators
+// above: bboxprev left with the Previous marker button and go-previous-context
+// / go-next-context joined with the two hold-column nudges. It was 50 earlier
+// that day, re-counted rather than adjusted: zoom-out-y came back with the Ignore Waveform Magnification lamp
 // that wears it (architect 2026-09-22), and merge had joined on 2026-09-19
 // with the Flatten button without this number moving, so the count was 49
 // against a stated 48 until the recount. It was 48 from 2026-09-17 evening,
@@ -463,7 +473,7 @@ enum class Icon {
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 50;
+inline constexpr int kIconCount = 51;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

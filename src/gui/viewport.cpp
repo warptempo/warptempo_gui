@@ -722,15 +722,19 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
-// THE NUDGE HOLDS ITS SUBJECT'S COLUMN (architect 2026-09-17: "I like to see
-// every delta when nudging" — the centring it replaced swallowed the first
-// nudge's pixel in its jump; it centred on the result 2026-09-14 to
-// 2026-09-17). A Left/Right nudge that MOVED SOMETHING calls this on its
-// changed path, and AT THE WORKING ZOOM OR FINER
-// (zoom_level_at_or_finer_than_working, the placement-instrument principle)
-// the viewport is placed so the subject — the resting cursor the nudge has
-// just landed — paints in THE COLUMN IT PAINTED IN BEFORE THE NUDGE, clamped
-// into the waveform's first and last columns; coarser the camera holds. So an
+// CTRL+LEFT / CTRL+RIGHT HOLD THEIR SUBJECT'S COLUMN (architect 2026-09-17: "I
+// like to see every delta when nudging" — the centring it replaced swallowed
+// the first nudge's pixel in its jump; it centred on the result 2026-09-14 to
+// 2026-09-17). A Ctrl+Left/Right step that MOVED SOMETHING calls this on its
+// changed path, AT EVERY ZOOM, and the viewport is placed so the subject — the
+// resting cursor the step has just landed — paints in THE COLUMN IT PAINTED
+// IN BEFORE THE STEP, clamped into the waveform's first and last columns. THE
+// CAMERA IS THE KEY'S CHOICE (architect 2026-09-22, retiring the
+// placement-instrument principle's zoom gate, which held the column at the
+// working zoom or finer for the BARE press from 2026-09-17): the bare press
+// never calls this and follows the edge through the movement owner's own
+// keep-visible edge-align, the ctrl press always calls it — the NudgeCamera
+// fork (gui_input.h), stated at the dispatch from the press's ctrl bit. So an
 // onscreen subject keeps its exact screen column and the waveform slides under
 // it by the nudge's own delta, and a subject that was offscreen lands on the
 // edge column on its side and stays there on later nudges, the window walking
@@ -753,29 +757,19 @@ void Viewport::invalidate_all() {
 // that changes nothing (a zero delta) repaints nothing.
 //
 // Both nudges have stopped playback before their write, so the cursor is the
-// subject. TWO CALLERS: the marker nudge's commit tail (finish_position_nudge,
-// position_nudge.cpp — the focused marker's pre-write frame in the active
-// domain — on its NudgeCamera::HoldColumn arm, which the W and M columns
-// state) and the waveform-lane playhead step
-// (GuiInputHandler::run_waveform_lane_playhead_step — the cursor before the
-// step). A held key's repeats and a held arrow button's fires reach both
-// through the same act bodies, so the hold runs at every step. NO VIEW TERM:
+// subject. TWO CALLERS, each on its NudgeCamera::HoldColumn arm: the marker
+// nudge's commit tail (finish_position_nudge, position_nudge.cpp — the focused
+// marker's pre-write frame in the active domain) and the waveform-lane
+// playhead step (GuiInputHandler::run_waveform_lane_playhead_step — the cursor
+// before the step). A held Ctrl+Left's repeats and a held hold-column
+// button's fires reach both through the same act bodies, so the hold runs at
+// every step. The P column's unit is a HOP, so there the held subject slides
+// the waveform a hop's width per step — the user asked for the hold. NO VIEW TERM:
 // in target view on the warp column the marker nudge is refused upstream
 // (active_column_authoring_allowed) and never arrives, while the playhead step
 // holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE.
-//
-// THE PHASE RESET NUDGE NEVER REACHES THIS BODY, AT ANY ZOOM (architect
-// 2026-09-22): the P column's bare arrow moves the reset a whole HOP
-// (phase_reset_hop_step_frame), and holding a hop-stepped subject still slides
-// the whole waveform a hop's width under it at every press — the hold was made
-// for a one-column delta. Its tail states NudgeCamera::PageIn instead, the
-// coarse Tab walk's FollowPage (follow_scroll_if_needed): the camera holds
-// while the reset stays on screen and pages it in when a hop carries it off.
-// The playhead step keeps the hold on every column, P included — the W and M
-// columns and the playhead keep it exactly as it stands.
 void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
                                                int64_t prior_viewport_start) {
-    if (!zoom_level_at_or_finer_than_working(app.zoom_level)) return;
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const double q = painter_samples_per_pixel(app, audio, area);

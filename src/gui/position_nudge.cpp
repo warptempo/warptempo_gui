@@ -223,55 +223,39 @@ void finish_position_nudge(
     // full call).
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
-    // (e) playhead follows the nudged marker's committed frame through a
-    // movement owner, and (f) the camera — both are the CALLER'S STATED
-    // NudgeCamera, because the two arms land through different owners.
-    if (camera == NudgeCamera::PageIn) {
-        // (e/f) THE PHASE RESET NUDGE PAGES IN (architect 2026-09-22): the
-        // land is the Tab walk's own — land_playhead_on_source_frame, the
-        // movement owner's frame form (hide and audition end, then a write
-        // with NO keep-visible edge-align) — and then follow's page, the
-        // coarse walk's FollowPage exactly: the camera holds while the reset
-        // stays on screen, and a hop that carries it off the window pages it
-        // in at follow's lead, with the page's own synchronous rebuild. At
-        // every zoom. move_playhead_to cannot serve here: its edge-align would
-        // already have scrolled the reset to the window's edge, and the page
-        // would never fire. Why the P column leaves the hold is at
-        // Viewport::hold_subject_column_after_nudge.
-        land_playhead_on_source_frame(app, audio, viewport,
-                                      committed_focused_frame);
-        viewport.follow_scroll_if_needed();
-    } else {
-        // THE SUBJECT'S PRIOR PLACE is captured first, for (f): the focused
-        // marker's pre-write frame in the active domain (the identity in
-        // source view, the one view the W and M nudges author in) and the
-        // viewport it painted on — (e)'s keep-visible edge-align may scroll
-        // that viewport, and nothing between the twin's capture of the frame
-        // and here moves it.
-        const int64_t prior_subject_sample =
-            source_frame_to_active_domain(app, audio, prior_focused_frame);
-        const int64_t prior_viewport_start = app.viewport_start_sample;
-        viewport.move_playhead_to(
-            source_frame_to_active_domain(app, audio, committed_focused_frame));
-        // (f) THE HELD COLUMN, the W and M columns' camera: at the working
-        // zoom or finer the viewport is placed so the playhead (e) just
-        // landed on the nudged marker paints in the column the marker painted
-        // in before the nudge, clamped to the waveform's edge columns — at
-        // every step, a held key's repeats and a held arrow button's fires
-        // included, because each of them runs this tail; coarser the camera
-        // holds. This tail is the nudge's CHANGED path (each twin returns on
-        // its post-clamp identity no-op before reaching it), so a walled press
-        // moves no camera — a 2+ press walled after its collapse keeps the
-        // collapse and the land, and nothing more. The rule and body are at
-        // Viewport::hold_subject_column_after_nudge.
+    // (e) playhead follows the nudged marker's committed frame through the
+    // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f): the
+    // focused marker's pre-write frame in the active domain (the identity in
+    // source view; a target-view nudge exists only on the P column, which is
+    // no map input, so the map translating it is the one it painted under) and
+    // the viewport it painted on — (e)'s keep-visible edge-align may scroll
+    // that viewport, and nothing between the twin's capture of the frame and
+    // here moves it.
+    const int64_t prior_subject_sample =
+        source_frame_to_active_domain(app, audio, prior_focused_frame);
+    const int64_t prior_viewport_start = app.viewport_start_sample;
+    viewport.move_playhead_to(
+        source_frame_to_active_domain(app, audio, committed_focused_frame));
+    // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — architect
+    // 2026-09-22, at every zoom and on every column): a BARE press follows the
+    // edge and needs nothing beyond (e)'s own keep-visible edge-align; a CTRL
+    // press holds the column — the viewport is placed so the playhead (e)
+    // just landed on the nudged marker paints in the column the marker
+    // painted in before the nudge, clamped to the waveform's edge columns — at
+    // every step, a held key's repeats and a held button's fires included,
+    // because each of them runs this tail. This tail is the nudge's CHANGED
+    // path (each twin returns on its post-clamp identity no-op before reaching
+    // it), so a walled press moves no camera — a 2+ press walled after its
+    // collapse keeps the collapse and the land, and nothing more. The hold's
+    // rule and body are at Viewport::hold_subject_column_after_nudge.
+    if (camera == NudgeCamera::HoldColumn)
         viewport.hold_subject_column_after_nudge(prior_subject_sample,
                                                  prior_viewport_start);
-    }
     // (g) A POSITION NUDGE HIDES the trim region overlay, unconditionally,
     // exactly like the marker click that would have selected that singleton,
     // and discarding nothing — the trim stands behind it. IT NEEDS NO CALL OF
-    // ITS OWN since 2026-08-19: the land at (e) — either arm's — and the
-    // prologue's collapse land all go through a movement owner, which owns the hide (the rule at
+    // ITS OWN since 2026-08-19: the follow at (e) and the prologue's collapse
+    // land both go through a movement owner, which owns the hide (the rule at
     // clear_region_highlight, input_handler.h). Groups are never moved (the
     // doctrine at the declarations), so there is no extent to maintain here.
     // (h) view-independent target preview — ON THE TWO COLUMNS THAT REACH ONE.

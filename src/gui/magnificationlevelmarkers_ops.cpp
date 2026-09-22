@@ -235,7 +235,8 @@ void GuiMagnificationLevelMarkersOps::toggle_magnification_level_disabled() {
 // check carries.
 GuiOpRefusal
 GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
-        HorizontalArrowStep step, bool synthesized_repeat) {
+        HorizontalArrowStep step, NudgeCamera camera,
+        bool synthesized_repeat) {
     // Shared guard prologue: the WHOLE refusal set as one predicate (the Left /
     // Right buttons' own marker_nudge_actionable, which reads the ACTIVE
     // column's store — this one), then the coalesce verdict, then THE COLLAPSE
@@ -296,20 +297,20 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
                                            std::move(touched_live));
     }
     // Shared commit tail: record/dirty/invalidate, playhead follow, the
-    // at-working held column, and the point command's region collapse. IT PASSES
+    // press's camera (NudgeCamera), and the point command's region collapse. IT PASSES
     // A NULL GuiTargetRender — this column reaches no render input, so the
     // tail's (h) is skipped and the PICTURE's repayment takes its place below
     // (the pointer's contract is at finish_position_nudge's declaration).
     finish_position_nudge(app, audio, viewport, undo,
                           GestureKind::MagnificationLevelNudge, merge,
-                          orig_f, committed_f, NudgeCamera::HoldColumn,
+                          orig_f, committed_f, camera,
                           /*target_render=*/nullptr);
     // THE PICTURE IS REPAID ONLY WHERE THE DISPLAYED PLATE IS STALE (architect
     // 2026-09-16, "prefer the correct way"): the M drag's release rule
     // (MarkerDragOps::commit_drag's tail) rather than the cluster's pre-write
     // hash compare. The tail above may already have rendered the new gain —
-    // at the working zoom or finer its held-column move shifts the viewport
-    // through hold_subject_column_after_nudge, whose synchronous kick reads the committed
+    // the edge-align of (e) or, under Ctrl, the held-column move
+    // (hold_subject_column_after_nudge) may shift the viewport, whose synchronous kick reads the committed
     // store's profile and publishes the displayed fingerprint with it — and a
     // compare against the hash captured BEFORE the write would then render
     // that same plate a second time, synchronously, on every held repeat that

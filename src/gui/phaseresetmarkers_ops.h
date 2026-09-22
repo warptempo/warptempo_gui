@@ -50,8 +50,11 @@ struct GuiPhaseResetMarkersOps {
     // gui_input.h), the warp twin's own parameter: on this column always ONE
     // HOP of the engine's analysis lattice, through phase_reset_hop_step_frame
     // (architect 2026-09-21 — THE P COLUMN'S ARROW UNIT IS A HOP, the recorded
-    // exception between columns).
+    // exception between columns). `camera` is the press's (NudgeCamera,
+    // gui_input.h: the bare press follows the edge, Ctrl holds the column),
+    // forwarded to the shared tail untouched.
     GuiOpRefusal nudge_selected_phase_resets(HorizontalArrowStep step,
+                                             NudgeCamera camera,
                                              bool synthesized_repeat);
     // THE VERTICAL ARROWS' SECOND STEP BODY ON THIS COLUMN (2026-09-09), the
     // twin of GuiWarpMarkersOps::adjust_iter_bound_cents clause for clause in

@@ -180,10 +180,13 @@ struct GuiWarpMarkersOps {
     // for the tempo step's own reason.
     GuiOpRefusal adjust_iter_bound_cents(MarkerCell side, int64_t delta_cents);
     // `step` is the press's one step in its unit (horizontal_arrow_step,
-    // gui_input.h): on this column always ONE PAINTED COLUMN (bare only — the
-    // horizontal ladder is retired, the vertical one above standing), which
-    // the shared road reads as a plain column delta the whole way down.
+    // gui_input.h): on this column always ONE PAINTED COLUMN (the horizontal
+    // ladder is retired, the vertical one above standing), which the shared
+    // road reads as a plain column delta the whole way down. `camera` is the
+    // press's (NudgeCamera, gui_input.h — bare follows the edge, Ctrl holds
+    // the column), forwarded to the shared tail untouched.
     GuiOpRefusal nudge_selected_markers(HorizontalArrowStep step,
+                                        NudgeCamera camera,
                                         bool synthesized_repeat);
 
    private:
