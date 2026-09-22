@@ -159,6 +159,9 @@ set(WARPTEMPO_GUI_SOURCES
     # unit beside its sibling's; the shared walk is header-only
     # (propagate_blocks.h).
     src/gui/magnification_level_propagate.cpp
+    # THE MAGNIFICATION LEVEL DETECTOR (2026-09-22): the pure analysis behind
+    # Generate Magnification Level Markers, in its own translation unit.
+    src/gui/magnification_auto_detect.cpp
     src/gui/prompt.cpp
     src/gui/warpmarkers_ops.cpp
     src/gui/position_nudge.cpp
