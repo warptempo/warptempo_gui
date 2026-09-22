@@ -1213,7 +1213,7 @@ ROADOM rig's layout is reproduced at gui_scale 225 = 1024 logical px
 wide, and the icon row fits WHOLE up to gui_scale 322 from the TWO VIEW LAMPS'
 WHOLE ICON-ROW CATEGORY'S DELETION on 2026-09-15 — two boxes, a group slot and
 a separator — until 2026-09-19. THE WALK IS 782 AUTHORED PX AND THE CEILING 295 since
-2026-09-22, when the WAVEFORM MAGNIFICATION LAMP joined the viewport-class
+2026-09-22, when the IGNORE WAVEFORM MAGNIFICATION LAMP joined the viewport-class
 group between Center and Follow (22 members in 5 groups; the PAINTED walk,
 every element its own scaled_px, ends at 2302 of 2304 at 295 and at 2324 at
 296 — paint_icon_row carries the arithmetic). It was 748 and 308 from

@@ -291,12 +291,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ctrl-drag and the pinch.)
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // WAVEFORM MAGNIFICATION (architect 2026-09-22) — bare `]`, a TOGGLE with
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — bare `]`, a TOGGLE with
     // a lamp, right after `c` and ahead of Follow. Live on a locked tab and
     // under the read-only lock (a display posture on that allowlist), greyed
     // in target view where the key cards, and DEAD in the `h` view, whose
     // allowlist does not name it.
-    {RedesignButton::IconWaveformMagnification,
+    {RedesignButton::IconIgnoreWaveformMagnification,
      GuiKeys::BracketRight, false, false, false, false, true},                     // bare ]
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
@@ -7345,7 +7345,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's three menu anchors and the view bar's four, row 3's two
 // tabs, row 4's twenty-two — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
-// the iteration group since 2026-09-19, the WAVEFORM MAGNIFICATION lamp in the
+// the iteration group since 2026-09-19, the IGNORE WAVEFORM MAGNIFICATION lamp in the
 // zoom group since 2026-09-22 — and the bottom row's
 // sixteen: the enum's
 // own count at kRedesignButtonCount — the stash is

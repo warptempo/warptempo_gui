@@ -150,10 +150,10 @@ enum class Icon {
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
     // ZOOM-OUT-Y, the vertical magnifier (the ruler on its dial beside a
-    // minus): worn by the Waveform Magnification lamp between Center and
-    // Follow (architect 2026-09-22), restored with its def and asset for the
+    // minus): worn by the Ignore Waveform Magnification lamp between Center
+    // and Follow (architect 2026-09-22), restored with its def and asset for the
     // third time — the lamp's stands of 2026-09-14 and 2026-09-17 wore it too.
-    ZoomOutY,            // Toggle Waveform Magnification (bare `]`)
+    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `]`)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -447,7 +447,7 @@ enum class Icon {
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
 // 50 SINCE 2026-09-22, re-counted off the enumerators above rather than
-// adjusted: zoom-out-y came back that day with the Waveform Magnification lamp
+// adjusted: zoom-out-y came back that day with the Ignore Waveform Magnification lamp
 // that wears it (architect 2026-09-22), and merge had joined on 2026-09-19
 // with the Flatten button without this number moving, so the count was 49
 // against a stated 48 until the recount. It was 48 from 2026-09-17 evening,

@@ -192,12 +192,13 @@ const WaveformGainProfileCache& effective_waveform_gain_profile(
     // lattice, which no magnified picture helps.
     if (app.active_audio_view == 'T') return kUnmagnified;
 
-    // SOURCE VIEW: THE LAMP ALONE DECIDES, on every column and at every zoom.
-    if (!app.waveform_magnification_lit) return kUnmagnified;
+    // SOURCE VIEW: THE LAMP ALONE DECIDES, on every column and at every zoom —
+    // Ignore Waveform Magnification lit is flat, dark (the default) magnified.
+    if (app.ignore_waveform_magnification) return kUnmagnified;
 
     // A MAGNIFICATION-LEVEL-column DRAG shows the store as the release would
     // leave it. drag_mode is the column the press began on, and 'M' exists in
-    // source view alone, so the drag reaches this arm whenever the lamp is lit.
+    // source view alone, so the drag reaches this arm whenever the lamp is dark.
     if (app.drag.active && app.drag.drag_mode == 'M')
         return waveform_gain_profile_drag_cached(app);
     return waveform_gain_profile_cached(app);

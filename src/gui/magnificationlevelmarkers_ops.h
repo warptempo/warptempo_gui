@@ -34,8 +34,8 @@ class GuiAudio;
 //     kick_waveform_sync_if_gain_changed AFTER, and the new gain lands in the
 //     frame its edit does rather than a tick late on the async backstop. A
 //     write the picture cannot see — a drop copying the level already in force,
-//     a nudge inside one section, any write while the `]` Waveform
-//     Magnification lamp is dark —
+//     a nudge inside one section, any write while the `]` Ignore Waveform
+//     Magnification lamp is lit —
 //     moves no hash and renders nothing, which is that owner's own rule. THE
 //     NUDGE IS THE ONE EXCEPTION (architect 2026-09-16): its shared commit
 //     tail may already have rendered the new gain through the at-working

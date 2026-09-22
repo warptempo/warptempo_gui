@@ -754,7 +754,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
         // Show the trim region, and maximize it to the whole song.
         case GuiKeys::BracketLeft: return bare || sh;
-        // Toggle Waveform Magnification (architect 2026-09-22), bound in both
+        // Toggle Ignore Waveform Magnification (architect 2026-09-22), bound in both
         // modes as `f` and `z` are: outside source view (target view, and the
         // `h` view's allowlist) it refuses on a card rather than falling
         // silent.
@@ -846,7 +846,7 @@ static_assert(chord_is_bound(GuiKeys::BracketRight, GuiInputState{}, false) &&
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::BracketRight,
                                   GuiInputState{true, false, false}, false),
-              "Toggle Waveform Magnification is bare `]` in both modes and no "
+              "Toggle Ignore Waveform Magnification is bare `]` in both modes and no "
               "decoration of it");
 static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
@@ -1097,11 +1097,11 @@ inline bool is_magnification_level_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && mods.ctrl && mods.shift && !mods.alt;
 }
 
-// True for the chord that toggles THE WAVEFORM MAGNIFICATION LAMP (architect
-// 2026-09-22): BARE `]` exactly — no ctrl, no shift, no alt. The bracket pair
-// is the picture's own letter pair: bare `[` shows and hides the trim region
-// overlay and bare `]` shows and hides the magnification, both display
-// postures that author nothing. One-shot (repeat-ineligible: a held toggle
+// True for the chord that toggles THE IGNORE WAVEFORM MAGNIFICATION LAMP
+// (architect 2026-09-22): BARE `]` exactly — no ctrl, no shift, no alt. The
+// bracket pair is the picture's own letter pair: bare `[` shows and hides the
+// trim region overlay and bare `]` hides and shows the magnification, both
+// display postures that author nothing. One-shot (repeat-ineligible: a held toggle
 // would flicker). The lamp governs SOURCE VIEW alone — target view is always
 // flat — so in target view the chord is a bound key that REFUSES on a card,
 // the lamp keeping its state (the arm is BracketRight's case in

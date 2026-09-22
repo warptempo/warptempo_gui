@@ -382,7 +382,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // frame — through the gain category's one owner, which renders nothing when
     // the hash did not move (a warp or phase-reset drag, a motion within one
     // column, two neighbouring sections at the same level, any motion while
-    // the `]` lamp is dark and the gate answers flat on both sides). An M drag
+    // the `]` lamp is lit and the gate answers flat on both sides). An M drag
     // stands in SOURCE VIEW alone, the only view that column exists in, so the
     // kick never runs against target view's flat answer.
     //

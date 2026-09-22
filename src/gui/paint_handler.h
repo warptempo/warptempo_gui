@@ -773,7 +773,7 @@ private:
     // status bar whose state text is row 8's own cell now),
     // the
     // ICON ROW (top lane 1 since that relayout, row 4: the twenty-two
-    // view/mode/action buttons since the WAVEFORM MAGNIFICATION lamp joined
+    // view/mode/action buttons since the IGNORE WAVEFORM MAGNIFICATION lamp joined
     // them 2026-09-22, twenty-one from the FLATTEN button's arrival from the
     // bottom row 2026-09-19, twenty from the two view lamps' whole-category
     // deletion 2026-09-15 and twenty-two before that —

@@ -156,9 +156,9 @@ struct Viewport {
     //    with no gain-change kick of its own.
     //    (The gain gate's other inputs are the AUDIO VIEW and the `]` LAMP —
     //    effective_waveform_gain_profile answers the empty profile in target
-    //    view, and in source view while the lamp is dark. The S/T flip owes no
+    //    view, and in source view while the lamp is lit. The S/T flip owes no
     //    gain kick of its own, running an unconditional kick_waveform_sync;
-    //    the lamp's one setter, GuiInputHandler::set_waveform_magnification_lit,
+    //    the lamp's one setter, GuiInputHandler::set_ignore_waveform_magnification,
     //    takes the before/after hash kick above. The column and the zoom are no
     //    inputs since 2026-09-22.)
     //    A gain change dirties the plate fingerprint
@@ -270,7 +270,7 @@ struct Viewport {
     // changes the store and not the profile, and must not drain the worker and
     // re-render the whole plate. (Every level-writing caller runs with the
     // MAGNIFICATION LEVEL COLUMN ACTIVE, which is source view by construction;
-    // while the `]` lamp is dark the gate answers flat on both sides of its
+    // while the `]` lamp is lit the gate answers flat on both sides of its
     // write, so the hashes agree and nothing renders — the picture being
     // flat, that is the right answer.)
     uint64_t waveform_gain_hash() const;

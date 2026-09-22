@@ -265,13 +265,14 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
     const AppState& app);
 
 // THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE.
-// MAGNIFICATION IS A MANUAL LAMP IN SOURCE VIEW AND ABSENT IN TARGET VIEW
+// MAGNIFICATION IS A MANUAL OVERRIDE IN SOURCE VIEW AND ABSENT IN TARGET VIEW
 // (architect 2026-09-22), two terms:
 //
 //   TARGET view ('T') — flat, whatever the lamp says.
-//   SOURCE view ('S') — the live profile IFF the Waveform Magnification lamp
-//                       (AppState::waveform_magnification_lit, bare `]`) is
-//                       lit, else flat — on every column and at every zoom.
+//   SOURCE view ('S') — the live profile UNLESS the Ignore Waveform
+//                       Magnification lamp (AppState::ignore_waveform_magnification,
+//                       bare `]`, dark at every project open) is lit, then flat
+//                       — on every column and at every zoom.
 //
 // The live answer is the magnification level store's memoized profile
 // (waveform_gain_profile_cached above); flat is the EMPTY profile, level 0
@@ -281,8 +282,8 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
 // the SOURCE views are what author against it, while the target view's own
 // column, the phase resets, moves on the HOP LATTICE in quantized steps that no
 // superfine picture helps — so target view never shows it. Inside source view
-// the architect chose the switch over any derivation: whether the picture is
-// drawn loud is his call at the moment, not a function of the zoom or the
+// the architect chose a switch over any derivation: magnified by default, and
+// flattening it is his call at the moment, not a function of the zoom or the
 // column. (Superseded: the audio-view rule of 2026-09-17, magnified whenever
 // source view stood; and the view-and-zoom gate of 2026-09-19, the M column at
 // every zoom and every other source column at the working zoom or finer.)
@@ -301,7 +302,7 @@ const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
 // waveform_cache.cpp); the displayed plate's staleness compare against that
 // field (GuiPaintHandler::displayed_plate_gain_is_stale); and the gain kick's
 // hash (Viewport::waveform_gain_hash). While a MAGNIFICATION-LEVEL-column
-// marker drag stands with the lamp lit — source view with the M column active,
+// marker drag stands with the lamp dark — source view with the M column active,
 // that column existing in no other view — the live answer is the DRAG SLOT's
 // (waveform_gain_profile_drag_cached, above), so the picture shows the store
 // as the release would leave it.

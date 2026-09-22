@@ -1719,7 +1719,7 @@ inline int tab_row_h_px() {
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
 // kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-TWO view/mode/action buttons since
-// 2026-09-22, when the WAVEFORM MAGNIFICATION lamp joined the zoom group
+// 2026-09-22, when the IGNORE WAVEFORM MAGNIFICATION lamp joined the zoom group
 // between Center and Follow — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;

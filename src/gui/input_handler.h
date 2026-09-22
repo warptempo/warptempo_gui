@@ -1565,8 +1565,8 @@ struct GuiInputHandler {
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
     // the view bar's four, row 3's two tabs, row 4's twenty-two (the
-    // toolbar four included since the 2026-08-12 relayout, the WAVEFORM
-    // MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
+    // toolbar four included since the 2026-08-12 relayout, the IGNORE
+    // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
     // seven closing it — the opener, the walk lamp and the four companions
@@ -4112,19 +4112,20 @@ private:
     // changes nothing already on screen.
     void set_restrict_undo_to_viewport(bool desired);
 
-    // THE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect 2026-09-22) —
-    // the restrict-undo lamp's shape with ONE road: bare `]`, which the icon
-    // row's button reaches by synthesizing that press, and whose arm reaches
-    // here only in SOURCE VIEW (target view refuses at the arm, carding). The
-    // bit (AppState::waveform_magnification_lit) is a per-project session
-    // posture, dark at every project open, never serialized and never in the
+    // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect
+    // 2026-09-22) — the restrict-undo lamp's shape with ONE road: bare `]`,
+    // which the icon row's button reaches by synthesizing that press, and
+    // whose arm reaches here only in SOURCE VIEW (target view refuses at the
+    // arm, carding). The bit (AppState::ignore_waveform_magnification) is a
+    // per-project session posture, dark at every project open (source view
+    // magnified), never serialized and never in the
     // undo domain. Writes the field, then kicks the synchronous rebuild iff
     // the EFFECTIVE gain profile changed across the write
     // (Viewport::kick_waveform_sync_if_gain_changed), so the picture lands in
     // the press's own frame and a toggle that changes nothing visible — a
     // piece with no enabled level above 0 — renders nothing. The lamp's face
     // rides the per-tick comparator. History-less; display-only.
-    void set_waveform_magnification_lit(bool desired);
+    void set_ignore_waveform_magnification(bool desired);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare

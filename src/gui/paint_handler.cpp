@@ -1013,14 +1013,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // and no separator moving.
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // WAVEFORM MAGNIFICATION (architect 2026-09-22), the `]` lamp, between
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22), the `]` lamp, between
     // Center and Follow in the same group: Breeze's zoom-out-y, the magnifier
     // with a ruler on its dial — the picture's vertical scale. It joins the
     // group rather than opening one, so it adds one box and one 2px gap to the
-    // walk and no separator. (The same glyph and seat carried the lamp on
-    // 2026-09-14 and, as Ignore Waveform Magnification, on 2026-09-17; each
-    // left that evening under a rule that made magnification automatic.)
-    {RedesignButton::IconWaveformMagnification, icons::Icon::ZoomOutY},
+    // walk and no separator. (The same glyph, seat and name carried the lamp
+    // on 2026-09-14 and on 2026-09-17; each left that evening under a rule
+    // that made magnification automatic.)
+    {RedesignButton::IconIgnoreWaveformMagnification, icons::Icon::ZoomOutY},
     // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
     // to 2026-09-14 — magnify wearing zoom-in-y and reduce wearing
     // zoom-out-y — and left with the setting it stepped (architect
@@ -2707,8 +2707,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the Show trim region button leading (it
     // had a group of its own from 2026-08-11, when the scissors opened it,
-    // until that ruling), then the zoom pair (2026-08-12), THE WAVEFORM
-    // MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW, which came
+    // until that ruling), then the zoom pair (2026-08-12), THE IGNORE
+    // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW, which came
     // in from the
     // dissolved mass-marker group the same day, and THE RESTRICT UNDO TO VIEWPORT LAMP closing
     // the group (2026-09-04, arriving from the toolbar group later that day
@@ -2739,8 +2739,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY-TWO MEMBERS IN FIVE GROUPS, the WAVEFORM
-    // MAGNIFICATION lamp having joined the zoom group between Center and
+    // minus groups): TWENTY-TWO MEMBERS IN FIVE GROUPS, the IGNORE
+    // WAVEFORM MAGNIFICATION lamp having joined the zoom group between Center and
     // Follow on 2026-09-22 (one box and one gap onto the walk, no separator):
     //   8 + 22·32 + (22−5)·2 + (5−1)·9 = 8 + 704 + 34 + 36 = 782px,
     // IN EVERY STATE — the row has one width, inside the `h` view as

@@ -840,11 +840,12 @@ constexpr IconPath kToolRectSelectionPaths[] = {
 // assets together. This is the roster's record of which files came and went
 // and makes no claim about what magnification does; that rule lives at
 // effective_waveform_gain_profile.) ZOOM-OUT-Y, the vertical magnifier's
-// minus, is the Waveform Magnification lamp's glyph (architect 2026-09-22):
+// minus, is the Ignore Waveform Magnification lamp's glyph (architect
+// 2026-09-22):
 // the same magnifier with a ruler on its dial beside a minus, transcribed
 // byte-verbatim from breeze-dark's actions/22/. It is back for the third
-// time: it wore the `]` lamp of 2026-09-14 and the Ignore Waveform
-// Magnification lamp of 2026-09-17, and left each evening with the lamp.
+// time: it wore the same-named `]` lamp of 2026-09-14 and of 2026-09-17, and
+// left each evening with the lamp.
 
 constexpr IconPath kZoomFitBestPaths[] = {
     {kIconText,

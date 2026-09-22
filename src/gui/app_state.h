@@ -1840,8 +1840,8 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-19 against kDropdownMenus and the chord table (43 chord
-// rows + 3 anchors = kRedesignButtonCount, re-counted 2026-09-19);
+// re-greped 2026-09-22 against kDropdownMenus and the chord table (44 chord
+// rows + 3 anchors = 47 = kRedesignButtonCount, re-counted 2026-09-22);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -2094,24 +2094,22 @@ enum class RedesignButton {
     // pointer home (the Navigation dropdown that once duplicated them was
     // deleted 2026-08-15).
     IconZoomFitBest, IconZoomOriginal,
-    // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `]` lamp, between
-    // Center and Follow. A DISPLAY POSTURE and nothing else: lit, the
-    // SOURCE-VIEW waveform picture carries the magnification level markers
-    // column's per-section gain (effective_waveform_gain_profile); dark, it is
-    // flat; target view is flat whatever it says. The M column's authoring,
-    // its red cue, the render, undo and every sidecar are untouched. The bit
-    // is AppState::waveform_magnification_lit, DARK AT EVERY PROJECT OPEN like
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `]` lamp,
+    // between Center and Follow, a MANUAL OVERRIDE. A DISPLAY POSTURE and
+    // nothing else: dark (the default), the SOURCE-VIEW waveform picture
+    // carries the magnification level markers column's per-section gain
+    // (effective_waveform_gain_profile); lit, it is flat; target view is flat
+    // whatever it says. The M column's authoring, its red cue, the render,
+    // undo and every sidecar are untouched. The bit is
+    // AppState::ignore_waveform_magnification, DARK AT EVERY PROJECT OPEN like
     // the rest of this group's lamps. IT GREYS IN TARGET VIEW, where the lamp
     // has no effect and bare `]` cards (waveform_magnification_toggle_actionable,
     // the face and the key's one verdict); LIVE on a locked tab and under the
     // read-only lock; DEAD in the `h` view, whose allowlist does not name `]`
     // (Follow's and Restrict Undo to Viewport's answer there), through the
-    // derived partition. (The lamp stood twice before under other rules: on
-    // 2026-09-14, forced lit in target view, deleted that evening when
-    // magnification became a function of the zoom; and on 2026-09-17 as
-    // Ignore Waveform Magnification, the inverse sense, deleted that evening
-    // when magnification became a function of the audio view.)
-    IconWaveformMagnification,
+    // derived partition. (It revives the 2026-09-14 / 2026-09-17 lamp's name
+    // and sense, now scoped to source view with no zoom term.)
+    IconIgnoreWaveformMagnification,
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
     // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
     // architect retired the setting it stepped (architect approval 2026-09-14):
@@ -2836,7 +2834,7 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-22, when
-// the WAVEFORM MAGNIFICATION lamp joined row 4's zoom group between Center and
+// the IGNORE WAVEFORM MAGNIFICATION lamp joined row 4's zoom group between Center and
 // Follow): SEVEN in row 1 (the
 // three menu anchors and the view bar's four), two in row 3, TWENTY-TWO in
 // row 4 and SIXTEEN in the bottom row — 47. Of those, FORTY-FOUR carry a chord in
@@ -2920,7 +2918,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconShowRegion:
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
-        case RedesignButton::IconWaveformMagnification:
+        case RedesignButton::IconIgnoreWaveformMagnification:
         case RedesignButton::IconFollow:
         case RedesignButton::IconBpm:
         case RedesignButton::IconIter:
@@ -4743,21 +4741,22 @@ struct AppState {
     // other act — it only decides whether one step runs at all.
     bool    restrict_undo_to_viewport = false;
 
-    // WAVEFORM MAGNIFICATION — the lamp on bare `]` (architect 2026-09-22). A
+    // IGNORE WAVEFORM MAGNIFICATION — the lamp on bare `]` (architect
+    // 2026-09-22), a manual override. A
     // session posture in this family: per-project, DARK AT EVERY PROJECT OPEN
     // (run_project builds this AppState fresh, so the default IS the reset),
     // in no settings vocabulary, never serialized, never in the undo domain,
-    // not carried by `'`, and touched by no restore, view switch or lock. LIT,
+    // not carried by `'`, and touched by no restore, view switch or lock. DARK,
     // the SOURCE-VIEW waveform picture carries the magnification level
-    // markers column's per-section gain; dark, it is flat. TARGET VIEW IS FLAT
+    // markers column's per-section gain; lit, it is flat. TARGET VIEW IS FLAT
     // WHATEVER IT SAYS, and the bit keeps its state there untouched — the key
     // refuses and the button greys in target view, so nothing can write it
     // where it has no effect. THE BIT IS THE ANSWER in source view, read by
     // effective_waveform_gain_profile (warp_frame_map_view.h) and by the
     // lamp's face, and by nothing else — it reaches no authoring, no red cue,
     // no render and no sidecar. Its one writer is
-    // GuiInputHandler::set_waveform_magnification_lit.
-    bool    waveform_magnification_lit = false;
+    // GuiInputHandler::set_ignore_waveform_magnification.
+    bool    ignore_waveform_magnification = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
@@ -13312,14 +13311,14 @@ inline constexpr const char* kUndoOutsideViewCard =
 inline constexpr const char* kRedoOutsideViewCard =
     "Redo is outside the view";
 
-// THE WAVEFORM MAGNIFICATION LAMP'S ONE VERDICT (architect 2026-09-22):
+// THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE VERDICT (architect 2026-09-22):
 // the lamp governs SOURCE VIEW alone — target view is flat whatever it says
 // (effective_waveform_gain_profile, warp_frame_map_view.h) — so the toggle is
 // actionable exactly in source view. TWO READERS: bare `]`'s arm
 // (handle_plain_bare_keys, input_key_dispatch.cpp), which cards
 // kMagnificationSourceViewOnlyCard on a false answer and leaves the bit as it
 // stands, and the lamp's face (redesign_button_enabled's
-// IconWaveformMagnification arm), which greys on the same answer. The `h`
+// IconIgnoreWaveformMagnification arm), which greys on the same answer. The `h`
 // view's refusal and the overlays' dead face are their own partitions, ahead
 // of this.
 inline bool waveform_magnification_toggle_actionable(const AppState& a) {
@@ -14515,14 +14514,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // navigation, not authored content). Its lamp reports the arm.
         case RedesignButton::IconFollow:
             return true;
-        // THE WAVEFORM MAGNIFICATION LAMP GREYS IN TARGET VIEW (architect
+        // THE IGNORE WAVEFORM MAGNIFICATION LAMP GREYS IN TARGET VIEW (architect
         // 2026-09-22): the lamp governs source view alone, so there bare `]`
         // refuses on its card and the bit keeps its state — this face reads
         // the verdict that refusal reads, waveform_magnification_toggle_actionable.
         // The lock admits the chord (a display posture authors nothing), and
         // the `h` view greys it through the derived partition above, bare `]`
         // being off that mode's allowlist as `f` and `z` are.
-        case RedesignButton::IconWaveformMagnification:
+        case RedesignButton::IconIgnoreWaveformMagnification:
             return waveform_magnification_toggle_actionable(a);
         // THE RESTRICT-UNDO-TO-VIEWPORT LAMP MIRRORS NOTHING (2026-09-04),
         // the next on this answer: bare `z` toggles the posture in either
@@ -15717,12 +15716,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // face and the refusal cannot drift.
         case RedesignButton::IconRestrictUndo:
             return a.restrict_undo_to_viewport;
-        // The Waveform Magnification lamp (architect 2026-09-22): the same
-        // toggle pattern, reading the live bit bare `]` flips. In target view
+        // The Ignore Waveform Magnification lamp (architect 2026-09-22): the
+        // same toggle pattern, reading the live bit bare `]` flips — lit is
+        // ignoring, the picture flat in source view. In target view
         // the face is greyed and still reads the bit, which keeps its state
         // there untouched.
-        case RedesignButton::IconWaveformMagnification:
-            return a.waveform_magnification_lit;
+        case RedesignButton::IconIgnoreWaveformMagnification:
+            return a.ignore_waveform_magnification;
         // GRID ITERATION MODE'S LAMP (2026-08-01, away with its button
         // 2026-08-27 to 2026-09-04 and back with it): the same toggle pattern
         // once more, reading the live bit bare `i` flips, so the lit face and
@@ -16386,10 +16386,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
             return {"Full Zoom Out (0)", nullptr};
         case RedesignButton::IconZoomOriginal:
             return {"Center on Focus (C)", nullptr};
-        // THE MAGNIFICATION LAMP (architect 2026-09-22), one line: bare `]`
-        // toggles and has no shifted twin; the name is the toggle's.
-        case RedesignButton::IconWaveformMagnification:
-            return {"Toggle Waveform Magnification (])", nullptr};
+        // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22), one
+        // line: bare `]` toggles and has no shifted twin; the name is the
+        // toggle's.
+        case RedesignButton::IconIgnoreWaveformMagnification:
+            return {"Toggle Ignore Waveform Magnification (])", nullptr};
         // THE FOLLOW LAMP, one line: bare `f` toggles and has no shifted twin.
         // Its text NAMES THE TOGGLE (the lamp rule at this table's head,
         // architect 2026-09-01): it read "Follow (F)" until that day.
