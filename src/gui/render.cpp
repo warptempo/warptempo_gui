@@ -1242,20 +1242,23 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
         // varies on the disabled axis alone.
         f.border = kMarkerFlagBorder;
         f.label = kMarkerFlagLabel;
-        f.stem  = kMarkerStemRed;
+        // THE STEM FOLLOWS THE SELECTION BIT AS THE FILL DOES (architect
+        // 2026-09-23): the bright fill when selected, the class's own REST
+        // stem kMarkerStemRed otherwise.
+        f.stem  = selected ? kMarkerFlagFillRedSel : kMarkerStemRed;
         f.has_stem = true;
         return f;
     }
     flag_column_pair(column_face, selected, f.fill, f.edge);
     f.border = kMarkerFlagBorder;   // live: undamped, like the red arm above
     f.label = kMarkerFlagLabel;
-    // The stem reads the CLASS ALONE, never the selection bit: a selected
-    // default marker keeps its calm stem colour (the architect's explicit
-    // rule), so only the flag brightens — mirrored on the phase-reset column,
-    // each default-class stem reading its own column's calm fill (the
-    // unselected pair's fill).
-    GuiColor calm_edge;
-    flag_column_pair(column_face, /*selected=*/false, f.stem, calm_edge);
+    // THE STEM WEARS THE FILL, SELECTION INCLUDED (architect 2026-09-23: "make
+    // the stems the same colour as the highlighted flag when a flag is
+    // selected, so that it stands out" — at a coarse zoom among many markers,
+    // the playhead is found by looking up and the selected stems by looking
+    // down). The column's selected pair's fill when selected, its calm fill at
+    // rest, on both columns.
+    f.stem = f.fill;
     f.has_stem = true;
     return f;
 }
@@ -1264,7 +1267,9 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
 
 // The phase-reset lead-in ring's colour (declaration in render.h): the ladder
 // above asked for a LIVE, UNSELECTED reset's stem, so the ring can never pick
-// a colour the stem would not — the class alone, as the stem reads it. It
+// a colour the resting stem would not — the class alone. It asks for the
+// unselected face deliberately: the ring is not a selection cue, so it keeps
+// the rest colour while a selected reset's stem brightens. It
 // stands outside the file's anonymous namespace so paint_handler.cpp reaches
 // it; the ladder it calls stays file-local.
 GuiColor phase_reset_stem_color(bool red) {
@@ -1497,8 +1502,10 @@ void render_flag_boxes_impl(
             // after its press), the payload is
             // bright, so a selected marker always shows its selection
             // somewhere. Disabled and red blend as they always did, cell by
-            // cell through the same ladders; the stem and the border read the
-            // class alone, so the payload face carries them for the marker.
+            // cell through the same ladders; the border reads the class alone
+            // and the stem the flag box's fill, so the payload face carries
+            // both for the marker (a marker whose addressed cell is a bound
+            // cell keeps its rest stem, as its flag box keeps its rest fill).
             MarkerCell bright = i == focus_marker ? focus_cell
                                                   : MarkerCell::Payload;
             // THE FALLBACK ASKS WHETHER THE BRIGHT CELL IS SHOWN AT ALL, by
@@ -2177,12 +2184,15 @@ void render_history_diff_flags(
                 out_hit_rects->push_back(r);
             }
             if (out_stems) {
-                // THE STEM READS THE CLASS ALONE, never the focus — the live
-                // lane's rule, and here the class is "does the commit still have
-                // this line": a removed or CHANGED entry stems red (deference to
-                // the old, the architect's ruling for the pair), a purely added
-                // one green. The colour is the UNSELECTED fill and it is never
-                // damped: a stem either paints its class or is absent.
+                // THE STEM READS THE CLASS AND THE FOCUS SWAP — the live
+                // lane's rule (architect 2026-09-23: the stem follows the
+                // selection bit as the fill does), and here the class is "does
+                // the commit still have this line": a removed or CHANGED entry
+                // stems red (deference to the old, the architect's ruling for
+                // the pair), a purely added one green. The colour is the
+                // class's fill — its Sel fill on a focused or selected flag —
+                // and it is never damped: a stem either paints its class or is
+                // absent.
                 //
                 // AND IT READS THE DISABLED AXIS (architect 2026-08-22), on the
                 // SINGLE-half flags alone. A removed-only or added-only flag
@@ -2202,8 +2212,11 @@ void render_history_diff_flags(
                 if (!single_disabled) {
                     out_stems->push_back(
                         MarkerStem{i, static_cast<double>(bx),
-                                   f.removed ? kHistoryRemovedFill
-                                             : kHistoryAddedFill});
+                                   f.removed
+                                       ? (focused ? kHistoryRemovedFillSel
+                                                  : kHistoryRemovedFill)
+                                       : (focused ? kHistoryAddedFillSel
+                                                  : kHistoryAddedFill)});
                 }
             }
         });

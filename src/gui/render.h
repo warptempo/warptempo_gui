@@ -721,16 +721,19 @@ inline constexpr GuiColor kMarkerFlagFillRed     = hex(0xDA4453);
 inline constexpr GuiColor kMarkerFlagEdgeRed     = hex(0x79262E);
 inline constexpr GuiColor kMarkerFlagFillRedSel  = hex(0xFF6C7B);
 inline constexpr GuiColor kMarkerFlagEdgeRedSel  = hex(0x8E3C44);
-// The RED class's STEM is NOT its fill: #da4453 is the architect's own explicit
-// value for it, so the red stem is its own constant while the default and
-// selected classes both stem in kMarkerFlagFill (a selected marker keeps the
-// CALM stem — also his explicit rule, which is why the stem color is resolved
-// from the class ALONE and never from the selection bit, red included: the
-// stem does not follow the flag's brightening). Since 2026-09-16 it EQUALS the
-// red class's rest fill, by coincidence of provenance rather than by
-// derivation — both are the unselected removed crop's fill, arrived at
-// separately — so it stays its own constant and a retune of one is not a
-// retune of the other.
+// The RED class's REST STEM is its own constant: #da4453 is the architect's own
+// explicit value for it. THE STEM FOLLOWS THE SELECTION BIT AS THE FILL DOES
+// (architect 2026-09-23, reversing the calm-stem rule: "make the stems the same
+// colour as the highlighted flag when a flag is selected, so that it stands
+// out" — at a coarse zoom among many markers the playhead is found by looking
+// up and the selected stems by looking down): resolve_flag_face reads the
+// class AND the selection bit for the stem exactly as for the fill, so a
+// selected red marker stems in kMarkerFlagFillRedSel and a resting one in this
+// constant, and every other class stems in its column's pair's fill, bright
+// when selected. Since 2026-09-16 this constant EQUALS the red class's rest
+// fill, by coincidence of provenance rather than by derivation — both are the
+// unselected removed crop's fill, arrived at separately — so it stays its own
+// constant and a retune of one is not a retune of the other.
 inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 
 // THE SEAM COLUMN between a flag box and the cell to its right is a 1px
@@ -765,12 +768,13 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 //
 // RED STAYS RED ON EVERY COLUMN (kMarkerFlagFillRed / kMarkerFlagEdgeRed and
 // their Sel pair, resolve_flag_face's first live arm, asked before the
-// column), and the phase-reset STEM mirrors the warp rule — it reads the
-// CLASS alone, so a selected default-class reset keeps this calm fill and
-// only the flag brightens. THE PHASE-RESET LEAD-IN RING on the waveform wears
-// the colour its reset's stem wears (paint_phase_reset_overlay_ring,
+// column), and the phase-reset STEM mirrors the warp rule — it wears its
+// flag's fill, this calm fill at rest and the Sel fill when selected
+// (architect 2026-09-23). THE PHASE-RESET LEAD-IN RING on the waveform wears
+// the colour its reset's RESTING stem wears (paint_phase_reset_overlay_ring,
 // paint_handler.cpp, through phase_reset_stem_color — architect 2026-09-17):
-// this calm fill, or the stem red for a reset in the column's red set. THE BOUND (hop) CELLS ON
+// this calm fill, or the stem red for a reset in the column's red set; the
+// ring is not a selection cue, so it does not brighten with the stem. THE BOUND (hop) CELLS ON
 // THIS COLUMN WEAR THIS PAIR TOO (architect 2026-09-21: the cells wear their
 // own column's hue — superseding his 2026-09-15 "fine for now", which had
 // kept them on the warp column's purple): every bound-cell call site into
@@ -893,8 +897,10 @@ inline constexpr GuiColor kMarkerFlagLabel       = hex(0x000000);
 // UNSELECTED crop's fill, so three constants could not be re-read as a ladder
 // — and the live class now carries BOTH crops as its rest pair and its
 // selected pair, read on the selection bit exactly as this mode's focus swap
-// reads its own. The stem stays the unselected fill by its own explicit
-// ruling, which is what it always was.
+// reads its own. THE STEM FOLLOWS THE SAME SWAP (architect 2026-09-23, the
+// live lane's rule reaching this one so the two ladders agree on what
+// selection does to a stem): a focused or selected diff flag stems in its
+// class's Sel fill, a resting one in the class's rest fill.
 //
 // THE GREENS ARE THIS VIEW'S ALONE, so a live flag can never read as a diff
 // flag. Nothing outside this mode paints them.
@@ -3120,7 +3126,8 @@ struct FlagLaneRects {
 // (GuiPaintHandler::paint_marker_stems) and the playhead's white-stem
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
-// The published COLOUR is the marker's resolved CLASS; the consumer applies
+// The published COLOUR is the marker's resolved face — its class, brightened
+// when its flag box is (architect 2026-09-23); the consumer applies
 // exactly one override over it, the open flag editor's invalid-commit red flash
 // (a transient the painter has no business baking into a cache — the contract is
 // at GuiPaintHandler::paint_marker_stems).
@@ -3229,8 +3236,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              cell of a selected marker (architect 2026-09-16 — red joins
 //              the other classes' rest/selected shape, on the same `selected`
 //              bit, the cue being the HUE and never the brightness); stem
-//              kMarkerStemRed, the class's alone and selection-blind like
-//              every other stem; border kMarkerFlagBorder undamped, like every
+//              kMarkerStemRed at rest and kMarkerFlagFillRedSel selected,
+//              following the fill like every other stem (architect
+//              2026-09-23); border kMarkerFlagBorder undamped, like every
 //              live class. RED STAYS RED ON BOTH COLUMNS — the column
 //              fork below never reaches this arm.
 //   Otherwise: kMarkerFlagFill / kMarkerFlagEdge on the WARP flag box and its
@@ -3244,8 +3252,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              site names its column explicitly — the phase-reset flag box
 //              and its cells pass `PhaseReset`), swapping to the bright Sel
 //              pair on any column when selected — SELECTION IS THAT SWAP AND NOTHING
-//              ELSE. The stem stays the CALM fill of whichever column's flag
-//              it belongs to, either way (the architect's explicit rule).
+//              ELSE. The stem wears the flag box's fill, the calm one at rest
+//              and the bright one selected (architect 2026-09-23).
 //
 // `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
 // phase-reset painter below carries the same parameter for its own hop
@@ -3277,8 +3285,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // brightness lives. The rule is stated once at
 // the selected pair's palette block (kMarkerFlagFillSel) and applies on both
 // columns — a phase reset's bound cells are cells too. Disabled and red
-// blend cell by cell through the same ladders; the stem and the border read
-// the class alone.
+// blend cell by cell through the same ladders; the border reads the class
+// alone and the stem the flag box's face, so it brightens exactly when the
+// payload does.
 //
 // `cr`'s scaled font is set by this function (the redesign sans face at
 // redesign_font_size_px) and restored.
@@ -3547,8 +3556,10 @@ void render_phase_reset_flags(cairo_t* cr,
 // architect 2026-09-17). It asks the one class ladder (resolve_flag_face,
 // render.cpp) rather than restating it: kMarkerStemRed when `red` (the
 // column's red set, phase_reset_red_flag_set_cached), the column's calm fill
-// kPhaseResetFlagFill otherwise. Selection-blind, as the stem is; no disabled
-// arm, a disabled reset painting neither stem nor ring.
+// kPhaseResetFlagFill otherwise — the RESTING stem's colour: it asks for the
+// unselected face, because the ring is not a selection cue and does not
+// brighten when a selected reset's stem does (architect 2026-09-23). No
+// disabled arm, a disabled reset painting neither stem nor ring.
 GuiColor phase_reset_stem_color(bool red);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
@@ -3686,7 +3697,8 @@ struct HistoryDiffFlag {
 // flag together. One face for both, deliberately — the focus is the selection's
 // singleton when the set is empty, and the revert act reads them the same way, so
 // a second brightness would be a distinction nothing acts on. The STEM reads the
-// class alone, never either of them, exactly as the live lane's does — and a
+// class and that same swap, exactly as the live lane's does (architect
+// 2026-09-23: the class's Sel fill on a focused or selected flag) — and a
 // CHANGED pair stems RED, deferring to the old. THE STEM ALSO READS THE DISABLED
 // AXIS NOW (architect 2026-08-22): a SINGLE flag — added-only or removed-only —
 // whose one side is EFFECTIVELY disabled publishes NO STEM AT ALL, the live

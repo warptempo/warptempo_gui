@@ -5174,11 +5174,12 @@ struct AppState {
     // there (the account is at value_drag_posture).
     bool          add_to_selection = false;
 
-    // STEMS ARE NO LONGER A SELECTION VISUAL AT ALL (row 5, architect). Every
-    // ENABLED marker of the active column stems, always, in its class's
-    // UNSELECTED colour (GuiPaintHandler::paint_marker_stems, off the marker
-    // painter's stash); a disabled marker stems never. Selection's cue is its
-    // flags' bright colour pair and nothing else. The successive apparatus this
+    // STEMS NEVER APPEAR OR VANISH WITH THE SELECTION (row 5, architect). Every
+    // ENABLED marker of the active column stems, always
+    // (GuiPaintHandler::paint_marker_stems, off the marker painter's stash); a
+    // disabled marker stems never. A selected marker's stem wears its flag's
+    // bright fill (architect 2026-09-23), so selection's cue is the flags'
+    // bright colour pair and the stems beneath them. The successive apparatus this
     // replaces is worth naming once, because each layer was deleted for the same
     // reason the next one was: the conditional stem's hover/pin arms
     // (harvested 2026-07-25 for always-on-for-a-singleton), then the singleton

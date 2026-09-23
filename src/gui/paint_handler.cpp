@@ -5706,11 +5706,14 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE RING IS THE STEM'S COLOUR (architect 2026-08-01; the class rule
     // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
-    // annotates. It wears what that stem wears, the CLASS alone and never the
-    // selection: the stem red when the reset is in the column's red set
-    // (band.red), the column's calm fill kPhaseResetFlagFill otherwise.
-    // phase_reset_stem_color asks the one class ladder for it rather than
-    // restating it, so ring and stem cannot drift.
+    // annotates. It wears what that stem wears AT REST, the CLASS alone and
+    // never the selection: the stem red when the reset is in the column's red
+    // set (band.red), the column's calm fill kPhaseResetFlagFill otherwise.
+    // RECORDED ASYMMETRY (architect 2026-09-23): a selected reset's stem
+    // brightens with its flag while the ring keeps the rest colour — the ring
+    // is not a selection cue. phase_reset_stem_color asks the one class ladder
+    // for the unselected face rather than restating it, so ring and resting
+    // stem cannot drift.
     const GuiColor ring = phase_reset_stem_color(band.red);
     cairo_set_source_rgb(cr, ring.r, ring.g, ring.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
@@ -5830,8 +5833,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
-// what stems, in what colour, and why selection changes none of it — is at the
-// declaration.
+// what stems and in what colour (a selected marker's stem brightening with its
+// flag, architect 2026-09-23) — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its flag box's LEFT EDGE, and that column was
@@ -5854,10 +5857,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // flashing flag and its stem read as one object, exactly as a coincident
     // marker's red class already does — the flash borrows that class's stem,
     // kMarkerStemRed, it does not invent a colour, so #da4453 either way. The
-    // stem is the one surface the 2026-09-16 rest/selected split did not reach:
-    // the flag's flash moved onto the class's BRIGHT pair and the stem reads
-    // the CLASS alone on every column, selection-blind, so the one constant
-    // still answers both.
+    // flash stem stays the red class's REST stem although the flag's flash
+    // took the class's BRIGHT pair on 2026-09-16 and a selected red stem now
+    // takes the bright fill (architect 2026-09-23): the flash override is its
+    // own ruling and was left as it stood.
     //
     // IT IS A PAINT-TIME OVERRIDE, mirroring how the flash face itself is stored
     // and painted: render_flag_editor_box resolves the marker's ordinary face

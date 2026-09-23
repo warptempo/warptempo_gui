@@ -118,8 +118,11 @@ struct Selection {
     // THE STEM'S SUBJECT PAIR IS DELETED (row 5, 2026-08-01). stem_subject() /
     // damage_stem_on_subject_change() were the phase-overlay owner's twin for the
     // selected-marker stem, because that stem was a SELECTION visual that could
-    // appear, move or vanish with no other repaint. Stems are
-    // selection-independent now — every enabled marker stems, always, in its
-    // class's unselected colour — so there is no selection-driven stem
-    // transition left to own. The overlay owner above stands.
+    // appear, move or vanish with no other repaint. Every enabled marker stems,
+    // always, so no stem appears or vanishes with the selection; a selected
+    // marker's stem BRIGHTENS with its flag (architect 2026-09-23), and that
+    // colour change needs no owner here: the flag cache's selection fingerprint
+    // rebuilds the stash and its rebuild damages the waveform with the strip
+    // (maybe_rebuild_flag_cache, waveform_cache.cpp). The overlay owner above
+    // stands.
 };

@@ -1215,8 +1215,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // the hard-coded red class: kMarkerFlagFillRed/kMarkerFlagEdgeRed at rest
     // and their Sel pair on a selected marker's addressed cell (architect
     // 2026-09-16 — red takes the selection swap like every other class, the
-    // cue being the hue), with the kMarkerStemRed stem, which is the class's
-    // alone and selection-blind like every other stem (resolve_flag_face — a
+    // cue being the hue), with the kMarkerStemRed stem at rest and the bright
+    // fill selected, following the flag like every other stem (architect
+    // 2026-09-23; resolve_flag_face — a
     // disabled red marker blends whichever of the two pairs it would have worn
     // toward the lane ground and stays recognisably red).
     // Read from the memoized caches (keyed on the respective store

@@ -86,7 +86,8 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
 // flags paint the row-5 red class (kMarkerFlagFillRed / kMarkerFlagEdgeRed at
 // rest, the Sel pair on a selected marker's addressed cell since 2026-09-16,
-// stem kMarkerStemRed) — the swap moves the class's BRIGHTNESS and never its
+// stem kMarkerStemRed at rest and the bright fill selected) — the swap moves
+// the class's BRIGHTNESS and never its
 // hue, so the cue is never masked. `red` is a PAINT cue with two meanings: the
 // render normalizes this marker, OR this marker shares its frame with another.
 // Three contributors, all computed SILENTLY from the display path (no resolver
@@ -415,7 +416,7 @@ int painted_column_of_source_frame(
 // The selected-stem invalidator was the other _on_basis caller until
 // 2026-07-30; it rode the ITEM basis for PLATE-painted pixels, was widened to a
 // full waveform-area invalidate rather than re-based, and is gone entirely with
-// the selection-keyed stem itself.)
+// the singleton selected-marker stem itself.)
 // `spp` must be > 0 (returns 0, a valid column, on a degenerate spp — callers
 // guard the geometry, exactly like the live-basis form). The domain and the
 // source->target mapping are unchanged (they don't depend on the viewport).

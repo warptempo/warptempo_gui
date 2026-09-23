@@ -8582,7 +8582,8 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
                 static_cast<std::size_t>(app.history_mode.focus)].time_frame);
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
-    // (the flag's colour swaps and its stem stays put), and none when it did
+    // (the flag's and its stem's colours swap; the stem's column stays put),
+    // and none when it did
     // not — a re-click on the focused flag re-lands a playhead that is
     // already there, and the land owner is itself idempotent. A DROPPED
     // SELECTION is that same face swap over more flags, so it damages too.

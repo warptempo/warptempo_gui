@@ -884,10 +884,11 @@ private:
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, from its flag's bottom (= the marker
     // lane's bottom = the waveform top) down through the waveform to the
-    // window's content bottom, in its class's UNSELECTED color; a DISABLED
-    // marker stems never. Selection changes nothing here — a selected default
-    // marker keeps the calm #9b59b6 stem, the architect's explicit rule, and the
-    // selection cue is entirely the flag's bright colour pair.
+    // window's content bottom, in its flag box's fill; a DISABLED marker stems
+    // never. A selected marker's stem takes its flag's BRIGHT fill (architect
+    // 2026-09-23, reversing the calm-stem rule), so at a coarse zoom the
+    // selected stems stand out among many; the colour is resolved in the
+    // painter (resolve_flag_face) and published in the stash.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its flag box's LEFT EDGE, and
