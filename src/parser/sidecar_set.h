@@ -18,7 +18,7 @@
 // any parsing. Every road now asks THIS, then reads.
 //
 // Nothing here parses, opens or writes: it is a stat of the set's three names
-// and, on the project roads, the retired ones (below). The GUI's
+// and nothing else. The GUI's
 // GuiFailure-composing wrapper is sidecar_set_presence (settings_io.h) and is
 // the only thing that knows about cards.
 
@@ -36,19 +36,13 @@ inline constexpr const char* kSidecarExtensions[] = {
 };
 inline constexpr std::size_t kSidecarCount = std::size(kSidecarExtensions);
 
-// THE RETIRED SIDECARS (architect approval 2026-09-23): names that were once a
-// member of the set and are no longer written or read. A project folder where
-// one of them EXISTS beside the stem is REFUSED by the preflight below on the
-// project roads (the Retired defect) rather than silently ignored — we never
-// support legacy, and a file the product no longer reads sitting beside the
-// source is a state the user deletes by hand. The roads that read an OLD
-// SNAPSHOT of a project (the GitHub recheck's commits and exported members,
-// the render-entry batch cells) ask the core with RetiredSidecars::Ignore and
-// simply leave the retired file unread: it was that snapshot's own content,
-// and the snapshot's three members still say everything the product reads.
-inline constexpr const char* kRetiredSidecarExtensions[] = {
-    ".magnificationlevelmarkers",
-};
+// ONLY WHAT IS REQUIRED IS CHECKED (architect approval 2026-09-23): the set's
+// three members are required on every load, and ANY OTHER FILE beside the
+// source — a `.magnificationlevelmarkers` left from when the set was four
+// included — is unrecognized and unread on every road (the GUI's project open,
+// the argument road, Revert, the picker's dry run, the CLI, the render-entry
+// batch cells, the history walk). Nothing is load-fatal for being a file the
+// product does not recognize.
 
 // WHICH SIDECAR, NAMED ONCE (architect approval 2026-09-16): the three indices
 // into the list above are the ONE SPELLING OF "WHICH SIDECAR" everywhere. A
@@ -112,50 +106,18 @@ struct SidecarSetDefect {
     enum class Kind {
         Missing,     // `path` exists nowhere and at least one sibling does
         Unreadable,  // the stat on `path` itself failed; `reason` is its words
-        Retired,     // `path` is a retired sidecar that exists (architect
-                     // approval 2026-09-23); every road words it as
-                     // "'<file>' is no longer part of the sidecar set; delete
-                     // it"
     };
     Kind                  kind = Kind::Missing;
     std::filesystem::path path;
     std::string           reason;  // Unreadable only; path-free by contract
 };
 
-// WHETHER THE PREFLIGHT ASKS THE RETIRED NAMES (architect approval
-// 2026-09-23), spelled at every call site. REFUSE on the roads that open the
-// LIVE project — the GUI's load and its dry run (the picker, Revert), and the
-// CLI — where a retired file is load-fatal. IGNORE on the render-entry load in
-// place, whose batch cell is an old snapshot the product wrote and whose
-// retired copy is simply left unread (kRetiredSidecarExtensions above).
-enum class RetiredSidecars { Refuse, Ignore };
-
-// The preflight: stat the three names (and, under Refuse, the retired ones,
-// FIRST) and answer before anything is parsed. Pure but for the stats; no file
-// is opened, read or created. A retired name is asked ahead of the set so a
-// folder holding one is refused as that file whatever else it holds — a new
-// project's folder (no member of the set) included, which the model calls a
-// new project (resolve_project) and this refuses before any template is
-// written.
+// The preflight: stat the three names and answer before anything is parsed.
+// Pure but for the stats; no file is opened, read or created, and no name
+// outside the set is asked (architect approval 2026-09-23).
 inline std::expected<SidecarSetPresence, SidecarSetDefect>
 sidecar_set_presence_core(const std::filesystem::path& parent,
-                          const std::string&           stem,
-                          RetiredSidecars              retired) {
-    if (retired == RetiredSidecars::Refuse) {
-        for (const char* ext : kRetiredSidecarExtensions) {
-            const std::filesystem::path p = parent / (stem + ext);
-            auto here = sidecar_exists(p);
-            if (!here) {
-                return std::unexpected(SidecarSetDefect{
-                    SidecarSetDefect::Kind::Unreadable, p,
-                    std::move(here.error())});
-            }
-            if (*here) {
-                return std::unexpected(SidecarSetDefect{
-                    SidecarSetDefect::Kind::Retired, p, {}});
-            }
-        }
-    }
+                          const std::string&           stem) {
     std::size_t                          present = 0;
     std::optional<std::filesystem::path> first_missing;
     for (std::size_t i = 0; i < kSidecarCount; ++i) {

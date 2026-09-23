@@ -22,15 +22,12 @@
 // carries any of the three sidecars — `<stem>.warpmarkers`,
 // `<stem>.phaseresetmarkers`, `<stem>.settings` (kSidecarExtensions,
 // sidecar_set.h) — names its source by that stem, and `<stem>.wav` must exist;
-// whether it carries ALL THREE, and whether a RETIRED sidecar
-// (`<stem>.magnificationlevelmarkers`, kRetiredSidecarExtensions) stands
-// beside it, is the loaders' question (sidecar_set_presence, settings_io.h),
-// not this model's. A folder with NO sidecar at all is a NEW
-// project iff it holds EXACTLY ONE `.wav`: that wav is the source, and the
-// first open writes the template sidecars beside it as it always has — unless
-// a retired sidecar for that stem stands there, which the load's preflight
-// refuses before any template is written (a retired name is no member of the
-// set, so the model does not count it as a sidecar). Every
+// whether it carries ALL THREE is the loaders' question
+// (sidecar_set_presence, settings_io.h), not this model's, and any other file
+// beside the source is unrecognized and unread on every road. A folder with NO
+// sidecar at all is a NEW project iff it holds EXACTLY ONE `.wav`: that wav is
+// the source, and the first open writes the template sidecars beside it as it
+// always has. Every
 // other state is INVALID and says why, one sentence each: more than one sidecar
 // stem, the whole sorted set named so the words do not depend on the walk's
 // order; no wav for the sidecar's stem; several wavs and no sidecar; no wav at

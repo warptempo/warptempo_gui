@@ -225,22 +225,16 @@ std::expected<bool, GuiFailure> sidecar_present(
 
 // The rule and the verdicts are the core's (sidecar_set_presence_core,
 // sidecar_set.h); this body is the GUI's two-clause composition of its defect
-// and nothing else. BOTH ITS CALLERS OPEN THE LIVE PROJECT (the load and its
-// dry run), so it asks the retired names too (RetiredSidecars::Refuse).
+// and nothing else.
 std::expected<SidecarSetPresence, GuiFailure> sidecar_set_presence(
         const std::filesystem::path& parent, const std::string& stem) {
-    auto presence =
-        sidecar_set_presence_core(parent, stem, RetiredSidecars::Refuse);
+    auto presence = sidecar_set_presence_core(parent, stem);
     if (presence) return *presence;
     const SidecarSetDefect& d = presence.error();
     switch (d.kind) {
         case SidecarSetDefect::Kind::Missing:
             return std::unexpected(path_failure(
                 "Missing ", d.path, shown_project_path(d.path), ""));
-        case SidecarSetDefect::Kind::Retired:
-            return std::unexpected(path_failure(
-                "", d.path, shown_project_path(d.path),
-                " is no longer part of the sidecar set; delete it"));
         case SidecarSetDefect::Kind::Unreadable:
             break;
     }

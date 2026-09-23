@@ -51,11 +51,10 @@
 //   NOTHING ELSE IS READ. There is no metadata file, no date and no title: the
 //   walk line shows `n/N <sha7>` and a scale clause derived from the sidecars,
 //   so a member needs its SHA and nothing more. Files beside the three are
-//   not looked at — A RETIRED SIDECAR INCLUDED: a member exported while the
-//   set was four carries a `<stem>.magnificationlevelmarkers` beside them, and
-//   the member stays eligible on its three, that file never stat'd or read
-//   (architect approval 2026-09-23; the git road's own rule, history_diff.h's
-//   eligibility paragraph). An entry under `history/` that is not a directory, or whose
+//   not looked at: a member exported while the set was four carries a
+//   `<stem>.magnificationlevelmarkers` beside them, and the member stays
+//   eligible on its three, that file never stat'd or read (the git road's own
+//   rule, history_diff.h's eligibility paragraph). An entry under `history/` that is not a directory, or whose
 //   name is not `<digits>_<7 lowercase hex>`, is NOT A MEMBER — it is skipped
 //   with one stderr line naming it and is not counted as hidden, hidden being
 //   reserved for an export the strict load refuses. A member the strict load

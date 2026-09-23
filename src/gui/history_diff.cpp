@@ -102,10 +102,9 @@ constexpr const char* kBranchRef = "HEAD";
 // answers where the piece lives, and the strict load gate is what then refuses
 // a partial commit, at walk entry and at the `'` act alike. THE MATCH READS
 // THE THREE MEMBERS OF THE SET AND NO OTHER NAME: a commit that also carries
-// the retired `.magnificationlevelmarkers` (the set was four from 2026-09-15
-// until that column's deletion, architect approval 2026-09-23) is matched,
-// listed and loaded on its three, the retired file never read — the
-// eligibility paragraph at history_diff.h's head.
+// a `.magnificationlevelmarkers` (the set was four from 2026-09-15 until that
+// column's deletion) is matched, listed and loaded on its three, that file
+// never read — the eligibility paragraph at history_diff.h's head.
 
 // Pathological-input guards for the line diff. The real files are tens to
 // a few hundred lines, so both are unreachable in practice; they exist so a
@@ -1840,10 +1839,9 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     // and inheriting some files from the commit and the rest from nowhere
     // would compose a state no checkpoint ever was. (For the walk the same
     // refusal is simple ineligibility: a checkpoint that cannot be loaded is
-    // not stepped to.) A commit that also carries the RETIRED
+    // not stepped to.) A commit that also carries a
     // `.magnificationlevelmarkers` is not partial: that name is no member of
-    // the set, so it was never resolved into `snap` and nothing here asks it
-    // (architect approval 2026-09-23).
+    // the set, so it was never resolved into `snap` and nothing here asks it.
     auto missing = [&](const char* ext) {
         return refuse("commit " + snap.sha + " carries no '" + base_name +
                       ext + "'");

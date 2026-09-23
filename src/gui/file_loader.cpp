@@ -131,8 +131,7 @@ std::optional<GuiFailure> source_load_dry_run(
         sidecar_path(parent, stem, kSidecarSettings);
 
     // THE REQUIRED-FILE RULE FIRST, through the load's own owner
-    // (sidecar_set_presence, settings_io.h — all three sidecars or none, and
-    // no retired sidecar beside them): a
+    // (sidecar_set_presence, settings_io.h — all three sidecars or none): a
     // partial set refuses here with the load's own "Missing '<file>'", a stat
     // that fails refuses in the system's words, and a set with NO sidecar is
     // what the load will template, so a new project passes trivially.
@@ -352,12 +351,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // too): a folder carrying NO sidecar is a new project and gets the three
     // templates; a folder carrying ALL THREE loads them; a folder carrying some
     // and not all is refused naming the missing file, and NOTHING is written —
-    // a project from before a sidecar joined the set is migrated by hand. A
-    // folder carrying a RETIRED sidecar (the `.magnificationlevelmarkers` the
-    // set held until architect approval 2026-09-23) is refused the same way,
-    // whether or not it carries the set — asked FIRST, so a folder the model
-    // calls a new project is refused before any template is written. The
-    // refusal is this load's own class, FATAL, like every refusal below.
+    // a project from before a sidecar joined the set is migrated by hand. Any
+    // other file beside the source (a `.magnificationlevelmarkers` left from
+    // when the set was four included) is unrecognized and unread (architect
+    // 2026-09-23). The refusal is this load's own class, FATAL, like every
+    // refusal below.
     {
         auto presence = sidecar_set_presence(parent, stem);
         if (!presence) {

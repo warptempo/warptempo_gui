@@ -2763,9 +2763,9 @@ struct WaveformBasis {
 // exact alternative is a second pyramid reduced over the gained samples —
 // immutable with the source like the curve, so the lamp would select between
 // the two pyramids rather than rebuild one — at the memory of a second
-// pyramid. The centre rule stands as the architect's accepted approximation
-// for a display-only plate at the coarse zooms, pending his ruling
-// (2026-09-23). At working zoom (55 frames per column against a 4400-frame
+// pyramid. RULED (architect 2026-09-23): the centre rule stands and no gained
+// second pyramid is built — placement is never done at a coarse zoom, so the
+// approximation there costs nothing the plate is used for. At working zoom (55 frames per column against a 4400-frame
 // hop) the two agree.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this

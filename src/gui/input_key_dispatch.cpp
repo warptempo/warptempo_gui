@@ -5643,15 +5643,8 @@ bool GuiInputHandler::load_render_entry_in_place(
     // with no sidecars is three missing files. The refusal keeps this body's own
     // shape: `refuse` puts the full path on stderr and the card names the file
     // the folder-and-file way, lowercase, single-quoted.
-    //
-    // A RETIRED SIDECAR IN THE CELL IS LEFT UNREAD (RetiredSidecars::Ignore,
-    // architect 2026-09-23): the cell is a snapshot the product wrote, and one
-    // written while the magnification level markers column stood carries that
-    // column's copy beside the three members this act reads, which still say
-    // everything the product loads. So the Retired defect never arises here.
     {
-        auto presence = sidecar_set_presence_core(e.batch_folder, e.basename,
-                                                  RetiredSidecars::Ignore);
+        auto presence = sidecar_set_presence_core(e.batch_folder, e.basename);
         if (!presence) {
             const SidecarSetDefect& d = presence.error();
             if (d.kind == SidecarSetDefect::Kind::Missing) {

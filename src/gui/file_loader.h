@@ -108,13 +108,11 @@ struct GuiFileLoader {
 //     the decoder refuses is a corrupt-media fault of the class the load's own
 //     exit answers.
 //   * THE REQUIRED-FILE RULE (architect 2026-09-15), through the load's own
-//     owner `sidecar_set_presence` (settings_io.h): all three sidecars or none
-//     and no retired sidecar beside them,
-//     presence being `sidecar_present`'s EXISTS — so a non-regular object at a
-//     sidecar's name is a parse failure here exactly as it is there — a
-//     partial set refusing "Missing '<file>'", a retired sidecar refusing
-//     "'<file>' is no longer part of the sidecar set; delete it", a stat that
-//     fails refusing in the system's words, and a set with no sidecar at all
+//     owner `sidecar_set_presence` (settings_io.h): all three sidecars or
+//     none, any other file beside the source unread, presence being
+//     `sidecar_present`'s EXISTS — so a non-regular object at a sidecar's name
+//     is a parse failure here exactly as it is there — a partial set refusing
+//     "Missing '<file>'", a stat that fails refusing in the system's words, and a set with no sidecar at all
 //     being what the load will template, so a new project passes trivially.
 //     Mirrored.
 //   * the two STRICT marker readers and the STRICT whole-file settings

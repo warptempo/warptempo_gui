@@ -66,7 +66,11 @@ constexpr double kTopPercentile = 0.9;
 // Columns under this are silence or tape hiss (the architect's old gates ran
 // -40..-50).
 constexpr double kGateDb = -50.0;
-// A window with less audible material than this fraction is silence.
+// A window with less audible material than this fraction is silence. Ruled
+// LEAVE AS IS (architect 2026-09-23), together with the gate above and the x8
+// all-silent fallback below: the architect never works on a short excerpt or
+// on a file under -50 dBFS, and his oldest usable recordings (1970s tape
+// remastered in the 2020s) pass the hiss gate. No further criterion.
 constexpr double kGatedMinFraction = 0.25;
 // Section scale: the finest window whose exposition and repeat still agree
 // (1 s splits them; 3 s, R128's, misses lead-ins) — five eighths of the
@@ -169,6 +173,8 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         }
         coarse.resize(raw.size());
         if (known.empty()) {
+            // No window is audible anywhere: x8 flat (kGatedMinFraction's
+            // ruling).
             std::fill(coarse.begin(), coarse.end(), 3.0);
         } else {
             // A silent point takes the NEARER known point, the earlier on a tie

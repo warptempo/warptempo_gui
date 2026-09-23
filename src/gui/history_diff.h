@@ -142,17 +142,14 @@ inline constexpr const char* kHistoryFolderNoCheckpoint =
 // model — the architect's no-legacy rule (the program never imports leniently;
 // an old-format checkpoint is hand-edited, never tolerated).
 //
-// A RETIRED SIDECAR IN A CHECKPOINT IS LEFT UNREAD, NOT REFUSED (architect
-// approval 2026-09-23). The walk reads the THREE MEMBERS OF THE SET
-// (kSidecarExtensions, sidecar_set.h) by name — the pathspecs, the per-commit
-// sidecar match and the blob reads all enumerate that list and no other — so
-// a commit that also carries a `.magnificationlevelmarkers` beside them (every
-// checkpoint from 2026-09-15 to that column's deletion) stays ELIGIBLE on its
-// three: the extra file is never listed, staged or parsed. This is the
-// snapshot's own old content, not the live project's state, which is why the
-// live preflight's refusal of a retired file (RetiredSidecars::Refuse) does
-// not apply here. A commit from before the set was three that lacks one of
-// the three still refuses as ever.
+// ANY OTHER FILE IN A CHECKPOINT IS LEFT UNREAD. The walk reads the THREE
+// MEMBERS OF THE SET (kSidecarExtensions, sidecar_set.h) by name — the
+// pathspecs, the per-commit sidecar match and the blob reads all enumerate
+// that list and no other — so a commit that also carries a
+// `.magnificationlevelmarkers` beside them (every checkpoint from 2026-09-15
+// to that column's deletion) stays ELIGIBLE on its three: the extra file is
+// never listed, staged or parsed, as on every live road (sidecar_set.h). A
+// commit that lacks one of the three still refuses as ever.
 //
 // THE WALK IS UNCAPPED AND PREFETCHED (architect 2026-08-07, retiring the ruled
 // depth of 20). Two facts follow from the gate above: it costs a strict
@@ -590,9 +587,9 @@ struct GuiHistoryCommitLoad {
 // The sequence is the `'` act's own validation, whole: read_commit_sidecars
 // resolves the spelling and reads the three blobs out of that commit's own
 // tree (size-cross-checked); a commit missing ANY of the three refuses (a
-// partial checkpoint can neither be loaded in place nor walked to), while a
-// retired sidecar beside them is never read (the eligibility paragraph at the
-// head of this file); the bytes are then
+// partial checkpoint can neither be loaded in place nor walked to), while any
+// other file beside them is never read (the eligibility paragraph at the head
+// of this file); the bytes are then
 // staged through an RAII scratch directory and judged by the three STRICT
 // WHOLE-FILE LOADERS themselves — read_settings_file, GuiWarpMarkers::load,
 // GuiPhaseResetMarkers::load, all frozen-parser entry points that take a PATH — because a GUI-side scanner over the strings would

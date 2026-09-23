@@ -125,22 +125,16 @@ int main(int argc, char** argv) {
     // missing member is. Not a divergence in the loadability verdict, which is
     // stated for FILES THAT EXIST just below.
     //
-    // A RETIRED SIDECAR BESIDE THE SOURCE REFUSES HERE AS IT DOES IN THE GUI
-    // (RetiredSidecars::Refuse; architect approval 2026-09-23), so a folder is
-    // loadable in both products or neither. ---
+    // ONLY THE SET IS ASKED, as in the GUI: any other file beside the source
+    // is unrecognized and unread, so a folder is loadable in both products or
+    // neither (architect approval 2026-09-23). ---
     {
-        auto presence =
-            sidecar_set_presence_core(parent, stem, RetiredSidecars::Refuse);
+        auto presence = sidecar_set_presence_core(parent, stem);
         if (!presence) {
             const SidecarSetDefect& d = presence.error();
             if (d.kind == SidecarSetDefect::Kind::Missing) {
                 std::fprintf(stderr, "warptempo_cli: Missing '%s'\n",
                              d.path.string().c_str());
-            } else if (d.kind == SidecarSetDefect::Kind::Retired) {
-                std::fprintf(stderr,
-                    "warptempo_cli: '%s' is no longer part of the sidecar "
-                    "set; delete it\n",
-                    d.path.string().c_str());
             } else {
                 std::fprintf(stderr, "warptempo_cli: Cannot read '%s': %s\n",
                              d.path.string().c_str(), d.reason.c_str());
