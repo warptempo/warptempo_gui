@@ -311,9 +311,14 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
 // its refusals, its cards, its locks and its undo coalescing are the bare
 // press's — the GestureKind is the column's either way, so a held Ctrl+Left
 // burst coalesces exactly as a bare one does and a ctrl tap and a bare tap on
-// one subject merge in the tap window like two bare taps. The one owner of the
-// fork is nudge_camera, read by both dispatch arms (the marker lane's and the
-// waveform lane's).
+// one subject merge in the tap window like two bare taps. THE ONE OWNER OF
+// THE FORK'S LOGIC IS nudge_camera, BUT IT HAS ONE CALLER: the marker lane's
+// arm (input_handler.cpp), which reads live mods because its bare and ctrl
+// forms share one dispatch site. The WAVEFORM lane's bare and ctrl forms are
+// two SEPARATE dispatch cases instead, so each states its own camera as the
+// matching literal directly rather than calling this function — FollowEdge
+// at the bare-key case (input_key_dispatch.cpp, which never reads mods) and
+// HoldColumn at the lane's own ctrl arm (input_handler.cpp).
 enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
 constexpr NudgeCamera nudge_camera(GuiInputState mods) {
     return mods.ctrl ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;

@@ -98,13 +98,15 @@ struct GuiInputHandler;
 //     synchronously (detect_magnification_levels, magnification_auto_detect.h,
 //     the rule's owner), whatever the trim is.
 //   * THE REPLACEMENT: every magnification level marker, enabled or disabled,
-//     whose frame lies INSIDE THE TRIM is deleted, and exactly the detected
-//     breakpoints whose frame lies inside the trim are inserted, all enabled.
-//     Nothing else: no patching at the trim's edges and no empty-trim case —
-//     if nothing is detected inside, the markers there are simply deleted.
-//     Membership is the trim store's own inclusive whole-frame pair
-//     (trim_contains_source_frame, app_state.h), so the full window — the old
-//     "unset" — replaces the whole column.
+//     whose frame lies INSIDE THE ACTIVE TAB'S TRIM (`app.trim` — the M
+//     store both A/B tabs share, so it is the ACTIVE TAB's window that
+//     bounds the act, not a store term of its own) is deleted, and exactly
+//     the detected breakpoints whose frame lies inside that trim are
+//     inserted, all enabled. Nothing else: no patching at the trim's edges
+//     and no empty-trim case — if nothing is detected inside, the markers
+//     there are simply deleted. Membership is the trim store's own inclusive
+//     whole-frame pair (trim_contains_source_frame, app_state.h), so the full
+//     window — the old "unset" — replaces the whole column.
 //   * IT ASKS FIRST: an OK / Cancel prompt raised on OK ("Replace the N
 //     magnification levels in the trim with M generated ones?"), the counts
 //     being why the detection runs at the press. The detected in-trim list is
@@ -189,9 +191,9 @@ struct MagnificationLevelPropagate {
 
     // Ctrl+Alt+Shift+M, the press. Caller has already verified the M column
     // (carded there). Runs the detector over the full song, parks the
-    // breakpoints inside the trim, stops playback and raises the OK / Cancel
-    // confirmation (DialogTrigger::GENERATE_MAGNIFICATION_CONFIRM) naming how
-    // many markers would be deleted and how many inserted.
+    // breakpoints inside the active tab's trim, stops playback and raises
+    // the OK / Cancel confirmation (DialogTrigger::GENERATE_MAGNIFICATION_CONFIRM)
+    // naming how many markers would be deleted and how many inserted.
     void open_generate_confirmation();
 
     // The confirmation's OK (GuiPrompt::activate_response, the prompt already
@@ -204,10 +206,11 @@ struct MagnificationLevelPropagate {
     void cancel_generate_confirmation() { pending_generated_.reset(); }
 
 private:
-    // THE PARKED ANSWER: the detected breakpoints inside the trim, set only
-    // while the generate confirmation stands (the modal prompt holds the store
-    // still under it) and cleared on both of its close roads, so it can never
-    // reach a later answer. EMPTY is a real answer — nothing detected inside —
-    // which is why "nothing parked" is the optional's own empty state.
+    // THE PARKED ANSWER: the detected breakpoints inside the active tab's
+    // trim, set only while the generate confirmation stands (the modal
+    // prompt holds the store still under it) and cleared on both of its
+    // close roads, so it can never reach a later answer. EMPTY is a real
+    // answer — nothing detected inside — which is why "nothing parked" is
+    // the optional's own empty state.
     std::optional<std::vector<GuiDetectedMagnificationLevel>> pending_generated_;
 };

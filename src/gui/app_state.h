@@ -1770,8 +1770,9 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-22 against kDropdownMenus and the chord table (44 chord
-// rows + 3 anchors = 47 = kRedesignButtonCount, re-counted 2026-09-22);
+// re-greped 2026-09-22 against kDropdownMenus and the chord table (46 chord
+// rows + 3 anchors = 49 = kRedesignButtonCount, re-counted 2026-09-22 after
+// Zoom In / Zoom Out rejoined the chord table that same day);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -14565,16 +14566,20 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS FIFTEEN, AND THIS IS THE ONE SITE
-        // THAT ENUMERATES IT (re-derived from the arms 2026-09-19; every other
-        // site states its own class and points here). In five groups, by HOW
-        // each asks:
+        // THE READ-ONLY LOCK'S BUTTON SET IS SEVENTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-22; every
+        // other site states its own class and points here). In five groups,
+        // by HOW each asks:
         //   * THESE SEVEN, whose arms are below — the bit their first term.
         //     Six read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
         //     (any_tab_read_only, its own arm's reason).
-        //   * THE FOUR CARDINAL ARROWS, at the transport block below: Up/Down
-        //     outright, Left/Right only while a selection stands, through the
-        //     gate's own owner horizontal_arrow_step_lock_admits.
+        //   * THE SIX HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
+        //     block below: Up/Down outright, and the FOUR of Left/Right/
+        //     TransportHoldLeft/TransportHoldRight only while a selection
+        //     stands, through the gate's own owner
+        //     horizontal_arrow_step_lock_admits — the HOLD-COLUMN pair
+        //     (Ctrl+Left / Ctrl+Right, 2026-09-22) is the same step under
+        //     another camera and greys exactly with its bare twin.
         //   * UNDO and REDO, at the toolbar block below, where the read-only
         //     term is theirs alone among the four.
         //   * LOAD IN PLACE, at the history group's arm, where the bit

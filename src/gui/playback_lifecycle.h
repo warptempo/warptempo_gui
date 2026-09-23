@@ -135,7 +135,7 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-09-14 — NINE
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-09-22 — TEN
     // sites: GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
@@ -146,13 +146,18 @@ struct GuiPlaybackLifecycle {
     // 2026-08-28) and the AV SYNC STATS PANEL (open_av_sync_stats); the TWO
     // prompt opens (prompt.cpp: unsaved, and File → Revert's confirmation —
     // the error notice's was a third until that prompt kind retired whole on
-    // 2026-08-30); and THE RENDER PLAYER's open
+    // 2026-08-30); THE RENDER PLAYER's open
     // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,
     // 2026-08-28; the project's audition ends where the player's transport
     // begins, and the player's own stops all take stop_playback_if_playing
-    // through the fork inside it). It had gone seven to six on 2026-08-09,
-    // when the render-library advisory prompt was deleted with the whole
-    // attestation surface.
+    // through the fork inside it); and, since 2026-09-22, THE GENERATE
+    // MAGNIFICATION LEVEL MARKERS CONFIRMATION
+    // (MagnificationLevelPropagate::open_generate_confirmation,
+    // magnification_level_propagate.cpp — a fourth modal owner, its own
+    // opener carrying its own call as the render player's and the settings
+    // editor's do, the count rising NINE to TEN with it). It had gone seven
+    // to six on 2026-08-09, when the render-library advisory prompt was
+    // deleted with the whole attestation surface.
     // IT WENT EIGHT TO SEVEN LATER THE SAME DAY: the settings editor's TWO doors
     // — the `;` key (input_handler.cpp) and the Settings DROPDOWN item
     // (input_pointer.cpp), the one route onto that surface that reached no key

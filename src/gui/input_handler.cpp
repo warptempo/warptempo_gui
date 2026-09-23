@@ -2444,7 +2444,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // beside its count, so the hop step reaches the same twin, prologue and
     // landing owner as the column step and takes everything else the nudge
     // does. The WAVEFORM lane's twin is handle_plain_bare_keys' Left / Right
-    // case, which asks the same fork.
+    // case (input_key_dispatch.cpp) for the bare form and this lane's own
+    // ctrl arm below for the held-column one: each states its NudgeCamera as
+    // a literal directly (FollowEdge, HoldColumn) rather than calling
+    // nudge_camera itself, since the waveform lane's bare and ctrl presses
+    // are two separate dispatch cases and the bare one has no mods to read.
     if (!alt && !shift &&
         (key == GuiKeys::Left || key == GuiKeys::Right) &&
         playhead_in_marker_lane()) {
