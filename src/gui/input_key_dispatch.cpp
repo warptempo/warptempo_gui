@@ -9310,7 +9310,7 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 void GuiInputHandler::run_waveform_lane_playhead_step(
     HorizontalArrowStep step) {
     // THE CAMERA IS THE HOLD POSTURE'S, read BEFORE the act, and the posture
-    // is KEPT across it — the nudge's one exemption (AppState::camera_hold):
+    // is KEPT across it — the nudge's exemption (AppState::camera_hold):
     // the step lands through a movement owner and may move the camera, each
     // of which would otherwise put it out.
     const NudgeCamera camera = nudge_camera(app);

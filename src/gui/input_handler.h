@@ -523,25 +523,18 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // than left-aligned, and the unclamped case degenerates to the span's left edge
 // (unrounded spp_t * W == the margined span by the solve). Shared by
 // run_span_framing_command (both arms) and the GROUP undo/redo restore's
-// cannot-fit arm (center_span_in_view below). Definition in input_handler.cpp.
+// cannot-fit arm (undo.cpp, on a false verdict from
+// Viewport::least_movement_span_scroll_if_needed, whose fit test guarantees
+// that arm only ever zooms out). Definition in input_handler.cpp.
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
-// THE GROUP UNDO/REDO RESTORE'S CAMERA (architect 2026-09-22): centre the
-// ACTIVE-DOMAIN range [lo, hi]'s middle at the current zoom, ALWAYS, and zoom
-// OUT through frame_span_into_view(margin=true) only when the range plus the
-// edge margin on each side cannot fit the window; never zoom in. It is the
-// framer above's caller, not its sibling. ONE CALLER, the restore
-// (undo.cpp), which derives its extent through
-// clamp_playhead_to_live_domain(source_frame_to_active_domain(...)); a caller
-// holding SOURCE frames would convert first. It writes ONLY the viewport,
-// through the family's clamp chokepoints, and damages nothing — the restore's
-// tail owns the damage and the kick. The two arms, the margin arithmetic and
-// the record of the three-arm bring_span_into_view it replaced are at the
-// DEFINITION in input_handler.cpp.
-void center_span_in_view(AppState& app, const GuiAudio& audio,
-                         Viewport& viewport, int64_t lo, int64_t hi);
+// (center_span_in_view, the group undo/redo restore's camera from 2026-09-22 —
+// centre the range's middle always, zoom out only when it cannot fit — was
+// deleted 2026-09-23 when the restore took the least-movement landing: its fit
+// test moved into Viewport::least_movement_span_scroll_if_needed and its
+// zoom-out arm is the restore's own call of the framer above.)
 
 // THE `h` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
 // input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
@@ -2208,7 +2201,7 @@ struct GuiInputHandler {
     // mode's re-expression walks its own diff-flag list and its own focus — so
     // the call sites (re-greped 2026-09-23: run_center_key_command — the
     // centre keys' act, which the live `c` arm, the mode's `c` claim and
-    // Shift+C reach — run_overview_command's unstamped-ceiling arm, the A/B
+    // Shift+C reach — the A/B
     // audition's GuiAbAudition::apply_working_zoom, Shift+`j`'s jump, which
     // calls it TWICE — once on the tab it leaves and once on the tab it
     // lands — and, since 2026-09-14, the Ctrl+Shift+Tab paired march, which
@@ -2475,8 +2468,7 @@ private:
     // is untouched at every level (architect 2026-08-05, "no zoom on Tab";
     // the finer-to-working return of 2026-09-15 went 2026-09-22). `c`
     // remains the direct route to
-    // kWorkingZoomLevel from any level, and `0` reaches it through `c` at a
-    // ceiling nothing stamped. A step that focuses
+    // kWorkingZoomLevel from any level. A step that focuses
     // nothing does nothing at all.
     //
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
@@ -2551,10 +2543,11 @@ private:
     // ceiling it STAMPS the zoom level, viewport start and playhead into the
     // active tab's ViewState::overview_recall and jumps to the ceiling,
     // raising the tab's whole-song state (ViewState::whole_song_visible);
-    // pressed again while that state stands it RESTORES the three — the
-    // playhead through Viewport::move_playhead_to, the level and start through
-    // Viewport::apply_zoom_to_start — with no centring; at a ceiling it did
-    // not produce it runs run_center_command. The fork is
+    // pressed again while that state stands, in the audio view the stamp was
+    // taken in (overview_recall_restorable), it RESTORES the three verbatim —
+    // the playhead through Viewport::move_playhead_to, the level and start
+    // through Viewport::apply_zoom_to_start — with no centring; with nothing
+    // to return to it is a silent no-op. The fork is
     // overview_command_target (app_state.h). THIS FUNCTION IS THE STAMP'S ONE
     // WRITER AND THE STATE'S ONE SETTER. Neither press arms or keeps a camera
     // posture. The rationale is at the definition.

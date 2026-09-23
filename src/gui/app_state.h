@@ -51,8 +51,10 @@ struct GuiTargetRender;
 // for zoom: `0` IS A TOGGLE (architect 2026-09-23): below the ceiling it
 // stamps the view it leaves — zoom level, playhead and viewport start
 // (ViewState::overview_recall) — and goes to full zoom-out; pressed again
-// while its whole-song state stands it restores all three, no centring. At a
-// ceiling it did not produce (nothing stamped) it runs the `c` command.
+// while its whole-song state stands it restores all three, no centring, in
+// the audio view the stamp was taken in. With nothing to return to (a
+// ceiling it did not produce, or a stamp from the other audio view) it is a
+// silent no-op.
 // WHOLE-SONG-VISIBLE IS CARRIED AS A STATE since 2026-09-02
 // (ViewState::whole_song_visible): the ceiling moves with the window's width
 // and with the active domain's total, so the level alone could not say whether
@@ -93,25 +95,28 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //   * Viewport::follow_scroll_if_needed — follow's page-in, during playback
 //     and at a PageIn launch: an offscreen target lands the margin in from
 //     the LEFT edge;
-//   * Viewport::least_movement_scroll_if_needed — the Tab walk's
-//     target-view landing (MarkerLandingFrame::LeastMovement, chosen by
-//     marker_walk_landing_frame): an onscreen subject moves nothing,
-//     an offscreen one lands the margin in from whichever edge it was beyond;
+//   * Viewport::least_movement_span_scroll_if_needed — THE ONE
+//     LEAST-MOVEMENT BODY, over a subject (its playhead form
+//     least_movement_scroll_if_needed: the Tab walk's target-view landing,
+//     MarkerLandingFrame::LeastMovement chosen by marker_walk_landing_frame,
+//     and the undo/redo restore's singleton camera) or a range (the
+//     restore's group camera, since 2026-09-23): its fit test asks whether
+//     the range is at most 1 − 2 × margin of the window at the current zoom
+//     (else the restore zooms out through the framer's margin arm below), and
+//     a fitting range already wholly on screen moves nothing, while one
+//     beyond an edge lands the margin in from that edge;
 //   * frame_span_into_view's `margin` arm (input_handler.cpp) — the span
 //     framer pads each side by this fraction OF THE WINDOW, so the framed
-//     span occupies 1 − 2 × margin of it;
-//   * center_span_in_view (input_handler.cpp) — the group undo/redo
-//     restore's camera, whose fit test asks whether the restored range is at
-//     most 1 − 2 × margin of the window at the current zoom (centre there),
-//     else zooms out through the framer's margin arm above (added
-//     2026-09-22).
+//     span occupies 1 − 2 × margin of it.
+// (center_span_in_view, the group restore's centring camera of 2026-09-22,
+// was a reader until its deletion 2026-09-23; the restore's singleton
+// centred its marker outright, reading nothing, over the same day.)
 // NOT READERS, by ruling: the nudge's held column under the hold posture
 // (Viewport::hold_subject_column_after_nudge), which brings an offscreen
 // subject to the window's own edge column, and the movement owners'
 // keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
-// minimum; and the undo/redo restore's SINGLETON camera, which centres its
-// marker outright. viewport_edge_margin_samples below is the two viewport
-// readers' one conversion to samples; the span framer and the group restore's
+// minimum. viewport_edge_margin_samples below is the two viewport readers'
+// one conversion to samples; the span framer and the least-movement body's
 // fit test work in the unrounded double domain and read the fraction
 // themselves.
 constexpr double kViewportEdgeMarginFraction = 0.05;
@@ -2056,9 +2061,10 @@ enum class RedesignButton {
     // BUTTONS hold-repeats (the keys repeat).
     // Every one is a momentary navigation act and LIVE in the `h` view (all
     // four chords are on the mode's allowlist or its own vocabulary, so the
-    // derived partition answers live with nothing hand-listed). TWO NEVER
-    // GREY because each always acts — `0` restores its stamp at the ceiling
-    // (or runs `c` at a ceiling it did not produce), `c` always frames — and
+    // derived partition answers live with nothing hand-listed). CENTER NEVER
+    // GREYS because `c` always frames; FULL ZOOM OUT GREYS where bare `0`
+    // has nothing to return to AND Reset Trim, its shifted twin, would not
+    // act (the twin rule, at redesign_button_enabled's arm); and
     // THE STEPPING PAIR GREY AT THEIR WALLS, Zoom In at the floor
     // and Zoom Out at the per-file ceiling (zoom_in_step_actionable /
     // zoom_out_step_actionable, the arms at redesign_button_enabled). They are the zoom commands' pointer
@@ -2111,7 +2117,7 @@ enum class RedesignButton {
     // would SWITCH THE VIEW — land on the other A/B tab, the other audio view
     // or another marker column — refuses instead, cards, and leaves both
     // stacks exactly as they were. (Until 2026-09-22 it refused a step whose
-    // restore would move the CAMERA; the restore's camera now centres what it
+    // restore would move the CAMERA; the restore's camera answers to what it
     // restores, and the lamp asks the view alone.)
     //
     // A PER-PROJECT SESSION POSTURE like every other lamp in this group: the
@@ -4263,7 +4269,8 @@ inline TrimState full_trim_window(int64_t total_frames) {
 // toggle between full zoom out and restore to previous zoom level, playhead
 // position, and viewport position"). The first press (below the ceiling)
 // writes it from the live camera and cursor and goes to full zoom-out; the
-// second press (the tab's whole_song_visible standing) restores the three
+// second press (the tab's whole_song_visible standing, in the audio view the
+// stamp was taken in — overview_recall_restorable) restores the three
 // verbatim — the level through Viewport::apply_zoom_to_start, the playhead
 // through Viewport::move_playhead_to, the viewport start through that
 // applier's clamp_viewport_start — with no centring. It superseded the
@@ -4273,21 +4280,22 @@ inline TrimState full_trim_window(int64_t total_frames) {
 // touch gesture or load path writes it.
 //
 // THE DOMAIN TAG. The live fields carry target frames in target view, and the
-// whole-song state survives the S/T flip, so a stamp may be read back in the
-// other audio view. In its own view it restores verbatim; across the flip it
-// is re-expressed the way the flip itself re-expresses the camera — the
-// playhead through the live map from its source frame, and the viewport start
-// placed so that playhead paints in the column it painted in when stamped.
+// whole-song state survives the S/T flip, so a stamp may stand while the other
+// audio view is up. It is read back ONLY IN ITS OWN VIEW (architect
+// 2026-09-23: "if there's nothing to return to, or the place you would return
+// to has been put away because we've changed views, zero should just lose its
+// meaning"): across the flip `0` is a silent no-op, and flipping back makes the
+// stamp restorable again. (From the toggle's landing until that ruling, the
+// same day, a cross-view stamp was re-expressed the way the flip re-expresses
+// the camera, from two more fields — the playhead as a source frame and its
+// column in the stamped window — deleted with it.)
 struct OverviewRecall {
     double  zoom_level             = kWorkingZoomLevel;
     int64_t viewport_start_sample  = 0;
     int64_t playhead_cursor_sample = 0;
-    // The audio view the three above are expressed in ('S' / 'T').
+    // The audio view the three above are expressed in ('S' / 'T'), and the
+    // only view they are restored in.
     char    audio_view             = 'S';
-    // The cross-view re-expression's two inputs: the stamped playhead as a
-    // source frame, and its column in the stamped window (fractional px).
-    int64_t playhead_source_frame  = 0;
-    double  playhead_column_px     = 0.0;
 };
 
 // Navigational bookmark. Holds a snapshot of the fields that define
@@ -4344,8 +4352,11 @@ struct ViewState {
     //
     // ONE SETTER: run_overview_command's zoom-out arm, the same press that
     // writes the stamp above (input_handler.cpp). THE STAMP'S LIFETIME IS THIS
-    // BIT'S: the restore arm runs only while the bit stands and every setting
-    // re-stamps, so no stale stamp can be restored. WHILE IT STANDS THE LEVEL
+    // BIT'S: the restore arm runs only while the bit stands (and the stamp's
+    // audio view is the live one — overview_recall_restorable) and every
+    // setting re-stamps, so no stale stamp can be restored. A press in the
+    // other audio view is a no-op and leaves the bit standing, so the stamp
+    // comes back into reach when the view does. WHILE IT STANDS THE LEVEL
     // FOLLOWS THE CEILING — clamp_viewport_start, the one zoom/viewport
     // chokepoint every geometry and domain change funnels through, re-derives
     // the level from the live ceiling, so the S/T flip and the resize keep the
@@ -4654,9 +4665,9 @@ struct AppState {
     // apply_zoom_change, apply_strip_drag_zoom, apply_zoom_to_start,
     // scroll_viewport, center_viewport_on_playhead,
     // hold_subject_column_after_nudge, follow_scroll_if_needed and
-    // least_movement_scroll_if_needed; the undo restore's centring
-    // (undo.cpp); center_span_in_view and the S/T flip's viewport
-    // translation (input_handler.cpp); the settings editor's viewport commit
+    // least_movement_span_scroll_if_needed (the undo restore's camera
+    // reaching it and frame_span_into_view, undo.cpp); the S/T flip's
+    // viewport translation (input_handler.cpp); the settings editor's viewport commit
     // (settings_editor.cpp); the tab / view switch's band restore
     // (active_views.cpp); the load paths (file_loader.cpp); and the level
     // re-derivation inside clamp_viewport_start itself. The other
@@ -4693,24 +4704,33 @@ struct AppState {
     //     cannot centre (a wall) still arms: the bit means "hold the column
     //     the subject is in", not "the subject is at the centre".
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     a drop, a click), by the undo / redo restore's centring (a group
-    //     restore centres a RANGE, not the subject — undo is not a reliable
-    //     centre), by the A/B audition's internal `c` (which neither sets nor
+    //     a drop, a click), by the undo / redo restore (whose camera is the
+    //     least-movement landing since 2026-09-23 and centres nothing; it
+    //     centred until then, and was no reliable centre even so, a group
+    //     restore centring a RANGE), by the A/B audition's internal `c` (which neither sets nor
     //     clears it), by a launch's own camera, or by `0` in either press
     //     (neither is a centring since 2026-09-23: the second press restores
     //     the stamped view).
     //   * KEPT by the two stepped zooms (`=` / `-`, Zoom In / Zoom Out — they
     //     pivot on the viewport's centre; Viewport::apply_zoom_step), by every
     //     play and every stop that moves no camera (a stop moves no
-    //     playhead), and by THE NUDGE ITSELF, the one exemption from the
+    //     playhead), by THE NUDGE ITSELF, the first exemption from the
     //     movement-owner clear: it lands the playhead through a movement
     //     owner and holds the column, so it reads the bit before its act and
-    //     leaves it standing after (the two nudge dispatch sites).
+    //     leaves it standing after (the two nudge dispatch sites); and by
+    //     THE UNDO / REDO RESTORE THAT MOVES NO CAMERA (architect 2026-09-23),
+    //     the second exemption: undo and redo are ordinary viewport writes,
+    //     clearing the bit only when their camera moves, and the least-movement
+    //     landing mostly does not — so the hold survives an undo of a tempo
+    //     step or a nudge. The restore's land on the restored focus is a
+    //     movement owner, so the restore's visual tail (undo.cpp) keeps the bit
+    //     across that land and lets its camera write decide.
     //   * CLEARED by every other camera change (the chokepoint above: the
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), the chase's
     //     page-in — a camera move not on the subject — the least-movement
-    //     landing, the span framer, the undo restore's camera, the tab and
+    //     landing when it scrolls, the span framer, the undo restore's camera
+    //     when it scrolls or zooms, the tab and
     //     view switches), and by the three playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
     //     land_playhead_on_source_frame) — play-then-stop leaves the hold
@@ -11566,26 +11586,44 @@ inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
            clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
 }
 
+// IS THERE A VIEW FOR BARE `0` TO RETURN TO — THE ONE OWNER of "restorable"
+// (architect 2026-09-23): the active tab's whole-song state stands
+// (ViewState::whole_song_visible) AND its stamp was taken in the live audio
+// view (OverviewRecall::audio_view). A stamp from the other audio view has
+// been put away with that view and is not restored there. Read by
+// overview_command_target below (its RestoreView arm), which the act, the
+// Full Zoom Out button's face and its tooltip all ask. Defined in
+// input_handler.cpp beside the act.
+bool overview_recall_restorable(const AppState& a);
+
 // WHAT BARE `0` WOULD DO — the whole-song zoom command's one fork, named
 // 2026-09-01 (architect, the truthful-tooltips ruling) and made a three-way
-// fork 2026-09-23 (the toggle, OverviewRecall above):
-//   * ZoomOut — the tab's whole-song state is down and the level is below the
-//     per-file ceiling: `level` is that ceiling, which the first press applies
-//     after stamping.
-//   * RestoreView — the whole-song state stands (ViewState::whole_song_visible,
-//     read FIRST since 2026-09-02, R-17g, so a resize or an S/T flip that moved
-//     the ceiling does not make the press forget it is out): `level` is the
-//     stamp's level clamped into the live window.
-//   * CenterAtWorkingZoom — at the ceiling (`>=`) with the state down: a
-//     ceiling this key never produced (a short file that opens
-//     whole-song-visible, a level the clamp or a stepped zoom parked there), so
-//     nothing is stamped and the press is the `c` command; `level` is
-//     kWorkingZoomLevel.
-// TWO READERS: GuiInputHandler::run_overview_command (the act, which decides
-// nothing of its own past this) and the Full Zoom Out button's tooltip.
-// Defined in input_handler.cpp beside the act.
+// fork 2026-09-23 (the toggle, OverviewRecall above; its third arm became the
+// no-op the same day — "if there's nothing to return to ... zero should just
+// lose its meaning"):
+//   * RestoreView — overview_recall_restorable (the whole-song state stands,
+//     read FIRST since 2026-09-02, R-17g, so a resize or an S/T flip that
+//     moved the ceiling does not make the press forget it is out; and the
+//     stamp is the live audio view's): `level` is the stamp's level clamped
+//     into the live window.
+//   * NoOp — nothing to return to: the whole-song state stands over a stamp
+//     from the other audio view, or the level is at the per-file ceiling
+//     (`>=`) with the state down — a ceiling this key never produced (a short
+//     file that opens whole-song-visible, a level the clamp or a stepped zoom
+//     parked there), so nothing was stamped. The press is a benign refusal
+//     already at its state: silent, no card, and the button greys unless its
+//     shifted twin would act (redesign_button_enabled). `level` is unused.
+//     (Until 2026-09-23 the unstamped ceiling ran the `c` command at the
+//     working zoom, CenterAtWorkingZoom, deleted with the ruling.)
+//   * ZoomOut — everything else: the whole-song state is down and the level
+//     is below the per-file ceiling; `level` is that ceiling, which the press
+//     applies after stamping.
+// THREE READERS: GuiInputHandler::run_overview_command (the act, which
+// decides nothing of its own past this), the Full Zoom Out button's face
+// (redesign_button_enabled) and its tooltip. Defined in input_handler.cpp
+// beside the act.
 struct OverviewCommandTarget {
-    enum class Arm { ZoomOut, RestoreView, CenterAtWorkingZoom };
+    enum class Arm { ZoomOut, RestoreView, NoOp };
     Arm    arm   = Arm::ZoomOut;
     double level = 0.0;
 };
@@ -12494,7 +12532,7 @@ inline MarkerLandingFrame marker_walk_landing_frame(const AppState& a) {
 // marker lane's arm, input_handler.cpp, and the waveform lane's step,
 // run_waveform_lane_playhead_step), each reading it BEFORE its act, since the
 // act's own movement would put the posture out and the nudge keeps it (the
-// posture's one exemption, at its declaration). The two answers are at
+// posture's first exemption, at its declaration). The two answers are at
 // NudgeCamera (gui_input.h).
 inline NudgeCamera nudge_camera(const AppState& a) {
     return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
@@ -12912,7 +12950,7 @@ std::set<int> restore_touched_indices(const UndoEntry& entry,
 //   * THE COLUMN is op_mode, and it is compared only on a MARKER entry: an
 //     'S' entry's op_mode is that kind's marker rather than a column, and its
 //     restore writes no column (the column restore is gated off 'S').
-// NO CAMERA TERM, by the same ruling: the restore's camera centres what it
+// NO CAMERA TERM, by the same ruling: the restore's camera answers to what it
 // restores (the visual tail, undo.cpp) and the lamp no longer asks where that
 // is — the camera restriction left whole, the touched-span measurement under
 // the map a restore would install with it.
@@ -13872,9 +13910,9 @@ inline bool playback_launch_playable(const AppState& a,
 // (the rule and its discriminator — the face, not the card — are at
 // Undo::coalesce_gesture). The ladder ends of the zoom: Zoom in greys at the
 // floor (zoom_in_step_actionable) and Zoom out at the per-file ceiling
-// (zoom_out_step_actionable); `0` and `c` stay lit because each always acts
-// (`0` restores its stamp at the ceiling, or runs `c` where nothing is
-// stamped).
+// (zoom_out_step_actionable); `c` stays lit because it always acts, and `0`
+// greys only where it has nothing to return to and its shifted twin would
+// not act either (the twin rule below).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -14294,6 +14332,21 @@ static_assert(kPhaseResetLeadInSamples == kN / 2 &&
 int64_t phase_reset_lead_in_launch_offset(const AppState& a,
                                           const GuiPlayback& playback);
 
+// WOULD SHIFT+0 (RESET TRIM) ACT — the Full Zoom Out button's shifted twin
+// (redesign_button_shift_admits), asked ahead. Its two terms are the act's
+// own refusals in the order the press meets them: the `h` view's allowlist,
+// which does not admit the chord (history_mode_key_blocked,
+// input_key_dispatch.cpp), then the maximizer's own identity guard,
+// trim_is_full_window at handle_trim_clear_both's head (input_trim.cpp),
+// which refuses over the whole-song window. TWO READERS: the button's face
+// (redesign_button_enabled, the twin rule's OR with the plain press) and its
+// tooltip's shift line (redesign_button_tooltip), so the grey and the line
+// cannot disagree.
+inline bool reset_trim_would_act(const AppState& a, int64_t total_frames) {
+    return !a.history_mode.active &&
+           !trim_is_full_window(a.trim, total_frames);
+}
+
 // WOULD A PLAIN Space PLAY FROM THE RESTING CURSOR — the ask-ahead
 // composition of the plain launch's own gates in the act's own order (the
 // device, the dispatch arm's target-preview gate, toggle_playback's
@@ -14449,23 +14502,32 @@ inline bool redesign_button_enabled(const AppState& a,
         // (row 3 is the A/B tabs in every state).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
-        // THE ZOOM GROUP: two of the four MIRROR NOTHING (2026-08-12)
-        // because each always acts on a loaded file — FULL ZOOM OUT (bare
-        // `0`) restores the view it stamped once it is there (the `c` command
-        // at a ceiling it did not produce), and `c` always frames.
-        // FULL ZOOM OUT'S SHIFT TWIN (Shift+0, Reset Trim, since 2026-09-22)
-        // needs no term by the twin rule: the plain press is always live, and
-        // the shifted press refusing over a full window is the key's own
-        // silent no-op. THE STEPPING PAIR are the two whose press CAN be a
+        // THE ZOOM GROUP. CENTER MIRRORS NOTHING (2026-08-12): `c` always
+        // frames on a loaded file. FULL ZOOM OUT MIRRORS ITS FORK UNDER THE
+        // TWIN RULE (architect 2026-09-23 — "zero should just lose its
+        // meaning" when there is nothing to return to): bare `0` is a silent
+        // no-op on overview_command_target's NoOp arm (a ceiling the key did
+        // not produce, or a stamp from the other audio view —
+        // overview_recall_restorable is the restorable owner), and the button
+        // admits its shifted twin, Shift+0 Reset Trim (since 2026-09-22), so
+        // it greys only when BOTH would change nothing: the plain fork's NoOp
+        // AND reset_trim_would_act false (the maximizer's own guard,
+        // trim_is_full_window, behind the `h` view's refusal of the chord).
+        // From 2026-08-12 until that ruling it never greyed, the unstamped
+        // ceiling running the `c` command. THE STEPPING PAIR are the two whose press CAN be a
         // consumed no-op — at the floor Viewport::zoom_in, at the per-file
         // ceiling Viewport::zoom_out, returns having moved nothing — and each
         // GREYS THERE (the truthful-buttons ruling; Zoom In's floor arm that
         // recentred on the playhead was deleted 2026-09-22), reading the act's
         // own leading return over clamp_zoom_level's bounds; both grey during
         // a load on that owner's live-frames term too, where the chord drops
-        // at on_key's guard. All four are LIVE in the `h` view — the derived
-        // partition finds them on the mode's allowlist or its own vocabulary.
+        // at on_key's guard. All four are admitted in the `h` view — the
+        // derived partition finds them on the mode's allowlist or its own
+        // vocabulary — and each answers its own arm there.
         case RedesignButton::IconZoomFitBest:
+            return overview_command_target(a, audio).arm !=
+                       OverviewCommandTarget::Arm::NoOp ||
+                   reset_trim_would_act(a, total_frames);
         case RedesignButton::IconZoomOriginal:
             return true;
         case RedesignButton::IconZoomIn:
@@ -16977,30 +17039,26 @@ inline RedesignTooltipText redesign_button_tooltip(
     // where the modified press would do nothing different. Each condition is
     // the act's or the face's own predicate — none is restated here.
     switch (b) {
-        // FULL ZOOM OUT AT THE CEILING is the recall — the restore of the
-        // stamped view while the whole-song state stands (architect
-        // 2026-09-23), plain `c` at a ceiling nothing stamped — through the
-        // act's one fork (overview_command_target, run_overview_command's
-        // own), so the word cannot name an act the press will not run.
+        // FULL ZOOM OUT WITH A VIEW TO RETURN TO is the recall — the restore
+        // of the stamped view (architect 2026-09-23) — through the act's one
+        // fork (overview_command_target, run_overview_command's own), so the
+        // word cannot name an act the press will not run. AT THE NO-OP the
+        // word is the act's name, "Full Zoom Out (0)": the grey carries the
+        // message and a tooltip is the act's name and nothing else. ("Back to
+        // Working Zoom", the unstamped ceiling's `c`, left with that arm the
+        // same day.)
         //
-        // ITS SHIFT LINE (Reset Trim, 2026-09-22) DROPS OVER A FULL TRIM
-        // WINDOW, in either name: the maximizer's own guard
-        // (trim_is_full_window at handle_trim_clear_both's head,
-        // input_trim.cpp) refuses there, so the line would name a press that
-        // does nothing.
+        // ITS SHIFT LINE (Reset Trim, 2026-09-22) DROPS WHERE THE SHIFTED
+        // PRESS WOULD NOT ACT, in either name: reset_trim_would_act, the
+        // predicate the face's twin term reads (the maximizer's own guard,
+        // trim_is_full_window, behind the `h` view's refusal of the chord).
         case RedesignButton::IconZoomFitBest: {
             const OverviewCommandTarget t = overview_command_target(a, audio);
-            const char* line2 = trim_is_full_window(a.trim, total_frames)
-                                    ? nullptr
-                                    : redesign_button_tooltip(b).line2;
-            switch (t.arm) {
-                case OverviewCommandTarget::Arm::RestoreView:
-                    return {"Back to Previous View (0)", line2};
-                case OverviewCommandTarget::Arm::CenterAtWorkingZoom:
-                    return {"Back to Working Zoom (0)", line2};
-                case OverviewCommandTarget::Arm::ZoomOut:
-                    break;
-            }
+            const char* line2 = reset_trim_would_act(a, total_frames)
+                                    ? redesign_button_tooltip(b).line2
+                                    : nullptr;
+            if (t.arm == OverviewCommandTarget::Arm::RestoreView)
+                return {"Back to Previous View (0)", line2};
             return {redesign_button_tooltip(b).line1, line2};
         }
         // CENTER WITH NOTHING FOCUSED centers on the playhead —

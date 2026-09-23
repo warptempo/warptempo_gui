@@ -1551,7 +1551,8 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     clear_audition_sequence(app);
     // AND THE HOLD POSTURE GOES OUT ON THE SAME MOVEMENT, for the same reason
     // and above the same return: one of its three movement-owner clears (the
-    // rule and the nudge's exemption are at AppState::camera_hold).
+    // rule and its two exemptions — the nudge's and the undo/redo restore's —
+    // are at AppState::camera_hold).
     app.camera_hold = false;
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }

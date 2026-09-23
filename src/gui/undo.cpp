@@ -3,14 +3,12 @@
 #include "input_handler.h"        // land_playhead_on_marker,
                                   // GuiInputHandler::switch_active_audio_view_to
                                   // — the S/T tag's restore chokepoint,
-                                  // center_span_in_view — the restore visual
-                                  // tail's group camera (frame_span_into_view
-                                  // is its cannot-fit arm and is not called
-                                  // from this TU)
+                                  // frame_span_into_view — the restore visual
+                                  // tail's group camera's cannot-fit arm
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // singleton centre and the group camera,
-                                  // and active_domain_to_source_frame for the
+                                  // group camera's range, and
+                                  // active_domain_to_source_frame for the
                                   // restore's map-change re-land
 
 #include <algorithm>
@@ -679,7 +677,7 @@ namespace {
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;
 // the universal land-on-the-focus rule at land_playhead_on_marker) and the
-// camera that centres what was restored — lives in restore_history_entry AFTER
+// camera that brings what was restored on screen with least movement — lives in restore_history_entry AFTER
 // sanitize.
 template <class M, class FieldsDiffer>
 void apply_post_restore_rules_impl(Selection& selection,
@@ -1089,26 +1087,44 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
-    // language; THE CAMERA RULED 2026-09-22): the restore re-selects the
-    // touched set (done above) and LANDS the playhead on its FOCUS — the
-    // touched marker for a singleton, the EARLIEST touched member for a group
-    // (the focus rule at apply_post_restore_rules_impl) — the members' own
-    // brightened flags and the always-visible cursor on the focus being the
-    // whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS AND NEVER TO THE
-    // PLAYHEAD (architect 2026-09-22):
-    //   * ONE MARKER is CENTRED, ALWAYS, at the current zoom — onscreen or
-    //     not, so every restore of one marker lands it in the same place;
-    //   * SEVERAL MARKERS have their range's MIDDLE centred, ALWAYS, at the
-    //     current zoom, and when the range plus the edge margin on each side
-    //     cannot fit the window the camera ZOOMS OUT until it does; it never
-    //     zooms in (center_span_in_view, input_handler.cpp);
+    // language; THE CAMERA RULED 2026-09-22 and re-ruled 2026-09-23): the
+    // restore re-selects the touched set (done above) and LANDS the playhead
+    // on its FOCUS — the touched marker for a singleton, the EARLIEST touched
+    // member for a group (the focus rule at apply_post_restore_rules_impl) —
+    // the members' own brightened flags and the always-visible cursor on the
+    // focus being the whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS
+    // AND NEVER TO THE PLAYHEAD, AND IT MOVES AS LITTLE AS IT CAN (architect
+    // 2026-09-23: "undo centring is too aggressive"; the one least-movement
+    // body is Viewport::least_movement_span_scroll_if_needed):
+    //   * ONE MARKER takes the least-movement landing on the cursor the land
+    //     just seated (Viewport::least_movement_scroll_if_needed): onscreen
+    //     nothing moves, offscreen it lands the edge margin in from the edge
+    //     it was beyond, the zoom untouched;
+    //   * SEVERAL MARKERS: when their range plus the edge margin on each side
+    //     fits the window at the current zoom, the viewport translates the
+    //     least distance that brings the whole range in with the margin —
+    //     nothing when it is already wholly on screen; when it cannot fit,
+    //     the span framer ZOOMS OUT until it does and centres it
+    //     (frame_span_into_view with margin, input_handler.cpp), never in;
     //   * NO MARKER (a removal, or an entry that touched nothing in this
     //     column) moves NO CAMERA: the only cursor write such a restore makes
     //     is the map-change re-land's translation above, which scrolls
     //     nothing.
+    // (From 2026-09-22 to 2026-09-23 one marker was centred always and a
+    // group's range middle was centred always, zooming out only when it could
+    // not fit — center_span_in_view, deleted with that ruling.)
+    //
+    // THE HOLD POSTURE (AppState::camera_hold) SURVIVES A RESTORE THAT MOVES
+    // NO CAMERA: undo and redo are ordinary viewport writes, clearing both
+    // postures only through the chokepoint when their camera moves, and least
+    // movement mostly does not. So the restore's land keeps the bit across
+    // itself — the land is the subject coming back to where the entry left
+    // it, not the user turning elsewhere — and the camera write after it
+    // decides alone.
+    //
     // Runs AFTER sanitize_selection_after_restore so the land sees the final
     // membership, after the tab / data / column / audio-view restores so it
-    // centres in the view the restore ends in, and BEFORE the
+    // lands in the view the restore ends in, and BEFORE the
     // recompute/invalidate/kick block below so restore's one sync render
     // covers the final geometry. It branches on the POST-sanitize live size,
     // so a defensive edge takes the matching arm (a group entry sanitized
@@ -1125,39 +1141,28 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         const size_t sel_size = app.selected_markers.size();
         if (sel_size == 1) {
             const int t = *app.selected_markers.begin();
-            // Resolve the touched marker's source frame with ONE bounds check up
-            // front — an out-of-range t skips the WHOLE singleton visual (land +
-            // centre) rather than half-applying it (a bad t would else land
-            // nothing but centre on the src_f=0 default). Defensive only:
-            // post-sanitize the selection indices are always in range, so this
-            // guards an impossible state, never a reachable one.
-            // The active column's store through its selector pair
-            // (active_marker_count / active_marker_time_frame, app_state.h),
-            // all three columns.
+            // Resolve the touched marker with ONE bounds check up front — an
+            // out-of-range t skips the WHOLE singleton visual (land + camera)
+            // rather than half-applying it. Defensive only: post-sanitize the
+            // selection indices are always in range, so this guards an
+            // impossible state, never a reachable one. The active column's
+            // store through its selector pair (active_marker_count,
+            // app_state.h), all three columns.
             const bool in_range = (t >= 0 && t < active_marker_count(app));
-            const int64_t src_f =
-                in_range ? active_marker_time_frame(app, t) : 0;
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
-                // move, through the movement owner. Playback is already
-                // stopped above, so land's scanner-inactive premise holds.
+                // move, through the movement owner, keeping the hold posture
+                // across it (the rule above). Playback is already stopped
+                // above, so land's scanner-inactive premise holds and the
+                // least-movement landing's subject is the cursor it seats.
+                const bool hold_before = app.camera_hold;
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
-                // CENTRE, ALWAYS, at the CURRENT zoom (architect 2026-09-22 —
-                // until then only an OFFSCREEN marker was recentred, so a
-                // restore's camera depended on where the marker happened to
-                // stand): the touched marker's active-domain image at the
-                // window's middle, re-snapped and wall-clamped through the one
-                // chokepoint, no zoom change. The frame is the LAND'S, exactly
-                // — the crossing into the active domain then the live-domain
-                // clamp (the crossing can round a right-wall marker onto
-                // domain_total_frames itself, one past the last frame) — so the
-                // centre is the frame the land seated.
-                const int64_t domain_frame = clamp_playhead_to_live_domain(
-                    source_frame_to_active_domain(app, viewport.audio, src_f),
-                    app, viewport.audio);
-                const int64_t visible = samples_visible(app, viewport.audio);
-                app.viewport_start_sample = domain_frame - visible / 2;
-                clamp_viewport_start(app, viewport.audio);
+                app.camera_hold = hold_before;
+                // THE LEAST-MOVEMENT LANDING at the CURRENT zoom (architect
+                // 2026-09-23; centred always from 2026-09-22 until then): an
+                // onscreen marker moves no camera, an offscreen one lands the
+                // edge margin in from the edge it was beyond.
+                viewport.least_movement_scroll_if_needed();
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
                 // full-waveform invalidates below repaint it. Stems do not
@@ -1178,15 +1183,23 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // impossible out-of-range index no-ops the land) and writes NO
             // viewport, so the camera below is its own; playback is already
             // stopped above (land's scanner-inactive premise).
+            // The hold posture is kept across the land (the rule above).
+            const bool hold_before = app.camera_hold;
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());
-            // THE CAMERA CENTRES THE RANGE'S MIDDLE, zooming out only when the
-            // range plus the edge margin cannot fit (the rule and its fit
-            // arithmetic at center_span_in_view's definition,
-            // input_handler.cpp; the restore is its one caller). WHAT IS THIS
-            // SITE'S OWN: the ACTIVE-DOMAIN extent derived just below, and the
-            // unconditional invalidate + kick_waveform_sync at the tail of this
-            // body, which is the damage the owner deliberately does not do.
+            app.camera_hold = hold_before;
+            // THE CAMERA IS THE LEAST MOVEMENT THAT SHOWS THE RANGE, zooming
+            // out only when the range plus the edge margin cannot fit (the fit
+            // test and the translation at
+            // Viewport::least_movement_span_scroll_if_needed, viewport.cpp;
+            // its false verdict hands the range to the span framer's margin
+            // arm, which then only ever zooms out — the argument is at the fit
+            // test). WHAT IS THIS SITE'S OWN: the ACTIVE-DOMAIN extent derived
+            // just below. ACCEPTED COST: the translation's changed path and the
+            // framer each run one synchronous render, and the unconditional
+            // invalidate + kick_waveform_sync at the tail of this body runs a
+            // second over identical final state — a bounded duplicate on a
+            // discrete keystroke.
             // THE RANGE IS THE TOUCHED SET'S OWN [earliest, latest]
             // ACTIVE-DOMAIN EXTENT, each member through the LAND'S formula —
             // clamp_playhead_to_live_domain(source_frame_to_active_domain(...))
@@ -1210,8 +1223,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                     else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
                 }
             }
-            if (have) {
-                center_span_in_view(app, viewport.audio, viewport, lo, hi);
+            if (have &&
+                !viewport.least_movement_span_scroll_if_needed(lo, hi)) {
+                frame_span_into_view(app, viewport.audio, viewport, lo, hi,
+                                     /*margin=*/true);
             }
         }
         // sel_size == 0: nothing — the removal branch cleared, and the camera
@@ -1231,8 +1246,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
     // The visual tail above may have LANDED the playhead (on the restored focus
-    // in either arm) and centred the restored markers, zooming out for a
-    // group that cannot fit; these invalidations and the
+    // in either arm) and brought the restored markers on screen with least
+    // movement, zooming out for a group that cannot fit; these invalidations
+    // and the
     // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about

@@ -899,8 +899,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              entries.
     //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → full zoom-out stamping the view, then the
-    //                              restore of that view; `c` at a ceiling
-    //                              nothing stamped (run_overview_command)
+    //                              restore of that view in the audio view it
+    //                              was stamped in; a silent no-op with
+    //                              nothing to return to (run_overview_command)
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead;
@@ -1768,8 +1769,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Bare 0 is A TOGGLE (run_overview_command — architect 2026-09-23): full
     // zoom out stamping the view it leaves, then the restore of that zoom
-    // level, playhead and viewport start, no centring; at a ceiling it did
-    // not produce it runs the `c` command. Neither press arms or keeps a
+    // level, playhead and viewport start, no centring, in the audio view the
+    // stamp was taken in; with nothing to return to (a ceiling it did not
+    // produce, or a stamp from the other audio view) it is a silent no-op
+    // and its button greys. Neither press arms or keeps a
     // camera posture: both clear HOLD and CHASE through the one chokepoint
     // clear (clamp_viewport_start). The trim-bar double-click
     // deliberately
@@ -2465,7 +2468,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // case (input_key_dispatch.cpp), which asks the same owner.
     //
     // THE NUDGE KEEPS THE HOLD POSTURE ACROSS ITS WHOLE ACT, the posture's
-    // one exemption (AppState::camera_hold): the camera is read BEFORE the
+    // first exemption (AppState::camera_hold): the camera is read BEFORE the
     // act and the bit written back after it, because the act lands the
     // playhead through a movement owner and may move the camera, each of
     // which would otherwise put the posture out.
@@ -2901,8 +2904,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // framing. Putting a policy read in here is what made the march inherit
     // it, which is the shape the required parameter exists to prevent:
     // framing cannot be acquired by saying nothing. `c` remains the direct
-    // route to the working zoom; `0` reaches it through `c` at a full zoom
-    // out it did not produce (nothing stamped in ViewState::overview_recall).
+    // route to the working zoom (`0` reached it too, at a full zoom out it
+    // did not produce, until 2026-09-23; that press is a silent no-op now).
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.
@@ -3024,14 +3027,12 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 void GuiInputHandler::run_center_command() {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
-    // FORK LIVES. SIX CALLERS, re-grepped 2026-09-23: the centre keys' act
+    // FORK LIVES. FIVE CALLERS, re-grepped 2026-09-23: the centre keys' act
     // run_center_key_command (since 2026-09-23 the one road of the live `c`
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
     // handle_history_mode_key — which must claim the key to keep it off the
     // mode's allowlist — and Shift+C, and the writer of the camera postures a
-    // centring key arms), run_overview_command's CenterAtWorkingZoom arm —
-    // `0` pressed at a full zoom out it did not produce runs exactly what `c`
-    // runs —, since 2026-08-28 the A/B audition's
+    // centring key arms), since 2026-08-28 the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame (the rule and the ordering it owes the audition's sequence are at
@@ -3049,21 +3050,23 @@ void GuiInputHandler::run_center_command() {
     // same composition over the diff-flag cycle — TWICE, one caller — which
     // reaches this body's mode arm below.
     //
+    // (`0` WAS A SIXTH CALLER until 2026-09-23: at a full zoom out it had not
+    // produced it ran this command. That arm was deleted the same day — such
+    // a `0` is a silent no-op, run_overview_command.)
+    //
     // THE LEVEL IS ALWAYS kWorkingZoomLevel. From 2026-08-18 to 2026-09-23 it
     // was a parameter that `0`'s second press filled with the level it had
     // stamped; that press restores the stamped view itself now (the toggle,
     // run_overview_command), so no caller substitutes and the parameter went.
     //
     // THE FORK IS HERE RATHER THAN AT THE CALLERS because that makes it ONE
-    // decision for all of them: every caller but `0` is reachable in one mode
-    // only — the two key arms because the mode claims `c` above the live
-    // dispatch, so the live arm below never runs in the mode, the audition
-    // and Shift+`j` because both are refused inside the mode, the live
-    // march because the mode claims Ctrl+Shift+Tab for its own, and the
-    // mode's march because it is that claim — while `0` is reachable in
-    // both. Putting the question at `0` alone would leave the
-    // mode's own `c` answering it a second time in another spelling. One owner,
-    // one answer.
+    // decision for all of them: the audition and Shift+`j` are refused inside
+    // the mode, the live march never runs there because the mode claims
+    // Ctrl+Shift+Tab for its own, and the mode's march is that claim — while
+    // the centre keys' act is reached from both, the live `c` arm and the
+    // mode's own `c` claim. Putting the question at that act alone would
+    // leave the marches answering it a second time in another spelling. One
+    // owner, one answer.
     if (app.history_mode.active) {
         // THE MODE'S RE-EXPRESSION: the live recipe read against the mode's own
         // data. With a focus standing the playhead re-lands on that diff flag
@@ -3139,7 +3142,15 @@ void GuiInputHandler::run_center_key_command(bool arm_chase) {
         app.camera_chase = true;
 }
 
-// WHAT BARE `0` WOULD DO — the contract and the two readers are at the
+// IS THERE A VIEW FOR BARE `0` TO RETURN TO — the contract is at the
+// declaration (app_state.h).
+bool overview_recall_restorable(const AppState& app) {
+    const ViewState& v = active_view_state(app);
+    return v.whole_song_visible &&
+           v.overview_recall.audio_view == app.active_audio_view;
+}
+
+// WHAT BARE `0` WOULD DO — the contract and the three readers are at the
 // declaration (app_state.h); the reasoning for each arm is at
 // run_overview_command below, which is the fork's act and decides nothing of
 // its own past this. The ceiling compare is `>=`.
@@ -3148,19 +3159,25 @@ OverviewCommandTarget overview_command_target(const AppState& app,
     OverviewCommandTarget t;
     // THE WHOLE-SONG STATE ANSWERS FIRST (R-17g): a `0` that landed on the
     // ceiling is still out after a resize or an S/T flip has moved that
-    // ceiling, and its stamp is the answer.
-    if (active_view_state(app).whole_song_visible) {
+    // ceiling, and its stamp is the answer — in the stamp's own audio view.
+    if (overview_recall_restorable(app)) {
         t.arm   = OverviewCommandTarget::Arm::RestoreView;
         t.level = clamp_zoom_level(
             app, audio, active_view_state(app).overview_recall.zoom_level);
+        return t;
+    }
+    // The state standing over the other view's stamp is out with nothing to
+    // return to; a zoom-out there would re-stamp over the stamp the other
+    // view still owns.
+    if (active_view_state(app).whole_song_visible) {
+        t.arm = OverviewCommandTarget::Arm::NoOp;
         return t;
     }
     const double full_out = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio),
         audio.sample_rate());
     if (app.zoom_level >= full_out) {
-        t.arm   = OverviewCommandTarget::Arm::CenterAtWorkingZoom;
-        t.level = kWorkingZoomLevel;
+        t.arm = OverviewCommandTarget::Arm::NoOp;
         return t;
     }
     t.arm   = OverviewCommandTarget::Arm::ZoomOut;
@@ -3177,7 +3194,7 @@ void GuiInputHandler::run_overview_command() {
     // re-centred instead of restoring the window.
     //
     // THE FORK is overview_command_target's, one owner shared with the Full
-    // Zoom Out button's tooltip; its three arms:
+    // Zoom Out button's face and tooltip; its three arms:
     //
     // FIRST PRESS (ZoomOut): STAMP the zoom level, the viewport start and the
     // resting playhead into the active tab's OverviewRecall, with the audio
@@ -3188,33 +3205,41 @@ void GuiInputHandler::run_overview_command() {
     // stop_playback_if_playing's declaration), and a selection's span survives
     // it as it survives `=` / `-`.
     //
-    // SECOND PRESS (RestoreView, the whole-song state standing): RESTORE THE
-    // THREE, NO CENTRING. The playhead first, through the movement owner
-    // Viewport::move_playhead_to — a route to a spot nothing marks, so when it
-    // moves the cursor it pays exactly what Home / End pay (the stop, the
-    // selection clear or, in the `h` view, the mode's focus clear); a stamp
-    // equal to the live cursor writes nothing there. Then the whole-song state
-    // is cleared and the level and viewport start go down together through
-    // Viewport::apply_zoom_to_start, whose clamp_viewport_start owns the
-    // lattice snap and the walls (the discrete move's damage, predictor resync
-    // and synchronous rebuild are that applier's). While zoomed out the whole
-    // song is visible, so the movement owner's keep-visible edge-align never
-    // scrolls ahead of the applier. If the playhead moved while zoomed out,
-    // the stamped one still comes back — the ruling's "restore ... playhead
-    // position". Across an S/T flip the stamp is re-expressed as the flip
-    // re-expresses the camera (OverviewRecall's domain tag, app_state.h). A
-    // stamped level above a ceiling that has since fallen clamps onto it; the
-    // state is cleared regardless, so the press still ends the trip.
+    // SECOND PRESS (RestoreView, overview_recall_restorable: the whole-song
+    // state standing in the audio view the stamp was taken in): RESTORE THE
+    // THREE VERBATIM, NO CENTRING. The playhead first, through the movement
+    // owner Viewport::move_playhead_to — a route to a spot nothing marks, so
+    // when it moves the cursor it pays exactly what Home / End pay (the stop,
+    // the selection clear or, in the `h` view, the mode's focus clear); a
+    // stamp equal to the live cursor writes nothing there. Then the
+    // whole-song state is cleared and the level and viewport start go down
+    // together through Viewport::apply_zoom_to_start, whose
+    // clamp_viewport_start owns the lattice snap and the walls (the discrete
+    // move's damage, predictor resync and synchronous rebuild are that
+    // applier's). While zoomed out the whole song is visible, so the movement
+    // owner's keep-visible edge-align never scrolls ahead of the applier. If
+    // the playhead moved while zoomed out, the stamped one still comes back —
+    // the ruling's "restore ... playhead position". A stamped level above a
+    // ceiling that has since fallen clamps onto it; the state is cleared
+    // regardless, so the press still ends the trip.
     //
-    // AT A CEILING THIS KEY DID NOT PRODUCE (CenterAtWorkingZoom): nothing is
-    // stamped, so the press is the `c` command at the working zoom, carrying
-    // `c`'s regime (its focus land and the stop inside it).
+    // NOTHING TO RETURN TO (NoOp — architect 2026-09-23: "if there's nothing
+    // to return to, or the place you would return to has been put away
+    // because we've changed views, zero should just lose its meaning"): a
+    // ceiling this key did not produce, or a stamp taken in the other audio
+    // view. A benign refusal already at its state — silent, no card
+    // (messaging.md) — and the button greys unless Reset Trim, its shifted
+    // twin, would act. The whole-song state is left standing, so a flip back
+    // brings the stamp into reach again. (Until that ruling a cross-view
+    // stamp was re-expressed through the live map and the unstamped ceiling
+    // ran the `c` command; both arms are deleted.)
     //
     // THE CAMERA POSTURES (AppState::camera_hold / camera_chase): `0` arms
-    // neither and keeps neither. Both presses put both out through the one
-    // chokepoint clear in clamp_viewport_start (the camera they settle differs
-    // from the last one settled), and the restore's movement owner puts HOLD
-    // out as well; no exemption is spelled here.
+    // neither and keeps neither. Both acting presses put both out through the
+    // one chokepoint clear in clamp_viewport_start (the camera they settle
+    // differs from the last one settled), and the restore's movement owner
+    // puts HOLD out as well; no exemption is spelled here. The no-op writes
+    // nothing and so keeps both.
     //
     // THE TWO RECORDS are this function's alone: it is the stamp's one writer
     // and the whole-song state's one setter (both declarations, app_state.h).
@@ -3231,13 +3256,6 @@ void GuiInputHandler::run_overview_command() {
         r.viewport_start_sample  = app.viewport_start_sample;
         r.playhead_cursor_sample = app.playhead_cursor_sample;
         r.audio_view             = app.active_audio_view;
-        r.playhead_source_frame  =
-            active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
-        const double spp = current_samples_per_pixel(app, audio);
-        r.playhead_column_px =
-            spp > 0.0 ? static_cast<double>(app.playhead_cursor_sample -
-                                            app.viewport_start_sample) / spp
-                      : 0.0;
         viewport.apply_zoom_change(target.level);
         // The whole-song state is raised AFTER the applier, which clears it
         // as every level-moving zoom write does (the inventory is at
@@ -3249,19 +3267,8 @@ void GuiInputHandler::run_overview_command() {
     }
     case OverviewCommandTarget::Arm::RestoreView: {
         const OverviewRecall r = active_view_state(app).overview_recall;
-        int64_t playhead = r.playhead_cursor_sample;
-        int64_t start    = r.viewport_start_sample;
-        if (r.audio_view != app.active_audio_view) {
-            // The flip's own re-expression: the playhead follows its source
-            // frame into the live domain, and the window is placed so it
-            // paints in the column it painted in when stamped.
-            playhead = source_frame_to_active_domain(
-                app, audio, r.playhead_source_frame);
-            start = playhead - static_cast<int64_t>(std::nearbyint(
-                r.playhead_column_px *
-                samples_per_pixel_at(target.level, audio.sample_rate())));
-        }
-        playhead = clamp_playhead_to_live_domain(playhead, app, audio);
+        const int64_t playhead =
+            clamp_playhead_to_live_domain(r.playhead_cursor_sample, app, audio);
         if (playhead != app.playhead_cursor_sample) {
             playback_lifecycle.stop_playback_if_playing();
             if (app.history_mode.active) {
@@ -3276,11 +3283,10 @@ void GuiInputHandler::run_overview_command() {
             viewport.move_playhead_to(playhead);
         }
         active_view_state(app).whole_song_visible = false;
-        viewport.apply_zoom_to_start(target.level, start);
+        viewport.apply_zoom_to_start(target.level, r.viewport_start_sample);
         return;
     }
-    case OverviewCommandTarget::Arm::CenterAtWorkingZoom:
-        run_center_command();
+    case OverviewCommandTarget::Arm::NoOp:
         return;
     }
 }
@@ -3355,69 +3361,6 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // other zoom commands; the idempotent current-vs-target no-op lives there.
     // NOT apply_zoom_change (which would recenter on the playhead).
     viewport.apply_zoom_to_start(target_level, target_start);
-}
-
-// THE GROUP RESTORE'S CAMERA: CENTRE THE RANGE'S MIDDLE AT THE CURRENT ZOOM,
-// ZOOM OUT ONLY WHEN THE RANGE CANNOT FIT WITH ITS MARGIN (architect
-// 2026-09-22). The undo/redo restore of several markers hands its touched
-// set's [earliest, latest] active-domain extent here and the camera answers to
-// that range and to nothing else — never to the playhead, and never to where
-// the range happened to stand: an onscreen range is centred exactly as an
-// offscreen one is, so every group restore lands its markers in the same place.
-//
-// TWO ARMS, decided on the EDGE MARGIN (kViewportEdgeMarginFraction,
-// app_state.h — this is one of its readers, inventoried there):
-//   * the range FITS when its width is at most 1 − 2 × margin of the visible
-//     window at the current zoom — the room the span framer leaves it, so the
-//     two arms agree on the boundary — and then the viewport is placed so the
-//     range's middle is the window's middle, through the one clamp chokepoint,
-//     with NO zoom change;
-//   * otherwise frame_span_into_view with margin, which fits the range plus
-//     the margin on each side and centres the same middle. It only ever ZOOMS
-//     OUT on this arm: a range wider than 1 − 2 × margin of the current window
-//     solves to a coarser level than the current one, and the framer's clamp
-//     into [kMinZoom, the effective ceiling] cannot bring it below the current
-//     level, which is itself inside that interval. NEVER ZOOM IN — a narrow
-//     range keeps the zoom the user chose.
-// The fit test is in the framer's own unrounded domain (spp × W at the live
-// level, the framer's `visible_t`) rather than in painted columns, so the arm
-// that centres and the arm that zooms out read one arithmetic. At the
-// effective ceiling a range wider than the whole song's window saturates the
-// framer at the ceiling, where apply_zoom_to_start centres what it can and the
-// wall clamp owns the rest.
-//
-// UNTIL 2026-09-22 THIS WAS bring_span_into_view, three arms on painted
-// columns — no write for a range already on screen, a scroll at the current
-// zoom when centring alone fitted it, the framer otherwise — shared with the
-// Restrict undo to viewport lamp through span_columns_visible. The restore is
-// its only caller (the Show trim region button, the other, left 2026-09-04),
-// so the ruling changed the owner rather than growing a second one; the lamp
-// stopped measuring the camera the same day and span_columns_visible went with
-// its last reader.
-//
-// IT WRITES ONLY THE VIEWPORT (level and start) and damages nothing: the
-// restore's tail owns the damage and its one synchronous kick. ACCEPTED COST on
-// the framer arm: apply_zoom_to_start runs one sync render and the restore's
-// unconditional kick runs a second over identical final state — a bounded
-// duplicate on a discrete keystroke. Degenerate geometry (no strip width, no
-// sample rate) leaves the viewport where it stands.
-void center_span_in_view(AppState& app, const GuiAudio& audio,
-                         Viewport& viewport, int64_t lo, int64_t hi) {
-    if (hi < lo) std::swap(lo, hi);   // defensive; the restore passes in order
-    const GuiRect area = waveform_area(app);
-    const int     W    = area.w;
-    const int     sr   = audio.sample_rate();
-    if (W <= 0 || sr <= 0) return;
-    const double visible_t = samples_per_pixel_at(app.zoom_level, sr) *
-                             static_cast<double>(W);
-    const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) * visible_t;
-    if (static_cast<double>(hi - lo) <= room) {
-        const int64_t visible = samples_visible(app, audio);
-        app.viewport_start_sample = lo + (hi - lo) / 2 - visible / 2;
-        clamp_viewport_start(app, audio);
-        return;
-    }
-    frame_span_into_view(app, audio, viewport, lo, hi, /*margin=*/true);
 }
 
 void GuiInputHandler::run_span_framing_command() {
