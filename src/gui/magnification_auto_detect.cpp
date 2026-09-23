@@ -50,8 +50,6 @@ constexpr int kMaxLevel = 4;
 constexpr double kStepSeconds = 0.1;  // analysis hop (resolution only)
 
 // --- the free constants, each with its reason -------------------------------
-// Where the typical column top lands: THE calibration (fitted across the 40th).
-constexpr double kTargetDb = -1.5;
 // The typical top: the loudest 10% may clip (convention).
 constexpr double kTopPercentile = 0.9;
 // Columns under this are silence or tape hiss (the architect's old gates ran
@@ -67,11 +65,7 @@ constexpr double kWindowSeconds = 1.5;
 constexpr double kLookaheadSeconds = 0.5;
 
 // --- derived: nothing below is a free choice --------------------------------
-// A level is too much once it would push the typical top past the lane edge
-// (0 dB): at level L a stretch measuring d puts its top at
-// kTargetDb + (L - d) * kLevelDb, so the highest level that fits is
-// floor(d - kTargetDb / kLevelDb) and level L owns [L + kEdge, L + 1 + kEdge).
-constexpr double kEdge = kTargetDb / kLevelDb;  // -0.249: thresholds 0.751, 1.751, 2.751, 3.751
+// The level walls are the whole numbers in d (see level_of).
 // A section shorter than the window cannot be measured.
 constexpr double kMinSegmentSeconds = kWindowSeconds;
 // A centred window's crossing is off by at most half its width.
@@ -79,19 +73,24 @@ constexpr double kPlaceSearchSeconds = kWindowSeconds / 2;
 
 double db(double x) { return 20 * std::log10(std::max(x, 1e-6)); }
 
+// A level is too much once it would push the typical top past the lane edge
+// (0 dBFS): at level L a stretch measuring d paints its typical top at
+// (L - d) * kLevelDb dB, so it fits iff L <= d. The highest level that fits
+// is floor(d), and level L owns [L, L + 1): the walls are d = 1, 2, 3, 4,
+// typical tops of -6.02, -12.04, -18.06 and -24.08 dBFS.
 int level_of(double d) {
-    const double f = std::floor(d - kEdge);
+    const double f = std::floor(d);
     return static_cast<int>(std::max<double>(kMinLevel, std::min<double>(kMaxLevel, f)));
 }
 
 double upper_bound_of(int level) {
     return level == kMaxLevel ? std::numeric_limits<double>::infinity()
-                              : (level + 1) + kEdge;
+                              : level + 1;
 }
 
 double lower_bound_of(int level) {
     return level == kMinLevel ? -std::numeric_limits<double>::infinity()
-                              : level + kEdge;
+                              : level;
 }
 
 struct Section {
@@ -144,10 +143,10 @@ public:
     Analysis(std::vector<double> columns, double gate)
         : c_(std::move(columns)), n_(static_cast<int64_t>(c_.size())), gate_(gate) {}
 
-    // The level that puts the typical top of columns [lo, hi) at kTargetDb,
-    // or `prev` when too little of the window is audible. The slice clamps to
-    // the song; the audibility threshold reads the UNCLAMPED width, so a
-    // window hanging off either end needs as much audible material as a
+    // The number of doublings the typical top of columns [lo, hi) has under
+    // 0 dBFS, or `prev` when too little of the window is audible. The slice
+    // clamps to the song; the audibility threshold reads the UNCLAMPED width,
+    // so a window hanging off either end needs as much audible material as a
     // whole one.
     std::optional<double> top_level(int64_t lo, int64_t hi, std::optional<double> prev) {
         scratch_.clear();
@@ -164,7 +163,7 @@ public:
             kTopPercentile * static_cast<double>(scratch_.size() - 1));
         std::nth_element(scratch_.begin(), scratch_.begin() + static_cast<std::ptrdiff_t>(idx),
                          scratch_.end());
-        return (kTargetDb - db(scratch_[idx])) / kLevelDb;
+        return -db(scratch_[idx]) / kLevelDb;
     }
 
 private:

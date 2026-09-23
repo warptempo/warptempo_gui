@@ -9,24 +9,27 @@
 // one column is kZoomBaseMsPerPx * 2^(kWorkingZoomLevel - 1) of source time
 // (55 frames at 44.1 kHz) — and a column's height is the plate renderer's own
 // min/max reduced to one number: the largest |x| over both channels. What it
-// proposes is the level that puts each stretch's typical column top just
-// under the lane edge, so the magnified picture fills the lane without the
-// body of the music clipping.
+// proposes is the HIGHEST level at which each stretch's typical column top
+// (the kTopPercentile column height) still fits under the lane edge, 0 dBFS,
+// so the magnified picture fills the lane without the body of the music
+// clipping. Levels are whole doublings, so a level puts the typical top
+// anywhere in the 6 dB under the edge, never at one fixed distance.
 //
 // THREE STAGES:
 //
-//   1. THE CURVE. At every analysis hop, the level that puts the typical
-//      column top (the kTopPercentile order statistic of the gated column
-//      heights in a centred window of kWindowSeconds) at kTargetDb. Columns
-//      under kGateDb are silence or tape hiss and are gated out; a window
-//      with too little audible material takes the level of the NEARER
-//      audible side, so the curve is the same whichever way the audio runs.
+//   1. THE CURVE. At every analysis hop, d: the number of doublings the
+//      typical column top (the kTopPercentile order statistic of the gated
+//      column heights in a centred window of kWindowSeconds) sits under
+//      0 dBFS, -dB(top) / kLevelDb. Columns under kGateDb are silence or tape
+//      hiss and are gated out; a window with too little audible material
+//      takes the d of the NEARER audible side, so the curve is the same
+//      whichever way the audio runs.
 //   2. THE LEVELS. Each hop takes the highest level whose typical top still
-//      fits the lane — level = floor(d - kTargetDb / kLevelDb), clamped to
-//      1..4 — with NO hysteresis (it made the result direction-dependent). A
-//      section shorter than the window cannot be measured, so it joins the
-//      neighbour nearest in level, a tie going to the longer neighbour; that
-//      is what suppresses chatter, symmetrically in time.
+//      fits — level = floor(d), clamped to 1..4 — with NO hysteresis (it
+//      made the result direction-dependent). A section shorter than the
+//      window cannot be measured, so it joins the neighbour nearest in
+//      level, a tie going to the longer neighbour; that is what suppresses
+//      chatter, symmetrically in time.
 //   3. THE BOUNDARIES, placed at column resolution with a FORWARD look: a
 //      level begins at the first column whose next kLookaheadSeconds
 //      measures inside it, so a loud entry is clamped slightly early and a
