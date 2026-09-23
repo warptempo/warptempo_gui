@@ -320,28 +320,31 @@ enum class Icon {
     // the OPEN one while it is writable, swapped by redesign_button_icon.
     Lock,                // Locked: closed padlock, full color
     Unlock,              // Unlocked: open padlock, drawn dimmed by the caller
-    // THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15 from a
-    // rendered candidate sheet, the row's right cluster ahead of the four
-    // arrows): the walk (Tab, and Shift+Tab on its shifted press). HIS OWN
-    // REASONS, kept because they are about this row's crowding rather than
-    // about the glyphs in isolation:
-    //   bbox-prev / bbox-next are AN ARROW MEETING A BAR, which is the Tab
-    //   key's own shape — and they share no silhouette with the chevrons two
-    //   slots away (the cardinal arrows), the media-skip triangles at the
-    //   row's left, or the keyframe dials the history walk wears in the same
-    //   cluster inside the `h` view.
-    // (BOOST, the two-arrow cycle the group's third button wore for walk both
-    // tabs, is DELETED with that button on 2026-09-14 — its enumerator, its
-    // def and its committed asset — no other button wearing it; the march is
-    // the tab row's shifted press now. It was the file that brought the
-    // interpreter's stroked arm back and the one producer of the per-path line
-    // cap, which went with it.)
-    // (BBOXPREV, the Previous marker button's glyph, is DELETED with that
-    // button on 2026-09-22, when the walk pair merged into one button wearing
-    // bboxnext — its enumerator, its def and its committed asset.)
-    BboxNext,            // The walk (Tab; Shift+Tab on the shifted press)
+    // THE BOTTOM ROW'S MARKER-WALK GROUP, the row's right cluster ahead of the
+    // four arrows: THE TWO WALKS' GLYPHS (architect 2026-09-22, his named
+    // picks) — Breeze's snap-orthogonal on the CENTRING walk (Tab, and
+    // Shift+Tab on its shifted press) and snap-node on the LEAST-MOVEMENT walk
+    // seated right after it (Alt+Tab, and Alt+Shift+Tab on its shifted
+    // press). Two siblings of one family, so the pair reads as one group:
+    // snap-orthogonal is a node boxed on a dotted CROSS — the landing brought
+    // to the middle of the view — and snap-node a node at the end of a dotted
+    // RUN, reached from one side and stopped at, which is what the
+    // least-movement landing does.
+    // (BBOXNEXT, the arrow meeting a bar the walk wore from 2026-08-15, is
+    // DELETED with the glyph change on 2026-09-22 — its enumerator, its def
+    // and its committed asset — no other button wearing it. BBOXPREV, the
+    // Previous marker button's glyph, left the same day with that button when
+    // the walk pair merged into one. BOOST, the two-arrow cycle the group's
+    // third button wore for walk both tabs, is DELETED with that button on
+    // 2026-09-14 — its enumerator, its def and its committed asset; the march
+    // is the tab row's shifted press now. It was the file that brought the
+    // interpreter's stroked arm back and the one producer of the per-path
+    // line cap, which went with it.)
+    SnapOrthogonal,      // The centring walk (Tab; Shift+Tab shifted)
+    SnapNode,            // The least-movement walk (Alt+Tab; Alt+Shift+Tab
+                         // shifted)
     // THE HOLD-COLUMN NUDGES' GLYPHS (architect 2026-09-22), the walk group's
-    // second and third: Breeze's go-previous-context / go-next-context, a
+    // third and fourth: Breeze's go-previous-context / go-next-context, a
     // tag-shaped arrow carrying a pair of braces — the chevron's direction
     // with a mark that it is not the plain arrow two slots away.
     GoPreviousContext,   // Ctrl+Left, the held-column nudge left
@@ -439,8 +442,11 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 52 SINCE the Zoom In / Zoom Out restoration later on 2026-09-22,
-// re-counted off the enumerators above: zoom-in and zoom-out came back with
+// 53 SINCE THE LEAST-MOVEMENT WALK (architect 2026-09-22, later still),
+// re-counted off the enumerators above: bboxnext left with the walk's glyph
+// change, and snap-orthogonal and snap-node joined as the two walks' glyphs.
+// It was 52 from the Zoom In / Zoom Out restoration earlier that day:
+// zoom-in and zoom-out came back with
 // the two buttons that wear them. It was 50 from the Show trim region
 // button's deletion earlier that day, tool-rect-selection leaving with the
 // button that wore it. It was 51 from that day's walk-group change:
@@ -462,7 +468,7 @@ enum class Icon {
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 52;
+inline constexpr int kIconCount = 53;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

@@ -86,7 +86,10 @@ struct Viewport {
     //    (the offscreen-follow shift inside reseat_playhead_to, which
     //    move_playhead_to and the cent steps' re-land both reach,
     //    apply_zoom_change,
-    //    apply_zoom_to_start, center_viewport_on_playhead, apply_strip_drag_zoom,
+    //    apply_zoom_to_start, center_viewport_on_playhead, the discrete move's
+    //    other three callers (hold_subject_column_after_nudge,
+    //    follow_scroll_if_needed, least_movement_scroll_if_needed),
+    //    apply_strip_drag_zoom,
     //    scroll_viewport — every pan/scroll class, which joined this route
     //    2026-07-26 when the incremental shift-and-strip path was retired),
     //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
@@ -401,9 +404,17 @@ struct Viewport {
     // callers are at the definition.
     void hold_subject_column_after_nudge(int64_t prior_subject_sample,
                                          int64_t prior_viewport_start);
-    // The changed-path tail the two one-shot playhead camera jumps above share.
+    // The changed-path tail the one-shot playhead camera moves share (the two
+    // above and the two below).
     void finish_discrete_viewport_move();
+    // Follow's page-in: an offscreen subject lands the edge margin
+    // (kViewportEdgeMarginFraction, app_state.h) in from the LEFT edge.
     void follow_scroll_if_needed();
+    // THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Alt+Tab walk's
+    // camera: an onscreen subject moves nothing, an offscreen one lands the
+    // edge margin in from the edge it was beyond, the zoom untouched. The
+    // three answers and the subject are at the definition.
+    void least_movement_scroll_if_needed();
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo cent step, the settings

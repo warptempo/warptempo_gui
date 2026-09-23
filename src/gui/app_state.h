@@ -72,12 +72,47 @@ constexpr double kWorkingZoomLevel = 2.0;  // 2.4 s — working zoom; the zoom
                                            // gestures can go one step deeper
                                            // to kMinZoom (1.2 s)
 
-// Viewport lead/overlap fraction, expressed as a divisor of the visible
-// span. Follow mode keeps this much of the window as lead context when it
-// re-anchors; paged scroll (PageUp/PageDown) retains the same fraction as
-// overlap so the two behaviors stay visually consistent. One source of
-// truth — do not inline the divisor at either site.
-constexpr int64_t kViewportLeadDivisor = 10;
+// THE STEPPED PAN'S STRIDE, as a divisor of the visible span: one plain wheel
+// detent over the waveform (handle_wheel) and one PageUp / PageDown each move
+// the viewport samples_visible / 10, so a page keeps nine tenths of the window
+// as overlap. ITS TWO READERS are those two pan steps (input_handler.cpp), and
+// only a PAN STEP reads it. It was kViewportLeadDivisor until 2026-09-22 and
+// follow's page-in lead too, the 10 % lead; that reader moved to the edge
+// margin below (architect 2026-09-22 — the lead "starts way too late"), and
+// the constant was renamed for the one job it kept.
+constexpr int64_t kViewportPanStepDivisor = 10;
+
+// THE EDGE MARGIN (architect 2026-09-22 — "leave it tunable"): EVERY LANDING
+// THAT BRINGS A SUBJECT ON SCREEN WITHOUT CENTRING IT places it this fraction
+// of the visible window in from the edge. 5 % since the ruling (2.5 % was
+// tried and bumped for a consistent feel; a flag that then clips at the right
+// edge is accepted and not designed around). A retune is this one number.
+// ITS READERS, grepped at the ruling — the one inventory of the class:
+//   * Viewport::follow_scroll_if_needed — follow's page-in, during playback
+//     and at a PageIn launch: an offscreen target lands the margin in from
+//     the LEFT edge;
+//   * Viewport::least_movement_scroll_if_needed — the Alt+Tab walk's landing
+//     (MarkerLandingFrame::LeastMovement): an onscreen subject moves nothing,
+//     an offscreen one lands the margin in from whichever edge it was beyond;
+//   * frame_span_into_view's `margin` arm (input_handler.cpp) — the span
+//     framer pads each side by this fraction OF THE WINDOW, so the framed
+//     span occupies 1 − 2 × margin of it.
+// NOT READERS, by ruling: the Ctrl+Left / Ctrl+Right held column
+// (Viewport::hold_subject_column_after_nudge), which brings an offscreen
+// subject to the window's own edge column, and the movement owners'
+// keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
+// minimum. viewport_edge_margin_samples below is the two viewport readers'
+// one conversion to samples; the span framer works in the unrounded double
+// domain and reads the fraction itself.
+constexpr double kViewportEdgeMarginFraction = 0.05;
+
+// The edge margin in whole samples of a window `visible` samples wide,
+// banker's-rounded (a point on the sample grid; clamp_viewport_start then
+// owns the viewport's own grid).
+inline int64_t viewport_edge_margin_samples(int64_t visible) {
+    return static_cast<int64_t>(std::nearbyint(
+        kViewportEdgeMarginFraction * static_cast<double>(visible)));
+}
 
 // (THE ONE GLOBAL HIT HALF-WIDTH IS GONE — kMarkerHitHalfPx, deleted
 // 2026-08-02 with its last reader long behind it. It was the single
@@ -1747,12 +1782,13 @@ struct TrimBarPressSeed {
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-22, when
-// the walk pair merged and the two hold-column nudges joined its group) — the
+// 2026-09-01), then the bottom row's EIGHTEEN (re-counted 2026-09-22, when
+// the least-movement walk joined its walk group after that day's merge of the
+// walk pair and the two hold-column nudges' arrival) — the
 // transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership and its succession), the
-// MARKER-WALK GROUP'S THREE (2026-08-15; the walk and the two hold-column
-// nudges since 2026-09-22) and the four cardinal arrows. It exists ONCE, here, because
+// MARKER-WALK GROUP'S FOUR (2026-08-15; the two walks and the two
+// hold-column nudges since 2026-09-22) and the four cardinal arrows. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -1770,9 +1806,9 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-22 against kDropdownMenus and the chord table (46 chord
-// rows + 3 anchors = 49 = kRedesignButtonCount, re-counted 2026-09-22 after
-// Zoom In / Zoom Out rejoined the chord table that same day);
+// re-greped 2026-09-22 against kDropdownMenus and the chord table (47 chord
+// rows + 3 anchors = 50 = kRedesignButtonCount, re-counted 2026-09-22 after
+// the least-movement walk joined the chord table that same day);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -2043,7 +2079,8 @@ enum class RedesignButton {
     // (The Center on next marker lamp on bare `n` stood here from 2026-09-04
     // to 2026-09-13, when the Tab walk's framing became a function of the zoom
     // at the landing, and the lamp, its chord and this box were deleted; since
-    // 2026-09-22 the walk never centres at all.)
+    // 2026-09-22 the bare walk centres at the standing zoom and the Alt walk
+    // moves the camera least, at every zoom, no lamp deciding either.)
     //
     // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the `z` lamp, closing
     // the viewport-class group behind Follow, because
@@ -2354,7 +2391,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SEVENTEEN buttons in four groups, in painted order (the enum
+    // detection. EIGHTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2372,7 +2409,8 @@ enum class RedesignButton {
     // button between Toggle inherit and Edit flag for the hours of 2026-09-19
     // before it took the icon row's iteration group)),
     // THE MARKER-WALK GROUP (2026-08-15; since 2026-09-22 the walk = Tab,
-    // its shifted press Shift+Tab, then the hold-column nudges = Ctrl+Left /
+    // its shifted press Shift+Tab, the least-movement walk = Alt+Tab, its
+    // shifted press Alt+Shift+Tab, then the hold-column nudges = Ctrl+Left /
     // Ctrl+Right), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
@@ -2702,8 +2740,8 @@ enum class RedesignButton {
     // id names the button, not the lane it sits in.
     IconAddToSelection,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's right cluster,
-    // behind a separator and ahead of the four arrows) — THREE BUTTONS SINCE
-    // 2026-09-22: THE WALK, then the two HOLD-COLUMN nudges.
+    // behind a separator and ahead of the four arrows) — FOUR BUTTONS SINCE
+    // 2026-09-22: THE TWO WALKS, then the two HOLD-COLUMN nudges.
     //
     // THE WALK IS ONE BUTTON (architect 2026-09-22, merging Previous marker and
     // Next marker, two buttons over two chords since 2026-08-15): its plain
@@ -2711,7 +2749,8 @@ enum class RedesignButton {
     // are Shift+Tab, the previous one — A SHIFT-MODIFIED FORM NEVER HAS ITS
     // OWN BUTTON, IT RIDES THE PLAIN ONE (redesign_button_shift_admits, whose
     // static_assert binds the tooltip's second line to the admission). It
-    // greys only where neither direction would act, the twin rule.
+    // greys only where neither direction would act, the twin rule. It CENTRES
+    // its landing at the standing zoom (MarkerLandingFrame::Center).
     //
     // (WALK BOTH TABS, the group's third button on Ctrl+Shift+Tab, stood here
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
@@ -2734,6 +2773,20 @@ enum class RedesignButton {
     // Outside the view it greys on the walk's own landing in both directions
     // (marker_walk_actionable, at redesign_button_enabled).
     TransportWalk,
+    // THE LEAST-MOVEMENT WALK (architect 2026-09-22), seated IMMEDIATELY AFTER
+    // the walk: the same walk with the other landing camera — its plain press
+    // is Alt+Tab and its shift-click and long press Alt+Shift+Tab, the table
+    // row carrying alt as its own base chord (Undo's ctrl shape, one axis
+    // over) and shift an admission as the walk's is. An onscreen landing
+    // moves nothing and an offscreen one lands the edge margin in from the
+    // edge it was beyond (MarkerLandingFrame::LeastMovement). Its face is
+    // the walk's own (marker_walk_actionable in both directions, the twin
+    // rule) — the same step, only the camera differs — and the `h` view
+    // leaves it lit as it leaves the walk, history_mode_owns_key claiming the
+    // Alt forms as the diff-flag cycle. It is the ONLY road to the act on the
+    // tablet (which translates no hardware key) and on a labwc whose window
+    // switcher takes Alt+Tab.
+    TransportWalkLeastMovement,
     // THE HOLD-COLUMN NUDGES (architect 2026-09-22): Ctrl+Left and
     // Ctrl+Right, the Left / Right step with the held-column camera
     // (NudgeCamera, gui_input.h) — the same act, unit, walls, refusals and
@@ -2745,18 +2798,19 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-22, when
-// Zoom In and Zoom Out were restored, later the same day the Show trim region
-// button was deleted, the walk pair merged into one button and the two
-// hold-column nudges joined the bottom row's walk group): SEVEN in row 1 (the
-// three menu anchors and the view bar's four), two in row 3, TWENTY-THREE in
-// row 4 and SEVENTEEN in the bottom row — 49. Of those, FORTY-SIX carry a chord in
+// the LEAST-MOVEMENT WALK joined the bottom row's walk group, after the same
+// day's Zoom In / Zoom Out restoration, the Show trim region button's
+// deletion, the walk pair's merge and the two hold-column nudges' arrival):
+// SEVEN in row 1 (the three menu anchors and the view bar's four), two in
+// row 3, TWENTY-THREE in row 4 and EIGHTEEN in the bottom row — 50. Of those,
+// FORTY-SEVEN carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 49;
+inline constexpr int kRedesignButtonCount = 50;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2856,6 +2910,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalk:
+        case RedesignButton::TransportWalkLeastMovement:
         case RedesignButton::TransportHoldLeft:
         case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportDown:
@@ -2867,7 +2922,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-22: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-09-22: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
 // the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button
@@ -2876,17 +2931,17 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // group from 2026-09-10 to its deletion 2026-09-13, the MARKER
 // MAGNIFICATION from 2026-09-14 to 2026-09-15, and the FLATTEN BUTTON for the
 // hours of 2026-09-19 before it went up to the icon row's iteration group),
-// the MARKER-WALK GROUP's three (2026-08-15; three
+// the MARKER-WALK GROUP's four (2026-08-15; three
 // until Walk Both Tabs left on 2026-09-14, two until 2026-09-22, when the
 // walk pair merged into one button and the two hold-column nudges joined
-// it) and the four
+// it, then four when the least-movement walk joined later that day) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
 // until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -2914,6 +2969,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalk:
+        case RedesignButton::TransportWalkLeastMovement:
         case RedesignButton::TransportHoldLeft:
         case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportDown:
@@ -12323,35 +12379,47 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 }
 
 // How a marker landing treats the camera, stated by the caller that asks for
-// the landing (architect 2026-09-04). `Center` recenters the viewport on the
-// landing at the standing zoom — `c`'s framing, the one deliberate centre;
-// `FollowPage` leaves the camera where it stands and merely pages an
-// offscreen landing into view through follow's own body
-// (Viewport::follow_scroll_if_needed) — THE BARE TAB WALK'S, AT EVERY ZOOM
-// (architect 2026-09-22: no camera is derived from the zoom); `NoFrame` (2026-09-14) moves no camera
-// at all — the focus and the playhead land and nothing scrolls, even for an
-// offscreen landing. NoFrame exists for exactly ONE composition, the
-// Ctrl+Shift+Tab PAIRED MARCH in both of its forms (the live march over
-// cycle_marker_focus and the `h` view's over cycle_history_diff_flag_focus),
-// each of whose steps runs run_center_command behind it: `c` is then the SOLE
-// framing owner, so a FollowPage page-render of an offscreen landing that `c`
-// would immediately supersede never happens.
+// the landing (architect 2026-09-04). THREE KINDS:
+//   * `Center` recenters the viewport on the landing AT THE STANDING ZOOM
+//     (Viewport::center_viewport_on_playhead — never `c`'s snap to the
+//     working zoom, which `c` itself writes after its own Center landing) —
+//     THE BARE TAB WALK'S, live and in the `h` view (architect 2026-09-22,
+//     putting the centre back after that day's page-in walk);
+//   * `LeastMovement` (architect 2026-09-22) moves the viewport as little as
+//     it can: an onscreen landing moves nothing, an offscreen one lands the
+//     edge margin in from the edge it was beyond
+//     (Viewport::least_movement_scroll_if_needed) — THE ALT+TAB WALK'S, live
+//     and in the `h` view;
+//   * `NoFrame` (2026-09-14) moves no camera at all — the focus and the
+//     playhead land and nothing scrolls, even for an offscreen landing.
+//     NoFrame exists for exactly ONE composition, the Ctrl+Shift+Tab PAIRED
+//     MARCH in both of its forms (the live march over cycle_marker_focus and
+//     the `h` view's over cycle_history_diff_flag_focus), each of whose steps
+//     runs run_center_command behind it: `c` is then the SOLE framing owner,
+//     so a framing of an offscreen landing that `c` would immediately
+//     supersede never happens.
+// (`FollowPage` — the camera held and an offscreen landing paged in through
+// Viewport::follow_scroll_if_needed — was the bare walk's for the day of
+// 2026-09-22 and before that its coarser-zoom arm; it left with its last
+// caller when the bare walk went back to Center, the least-movement landing
+// being the walk's camera that holds.)
 //
 // The type exists so that framing cannot be inherited. It is a REQUIRED
 // argument of GuiInputHandler::cycle_marker_focus,
 // GuiInputHandler::jump_playhead_to_focused_marker and
 // GuiInputHandler::cycle_history_diff_flag_focus — none carries a default
-// — so a new caller of any cannot compile without saying which of the three
-// it means, which is exactly what a defaulted bool would have let it skip.
+// — so a new caller of any cannot compile without saying which kind it
+// means, which is exactly what a defaulted bool would have let it skip.
 // No `Gui` prefix: that convention rides the marker-side data types
 // (GuiWarpMarker, GuiPhaseResetMarker), while the small policy and verdict
 // enums beside this one — MarkerCell, TrimHit, PayloadEligibility — carry
 // none.
-enum class MarkerLandingFrame { Center, FollowPage, NoFrame };
+enum class MarkerLandingFrame { Center, LeastMovement, NoFrame };
 
 // NO CAMERA IS DERIVED FROM THE ZOOM (architect 2026-09-22): the camera is the
-// key's choice. The bare Tab walk states FollowPage at every level (its four
-// arms say so by name), and the Left/Right nudge follows the edge bare and
+// key's choice. The bare Tab walk states Center and the Alt+Tab walk
+// LeastMovement at every level (their arms say so by name), and the
+// Left/Right nudge follows the edge bare and
 // holds its column under Ctrl (NudgeCamera, gui_input.h). So the at-or-finer
 // predicate `zoom_level_at_or_finer_than_working` and the walk's zoom-derived
 // `marker_walk_frame` (Center at working or finer, FollowPage coarser,
@@ -14891,11 +14959,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
         // FLAG BUTTON (bare `j` and
         // bare Return are consumed in there like the
-        // verbs' own chords) — THIRTEEN of the seventeen. ADD TO SELECTION
+        // verbs' own chords) — THIRTEEN of the eighteen. ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. The two SKIPS and
-        // THE WALK stay lit, being the mode's own
-        // absolute jumps and its diff-flag cycle (the tab row's shifted press
+        // THE TWO WALKS stay lit, being the mode's own
+        // absolute jumps and its diff-flag cycle in both cameras (the tab row's shifted press
         // carries the march that composes that cycle with the A/B switch, the
         // tabs being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
@@ -14904,7 +14972,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // on a locked tab, their own gate, stated at their arm above — and,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
         // inherit and Edit flag (that same arm), on UP / DOWN,
-        // LEFT / RIGHT and the hold-column pair, THE WALK and COPY VALUE
+        // LEFT / RIGHT and the hold-column pair, THE TWO WALKS and COPY VALUE
         // (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
@@ -15216,7 +15284,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // third until 2026-09-14, greyed on the iteration lock alone; the
         // march is the tab row's shifted press now, whose face is the tabs'
         // never-grey arm.)
+        // THE LEAST-MOVEMENT WALK (2026-09-22) SHARES THE ARM WHOLE: its two
+        // chords, Alt+Tab and Alt+Shift+Tab, run the same cycle_marker_focus
+        // over the same marker_walk_step, the landing's camera being the one
+        // difference, so the walk's own verdict is its verdict — and the `h`
+        // view's partition leaves it lit for the same reason
+        // (history_mode_owns_key claims the Alt forms).
         case RedesignButton::TransportWalk:
+        case RedesignButton::TransportWalkLeastMovement:
             if (!marker_walk_actionable(a, audio, /*forward=*/true) &&
                 !marker_walk_actionable(a, audio, /*forward=*/false))
                 return false;
@@ -15528,8 +15603,9 @@ inline bool redesign_button_enabled(const AppState& a,
             return ab_audition_preflight_ok(a, audio, playback,
                                             target_render);
         default:
-            // REACHED BY EXACTLY NINE IDS, re-derived by walking the first
-            // switch 2026-09-22 (the walk pair merged into one and the two
+            // REACHED BY EXACTLY TEN IDS, re-derived by walking the first
+            // switch 2026-09-22 (the least-movement walk joined; nine earlier
+            // that day, when the walk pair merged into one and the two
             // hold-column nudges joined; eight from 2026-09-14,
             // nine from 2026-09-13 until Walk Both Tabs
             // left on 2026-09-14; ten from 2026-09-10 while the VALUE DRAG
@@ -15538,8 +15614,8 @@ inline bool redesign_button_enabled(const AppState& a,
             // of their own above) — the bottom
             // row's members that break out of the first switch to take the
             // loading/blank guard and have nothing further to say here: the
-            // marker-walk three, the four arrows, COPY VALUE and ADD TO
-            // SELECTION. All nine
+            // marker-walk four, the four arrows, COPY VALUE and ADD TO
+            // SELECTION. All ten
             // refuse ahead of that break on their own predicate since the
             // truthful-buttons ruling — Add to selection on the iteration
             // lock's membership; the ruling, the 2026-08-15 reversal it
@@ -15799,6 +15875,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportWalk:
+        case RedesignButton::TransportWalkLeastMovement:
         case RedesignButton::TransportHoldLeft:
         case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportLeft:
@@ -16014,7 +16091,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // Next Marker into one button: a shift-modified form never has its own
 // button, it rides the plain one. The plain press is bare Tab and the shifted
 // press Shift+Tab, the reverse walk — the drop's and the copy's rule once
-// more — and the long press reaches it on glass, the button not repeating.)
+// more — and the long press reaches it on glass, the button not repeating.
+// THE LEAST-MOVEMENT WALK JOINED BESIDE IT the same day: its plain press is
+// Alt+Tab and its shifted press Alt+Shift+Tab, the alt riding the table
+// row's own base chord and shift the admission, exactly the walk's shape one
+// modifier over.)
 // (FULL ZOOM OUT JOINED 2026-09-22 with Shift+0, RESET TRIM (architect: `0`
 // is the whole song, full zoom out and, shifted, full trim out). The act had
 // ridden the Show trim region button's shift press until that button's
@@ -16037,6 +16118,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::IconFlatten ||
            b == RedesignButton::IconListen ||
            b == RedesignButton::TransportWalk ||
+           b == RedesignButton::TransportWalkLeastMovement ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
@@ -16661,6 +16743,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (the act and the modifier, not a key).
         case RedesignButton::TransportWalk:
             return {"Next Marker (Tab)",
+                    "Press Shift for the previous marker."};
+        // THE LEAST-MOVEMENT WALK (2026-09-22): the walk's own name with the
+        // camera it differs by, the chord in parentheses as the walk's, and
+        // the same reverse line — its shifted press is Alt+Shift+Tab, the
+        // previous marker with the same camera.
+        case RedesignButton::TransportWalkLeastMovement:
+            return {"Next Marker with Least Movement (Alt+Tab)",
                     "Press Shift for the previous marker."};
         // THE HOLD-COLUMN PAIR (2026-09-22): the arrow's step with the held
         // column, named as an act with its chord in parentheses — the arrows'

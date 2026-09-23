@@ -733,12 +733,13 @@ void Viewport::center_viewport_on_playhead() {
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }
 
-// THE DISCRETE MOVE'S TAIL, shared by center_viewport_on_playhead and
-// hold_subject_column_after_nudge — the two one-shot camera jumps that land
-// the viewport on a playhead: waveform and top-strip damage, the predictor
-// re-anchored if playing, and the synchronous rebuild so the playhead overlay
-// does not lead the waveform by a frame. Callers invoke it on their changed
-// path alone.
+// THE DISCRETE MOVE'S TAIL, shared by the four one-shot camera moves that land
+// the viewport on a playhead — center_viewport_on_playhead,
+// hold_subject_column_after_nudge, follow_scroll_if_needed and
+// least_movement_scroll_if_needed: waveform and top-strip damage (the flags
+// move with the viewport), the predictor re-anchored if playing, and the
+// synchronous rebuild so the playhead overlay does not lead the waveform by a
+// frame. Callers invoke it on their changed path alone.
 void Viewport::finish_discrete_viewport_move() {
     invalidate_waveform_area();
     const GuiRect ts = top_strip_area(app);
@@ -832,12 +833,15 @@ void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }
 
-// Auto-follow during playback: when the scanner leaves the viewport,
-// scroll so the scanner lands ~10% into the new view, leaving room
-// ahead. Only the first move beyond vp_end triggers a scroll. Called
-// at launch too (right after the one launch body's seed — launch_playback_window
-// — sets the scanner to the launch position), so the same landing rule
-// left-edge-aligns the viewport on the launch position if it was offscreen.
+// Auto-follow during playback: when the scanner leaves the viewport, scroll
+// so the scanner lands THE EDGE MARGIN in from the new view's LEFT edge
+// (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
+// architect finding the old 10 % lead "starts way too late"; the class's
+// inventory is at that declaration), leaving the rest of the window ahead.
+// Only the first move beyond vp_end triggers a scroll. Called at launch too
+// (right after the one launch body's seed — launch_playback_window — sets the
+// scanner to the launch position), so the same landing rule places an
+// offscreen launch position the same margin in from the left edge.
 // THE LAUNCH CALL IS THE CALLER'S WORD SINCE 2026-09-18
 // (GuiPlaybackLifecycle::LaunchCamera): every GUI road asks for it and starts
 // on screen anyway (Space's cursor launch is the one that a pan can have
@@ -853,27 +857,60 @@ void Viewport::follow_scroll_if_needed() {
         : app.playhead_cursor_sample;
     const int64_t vp_end = app.viewport_start_sample + visible;
     if (target < app.viewport_start_sample || target >= vp_end) {
-        const int64_t lead = visible / kViewportLeadDivisor;
         const int64_t old_vp = app.viewport_start_sample;
-        app.viewport_start_sample = std::max<int64_t>(0, target - lead);
+        app.viewport_start_sample = std::max<int64_t>(
+            0, target - viewport_edge_margin_samples(visible));
         clamp_viewport_start(app, audio);
-        if (app.viewport_start_sample != old_vp) {
-            invalidate_waveform_area();
-            if (playback.is_playing()) playback.resync_predictor();
-            // Viewport actually moved — THE PAGE TAKES THE SYNCHRONOUS
-            // REBUILD (architect 2026-09-02), the same body every user-driven
-            // pan/zoom frame takes. It kicked the ASYNC worker until that day,
-            // and until the worker published, every surface painted the OLD
-            // viewport while the scanner's column sat outside it: the playhead
-            // line VANISHED for a frame or two at every page (main.cpp's
-            // pre-paint documents that offscreen scanner as its own fallback
-            // case). The retired centered pin (2026-08-31 to 2026-09-13) proved
-            // the synchronous rebuild fits inside a frame EVERY frame; follow
-            // pays it once per page — and the 2026-08-07 flicker ruling (github-recheck.md) put
-            // a reported flicker onto this path the same way.
-            // kick_waveform_sync reclamps through clamp_viewport_start before
-            // rendering, which is idempotent against the clamp just above.
-            kick_waveform_sync();
-        }
+        // Viewport actually moved — THE PAGE TAKES THE DISCRETE MOVE'S TAIL,
+        // and with it THE SYNCHRONOUS REBUILD (architect 2026-09-02), the same
+        // body every user-driven pan/zoom frame takes. It kicked the ASYNC
+        // worker until that day, and until the worker published, every
+        // surface painted the OLD viewport while the scanner's column sat
+        // outside it: the playhead line VANISHED for a frame or two at every
+        // page (main.cpp's pre-paint documents that offscreen scanner as its
+        // own fallback case). The retired centered pin (2026-08-31 to
+        // 2026-09-13) proved the synchronous rebuild fits inside a frame EVERY
+        // frame; follow pays it once per page — and the 2026-08-07 flicker
+        // ruling (github-recheck.md) put a reported flicker onto this path the
+        // same way. The tail was spelled here inline until 2026-09-22, minus
+        // the top-strip damage the shared tail carries — which a page owes all
+        // the same, the flags moving with the viewport.
+        if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
     }
+}
+
+// THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Alt+Tab walk's
+// camera (MarkerLandingFrame::LeastMovement): the viewport moves as little as
+// it can while the subject ends on screen. THE SUBJECT IS THE ONE THE OTHER
+// PLAYHEAD CAMERAS TAKE — the scanner while it runs, the resting cursor
+// otherwise (center_viewport_on_playhead's and follow_scroll_if_needed's own
+// ternary) — so the owner means the same thing whoever calls it; its callers
+// today (the two landing switches, jump_playhead_to_focused_marker and
+// cycle_history_diff_flag_focus) have stopped playback first and so hand it
+// the cursor they just landed. Three answers:
+//   * ON SCREEN (inside [start, start + visible)): NOTHING MOVES;
+//   * LEFT OF THE WINDOW: it lands the edge margin in from the LEFT edge;
+//   * RIGHT OF THE WINDOW: it lands the edge margin in from the RIGHT edge.
+// So the viewport travels toward the subject and stops the margin past it —
+// the nearer edge is always the one the subject is beyond — never through
+// the window to centre it. The margin is kViewportEdgeMarginFraction's (the
+// class's inventory is at that declaration). clamp_viewport_start owns the
+// song's two ends and the grid, so at an end the subject may sit nearer the
+// edge than the margin; the zoom is never changed. The changed path takes the
+// discrete move's tail.
+void Viewport::least_movement_scroll_if_needed() {
+    const int64_t visible = samples_visible(app, audio);
+    if (visible <= 0) return;
+    const int64_t target = app.playhead_scanner_active
+        ? app.playhead_scanner_sample
+        : app.playhead_cursor_sample;
+    const int64_t vp_end = app.viewport_start_sample + visible;
+    if (target >= app.viewport_start_sample && target < vp_end) return;
+    const int64_t margin = viewport_edge_margin_samples(visible);
+    const int64_t old_vp = app.viewport_start_sample;
+    app.viewport_start_sample = target < app.viewport_start_sample
+        ? target - margin
+        : target + margin - visible;
+    clamp_viewport_start(app, audio);
+    if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }

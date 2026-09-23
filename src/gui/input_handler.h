@@ -514,7 +514,8 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // [kMinZoom, effective ceiling]) and CENTER the span in the window, then apply
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
-// sync render). `margin` adds a 2.5%-per-side (region / trim / group cases); the
+// sync render). `margin` adds the EDGE MARGIN per side — kViewportEdgeMarginFraction
+// of the WINDOW, so the span fills 1 − 2 × margin of it (trim / group cases); the
 // whole-song case passes margin=false. The centering formula uses the UNROUNDED
 // visible width (spp_t * W) — grid quantization is owned downstream by
 // clamp_viewport_start, so NO painter-quantized pre-rounding is applied here
@@ -572,7 +573,8 @@ void bring_span_into_view(AppState& app, const GuiAudio& audio,
 // 2026-08-12 collapse rule alone and is deleted with it, 2026-08-14.)
 //   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
 //     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
-//     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle),
+//     walk), bare Tab / Shift+Tab / IsoLeftTab and their Alt forms (the
+//     diff-flag cycle, centring bare and least-movement under Alt),
 //     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — the ONE
 //     ctrl-carrying claim), bare `g`
 //     (the WALK toggle over the two sources, the icon row's WALK LAMP's chord
@@ -1413,9 +1415,9 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's seventeen — the transport three, then the right block's
+    // row's eighteen — the transport three, then the right block's
     // MARKER-VERB GROUP of seven (kMarkerVerbGroup, paint_handler.cpp, owns
-    // that membership), the walk group's three (the walk and the two
+    // that membership), the walk group's four (the two walks and the two
     // hold-column nudges) and four cardinal arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
@@ -2482,7 +2484,8 @@ private:
     void handle_wheel(GuiMouseButton button, int count, bool ctrl, bool shift,
                       bool alt, bool inside_waveform, bool inside_top);
 
-    // Tab / Shift+Tab / IsoLeftTab dispatch: cycle marker focus, then stop
+    // Tab / Shift+Tab / IsoLeftTab dispatch, and the same three under Alt:
+    // cycle marker focus, then stop
     // playback and move the playhead onto the newly focused marker. The zoom
     // is untouched at every level (architect 2026-08-05, "no zoom on Tab";
     // the finer-to-working return of 2026-09-15 went 2026-09-22). `c`
@@ -2495,15 +2498,17 @@ private:
     // This body moves the focus and lands the playhead; it decides nothing
     // about the camera beyond what `frame` states and reads no preference of
     // its own — follow mode never gated it. The three bare arms pass
-    // MarkerLandingFrame::FollowPage at every zoom (architect 2026-09-22, no
-    // camera derived from the zoom) while the
+    // MarkerLandingFrame::Center (the landing centred at the standing zoom)
+    // and the three Alt arms MarkerLandingFrame::LeastMovement, at every zoom
+    // (architect 2026-09-22, no camera derived from the zoom), while the
     // Ctrl+Shift+Tab paired march passes MarkerLandingFrame::NoFrame
     // outright and frames each step through run_center_command behind it
     // (architect 2026-09-14, the march runs plain `c`, the one framing owner
     // of its steps).
-    // The parameter carries no default precisely so a future third caller
-    // cannot inherit either answer by saying nothing.
-    // The WHOLE Tab family comes through here: the three bare chords and the
+    // The parameter carries no default precisely so a future caller
+    // cannot inherit any answer by saying nothing.
+    // The WHOLE Tab family comes through here: the three bare chords, the
+    // three Alt chords (Alt+Tab, Alt+Shift+Tab, Alt+IsoLeftTab) and the
     // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
@@ -2530,8 +2535,9 @@ private:
     // (app.last_selected_marker), stopping playback and then treating the
     // camera as `frame` says — MarkerLandingFrame::Center recentering the
     // viewport on the landing AT THE LEVEL IT IS CALLED AT,
-    // MarkerLandingFrame::FollowPage leaving the camera where it stands and
-    // merely paging an OFFSCREEN landing into view through follow's own body,
+    // MarkerLandingFrame::LeastMovement moving the camera only for an
+    // OFFSCREEN landing, which lands the edge margin in from the edge it was
+    // beyond (Viewport::least_movement_scroll_if_needed),
     // MarkerLandingFrame::NoFrame writing no camera at all (the paired march,
     // whose `c` behind each step frames).
     // The zoom belongs to the caller too, and the callers differ in it: `c`
@@ -2552,8 +2558,8 @@ private:
     // Its land is the movement owner; its
     // callers are `c` (and, through `c`, Shift+`j`, the `0` command's second
     // arm, the A/B audition and the Ctrl+Shift+Tab paired march) and
-    // cycle_marker_focus, which the three bare Tab arms and the march's two
-    // walk steps reach.
+    // cycle_marker_focus, which the three bare Tab arms, the three Alt+Tab
+    // arms and the march's two walk steps reach.
     bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
 
     // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
@@ -2581,8 +2587,8 @@ private:
     // ZOOM TO A SPAN, never the working zoom. TWO ARMS since 2026-08-18 (the
     // region arm above them died with the separate region state) — a proper
     // trim SUB-WINDOW (expressed in the active domain) → the whole
-    // song (full zoom-out, which the FULL trim window also takes). The trim span is framed with a 2.5%-per-side
-    // margin; the fit level and span-start are set through the clamp chokepoints
+    // song (full zoom-out, which the FULL trim window also takes). The trim span is framed with the edge margin
+    // per side (kViewportEdgeMarginFraction, app_state.h); the fit level and span-start are set through the clamp chokepoints
     // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
     // recenter). Idempotent: a second click with the viewport unchanged no-ops.
     void run_span_framing_command();
@@ -2631,7 +2637,8 @@ private:
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
 
     // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /
-    // Shift+Tab / IsoLeftTab cycle marker focus. Returns true if key+mods
+    // Shift+Tab / IsoLeftTab cycle marker focus, and Alt+Tab / Alt+Shift+Tab /
+    // Alt+IsoLeftTab cycle it with the least-movement landing. Returns true if key+mods
     // matched one (on_key then returns), false otherwise.
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
 
@@ -4518,7 +4525,8 @@ private:
     // the given direction, treating the camera as the REQUIRED `frame` says
     // (MarkerLandingFrame, app_state.h — the live walk's own type). Two
     // callers, both in handle_history_mode_key: its Tab arm, which states
-    // FollowPage (at every zoom since 2026-09-22), and its Ctrl+Shift+Tab march, which states NoFrame and runs
+    // Center on the bare chords and LeastMovement on the Alt chords (at every
+    // zoom, architect 2026-09-22), and its Ctrl+Shift+Tab march, which states NoFrame and runs
     // run_center_command behind each step exactly as the live march does
     // (architect 2026-09-14). Every walk rule it obeys is stated at those arms.
     void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);

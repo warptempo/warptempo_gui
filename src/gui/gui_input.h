@@ -685,6 +685,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool cs    =  ctrl && !alt &&  shift;   // Ctrl+Shift
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
+    const bool al    = !ctrl &&  alt && !shift;   // Alt alone
+    const bool as    = !ctrl &&  alt &&  shift;   // Alt+Shift
     switch (key) {
         // -- letters, bare only, bound in EVERY state: the view toggle and the
         // mode toggles (`c` centre, `i` iteration, `k` add to
@@ -819,12 +821,15 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Open the flag editor on the focused marker.
         case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
         case GuiKeys::Delete: return bare;
-        // The marker walk (bare forward, shift back), the A/B tab switch and
-        // the paired march.
-        case GuiKeys::Tab: return bare || sh || cl || cs;
+        // The marker walk (bare forward, shift back), the SAME WALK WITH THE
+        // LEAST-MOVEMENT LANDING under Alt (Alt+Tab forward, Alt+Shift+Tab
+        // back — the product's first bare-Alt chords, 2026-09-22), the A/B
+        // tab switch and the paired march. Ctrl+Alt+Tab spells nothing.
+        case GuiKeys::Tab: return bare || sh || al || as || cl || cs;
         // The shifted Tab's own keysym, admitted shift-agnostically as the
-        // live walk admits it.
-        case GuiKeys::IsoLeftTab: return bare || sh;
+        // live walk admits it — under Alt too, the least-movement walk's
+        // reverse.
+        case GuiKeys::IsoLeftTab: return bare || sh || al || as;
         // The value step on the addressed cell (the tempo, a bound or the
         // magnification level), IN THREE MAGNITUDES since 2026-08-31 (R12):
         // bare one unit, Ctrl three, Shift ten since 2026-09-21 (the
@@ -935,6 +940,21 @@ static_assert(chord_is_bound(GuiKeys::O,
                                   GuiInputState{false, false, true}, false),
               "Revert is Ctrl+Alt+O exactly, bound in both modes; "
               "Ctrl+Alt+Shift+O and Alt+O spell nothing");
+static_assert(chord_is_bound(GuiKeys::Tab,
+                             GuiInputState{false, false, true}, false) &&
+                  chord_is_bound(GuiKeys::Tab,
+                                 GuiInputState{false, true, true}, true) &&
+                  chord_is_bound(GuiKeys::IsoLeftTab,
+                                 GuiInputState{false, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::Tab,
+                                  GuiInputState{true, false, true}, false) &&
+                  !chord_is_bound(GuiKeys::Tab,
+                                  GuiInputState{true, true, true}, true) &&
+                  !chord_is_bound(GuiKeys::IsoLeftTab,
+                                  GuiInputState{true, false, true}, false),
+              "Alt+Tab and Alt+Shift+Tab (and Alt+IsoLeftTab) are the "
+              "least-movement walk in both modes; no Ctrl+Alt spelling of "
+              "Tab binds");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Up,
                                  GuiInputState{false, true, false}, false) &&

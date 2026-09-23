@@ -909,7 +909,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              axes: each composes the S/T chokepoint
     //                              switch_active_audio_view_to with the column
     //                              entry GuiActiveViews::select_active_markers_view
-    //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus
+    //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus, centring the landing
+    //   - Alt+Tab/Alt+Shift+Tab/Alt+IsoLeftTab → the same cycle with the
+    //                              least-movement landing
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → the render/batch cancel (and the editor /
@@ -2200,8 +2202,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs,
     // framing each step through plain `c`; Tab / Shift+Tab / IsoLeftTab cycle
-    // marker focus, paging an offscreen landing in and otherwise holding the
-    // camera, at every zoom (architect 2026-09-22).
+    // marker focus and centre the landing at the standing zoom, and the same
+    // three under Alt cycle it with the least-movement landing (architect
+    // 2026-09-22).
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
@@ -2524,13 +2527,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     }
 
     // PageUp / PageDown: step the viewport back / forward by exactly the
-    // plain wheel's stepped-pan step (samples_visible / 10). PageUp goes back, PageDown
+    // plain wheel's stepped-pan step (samples_visible / kViewportPanStepDivisor).
+    // PageUp goes back, PageDown
     // forward. Pure active-display navigation, so the read-only allowlist
     // admits it.
     if (!ctrl && !alt && !shift &&
         (key == GuiKeys::PageDown || key == GuiKeys::PageUp)) {
         const int64_t step = std::max<int64_t>(
-            1, samples_visible(app, audio) / kViewportLeadDivisor);
+            1, samples_visible(app, audio) / kViewportPanStepDivisor);
         viewport.scroll_viewport(key == GuiKeys::PageUp ? -step : +step);
         return;
     }
@@ -2883,9 +2887,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
     // (architect 2026-09-04). The walk moves focus and lands the playhead; the
     // camera is its caller's statement, forwarded untouched: the three bare
-    // arms state FollowPage at every zoom (architect 2026-09-22 — no camera is
-    // derived from the zoom, so the walk never centres and never changes the
-    // zoom), while the Ctrl+Shift+Tab paired march — a different act, which
+    // arms state Center and the three Alt arms LeastMovement, at every zoom
+    // (architect 2026-09-22 — no camera is derived from the zoom, and neither
+    // walk changes the zoom), while the Ctrl+Shift+Tab paired march — a different act, which
     // runs plain `c` behind each step (architect 2026-09-14) — states
     // MarkerLandingFrame::NoFrame, the `c` behind it being the step's one
     // framing. Putting a policy read in here is what made the march inherit
@@ -2976,30 +2980,31 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // unmoved path (EOF-clamped no-op) needs none.
     //
     // `frame` IS THE CALLER'S TOO (architect 2026-09-04), and it selects among the switch's arms and nothing else:
-    // the land above already happened, so a FollowPage landing still moves the
-    // focus and the playhead — the camera simply stays where the user left it.
-    // THE FollowPage ARM IS FOLLOW'S PAGE, not a second scroll spelling:
-    // Viewport::follow_scroll_if_needed is the one body that brings an
-    // offscreen playhead into view at follow's own margin, it asks no follow
-    // bit of its own (its callers do), and playback is stopped above so it
-    // reads the resting cursor. A landing already on screen leaves it a no-op,
-    // which is the whole of what "does not frame" means here. THE NoFrame ARM
-    // WRITES NO CAMERA AT ALL (2026-09-14), an offscreen landing included: its
-    // caller frames behind it.
+    // the land above already happened, so a LeastMovement landing still moves
+    // the focus and the playhead — the camera simply stays where the user left
+    // it while the landing is on screen.
+    // THE LeastMovement ARM IS ITS ONE VIEWPORT OWNER
+    // (Viewport::least_movement_scroll_if_needed): an offscreen landing lands
+    // the edge margin in from the edge it was beyond, and playback is stopped
+    // above so it reads the resting cursor. A landing already on screen leaves
+    // it a no-op. THE NoFrame ARM WRITES NO CAMERA AT ALL (2026-09-14), an
+    // offscreen landing included: its caller frames behind it.
     //
-    // WHO PASSES WHAT, re-grepped 2026-09-16: `c` (run_center_command) states
-    // Center; the FOUR bare Tab arms state FollowPage at every zoom (architect
-    // 2026-09-22) — the live walk's three and the `h` view's one over its
-    // diff-flag cycle, which joined them on 2026-09-16; the Ctrl+Shift+Tab paired march states
-    // NoFrame at each walk step and then runs run_center_command, so every
-    // landing, on screen or off, is framed once, by `c`, and no FollowPage
-    // page-render lands for `c` to supersede at once.
+    // WHO PASSES WHAT, re-grepped 2026-09-22: `c` (run_center_command) states
+    // Center; the FOUR bare Tab arms state Center at the standing zoom and the
+    // FOUR Alt+Tab arms LeastMovement (architect 2026-09-22) — the live walk's
+    // three of each and the `h` view's one of each over its diff-flag cycle;
+    // the Ctrl+Shift+Tab paired march states NoFrame at each walk step and
+    // then runs run_center_command, so every landing, on screen or off, is
+    // framed once, by `c`, and no framing lands for `c` to supersede at once.
     // Shift+`j`, the A/B audition and the march reach the camera through
     // run_center_command by name and so take its Center with it.
     switch (frame) {
-        case MarkerLandingFrame::Center:     viewport.center_viewport_on_playhead(); break;
-        case MarkerLandingFrame::FollowPage: viewport.follow_scroll_if_needed();     break;
-        case MarkerLandingFrame::NoFrame:                                            break;
+        case MarkerLandingFrame::Center:
+            viewport.center_viewport_on_playhead();      break;
+        case MarkerLandingFrame::LeastMovement:
+            viewport.least_movement_scroll_if_needed();  break;
+        case MarkerLandingFrame::NoFrame:                break;
     }
     return true;
 }
@@ -3295,8 +3300,15 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     if (hi < lo) std::swap(lo, hi);   // defensive; monotone callers keep order
     double flo = static_cast<double>(lo);
     double fhi = static_cast<double>(hi);
+    // THE MARGIN IS THE EDGE MARGIN, A FRACTION OF THE WINDOW PER SIDE
+    // (kViewportEdgeMarginFraction, app_state.h, since 2026-09-22 — it padded
+    // 2.5 % OF THE SPAN per side until then): the framed span occupies
+    // 1 − 2m of the window it is fitted into, so each side pads m / (1 − 2m)
+    // of the span. The fit and the centring below then read the padded span
+    // unchanged.
     if (margin) {
-        const double m = 0.025 * static_cast<double>(hi - lo);
+        const double f = kViewportEdgeMarginFraction;
+        const double m = f / (1.0 - 2.0 * f) * static_cast<double>(hi - lo);
         flo -= m;
         fhi += m;
     }
@@ -3362,7 +3374,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     under the clamped start: both in [0, W) -> the SCROLL stands (no zoom
 //     change, no margin);
 //   - else -> frame_span_into_view with margin (the cannot-fit fallback; the
-//     framer only ever zooms OUT to fit — fit level + 2.5%-per-side, centered,
+//     framer only ever zooms OUT to fit — fit level + the edge margin per side, centered,
 //     clamped [kMinZoom, effective ceiling], NO playhead recenter). It
 //     OVERWRITES the tentative viewport wholesale (level + start via
 //     apply_zoom_to_start), so the tentative write needs no revert.
@@ -3493,7 +3505,7 @@ void GuiInputHandler::run_span_framing_command() {
         margin = true;
     }
 
-    // Frame the span through the shared framer (2.5%-per-side for the trim
+    // Frame the span through the shared framer (the edge margin per side for the trim
     // window, none for the whole song — already whole-song at the effective ceiling,
     // start 0). Centering + the wall clamp make the whole-song arm degenerate to
     // the effective ceiling at start 0. The idempotent no-op lives in
@@ -3505,7 +3517,7 @@ void GuiInputHandler::run_span_framing_command() {
 // 2026-09-14): THE PLAIN WHEEL IS THE STEPPED PAN, and every modified wheel is
 // a swallowed no-op.
 //
-// THE STEPPED PAN: the samples_visible / kViewportLeadDivisor stride through
+// THE STEPPED PAN: the samples_visible / kViewportPanStepDivisor stride through
 // the scroll_viewport funnel, which is what carries the follow suppression,
 // over the waveform and the top strip alike (every context
 // id, one route; the two bools below say only "a wheel-live surface"). up =
@@ -3535,7 +3547,7 @@ void GuiInputHandler::handle_wheel(GuiMouseButton button, int count,
     if (count < 1) count = 1;
     if (ctrl || shift || alt) return;
     const int64_t step = std::max<int64_t>(
-        1, samples_visible(app, audio) / kViewportLeadDivisor);
+        1, samples_visible(app, audio) / kViewportPanStepDivisor);
     viewport.scroll_viewport((button == GuiMouseButton::WheelUp ? -step : +step) * count);
 }
 

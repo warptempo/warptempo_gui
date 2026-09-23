@@ -786,7 +786,7 @@ private:
     // under it, 2026-08-29:
     // the transport three, the clock and the STATE CELL left, then the marker
     // verbs, the
-    // marker-walk three and the arrow four flush
+    // marker-walk four and the arrow four flush
     // right behind their separators, declared
     // below).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
@@ -812,7 +812,7 @@ private:
     // 2026-08-12; the arrows flush right since the same day's relayout): the
     // transport three at the left pad, then the right margin's block — the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp)
-    // + separator + marker-walk three + separator + arrow four (2026-08-15 for the walk
+    // + separator + marker-walk four + separator + arrow four (2026-08-15 for the walk
     // group, 2026-08-18 for the verbs) — at
     // the icon row's boxes, the
     // monospace clock at its own left-anchored pen behind the transport's
