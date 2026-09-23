@@ -131,13 +131,12 @@ struct Viewport {
     //    the source at load (GuiAudio::gain_curve), and the plate's gain
     //    field (waveform_gain_fingerprint, warp_frame_map_view.h) has TWO
     //    LIVE INPUTS, re-grepped 2026-09-23: the `[` LAMP, whose one setter
-    //    (GuiInputHandler::set_ignore_waveform_magnification) takes the
-    //    before/after kick below (kick_waveform_sync_if_gain_changed), and the
-    //    S/T FLIP, which owes no gain kick of its own, running an
-    //    unconditional kick_waveform_sync. The marker drag's release still asks
-    //    displayed_plate_gain_is_stale, but no marker store moves the gain, so
-    //    that compare always comes out equal and renders nothing. The markers
-    //    and the zoom are no inputs.
+    //    (GuiInputHandler::set_ignore_waveform_magnification, the one caller
+    //    of kick_waveform_sync_if_gain_changed) takes the before/after kick
+    //    below, and the S/T FLIP, which owes no gain kick of its own, running
+    //    an unconditional kick_waveform_sync. The markers and the zoom are no
+    //    inputs: no marker store moves the curve or its fingerprint, so a
+    //    marker gesture owes the plate nothing on the gain's account.
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and the lamp takes the kick so the
@@ -246,19 +245,8 @@ struct Viewport {
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
-    // THE MARKER DRAG RELEASE'S TWO SEAMS (Sol round 11 of 2026-09-14; the
-    // rule is at MarkerDragOps::commit_drag's tail).
-    // displayed_plate_gain_is_stale: true when a plate is displayed and its
-    // published gain fingerprint (wf_cache.fp_gain_hash) differs from the
-    // live gain field (waveform_gain_fingerprint). ONE READER: the drag's
-    // commit.
-    // Wired in main.cpp to GuiPaintHandler::displayed_plate_gain_is_stale;
-    // false unwired (the tick's dirty-detect then catches the plate).
-    std::function<bool()> displayed_plate_gain_is_stale_;
-    bool displayed_plate_gain_is_stale() const {
-        return displayed_plate_gain_is_stale_ &&
-               displayed_plate_gain_is_stale_();
-    }
+    // THE MARKER DRAG RELEASE'S SEAM (Sol round 11 of 2026-09-14; the rule
+    // is at MarkerDragOps::commit_drag's tail).
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
     // synchronous plate rebuild's tail and the tick run, with no plate render.

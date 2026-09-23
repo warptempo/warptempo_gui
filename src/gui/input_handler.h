@@ -3137,7 +3137,7 @@ private:
     bool load_render_entry_in_place(const AppState::RenderEntry& e);
 
     // load_history_commit_in_place: the same act with the COMMITTED HISTORY as its
-    // source — apply the four sidecars the commit walk's member at `member`
+    // source — apply the three sidecars the commit walk's member at `member`
     // carries as the new authoring baseline, in memory, with the disk
     // untouched. `member` is the VIEWED index (the one caller,
     // confirm_load_in_place, hands it the index it parked; the typed spelling
@@ -3145,8 +3145,8 @@ private:
     // ADDRESS — a commit SHA on the git road, a member FOLDER on the exported
     // one (history_folder.h) — because the two roads spell it differently and
     // the close inside the act drops the session that holds either.
-    // Validate-before-mutate like its sibling: the address, the four-sidecar
-    // presence and all four STRICT whole-file parses run before any store is
+    // Validate-before-mutate like its sibling: the address, the three-sidecar
+    // presence and all three STRICT whole-file parses run before any store is
     // written, each failure returning false with one stderr line naming the
     // cause and the file. No wav is compared (neither a commit nor an export
     // carries audio — the loaded source is the source), no tmp/ wipe and so
@@ -4001,7 +4001,7 @@ private:
     // The gate is the sibling of read_only_key_blocked's allowlist shape: true
     // when key+mods should be dropped while a keyboard-modal editor is open
     // (admits only the keys the active editor consumes, bare Esc, Ctrl+S, and
-    // Ctrl+Q). It serves all six editor kinds, top strip included (the list is
+    // Ctrl+Q). It serves all five editor kinds, top strip included (the list is
     // text_editor::Kind).
     // THE PREDICATE IS PUBLIC since 2026-09-17 for one outside reader, the
     // car transport's gate (GuiCarTransport::admits: a head-unit button is

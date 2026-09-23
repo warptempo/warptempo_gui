@@ -1265,7 +1265,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       since it can only fire while one of the editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all six kinds, through route_modal_editor_key: Esc
+    //   (b) THE EDITORS — all five kinds, through route_modal_editor_key: Esc
     //       closes / cancels the edit (the editor blocks above, bit-for-bit
     //       unchanged);
     //       the commit-title editor (2026-08-07) joined that route and added no

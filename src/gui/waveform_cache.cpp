@@ -730,11 +730,6 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     maybe_rebuild_flag_cache();
 }
 
-bool GuiPaintHandler::displayed_plate_gain_is_stale() const {
-    if (!wf_cache.fp_rendered) return false;
-    return wf_cache.fp_gain_hash != waveform_gain_fingerprint(app);
-}
-
 // -- Flag-cache fingerprint hashes ---------------------------------------
 
 namespace {

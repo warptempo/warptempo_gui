@@ -2747,13 +2747,26 @@ struct WaveformBasis {
 // of the GLOBAL column index (the authoring lattice below) in both views —
 // target view maps the column through the warp map to its source span first —
 // so the lookup is pan-invariant by construction and nothing forks on the
-// view. At a coarse zoom a plate column covers many working-zoom columns whose
-// gains differ; the pixel takes the gain at its centre rather than a
-// per-working-column product before the min/max reduction, because the
-// pyramid reduces RAW peaks (a gained pyramid would be a second pyramid,
-// rebuilt on every lamp flip), the curve varies on the window's 1.5 s scale so
-// a pixel's spread of gain is small at every zoom this product shows, and the
-// plate is display-only.
+// view.
+//
+// THE CENTRE RULE IS AN APPROXIMATION AT THE COARSE ZOOMS. A coarse plate
+// column covers many working-zoom columns whose gains differ; it takes the
+// curve's gain at its centre source frame and applies it to the min/max
+// reduced from RAW peaks, so where the gain changes inside the column (the
+// curve can step sharply where its order statistic changes) the bar's height
+// differs from the height a per-working-column gain applied before the
+// reduction would give. The error is not small: on the 40th at whole-piece
+// zoom (1920 columns, ~0.30 s per column) a column at 122.3 s paints 0.53 by
+// the centre rule against 0.87 gained-before-reduction, and at 640 columns
+// (~0.90 s per column) one paints 0.97 against 0.34 (normalized peak
+// estimates, Astra review 2026-09-23, tmp/gain_check/review_coarse.py). The
+// exact alternative is a second pyramid reduced over the gained samples —
+// immutable with the source like the curve, so the lamp would select between
+// the two pyramids rather than rebuild one — at the memory of a second
+// pyramid. The centre rule stands as the architect's accepted approximation
+// for a display-only plate at the coarse zooms, pending his ruling
+// (2026-09-23). At working zoom (55 frames per column against a 4400-frame
+// hop) the two agree.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate is pixels, playback
@@ -3131,7 +3144,7 @@ struct MarkerStem {
 
 // WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
 // open marker-lane editor is standing in for it. THE ONE GRAPHIC MODEL, stated
-// once here and applied to all FOUR editors (architect 2026-09-05, on the
+// once here and applied to all three editors (architect 2026-09-05, on the
 // tablet: "it just feels odd to have one nonvariant field in the middle ... the
 // two editors on the opposite ends behaving one way and the bounds one in the
 // middle behaving in a different way makes the whole thing seem hacked

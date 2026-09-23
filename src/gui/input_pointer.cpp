@@ -5125,7 +5125,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // contract admits as a command arm through the ordinary press body while a
     // dialog editor stood, which is what gave a keyboard-less user on GLASS a
     // way out of an accidentally opened settings editor. THE MODAL ANSWERS
-    // THAT ITSELF now: all four editor dialogs publish real OK and CANCEL
+    // THAT ITSELF now: all three editor dialogs publish real OK and CANCEL
     // buttons, the claim below admits a press on them, and Cancel dispatches
     // the session's own Esc. With Quit's button gone to the File menu the
     // membership had already derived down to Save, and a convenience chord is

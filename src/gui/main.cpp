@@ -1559,12 +1559,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // GuiPaintHandler::force_synchronous_waveform_rebuild.
     viewport.request_waveform_sync_ =
         [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
-    // The marker drag release's two seams (the rule at
-    // MarkerDragOps::commit_drag's tail, the contracts at their Viewport
-    // declarations): the displayed plate's gain staleness and the flag-only
-    // refresh.
-    viewport.displayed_plate_gain_is_stale_ =
-        [&]() { return paint_handler.displayed_plate_gain_is_stale(); };
+    // The marker drag release's seam (the rule at
+    // MarkerDragOps::commit_drag's tail, the contract at its Viewport
+    // declaration): the flag-only refresh.
     viewport.refresh_flag_cache_ =
         [&]() { paint_handler.maybe_rebuild_flag_cache(); };
 

@@ -595,12 +595,6 @@ struct GuiPaintHandler {
     // playhead line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();
 
-    // True when a plate is displayed (wf_cache.fp_rendered) and its published
-    // gain fingerprint (fp_gain_hash) differs from the live gain field
-    // (waveform_gain_fingerprint). The contract and its readers are at
-    // Viewport::displayed_plate_gain_is_stale.
-    bool displayed_plate_gain_is_stale() const;
-
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay stays

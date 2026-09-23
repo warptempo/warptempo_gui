@@ -24,7 +24,8 @@
 //   -dB(top) / kLevelDb. Columns under kGateDb are silence or tape hiss and
 //   are gated out; a window with too little audible material takes the d of
 //   the NEARER audible hop, so the curve is the same whichever way the audio
-//   runs. An all-silent song takes d = 3 everywhere.
+//   runs (up to the hop lattice and the earlier-on-a-tie choice, below). An
+//   all-silent song takes d = 3 everywhere.
 //
 //   THE GAIN. g = 2^d, clamped to [kGainMin, kGainMax]: the gain that puts
 //   the window's typical column top exactly on the lane edge. That is the
@@ -35,7 +36,10 @@
 // A centred window's kTopPercentile reports loud once a tenth of it is loud,
 // so the quiet before a loud entry fades down over roughly the last quarter
 // of a working-zoom screen (~0.6 s) and stays down over the first quarter
-// after it — symmetric in time, with no forward look-ahead — and a lone
+// after it — symmetric in time, with no forward look-ahead (literally so only
+// up to the hop lattice, whose hops sit at multiples of the hop from frame 0,
+// and the nearer-known rule's earlier-on-a-tie choice for a silent hop) — and
+// a lone
 // accent inside a quiet passage halos its neighbours for about half a window
 // on each side. Both are the rule's shape, accepted by the architect, not
 // defects.

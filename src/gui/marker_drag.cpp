@@ -526,26 +526,22 @@ void MarkerDragOps::commit_drag() {
     // reset drag never touches the warp map. So the only surviving MAP effect is
     // the view-independent target preview trigger below.
     //
-    // THE RELEASE'S PLATE AND FLAG RULE (architect 2026-09-14; Sol round 11
-    // of 2026-09-14). With the drag state cleared above, the freeze is lifted.
-    //   THE PLATE: judged against WHAT WAS PUBLISHED — the release renders
-    //   synchronously iff the live gain field differs from the DISPLAYED
-    //   plate's gain fingerprint (Viewport::displayed_plate_gain_is_stale), so
-    //   the render lands in the release's own frame rather than a tick late.
-    //   No column's store moves the waveform's gain (the picture's gain is the
-    //   curve derived from the source, gated by the audio view and the `[`
-    //   lamp alone), so a drag leaves the gain field where it found it and no
-    //   plate renders.
+    // THE RELEASE'S FLAG RULE (architect 2026-09-14; Sol round 11 of
+    // 2026-09-14). With the drag state cleared above, the freeze is lifted.
+    //   NO PLATE RENDERS: neither marker kind a drag can move (warp, phase
+    //   reset) moves the waveform's gain curve or its fingerprint — the
+    //   picture's gain is the curve derived from the source, gated by the
+    //   audio view and the `[` lamp alone — and the lamp is gesture-gated
+    //   with a synchronous kick of its own, so the release has no gain change
+    //   to publish (the staleness branch that once rendered here lost its last
+    //   producer with the magnification level markers column, Astra review
+    //   2026-09-23).
     //   THE FLAGS ARE REFRESHED ON EVERY RELEASE: a drag-time rebuild keyed
     //   the flag bitmap to the drag overlay, and the reorder/remap and the
     //   DragState reset above change what it must show, so a Wayland frame
     //   callback served before the tick would blit drag-era flags against the
-    //   committed store. The synchronous rebuild's tail already rebuilds the
-    //   flag cache; the no-render arm reaches the flag cache ALONE
+    //   committed store. The release reaches the flag cache ALONE
     //   (Viewport::refresh_flag_cache — fingerprint-guarded, no plate render).
-    if (viewport.displayed_plate_gain_is_stale())
-        viewport.kick_waveform_sync();
-    else
-        viewport.refresh_flag_cache();
+    viewport.refresh_flag_cache();
     if (net_changed) target_render.trigger();
 }

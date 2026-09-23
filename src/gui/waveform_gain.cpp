@@ -74,12 +74,17 @@ constexpr double kGatedMinFraction = 0.25;
 // centred window's p90 reports loud once a tenth of it is loud, so the quiet
 // before a loud entry fades over roughly the last quarter of a screen
 // (~0.6 s) and the first quarter after it — symmetric in time, no forward
-// look-ahead — and a lone accent halos its neighbours for about half a window
+// look-ahead (literally so only up to the hop lattice, whose hops sit at
+// multiples of the hop from frame 0, and the silent hop's earlier-on-a-tie
+// choice) — and a lone accent halos its neighbours for about half a window
 // on each side. Both are the rule's shape, not defects.
 constexpr double kWindowSeconds = kReferenceScreenSeconds * 5.0 / 8.0;
 static_assert(kWindowSeconds == 1.5, "the exposition/repeat criterion's 1.5 s");
-// THE CLAMP'S TWO CONSTANTS. The floor never attenuates: a tutti whose
-// typical top already rests under the edge is left alone.
+// THE CLAMP'S TWO CONSTANTS. The floor forbids attenuation: g = 2^d with
+// d >= 0 for every window whose typical top sits under or at the edge, so the
+// floor is reached only at d = 0 and the picture is NEVER pushed below its own
+// level — a window whose typical top already sits at the edge takes x1, and
+// one below the edge is raised to it (x2 at -6 dB), not left alone.
 constexpr double kGainMin = 1.0;
 // The cap: four doublings, the old level ladder's top.
 constexpr double kGainMax = 16.0;
@@ -166,7 +171,11 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         if (known.empty()) {
             std::fill(coarse.begin(), coarse.end(), 3.0);
         } else {
-            // A silent point takes the NEARER known point, the earlier on a tie.
+            // A silent point takes the NEARER known point, the earlier on a tie
+            // (the retained detector's rule). The experiment's reference script
+            // interpolates d between the known hops instead; the difference is
+            // intentional and visible only on gated-but-nonzero material, true
+            // silence painting nothing at any gain.
             for (size_t k = 0; k < raw.size(); ++k) {
                 if (raw[k]) { coarse[k] = *raw[k]; continue; }
                 const int64_t kk = static_cast<int64_t>(k);

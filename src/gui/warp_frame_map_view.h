@@ -211,13 +211,11 @@ bool waveform_magnified(const AppState& app);
 // alone names it. ONE PLACE, so the picture caches' existing hash keys
 // re-render on every flip with no per-caller code: the plate fingerprint
 // carries it beside the viewport geometry, the S/T switch ends in its own
-// kick_waveform_sync and the lamp's one setter kicks when it moved. THREE
+// kick_waveform_sync and the lamp's one setter kicks when it moved. TWO
 // READERS, re-grepped 2026-09-23: the plate's render inputs, which is also
 // where the fingerprint's gain field is captured
-// (compute_waveform_render_inputs, waveform_cache.cpp); the displayed plate's
-// staleness compare against that field
-// (GuiPaintHandler::displayed_plate_gain_is_stale); and the gain kick's hash
-// (Viewport::waveform_gain_hash).
+// (compute_waveform_render_inputs, waveform_cache.cpp); and the gain kick's
+// hash (Viewport::waveform_gain_hash).
 uint64_t waveform_gain_fingerprint(const AppState& app);
 
 class GuiAudio;

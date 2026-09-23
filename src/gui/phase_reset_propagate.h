@@ -26,10 +26,11 @@ struct GuiInputHandler;
 // consistent with the identity fallback the rest of the target-view paint uses
 // on an empty map.
 //
-// ONE SPELLING IS THE POINT: both propagates report a lockstep divergence in
-// the same register ("Stopped at <timestamp> (label name diverged)"), and a
-// second implementation would let the two drift in the one place the user
-// compares them.
+// ONE SPELLING IS THE POINT: both phase-reset pastes (paste_apply and
+// paste_state_apply) report a lockstep divergence in the same register
+// ("Stopped at <timestamp> (label name diverged)"), and a second
+// implementation would let the two drift in the one place the user compares
+// them.
 std::string format_domain_timestamp(double source_frame, const AppState& app,
                                     const GuiAudio& audio);
 

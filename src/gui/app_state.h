@@ -5954,8 +5954,8 @@ struct AppState {
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SIX editor kinds, 0 when
-    // none stands — the accessor above widened by the three top-strip kinds it
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL FIVE editor kinds, 0 when
+    // none stands — the accessor above widened by the two top-strip kinds it
     // names as deliberate non-members. It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
     // with the edit they were armed in: keying them to this id turns "reset
@@ -6715,7 +6715,7 @@ struct AppState {
     // and its `scale=` value.
     //
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
-    // load-in-place gate itself — each candidate commit's four sidecars must
+    // load-in-place gate itself — each candidate commit's three sidecars must
     // pass the strict whole-set load (load_commit_sidecars_strict,
     // history_diff.h, the `'` act's own validation, one predicate) —
     // so every checkpoint the mode can step to is one `'` can load.
@@ -6969,7 +6969,7 @@ struct AppState {
     // SAVE beside the
     // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
     // dirty cleared with it) and only then writes the live authoring state as
-    // the four sidecars into the piece's directory in the projects repository,
+    // the three sidecars into the piece's directory in the projects repository,
     // commits them pathspec-scoped under the entered title and pushes
     // (commit_history_checkpoint, history_diff.h — the product's ONE mutating
     // git route, and its only writer outside the user's own save). A FAILED SAVE
@@ -7900,7 +7900,7 @@ struct AppState {
     // reopen one, so the first refusal's grey is structural, while the save
     // lockout shows as the Save button's "Committing..." wherever the user is.
     // Its reason is a real race rather than a policy — the worker writes the
-    // four sidecars into projects/<id>/ off the main thread, and in the
+    // three sidecars into projects/<id>/ off the main thread, and in the
     // coincident workflow a concurrent Ctrl+S writes those same paths through
     // the same fixed temp name.
     bool history_checkpoint_in_flight = false;
@@ -15129,7 +15129,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // SAVE'S SECOND TERM IS THE PUBLISHING CHECKPOINT (2026-08-08), and it
         // is GLOBAL rather than mode-scoped because the act outlives the view it
-        // was launched from: while the worker writes the four sidecars into
+        // was launched from: while the worker writes the three sidecars into
         // projects/<id>/, every save is refused at the one save owner
         // (GuiSaveOps::save, which states why), so this arm is that refusal's
         // mirror exactly as the read-only terms below mirror the key gate. The

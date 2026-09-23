@@ -2614,7 +2614,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             the Local walk consumes it): it opens the HISTORY
 //                             PICKER over the viewed walk's members, and the
 //                             open act on the REMOTE tab loads the commit's
-//                             four sidecars (load_history_commit_in_place),
+//                             three sidecars (load_history_commit_in_place),
 //                             on the LOCAL tab that state of the session's own
 //                             timeline as a new undo entry
 //                             (load_history_local_entry_in_place). It is a
@@ -3306,7 +3306,7 @@ bool GuiInputHandler::handle_commit_title_editor_key(GuiKey        key,
 //
 // AND SINCE 2026-08-08 THE BIT ALSO LOCKS OUT EVERY SAVE, globally, which is
 // what makes the coincident-write paragraph below safe rather than merely
-// unlucky: the worker writes the four sidecars into projects/<id>/ off the main
+// unlucky: the worker writes the three sidecars into projects/<id>/ off the main
 // thread, and under the project-folder law a concurrent Ctrl+S would write the
 // very same paths through the same fixed temp name. The refusal lives at the one save
 // owner (GuiSaveOps::save) and its face is the Save button's "Committing...".
@@ -4136,7 +4136,7 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 // Any text editor consuming printable keys — the TWO single-State dialog
 // editors (the settings prompt and the commit-title editor) plus the top-strip
 // flag editor in ANY of its
-// kinds (the FlagPayload editor takes typed letters too); the six Kinds are
+// kinds (the FlagPayload editor takes typed letters too); the five Kinds are
 // listed at text_editor::Kind. The platform layer's kLeftClickKey probe: while
 // this is true that key types a normal letter rather than emulating the left
 // button.
@@ -5880,7 +5880,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // line having outranked the transient tier a refusal would have written).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: a checkpoint
-// is four sidecars and no audio at all, on either road, so the LOADED SOURCE IS
+// is three sidecars and no audio at all, on either road, so the LOADED SOURCE IS
 // THE SOURCE — this loads a recipe in place for the file already open, exactly
 // as the mode's
 // diff measures a checkpoint against the session for that same file. The render-entry
@@ -5903,7 +5903,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // load_render_entry_in_place's body and whose declaration (input_handler.h)
 // states the rule: a load in place writes exactly what its one undo entry
 // restores. Everything else the commit's `.settings` carries is READ PAST, the
-// four-sidecar set being a whole standard-schema state rather than a request:
+// three-sidecar set being a whole standard-schema state rather than a request:
 // its tab bands (the checkpoint's trim included), its S/T, W/P and A/B keys, its
 // camera, and its session prefs — `projects_repo` among them, so a commit whose
 // settings named a different projects home no longer installs that answer, and
