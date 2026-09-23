@@ -38,21 +38,29 @@ namespace {
 // holes (the body cutout and the lid slot) come out as holes: its subpaths wind
 // against the outline. Filling subpath-by-subpath would flood them.
 //
-// `xform` carries the path element's own SVG `transform` attribute, applied
-// around the path so `d` can stay VERBATIM — baking a transform into the
-// numbers by hand would destroy the property that a diff between this table and
-// the file is a transcription bug and nothing else. THREE committed files need
-// one, and all are TRANSLATES: dialog-ok-apply.svg, whose author drew the
-// check mark at its document coordinates and translated it back into the
-// viewBox, dialog-cancel.svg (row 8, 2026-08-11), whose `translate(-1-1)`
-// spells the glued-negative form the SVG grammar admits, and
-// go-previous-context.svg (2026-09-22) the same way. `icon_translate` is
-// the one producer, named rather than raw so a translate READS as a translate
-// at its site. (A general `icon_matrix` constructor lived here for part of
-// 2026-08-11, for distortionfx's rotate-and-scale; it went with that file. The
-// field itself still holds cairo's six components — icon_translate writes all
-// six and draw() hands them to cairo_matrix_init — so a future `matrix(...)`
-// needs the constructor back and nothing else.)
+// `xform` carries a transform applied around the path so `d` can stay
+// VERBATIM — baking a transform into the numbers by hand would destroy the
+// property that a diff between this table and the file is a transcription bug
+// and nothing else. Three icons' rows carry a non-identity one. TWO are the
+// FILE'S OWN `transform` attribute, both TRANSLATES: dialog-ok-apply.svg, whose
+// author drew the check mark at its document coordinates and translated it
+// back into the viewBox, and dialog-cancel.svg (row 8, 2026-08-11), whose
+// `translate(-1-1)` spells the glued-negative form the SVG grammar admits.
+// `icon_translate` is their producer, named rather than raw so a translate
+// READS as a translate at its site. THE THIRD IS THE PRODUCT'S OWN, the first
+// icon modification (architect 2026-09-23): snap-nodes-midpoint.svg carries no
+// transform, and the hold-column nudges wear it turned a quarter left and a
+// quarter right through `icon_quarter_turn_about_centre`, one matrix on both
+// of the file's paths, the `d` strings still byte-verbatim. The precedent is
+// the RIGID QUARTER TURN about the 22-grid's centre: it maps every integer
+// coordinate to an integer coordinate, so the pixel grid and the Breeze
+// provenance both survive; anything that would move ink off the grid (a scale,
+// a skew, a non-right angle) is not admitted by it. (A general `icon_matrix`
+// constructor lived here for part of 2026-08-11, for distortionfx's
+// rotate-and-scale; it went with that file. The field holds cairo's six
+// components — each producer writes all six and draw() hands them to
+// cairo_matrix_init — so a file's future `matrix(...)` needs that constructor
+// back and nothing else.)
 struct IconTransform {
     // Cairo's matrix components, which take SVG's matrix(a b c d e f) in that
     // exact argument order (a=xx, b=yx, c=xy, d=yy, e=x0, f=y0 in both).
@@ -63,10 +71,24 @@ constexpr IconTransform icon_translate(double tx, double ty) {
     return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
 }
 
+// A quarter turn about the 22-px viewBox's centre (11, 11), clockwise on
+// screen (y down) for +1, anticlockwise for -1; no other value is admitted.
+//   +1: matrix(0 1 -1 0 22 0), (x, y) -> (22 - y, x)
+//   -1: matrix(0 -1 1 0 0 22), (x, y) -> (y, 22 - x)
+// The check, on snap-nodes-midpoint's apex-up triangle: the apex (11, 8) lands
+// at (14, 11) under +1, pointing right, and at (8, 11) under -1, pointing left;
+// the centre (11, 11) is fixed by both, and the horizontal line at y = 11
+// becomes the vertical line at x = 11. Both matrices have determinant +1, so a
+// path's winding is preserved and a nonzero-winding hole stays a hole.
+constexpr IconTransform icon_quarter_turn_about_centre(int turns) {
+    return turns > 0 ? IconTransform{0.0, 1.0, -1.0, 0.0, 22.0, 0.0}
+                     : IconTransform{0.0, -1.0, 1.0, 0.0, 0.0, 22.0};
+}
+
 struct IconPath {
     GuiColor      ink;      // fill source
     const char*   d;
-    IconTransform xform{};  // identity unless the file carries a transform
+    IconTransform xform{};  // identity unless the row carries a transform
 };
 
 struct IconDef {
@@ -315,8 +337,8 @@ constexpr IconPath kUnlockPaths[] = {
 // element, vcs-commit carries the identical pair ONCE on a `<g>` that encloses
 // all three of its paths. A group attribute is inherited by the children and
 // nothing else, so both resolve to the same #fcfcfc per path — the `<g>` is a
-// spelling, not a transform, and there is nothing about it to model (the files
-// that DO carry one are inventoried at IconPath's `xform`, above).
+// spelling, not a transform, and there is nothing about it to model (the rows
+// that DO carry one are inventoried at IconTransform, above).
 constexpr IconPath kVcsCommitPaths[] = {
     {kIconText, "m10 4h1v5h-1z"},
     {kIconText, "m10 14h1v5h-1z"},
@@ -920,48 +942,32 @@ constexpr IconPath kBboxNextPaths[] = {
      "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
 };
 
-// THE HOLD-COLUMN NUDGES (architect 2026-09-22), the walk group's second and
-// third: go-previous-context and go-next-context, each ONE filled path under
-// `.ColorScheme-Text`, `d` verbatim. go-previous-context carries the file's own
-// transform="translate(-378.85714-540.07647)" (the glued-negative form
-// dialog-cancel's translate already spells), carried as data so the `d` stays
-// byte-identical; go-next-context has none. Command coverage: m, v, h, l and
-// relative c with leading-dot decimals chained without separators — all
-// inside the interpreter's subset.
-constexpr IconPath kGoPreviousContextPaths[] = {
-    {kIconText,
-     "m398.85714 543.07647v16h-14l-4-8 4-8h14m-5.42773 4v.5918c.7107 0 "
-     ".7207.23916.7207 1.10547v1.01757c0 .41547.12362 1.03272.72266 "
-     "1.28907-.59904.25635-.72266.87555-.72266 1.29101v1.00781c0 "
-     ".86631-.001 1.10547-.7207 1.10547v.5918c1.06609 0 1.51367-.35225 "
-     "1.51367-1.25391v-1.22265c0-.55691.0205-1.20117.60937-1.20117h.30469v-"
-     ".64454h-.30469c-.58887 0-.60937-.64426-.60937-1.20117v-1.22265c0-"
-     ".90166-.44758-1.25391-1.51367-1.25391m-3.13672 0c-1.0661 0-1.52149"
-     ".35225-1.52149 1.25391v1.22265c.00001.55691-.0404 1.20117-.61914 "
-     "1.20117h-.29492v.64454h.29492c.57874 0 .61914.64426.61914 1.20117v"
-     "1.22265c.00001.90166.45539 1.25391 1.52149 1.25391v-.5918c-.71082 "
-     "0-.72852-.23916-.72852-1.10547v-1.00781c0-.41546-.12361-1.03466-"
-     ".72265-1.29101.59904-.25635.72265-.8736.72265-1.28907v-1.01757c0-"
-     ".86631.0178-1.10547.72852-1.10547v-.5918",
-     icon_translate(-378.85714, -540.07647)},
+// THE HOLD-COLUMN NUDGES (architect 2026-09-23), the walk group's second and
+// third: snap-nodes-midpoint, a hollow triangle standing on a line split
+// around it, TURNED A QUARTER — left (-1) for Ctrl+Left, right (+1) for
+// Ctrl+Right — so the triangle points the nudge's way from a vertical line: a
+// node on a line, the marker held to its column. The file carries no transform;
+// the turn is the product's own (the precedent is recorded at IconTransform).
+// Two paths, `d` verbatim and spelled once so both icons share them: path4
+// under `.ColorScheme-Text` (the line), path6 under `.ColorScheme-Accent` (the
+// triangle, kIconAccent; its inner subpath winds against the outer, so nonzero
+// winding makes the hole). Command coverage: relative m with its implicit
+// linetos (glued negatives included), v, h and z — all inside the
+// interpreter's subset. (go-previous-context
+// and go-next-context wore this pair from 2026-09-22 until 2026-09-23.)
+constexpr const char* kSnapNodesMidpointLineD =
+    "m3 11v1h7v-1zm9 0v1h7v-1z";
+constexpr const char* kSnapNodesMidpointNodeD =
+    "m11 8-3 6h6zm0 2.236328 1.382812 2.763672h-2.765624z";
+
+constexpr IconPath kSnapNodesMidpointLeftPaths[] = {
+    {kIconText,   kSnapNodesMidpointLineD, icon_quarter_turn_about_centre(-1)},
+    {kIconAccent, kSnapNodesMidpointNodeD, icon_quarter_turn_about_centre(-1)},
 };
 
-constexpr IconPath kGoNextContextPaths[] = {
-    {kIconText,
-     "m2 3v16h14l4-8-4-8h-14m5.427734 4v.591797c-.7107 0-.720703.239159-"
-     ".720703 1.105469v1.017578c0 .41547-.123616 1.032712-.722656 "
-     "1.289062.59904.25635.722656.875556.722656 1.291016v1.00781c0 "
-     ".86631.009983 1.105469.720703 1.105469v.591797c-1.06609 0-1.513672-"
-     ".352246-1.513672-1.253906v-1.222656c0-.556911-.020485-1.201172-"
-     ".609375-1.201172h-.304688v-.644532h.304688c.58887 0 .609375-.644261"
-     ".609375-1.201171v-1.222656c0-.90166.447582-1.253906 1.513672-1.253906"
-     "m3.136719 0c1.0661 0 1.521485.352246 1.521485 1.253906v1.222656c-"
-     ".00001.556911.0404 1.201171.61914 1.201171h.294922v.644532h-.294922c-"
-     ".57874 0-.61914.644261-.61914 1.201172v1.222656c-.00001.90166-.455385 "
-     "1.253906-1.521485 1.253906v-.591797c.71082 0 .728516-.239159.728516-"
-     "1.105469v-1.00781c0-.41546.123606-1.034666.722656-1.291016-.59905-"
-     ".25635-.722656-.873592-.722656-1.289062v-1.017578c0-.86631-.017786-"
-     "1.105469-.728516-1.105469v-.591797"},
+constexpr IconPath kSnapNodesMidpointRightPaths[] = {
+    {kIconText,   kSnapNodesMidpointLineD, icon_quarter_turn_about_centre(+1)},
+    {kIconAccent, kSnapNodesMidpointNodeD, icon_quarter_turn_about_centre(+1)},
 };
 
 // -- THE NOTIFICATION CARDS' THREE (2026-08-29) -------------------------------
@@ -1085,8 +1091,8 @@ constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kMerge              {22.0, kMergePaths,               1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
-constexpr IconDef kGoPreviousContext  {22.0, kGoPreviousContextPaths,   1};
-constexpr IconDef kGoNextContext      {22.0, kGoNextContextPaths,       1};
+constexpr IconDef kSnapNodesMidpointLeft  {22.0, kSnapNodesMidpointLeftPaths,  2};
+constexpr IconDef kSnapNodesMidpointRight {22.0, kSnapNodesMidpointRightPaths, 2};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
@@ -1139,8 +1145,8 @@ const IconDef& icon_def(Icon icon) {
         case Icon::InsertLink:          return kInsertLink;
         case Icon::Merge:               return kMerge;
         case Icon::BboxNext:            return kBboxNext;
-        case Icon::GoPreviousContext:   return kGoPreviousContext;
-        case Icon::GoNextContext:       return kGoNextContext;
+        case Icon::SnapNodesMidpointLeft:  return kSnapNodesMidpointLeft;
+        case Icon::SnapNodesMidpointRight: return kSnapNodesMidpointRight;
         case Icon::DialogOkApply:       break;
         case Icon::DialogInformation:   return kDialogInformation;
         case Icon::DialogError:         return kDialogError;
@@ -1174,7 +1180,7 @@ const IconDef& icon_def(Icon icon) {
 //
 // THE SUBSET IS THE `d` GRAMMAR AND NOTHING ELSE. The interpreter's other
 // grown feature is the PATH ELEMENT's, not the string's, and lives where it is
-// used: the per-path translate at IconPath's `xform`. It cannot reach this
+// used: the per-path transform at IconPath's `xform`. It cannot reach this
 // walk, which appends geometry in the path's own units either way.
 struct PathCursor {
     const char* p;
@@ -1532,10 +1538,11 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
     cairo_scale(cr, size_px / def.view_box, size_px / def.view_box);
     for (int i = 0; i < def.path_count; ++i) {
         const IconPath& p = def.paths[i];
-        // The path element's own transform, applied INSIDE cairo's CTM (on top
+        // The row's transform, applied INSIDE cairo's CTM (on top
         // of the viewBox mapping above) and saved/restored around the path so it
-        // cannot leak into a sibling — two files carry one, and a per-path
-        // transform that escaped its path would be a silent bug. Applied
+        // cannot leak into a sibling — three icons' rows carry one (inventory
+        // at IconTransform), and a per-path transform that escaped its path
+        // would be a silent bug. Applied
         // UNCONDITIONALLY, identity included: multiplying by the identity is
         // exact in doubles, so an untransformed path's pixels are exactly what
         // they would be with no matrix at all, and there is no "has a transform"

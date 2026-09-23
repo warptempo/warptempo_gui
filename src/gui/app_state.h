@@ -2821,7 +2821,8 @@ enum class RedesignButton {
     // faces as the arrow pair beside them, the camera alone differing. They
     // HOLD-REPEAT as those do (kToolbarChords' `repeats` column), their table
     // rows carrying ctrl as their own base chord (Undo's shape), and admit no
-    // modifier. Breeze's go-previous-context / go-next-context.
+    // modifier. Breeze's snap-nodes-midpoint turned a quarter left / right
+    // (icons.h's SnapNodesMidpointLeft / SnapNodesMidpointRight).
     TransportHoldLeft, TransportHoldRight,
     TransportDown, TransportUp, TransportLeft, TransportRight
 };

@@ -347,12 +347,18 @@ enum class Icon {
     // button — enumerators, defs and committed assets — and bboxnext came
     // back byte-verbatim as the one walk's glyph.)
     BboxNext,            // The walk (Tab; Shift+Tab on the shifted press)
-    // THE HOLD-COLUMN NUDGES' GLYPHS (architect 2026-09-22), the walk group's
-    // second and third: Breeze's go-previous-context / go-next-context, a
-    // tag-shaped arrow carrying a pair of braces — the chevron's direction
-    // with a mark that it is not the plain arrow two slots away.
-    GoPreviousContext,   // Ctrl+Left, the held-column nudge left
-    GoNextContext,       // Ctrl+Right, the held-column nudge right
+    // THE HOLD-COLUMN NUDGES' GLYPHS (architect 2026-09-23), the walk group's
+    // second and third: Breeze's snap-nodes-midpoint — an accent-blue hollow
+    // triangle on a line split around it — TURNED A QUARTER, the product's
+    // first icon modification (a rigid turn about the viewBox centre; the
+    // precedent is at icons.cpp's IconTransform). Turned left, the triangle
+    // points left from a vertical line; turned right, right: a node on a
+    // line, the marker held to its column. (Breeze's go-previous-context /
+    // go-next-context, a filled tag-shaped arrow carrying braces, wore the
+    // pair from 2026-09-22 and were DELETED 2026-09-23 — enumerators, defs
+    // and committed assets — as far more ink than the chevrons beside them.)
+    SnapNodesMidpointLeft,   // Ctrl+Left, the held-column nudge left
+    SnapNodesMidpointRight,  // Ctrl+Right, the held-column nudge right
     // THE EDIT FLAG BUTTON'S GLYPH (2026-08-27), the bottom row's verb group
     // after Toggle inherit: text-field, Breeze's own
     // TEXT CURSOR — a serif I-beam standing on a field's underline rule.
@@ -446,8 +452,11 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 52 SINCE THE LEAST-MOVEMENT WALK'S DELETION (architect 2026-09-23),
-// re-counted off the enumerators above: snap-orthogonal and snap-node left
+// 52 SINCE THE HOLD-COLUMN NUDGES' GLYPH CHANGE (architect 2026-09-23),
+// re-counted off the enumerators above: go-previous-context and
+// go-next-context left and the two turns of snap-nodes-midpoint joined, so
+// the number is unmoved. It was 52 from the least-movement walk's deletion
+// earlier that day: snap-orthogonal and snap-node left
 // with it and bboxnext came back as the walk's glyph. It was 53 for the day
 // before, from the least-movement walk's arrival (2026-09-22, later still),
 // when bboxnext left and those two joined. It was 52 from the Zoom In /

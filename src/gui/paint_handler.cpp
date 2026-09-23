@@ -3347,8 +3347,9 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
 // since 2026-09-23) and the two HOLD-COLUMN NUDGES (Ctrl+Left, Ctrl+Right).
 // THE WALK WEARS BBOXNEXT, his pick from a rendered candidate sheet
 // (2026-08-15; the reasons are at its icons.h entry — an arrow meeting a bar,
-// the Tab key's own shape); the nudges wear go-previous-context /
-// go-next-context, his named picks. (Walk both tabs stood third on boost, a
+// the Tab key's own shape); the nudges wear snap-nodes-midpoint turned a
+// quarter left and right (2026-09-23; go-previous-context /
+// go-next-context before it, from 2026-09-22). (Walk both tabs stood third on boost, a
 // two-arrow cycle, until the button and its glyph were deleted on
 // 2026-09-14; bboxprev left with Previous marker 2026-09-22. The
 // least-movement walk stood beside the walk from 2026-09-22 until it was
@@ -3356,8 +3357,8 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
 // for that day, deleted with it; the walk wears bboxnext again.)
 constexpr TransportRowDef kTransportWalkGroup[] = {
     {RedesignButton::TransportWalk,        icons::Icon::BboxNext},
-    {RedesignButton::TransportHoldLeft,    icons::Icon::GoPreviousContext},
-    {RedesignButton::TransportHoldRight,   icons::Icon::GoNextContext},
+    {RedesignButton::TransportHoldLeft,    icons::Icon::SnapNodesMidpointLeft},
+    {RedesignButton::TransportHoldRight,   icons::Icon::SnapNodesMidpointRight},
 };
 // DOWN, UP, LEFT, RIGHT — the architect's order, 2026-08-14, superseding the
 // row's original vim order (h j k l = left / down / up / right) with no
