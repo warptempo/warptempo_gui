@@ -641,8 +641,8 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 
     // Past the return above either the level or the start really moved, so
     // this is a zoom, a pan, or both at once — the trim bar's span-framing
-    // double-click and the group undo/redo restore's zoom-out-to-fit arm being
-    // what reach here.
+    // double-click, the group undo/redo restore's zoom-out-to-fit arm and bare
+    // `0`'s restore being what reach here.
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at

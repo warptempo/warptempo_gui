@@ -381,8 +381,10 @@ struct Viewport {
     // (level, start) after clamping equals the current viewport, it is a true
     // no-op — no repaint and no state left behind — so a second identical framing
     // does nothing, while any pan/zoom in between
-    // makes the target differ and this re-frames. The sole caller is the
-    // trim-bar double-click (run_span_framing_command).
+    // makes the target differ and this re-frames. Its callers: the span
+    // framer frame_span_into_view (the trim-bar double-click and the group
+    // undo/redo restore) and bare `0`'s restore of its stamped view
+    // (run_overview_command), whose start is the stamp's, not a span's.
     void apply_zoom_to_start(double new_zoom_level, int64_t new_start);
     // THE ZOOM STEP (bare `=` / `-` and the icon row's Zoom In / Zoom Out,
     // restored 2026-09-22 — the tablet's pen has no pinch): one whole level

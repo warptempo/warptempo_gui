@@ -898,8 +898,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              family as the playhead-step and Home/End
     //                              entries.
     //   - =/- (no mods)          → zoom in/out
-    //   - 0 (no mods)            → full zoom-out, else the `c` command
-    //                              (run_overview_command)
+    //   - 0 (no mods)            → full zoom-out stamping the view, then the
+    //                              restore of that view; `c` at a ceiling
+    //                              nothing stamped (run_overview_command)
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead;
@@ -1765,13 +1766,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         viewport.zoom_out(); return;
     }
 
-    // Bare 0 goes to FULL ZOOM OUT, and runs the `c` command once it is already
-    // there (run_overview_command — architect 2026-08-05, no longer a toggle;
-    // the second arm was a bare center for one day). The trim-bar double-click
+    // Bare 0 is A TOGGLE (run_overview_command — architect 2026-09-23): full
+    // zoom out stamping the view it leaves, then the restore of that zoom
+    // level, playhead and viewport start, no centring; at a ceiling it did
+    // not produce it runs the `c` command. Neither press arms or keeps a
+    // camera posture: both clear HOLD and CHASE through the one chokepoint
+    // clear (clamp_viewport_start). The trim-bar double-click
     // deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
-    // gesture — `0` reaches it only from full out, and by calling it — while
+    // gesture, while
     // the Tab family changes no zoom (2026-08-05), so `0` is
     // the one command that reaches the whole song. DIGITS 1, 2,
     // 3 and 4 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (`4` since
@@ -2897,9 +2901,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // framing. Putting a policy read in here is what made the march inherit
     // it, which is the shape the required parameter exists to prevent:
     // framing cannot be acquired by saying nothing. `c` remains the direct
-    // route to the working zoom; `0`'s second arm reaches it through `c`
-    // whenever its tab has stamped no return level
-    // (ViewState::zoom_recall_level).
+    // route to the working zoom; `0` reaches it through `c` at a full zoom
+    // out it did not produce (nothing stamped in ViewState::overview_recall).
     // A CYCLE STEP THAT LANDS NOTHING CHANGES NOTHING: with no marker to focus
     // the jump returns false having touched neither playhead nor viewport — a
     // Tab in an empty collection stays the consumed nothing it has always been.
@@ -3018,7 +3021,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     return true;
 }
 
-void GuiInputHandler::run_center_command(double target_zoom_level) {
+void GuiInputHandler::run_center_command() {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
     // FORK LIVES. SIX CALLERS, re-grepped 2026-09-23: the centre keys' act
@@ -3026,9 +3029,9 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
     // handle_history_mode_key — which must claim the key to keep it off the
     // mode's allowlist — and Shift+C, and the writer of the camera postures a
-    // centring key arms), since 2026-08-05 run_overview_command's SECOND ARM —
-    // `0` pressed with the zoom already at full out runs exactly what `c` runs
-    // —, since 2026-08-28 the A/B audition's
+    // centring key arms), run_overview_command's CenterAtWorkingZoom arm —
+    // `0` pressed at a full zoom out it did not produce runs exactly what `c`
+    // runs —, since 2026-08-28 the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame (the rule and the ordering it owes the audition's sequence are at
@@ -3046,13 +3049,10 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // same composition over the diff-flag cycle — TWICE, one caller — which
     // reaches this body's mode arm below.
     //
-    // THE LEVEL IS THE CALLER'S, defaulting to kWorkingZoomLevel (the header
-    // carries the default; every caller but one passes nothing and so means
-    // `c` exactly). `0`'S ALREADY-FULL-OUT ARM IS THE ONE THAT SUBSTITUTES:
-    // since 2026-08-18 it passes the level it STAMPED on the way out to full
-    // zoom-out, so the return trip is this recipe with one value changed — not
-    // a second path — and everything else about it, the mode fork and the land
-    // included, is decided here once for every caller.
+    // THE LEVEL IS ALWAYS kWorkingZoomLevel. From 2026-08-18 to 2026-09-23 it
+    // was a parameter that `0`'s second press filled with the level it had
+    // stamped; that press restores the stamped view itself now (the toggle,
+    // run_overview_command), so no caller substitutes and the parameter went.
     //
     // THE FORK IS HERE RATHER THAN AT THE CALLERS because that makes it ONE
     // decision for all of them: every caller but `0` is reachable in one mode
@@ -3090,13 +3090,13 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
                 app.history_mode.flags[
                     static_cast<std::size_t>(focus)].time_frame);
         }
-        viewport.apply_zoom_change(target_zoom_level);
+        viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();
         return;
     }
 
-    // THE LIVE RECIPE. Jump to the caller's level — kWorkingZoomLevel by
-    // default, the ideal warp-authoring zoom. When a marker is focused, first
+    // THE LIVE RECIPE. Jump to kWorkingZoomLevel, the ideal warp-authoring
+    // zoom. When a marker is focused, first
     // jump the playhead
     // exactly onto it — the same jump the Tab family runs, after the same
     // last-selected repair — then set that level and center on it; with no
@@ -3120,7 +3120,7 @@ void GuiInputHandler::run_center_command(double target_zoom_level) {
     // is a separate act from this one.
     selection.repair_last_selected();
     jump_playhead_to_focused_marker(MarkerLandingFrame::Center);
-    viewport.apply_zoom_change(target_zoom_level);
+    viewport.apply_zoom_change(kWorkingZoomLevel);
     viewport.center_viewport_on_playhead();
 }
 
@@ -3146,160 +3146,142 @@ void GuiInputHandler::run_center_key_command(bool arm_chase) {
 OverviewCommandTarget overview_command_target(const AppState& app,
                                               const GuiAudio& audio) {
     OverviewCommandTarget t;
+    // THE WHOLE-SONG STATE ANSWERS FIRST (R-17g): a `0` that landed on the
+    // ceiling is still out after a resize or an S/T flip has moved that
+    // ceiling, and its stamp is the answer.
+    if (active_view_state(app).whole_song_visible) {
+        t.arm   = OverviewCommandTarget::Arm::RestoreView;
+        t.level = clamp_zoom_level(
+            app, audio, active_view_state(app).overview_recall.zoom_level);
+        return t;
+    }
     const double full_out = effective_max_zoom_level(
         waveform_area(app).w, live_total_frames(app, audio),
         audio.sample_rate());
-    // THE CEILING IS A STATE, NOT ONLY A NUMBER (architect 2026-09-02, R-17g):
-    // the tab's whole-song bit answers first, so a `0` that landed on the
-    // ceiling is still AT it after a resize or an S/T flip has moved that
-    // ceiling — the two events that used to make this compare read false and
-    // send the next press stamping a former ceiling over the magnification the
-    // user was working at. The number compare stays beside it for the ceilings
-    // this key never produced: a short file that OPENS whole-song-visible, and
-    // any level the clamp itself has parked there.
-    t.at_ceiling = active_view_state(app).whole_song_visible ||
-                   app.zoom_level >= full_out;
-    if (!t.at_ceiling) {
-        t.level = full_out;
+    if (app.zoom_level >= full_out) {
+        t.arm   = OverviewCommandTarget::Arm::CenterAtWorkingZoom;
+        t.level = kWorkingZoomLevel;
         return t;
     }
-    // THE RETURN TRIP'S RESOLVE (the argument is at the act): the stamp
-    // clamped into the live window, spending as the working zoom when it is
-    // empty or can no longer move the zoom.
-    const double recall = clamp_zoom_level(
-        app, audio,
-        active_view_state(app).zoom_recall_level.value_or(kWorkingZoomLevel));
-    t.level = recall == app.zoom_level ? kWorkingZoomLevel : recall;
+    t.arm   = OverviewCommandTarget::Arm::ZoomOut;
+    t.level = full_out;
     return t;
 }
 
 void GuiInputHandler::run_overview_command() {
-    // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
-    // (architect 2026-08-05, REPLACING the working-zoom toggle this used to be).
-    // Below the per-file effective
-    // ceiling → jump to it, the whole song in the window, playhead untouched.
-    // ALREADY at it → RUN THE `c` COMMAND (architect 2026-08-05, superseding the
-    // bare center that arm shipped with the same day) — with `c`'s own focus
-    // semantics rather than a second, weaker centering. The
-    // fork between the live `c` and the history mode's own lives inside
-    // run_center_command, its one owner.
+    // The bare `0` key: A TOGGLE BETWEEN FULL ZOOM OUT AND THE VIEW IT LEFT
+    // (architect 2026-09-23: "Zero actually should be a toggle between full
+    // zoom out and restore to previous zoom level, playhead position, and
+    // viewport position"). It superseded the 2026-08-05 / 2026-08-18 reading,
+    // whose second press ran the `c` command at the stamped level and so
+    // re-centred instead of restoring the window.
     //
-    // AND `0` REMEMBERS TWO THINGS. WHERE IT CAME FROM (architect 2026-08-18):
-    // the zoom-out
-    // arm STAMPS the level it is leaving into the active tab's
-    // zoom_recall_level, and the already-full-out arm spends it — the same `c`
-    // command with the stamped level substituted for the working zoom, and the
-    // working zoom back in its place when the stamp can no longer move the zoom
-    // (the fallen-ceiling case, decided at that arm below). So the
-    // round trip goes out to the whole song and back to the magnification the
-    // user was working at, per tab and per session, rather than always landing
-    // on the working zoom. With NOTHING stamped the second arm is `c` itself,
-    // unchanged: the project that opens already zoomed out, and the first `0` of
-    // a session. The architect's own closure argument for why an empty slot is
-    // rare: this key only ever reaches the ceiling THROUGH the stamping arm, so
-    // the slot is empty at the ceiling only when the ceiling was reached some
-    // other way. THE RESTORE IS THE LEVEL ALONE, not the window — `c`'s
-    // centering decides where, exactly as it does for the working zoom (asked
-    // and answered directly). Nothing is cleared on the way back: the stamp
-    // stays the level `0` was most recently pressed at, and the next press below
-    // the ceiling overwrites it. THIS FUNCTION IS THE STAMP'S ONE WRITER — no
-    // manual `=`/`-`, no wheel, no drag, no `c`, no touch gesture and no load
-    // path writes it (the field's own note, app_state.h, carries the rest).
-    // The trim-bar DOUBLE-CLICK still DIVERGES from this (see
-    // run_span_framing_command): it zooms to the trim / whole-song
-    // SPAN, where this one command only ever reaches the whole song.
+    // THE FORK is overview_command_target's, one owner shared with the Full
+    // Zoom Out button's tooltip; its three arms:
     //
-    // THE FIRST ARM IS A PURE VIEWPORT MOVE (architect 2026-07-30, reversing the
-    // 2026-07-29 clear+collapse as OVERSCOPED): it touches neither the selection
-    // nor the region nor the playhead — only the zoom level and, through
-    // apply_zoom_change, the viewport start. The 2026-08-18 stamp does not
-    // widen that claim: it records the level this very arm is leaving, view
-    // scratch about the zoom itself, and paints nothing.
-    // A selection span's endpoints are
-    // ACTIVE-DOMAIN frames and a zoom changes no domain, so a group and its extent
-    // survive the overview exactly as they survive `=` / `-`, the zoom
-    // gestures and the
-    // wheel.
-    // The family is the group-verb doctrine (position_nudge.h): `0` sits with the
-    // zoom framing on the span-READ side, not with the collapse+land verbs. It does
-    // not stop a live audition either — the pure-viewport-move class of the keyboard
-    // stop rule (stop_playback_if_playing's declaration, playback_lifecycle.h).
-    // THIS ARM IS A PURE VIEWPORT MOVE, and THE CAMERA IS NEVER A MOVEMENT:
-    // it writes no playhead, so it reaches neither playhead movement owner
-    // (the rule at Viewport::move_playhead_to, viewport.cpp).
-    // THE SECOND ARM IS `c`, SO IT CARRIES `c`'s REGIME, not this one's: the
-    // focus repair, the land onto the focused marker and the stop that rides
-    // inside it are all the center
-    // command's, stated at its owner. Nothing about them is decided here — this arm only chooses
-    // between the two commands.
-    // Both arms read the RESTING cursor (apply_zoom_change and
-    // center_viewport_on_playhead both take the scanner while playing and the
-    // cursor otherwise). With a selection the cursor already rests on the focus —
-    // every focus-changing route lands it.
+    // FIRST PRESS (ZoomOut): STAMP the zoom level, the viewport start and the
+    // resting playhead into the active tab's OverviewRecall, with the audio
+    // view they are expressed in, then jump to the per-file ceiling and raise
+    // the tab's whole-song state. A PURE VIEWPORT MOVE (architect 2026-07-30):
+    // it writes neither the selection nor the playhead, stops nothing (the
+    // pure-viewport-move class of the keyboard stop rule,
+    // stop_playback_if_playing's declaration), and a selection's span survives
+    // it as it survives `=` / `-`.
     //
-    // `>=` rather than `==`: the
-    // clamp chokepoint keeps the live level at or under the ceiling, and a level
-    // resting exactly on it is what "already full out" means either way.
-    // AND THAT IT IS OUT (architect 2026-09-02, R-17g): the same arm raises the
-    // tab's WHOLE-SONG STATE (ViewState::whole_song_visible), which the fork
-    // above reads ahead of the number. The number alone could not carry the
-    // trip, because the ceiling is not one level — it moves with the waveform's
-    // width and with the active domain's total, so a `0` in source view
-    // followed by an S/T flip into the LONGER target domain left the level
-    // BELOW the new ceiling, and the next `0` read itself as the zoom-out arm
-    // and stamped that former ceiling over the magnification the user was
-    // actually working at: `0` `0` then cycled between two ceilings instead of
-    // returning. While the state stands, clamp_viewport_start re-derives the
-    // level from the live ceiling, so the flip and the resize carry the picture
-    // the state names; every zoom write that moves the level clears it (the
-    // four clears are inventoried at the field).
+    // SECOND PRESS (RestoreView, the whole-song state standing): RESTORE THE
+    // THREE, NO CENTRING. The playhead first, through the movement owner
+    // Viewport::move_playhead_to — a route to a spot nothing marks, so when it
+    // moves the cursor it pays exactly what Home / End pay (the stop, the
+    // selection clear or, in the `h` view, the mode's focus clear); a stamp
+    // equal to the live cursor writes nothing there. Then the whole-song state
+    // is cleared and the level and viewport start go down together through
+    // Viewport::apply_zoom_to_start, whose clamp_viewport_start owns the
+    // lattice snap and the walls (the discrete move's damage, predictor resync
+    // and synchronous rebuild are that applier's). While zoomed out the whole
+    // song is visible, so the movement owner's keep-visible edge-align never
+    // scrolls ahead of the applier. If the playhead moved while zoomed out,
+    // the stamped one still comes back — the ruling's "restore ... playhead
+    // position". Across an S/T flip the stamp is re-expressed as the flip
+    // re-expresses the camera (OverviewRecall's domain tag, app_state.h). A
+    // stamped level above a ceiling that has since fallen clamps onto it; the
+    // state is cleared regardless, so the press still ends the trip.
     //
-    // THE FORK AND THE RESOLVE ARE ONE OWNER since 2026-09-01
-    // (overview_command_target above), which the Full zoom out button's hint
-    // reads too, so the word it says is the level this arm will hand to `c`.
+    // AT A CEILING THIS KEY DID NOT PRODUCE (CenterAtWorkingZoom): nothing is
+    // stamped, so the press is the `c` command at the working zoom, carrying
+    // `c`'s regime (its focus land and the stop inside it).
+    //
+    // THE CAMERA POSTURES (AppState::camera_hold / camera_chase): `0` arms
+    // neither and keeps neither. Both presses put both out through the one
+    // chokepoint clear in clamp_viewport_start (the camera they settle differs
+    // from the last one settled), and the restore's movement owner puts HOLD
+    // out as well; no exemption is spelled here.
+    //
+    // THE TWO RECORDS are this function's alone: it is the stamp's one writer
+    // and the whole-song state's one setter (both declarations, app_state.h).
+    // The trim-bar DOUBLE-CLICK DIVERGES from this (run_span_framing_command):
+    // it frames the trim / whole-song SPAN.
     const OverviewCommandTarget target = overview_command_target(app, audio);
-    if (target.at_ceiling) {
-        // THE RETURN TRIP. value_or is the whole of the empty-slot rule: with
-        // nothing stamped this is `c` verbatim.
-        // AND A STAMP IS RESOLVED (in the owner above) rather than left to
-        // apply_zoom_change's
-        // own pre-clamp, because that clamp alone can strand this arm: a level
-        // stamped while it was legal sits ABOVE the ceiling once the ceiling
-        // FALLS (a narrower window, an S/T flip into a shorter domain), the
-        // pre-clamp hands such a request back the ceiling, and the ceiling is
-        // the level this arm is standing on — so the request would equal the
-        // live level, apply_zoom_change's equality early-return would fire, and
-        // the round trip would move no zoom at all while legal magnifications
-        // still exist below. A STAMP THAT CANNOT MOVE THE ZOOM IS WORTH NO MORE
-        // THAN AN EMPTY SLOT, so it spends as one: kWorkingZoomLevel, which is
-        // exactly what an unstamped tab answers with and what a project opened
-        // already zoomed out gets. The genuinely immovable case — a file so
-        // short that its ceiling is at or below the working zoom — answers the
-        // same way it always has, `c` landing and centering with no zoom change.
-        // NOTHING IS CLEARED on this path: this function stays the stamp's ONE
-        // writer (the field's note, app_state.h). An unusable stamp is unusable
-        // only against the CURRENT ceiling — widen the window or flip the domain
-        // back and it is the right answer again — and the next press below the
-        // ceiling overwrites it regardless.
-        run_center_command(target.level);
-    } else {
-        // Stamp BEFORE the move, since the move is what makes the level
-        // historical. The live app.zoom_level is the value: it is the clamped
-        // truth (clamp_viewport_start's zoom clamp owns every write to it) and
-        // it is strictly below the ceiling on this arm, so a stamp can never
-        // name full zoom-out and make the return trip a no-op.
-        active_view_state(app).zoom_recall_level = app.zoom_level;
+    switch (target.arm) {
+    case OverviewCommandTarget::Arm::ZoomOut: {
+        // Stamp BEFORE the move, since the move is what makes the view
+        // historical. The live fields are the clamped truth, and the level is
+        // strictly below the ceiling on this arm.
+        OverviewRecall& r = active_view_state(app).overview_recall;
+        r.zoom_level             = app.zoom_level;
+        r.viewport_start_sample  = app.viewport_start_sample;
+        r.playhead_cursor_sample = app.playhead_cursor_sample;
+        r.audio_view             = app.active_audio_view;
+        r.playhead_source_frame  =
+            active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+        const double spp = current_samples_per_pixel(app, audio);
+        r.playhead_column_px =
+            spp > 0.0 ? static_cast<double>(app.playhead_cursor_sample -
+                                            app.viewport_start_sample) / spp
+                      : 0.0;
         viewport.apply_zoom_change(target.level);
-        // AND THE WHOLE-SONG STATE IS RAISED, after the applier (which clears
-        // it, as every zoom write that moves the level does — the inventory is
-        // at ViewState::whole_song_visible). THIS ARM IS ITS ONE SETTER: the
-        // state says "the whole song is visible because `0` put it there", and
-        // while it stands the one clamp chokepoint re-derives the level from
-        // whatever the live ceiling has become, so a resize or an S/T flip
-        // carries the picture instead of stranding a number under a new
-        // ceiling. The stamp above and this bit are one press's two records —
-        // where the trip came FROM, and that it is out.
+        // The whole-song state is raised AFTER the applier, which clears it
+        // as every level-moving zoom write does (the inventory is at
+        // ViewState::whole_song_visible). While it stands the clamp chokepoint
+        // re-derives the level from the live ceiling, so a resize or an S/T
+        // flip carries the picture instead of stranding a number.
         active_view_state(app).whole_song_visible = true;
+        return;
+    }
+    case OverviewCommandTarget::Arm::RestoreView: {
+        const OverviewRecall r = active_view_state(app).overview_recall;
+        int64_t playhead = r.playhead_cursor_sample;
+        int64_t start    = r.viewport_start_sample;
+        if (r.audio_view != app.active_audio_view) {
+            // The flip's own re-expression: the playhead follows its source
+            // frame into the live domain, and the window is placed so it
+            // paints in the column it painted in when stamped.
+            playhead = source_frame_to_active_domain(
+                app, audio, r.playhead_source_frame);
+            start = playhead - static_cast<int64_t>(std::nearbyint(
+                r.playhead_column_px *
+                samples_per_pixel_at(target.level, audio.sample_rate())));
+        }
+        playhead = clamp_playhead_to_live_domain(playhead, app, audio);
+        if (playhead != app.playhead_cursor_sample) {
+            playback_lifecycle.stop_playback_if_playing();
+            if (app.history_mode.active) {
+                if (clear_history_mode_focus(app.history_mode)) {
+                    viewport.invalidate_all();
+                }
+            } else if (!app.selected_markers.empty() ||
+                       app.last_selected_marker != -1) {
+                selection.clear_selection();
+                viewport.invalidate_waveform_area();
+            }
+            viewport.move_playhead_to(playhead);
+        }
+        active_view_state(app).whole_song_visible = false;
+        viewport.apply_zoom_to_start(target.level, start);
+        return;
+    }
+    case OverviewCommandTarget::Arm::CenterAtWorkingZoom:
+        run_center_command();
+        return;
     }
 }
 

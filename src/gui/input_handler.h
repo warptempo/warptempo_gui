@@ -2208,7 +2208,7 @@ struct GuiInputHandler {
     // mode's re-expression walks its own diff-flag list and its own focus — so
     // the call sites (re-greped 2026-09-23: run_center_key_command — the
     // centre keys' act, which the live `c` arm, the mode's `c` claim and
-    // Shift+C reach — run_overview_command's already-full-out arm, the A/B
+    // Shift+C reach — run_overview_command's unstamped-ceiling arm, the A/B
     // audition's GuiAbAudition::apply_working_zoom, Shift+`j`'s jump, which
     // calls it TWICE — once on the tab it leaves and once on the tab it
     // lands — and, since 2026-09-14, the Ctrl+Shift+Tab paired march, which
@@ -2219,18 +2219,10 @@ struct GuiInputHandler {
     // each of its halves with this command on the tab that half plays, run
     // inside the switch's own frame (ab_audition.h carries the rule and the
     // ordering it owes the sequence).
-    // THE ZOOM IS A PARAMETER since 2026-08-18 and defaults to kWorkingZoomLevel,
-    // which is what `c` itself means — the two key arms pass nothing. `0`'s
-    // already-full-out arm passes the level IT stamped on the way out
-    // (ViewState::zoom_recall_level) when one stands, so the return trip is this
-    // one command with ONE substitution rather than a second recipe: same mode
-    // fork, same land, same centering, and the same clamp (apply_zoom_change
-    // pre-clamps every request, so no caller can drive the level outside the
-    // per-file window). That pre-clamp is a bound, not a rescue: a stamp read
-    // back under a fallen ceiling would clamp onto the level the key is already
-    // standing on, so THAT arm resolves the stamp itself and passes the working
-    // zoom instead when it cannot move — its own comment carries the case.
-    void run_center_command(double target_zoom_level = kWorkingZoomLevel);
+    // THE ZOOM IS ALWAYS kWorkingZoomLevel (the parameter `0`'s second press
+    // filled with its stamped level went with the 2026-09-23 toggle, which
+    // restores the stamped view itself).
+    void run_center_command();
     // THE CENTRE KEYS' ACT (architect 2026-09-23): bare `c` (the live arm and
     // the `h` view's claim) with `arm_chase` false, SHIFT+C with it true —
     // run_center_command, then the camera postures the explicit centring
@@ -2238,7 +2230,8 @@ struct GuiInputHandler {
     // the centring could move the camera, and the CHASE posture armed by
     // Shift+C, or by bare `c` kept as it stood unless the centring's own
     // landing stopped the play it was chasing (that stop spends it). The
-    // other callers of run_center_command — `0`'s second press, the A/B
+    // other callers of run_center_command — `0` at a ceiling it did not
+    // produce, the A/B
     // audition, and the marches and Shift+J, which arm the hold at their own
     // tails — do not come through here.
     void run_center_key_command(bool arm_chase);
@@ -2482,8 +2475,8 @@ private:
     // is untouched at every level (architect 2026-08-05, "no zoom on Tab";
     // the finer-to-working return of 2026-09-15 went 2026-09-22). `c`
     // remains the direct route to
-    // kWorkingZoomLevel from any level, and `0`'s second arm reaches it through
-    // `c` when its tab has stamped no return level. A step that focuses
+    // kWorkingZoomLevel from any level, and `0` reaches it through `c` at a
+    // ceiling nothing stamped. A step that focuses
     // nothing does nothing at all.
     //
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
@@ -2548,31 +2541,23 @@ private:
     // that lands a focus states its own camera. `c` states Center; the walk
     // states what ITS caller handed it.
     // Its land is the movement owner; its
-    // callers are `c` (and, through `c`, Shift+`j`, the `0` command's second
-    // arm, the A/B audition and the Ctrl+Shift+Tab paired march) and
+    // callers are `c` (and, through `c`, Shift+`j`, the `0` command's
+    // unstamped-ceiling arm, the A/B audition and the Ctrl+Shift+Tab paired march) and
     // cycle_marker_focus, which the three Tab arms and the march's two walk
     // steps reach.
     bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
 
-    // The bare `0` key: FULL ZOOM OUT FIRST, THE `c` COMMAND WHEN ALREADY THERE
-    // (architect 2026-08-05, replacing the working-zoom toggle; the second arm
-    // was a bare center for one day). Below the per-file effective ceiling →
-    // STAMP the level being left into the active tab's zoom_recall_level, then
-    // jump to the ceiling (whole song visible); already at it → run_center_command
-    // AT THE STAMPED LEVEL, falling back to the working zoom when nothing has
-    // been stamped OR when the stamp can no longer move the zoom (a ceiling that
-    // fell under it) — so `0` twice is overview then back to the magnification it
-    // was pressed at (architect 2026-08-18), and overview then the working zoom
-    // on a tab that never stamped. THIS FUNCTION IS THE STAMP'S ONE WRITER (the
-    // field, app_state.h) AND, SINCE 2026-09-02, THE ONE SETTER OF THE TAB'S
-    // WHOLE-SONG STATE (ViewState::whole_song_visible, R-17g): the zoom-out arm
-    // raises it beside the stamp, the clamp chokepoint then keeps the level on
-    // whatever the live ceiling becomes across a resize or an S/T flip, and the
-    // already-full-out fork reads that state rather than a number that a moved
-    // ceiling had made false. The FIRST arm is a
-    // PURE VIEWPORT MOVE (architect 2026-07-30): it writes neither the selection
-    // nor the region nor the playhead; the second carries `c`'s regime, stated
-    // at that command. The rationale is at the definition.
+    // The bare `0` key, A TOGGLE (architect 2026-09-23): below the per-file
+    // ceiling it STAMPS the zoom level, viewport start and playhead into the
+    // active tab's ViewState::overview_recall and jumps to the ceiling,
+    // raising the tab's whole-song state (ViewState::whole_song_visible);
+    // pressed again while that state stands it RESTORES the three — the
+    // playhead through Viewport::move_playhead_to, the level and start through
+    // Viewport::apply_zoom_to_start — with no centring; at a ceiling it did
+    // not produce it runs run_center_command. The fork is
+    // overview_command_target (app_state.h). THIS FUNCTION IS THE STAMP'S ONE
+    // WRITER AND THE STATE'S ONE SETTER. Neither press arms or keeps a camera
+    // posture. The rationale is at the definition.
     void run_overview_command();
 
     // THE SPAN-FRAMING command, run by the TRIM BAR LANE's DOUBLE-CLICK:

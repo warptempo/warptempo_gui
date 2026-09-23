@@ -48,10 +48,12 @@ struct GuiTargetRender;
 // at the per-file effective ceiling (effective_max_zoom_level), where full
 // zoom-out rests at whole-song-visible. There is no fit-file mode and no
 // sentinel level. Bare-digit keys are unbound
-// for zoom: `0` goes to full zoom-out and, pressed once already there, runs the
-// `c` command — at the level it stamped on the way out when its tab has one
-// (ViewState::zoom_recall_level, architect 2026-08-18), at the working zoom
-// when it does not. WHOLE-SONG-VISIBLE IS CARRIED AS A STATE since 2026-09-02
+// for zoom: `0` IS A TOGGLE (architect 2026-09-23): below the ceiling it
+// stamps the view it leaves — zoom level, playhead and viewport start
+// (ViewState::overview_recall) — and goes to full zoom-out; pressed again
+// while its whole-song state stands it restores all three, no centring. At a
+// ceiling it did not produce (nothing stamped) it runs the `c` command.
+// WHOLE-SONG-VISIBLE IS CARRIED AS A STATE since 2026-09-02
 // (ViewState::whole_song_visible): the ceiling moves with the window's width
 // and with the active domain's total, so the level alone could not say whether
 // `0` had been out and back, and while the state stands the level follows
@@ -2040,8 +2042,9 @@ enum class RedesignButton {
     // shift press now. FULL ZOOM OUT led the zoom group from then until ZOOM IN came back in
     // front of it the same evening.)
     // THE ZOOM FOUR (2026-08-12, the grand relayout's roster commit): zoom in
-    // (bare `=`), zoom out (bare `-`), full zoom out (bare `0`, whose ceiling
-    // arm runs the `c` command, and whose SHIFT-CLICK and long press are
+    // (bare `=`), zoom out (bare `-`), full zoom out (bare `0`, whose second
+    // press restores the view the first left, and whose SHIFT-CLICK and long
+    // press are
     // Shift+0 RESET TRIM since 2026-09-22 — `0` is the whole song for the
     // camera and, shifted, for the trim) and working-zoom center (bare `c`).
     // THE STEPPING PAIR WAS DELETED 2026-09-14 (Ctrl+drag and the pinch being
@@ -2054,8 +2057,9 @@ enum class RedesignButton {
     // Every one is a momentary navigation act and LIVE in the `h` view (all
     // four chords are on the mode's allowlist or its own vocabulary, so the
     // derived partition answers live with nothing hand-listed). TWO NEVER
-    // GREY because each always acts — `0` runs `c` at the ceiling, `c` always
-    // frames — and THE STEPPING PAIR GREY AT THEIR WALLS, Zoom In at the floor
+    // GREY because each always acts — `0` restores its stamp at the ceiling
+    // (or runs `c` at a ceiling it did not produce), `c` always frames — and
+    // THE STEPPING PAIR GREY AT THEIR WALLS, Zoom In at the floor
     // and Zoom Out at the per-file ceiling (zoom_in_step_actionable /
     // zoom_out_step_actionable, the arms at redesign_button_enabled). They are the zoom commands' pointer
     // home (the Navigation dropdown that once duplicated them was deleted
@@ -4255,6 +4259,37 @@ inline TrimState full_trim_window(int64_t total_frames) {
     return t;
 }
 
+// BARE `0`'s RECALL STAMP (architect 2026-09-23: "Zero actually should be a
+// toggle between full zoom out and restore to previous zoom level, playhead
+// position, and viewport position"). The first press (below the ceiling)
+// writes it from the live camera and cursor and goes to full zoom-out; the
+// second press (the tab's whole_song_visible standing) restores the three
+// verbatim — the level through Viewport::apply_zoom_to_start, the playhead
+// through Viewport::move_playhead_to, the viewport start through that
+// applier's clamp_viewport_start — with no centring. It superseded the
+// 2026-08-18 return LEVEL (the second press ran `c` at the stamped level).
+// ONE OWNER: GuiInputHandler::run_overview_command (input_handler.cpp) is the
+// one writer and the one reader; no manual `=`/`-`, no `c`, no wheel, drag,
+// touch gesture or load path writes it.
+//
+// THE DOMAIN TAG. The live fields carry target frames in target view, and the
+// whole-song state survives the S/T flip, so a stamp may be read back in the
+// other audio view. In its own view it restores verbatim; across the flip it
+// is re-expressed the way the flip itself re-expresses the camera — the
+// playhead through the live map from its source frame, and the viewport start
+// placed so that playhead paints in the column it painted in when stamped.
+struct OverviewRecall {
+    double  zoom_level             = kWorkingZoomLevel;
+    int64_t viewport_start_sample  = 0;
+    int64_t playhead_cursor_sample = 0;
+    // The audio view the three above are expressed in ('S' / 'T').
+    char    audio_view             = 'S';
+    // The cross-view re-expression's two inputs: the stamped playhead as a
+    // source frame, and its column in the stamped window (fractional px).
+    int64_t playhead_source_frame  = 0;
+    double  playhead_column_px     = 0.0;
+};
+
 // Navigational bookmark. Holds a snapshot of the fields that define
 // what the user sees and where playback would start. Not in the undo domain.
 // ONE PLAYHEAD PER TAB: playhead_cursor_sample is the whole of it — no
@@ -4281,40 +4316,21 @@ struct ViewState {
     double  zoom_level                 = kWorkingZoomLevel;
     int64_t playhead_cursor_sample     = 0;
 
-    // BARE `0`'s RETURN LEVEL (architect 2026-08-18): the zoom level the key was
-    // most recently pressed at while still BELOW the effective ceiling. `0`
-    // stamps it on the way out to full zoom-out and spends it when pressed again
-    // already there, so the round trip is overview and then back to the
-    // magnification the user left — the LEVEL only, not the window: the return
-    // trip re-centers the way `c` centers rather than restoring the exact
-    // viewport (architect, asked directly). EMPTY means nothing has been stamped
-    // in this tab yet and the return arm is then the plain `c` command, which is
-    // both the session's opening state and the project that opens ALREADY at
-    // full zoom out. The slot can only be found empty at the ceiling when the
-    // ceiling was reached some other way, since every arrival there by this key
-    // stamps on the way. A stamp STRANDED above a ceiling that has since fallen
-    // spends as an empty slot too, and is left standing rather than cleared —
-    // the reasoning is at the spending arm, which is where the ceiling is known.
-    // run_overview_command (input_handler.cpp) is the ONE writer: a manual
-    // `=`/`-` step does not stamp, `c` does not, the wheel does not, no drag or
-    // touch gesture does, and nothing clears it — that is what makes the round
-    // trip predictable.
+    // BARE `0`'s RECALL STAMP (architect 2026-09-23; the struct and its
+    // contract are at OverviewRecall above). Written by the first press, read
+    // by the second, and meaningful only while whole_song_visible (below)
+    // stands.
     // SESSION SCRATCH, DELIBERATELY ABSENT FROM kSettingsOrder (settings_io.cpp):
-    // the one member of this struct that is NOT persisted. That table is an
-    // explicit key list wired arm by arm — there is no reflective walk over this
-    // struct — so a member with no key row is simply never written and never
-    // read, which is exactly the ruling's "per tab, per session, not stored on
-    // disk". Do not "fix" the omission by adding a row.
+    // that table is an explicit key list wired arm by arm — there is no
+    // reflective walk over this struct — so a member with no key row is simply
+    // never written and never read: per tab, per session, not stored on disk.
+    // Do not "fix" the omission by adding a row.
     // A SOURCE LOAD DROPS IT with the rest of the band, no separate reset
     // needed: it seeds both tabs from a fresh ViewState. A LOAD IN PLACE KEEPS
     // IT since 2026-08-24, when the act narrowed to what its undo entry restores
     // (the rule at GuiInputHandler::apply_recipe_in_place, input_handler.h): the
-    // camera does not move any more, and this stamp is the camera's — bare `0`
-    // returns to the level the user himself left, over whatever markers he has
-    // loaded under it. That supersedes the 2026-08-18 reading, which dropped the
-    // stamp because a load in place was then a whole-band replace and so a
-    // discontinuity in the view; it is not one now.
-    std::optional<double> zoom_recall_level;
+    // camera does not move, and this stamp is the camera's.
+    OverviewRecall overview_recall;
 
     // IS THE WHOLE SONG VISIBLE — bare `0`'s own state, carried rather than
     // recomputed from a number (architect 2026-09-02, the four-tier review's
@@ -4327,7 +4343,9 @@ struct ViewState {
     // `0` cycled between two ceilings instead of returning to it.
     //
     // ONE SETTER: run_overview_command's zoom-out arm, the same press that
-    // writes the stamp above (input_handler.cpp). WHILE IT STANDS THE LEVEL
+    // writes the stamp above (input_handler.cpp). THE STAMP'S LIFETIME IS THIS
+    // BIT'S: the restore arm runs only while the bit stands and every setting
+    // re-stamps, so no stale stamp can be restored. WHILE IT STANDS THE LEVEL
     // FOLLOWS THE CEILING — clamp_viewport_start, the one zoom/viewport
     // chokepoint every geometry and domain change funnels through, re-derives
     // the level from the live ceiling, so the S/T flip and the resize keep the
@@ -4339,7 +4357,9 @@ struct ViewState {
     // fighting an explicit request, the clear running before their clamp call)
     // and the settings editor's PARKED-band zoom write, a typed level for a
     // tab that is not live. `0`'s own zoom-out arm sets the bit AFTER its
-    // applier has cleared it.
+    // applier has cleared it, and its restore arm clears it outright ahead of
+    // its applier (the trip back ends the state even where a fallen ceiling
+    // leaves the level where it stands).
     //
     // SESSION SCRATCH, PER TAB, like the stamp above and read and written IN
     // PLACE through active_view_state: absent from kSettingsOrder, never
@@ -4676,7 +4696,9 @@ struct AppState {
     //     a drop, a click), by the undo / redo restore's centring (a group
     //     restore centres a RANGE, not the subject — undo is not a reliable
     //     centre), by the A/B audition's internal `c` (which neither sets nor
-    //     clears it), by a launch's own camera, or by `0` in either press.
+    //     clears it), by a launch's own camera, or by `0` in either press
+    //     (neither is a centring since 2026-09-23: the second press restores
+    //     the stamped view).
     //   * KEPT by the two stepped zooms (`=` / `-`, Zoom In / Zoom Out — they
     //     pivot on the viewport's centre; Viewport::apply_zoom_step), by every
     //     play and every stop that moves no camera (a stop moves no
@@ -4685,7 +4707,8 @@ struct AppState {
     //     owner and holds the column, so it reads the bit before its act and
     //     leaves it standing after (the two nudge dispatch sites).
     //   * CLEARED by every other camera change (the chokepoint above: the
-    //     pans, the drags, the pointer zooms, `0`'s both presses, the chase's
+    //     pans, the drags, the pointer zooms, `0`'s both presses (the second
+    //     also through move_playhead_to when it moves the playhead), the chase's
     //     page-in — a camera move not on the subject — the least-movement
     //     landing, the span framer, the undo restore's camera, the tab and
     //     view switches), and by the three playhead MOVEMENT OWNERS
@@ -4727,7 +4750,8 @@ struct AppState {
     //     not at an A/B audition's stop, not at a render player stop — so it
     //     is a ONE-SHOT, and a REFUSED launch spends nothing.
     //   * CLEARED by every other camera change (the chokepoint above — the
-    //     pans, the drags, the pointer zooms AND THE STEPPED ZOOMS, `0`, the
+    //     pans, the drags, the pointer zooms AND THE STEPPED ZOOMS, `0`'s both
+    //     presses, the
     //     undo restore's camera, the switches) and by the PLACEMENT CLICK
     //     during a play (place_playhead_at_click_column): the DAW convention —
     //     a deliberate viewport act during a chase means the user is looking
@@ -7104,8 +7128,8 @@ struct AppState {
     // cursor-moving
     // acts land the playhead (the diff-flag click, the deferred click act, and
     // the
-    // keyboard's Tab cycle / Home / End / `c` — which `0` reaches too, from full
-    // zoom out), and since 2026-08-04 the admitted VIEW SWITCHES
+    // keyboard's Tab cycle / Home / End / `c` — which `0` reaches too, at a
+    // full zoom out it did not produce — and `0`'s restore), and since 2026-08-04 the admitted VIEW SWITCHES
     // move the two whole-file keys `active_audio_view=` and
     // `active_markers_view=` (`t` moving the per-tab band with them, the
     // playhead and viewport translating across the domain flip), and since
@@ -11542,25 +11566,28 @@ inline bool zoom_out_step_actionable(const AppState& a, const GuiAudio& audio) {
            clamp_zoom_level(a, audio, a.zoom_level + 1.0) > a.zoom_level;
 }
 
-// WHAT BARE `0` WOULD DO — the whole-song zoom command's one fork and its one
-// resolve, named 2026-09-01 (architect, the truthful-tooltips ruling: at the
-// ceiling the press is the RECALL, "Full zoom out" being a lie there). BELOW
-// the per-file ceiling `at_ceiling` is false and `level` is the ceiling the
-// zoom-out arm applies; AT it (`>=`)
-// `at_ceiling` is true and `level` is what the `c` command is handed — the
-// tab's stamped recall clamped into the live window, spending as
-// kWorkingZoomLevel when nothing is stamped or the stamp cannot move the zoom
-// (the fallen-ceiling rule, argued at the act). THE CEILING TEST READS THE
-// TAB'S WHOLE-SONG STATE FIRST since 2026-09-02 (ViewState::whole_song_visible
-// — R-17g), the number compare staying beside it for the ceilings this key
-// never produced (a short file that opens whole-song-visible, and any level
-// the clamp itself parks there). TWO READERS:
-// GuiInputHandler::run_overview_command (the act, which decides nothing of
-// its own past this) and the Full zoom out button's hint. Defined in
-// input_handler.cpp beside the act.
+// WHAT BARE `0` WOULD DO — the whole-song zoom command's one fork, named
+// 2026-09-01 (architect, the truthful-tooltips ruling) and made a three-way
+// fork 2026-09-23 (the toggle, OverviewRecall above):
+//   * ZoomOut — the tab's whole-song state is down and the level is below the
+//     per-file ceiling: `level` is that ceiling, which the first press applies
+//     after stamping.
+//   * RestoreView — the whole-song state stands (ViewState::whole_song_visible,
+//     read FIRST since 2026-09-02, R-17g, so a resize or an S/T flip that moved
+//     the ceiling does not make the press forget it is out): `level` is the
+//     stamp's level clamped into the live window.
+//   * CenterAtWorkingZoom — at the ceiling (`>=`) with the state down: a
+//     ceiling this key never produced (a short file that opens
+//     whole-song-visible, a level the clamp or a stepped zoom parked there), so
+//     nothing is stamped and the press is the `c` command; `level` is
+//     kWorkingZoomLevel.
+// TWO READERS: GuiInputHandler::run_overview_command (the act, which decides
+// nothing of its own past this) and the Full Zoom Out button's tooltip.
+// Defined in input_handler.cpp beside the act.
 struct OverviewCommandTarget {
-    bool   at_ceiling = false;
-    double level      = 0.0;
+    enum class Arm { ZoomOut, RestoreView, CenterAtWorkingZoom };
+    Arm    arm   = Arm::ZoomOut;
+    double level = 0.0;
 };
 OverviewCommandTarget overview_command_target(const AppState& a,
                                               const GuiAudio& audio);
@@ -13846,7 +13873,8 @@ inline bool playback_launch_playable(const AppState& a,
 // Undo::coalesce_gesture). The ladder ends of the zoom: Zoom in greys at the
 // floor (zoom_in_step_actionable) and Zoom out at the per-file ceiling
 // (zoom_out_step_actionable); `0` and `c` stay lit because each always acts
-// (`0` runs `c` at the ceiling).
+// (`0` restores its stamp at the ceiling, or runs `c` where nothing is
+// stamped).
 //
 // THE TWIN RULE (architect 2026-08-30, reversing the same day's
 // shift-admission precedent — the tablet relies on buttons): a button with
@@ -14423,7 +14451,8 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::TabB:
         // THE ZOOM GROUP: two of the four MIRROR NOTHING (2026-08-12)
         // because each always acts on a loaded file — FULL ZOOM OUT (bare
-        // `0`) runs the `c` command once it is there, and `c` always frames.
+        // `0`) restores the view it stamped once it is there (the `c` command
+        // at a ceiling it did not produce), and `c` always frames.
         // FULL ZOOM OUT'S SHIFT TWIN (Shift+0, Reset Trim, since 2026-09-22)
         // needs no term by the twin rule: the plain press is always live, and
         // the shifted press refusing over a full window is the key's own
@@ -16772,7 +16801,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
 //   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
-//   Working Zoom (0)" or "Back to Previous Zoom (0)" at the ceiling, Center
+//   Previous View (0)" while its whole-song state stands and "Back to Working
+//   Zoom (0)" at a ceiling nothing stamped, Center
 //   reads "Center on Playhead (C)" with nothing focused, the Up/Down pair and
 //   Edit flag read the ADDRESSED CELL's own name. Each of those names what a
 //   press would do in that state — which is what a name is for.
@@ -16947,10 +16977,11 @@ inline RedesignTooltipText redesign_button_tooltip(
     // where the modified press would do nothing different. Each condition is
     // the act's or the face's own predicate — none is restated here.
     switch (b) {
-        // FULL ZOOM OUT AT THE CEILING is the recall — `c` at the stamped
-        // level, or plain `c` when nothing usable is stamped — through the
-        // act's one resolve (overview_command_target, run_overview_command's
-        // own fork), so the word cannot pick the level the act will not.
+        // FULL ZOOM OUT AT THE CEILING is the recall — the restore of the
+        // stamped view while the whole-song state stands (architect
+        // 2026-09-23), plain `c` at a ceiling nothing stamped — through the
+        // act's one fork (overview_command_target, run_overview_command's
+        // own), so the word cannot name an act the press will not run.
         //
         // ITS SHIFT LINE (Reset Trim, 2026-09-22) DROPS OVER A FULL TRIM
         // WINDOW, in either name: the maximizer's own guard
@@ -16962,11 +16993,13 @@ inline RedesignTooltipText redesign_button_tooltip(
             const char* line2 = trim_is_full_window(a.trim, total_frames)
                                     ? nullptr
                                     : redesign_button_tooltip(b).line2;
-            if (t.at_ceiling) {
-                return {t.level == kWorkingZoomLevel
-                            ? "Back to Working Zoom (0)"
-                            : "Back to Previous Zoom (0)",
-                        line2};
+            switch (t.arm) {
+                case OverviewCommandTarget::Arm::RestoreView:
+                    return {"Back to Previous View (0)", line2};
+                case OverviewCommandTarget::Arm::CenterAtWorkingZoom:
+                    return {"Back to Working Zoom (0)", line2};
+                case OverviewCommandTarget::Arm::ZoomOut:
+                    break;
             }
             return {redesign_button_tooltip(b).line1, line2};
         }

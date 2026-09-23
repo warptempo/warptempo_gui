@@ -2469,8 +2469,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 
     // BARE `c` — the live arm's recipe with the MODE's focus in place of the
     // live marker's, and the BODY IS NOT HERE: run_center_command owns both
-    // recipes and picks between them on the mode bit (2026-08-05, when `0`'s
-    // second arm became a third caller of the same command). This arm is the
+    // recipes and picks between them on the mode bit (2026-08-05, when `0`
+    // became a third caller of the same command). This arm is the
     // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
     // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
@@ -2494,22 +2494,25 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
 // stop one.
 //   - = / - (bare)          → zoom in / out (restored 2026-09-22)
-//   - 0 (bare)              → the overview: full zoom out, or, once already
-//                             there, THE MODE'S OWN `c` (run_center_command
-//                             forks on the mode bit, so the second arm reads the
-//                             diff-flag focus like every other mode-local
-//                             re-expression — 2026-08-05). That arm is not a
-//                             pure viewport move: it is `c`, stop and land
-//                             included, admitted on exactly the reason
-//                             `c` itself is claimed one line above the gate.
+//   - 0 (bare)              → the overview toggle (2026-09-23): full zoom
+//                             out stamping the live tab's view, then the
+//                             restore of that zoom, playhead and viewport —
+//                             the mode owns no navigation state, so the stamp
+//                             is the live tab's, and a restore that moves the
+//                             playhead clears the mode's focus as Home / End
+//                             do. At a ceiling nothing stamped it is THE
+//                             MODE'S OWN `c` (run_center_command forks on the
+//                             mode bit), stop and land included, admitted on
+//                             exactly the reason `c` itself is claimed one
+//                             line above the gate.
 //   - PageUp/PageDown       → the paged viewport scroll
 //     (bare)                  — the three above are NAVIGATION, which is the
 //                             mode's whole vocabulary: the delta is laid out on
 //                             the viewport, so panning and zooming it is reading
 //                             it. Two of them are PURE viewport moves; `0`'s
-//                             second arm reaches the mode's own `c` and lands
-//                             the playhead, which the mode's diff-flag click and
-//                             Tab cycle already do.
+//                             restore (or its `c`) lands the playhead, which
+//                             the mode's diff-flag click and Tab cycle
+//                             already do.
 //   - t / p / 1 / 2 / 3     → THE VIEW SWITCHES (architect 2026-08-04, from his
 //     (bare)                  first real session with the mode). THE DELTA IS
 //                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,
