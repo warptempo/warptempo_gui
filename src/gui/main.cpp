@@ -374,8 +374,8 @@ namespace {
 // FUSED GLYPH — rectangle plus tip-down triangle under a single continuous
 // outline — spanning both, so a gap there would have cut one asset through its
 // middle. The fused glyph is gone: a marker is now a single text-on-flag BOX
-// inside ONE lane, and the playhead's triangle became the aliased head on the
-// MARKER lane's bottom rows. No seam is exempt any more — every seam (the
+// inside ONE lane, and the playhead's triangle became the aliased head (on the
+// ruler lane's bottom rows since 2026-09-23, paint_ruler_row). No seam is exempt any more — every seam (the
 // window top|menu seam, TIGHT since 2026-09-09 — it was GAP 1's band
 // 2026-09-03..09 — menu|icon, tight and borderless since 2026-09-09 (the
 // menu|tab seam it replaced was tight from 2026-09-03 and GAP 1's band from
@@ -457,7 +457,7 @@ int top_lane_height(int lane) {
         // font-scaled lane in the top strip went with them.
         case 3: return trim_lane_h_px();         // trim bar + endcaps
         case 4: return ruler_lane_h_px();        // timestamps / ticks / nav band
-        // Flags, stems and the playhead head; bottom edge = waveform top.
+        // Flags and the playhead's column run; bottom edge = waveform top.
         case 5: return marker_lane_h_px();
         default: return 0;
     }
@@ -1161,7 +1161,7 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). The half-width is playhead_half_px()'s
 // to own — render.h states its authored value, its provenance, and the recorded
-// mismatch against the wider marker-lane head.
+// mismatch against the wider head.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - playhead_half_px());
@@ -1169,14 +1169,13 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's stem inside the waveform AND
-    // its top-strip half above — the aliased head, which since row 5 stands in
-    // the MARKER lane's bottom rows with its tip on the waveform boundary (it
-    // moved out of the ruler lane at the 2026-08-01 live test; the occlusion
-    // rationale is at the paint site, paint_handler.cpp), plus the marker-lane
-    // stem segment that shares the head's block and is zero-height while the
-    // tip sits on that boundary. That top-strip half is where the cursor's
-    // non-waveform pixels live, and the envelope covers the whole lane band
-    // above the waveform rather than tracking the head's own rows.
+    // its top-strip half above — the aliased head on the ruler lane's bottom
+    // rows (since 2026-09-23; the ruling is at the paint site, paint_ruler_row)
+    // and the column's run through the marker lane beneath it. That top-strip
+    // half is where the cursor's non-waveform pixels live, and the envelope
+    // covers the whole lane band above the waveform rather than tracking the
+    // head's own rows, exactly as Viewport::invalidate_waveform_area (the
+    // discrete moves' damage) starts at the window top.
     const int y0 = 0;
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};

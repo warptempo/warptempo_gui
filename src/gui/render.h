@@ -644,16 +644,21 @@ inline constexpr GuiColor kTrimLaneBottomBorder = hex(0x131516);
 inline constexpr GuiColor kRulerLabel = hex(0xC2C2C2);
 inline constexpr GuiColor kRulerTick  = hex(0x737373);
 
-// THE PLAYHEAD's three. The HEAD is an aliased shape in a single flat grey; the
-// STEM is the paper white that replaces the old cursor line at this surface.
-// THE TICK-THROUGH-HEAD value is a PRE-BLENDED CONSTANT, never a runtime alpha:
-// where a ruler tick's column crosses the head, those head pixels paint #b7b7b7
-// (183,183,183, measured off row_5_lane_3_playhead_tick.png) instead of the
-// head's own grey. The opaque-palette doctrine has no compositing to offer, and
-// a measured blend is exact where an alpha would only approximate it.
-inline constexpr GuiColor kPlayheadHead     = hex(0x8E8F91);
-inline constexpr GuiColor kPlayheadHeadTick = hex(0xB7B7B7);
-inline constexpr GuiColor kPlayheadStem     = hex(0xFCFCFC);
+// THE PLAYHEAD's two colours and the head's one alpha. The HEAD is an aliased
+// shape in a single flat grey; the STEM is the paper white that replaces the
+// old cursor line at this surface.
+//
+// THE HEAD IS THE OPAQUE PALETTE'S ONE RULED EXCEPTION (architect 2026-09-23,
+// when the head moved up onto the ruler lane's bottom rows): it composites at
+// kPlayheadHeadAlpha over the ruler's timestamps and ticks, "slightly
+// translucent" in his words, so the digits read through it. The value is his
+// to tune by eye; no other colour in the tree carries an alpha. (Until that
+// day a tick crossing the head painted the pre-blended #b7b7b7 measured off
+// row_5_lane_3_playhead_tick.png; with real compositing the tick shows through
+// the alpha instead and that constant is deleted.)
+inline constexpr GuiColor kPlayheadHead      = hex(0x8E8F91);
+inline constexpr double   kPlayheadHeadAlpha = 0.8;
+inline constexpr GuiColor kPlayheadStem      = hex(0xFCFCFC);
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
 // selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a
@@ -2379,11 +2384,10 @@ inline constexpr int kPlayheadHeadHeightPx = 12;
 inline constexpr int kPlayheadHeadHalf[kPlayheadHeadHeightPx] = {
     9, 8, 7, 6, 6, 5, 4, 4, 3, 2, 1, 1
 };
-// ONE DEVICE ROW'S HALF-WIDTH, and the ONE expression both readers in
-// paint_handler.cpp share — the silhouette pass that fills the rows, and the
-// tick pre-blend that clips its per-pixel repaint to the same silhouette. A
-// device row picks its SOURCE row by the inverse scale (so the transcribed
-// shape survives scaling as steps, not slopes) and that row's authored half
+// ONE DEVICE ROW'S HALF-WIDTH, the ONE expression the head's painter
+// (paint_ruler_row, its one reader) fills its rows with. A device row picks
+// its SOURCE row by the inverse scale (so the transcribed shape survives
+// scaling as steps, not slopes) and that row's authored half
 // takes the tree's one conversion. `s` is the caller's gui_scale_factor(); it
 // is passed because the caller already holds it and only the row inverse needs
 // it, the width itself going through scaled_px like every other length.
@@ -2516,15 +2520,14 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // directly rather than the inset: the two are equal by inheritance, not by
 // requirement, and neither owns the other.
 //
-// RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD in the
-// marker lane is WIDER than this reach at every scale. The head's widest row is
-// 2 * playhead_head_half_px(0, s) + 1 off kPlayheadHeadHalf[0] = 9 — 19px at
-// 100% (the crop's own width), 9 at 50%, 29 at 150%, 37 at 200% and 73 at the
-// 400% ceiling, which is the capacity the ruler's tick window already derives
-// — against this
-// +/- 7-at-100% reach, which rides a different authored unit. Both scale, and
-// neither is a function of the other, so the gap is a fact at every scale
-// rather than a 100%-only observation. It is harmless as
+// RECORDED MISMATCH, live and deliberate: the cursor's aliased HEAD on the
+// ruler lane's bottom rows is WIDER than this reach at every scale. The head's
+// widest row is 2 * playhead_head_half_px(0, s) + 1 off kPlayheadHeadHalf[0]
+// = 9 — 19px at 100% (the crop's own width), 9 at 50%, 29 at 150%, 37 at 200%
+// and 73 at the 400% ceiling — against this +/- 7-at-100% reach, which rides a
+// different authored unit. Both scale, and neither is a function of the
+// other, so the gap is a fact at every scale rather than a 100%-only
+// observation. It is harmless as
 // the damage rule stands — narrow damage is reserved for the two per-frame
 // SCANNER sites, and the scanner is waveform-only and draws no head, while
 // every discrete CURSOR move takes full waveform-area damage (the rule and the
@@ -2803,9 +2806,9 @@ void render_waveform(cairo_surface_t* dest,
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
 // `draw_triangle` flag and a `triangle_lane` rect for an inverted-triangle
 // indicator stamped from a cached mask above the stem: row 5 replaced the
-// cursor's tip-down triangle with the MARKER lane's aliased head — which
-// paint_ruler_row draws despite the lane, because the head's pre-blended tick
-// crossing needs the tick columns — and every caller had passed `false` ever since. The branch,
+// cursor's tip-down triangle with the aliased head that paint_ruler_row
+// draws (with the column's marker-lane run beside it, the ruling at that
+// block) — and every caller had passed `false` ever since. The branch,
 // the mask and the lane rect are all deleted; both callers were already
 // line-only, so no painted pixel moves. (The complementary triangle-only form
 // was retired with the selected-marker focus triangle when the singleton's

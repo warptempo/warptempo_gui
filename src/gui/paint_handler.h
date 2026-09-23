@@ -602,8 +602,8 @@ struct GuiPaintHandler {
     // viewport. This is the ONE authoritative enumeration of the
     // PLATE-REGISTERED overlays (re-derived by grep over this accessor's
     // callers, 2026-08-02): the region ground, the phase-reset ring (through
-    // phase_reset_overlay_band), the playhead head (painted in the ruler pass,
-    // but living in the MARKER lane since the row-5 live test), the cursor
+    // phase_reset_overlay_band), the playhead head and the cursor's
+    // marker-lane run (both painted in the ruler pass), the cursor
     // playhead, the scanner — plus its two per-frame narrow damage sites in
     // main.cpp — and the strip-drag anchor. Other sites state only their own
     // class plus a pointer here. The MARKER STEMS are deliberately not among
@@ -915,14 +915,14 @@ private:
     // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
     // reinstated under row 5's always-on-stem regime. True when a MARKER'S OWN
     // STEM is standing where the cursor playhead's stem would stand, in which
-    // case the playhead's stem (its waveform segment, the cursor's only stem
-    // pixels) does not paint and the marker's stem IS the display.
+    // case the playhead's stem (its waveform segment and its marker-lane run
+    // alike) does not paint and the marker's stem IS the display.
     // The HEAD still paints — see the definition for the whole ruling, the two
     // ways a stem qualifies, and why this is a state compare and never a pixel
     // one.
     bool playhead_stem_suppressed() const;
-    // THE RESTING CURSOR's waveform stem (the head belongs to
-    // paint_ruler_row). Paints UNDER the marker stems and the flags —
+    // THE RESTING CURSOR's waveform stem (the head and the marker-lane run
+    // belong to paint_ruler_row). Paints UNDER the marker stems and the flags —
     // the z-order flip — which is the hidden-by-marker model for a cursor
     // sitting ON a marker.
     void paint_playheads(cairo_t* cr, const GuiRect& area);

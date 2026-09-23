@@ -9319,7 +9319,7 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // would re-cue the audio on every pixel.
     // The waveform invalidate below repaints the cursor's
     // HEAD AND STEM with the ground — its rect runs from the window top
-    // down through the waveform, so the marker-lane head is inside it (the
+    // down through the waveform, so the ruler-lane head is inside it (the
     // triangle this used to name retired with its lane in row 5); the
     // TIMESTAMP invalidate is owed
     // separately because the bottom row's CLOCK shows this cursor whenever

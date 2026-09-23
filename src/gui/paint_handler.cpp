@@ -16,7 +16,6 @@
 #include "engine/engine_geometry.h"  // kN, kRs — the seed frame mirror
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -4864,7 +4863,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // published-width rule the flag cache spells at its wave_w read
     // (waveform_cache.cpp). The spp above comes from the published fingerprint,
     // so the width bounding the tick walk, the label span and the head's
-    // tick-crossing recording must be the width that spp was published AGAINST:
+    // column gate must be the width that spp was published AGAINST:
     // during the async resize window (on_resize stores new dimensions while the
     // OLD plate stays blitted until the worker publishes) a grown live width
     // would walk ticks across the newly exposed right-hand area at the old
@@ -4878,8 +4877,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int64_t step  = ruler_step_ms(ms_per_px);
     const double  end_ms = vp_ms + ms_per_px * wave_w;
     // (There is no `minor` time step any more. It had two consumers — the float
-    // placement of each minor tick and the head's float re-derivation of which
-    // columns carried one — and the rigid comb replaced both with integer
+    // placement of each minor tick and the head's since-deleted float
+    // re-derivation of which columns carried one — and the rigid comb replaced
+    // both with integer
     // distribution across a segment. The MINORS-PER-STEP count is still the
     // ladder's own kRulerMinorsPerStep; only its expression as a duration is
     // gone.)
@@ -4906,30 +4906,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // type size — the simplest reproduction of Reaper's emphasis that survives
     // at every scale.
     const bool emphasize = step < 1000;
-
-    // THE PLAYHEAD HEAD'S TICK-CROSSING WINDOW, declared before the walk because
-    // the walk fills it: one byte per column across the head's widest row —
-    // 0 = no tick, 1 = minor, 2 = major. The head block below repaints exactly
-    // these columns in the pre-blended value, so the crossing is the ticks the
-    // walk actually painted rather than a second derivation of where ticks ought
-    // to be (which is what it was, and what the rigid comb would have made
-    // wrong).
-    //
-    // FIXED CAPACITY, no allocation: kPlayheadHeadHalf[0] is 9 authored px and
-    // the gui_scale schema caps at 400%, so the window is at most 2*36+1 = 73
-    // columns. 80 is headroom; the recording clamps to it, so a raised ceiling
-    // would lose the pre-blend at the outermost head columns rather than write
-    // out of bounds — which is what 48 (the 200%-ceiling number) would have
-    // done from 2026-08-26, when the schema's ceiling went 200 -> 400.
-    constexpr int kHeadTickWindowCap = 80;
-    std::array<uint8_t, kHeadTickWindowCap> head_ticks{};
-    const int head_half_max = playhead_head_half_px(0, gui_scale_factor());
-    const double head_px_pre = playhead_pixel_x(
-        app, static_cast<int64_t>(basis.vp_start), basis.spp);
-    const int head_cursor_col = static_cast<int>(std::nearbyint(head_px_pre));
-    int head_window = 2 * head_half_max + 1;
-    if (head_window > kHeadTickWindowCap) head_window = kHeadTickWindowCap;
-    const int head_col0 = head_cursor_col - head_half_max;
 
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
@@ -4986,16 +4962,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                       static_cast<double>(kRulerMinorsPerStep)));
             if (col < 0 || col >= wave_w) continue;
             const bool major = (i == 0);
-            // Record the crossing for the playhead head below, which repaints
-            // these exact columns in the pre-blended value. Recording what the
-            // walk PAINTS is what keeps head and ticks one source of truth; the
-            // head used to re-derive them from the float minor grid, which now
-            // no longer describes where the ticks are.
-            if (head_window > 0) {
-                const int w_idx = col - head_col0;
-                if (w_idx >= 0 && w_idx < head_window)
-                    head_ticks[static_cast<size_t>(w_idx)] = major ? 2 : 1;
-            }
             cairo_set_source_rgb(cr, kRulerTick.r, kRulerTick.g, kRulerTick.b);
             cairo_rectangle(cr, lane.x + col, major ? major_top : minor_top,
                             1, tick_bottom - (major ? major_top : minor_top));
@@ -5028,13 +4994,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         }
     }
 
-    // -- THE PLAYHEAD HEAD, the successor to the retired cursor triangle -----
-    //
-    // IT LIVES IN THIS PAINTER because it must know where the TICKS are: where a
-    // tick's column crosses the head, those head pixels take a PRE-BLENDED
-    // constant rather than the head's own grey, and the opaque-palette doctrine
-    // has no compositing to do that with. Ticks and head therefore share one
-    // owner and the crossing is exact instead of approximated.
+    // -- THE PLAYHEAD HEAD AND ITS MARKER-LANE COLUMN --------------------------
     //
     // ALIASED BY CONSTRUCTION: the shape is a transcribed per-row HALF-WIDTH
     // table (kPlayheadHeadHalf), painted as integer rectangles — one per row —
@@ -5043,36 +5003,41 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // half-width scales with it, which enlarges the pixel steps rather than
     // smoothing them: the shape stays the drawing it was transcribed from.
     //
-    // TIP-DOWN ON THE MARKER LANE'S BOTTOM ROWS, its tip ON the waveform
-    // boundary, centered on the playhead column — the same column the stem below
-    // runs on, so head and stem are one object.
+    // TIP-DOWN ON THE RULER LANE'S BOTTOM ROWS, its tip row the ruler's last
+    // row, so the head's last pixel touches the marker lane's first and head
+    // and flags never share a pixel: both stay whole at all times, and no lane
+    // grows for it (architect 2026-09-23; it sat on the marker lane's bottom
+    // rows from 2026-08-01, under the flags).
     //
-    // THE HEAD MOVED OUT OF THE RULER LANE (architect 2026-08-01, at the row-5
-    // live test). It sat on the ruler's bottom rows; it now occupies the MARKER
-    // lane's BOTTOM rows (the relocation's first shape put it at that lane's TOP
-    // and the architect amended it the same day, for the stem parity the band
-    // block below states), and the ruler lane is labels + tick-tops only. The point
-    // of the move is OCCLUSION: the flag blit follows this pass, so a marker
-    // sharing the cursor's column now covers part of the head — the accepted
-    // look, and the hidden-by-marker model reaching the head itself rather than
-    // only the stem below it.
+    // SLIGHTLY TRANSLUCENT, THE ONE RULED EXCEPTION TO THE OPAQUE PALETTE
+    // (architect 2026-09-23: "the timestamps are just a rough ballpark; the
+    // exact time is at the bottom left"). The head composites at
+    // kPlayheadHeadAlpha over whatever this painter already laid down in its
+    // band — the lane ground, the labels, a major tick's rise — so the digits
+    // read through it. That compositing is also what a tick crossing the head
+    // needs, so the crossing has no constant of its own any more: the tick
+    // simply shows through the alpha. The alpha never accumulates, because
+    // every repaint of this band first refills the lane ground above.
     //
-    // IT STAYS IN THIS PAINTER even though it no longer paints in this painter's
-    // own lane, and for the reason it was here to begin with: the tick-crossing
-    // pre-blend needs the tick columns, and the ticks are walked here. Moving
-    // the head to a marker-lane painter would split one object across two
-    // owners and re-derive the tick grid a second time.
+    // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
+    // 1px kPlayheadStem run from the marker lane's top to the waveform top,
+    // where render_playhead's waveform segment (paint_playheads) begins, so
+    // head, column and stem read as one unbroken object. It paints HERE, before
+    // the flag blit that follows this pass, so a flag standing in the column
+    // covers it — the hidden-by-marker model. It obeys the waveform segment's
+    // own suppression (playhead_stem_suppressed): where a marker's stem stands
+    // on the playhead's frame the whole stem yields to that marker, whose flag
+    // then fills the lane at that column, and the HEAD alone still paints, as
+    // it always has in that case.
     //
-    // THE HEAD'S TIP STANDS ON THE WAVEFORM BOUNDARY, so the cursor's stem
-    // begins exactly where the head ends: render_playhead's waveform segment
-    // (paint_playheads) starts at the waveform's top row, and head_bottom below
-    // IS that row, so head and stem meet with no gap and no lane pixel between
-    // them — one unbroken line across the seam, with no other playhead pixel in
-    // this lane. The pass order does the rest: ticks, then the head, then the
-    // flag blit over both (the hidden-by-marker model reaches the head too).
-    // The stem's WAVEFORM segment and the marker stems are already down by the
-    // time this pass runs, in a band this one never touches (the sequence is
-    // the paint-order block in on_redraw).
+    // IT STAYS IN THIS PAINTER for its band: the ruler's bottom rows are this
+    // painter's lane, and the head must composite over the labels and ticks
+    // the walk above just painted, which a later pass could only do by
+    // re-painting them.
+    //
+    // The whole object is the RESTING CURSOR'S: the `h` view, the render
+    // player and the audition reach it through this one block, and the scanner
+    // keeps its bare waveform line (paint_scanner).
     {
         const double cursor_px = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp);
@@ -5085,99 +5050,31 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // per-row HALF-WIDTH is where the floor lives (render.h).
             const int    rows = static_cast<int>(std::nearbyint(
                                     kPlayheadHeadHeightPx * s));
-            // THE BAND IS THE MARKER LANE'S BOTTOM `rows`, tip ON the waveform
-            // boundary (architect 2026-08-01, amending the first relocation,
-            // which put it at the lane's top). At 100% that is rows 45..56 of a
-            // 37..56 lane, with the waveform starting at 57.
-            //
-            // THE POINT IS STEM PARITY: the playhead's stem begins exactly
-            // where every marker stem begins — the waveform top — so the two
-            // read as the same object at the same length. head_bottom IS the
-            // waveform top, which is what hands the line off to
-            // render_playhead's waveform segment with no lane pixels in
-            // between.
-            const int    head_bottom = marker.y + marker.h;
+            // THE BAND IS THE RULER LANE'S BOTTOM `rows`, its bottom edge the
+            // marker lane's top (the two lanes abut, strip_row_rect): at 100%
+            // the ruler's last 12 of its 28 rows. The ruler is always taller
+            // than the head at every scale, so the band never leaves the lane.
+            const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;
+            cairo_set_source_rgba(cr, kPlayheadHead.r, kPlayheadHead.g,
+                                  kPlayheadHead.b, kPlayheadHeadAlpha);
             for (int r = 0; r < rows; ++r) {
                 // Each device row reads its SOURCE row's half-width through the
                 // ONE silhouette accessor (playhead_head_half_px, render.h),
-                // which also owns the tip's floor of 1 — shared verbatim with
-                // the tick pre-blend below, so the two cannot disagree about
-                // what the head's shape is.
+                // which also owns the tip's floor of 1.
                 const int half = playhead_head_half_px(r, s);
-                const int y0 = head_top + r;
-                const int x0 = lane.x + col - half;
-                const int w  = 2 * half + 1;
-                cairo_set_source_rgb(cr, kPlayheadHead.r, kPlayheadHead.g,
-                                     kPlayheadHead.b);
-                cairo_rectangle(cr, x0, y0, w, 1);
+                cairo_rectangle(cr, lane.x + col - half, head_top + r,
+                                2 * half + 1, 1);
+            }
+            // ONE FILL over the disjoint rows, so no pixel composites twice.
+            cairo_fill(cr);
+
+            if (!playhead_stem_suppressed()) {
+                cairo_set_source_rgb(cr, kPlayheadStem.r, kPlayheadStem.g,
+                                     kPlayheadStem.b);
+                cairo_rectangle(cr, lane.x + col, marker.y, 1, marker.h);
                 cairo_fill(cr);
             }
-            // THE TICK CROSSINGS, painted back over the head in the pre-blended
-            // value. Re-walking the ladder would be a second source of truth, so
-            // the crossing is decided the cheap way instead: a column carries a
-            // tick exactly when it is a whole number of minors from the origin,
-            // which is the same test the walk above used.
-            //
-            // ONLY THE ACTUAL INTERSECTION IS RECOLORED, and the intersection is
-            // computed from the SAME tops and bottom the tick walk drew with
-            // rather than assumed. THE MOVE INTO THE MARKER LANE CHANGED THE
-            // ANSWER COMPLETELY, which is exactly why this is computed:
-            //   * BEFORE, on the ruler's bottom rows, a MINOR never touched the
-            //     head at any scale (its top was marker.y, which WAS the head's
-            //     bottom — abutting bands) and a MAJOR touched only its own
-            //     rise, 4 rows of 12 at 100%.
-            //   * NOW both classes cut the FULL SILHOUETTE. The head sits on
-            //     the marker lane's BOTTOM rows and every tick runs the lane's
-            //     whole height to the waveform top, which is exactly the head's
-            //     tip row. Minors start at the lane top, majors `rise` above it;
-            //     either way the tick covers the head end to end. So both
-            //     intersections are [head_top, head_bottom) entire — 12 rows of
-            //     12 at 100%, 18 of 18 at 150%, 24 of 24 at 200%.
-            // The major/minor split is KEPT even though the two now resolve to
-            // the same band: it is the tick walk's own `major = (i == 0)` fact,
-            // and asserting "they coincide" in code instead of deriving it is
-            // how the previous geometry's answer would have survived this move
-            // as a silent lie.
-            cairo_set_source_rgb(cr, kPlayheadHeadTick.r, kPlayheadHeadTick.g,
-                                 kPlayheadHeadTick.b);
-            // THE CROSSING READS THE COMB THE WALK PAINTED. It used to re-derive
-            // the tick columns from the float minor grid — "is this column within
-            // half a pixel of a whole multiple of `minor`" — which was a second
-            // derivation that happened to agree while every tick rounded its own
-            // float position. IT WOULD NOT AGREE NOW: the minors are distributed
-            // across their segment's integer width (the rigid-comb note at the
-            // walk), so their columns are no longer a function of time alone.
-            // The walk records each painted tick into head_ticks, and this reads
-            // it back — one source of truth by construction rather than by two
-            // expressions being kept in step.
-            //
-            // The window is centred on the same cursor column this block paints
-            // the head at (head_col0 was derived from it before the walk), so
-            // the two cannot drift.
-            for (int dx = -head_half_max; dx <= head_half_max; ++dx) {
-                const int tc = col + dx;
-                if (tc < 0 || tc >= wave_w) continue;
-                const int w_idx = tc - head_col0;
-                if (w_idx < 0 || w_idx >= head_window) continue;
-                const uint8_t kind = head_ticks[static_cast<size_t>(w_idx)];
-                if (kind == 0) continue;
-                // WHICH tick it is decides where it starts, straight off the
-                // walk's own `major = (i == 0)` verdict (2 = major, 1 = minor).
-                const bool major_here = (kind == 2);
-                const int tick_top = major_here ? major_top : minor_top;
-                const int y_lo = std::max(tick_top, head_top);
-                const int y_hi = std::min(tick_bottom, head_bottom);
-                for (int y = y_lo; y < y_hi; ++y) {
-                    // The SAME accessor the silhouette pass filled with (floor
-                    // included), so the crossing clips to the pixels that are
-                    // actually there rather than to a second derivation.
-                    const int half = playhead_head_half_px(y - head_top, s);
-                    if (dx < -half || dx > half) continue;
-                    cairo_rectangle(cr, lane.x + tc, y, 1, 1);
-                }
-            }
-            cairo_fill(cr);
         }
     }
 
@@ -5994,13 +5891,17 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
 // implementation, not absence" — which the 2026-07-30 always-paints ruling
 // deleted. It is the coincident case ALONE that the always-paints clause loses:
 // the playhead still paints everywhere else, unconditionally, and the HEAD
-// paints even here (the architect expects it partly visible behind a coincident
-// flag; a ±1 column is invisible against the HEAD, whose widest row is
+// paints even here (on the ruler's bottom rows since 2026-09-23, just above
+// the coincident flag, so it stays whole; a ±1 column is invisible against the HEAD, whose widest row is
 // 2 * playhead_head_half_px(0, s) + 1 — 9px at the 50% floor, 19 at 100%, 73 at
 // the 400% ceiling, so it is at least nine columns wide anywhere in the schema
 // and the ±1 never approaches half of it. That is exactly what a 1px stem
 // beside another 1px stem is not, at any scale: the stem is one column by
 // ruling and does not scale at all, so there the same ±1 is the whole object).
+// The suppression covers the WHOLE stem, its marker-lane run included (read by
+// paint_ruler_row as well as paint_playheads): in that lane the coincident
+// marker's flag fills the column, and a white run a column beside its left
+// edge would be the same ±1 split.
 //
 // WHY IT IS PRINCIPLED AGAIN, and why it was not on 2026-07-30: in the OLD
 // visual model only a selected SINGLETON stemmed, so suppressing the playhead
@@ -6103,10 +6004,10 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
     // ROW 5 RETIRED THE TRIANGLE and this pass draws NOTHING in a strip lane
-    // any more: the tip-down triangle died with its lane, its successor is the
-    // aliased head on the MARKER lane's bottom rows, and paint_ruler_row owns it
-    // despite the lane (it needs the tick columns for the pre-blended
-    // crossing). So this pass is the WAVEFORM segment of the cursor's
+    // any more: the tip-down triangle died with its lane, and its successor —
+    // the aliased head on the ruler lane's bottom rows and the column's run
+    // through the marker lane — is paint_ruler_row's (the ruling is at that
+    // block). So this pass is the WAVEFORM segment of the cursor's
     // stem, nothing else — and since 2026-08-02 render_playhead draws a line and
     // only a line: the dead triangle branch is deleted, and with it the lane
     // rect this call used to thread through to it.
@@ -6116,8 +6017,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // beneath a marker flag sharing its column, so a cursor resting on a marker
     // sits hidden behind that marker's flag, and it passes under the marker
     // STEMS below it in the waveform too. Gated on the waveform OR the top strip
-    // being exposed: the cursor's HEAD lives in the strip (paint_ruler_row) and
-    // this stem in the waveform, and the two halves of one line repaint
+    // being exposed: the cursor's HEAD and marker-lane run live in the strip
+    // (paint_ruler_row) and this stem in the waveform, and the two halves of one line repaint
     // together whatever the damage shape — the outer Cairo clip bounds the
     // actual work.
     //
@@ -6134,8 +6035,9 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // MARKER'S stem already stands on the playhead's frame, the playhead's STEM
     // does not paint and that marker's stem is the display (035e669's
     // hidden-behind-the-marker model, reinstated — the whole ruling is at
-    // playhead_stem_suppressed). The clause above still holds everywhere else,
-    // and the HEAD paints in the suppressed case too (paint_ruler_row).
+    // playhead_stem_suppressed; the marker-lane run obeys it too). The clause
+    // above still holds everywhere else, and the HEAD paints in the suppressed
+    // case too (paint_ruler_row).
     //
     // The three-way chain that used to live here is gone with the SPAN FORM: the
     // region is no longer a playhead at all (it IS THE TRIM — a ground recolor
@@ -6151,18 +6053,18 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // The region ground still paints under the plate (paint_region_ground); the
     // cursor line crosses it exactly as it crosses waveform ink.
     // THE TRIANGLE IS OFF EVERYWHERE (row 5): the cursor's tip-down triangle
-    // retired with the triangle lane, and its successor — the aliased head on
-    // the MARKER lane's bottom rows — is painted by the ruler pass anyway, that pass
-    // owning the tick columns the head's pre-blended crossing needs. So this call is the stem's WAVEFORM
-    // segment; the ruler pass draws the head, its tip on the waveform boundary
-    // where this segment begins, and the two make one unbroken line.
+    // retired with the triangle lane, and its successor is the ruler pass's.
+    // So this call is the stem's WAVEFORM segment; the ruler pass draws the
+    // head on the ruler's bottom rows and the column's run through the marker
+    // lane down to the waveform top, where this segment begins, and the three
+    // make one unbroken object.
     // THE STEM IS kPlayheadStem NOW (#fcfcfc), superseding the old cursor line's
     // color at this surface: the head above it is the playhead's identity, and
     // the stem is that head's line continued down through the waveform.
     //
     // Z-INTENT: this segment goes down UNDER the marker stems painted after it
-    // and under the flag boxes blitted after those, and the head above it (the
-    // ruler pass) likewise goes under the flags. That is the HIDDEN-BY-MARKER
+    // and under the flag boxes blitted after those, and the marker-lane run
+    // above it (the ruler pass) likewise goes under the flags. That is the HIDDEN-BY-MARKER
     // model translated — a flag sharing the cursor's column hides it, exactly as
     // flags painted over the old triangle — and it is also why the stem is drawn
     // to run OVER the waveform's own borders: the stem is a boundary line like
@@ -8735,13 +8637,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: the lane
         //      ground, the window's bar, the two endcaps and the midpoint mark.
         //   6. the CURSOR's WAVEFORM stem segment (paint_playheads — the head
-        //      is the ruler pass's, step 9).
+        //      and the marker-lane run are the ruler pass's, step 9).
         //   7. the MARKER STEMS (waveform).
         //   8. the SCANNER (waveform).
         //   9. the RULER lane — ticks and labels — AND, in the same pass, the
-        //      cursor's HEAD on the marker lane: the head's pre-blended tick
-        //      crossing needs the tick columns, so one owner walks both (the
-        //      reasoning is at that block in paint_ruler_row).
+        //      cursor's HEAD on the ruler's bottom rows (translucent over the
+        //      labels and ticks just painted) and the cursor's column through
+        //      the marker lane, under the flags (the reasoning is at that
+        //      block in paint_ruler_row).
         //  10. the FLAG BLIT.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
