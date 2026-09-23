@@ -892,49 +892,36 @@ constexpr IconPath kMergePaths[] = {
      "L 11 18 L 4 18 L 4 16 z "},
 };
 
-// -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect 2026-09-22) -------------
+// -- THE BOTTOM ROW'S MARKER-WALK GROUP (architect-picked 2026-08-15) --------
 //
-// snap-orthogonal (the centring walk: Tab, and Shift+Tab on its shifted
-// press) and snap-node (the least-movement walk: Alt+Tab, and Alt+Shift+Tab
-// on its shifted press), both byte-verbatim from breeze-dark's actions/22/
-// (the theme go-previous-context / go-next-context were copied from). Why
-// this pair is at the enum entry in icons.h — a roster fact rather than a
+// bboxnext (the walk: Tab, and Shift+Tab on its shifted press; its landing's
+// camera is the audio view's since 2026-09-23, which the glyph does not
+// depict — an arrow meeting a bar is the Tab key's own shape). The
+// architect's reasons for the pick are at the enum entry in icons.h — they
+// are about this row's crowding, which is a roster fact rather than a
 // transcription one.
 //
-// BOTH FILES ARE ONE ORDINARY FILLED PATH under `.ColorScheme-Text`, and the
-// plainest in the table: absolute `M`, `L` and `z` alone, every coordinate a
-// whole number — snap-orthogonal eleven closed boxes (the node and the ten
-// dots of its cross), snap-node six (the node with its stub and the five
-// dots of its run). Nothing outside the interpreter's subset, no transform.
+// THE BBOX FILE IS AN ORDINARY FILLED PATH, one `.ColorScheme-Text`, its `d`
+// verbatim. Command coverage: relative `m` with implicit relative-lineto
+// repetition (comma-separated pairs — "0,1 -2,0 0,14" is three linetos), one
+// relative `m`, one absolute `L`, and NO `z` at all — the fill closes each
+// subpath implicitly, six committed files' precedent.
 //
-// (BBOXNEXT, the walk's glyph from 2026-08-15 — relative `m` with implicit
-// lineto repetition and no `z` — is DELETED with the glyph change on
-// 2026-09-22, its enumerator, its def and its committed asset; BBOXPREV, the
-// Previous marker button's, left the same day when the walk pair merged into
-// one; so did BOOST, the group's third file for Walk Both Tabs — the set's
-// first STROKED one, whose two arrowhead paths were the only producers of a
-// per-path LINE CAP — with its button 2026-09-14.)
-constexpr IconPath kSnapOrthogonalPaths[] = {
+// (BBOXPREV, the Previous marker button's glyph, is DELETED with that button
+// on 2026-09-22, when the walk pair merged into one; so is BOOST, the group's
+// third file for Walk Both Tabs — the set's first STROKED one, whose two
+// arrowhead paths were the only producers of a per-path LINE CAP — deleted
+// with its button 2026-09-14. SNAP-ORTHOGONAL and SNAP-NODE, the two walks'
+// glyphs from 2026-09-22, were deleted 2026-09-23 with the least-movement
+// walk, the walk wearing bboxnext again.)
+constexpr IconPath kBboxNextPaths[] = {
     {kIconText,
-     "M 11 3 L 11 4 L 12 4 L 12 3 L 11 3 z M 11 6 L 11 7 L 12 7 L 12 6 L 11 6 "
-     "z M 9 8 L 9 13 L 14 13 L 14 8 L 9 8 z M 3 10 L 3 11 L 4 11 L 4 10 L 3 10 "
-     "z M 5 10 L 5 11 L 6 11 L 6 10 L 5 10 z M 7 10 L 7 11 L 8 11 L 8 10 L 7 "
-     "10 z M 15 10 L 15 11 L 16 11 L 16 10 L 15 10 z M 18 10 L 18 11 L 19 11 "
-     "L 19 10 L 18 10 z M 11 14 L 11 15 L 12 15 L 12 14 L 11 14 z M 11 16 L "
-     "11 17 L 12 17 L 12 16 L 11 16 z M 11 18 L 11 19 L 12 19 L 12 18 L 11 18 "
-     "z "},
+     "m 14,3 0,1 2,0 0,14 -2,0 0,1 5,0 0,-1 -2,0 0,-14 2,0 0,-1 -5,0 m -11,4 "
+     "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
 };
 
-constexpr IconPath kSnapNodePaths[] = {
-    {kIconText,
-     "M 16 10 L 16 11 L 13 11 L 13 12 L 16 12 L 16 13 L 19 13 L 19 10 L 16 10 "
-     "z M 3 11 L 3 12 L 4 12 L 4 11 L 3 11 z M 5 11 L 5 12 L 6 12 L 6 11 L 5 "
-     "11 z M 7 11 L 7 12 L 8 12 L 8 11 L 7 11 z M 9 11 L 9 12 L 10 12 L 10 11 "
-     "L 9 11 z M 11 11 L 11 12 L 12 12 L 12 11 L 11 11 z "},
-};
-
-// THE HOLD-COLUMN NUDGES (architect 2026-09-22), the walk group's third and
-// fourth: go-previous-context and go-next-context, each ONE filled path under
+// THE HOLD-COLUMN NUDGES (architect 2026-09-22), the walk group's second and
+// third: go-previous-context and go-next-context, each ONE filled path under
 // `.ColorScheme-Text`, `d` verbatim. go-previous-context carries the file's own
 // transform="translate(-378.85714-540.07647)" (the glued-negative form
 // dialog-cancel's translate already spells), carried as data so the `d` stays
@@ -1097,8 +1084,7 @@ constexpr IconDef kListRemove         {22.0, kListRemovePaths,          1};
 constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kMerge              {22.0, kMergePaths,               1};
-constexpr IconDef kSnapOrthogonal     {22.0, kSnapOrthogonalPaths,      1};
-constexpr IconDef kSnapNode           {22.0, kSnapNodePaths,            1};
+constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
 constexpr IconDef kGoPreviousContext  {22.0, kGoPreviousContextPaths,   1};
 constexpr IconDef kGoNextContext      {22.0, kGoNextContextPaths,       1};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
@@ -1152,8 +1138,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::ViewHidden:          return kViewHidden;
         case Icon::InsertLink:          return kInsertLink;
         case Icon::Merge:               return kMerge;
-        case Icon::SnapOrthogonal:      return kSnapOrthogonal;
-        case Icon::SnapNode:            return kSnapNode;
+        case Icon::BboxNext:            return kBboxNext;
         case Icon::GoPreviousContext:   return kGoPreviousContext;
         case Icon::GoNextContext:       return kGoNextContext;
         case Icon::DialogOkApply:       break;

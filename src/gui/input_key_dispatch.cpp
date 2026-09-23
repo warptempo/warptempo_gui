@@ -441,15 +441,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
           key == GuiKeys::Digit2 || key == GuiKeys::Digit3) &&
          !ctrl && !shift && !alt);
-    // THE WALK IN BOTH OF ITS CAMERAS: bare Tab / Shift+Tab / IsoLeftTab (the
-    // centring walk) and, since 2026-09-22, the same three under Alt (the
-    // least-movement walk) — pure navigation either way, the same
-    // cycle_marker_focus with another landing camera, so the lock admits the
-    // alt forms on exactly the bare forms' standard. No ctrl: Ctrl+Tab and the
-    // march are their own entries below, and Ctrl+Alt+Tab binds nothing.
+    // THE WALK: bare Tab / Shift+Tab / IsoLeftTab — pure navigation, its
+    // camera the audio view's (marker_walk_landing_frame). No ctrl: Ctrl+Tab
+    // and the march are their own entries below. No alt: no Alt spelling of
+    // Tab binds (the Alt walk was deleted 2026-09-23).
     const bool is_tab_cycle =
-        (!ctrl && key == GuiKeys::Tab) ||
-        (!ctrl && key == GuiKeys::IsoLeftTab);
+        (!ctrl && !alt && key == GuiKeys::Tab) ||
+        (!ctrl && !alt && key == GuiKeys::IsoLeftTab);
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     const bool is_ctrl_shift_tab =
@@ -1805,16 +1803,15 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     WALK LAMP's chord;
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab / IsoLeftTab — the diff-flag cycle, shift-agnostic on
-//     IsoLeftTab exactly as the live cycle is, centring its landing;
-//   * Alt+Tab / Alt+Shift+Tab / Alt+IsoLeftTab — the same cycle with the
-//     least-movement landing (2026-09-22), the live Alt walk's mirror;
+//     IsoLeftTab exactly as the live cycle is, its landing's camera the live
+//     audio view's exactly as the live walk's is (marker_walk_landing_frame);
 //   * Ctrl+Shift+Tab       — the PAIRED MARCH (2026-08-18), the diff-flag cycle
 //     composed with the A/B switch: the mode's Tab act, the tab switch, the
 //     mode's Tab act again;
 //   * bare Home / End      — the ABSOLUTE ends of the song;
 //   * bare `c`             — working zoom, centered on the mode's own focus.
-// THE ALT TAB FAMILY IS THE ONE ALT SHAPE (2026-09-22) and THE MARCH THE ONE
-// CTRL SHAPE (2026-08-18). Ctrl+Tab was the walk cycle's
+// NO ALT SHAPE (the Alt Tab family, 2026-09-22, was deleted 2026-09-23) and
+// THE MARCH THE ONE CTRL SHAPE (2026-08-18). Ctrl+Tab was the walk cycle's
 // forward direction from 2026-08-05 and left with the walk selector; the
 // allowlist admits it as an ordinary A/B switch now. Returns true when the
 // press was consumed.
@@ -1869,26 +1866,18 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     2026-08-11, and this paragraph claimed the opposite until 2026-08-15;
 //   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
 //     relayout, likewise;
-//   * BARE Tab and ALT+TAB (with their shifted forms, the two walk buttons'
-//     shift presses) — the bottom row's two WALK BUTTONS (the centring walk
-//     since 2026-08-15, the least-movement walk since 2026-09-22), answered
-//     LIVE in the view by this predicate: they step the mode's own diff-flag
-//     cycle, so neither greys in the view. CTRL+SHIFT+TAB, the march over
+//   * BARE Tab (with its shifted form, the walk button's shift press) — the
+//     bottom row's WALK BUTTON (since 2026-08-15), answered LIVE in the view
+//     by this predicate: it steps the mode's own diff-flag cycle, so it does
+//     not grey in the view. CTRL+SHIFT+TAB, the march over
 //     that same cycle (2026-08-18), is the tab row's shifted press since
 //     2026-09-14, the tabs never greying.
 // Which leaves BARE `h` — the history button's own chord, and the one shape
 // here bound outside the mode at all.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
-    // THE ONE ALT SHAPE (architect 2026-09-22): ALT+TAB, ALT+SHIFT+TAB and
-    // ALT+IsoLeftTab, THE LEAST-MOVEMENT WALK, read here over the mode's own
-    // diff-flag cycle exactly as bare Tab is — "navigation commands that can
-    // be symmetric in the history view should be" — and claimed for the same
-    // reason bare Tab is, for the key and for the roster face derived from
-    // this predicate (the least-movement walk button stays lit in here). No
-    // ctrl: Ctrl+Alt+Tab binds nothing anywhere. Every other alt shape is
-    // refused on the next line.
-    if (mods.alt && !mods.ctrl &&
-        (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab)) return true;
+    // EVERY ALT SHAPE IS REFUSED: the mode claims no alt chord (the
+    // least-movement walk's Alt Tab shapes, claimed from 2026-09-22, were
+    // deleted 2026-09-23 when the walk's camera became the audio view's).
     if (mods.alt) return false;
     // THE FIRST CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
     // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
@@ -2045,12 +2034,13 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker),
     // and THE LIVE FAMILY'S LANDING IS MIRRORED ARM FOR ARM (architect
     // 2026-09-16; "navigation commands that can be symmetric in the history
-    // view should be", 2026-09-22): the mode's bare Tab arm states Center —
-    // the landing centred at the standing zoom — exactly as the three live
-    // bare arms do, and its Alt+Tab arm LeastMovement exactly as the three
-    // live Alt arms do, neither writing the zoom (architect 2026-09-22: no
-    // camera is derived from the zoom) — and the march states NoFrame, its
-    // `c` behind each step being the one framing.
+    // view should be", 2026-09-22): the mode's Tab arm states
+    // marker_walk_landing_frame exactly as the three live arms do — Center
+    // at the standing zoom in source view, LeastMovement in target view
+    // (architect 2026-09-23), the live audio view standing in the view —
+    // neither writing the zoom (no camera is derived from the zoom) — and
+    // the march states NoFrame, its `c` behind each step being the one
+    // framing.
     switch (frame) {
         case MarkerLandingFrame::Center:
             viewport.center_viewport_on_playhead();      break;
@@ -2344,8 +2334,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE TAB FAMILY IN THE VIEW — the diff-flag cycle, and above it the march
     // that composes the cycle with the A/B switch.
     //
-    // BARE TAB / SHIFT+TAB / IsoLeftTab — THE DIFF-FLAG CYCLE, mode-local, and
-    // the same three under Alt with the least-movement landing. Tab
+    // BARE TAB / SHIFT+TAB / IsoLeftTab — THE DIFF-FLAG CYCLE, mode-local. Tab
     // steps to the next flag, Shift+Tab and IsoLeftTab to the previous, in the
     // list's own order: rebuild_history_diff_flags leaves `flags` sorted
     // ASCENDING BY time_frame, so list order IS reading order and no second
@@ -2404,20 +2393,19 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         target_render.trigger();
         return true;
     }
-    // THE BARE STEP CENTRES AND THE ALT STEP MOVES LEAST, the live walks' own
-    // answers (architect 2026-09-16, the sibling's rule; the pair since
-    // 2026-09-22 — "navigation commands that can be symmetric in the history
-    // view should be"): bare Tab / Shift+Tab / IsoLeftTab centre the landing
-    // at the standing zoom, and Alt+Tab / Alt+Shift+Tab / Alt+IsoLeftTab keep
-    // the camera unless the landing is offscreen, where it lands the edge
-    // margin in from the edge it was beyond — so the walks frame alike at
-    // every level in both worlds. history_mode_owns_key claims the alt shapes
-    // ahead of its alt refusal; the march above ranks first.
+    // THE STEP'S CAMERA IS THE LIVE WALK'S OWN ANSWER (architect 2026-09-16,
+    // the sibling's rule; "navigation commands that can be symmetric in the
+    // history view should be", 2026-09-22): marker_walk_landing_frame over
+    // the SAME LIVE AUDIO VIEW, which stands in the view (architect
+    // 2026-09-23) — the landing centred at the standing zoom in source view,
+    // and in target view the camera held unless the landing is offscreen,
+    // where it lands the edge margin in from the edge it was beyond — so the
+    // walks frame alike at every level in both worlds. No alt term here:
+    // history_mode_owns_key refuses every alt shape ahead of this body; the
+    // march above ranks first.
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) {
         cycle_history_diff_flag_focus(key == GuiKeys::Tab && !mods.shift,
-                                      mods.alt
-                                          ? MarkerLandingFrame::LeastMovement
-                                          : MarkerLandingFrame::Center);
+                                      marker_walk_landing_frame(app));
         return true;
     }
 
@@ -2793,8 +2781,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // handle_history_mode_key's own vocabulary — bare `h` (the toggle), bare `u`
 // (the CUMULATIVE READING's toggle, 2026-08-08), bare `g` (the WALK's toggle,
 // 2026-08-18), bare `,` and
-// `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab and their Alt forms (the
-// DIFF-FLAG CYCLE, 2026-09-22 for the Alt forms), bare Home / End (the ABSOLUTE ends of the song,
+// `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the DIFF-FLAG CYCLE),
+// bare Home / End (the ABSOLUTE ends of the song,
 // not the trim bounds) and bare `c` (working zoom centered on the mode's own
 // focus). Four of those families joined on 2026-08-05, and they are claimed
 // rather than admitted for one reason: each is a MODE-LOCAL re-expression,
@@ -4265,9 +4253,8 @@ namespace {
 // without the shift bit and the product reads both as the one shape everywhere
 // it binds a reverse Tab (the `h` view's diff-flag cycle does the same). CTRL
 // AND ALT ARE REFUSED on every arm: a ctrl-carrying Tab is the tab-cycle
-// family's, not this ring's, and an alt-carrying one is the live cycle's
-// LEAST-MOVEMENT walk since 2026-09-22 — a camera the ring has none of — so
-// alt binds nothing in it.
+// family's, not this ring's, and alt binds nothing in it, as it binds no Tab
+// anywhere.
 enum class ModalRingTab { None, Forward, Reverse };
 
 ModalRingTab modal_ring_tab_shape(GuiKey key, GuiInputState mods) {
@@ -4472,16 +4459,15 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return true;
     // Marker-focus cycle keys auto-advance while held (fast marker walking):
     // bare Tab and Shift+Tab both cycle, and IsoLeftTab cycles shift-agnostic
-    // (mirroring the dispatch arm), all requiring no ctrl — AND ALT IS NO TERM
-    // since 2026-09-22: the Alt forms are the same walk with the
-    // least-movement landing, and a held one walks as fast. The `h` history
+    // (mirroring the dispatch arm), all requiring no ctrl and no alt (no Alt
+    // spelling of Tab binds, so none repeats). The `h` history
     // mode's diff-flag cycle takes the same three shapes and inherits this line
     // unchanged, which is the eligibility it wants: fast walking of the flags
     // instead of the markers. CTRL+TAB is excluded by the
     // same no-ctrl term, which is the eligibility it wants in every state — a
     // held A/B switch would only flap — and the term catches ctrl+shift+
     // IsoLeftTab with it (the Ctrl+Shift+Tab spelling needs the arm below).
-    if (!mods.ctrl &&
+    if (!mods.ctrl && !mods.alt &&
         (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab))
         return true;
     // Ctrl+Shift+Tab exactly (the lockstep march) repeats too, IN EVERY STATE
@@ -9159,8 +9145,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // centring thrown away twice, and a LeastMovement would still
     // page-render an OFFSCREEN landing only for `c` to supersede it at once.
     // NoFrame moves the focus and lands the playhead and writes no camera —
-    // and no zoom: `c` is the one zoom write of each step. The bare Tab walk
-    // states Center, the Alt+Tab walk LeastMovement, and this arm its own. The `h` view's march
+    // and no zoom: `c` is the one zoom write of each step. The Tab walk
+    // states the audio view's camera (marker_walk_landing_frame), and this
+    // arm its own. The `h` view's march
     // (handle_history_mode_key) is this composition over its own cycle.
     //
     // BOTH STEPS FRAME BECAUSE THE VIEWPORT IS SAVED BETWEEN THEM, and that is
@@ -9197,37 +9184,31 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     }
 
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
-    // marker, moving the playhead to it and CENTRING IT AT THE STANDING ZOOM
-    // (MarkerLandingFrame::Center — Viewport::center_viewport_on_playhead,
-    // never `c`'s snap to the working zoom; architect 2026-09-22, putting the
-    // centre back after that day's page-in walk, the zoom untouched at every
-    // level as it has been since the zoom-derived Center of 2026-09-13 went).
+    // marker, moving the playhead to it with THE AUDIO VIEW'S CAMERA
+    // (marker_walk_landing_frame, architect 2026-09-23): in source view the
+    // landing CENTRES at the standing zoom (MarkerLandingFrame::Center —
+    // Viewport::center_viewport_on_playhead, never `c`'s snap to the working
+    // zoom), in target view it is the LEAST-MOVEMENT landing
+    // (MarkerLandingFrame::LeastMovement — an onscreen landing moves nothing
+    // and an offscreen one lands the edge margin in from the edge it was
+    // beyond). The zoom is untouched at every level. Under a lit grid
+    // iterations the walk steps the cells (marker_walk_step's same-marker arm
+    // writes no camera in either view).
     //
-    // ALT+TAB / ALT+SHIFT+TAB / ALT+IsoLeftTab ARE THE SAME WALK WITH THE
-    // LEAST-MOVEMENT LANDING (architect 2026-09-22 — the product's first
-    // bare-Alt chords): the same cycle_marker_focus, so under a lit grid
-    // iterations it walks the cells exactly as the bare walk does
-    // (marker_walk_step's same-marker arm writes no camera for either), and
-    // only the marker-to-marker landing's camera differs — an onscreen
-    // landing moves nothing and an offscreen one lands the edge margin in
-    // from the edge it was beyond (MarkerLandingFrame::LeastMovement). On
-    // labwc the compositor may take Alt+Tab for its window switcher; the
-    // least-movement walk button is the road there.
-    //
-    // The `h` view's own Tab arm states the same pair over its diff-flag
-    // cycle (handle_history_mode_key). The Ctrl+Tab branch above runs first
-    // and returns, so Ctrl+Tab is consumed before reaching here; the explicit
-    // !ctrl guards below keep Ctrl+Shift+Tab — and every Ctrl+Alt shape,
-    // which binds nothing — out of the cycle path.
-    const MarkerLandingFrame walk_frame =
-        alt ? MarkerLandingFrame::LeastMovement : MarkerLandingFrame::Center;
-    if (!ctrl && key == GuiKeys::Tab && !shift) {
+    // The `h` view's own Tab arm states the same predicate over its
+    // diff-flag cycle (handle_history_mode_key). The Ctrl+Tab branch above
+    // runs first and returns, so Ctrl+Tab is consumed before reaching here;
+    // the explicit !ctrl guards below keep Ctrl+Shift+Tab out of the cycle
+    // path, and the !alt guards make every Alt spelling of Tab an unbound
+    // no-op (the Alt walk, 2026-09-22, was deleted 2026-09-23).
+    const MarkerLandingFrame walk_frame = marker_walk_landing_frame(app);
+    if (!ctrl && !alt && key == GuiKeys::Tab && !shift) {
         cycle_marker_focus(true,  walk_frame); return true;
     }
-    if (!ctrl && key == GuiKeys::Tab && shift)  {
+    if (!ctrl && !alt && key == GuiKeys::Tab && shift)  {
         cycle_marker_focus(false, walk_frame); return true;
     }
-    if (!ctrl && key == GuiKeys::IsoLeftTab)    {
+    if (!ctrl && !alt && key == GuiKeys::IsoLeftTab)    {
         cycle_marker_focus(false, walk_frame); return true;
     }
 

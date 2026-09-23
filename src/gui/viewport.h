@@ -418,8 +418,9 @@ struct Viewport {
     // Follow's page-in: an offscreen subject lands the edge margin
     // (kViewportEdgeMarginFraction, app_state.h) in from the LEFT edge.
     void follow_scroll_if_needed();
-    // THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Alt+Tab walk's
-    // camera: an onscreen subject moves nothing, an offscreen one lands the
+    // THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Tab walk's camera
+    // in target view (marker_walk_landing_frame, app_state.h): an onscreen
+    // subject moves nothing, an offscreen one lands the
     // edge margin in from the edge it was beyond, the zoom untouched. The
     // three answers and the subject are at the definition.
     void least_movement_scroll_if_needed();

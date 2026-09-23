@@ -471,8 +471,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // EIGHTEEN
-    // chords (the least-movement walk's Alt+Tab the eighteenth, 2026-09-22),
+    // SEVENTEEN
+    // chords (re-counted 2026-09-23, the least-movement walk deleted),
     // every one already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -668,7 +668,7 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
     // behind a separator and ahead of the arrows — THE WALK and, since
-    // 2026-09-22, THE LEAST-MOVEMENT WALK and the two HOLD-COLUMN nudges. The declined double-click
+    // 2026-09-22, the two HOLD-COLUMN nudges. The declined double-click
     // rule's mechanical reason is recorded at the roster entry (every
     // double-click surface in this product acts on its FIRST click too).
     // WALK BOTH TABS was a member on Ctrl+Shift+Tab until the architect
@@ -688,20 +688,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // IT IS LIVE INSIDE THE `h` VIEW and the derived partition says so with
     // nothing hand-listed — history_mode_owns_key claims bare Tab and
     // Shift+Tab as the diff-flag cycle forward and back.
+    //
+    // ITS CAMERA IS THE AUDIO VIEW'S (marker_walk_landing_frame, app_state.h):
+    // the landing centres in source view and moves least in target view, so
+    // one row reaches both on glass. (The least-movement walk's own row, an
+    // Alt Tab row from 2026-09-22, was deleted 2026-09-23 with that ruling.)
     {RedesignButton::TransportWalk,
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
-    // THE LEAST-MOVEMENT WALK (architect 2026-09-22), the same row with ALT
-    // SET as its own base chord (the hold nudges' ctrl shape, one modifier
-    // over): the plain press is Alt+Tab and the shift admission
-    // (redesign_button_shift_admits) ORs shift in for Alt+Shift+Tab, the
-    // reverse walk with the same camera. It does NOT repeat, its long press
-    // being its shift as the walk's is. The `h` view's partition leaves it
-    // lit: history_mode_owns_key claims the Alt forms as the diff-flag cycle.
-    // It is the least-movement walk's road wherever the key is not — the
-    // tablet, which translates no hardware key, and a labwc whose window
-    // switcher takes Alt+Tab.
-    {RedesignButton::TransportWalkLeastMovement,
-     GuiKeys::Tab,    false, false, true,  false, true},                             // Alt+Tab
     // THE HOLD-COLUMN NUDGES (architect 2026-09-22): Ctrl+Left and
     // Ctrl+Right as their OWN BASE CHORDS, the `ctrl` column set (Undo's
     // shape), and REPEATING like the four arrows — the held button walks
@@ -5786,8 +5779,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // nothing on the pointer at all. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
-        // Ctrl+Alt chords and, since 2026-09-22, the Alt+Tab least-movement
-        // walk, whose inventory is conventions.md's alt vocabulary.)
+        // Ctrl+Alt chords, whose inventory is conventions.md's alt
+        // vocabulary.)
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
@@ -7141,7 +7134,7 @@ void GuiInputHandler::finalize_active_drags() {
 // the iteration group since 2026-09-19, the IGNORE WAVEFORM MAGNIFICATION lamp in the
 // zoom group since 2026-09-22 and the ZOOM IN / ZOOM OUT pair back at its head
 // the same day — and the bottom row's
-// eighteen: the enum's
+// seventeen: the enum's
 // own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; only a MODAL's yield leaves a bottom-row member
 // with a zero rect now, and it resolves unhovered with no arm here).

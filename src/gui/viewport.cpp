@@ -912,8 +912,9 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
-// THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Alt+Tab walk's
-// camera (MarkerLandingFrame::LeastMovement): the viewport moves as little as
+// THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Tab walk's camera in
+// target view (MarkerLandingFrame::LeastMovement, chosen by
+// marker_walk_landing_frame since 2026-09-23): the viewport moves as little as
 // it can while the subject ends on screen. THE SUBJECT IS THE ONE THE OTHER
 // PLAYHEAD CAMERAS TAKE — the scanner while it runs, the resting cursor
 // otherwise (center_viewport_on_playhead's and follow_scroll_if_needed's own

@@ -2006,7 +2006,7 @@ int  waveform_max_h_px();
 // strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
 // clock behind their separator (left-anchored since 2026-08-18, centred in the
 // lane before it), and the MARKER-VERB GROUP
-// + separator + marker-walk four + separator + four cardinal
+// + separator + marker-walk three + separator + four cardinal
 // arrows flush right (2026-08-15 for the walk group, 2026-08-18 for the
 // verbs; kMarkerVerbGroup in paint_handler.cpp owns that group's membership,
 // which has changed under this geometry several times and does not bear

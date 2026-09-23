@@ -181,7 +181,7 @@ namespace {
 // transport three at the left
 // pad and, flush right, the MARKER-VERB GROUP (kMarkerVerbGroup,
 // paint_handler.cpp, owns its membership and its succession), the
-// marker-walk four and the four
+// marker-walk three and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
 // rearrangement, re-weighted 2026-08-15 and again at the 2026-08-18 relayout,
@@ -817,7 +817,7 @@ GuiRect top_marker_row_area(const AppState& a) {
 // row's boxes with the monospace clock behind their separator (left-aligned
 // since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the
-// marker-walk four and the four cardinal arrows, divided by two more of the
+// marker-walk three and the four cardinal arrows, divided by two more of the
 // ruled separators, and THE STATE CELL right of the clock. (The arrows' four
 // slots were a mode SWAP with the history
 // companions from 2026-08-14 until the 2026-08-18 relayout took those four
@@ -2496,9 +2496,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its eighteen
+            // second arm covers both of the row's surfaces, its seventeen
             // roster buttons (the transport three, the right block's seven
-            // marker-verb-group members, the walk group's four and the four
+            // marker-verb-group members, the walk group's three and the four
             // cardinal arrows — the four tables in paint_handler.cpp,
             // kMarkerVerbGroup and its neighbours, own those memberships)
             // and the MODAL's own buttons

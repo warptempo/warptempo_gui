@@ -909,9 +909,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              axes: each composes the S/T chokepoint
     //                              switch_active_audio_view_to with the column
     //                              entry GuiActiveViews::select_active_markers_view
-    //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus, centring the landing
-    //   - Alt+Tab/Alt+Shift+Tab/Alt+IsoLeftTab → the same cycle with the
-    //                              least-movement landing
+    //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus, the landing's camera
+    //                              the audio view's (centring in source view,
+    //                              least movement in target view)
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → the render/batch cancel (and the editor /
@@ -2202,9 +2202,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs,
     // framing each step through plain `c`; Tab / Shift+Tab / IsoLeftTab cycle
-    // marker focus and centre the landing at the standing zoom, and the same
-    // three under Alt cycle it with the least-movement landing (architect
-    // 2026-09-22).
+    // marker focus with the audio view's camera — the landing centred at the
+    // standing zoom in source view, the least-movement landing in target view
+    // (marker_walk_landing_frame, architect 2026-09-23).
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
@@ -2888,10 +2888,11 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     //
     // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
     // (architect 2026-09-04). The walk moves focus and lands the playhead; the
-    // camera is its caller's statement, forwarded untouched: the three bare
-    // arms state Center and the three Alt arms LeastMovement, at every zoom
-    // (architect 2026-09-22 — no camera is derived from the zoom, and neither
-    // walk changes the zoom), while the Ctrl+Shift+Tab paired march — a different act, which
+    // camera is its caller's statement, forwarded untouched: the three Tab
+    // arms state marker_walk_landing_frame — Center in source view,
+    // LeastMovement in target view (architect 2026-09-23) — at every zoom (no
+    // camera is derived from the zoom, and the walk never changes the zoom),
+    // while the Ctrl+Shift+Tab paired march — a different act, which
     // runs plain `c` behind each step (architect 2026-09-14) — states
     // MarkerLandingFrame::NoFrame, the `c` behind it being the step's one
     // framing. Putting a policy read in here is what made the march inherit
@@ -2992,10 +2993,10 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // it a no-op. THE NoFrame ARM WRITES NO CAMERA AT ALL (2026-09-14), an
     // offscreen landing included: its caller frames behind it.
     //
-    // WHO PASSES WHAT, re-grepped 2026-09-22: `c` (run_center_command) states
-    // Center; the FOUR bare Tab arms state Center at the standing zoom and the
-    // FOUR Alt+Tab arms LeastMovement (architect 2026-09-22) — the live walk's
-    // three of each and the `h` view's one of each over its diff-flag cycle;
+    // WHO PASSES WHAT, re-grepped 2026-09-23: `c` (run_center_command) states
+    // Center; the FOUR Tab arms state marker_walk_landing_frame, Center in
+    // source view and LeastMovement in target view (architect 2026-09-23) —
+    // the live walk's three and the `h` view's one over its diff-flag cycle;
     // the Ctrl+Shift+Tab paired march states NoFrame at each walk step and
     // then runs run_center_command, so every landing, on screen or off, is
     // framed once, by `c`, and no framing lands for `c` to supersede at once.
