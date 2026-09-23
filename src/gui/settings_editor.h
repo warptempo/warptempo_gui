@@ -46,7 +46,7 @@ struct GuiInputHandler;
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.
-// 2. GUI-kind keys (viewport / zoom / playhead / follow / active_audio_view /
+// 2. GUI-kind keys (viewport / zoom / playhead / active_audio_view /
 //    active_markers_view / active_tab_view / per-tab trim /
 //    per-tab read_only / gui_scale):
 //    commit_gui_setting

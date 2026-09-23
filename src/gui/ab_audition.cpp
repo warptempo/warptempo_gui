@@ -168,6 +168,17 @@ void GuiAbAudition::start() {
     // tab's own focus, which the cursor already sits on after every route that
     // sets one, and a play that refused after such a move would simply end the
     // act — the interrupt rule's own answer.
+    //
+    // THE ACT IGNORES THE CAMERA POSTURES (architect 2026-09-23;
+    // AppState::camera_hold): its camera writes — the two `c`s and the tab
+    // switch here, the switch back and its `c` at the second pair — neither
+    // arm nor clear them, so what stood before the act stands after it. The
+    // bits are read here and written back behind the writes. The one
+    // exception is a chase belonging to a plain play this press interrupts:
+    // the switch's stop ends that play, which spends its chase as every
+    // project play's end does.
+    const bool hold_before  = app.camera_hold;
+    const bool chase_before = app.camera_chase && !playback.is_playing();
     apply_working_zoom();
     // Step 1: the ordinary tab switch (the stop of any live audition, the
     // selection clear, the band swap, the coincidence auto-select and the
@@ -179,6 +190,8 @@ void GuiAbAudition::start() {
     // together. Still ahead of the launch, so the play below starts from the
     // cursor `c` left (a no-op land after a switch — the header says why).
     apply_working_zoom();
+    app.camera_hold  = hold_before;
+    app.camera_chase = chase_before;
     // Step 2's first play, launched STRAIGHT AWAY — no rest precedes it. The
     // architect's rest is between SOUNDS and nothing sounded before this one
     // (the constants' own note, app_state.h). A refusal here is unreachable in
@@ -208,12 +221,21 @@ void GuiAbAudition::advance_after_natural_end(
             // first for a second reason: switch_active_tab_view_to takes the
             // one stop body, which clears the sequence, so a rest armed ahead
             // of it would be wiped.
-            active_views.switch_active_tab_view_to(ended.home_tab);
-            // `c` on the tab just re-entered, in that same switch's frame —
-            // and BEFORE the arm below, which is the second half of this
-            // arm's ordering rule: the command can clear the sequence, so it
-            // must not run after a rest has been written (the header).
-            apply_working_zoom();
+            // The camera postures are kept across both writes, the act's rule
+            // at start().
+            {
+                const bool hold_before  = app.camera_hold;
+                const bool chase_before = app.camera_chase;
+                active_views.switch_active_tab_view_to(ended.home_tab);
+                // `c` on the tab just re-entered, in that same switch's frame
+                // — and BEFORE the arm below, which is the second half of
+                // this arm's ordering rule: the command can clear the
+                // sequence, so it must not run after a rest has been written
+                // (the header).
+                apply_working_zoom();
+                app.camera_hold  = hold_before;
+                app.camera_chase = chase_before;
+            }
             arm_rest(Phase::HomeFirst, ended.home_tab, kAuditionSwitchGapMs);
             return;
         case Phase::HomeFirst:

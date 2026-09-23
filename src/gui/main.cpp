@@ -181,7 +181,7 @@ namespace {
 // transport three at the left
 // pad and, flush right, the MARKER-VERB GROUP (kMarkerVerbGroup,
 // paint_handler.cpp, owns its membership and its succession), the
-// marker-walk three and the four
+// marker walk and the four
 // cardinal arrows, divided by
 // two of the ruled separators (the roster commit's
 // rearrangement, re-weighted 2026-08-15 and again at the 2026-08-18 relayout,
@@ -751,8 +751,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-three view/mode/action buttons since Zoom In and Zoom
-// Out were restored later on 2026-09-22, twenty-one from the Show trim region
+// ICON row (the twenty-two view/mode/action buttons since Follow's deletion
+// 2026-09-23, twenty-three from Zoom In and Zoom
+// Out's restoration later on 2026-09-22, twenty-one from the Show trim region
 // button's deletion that day, twenty-two from the IGNORE WAVEFORM
 // MAGNIFICATION lamp's arrival that day — twenty-one from the FLATTEN
 // button's arrival from the bottom row 2026-09-19, twenty from the two view
@@ -817,7 +818,7 @@ GuiRect top_marker_row_area(const AppState& a) {
 // row's boxes with the monospace clock behind their separator (left-aligned
 // since 2026-08-18), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the
-// marker-walk three and the four cardinal arrows, divided by two more of the
+// marker walk and the four cardinal arrows, divided by two more of the
 // ruled separators, and THE STATE CELL right of the clock. (The arrows' four
 // slots were a mode SWAP with the history
 // companions from 2026-08-14 until the 2026-08-18 relayout took those four
@@ -1022,7 +1023,8 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     return viewport_grid_point(k, q);
 }
 
-void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
+namespace {
+void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
     // Level ceiling (the chokepoint): every zoom write funnels through this
     // function immediately after assigning zoom_level — the same single-funnel
     // argument that placed the viewport grid snap below — so a per-file ceiling
@@ -1092,6 +1094,24 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     if (snapped < 0)               snapped = 0;
     if (snapped > max_start_grid)  snapped = max_start_grid;
     a.viewport_start_sample = snapped;
+}
+}  // namespace
+
+void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
+    clamp_viewport_start_body(a, audio);
+    // THE CAMERA POSTURES' ONE CLEAR (architect 2026-09-23): every viewport
+    // write passes this function before anything reads the camera, so a
+    // camera it settles somewhere other than where it settled last puts out
+    // both postures here, once for every writer. The rule, the writer
+    // inventory this claim rests on and the exempt writers (which keep or
+    // re-arm their bit after this call) are at AppState::camera_hold.
+    if (a.viewport_start_sample != a.camera_posture_viewport_start ||
+        a.zoom_level != a.camera_posture_zoom_level) {
+        a.camera_hold  = false;
+        a.camera_chase = false;
+        a.camera_posture_viewport_start = a.viewport_start_sample;
+        a.camera_posture_zoom_level     = a.zoom_level;
+    }
 }
 
 double playhead_pixel_x(const AppState& a, int64_t vp_start, double spp) {
@@ -2458,7 +2478,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE REDESIGNED BUTTONS' STATE-VECTOR STALENESS COMPARATOR — the ONE
         // site that repairs a stale DISABLED or SELECTED face, and the reason no
-        // route that pushes/pops history, toggles read-only, flips follow or
+        // route that pushes/pops history, toggles read-only, flips
         // iteration mode, finishes a load — or, since 2026-08-30, MUTATES THE
         // SELECTION, switches a view or steps the history walk (the
         // truthful-buttons ruling's face terms, redesign_button_enabled) —
@@ -2496,9 +2516,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // at most tooltip_damage_h_px() tall. The band's SIDE follows the
             // owner: a top-row tooltip hangs BELOW the top strip, a BOTTOM-ROW
             // one hangs ABOVE its lane, the painter's own flip — and that
-            // second arm covers both of the row's surfaces, its seventeen
+            // second arm covers both of the row's surfaces, its fifteen
             // roster buttons (the transport three, the right block's seven
-            // marker-verb-group members, the walk group's three and the four
+            // marker-verb-group members, the walk group's one and the four
             // cardinal arrows — the four tables in paint_handler.cpp,
             // kMarkerVerbGroup and its neighbours, own those memberships)
             // and the MODAL's own buttons
@@ -2881,7 +2901,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // column outside the waveform area and
             // invalidate_playhead_columns emits no damage for one, so a
             // scanner that has left the viewport (a launch inside a trim
-            // window the user then panned away from, follow off)
+            // window the user then panned away from, no chase standing)
             // leaves this tick producing NO damage at all — and with the
             // pre-paint hook the sole advancer of the scanner position
             // while playing, no damage means no paint means the position
@@ -2892,7 +2912,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // onscreen, so a paint is always produced, and it is the
             // honest rect — the clock tracks the SCANNER's time
             // while playing, so it is frozen alongside the line for
-            // exactly the same stretch. Follow mode is untouched: no
+            // exactly the same stretch. The chase is untouched: no
             // viewport work is added here, and a chasing viewport keeps
             // the column onscreen so the fallback simply never fires.
             if (playhead_invalidate_rect(waveform_area(app), px).w <= 0)
@@ -3102,7 +3122,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // that via its in_pre_paint_ flag).
         invalidate_playhead_columns(old_px, new_px);
         invalidate_clock_area();
-        // THE FOLLOW CHASE NEVER PAGES UNDER A LIVE AIM (the two refusal terms
+        // THE CHASE NEVER PAGES UNDER A LIVE AIM (the two refusal terms
         // below). The chase is the product's one AUTONOMOUS viewport mover: it
         // fires from the clock rather than from an event, and every aiming
         // gesture converts a WINDOW COLUMN through the CURRENT viewport at some
@@ -3111,7 +3131,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         //     remembered press_x at the RELEASE, so a page in between would
         //     place the playhead on whatever frame had slid under that column;
         //   * the grab-pan's first leg folds the whole press->crossing delta,
-        //     and follow suppression only begins once that first scroll_viewport
+        //     and the chase's clear only lands once that first scroll_viewport
         //     application fires;
         //   * a live marker / trim / region / strip drag converts each motion's
         //     window x the same way, so a page mid-drag would teleport the
@@ -3123,8 +3143,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // press-time viewport stays valid by construction and every existing
         // conversion is already correct — nothing captures frames at the press
         // and nothing about the click act or the fold moves. This is a PAUSE,
-        // not an end: it writes nothing, so the producer inventory
-        // (follow_engaged, app_state.h) is unchanged and the chase simply
+        // not an end: it writes nothing, so the posture
+        // (AppState::camera_chase) is unchanged and the chase simply
         // resumes and catches up on the next tick after the gesture ends —
         // including after a lost button or a force-end that ran no act at
         // all. A long motionless HOLD therefore visibly freezes the chase for
@@ -3133,12 +3153,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during the disambiguation
         // window; the contract is at the touch state block, input_core.h.
-        // THE BIT IS THE PLAY'S, NOT THE LAMP'S: follow is a one-shot, so
-        // this asks whether the play IN FLIGHT is chasing (the launch that
-        // spent the armed lamp is what turned it on; every pan turns it off,
-        // and bare `f` mid-play turns it either way) — the `f` lamp itself is
-        // the promise for the NEXT launch and is not read here.
-        if (app.follow_engaged &&
+        // THE BIT IS THE CHASE POSTURE (architect 2026-09-23), one bit armed
+        // by Shift+C and spent by the play's end, so standing during a play
+        // it means this play chases. THE A/B AUDITION IS NOT CHASED: its
+        // bounded plays are each framed by their own `c`, so the act's phase
+        // standing turns the page off (the render player never reaches here,
+        // its return above).
+        if (app.camera_chase && !audition_sequence_standing(app) &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     });

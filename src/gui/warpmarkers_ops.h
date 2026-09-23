@@ -183,8 +183,9 @@ struct GuiWarpMarkersOps {
     // gui_input.h): on this column always ONE PAINTED COLUMN (the horizontal
     // ladder is retired, the vertical one above standing), which the shared
     // road reads as a plain column delta the whole way down. `camera` is the
-    // press's (NudgeCamera, gui_input.h — bare follows the edge, Ctrl holds
-    // the column), forwarded to the shared tail untouched.
+    // press's (NudgeCamera, gui_input.h — the hold posture's answer,
+    // nudge_camera: dark follows the edge, standing holds the column),
+    // forwarded to the shared tail untouched.
     GuiOpRefusal nudge_selected_markers(HorizontalArrowStep step,
                                         NudgeCamera camera,
                                         bool synthesized_repeat);

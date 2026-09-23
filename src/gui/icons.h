@@ -186,7 +186,9 @@ enum class Icon {
     // still — no two buttons ever wore one math symbol, which is what the move
     // bought.
     BlackSum,            // The cumulative reading (`u`)
-    GoJump,              // Follow mode
+    // (GO-JUMP, the chevron with its destination dot, dressed the FOLLOW lamp
+    // from 2026-08-01 until the architect deleted that button 2026-09-23 —
+    // enumerator, def and committed asset left with it, no second wearer.)
     // Breeze's timeline-lift (2026-09-04, the architect's pick): a clip's two
     // end brackets with a red cross between them — a stretch of timeline the
     // editor declines to travel. The lamp it wears refuses an undo whose
@@ -250,7 +252,8 @@ enum class Icon {
     // table entry.
     KeyframePrevious,    // Older checkpoint (`,`)
     KeyframeNext,        // Newer checkpoint (`.`)
-    // The chevron pair, go-jump's own construction minus its destination dot:
+    // The chevron pair, go-jump's own construction minus its destination dot
+    // (go-jump itself deleted 2026-09-23):
     // ONE closed outline per file whose limbs are one viewBox unit thick, so
     // the weight rides the icon's scale like every other geometry here and
     // there is no stroke to set. Row 8's horizontal arrows are their whole
@@ -347,18 +350,13 @@ enum class Icon {
     // button — enumerators, defs and committed assets — and bboxnext came
     // back byte-verbatim as the one walk's glyph.)
     BboxNext,            // The walk (Tab; Shift+Tab on the shifted press)
-    // THE HOLD-COLUMN NUDGES' GLYPHS (architect 2026-09-23), the walk group's
-    // second and third: Breeze's snap-nodes-midpoint — an accent-blue hollow
-    // triangle on a line split around it — TURNED A QUARTER, the product's
-    // first icon modification (a rigid turn about the viewBox centre; the
-    // precedent is at icons.cpp's IconTransform). Turned left, the triangle
-    // points left from a vertical line; turned right, right: a node on a
-    // line, the marker held to its column. (Breeze's go-previous-context /
-    // go-next-context, a filled tag-shaped arrow carrying braces, wore the
-    // pair from 2026-09-22 and were DELETED 2026-09-23 — enumerators, defs
-    // and committed assets — as far more ink than the chevrons beside them.)
-    SnapNodesMidpointLeft,   // Ctrl+Left, the held-column nudge left
-    SnapNodesMidpointRight,  // Ctrl+Right, the held-column nudge right
+    // (THE HOLD-COLUMN NUDGES' GLYPHS stood here: Breeze's go-previous-context
+    // / go-next-context from 2026-09-22, then for the hours of 2026-09-23
+    // snap-nodes-midpoint TURNED A QUARTER left and right, the product's
+    // first icon modification. All four enumerators, their defs and the
+    // committed assets are DELETED — the last two 2026-09-23 with the two
+    // buttons, the architect having made the held column a posture of the
+    // bare arrows. The rotation's record is at icons.cpp's IconTransform.)
     // THE EDIT FLAG BUTTON'S GLYPH (2026-08-27), the bottom row's verb group
     // after Toggle inherit: text-field, Breeze's own
     // TEXT CURSOR — a serif I-beam standing on a field's underline rule.
@@ -452,10 +450,12 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 52 SINCE THE HOLD-COLUMN NUDGES' GLYPH CHANGE (architect 2026-09-23),
-// re-counted off the enumerators above: go-previous-context and
-// go-next-context left and the two turns of snap-nodes-midpoint joined, so
-// the number is unmoved. It was 52 from the least-movement walk's deletion
+// 49 SINCE THE FOLLOW LAMP AND THE HOLD-COLUMN NUDGES WERE DELETED (architect
+// 2026-09-23), re-counted off the enumerators above: go-jump and the two
+// turns of snap-nodes-midpoint left with the three buttons that wore them.
+// It was 52 from the hold-column nudges' glyph change earlier that day, when
+// go-previous-context and go-next-context left and the two turns of
+// snap-nodes-midpoint joined. It was 52 from the least-movement walk's deletion
 // earlier that day: snap-orthogonal and snap-node left
 // with it and bboxnext came back as the walk's glyph. It was 53 for the day
 // before, from the least-movement walk's arrival (2026-09-22, later still),
@@ -483,7 +483,7 @@ enum class Icon {
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 52;
+inline constexpr int kIconCount = 49;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

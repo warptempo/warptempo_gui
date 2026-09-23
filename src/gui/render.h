@@ -1718,10 +1718,11 @@ inline int tab_row_h_px() {
 // 2026-09-09, directly under the MENU ROW with nothing between (it was lane 2,
 // under the tabs, from the 2026-08-12 relayout until then; the tab row sits
 // under THIS row's border-bottom now, with the flexible gap 1 between —
-// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-THREE view/mode/action buttons since
-// 2026-09-22, when Zoom In and Zoom Out came back to the zoom group's head
-// hours after the Show trim region button left it, the same day the IGNORE
-// WAVEFORM MAGNIFICATION lamp joined it — the
+// kdenlive-redesign.md's closing section) (row 4 of the redesign: TWENTY-TWO view/mode/action buttons since
+// 2026-09-23, when Follow was deleted, twenty-three from 2026-09-22, when Zoom
+// In and Zoom Out came back to the zoom group's head hours after the Show trim
+// region button left it, the same day the IGNORE WAVEFORM MAGNIFICATION lamp
+// joined it — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
 // icons::kIconCount is a
@@ -2006,7 +2007,7 @@ int  waveform_max_h_px();
 // strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
 // clock behind their separator (left-anchored since 2026-08-18, centred in the
 // lane before it), and the MARKER-VERB GROUP
-// + separator + marker-walk three + separator + four cardinal
+// + separator + marker walk + separator + four cardinal
 // arrows flush right (2026-08-15 for the walk group, 2026-08-18 for the
 // verbs; kMarkerVerbGroup in paint_handler.cpp owns that group's membership,
 // which has changed under this geometry several times and does not bear

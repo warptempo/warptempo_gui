@@ -328,11 +328,11 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // phase_reset_hop_step_frame under the LIVE map — the owner the iteration
 // cells land through — so Right then Left returns the reset to where it
 // started give or take a frame, and each step changes its seed window by
-// exactly one. Bare and Ctrl both reach here and land the SAME hop through the
-// SAME body (architect 2026-09-22): Ctrl chooses only the camera term passed
-// through to finish_position_nudge (NudgeCamera::HoldColumn, position_nudge.h),
-// never a different step or a different wall; Shift never reaches here, the
-// horizontal ladder having retired its modifier. Every committed value is a
+// exactly one. The bare press alone reaches here: the camera term (the hold
+// posture's, nudge_camera) is only passed through to finish_position_nudge
+// (NudgeCamera::HoldColumn, position_nudge.h), never a different step or a
+// different wall, and no modifier reaches here — the horizontal ladder
+// retired Shift, and Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23. Every committed value is a
 // whole source frame. The warp and magnification twins take the same road
 // with one painted column instead (stepped_anchor_frame).
 //

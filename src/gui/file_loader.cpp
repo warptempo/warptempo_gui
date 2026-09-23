@@ -25,8 +25,9 @@
 void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
                                      const SettingsFile& sf) {
     app.engine_settings = sf.engine;
-    // NO CAMERA POSTURE LOADS HERE: follow is session state the piece does
-    // not determine, so it left the schema 2026-09-11.
+    // NO CAMERA POSTURE LOADS HERE: the postures (AppState::camera_hold /
+    // camera_chase; follow before them) are session state the piece does not
+    // determine, and follow left the schema 2026-09-11.
     // Event-synchronized hit geometry: this routine (re)establishes the live
     // view from settings, so the displayed hit map and its viewport mirror go
     // COLD through their one owner — the map on screen reflects the OTHER

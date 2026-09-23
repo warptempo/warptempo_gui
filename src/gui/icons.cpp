@@ -41,21 +41,23 @@ namespace {
 // `xform` carries a transform applied around the path so `d` can stay
 // VERBATIM — baking a transform into the numbers by hand would destroy the
 // property that a diff between this table and the file is a transcription bug
-// and nothing else. Three icons' rows carry a non-identity one. TWO are the
+// and nothing else. Two icons' rows carry a non-identity one, both the
 // FILE'S OWN `transform` attribute, both TRANSLATES: dialog-ok-apply.svg, whose
 // author drew the check mark at its document coordinates and translated it
 // back into the viewBox, and dialog-cancel.svg (row 8, 2026-08-11), whose
 // `translate(-1-1)` spells the glued-negative form the SVG grammar admits.
 // `icon_translate` is their producer, named rather than raw so a translate
-// READS as a translate at its site. THE THIRD IS THE PRODUCT'S OWN, the first
-// icon modification (architect 2026-09-23): snap-nodes-midpoint.svg carries no
-// transform, and the hold-column nudges wear it turned a quarter left and a
-// quarter right through `icon_quarter_turn_about_centre`, one matrix on both
-// of the file's paths, the `d` strings still byte-verbatim. The precedent is
-// the RIGID QUARTER TURN about the 22-grid's centre: it maps every integer
-// coordinate to an integer coordinate, so the pixel grid and the Breeze
-// provenance both survive; anything that would move ink off the grid (a scale,
-// a skew, a non-right angle) is not admitted by it. (A general `icon_matrix`
+// READS as a translate at its site. THE PRODUCT'S OWN MODIFICATION HAS NO
+// WEARER SINCE 2026-09-23: for the hours of that day the hold-column nudges
+// wore snap-nodes-midpoint.svg turned a quarter left and right through an
+// `icon_quarter_turn_about_centre` producer, one matrix on both of the file's
+// paths, the `d` strings byte-verbatim — deleted with the two buttons, the
+// asset and the producer. Its precedent stands for a future wearer: the RIGID
+// QUARTER TURN about the 22-grid's centre (+1: matrix(0 1 -1 0 22 0), -1:
+// matrix(0 -1 1 0 0 22), both determinant +1 so a hole stays a hole) maps
+// every integer coordinate to an integer coordinate, so the pixel grid and
+// the Breeze provenance both survive; anything that would move ink off the
+// grid (a scale, a skew, a non-right angle) is not admitted by it. (A general `icon_matrix`
 // constructor lived here for part of 2026-08-11, for distortionfx's
 // rotate-and-scale; it went with that file. The field holds cairo's six
 // components — each producer writes all six and draw() hands them to
@@ -69,20 +71,6 @@ struct IconTransform {
 
 constexpr IconTransform icon_translate(double tx, double ty) {
     return IconTransform{1.0, 0.0, 0.0, 1.0, tx, ty};
-}
-
-// A quarter turn about the 22-px viewBox's centre (11, 11), clockwise on
-// screen (y down) for +1, anticlockwise for -1; no other value is admitted.
-//   +1: matrix(0 1 -1 0 22 0), (x, y) -> (22 - y, x)
-//   -1: matrix(0 -1 1 0 0 22), (x, y) -> (y, 22 - x)
-// The check, on snap-nodes-midpoint's apex-up triangle: the apex (11, 8) lands
-// at (14, 11) under +1, pointing right, and at (8, 11) under -1, pointing left;
-// the centre (11, 11) is fixed by both, and the horizontal line at y = 11
-// becomes the vertical line at x = 11. Both matrices have determinant +1, so a
-// path's winding is preserved and a nonzero-winding hole stays a hole.
-constexpr IconTransform icon_quarter_turn_about_centre(int turns) {
-    return turns > 0 ? IconTransform{0.0, 1.0, -1.0, 0.0, 22.0, 0.0}
-                     : IconTransform{0.0, -1.0, 1.0, 0.0, 0.0, 22.0};
 }
 
 struct IconPath {
@@ -215,17 +203,9 @@ constexpr IconPath kMathmodePaths[] = {
 };
 
 
-// FOLLOW MODE's icon since 2026-08-01 (architect-picked, replacing
-// media-seek-forward): go-jump, the chevron with its destination dot — the
-// playhead chase reads as GOING somewhere, not as fast-forwarding a transport.
-constexpr IconPath kGoJumpPaths[] = {
-    {kIconText,
-     "M 5.7070312 3 L 5 3.7070312 L 11.125 9.8320312 L 12.292969 11 L 11.125 "
-     "12.167969 L 5 18.292969 L 5.7070312 19 L 11.832031 12.875 L 13.707031 11 "
-     "L 11.832031 9.125 L 5.7070312 3 z M 16 10 C 15.446 10 15 10.446 15 11 C "
-     "15 11.554 15.446 12 16 12 C 16.554 12 17 11.554 17 11 C 17 10.446 16.554 "
-     "10 16 10 z "},
-};
+// (FOLLOW MODE's go-jump, the chevron with its destination dot, stood here
+// from 2026-08-01 until the architect deleted the follow lamp 2026-09-23; its
+// paths, def and asset left with it.)
 
 // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP's icon (2026-09-04, the architect's
 // pick, kept through the 2026-09-22 rename): timeline-lift, a clip's two end
@@ -381,8 +361,9 @@ constexpr IconPath kVcsDiffPaths[] = {
 //
 // EACH IS ONE OUTLINE PATH, not a stroked line: Breeze draws the chevron as a
 // closed shape whose two limbs are one unit thick at the viewBox's own scale,
-// exactly as go-jump's does (they are the same drawing, go-jump's carrying its
-// destination dot as a second subpath). So the line weight scales with
+// exactly as go-jump's did (they are the same drawing, go-jump's carrying its
+// destination dot as a second subpath; go-jump was deleted 2026-09-23). So
+// the line weight scales with
 // gui_scale like every other geometry in this table, with no stroke width to
 // set and nothing that could fatten at 200%.
 //
@@ -942,33 +923,9 @@ constexpr IconPath kBboxNextPaths[] = {
      "0,3 0,2 0,3 1,0 0,-3 4,0 0,2 4,-3 L 8,8 8,10 4,10 4,7 3,7"},
 };
 
-// THE HOLD-COLUMN NUDGES (architect 2026-09-23), the walk group's second and
-// third: snap-nodes-midpoint, a hollow triangle standing on a line split
-// around it, TURNED A QUARTER — left (-1) for Ctrl+Left, right (+1) for
-// Ctrl+Right — so the triangle points the nudge's way from a vertical line: a
-// node on a line, the marker held to its column. The file carries no transform;
-// the turn is the product's own (the precedent is recorded at IconTransform).
-// Two paths, `d` verbatim and spelled once so both icons share them: path4
-// under `.ColorScheme-Text` (the line), path6 under `.ColorScheme-Accent` (the
-// triangle, kIconAccent; its inner subpath winds against the outer, so nonzero
-// winding makes the hole). Command coverage: relative m with its implicit
-// linetos (glued negatives included), v, h and z — all inside the
-// interpreter's subset. (go-previous-context
-// and go-next-context wore this pair from 2026-09-22 until 2026-09-23.)
-constexpr const char* kSnapNodesMidpointLineD =
-    "m3 11v1h7v-1zm9 0v1h7v-1z";
-constexpr const char* kSnapNodesMidpointNodeD =
-    "m11 8-3 6h6zm0 2.236328 1.382812 2.763672h-2.765624z";
-
-constexpr IconPath kSnapNodesMidpointLeftPaths[] = {
-    {kIconText,   kSnapNodesMidpointLineD, icon_quarter_turn_about_centre(-1)},
-    {kIconAccent, kSnapNodesMidpointNodeD, icon_quarter_turn_about_centre(-1)},
-};
-
-constexpr IconPath kSnapNodesMidpointRightPaths[] = {
-    {kIconText,   kSnapNodesMidpointLineD, icon_quarter_turn_about_centre(+1)},
-    {kIconAccent, kSnapNodesMidpointNodeD, icon_quarter_turn_about_centre(+1)},
-};
+// (THE HOLD-COLUMN NUDGES' snap-nodes-midpoint, turned a quarter left and
+// right, stood here for the hours of 2026-09-23 and was deleted with the two
+// buttons; the rotation's precedent is recorded at IconTransform.)
 
 // -- THE NOTIFICATION CARDS' THREE (2026-08-29) -------------------------------
 //
@@ -1050,7 +1007,6 @@ constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
 constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
-constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kTimelineLift       {22.0, kTimelineLiftPaths,        3};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
@@ -1091,8 +1047,6 @@ constexpr IconDef kViewHidden         {22.0, kViewHiddenPaths,          1};
 constexpr IconDef kInsertLink         {22.0, kInsertLinkPaths,          1};
 constexpr IconDef kMerge              {22.0, kMergePaths,               1};
 constexpr IconDef kBboxNext           {22.0, kBboxNextPaths,            1};
-constexpr IconDef kSnapNodesMidpointLeft  {22.0, kSnapNodesMidpointLeftPaths,  2};
-constexpr IconDef kSnapNodesMidpointRight {22.0, kSnapNodesMidpointRightPaths, 2};
 constexpr IconDef kDialogInformation  {22.0, kDialogInformationPaths,   2};
 constexpr IconDef kDialogError        {22.0, kDialogErrorPaths,         2};
 constexpr IconDef kWindowClose        {22.0, kWindowClosePaths,         2};
@@ -1105,7 +1059,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditRedo:            return kEditRedo;
         case Icon::MediaRecord:         return kMediaRecord;
         case Icon::BlackSum:            return kBlackSum;
-        case Icon::GoJump:              return kGoJump;
         case Icon::TimelineLift:        return kTimelineLift;
         case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::Mathmode:            return kMathmode;
@@ -1145,8 +1098,6 @@ const IconDef& icon_def(Icon icon) {
         case Icon::InsertLink:          return kInsertLink;
         case Icon::Merge:               return kMerge;
         case Icon::BboxNext:            return kBboxNext;
-        case Icon::SnapNodesMidpointLeft:  return kSnapNodesMidpointLeft;
-        case Icon::SnapNodesMidpointRight: return kSnapNodesMidpointRight;
         case Icon::DialogOkApply:       break;
         case Icon::DialogInformation:   return kDialogInformation;
         case Icon::DialogError:         return kDialogError;

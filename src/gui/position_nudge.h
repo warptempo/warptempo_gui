@@ -353,10 +353,12 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     refusal verdict and ahead of the first write, so this tail always runs
 //     stopped).
 // (f) THE CAMERA, the press's REQUIRED NudgeCamera (gui_input.h, no default;
-//     architect 2026-09-22, at every zoom and on every column): FollowEdge
-//     (bare Left / Right) adds nothing to (e)'s keep-visible edge-align, so
-//     the camera holds while the marker stays on screen and walks with it at
-//     the edge once it would leave; HoldColumn (Ctrl+Left / Ctrl+Right) runs
+//     at every zoom and on every column; the hold posture's answer since
+//     2026-09-23, nudge_camera, read at the dispatch): FollowEdge (the
+//     posture dark) adds nothing to (e)'s keep-visible edge-align, so the
+//     camera holds while the marker stays on screen and walks with it at the
+//     edge once it would leave; HoldColumn (the posture an explicit centring
+//     armed) runs
 //     Viewport::hold_subject_column_after_nudge, which places the viewport so
 //     the playhead (e) just landed paints in the column the marker painted in
 //     before the nudge (prior_focused_frame, the twin's pre-write frame, taken

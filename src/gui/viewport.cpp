@@ -214,8 +214,15 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // region overlay; that hide was deleted with the overlay's resting form.) This
 // is a class statement: the complete clearing-owner inventory is at
 // GuiAuditionSequence (app_state.h) and is not to be restated here.
+//
+// A PLAYHEAD MOVEMENT ALSO PUTS OUT THE HOLD POSTURE (architect 2026-09-23):
+// the column an explicit centring asked to keep belonged to the subject where
+// it stood, so a movement is one of the posture's three movement-owner clears,
+// the two lands being the others. The one exemption is the nudge, which keeps
+// the bit across its whole act; the rule is at AppState::camera_hold.
 void Viewport::move_playhead_to(int64_t new_sample) {
     clear_audition_sequence(app);
+    app.camera_hold = false;
     reseat_playhead_to(new_sample);
 }
 
@@ -286,7 +293,14 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
             new_sample - (visible - std::max<int64_t>(one_px, 1));
         viewport_changed = true;
     }
+    // THE KEEP-VISIBLE EDGE-ALIGN KEEPS THE CHASE (architect 2026-09-23): a
+    // camera move onto the playhead is a move onto the chase's own subject,
+    // not the user looking elsewhere, so the chokepoint's clear inside the
+    // clamp is undone for that one bit (AppState::camera_chase). HOLD is the
+    // movement owners' to clear, and a reseat is not one of them.
+    const bool chase_before = app.camera_chase;
     clamp_viewport_start(app, audio);
+    app.camera_chase = chase_before;
     if (app.viewport_start_sample != old_vp) viewport_changed = true;
 
     if (viewport_changed) {
@@ -557,36 +571,19 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // the predictor and rebuilds the plate exactly.
     if (!final && !level_changed && !vp_changed) return;
 
-    // THE STRIP DRAG BYPASSES scroll_viewport (it writes the viewport itself,
-    // above), so it ends the follow chase here as the funnel does: every user
-    // pan during playback takes the camera from the chase (architect
-    // 2026-07-30; the funnel copy is in scroll_viewport, the producer
-    // inventory at the bit's declaration in app_state.h). Gated on playback being live exactly as the funnel is, and
-    // on EITHER STRIP AXIS having moved — not on the viewport alone. The ZOOM
-    // axis is a first-class producer here: this zoom is SONG-ANCHORED (the
-    // grabbed sample stays pinned at its column), so it carries the view off the
-    // scanner just as the pan axis does — the zoom STEP included, which rides
-    // this applier about the viewport's centre (apply_zoom_step).
-    // The level test is not redundant with the viewport test: a level change can
-    // leave viewport_start_sample bit-identical (the anchor pinned at column 0,
-    // or the recompute rounding/clamping back onto the same grid point), and
-    // while that frame's zoom stands, the next pre-paint's follow_scroll_if_needed
-    // pages away from the level the user just dialled in.
-    // `level_changed` reports a real move, not a request: ALL THREE callers —
-    // the nav drag's zoom phase (apply_nav_zoom_at,
-    // which joined 2026-08-14 with the live-ctrl model), the two-finger
-    // touch-nav body
-    // (apply_touch_nav_update, which joined 2026-08-11 driving this same
-    // chokepoint per touch frame) and the zoom step (apply_zoom_step,
-    // 2026-09-22) —
-    // pre-clamp new_level into the same
-    // [kMinZoom, effective_max_zoom_level] window clamp_viewport_start re-applies
-    // below, so the pre-assignment compare cannot read a wall-saturated no-op as
-    // movement. A both-unchanged frame suppresses nothing either way — mid-gesture
-    // the true-no-op early return above takes it, and the terminating event falls
-    // through this gate false.
-    if ((level_changed || vp_changed) && playback.is_playing())
-        app.follow_engaged = false;
+    // THE CHASE ENDS AT THE CLAMP ABOVE, NOT HERE (architect 2026-09-23): a
+    // camera this applier moves — either axis, the level included, since a
+    // song-anchored zoom carries the view off the scanner as a pan does — is
+    // a camera change at clamp_viewport_start, which puts out both postures
+    // (AppState::camera_hold). The zoom STEP rides this applier and keeps the
+    // HOLD posture at its own site (apply_zoom_step); the chase has no
+    // exemption here, so a zoom during a chase collapses it. `level_changed`
+    // reports a real move, not a request: ALL THREE callers — the nav drag's
+    // zoom phase (apply_nav_zoom_at), the two-finger touch-nav body
+    // (apply_touch_nav_update) and the zoom step (apply_zoom_step) —
+    // pre-clamp new_level into the same [kMinZoom, effective_max_zoom_level]
+    // window clamp_viewport_start re-applies, so the pre-assignment compare
+    // cannot read a wall-saturated no-op as movement.
 
     invalidate_waveform_area();
     // Harmless over-damage, like apply_zoom_change's (the record is at
@@ -672,8 +669,13 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 // the ceiling the whole song is visible. The applier pays what every zoom
 // pays (the synchronous rebuild, the damage, the predictor resync while
 // playing) and clears the whole-song bit on a level move; as a song-anchored
-// camera move it also takes the camera from a follow chase in flight, as the
-// pinch and the ctrl-drag do. Neither step writes `0`'s recall stamp. The
+// camera move it also collapses a chase standing, as the pinch and the
+// ctrl-drag do (the chokepoint's clear, AppState::camera_chase). IT KEEPS THE
+// HOLD POSTURE (architect 2026-09-23): the step pivots on the viewport's
+// centre, so a subject an explicit centring put there stays there, and the
+// nudges that follow keep holding its column — the one zoom that is an
+// exemption from the chokepoint's clear, spelled here after the applier
+// (AppState::camera_hold). Neither step writes `0`'s recall stamp. The
 // caller has already pre-clamped the level (the applier's contract) and
 // asked its actionable predicate, so the level moves.
 void Viewport::apply_zoom_step(double new_zoom_level) {
@@ -683,8 +685,10 @@ void Viewport::apply_zoom_step(double new_zoom_level) {
     const double centre_col = static_cast<double>(wf_area.w) / 2.0;
     const double centre_frame =
         static_cast<double>(app.viewport_start_sample) + centre_col * spp;
+    const bool hold_before = app.camera_hold;
     apply_strip_drag_zoom(new_zoom_level, centre_frame, centre_col,
                           /*final=*/true);
+    app.camera_hold = hold_before;
 }
 
 // THE LEADING RETURNS ARE ONE OWNER EACH (zoom_in_step_actionable and
@@ -712,21 +716,12 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     app.viewport_start_sample += delta_samples;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
-        // EVERY PAN ENDS THE CHASE (architect 2026-07-30, "every pan
-        // suppresses"). This is the pan funnel — PageUp/PageDown, the
-        // plain-wheel stepped pan, touchpad scroll
-        // and the plain-drag grab-pan all land here (the DRAG plain since
-        // 2026-08-12, pan-primary; the WHEEL plain again since 2026-09-14, on
-        // alt for the days the plain form was the waveform magnification) — so one line covers the whole
-        // class by construction. Inside the CHANGED guard, because a pan that
-        // moved nothing (wall-saturated) ends nothing, and gated on
-        // playback being live, matching the placement body's own `was_playing`
-        // gate: a pan while stopped must not pre-empt the next play's chase.
-        // The producer inventory lives at the bit's declaration (app_state.h);
-        // the chase is turned back on for THIS play by a bare `f` press and by
-        // nothing else, and the next play chases only if the lamp was armed
-        // for it.
-        if (playback.is_playing()) app.follow_engaged = false;
+        // EVERY PAN ENDS BOTH CAMERA POSTURES — the chase and the hold — at
+        // the clamp above, which is the one clear every viewport write passes
+        // (AppState::camera_hold); a pan that moved nothing (wall-saturated)
+        // settles the same camera and ends nothing. This is the pan funnel —
+        // PageUp/PageDown, the plain-wheel stepped pan, touchpad scroll and
+        // the plain-drag grab-pan all land here.
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too — the flags carry their own text now, so this one
@@ -804,24 +799,23 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
-// CTRL+LEFT / CTRL+RIGHT HOLD THEIR SUBJECT'S COLUMN (architect 2026-09-17: "I
-// like to see every delta when nudging" — the centring it replaced swallowed
-// the first nudge's pixel in its jump; it centred on the result 2026-09-14 to
-// 2026-09-17). A Ctrl+Left/Right step that MOVED SOMETHING calls this on its
-// changed path, AT EVERY ZOOM, and the viewport is placed so the subject — the
-// resting cursor the step has just landed — paints in THE COLUMN IT PAINTED
-// IN BEFORE THE STEP, clamped into the waveform's first and last columns. THE
-// CAMERA IS THE KEY'S CHOICE (architect 2026-09-22, retiring the
-// placement-instrument principle's zoom gate, which held the column at the
-// working zoom or finer for the BARE press from 2026-09-17): the bare press
-// never calls this and follows the edge through the movement owner's own
-// keep-visible edge-align, the ctrl press always calls it — the NudgeCamera
-// fork (gui_input.h), stated at the dispatch from the press's ctrl bit. So an
-// onscreen subject keeps its exact screen column and the waveform slides under
-// it by the nudge's own delta, and a subject that was offscreen lands on the
-// edge column on its side and stays there on later nudges, the window walking
-// with it. NOTHING CENTRES: `c` is the centring act, this only shows the
-// subject is falling off screen.
+// THE NUDGE HOLDS ITS SUBJECT'S COLUMN WHILE THE HOLD POSTURE STANDS
+// (architect 2026-09-17 for the hold — "I like to see every delta when
+// nudging" — and 2026-09-23 for what chooses it). A Left/Right step that MOVED
+// SOMETHING calls this on its changed path, AT EVERY ZOOM, when the press's
+// camera is NudgeCamera::HoldColumn, and the viewport is placed so the subject
+// — the resting cursor the step has just landed — paints in THE COLUMN IT
+// PAINTED IN BEFORE THE STEP, clamped into the waveform's first and last
+// columns. THE CAMERA IS THE POSTURE'S (nudge_camera, app_state.h, reading
+// AppState::camera_hold, which an explicit centring arms): with it dark the
+// step never calls this and follows the edge through the movement owner's own
+// keep-visible edge-align. (It was the Ctrl modifier's choice from 2026-09-22
+// to 2026-09-23, Ctrl+Left / Ctrl+Right and two buttons of their own; those
+// chords bind nothing now.) So an onscreen subject keeps its exact screen
+// column and the waveform slides under it by the nudge's own delta, and a
+// subject that was offscreen lands on the edge column on its side and stays
+// there on later nudges, the window walking with it. NOTHING CENTRES: `c` is
+// the centring act, this only keeps the column the centring left.
 //
 // THE PRIOR VIEWPORT IS A PARAMETER because the landing has already run: the
 // movement owner's keep-visible edge-align (reseat_playhead_to) may have
@@ -843,10 +837,13 @@ void Viewport::invalidate_all() {
 // nudge's commit tail (finish_position_nudge, position_nudge.cpp — the focused
 // marker's pre-write frame in the active domain) and the waveform-lane
 // playhead step (GuiInputHandler::run_waveform_lane_playhead_step — the cursor
-// before the step). A held Ctrl+Left's repeats and a held hold-column
-// button's fires reach both through the same act bodies, so the hold runs at
-// every step. The P column's unit is a HOP, so there the held subject slides
-// the waveform a hop's width per step — the user asked for the hold. NO VIEW TERM:
+// before the step). A held arrow's repeats and a held arrow button's fires
+// reach both through the same act bodies, so the hold runs at every step. The
+// write below changes the camera, so the chokepoint puts the posture out; the
+// nudge keeps it across its whole act at its dispatch (AppState::camera_hold's
+// one exemption), which is what makes the next step hold too. The P column's
+// unit is a HOP, so there the held subject slides
+// the waveform a hop's width per step. NO VIEW TERM:
 // in target view on the warp column the marker nudge is refused upstream
 // (active_column_authoring_allowed) and never arrives, while the playhead step
 // holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE.
@@ -866,7 +863,7 @@ void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }
 
-// Auto-follow during playback: when the scanner leaves the viewport, scroll
+// The chase during playback (AppState::camera_chase): when the scanner leaves the viewport, scroll
 // so the scanner lands THE EDGE MARGIN in from the new view's LEFT edge
 // (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
 // architect finding the old 10 % lead "starts way too late"; the class's
@@ -880,8 +877,14 @@ void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
 // on screen anyway (Space's cursor launch is the one that a pan can have
 // carried out of view; a scrub click is a visible column already), while the
 // CAR'S play of the trim — the one launch that begins off screen by design —
-// asks for it only when the follow lamp is armed, so the camera stays where
+// asks for it only when the chase posture stands, so the camera stays where
 // the user left it.
+//
+// THE PAGE IS THE CHASE'S OWN CAMERA MOVE AND KEEPS THE CHASE (architect
+// 2026-09-23): its write passes the chokepoint, which puts out both camera
+// postures, and the chase is restored behind it (AppState::camera_chase). The
+// HOLD posture stays out — a page is a camera move not on the subject a
+// centring asked to keep.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;
@@ -893,7 +896,9 @@ void Viewport::follow_scroll_if_needed() {
         const int64_t old_vp = app.viewport_start_sample;
         app.viewport_start_sample = std::max<int64_t>(
             0, target - viewport_edge_margin_samples(visible));
+        const bool chase_before = app.camera_chase;
         clamp_viewport_start(app, audio);
+        app.camera_chase = chase_before;
         // Viewport actually moved — THE PAGE TAKES THE DISCRETE MOVE'S TAIL,
         // and with it THE SYNCHRONOUS REBUILD (architect 2026-09-02), the same
         // body every user-driven pan/zoom frame takes. It kicked the ASYNC

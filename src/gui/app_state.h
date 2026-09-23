@@ -103,7 +103,7 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //     most 1 − 2 × margin of the window at the current zoom (centre there),
 //     else zooms out through the framer's margin arm above (added
 //     2026-09-22).
-// NOT READERS, by ruling: the Ctrl+Left / Ctrl+Right held column
+// NOT READERS, by ruling: the nudge's held column under the hold posture
 // (Viewport::hold_subject_column_after_nudge), which brings an offscreen
 // subject to the window's own edge column, and the movement owners'
 // keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
@@ -1224,8 +1224,8 @@ struct TrimDragState {
 //     still leaves the cursor somewhere ordinary), the crossing event folds
 //     the whole press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
-//     what ends the follow chase for the play in flight (the pan producer
-//     class at follow_engaged). A PAN IS A PURE VIEWPORT MOVE: it moves
+//     what ends a standing chase (the camera postures' one clear, at
+//     AppState::camera_hold). A PAN IS A PURE VIEWPORT MOVE: it moves
 //     NO playhead, hides NO overlay and clears NO selection, seeds nothing.
 // THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -1814,16 +1814,16 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's FOUR, row 3's two
-// TABS, row 4's TWENTY-THREE
+// TABS, row 4's TWENTY-TWO
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
-// 2026-09-01), then the bottom row's SEVENTEEN (re-counted 2026-09-23, when
-// the least-movement walk left its walk group) — the
+// 2026-09-01), then the bottom row's FIFTEEN (re-counted 2026-09-23, when
+// the two hold-column nudges left its walk group) — the
 // transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership and its succession), the
-// MARKER-WALK GROUP'S THREE (2026-08-15; the walk and the two
-// hold-column nudges since 2026-09-23) and the four cardinal arrows. It exists ONCE, here, because
+// MARKER-WALK GROUP'S ONE (2026-08-15; the walk alone since 2026-09-23) and
+// the four cardinal arrows. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -1841,9 +1841,9 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-23 against kDropdownMenus and the chord table (46 chord
-// rows + 3 anchors = 49 = kRedesignButtonCount, re-counted 2026-09-23 after
-// the least-movement walk left the chord table);
+// re-greped 2026-09-23 against kDropdownMenus and the chord table (43 chord
+// rows + 3 anchors = 46 = kRedesignButtonCount, re-counted 2026-09-23 after
+// Follow's row and the two hold-column nudges' rows left the chord table);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -1987,9 +1987,9 @@ enum class RedesignButton {
     // region button leading the zoom four (2026-08-12, the architect's live
     // placement "after the trim"; the stepping pair out 2026-09-14 and back
     // 2026-09-22, and the Show trim region button gone that same day, so Zoom
-    // In leads), Follow and the three lamps behind
-    // them, the last of which arrived from the toolbar group later on
-    // 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
+    // In leads), the two lamps behind them (Follow stood among them from
+    // 2026-08-27 until its deletion 2026-09-23), the last of which arrived
+    // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
     // the HISTORY OPENER leading its WALK LAMP, its four companions and
@@ -2062,7 +2062,7 @@ enum class RedesignButton {
     // 2026-08-15).
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
     // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `[` lamp,
-    // between Center and Follow, a MANUAL OVERRIDE. A DISPLAY POSTURE and
+    // after Center, a MANUAL OVERRIDE. A DISPLAY POSTURE and
     // nothing else: dark (the default), the SOURCE-VIEW waveform picture
     // carries the magnification level markers column's per-section gain
     // (effective_waveform_gain_profile); lit, it is flat; target view is flat
@@ -2073,7 +2073,7 @@ enum class RedesignButton {
     // has no effect and bare `[` cards (waveform_magnification_toggle_actionable,
     // the face and the key's one verdict); LIVE on a locked tab and under the
     // read-only lock; DEAD in the `h` view, whose allowlist does not name `[`
-    // (Follow's and Restrict Undo to Current View's answer there), through the
+    // (Restrict Undo to Current View's answer there), through the
     // derived partition. (It revives the 2026-09-14 / 2026-09-17 lamp's name
     // and sense, now scoped to source view with no zoom term.)
     IconIgnoreWaveformMagnification,
@@ -2083,34 +2083,14 @@ enum class RedesignButton {
     // the picture's gain is a per-section profile, so there is no piece-wide
     // level for a button to step. Both buttons, the step owner and
     // the applier were deleted whole.)
-    // FOLLOW (bare `f`) — THE ZOOM GROUP'S LAST MEMBER SINCE 2026-08-27, and a
-    // VIEWPORT-CLASS act like everything else in it: the mode that keeps the
-    // playing cursor in view is about where the camera is, which is what that
-    // group collects. It is consumed in the `h` view and GREYS there; it does
-    // NOT grey on a locked tab, bare `f` being navigation and on the lock's
-    // allowlist. It wears a lamp, reading the live bit its own chord flips.
-    //
-    // IT ARRIVED HERE BY THE MASS-MARKER GROUP DISSOLVING UNDER IT (architect
-    // 2026-08-27): that group's other two members — the BPM opener (bare `m`)
-    // and iteration mode (bare `i`) — left with the SERIES RELOCATION, so the
-    // separator in front of it was deleted and the survivor joined the group
-    // to its left rather than standing alone behind a divider of its own.
-    //
-    // THE GROUP WAS FIVE UNTIL 2026-08-20 AND THREE UNTIL 2026-08-27, and both
-    // subtractions are the SAME ACT twice (architect): the propagate
-    // commands — Ctrl+P, Ctrl+Alt+P and Ctrl+Alt+Shift+P — took the new EDIT
-    // MENU as their ONE pointer home and IconCopy and
-    // IconPaste were deleted with the move; then bare `m` and bare `i` took
-    // the new SERIES MENU as theirs and IconBpm and IconIter were deleted with
-    // that one. Both are the NO-SECOND-ROAD DOCTRINE SATISFIED rather than
-    // amended, and both are the zoom group's own history run in reverse: there,
-    // four BUTTONS killed the Navigation MENU because the menu had become the
-    // second road; here the menu is the road and the buttons are. (THE BPM
-    // OPENER'S 2026-08-20 SURVIVAL — "the architect's stated aesthetic choice",
-    // recorded because the frequency argument alone would have taken it then —
-    // is SUPERSEDED: the frequency argument took it in the end, once the menu
-    // that fits it existed.)
-    IconFollow,
+    // (FOLLOW — bare `f`, the lamp that armed the next play's chase — stood
+    // here, the zoom group's last member, from 2026-08-27 until the architect
+    // deleted it 2026-09-23 with its chord: the chase is a posture Shift+C,
+    // the Center button's shift press, arms with no face of its own
+    // (AppState::camera_chase). Its go-jump glyph left with it. It had come
+    // into this group the day the mass-marker group dissolved under it, the
+    // propagate and Series relocations having taken that group's other
+    // members to the Edit and Series menus.)
     // (The Center on next marker lamp on bare `n` stood here from 2026-09-04
     // to 2026-09-13, when the Tab walk's framing became a function of the zoom
     // at the landing, and the lamp, its chord and this box were deleted; since
@@ -2120,7 +2100,7 @@ enum class RedesignButton {
     //
     // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04 as Restrict Undo to
     // Viewport; renamed and re-scoped 2026-09-22) — the `z` lamp, closing the
-    // viewport-class group behind Follow, because it is also a viewport
+    // viewport-class group, because it is also a viewport
     // gesture. That is the architect's own reason for moving it here later the
     // same day it landed, from the toolbar group, where it had stood between
     // Redo and Render touching the pair it governs. Lit, a step whose restore
@@ -2428,7 +2408,7 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SEVENTEEN buttons in four groups, in painted order (the enum
+    // detection. FIFTEEN buttons in four groups, in painted order (the enum
     // order is the painted order, and the row paints below the top rows, so the
     // roster's tail is
     // the right home): the TRANSPORT at the row's left (skip-back = bare Home,
@@ -2446,8 +2426,8 @@ enum class RedesignButton {
     // button between Toggle inherit and Edit flag for the hours of 2026-09-19
     // before it took the icon row's iteration group)),
     // THE MARKER-WALK GROUP (2026-08-15; since 2026-09-22 the walk = Tab,
-    // its shifted press Shift+Tab, then the hold-column nudges = Ctrl+Left /
-    // Ctrl+Right), and the
+    // its shifted press Shift+Tab — alone since 2026-09-23, the hold-column
+    // nudges on Ctrl+Left / Ctrl+Right deleted that day), and the
     // four CARDINAL ARROWS — DOWN, UP, LEFT, RIGHT left-to-right since
     // 2026-08-14 (the architect's order; it was vim's left-down-up-right from
     // the row's first day) — which inherit the bare arrows' whole
@@ -2746,8 +2726,7 @@ enum class RedesignButton {
     // modifier it always had.
     //
     // IT WEARS THE SELECTED FACE, being a mode — the roster's standing rule
-    // and the lamp IconFollow already wears, reading the live bit
-    // its own chord writes. THE ROW HAS A LAMP AGAIN because of it, having had
+    // for a lamp, reading the live bit its own chord writes. THE ROW HAS A LAMP AGAIN because of it, having had
     // none between the Cumulative toggle's departure earlier the same day and
     // this arrival.
     //
@@ -2776,8 +2755,9 @@ enum class RedesignButton {
     // id names the button, not the lane it sits in.
     IconAddToSelection,
     // THE MARKER-WALK GROUP (architect 2026-08-15, the row's right cluster,
-    // behind a separator and ahead of the four arrows) — THREE BUTTONS SINCE
-    // 2026-09-23: THE WALK, then the two HOLD-COLUMN nudges.
+    // behind a separator and ahead of the four arrows) — THE WALK ALONE SINCE
+    // 2026-09-23, the two HOLD-COLUMN nudges beside it since 2026-09-22 having
+    // been deleted that day.
     //
     // THE WALK IS ONE BUTTON (architect 2026-09-22, merging Previous marker and
     // Next marker, two buttons over two chords since 2026-08-15): its plain
@@ -2815,29 +2795,26 @@ enum class RedesignButton {
     // Outside the view it greys on the walk's own landing in both directions
     // (marker_walk_actionable, at redesign_button_enabled).
     TransportWalk,
-    // THE HOLD-COLUMN NUDGES (architect 2026-09-22): Ctrl+Left and
-    // Ctrl+Right, the Left / Right step with the held-column camera
-    // (NudgeCamera, gui_input.h) — the same act, unit, walls, refusals and
-    // faces as the arrow pair beside them, the camera alone differing. They
-    // HOLD-REPEAT as those do (kToolbarChords' `repeats` column), their table
-    // rows carrying ctrl as their own base chord (Undo's shape), and admit no
-    // modifier. Breeze's snap-nodes-midpoint turned a quarter left / right
-    // (icons.h's SnapNodesMidpointLeft / SnapNodesMidpointRight).
-    TransportHoldLeft, TransportHoldRight,
+    // (THE HOLD-COLUMN NUDGES — Ctrl+Left and Ctrl+Right, the Left / Right
+    // step with the held-column camera, wearing Breeze's snap-nodes-midpoint
+    // turned a quarter left and right — stood here from 2026-09-22 until the
+    // architect deleted them 2026-09-23 with their chords and their glyph:
+    // the held column is a posture an explicit centring arms, read by the
+    // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-23, when
-// the LEAST-MOVEMENT WALK left the bottom row's walk group): SEVEN in row 1
-// (the three menu anchors and the view bar's four), two in row 3,
-// TWENTY-THREE in row 4 and SEVENTEEN in the bottom row — 49. Of those,
-// FORTY-SIX carry a chord in
+// FOLLOW left row 4 and the two HOLD-COLUMN nudges left the bottom row's walk
+// group): SEVEN in row 1 (the three menu anchors and the view bar's four),
+// two in row 3, TWENTY-TWO in row 4 and FIFTEEN in the bottom row — 46. Of
+// those, FORTY-THREE carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 49;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2913,7 +2890,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconIgnoreWaveformMagnification:
-        case RedesignButton::IconFollow:
         case RedesignButton::IconBpm:
         case RedesignButton::IconIter:
         case RedesignButton::IconFlatten:
@@ -2937,8 +2913,6 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalk:
-        case RedesignButton::TransportHoldLeft:
-        case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
@@ -2948,7 +2922,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
     return false;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-23: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — FIFTEEN since 2026-09-23: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, ADD TO SELECTION, (2026-08-27)
 // the EDIT FLAG BUTTON and (2026-08-29) the COPY VALUE button
@@ -2957,18 +2931,19 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
 // group from 2026-09-10 to its deletion 2026-09-13, the MARKER
 // MAGNIFICATION from 2026-09-14 to 2026-09-15, and the FLATTEN BUTTON for the
 // hours of 2026-09-19 before it went up to the icon row's iteration group),
-// the MARKER-WALK GROUP's three (2026-08-15; three
+// the MARKER-WALK GROUP's one (2026-08-15; three
 // until Walk Both Tabs left on 2026-09-14, two until 2026-09-22, when the
 // walk pair merged into one button and the two hold-column nudges joined
 // it, four when the least-movement walk joined later that day, three again
-// when it left on 2026-09-23) and the four
+// when it left on 2026-09-23, and ONE later that day, when the two nudges
+// were deleted) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
 // since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
 // until the same relayout took them back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these fifteen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the hover clear and the hover recompute
 // (clear_redesign_button_hover / recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -2996,8 +2971,6 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalk:
-        case RedesignButton::TransportHoldLeft:
-        case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
@@ -3057,7 +3030,8 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // THE FIVE GROUPS, in painted order: the toolbar four,
 // THE VIEWPORT-CLASS GROUP (the zoom four leading since the Show trim region
 // button's deletion on 2026-09-22, Zoom In at their head, the magnification
-// lamp, FOLLOW and the restrict-undo lamp), THE ITERATION GROUP (the BPM opener,
+// lamp and the restrict-undo lamp — FOLLOW between them until its deletion
+// on 2026-09-23, which moved no divider), THE ITERATION GROUP (the BPM opener,
 // the grid-iterations lamp and, since 2026-09-19, FLATTEN), the
 // render-entry group (listen and
 // the read-only toggle — the load-in-place left it on 2026-09-01) and THE
@@ -4157,7 +4131,7 @@ struct PromptState {
 // A MODAL BUTTON'S TOOLTIP TEXT (architect 2026-08-13, the ruling that retired
 // the bracketed accelerators: "we just do a tooltip just like the regular icon
 // tooltips"). The FORMAT IS THE ROSTER'S OWN — "<word> (<key>)", exactly
-// "Toggle Follow (F)" — and so is the accelerator's SPELLING, the product's
+// "Toggle Grid Iterations (I)" — and so is the accelerator's SPELLING, the product's
 // one convention (spell_chord's head, gui_input.h): a bare letter UPPERCASE,
 // a named key by Qt's own English name ("Del", "Esc", "Return").
 //
@@ -4621,8 +4595,8 @@ struct AppState {
     bool    loading               = false;
 
     // Live working copy of the active view's state — exactly the three view
-    // fields immediately below, playhead / zoom / viewport (follow_armed after
-    // them is a session posture, not a per-tab mirror). The SELECTION is NOT one of
+    // fields immediately below, playhead / zoom / viewport (the camera
+    // postures after them are session postures, not per-tab mirrors). The SELECTION is NOT one of
     // them: it lives here alone and is parked nowhere, see selected_markers.
     // This is an INTENTIONAL cache of the active view's per-view slot, not
     // accidental duplication: the paint path and the input handlers touch
@@ -4634,114 +4608,145 @@ struct AppState {
     int64_t playhead_cursor_sample = 0;
     double  zoom_level             = kWorkingZoomLevel;
     int64_t viewport_start_sample  = 0;
-    // FOLLOW THE PLAYHEAD — the `f` lamp, WHICH IS ARMED AND THEN SPENT
-    // (architect 2026-09-11). The lamp says one thing: THE NEXT PLAY FOLLOWS.
-    // The user arms it by hand (bare `f`, its icon-row button), and the next
-    // play of the project's audio CONSUMES it at its launch — the launch tail
-    // copies it into follow_engaged below and puts the lamp out. Nothing is
-    // remembered: a play that chased leaves the lamp dark behind it, and
-    // chasing the play after that one means arming it again.
-    // A SESSION POSTURE in the
-    // add_to_selection family (the family's record is at that declaration
-    // below): it answers what the user is doing right now rather than what the
-    // piece determines, so it is in no settings vocabulary, is never
-    // serialized, is never in the undo domain, is not carried by `'`, and
-    // starts DARK at every project open — a reopen as much as a launch —
-    // because run_project constructs this AppState fresh each time.
-    // TWO WRITERS: GuiPlaybackLifecycle::toggle_follow — the one chokepoint
-    // bare `f` and its button share — which writes this field only when NO
-    // project play is in flight (with one in flight the same press toggles
-    // that play's chase instead and leaves the lamp alone), and the launch
-    // tail that spends it. So a lit lamp and a project play in flight cannot
-    // stand together, and THE FACE READS THIS FIELD AT REST AND THE CHASE
-    // DURING A PROJECT PLAY (2026-09-12, the same fork the toggle takes — the
-    // argument is at the face, redesign_button_selected's IconFollow arm).
-    bool    follow_armed           = false;
-
-    // THE PLAY IN FLIGHT IS CHASING — true exactly while the viewport is to
-    // keep the scanner in view, and false everywhere else (at rest, and in a
-    // play the user never armed follow for). TWO READERS: the chase itself —
-    // the pre-paint hook's autopager gate (main.cpp), which asks it with its
-    // two aiming terms beside it — and, since 2026-09-12, THE LAMP'S FACE while
-    // a project play runs, the lamp showing that play's chase for as long as
-    // one stands (redesign_button_selected's IconFollow arm, which carries the
-    // fork).
+    // THE TWO CAMERA POSTURES (architect 2026-09-23), which replaced the
+    // follow lamp and the Ctrl+Left / Ctrl+Right hold-column chord: camera
+    // behaviour that follows from what the user already did rather than from
+    // a lamp he has to light. Two INDEPENDENT bits, both SESSION POSTURES in
+    // the add_to_selection family (the family's record is at that declaration
+    // below): per project, DARK AT EVERY PROJECT OPEN (run_project constructs
+    // this AppState fresh), outside undo, not carried by `'`, in no sidecar
+    // and no settings vocabulary — and WITH NO FACE: no lamp, no icon, no
+    // card when either is armed or cleared.
     //
-    // THE WRITER INVENTORY (re-greped 2026-09-17; this is the ONE
-    // authoritative copy — the sites carry a class statement plus a pointer
-    // here).
-    // SET BY THE LAUNCH, which is the one-shot's whole mechanism: the one
-    // spend body GuiPlaybackLifecycle::spend_follow_lamp copies the armed
-    // lamp above into this field and puts the lamp out, from TWO SUCCESS
-    // TAILS — launch_playback_from's, whose two callers are Space's play arm
-    // (toggle_playback) and the scrub's launch (scrub_launch_at), and
-    // car_toggle_playback's, the head unit's play with the render player
-    // closed (2026-09-17) — the three project-audio launch roads; a REFUSED
-    // launch reaches no tail, so it consumes nothing and leaves the lamp lit
-    // for the next attempt. THE A/B AUDITION'S FOUR PLAYS PASS NEITHER TAIL
-    // (launch_bounded_audition goes straight to the launch body), so the act
-    // neither spends the lamp nor chases: each of its bounded plays is framed
-    // by its own `c`.
-    // SET AND CLEARED BY THE IN-FLIGHT ARM of GuiPlaybackLifecycle::
-    // toggle_follow, bare `f`'s (and its button's) other half: with a project
-    // play in flight the press turns THIS bit on or off for that play and
-    // never touches the lamp — the on edge resyncing the predictor and paging
-    // the scanner back into view, the off edge writing nothing else.
-    // CLEARED BY EVERY PAN DURING PLAYBACK — the user has taken the viewport
-    // away from the chase, so the chase stops snatching it back on the next
-    // tick. TWO PRODUCER CLASSES, both gated on playback being live:
-    //   * ANY VIEWPORT PAN (joined 2026-07-30, architect — "every pan
-    //     suppresses"): Viewport::scroll_viewport's changed branch, which is the
-    //     funnel for PageUp/PageDown, the PLAIN WHEEL's stepped pan, touchpad
-    //     scroll, the PLAIN-DRAG grab-pan (the drag plain since 2026-08-12, the
-    //     eighth glass ruling — pan-primary; the wheel on alt from 2026-08-27,
-    //     the plain form being the waveform magnification then, and PLAIN
-    //     again since 2026-09-14, the magnification setting retired); plus
-    //     Viewport::apply_strip_drag_zoom, which bypasses that
-    //     funnel and ends the chase on EITHER axis its callers write — its own
-    //     viewport write AND its level write, the drag's zoom being SONG-ANCHORED
-    //     and so carrying the view off the scanner the same way a pan does (a
-    //     level change can leave the viewport start bit-identical, which is why
-    //     the site tests both). THE ZOOM STEP (bare `=` / `-` and its two
-    //     buttons) rides that applier since 2026-09-22 (Viewport::
-    //     apply_zoom_step) and is a producer through it: it zooms about the
-    //     viewport's centre, not the scanner, so it too carries the view off
-    //     the chase. `c` and `0` are not producers — apply_zoom_change centres
-    //     on the scanner during playback, so they never leave the chase.
-    //   * the PLACEMENT (place_playhead_at_click_column, input_pointer.cpp),
-    //     which moves the cursor and reseeks. The click IS AN AIMING GESTURE
-    //     and takes the camera on follow's own precedent — the user placed the
-    //     cursor deliberately, so the chase must not page the viewport away
-    //     from it. A click that changes no playhead still clears the bit,
-    //     accepted under the same reading. The bit's THREE pan-class writers
-    //     are this site, scroll_viewport and apply_strip_drag_zoom
-    //     (viewport.cpp). THREE ROUTES REACH IT (re-derived 2026-08-12, the
-    //     membership matching reseek_keeping_alive's own at
-    //     playback_lifecycle.cpp): the
-    //     DEFERRED CLICK ACT at a plain navigation-surface press's motionless
-    //     release (run_nav_click_act — the upper half, the ruler and the empty
-    //     marker lane, live and `h`-view arms alike, though the view's cannot
-    //     actually produce, playback being unreachable inside it since
-    //     2026-08-05; the act's LOWER-HALF scrub arm is deliberately NOT a
-    //     producer — it returns above the placement and ends no chase,
-    //     2026-08-13), the LIVE shift former's press, and the view's own shift
-    //     former.
-    // CLEARED AT THE STOP AND DEFENSIVELY AT EVERY LAUNCH ENTRY (four sites,
-    // re-greped 2026-09-11, all in playback_lifecycle.cpp): the ONE stop body,
-    // stop_playback_if_playing (both stop edges — Space's and the tick's
-    // natural end — collapsed onto it), so no chase outlives the session it
-    // began in; and the THREE LAUNCH entries' defensive clears —
-    // toggle_playback's play arm, scrub_launch_at and launch_bounded_audition
-    // — each running before its own validation, so a refused launch leaves the
-    // chase off and the audition's own plays run with it off by that write.
-    bool    follow_engaged         = false;
+    // THE CLEARS ARE SEATED AT CHOKEPOINTS, NOT IN A HAND-KEPT LIST. Every
+    // viewport write — every writer of viewport_start_sample or zoom_level on
+    // the live fields — funnels through clamp_viewport_start (main.cpp)
+    // before anything reads the camera, and that function compares the camera
+    // it settles on with the one it settled on last
+    // (camera_posture_viewport_start / camera_posture_zoom_level below): a
+    // CHANGED CAMERA CLEARS BOTH BITS. So a write that lands the camera where
+    // it already was (a wall-saturated pan, a resize that rounds back onto
+    // the same grid point) clears nothing, and no writer can forget the clear.
+    // THE WRITER INVENTORY THE CLAIM RESTS ON, grepped 2026-09-23 (every
+    // assignment to the live viewport_start_sample / zoom_level, each followed
+    // by clamp_viewport_start before its caller reads the camera): in
+    // viewport.cpp reseat_playhead_to's keep-visible edge-align,
+    // apply_zoom_change, apply_strip_drag_zoom, apply_zoom_to_start,
+    // scroll_viewport, center_viewport_on_playhead,
+    // hold_subject_column_after_nudge, follow_scroll_if_needed and
+    // least_movement_scroll_if_needed; the undo restore's centring
+    // (undo.cpp); center_span_in_view and the S/T flip's viewport
+    // translation (input_handler.cpp); the settings editor's viewport commit
+    // (settings_editor.cpp); the tab / view switch's band restore
+    // (active_views.cpp); the load paths (file_loader.cpp); and the level
+    // re-derivation inside clamp_viewport_start itself. The other
+    // clamp_viewport_start callers (the resize, the tick's backstop,
+    // kick_waveform_sync) write nothing of their own and clear only if their
+    // clamp actually moves the camera. The parked-band writes (a
+    // ViewState that is not live) are not the camera and pass no clamp until
+    // they go live.
+    //
+    // THE EXEMPT WRITERS KEEP OR RE-ARM THEIR BIT AFTER THE CHOKEPOINT, each
+    // at its own site: the centring acts re-arm HOLD after their centring;
+    // the stepped zoom keeps HOLD across its write; the nudge keeps HOLD
+    // across its whole act; the chase's page-in, bare `c` and the reseat's
+    // keep-visible edge-align keep CHASE; and the A/B AUDITION keeps BOTH
+    // across its own camera writes (its `c`s and tab switches, GuiAbAudition::
+    // start and advance_after_natural_end), the act ignoring the postures as
+    // it ignored the follow lamp. Each is listed under its bit.
+    //
+    // HOLD — THE NUDGE CAMERA. While it stands, bare Left / Right (their held
+    // repeats, and the arrow buttons, which dispatch those chords) HOLD THE
+    // SUBJECT'S COLUMN (Viewport::hold_subject_column_after_nudge) in
+    // whichever column the subject is; dark, the nudge follows the edge
+    // through the movement owner's own keep-visible edge-align. ITS ONE READER
+    // is nudge_camera (below), asked by the two nudge dispatch sites.
+    // WHY: an explicit centring means "I want to stay right here", so the
+    // nudges that follow it keep the subject where the centring put it and
+    // the waveform slides under it.
+    //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
+    //     and in the `h` view), Shift+C, the SOURCE-VIEW Tab walk's landing
+    //     (cycle_marker_focus / cycle_history_diff_flag_focus on their
+    //     MarkerLandingFrame::Center arm — the target-view walk lands with
+    //     least movement and arms nothing), the paired march Ctrl+Shift+Tab
+    //     (live and `h`; each step's `c`) and Shift+J. A centring act that
+    //     cannot centre (a wall) still arms: the bit means "hold the column
+    //     the subject is in", not "the subject is at the centre".
+    //   * NOT SET by arrival at the centre by any other road (an arrow step,
+    //     a drop, a click), by the undo / redo restore's centring (a group
+    //     restore centres a RANGE, not the subject — undo is not a reliable
+    //     centre), by the A/B audition's internal `c` (which neither sets nor
+    //     clears it), by a launch's own camera, or by `0` in either press.
+    //   * KEPT by the two stepped zooms (`=` / `-`, Zoom In / Zoom Out — they
+    //     pivot on the viewport's centre; Viewport::apply_zoom_step), by every
+    //     play and every stop that moves no camera (a stop moves no
+    //     playhead), and by THE NUDGE ITSELF, the one exemption from the
+    //     movement-owner clear: it lands the playhead through a movement
+    //     owner and holds the column, so it reads the bit before its act and
+    //     leaves it standing after (the two nudge dispatch sites).
+    //   * CLEARED by every other camera change (the chokepoint above: the
+    //     pans, the drags, the pointer zooms, `0`'s both presses, the chase's
+    //     page-in — a camera move not on the subject — the least-movement
+    //     landing, the span framer, the undo restore's camera, the tab and
+    //     view switches), and by the three playhead MOVEMENT OWNERS
+    //     (Viewport::move_playhead_to, land_playhead_on_marker,
+    //     land_playhead_on_source_frame) — play-then-stop leaves the hold
+    //     standing, a moved playhead does not. The reseat and translate
+    //     entries are not movements and do not clear as owners; a camera
+    //     change their clamp makes (the reseat's edge-align scrolling to an
+    //     offscreen cursor, a shrunken domain's wall) is a camera change like
+    //     any other at the chokepoint.
+    bool    camera_hold            = false;
+
+    // CHASE — THE PLAY CAMERA. While it stands and PROJECT audio plays, the
+    // camera chases the scanner: the pre-paint hook's autopager
+    // (Viewport::follow_scroll_if_needed through main.cpp, which asks this
+    // bit with playback live, the A/B audition not standing and no pointer or
+    // touch aim held) pages the viewport so the scanner lands the edge margin
+    // in from the left edge, and the car's launch asks LaunchCamera::PageIn
+    // off it (car_play_playback). ONE BIT, NOT ARMED-THEN-ENGAGED: the same
+    // bit armed at rest is the one the next play reads. The A/B audition and
+    // the render player ignore it — the autopager asks the audition's phase
+    // and returns under the player, neither of their stops spends it, and
+    // the audition keeps it across its own camera writes.
+    //   * SET by Shift+C ONLY (GuiInputHandler::run_center_key_command with
+    //     arm_chase, is_center_and_chase_key's one road).
+    //     At rest it runs `c` and arms the chase for the next project-audio
+    //     launch; during a play it centres as `c` does during a play and
+    //     chases from there; a second Shift+C re-centres and leaves it
+    //     standing.
+    //   * KEPT by its own page-in (follow_scroll_if_needed), by bare `c`
+    //     (a centring on the playhead, the chase's own subject — the scanner
+    //     during a play — unless its focused landing stops the play, which
+    //     spends it), and by the movement owners' keep-visible
+    //     edge-align (reseat_playhead_to), a camera move onto the same
+    //     subject.
+    //   * SPENT BY THE PLAY'S END: the one stop body
+    //     (GuiPlaybackLifecycle::stop_playback_if_playing, natural end
+    //     included) puts it out when a project session stood — not at rest,
+    //     not at an A/B audition's stop, not at a render player stop — so it
+    //     is a ONE-SHOT, and a REFUSED launch spends nothing.
+    //   * CLEARED by every other camera change (the chokepoint above — the
+    //     pans, the drags, the pointer zooms AND THE STEPPED ZOOMS, `0`, the
+    //     undo restore's camera, the switches) and by the PLACEMENT CLICK
+    //     during a play (place_playhead_at_click_column): the DAW convention —
+    //     a deliberate viewport act during a chase means the user is looking
+    //     elsewhere, so the camera stays where he put it and the audio runs
+    //     on. A zoom during a chase collapses it.
+    bool    camera_chase           = false;
+
+    // THE CAMERA THE CHOKEPOINT SETTLED ON LAST — the compare's memory
+    // (clamp_viewport_start, main.cpp), and nothing else reads them.
+    // Rewritten by that function whenever the camera it settles differs from
+    // them, which is also the moment it clears the two postures above.
+    int64_t camera_posture_viewport_start = 0;
+    double  camera_posture_zoom_level     = kWorkingZoomLevel;
 
     // RESTRICT UNDO TO CURRENT VIEW — the lamp on bare `z` (architect
     // 2026-09-04; to Viewport until 2026-09-22).
-    // SESSION-ONLY AND NEVER SERIALIZED, which since 2026-09-11 is what it
-    // SHARES with follow's bits above it rather than what separates it from
-    // them: they are session postures, in no settings vocabulary, uncarried by
-    // `'`, and dark at every project open.
+    // SESSION-ONLY AND NEVER SERIALIZED, which is what it SHARES with the
+    // camera postures above it: they are session postures, in no settings
+    // vocabulary, uncarried by `'`, and dark at every project open.
     //
     // WHAT IT DOES: while it stands, an undo or redo whose restore would
     // switch the view (the tab, the audio view or the marker column) is a
@@ -6841,7 +6846,8 @@ struct AppState {
     //   DEAD — Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), RENDER (Ctrl+Alt+R, which
     //   left the allowlist with its shifted twin on 2026-08-08 when the
     //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
-    //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
+    //   the bpm opener (`m`), iteration (`i`), listen (`l`) (follow, `f`,
+    //   until its deletion 2026-09-23), and
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
@@ -7705,7 +7711,7 @@ struct AppState {
     // Authoring-class settings — the six engine-block keys (title, scale,
     // bpm, notes, url, cover; editor commits carry undo history) — participate
     // in dirty via settings_dirty. View-state keys — the GUI-kind keys
-    // (viewport/zoom/playhead per tab, follow, active_audio_view,
+    // (viewport/zoom/playhead per tab, active_audio_view,
     // active_markers_view, active_tab_view, trim,
     // read_only, projects_repo) — do
     // NOT participate: they are silently persisted on Ctrl+S and not tracked as
@@ -10826,7 +10832,11 @@ inline bool iter_tie_toggle_actionable(const AppState& a) {
 // IS THE A/B AUDITION STANDING — the act's one running bit in both halves
 // (`phase`, which a REST carries exactly as a PLAY does), named once so the
 // sites that ask it read one spelling. Its readers each state their own
-// reason: the transport-session statement below and the follow lamp's face.
+// reason: the transport-session statement below, the pre-paint chase gate
+// (main.cpp, the audition not being chased) and the one stop body's chase
+// spend (GuiPlaybackLifecycle::stop_playback_if_playing, the act's stops
+// spending nothing). The follow lamp's face read it until the lamp's
+// deletion 2026-09-23.
 inline bool audition_sequence_standing(const AppState& a) {
     return a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
 }
@@ -10975,16 +10985,15 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // PRESS WILL TAKE, horizontal_arrow_step(direction, active column) — a
 // painted column on W and M, a hop on the phase-reset column (architect
 // 2026-09-21, the horizontal ladder retired on every column and the P
-// column's arrow unit a hop). SINCE 2026-09-22 THIS PREDICATE SERVES FOUR
-// BUTTONS — TransportLeft/Right (bare Left/Right) and their hold-column
-// twins TransportHoldLeft/Right (Ctrl+Left/Right, their own base chords, not
-// an admission) — but Ctrl chooses only the camera term (NudgeCamera::
-// HoldColumn) that finish_position_nudge reads, never the step, so all four
-// ask this predicate identically; none of the four admits a SECOND modifier
-// (redesign_button_shift_admits and redesign_button_ctrl_admits both refuse
-// all four, app_state.h), so the twin rule still has no second variant to ask
-// about on any one button, and each face is exact by construction rather
-// than by a proof.
+// column's arrow unit a hop). IT SERVES TWO BUTTONS, TransportLeft/Right
+// (bare Left/Right; their hold-column twins on Ctrl+Left/Right served it too
+// from 2026-09-22 until their deletion 2026-09-23). The camera the step takes
+// (nudge_camera, the hold posture) is no term of it: the camera changes where
+// the viewport goes, never whether the step moves anything. Neither button
+// admits a modifier (redesign_button_shift_admits and
+// redesign_button_ctrl_admits both refuse them, app_state.h), so the twin
+// rule has no second variant to ask about, and each face is exact by
+// construction rather than by a proof.
 inline bool horizontal_arrow_step_actionable(const AppState& app,
                                              const GuiAudio& audio,
                                              int direction) {
@@ -11003,9 +11012,9 @@ inline bool horizontal_arrow_step_actionable(const AppState& app,
 // ADMITS Left / Right only in the WAVEFORM lane, where the step is pure
 // navigation — in the MARKER lane (a standing selection) the same press
 // nudges the focused marker, which is authoring, and the lock drops it.
-// It reads the lane and no modifier — the horizontal pair binds bare and
-// ctrl (the ladder retired 2026-09-21; ctrl the held-column camera since
-// 2026-09-22), and the gate's own is_playhead_step term admits both; the card that answers a marker-lane
+// It reads the lane and no modifier — the horizontal pair binds bare alone
+// (the ladder retired 2026-09-21; the ctrl form 2026-09-23), which the gate's
+// own is_playhead_step term admits; the card that answers a marker-lane
 // press names the chord that was pressed.
 // READERS: read_only_key_blocked's is_playhead_step entry (the gate — the
 // dispatch's sole read-only defense on the nudge, position_nudge_prologue
@@ -11910,12 +11919,9 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // LEFT / RIGHT ARE THE LANE'S, through the gate's own owner: in the
         // marker lane the press is a position nudge and pushes, in the
         // waveform lane it is the playhead's step and the lock has nothing to
-        // protect from it. The two HOLD-COLUMN buttons (2026-09-22) are the
-        // same step with another camera and grey with them.
+        // protect from it.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
-        case RedesignButton::TransportHoldLeft:
-        case RedesignButton::TransportHoldRight:
             return !horizontal_arrow_step_lock_admits(a);
         // A DEFAULT RATHER THAN AN EXHAUSTIVE SWITCH, unlike the roster
         // classification below: the members are the lock's, not the roster's,
@@ -12447,18 +12453,31 @@ enum class MarkerLandingFrame { Center, LeastMovement, NoFrame };
 // (handle_tab_switch_keys) and the `h` view's Tab arm over its diff-flag
 // cycle (handle_history_mode_key), which forks on the same live audio view.
 // Nothing else reads it: the paired march states NoFrame and runs `c`, and
-// undo's restore camera, follow, `c`, Shift+J and the audition are their own
-// rulings.
+// undo's restore camera, the chase, `c`, Shift+J and the audition are their
+// own rulings. THE CENTRE ARM ARMS THE HOLD POSTURE (AppState::camera_hold) at
+// the two walk bodies; the least-movement arm arms nothing.
 inline MarkerLandingFrame marker_walk_landing_frame(const AppState& a) {
     return a.active_audio_view == 'T' ? MarkerLandingFrame::LeastMovement
                                       : MarkerLandingFrame::Center;
 }
 
+// THE NUDGE'S CAMERA, ONE OWNER (architect 2026-09-23): the hold posture
+// read — HoldColumn while AppState::camera_hold stands (an explicit centring
+// armed it), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
+// marker lane's arm, input_handler.cpp, and the waveform lane's step,
+// run_waveform_lane_playhead_step), each reading it BEFORE its act, since the
+// act's own movement would put the posture out and the nudge keeps it (the
+// posture's one exemption, at its declaration). The two answers are at
+// NudgeCamera (gui_input.h).
+inline NudgeCamera nudge_camera(const AppState& a) {
+    return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
+}
+
 // NO CAMERA IS DERIVED FROM THE ZOOM (architect 2026-09-22): the camera is the
 // audio view's choice (architect 2026-09-23), never the zoom's. The Tab walk
 // states marker_walk_landing_frame at every level (its arms say so by name),
-// and the Left/Right nudge follows the edge bare and
-// holds its column under Ctrl (NudgeCamera, gui_input.h). So the at-or-finer
+// and the Left/Right nudge follows the edge or holds its column on the hold
+// posture (nudge_camera above). So the at-or-finer
 // predicate `zoom_level_at_or_finer_than_working` and the walk's zoom-derived
 // `marker_walk_frame` (Center at working or finer, FollowPage coarser,
 // 2026-09-13 to 2026-09-22) are DELETED with the placement-instrument
@@ -14009,8 +14028,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the VIEW BAR'S FOUR
-//     (the backtick and bare 1/2/3), the zoom four, follow, the
-//     RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
+//     (the backtick and bare 1/2/3), the zoom four, follow (until
+//     2026-09-23), the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
 //     not: the lamp is a posture switch that authors nothing, so its own chord
@@ -14424,12 +14443,6 @@ inline bool redesign_button_enabled(const AppState& a,
             return zoom_in_step_actionable(a, audio);
         case RedesignButton::IconZoomOut:
             return zoom_out_step_actionable(a, audio);
-        // FOLLOW MIRRORS NOTHING: bare `f` always does something on a loaded
-        // piece — it arms or disarms the lamp at rest, and turns the chase on
-        // or off for a play in flight — and the lock admits it (follow is
-        // navigation, not authored content). Its lamp reports the arm.
-        case RedesignButton::IconFollow:
-            return true;
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP GREYS IN TARGET VIEW (architect
         // 2026-09-22): the lamp governs source view alone, so there bare `[`
         // refuses on its card and the bit keeps its state — this face reads
@@ -14446,7 +14459,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // makes conditional is UNDO and REDO, and those two faces carry the
         // term (below), which is the truthful-button rule working as intended:
         // the button whose ACT the bit can refuse is the button that greys,
-        // never the switch. It GREYS IN THE `h` VIEW like Follow, through the
+        // never the switch. It GREYS IN THE `h` VIEW, through the
         // derived partition and with nothing hand-listed — bare
         // `z` is off the mode's allowlist, both undo stacks being frozen while
         // the view stands.
@@ -14560,20 +14573,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS SEVENTEEN, AND THIS IS THE ONE
-        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-22; every
+        // THE READ-ONLY LOCK'S BUTTON SET IS FIFTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-23, when
+        // the two hold-column nudges left the transport block; every
         // other site states its own class and points here). In five groups,
         // by HOW each asks:
         //   * THESE SEVEN, whose arms are below — the bit their first term.
         //     Six read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
         //     (any_tab_read_only, its own arm's reason).
-        //   * THE SIX HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
-        //     block below: Up/Down outright, and the FOUR of Left/Right/
-        //     TransportHoldLeft/TransportHoldRight only while a selection
-        //     stands, through the gate's own owner
-        //     horizontal_arrow_step_lock_admits — the HOLD-COLUMN pair
-        //     (Ctrl+Left / Ctrl+Right, 2026-09-22) is the same step under
-        //     another camera and greys exactly with its bare twin.
+        //   * THE FOUR HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
+        //     block below: Up/Down outright, and Left/Right only while a
+        //     selection stands, through the gate's own owner
+        //     horizontal_arrow_step_lock_admits.
         //   * UNDO and REDO, at the toolbar block below, where the read-only
         //     term is theirs alone among the four.
         //   * LOAD IN PLACE, at the history group's arm, where the bit
@@ -14876,16 +14887,15 @@ inline bool redesign_button_enabled(const AppState& a,
         // theirs — so the face and the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW GREYS, re-derived 2026-09-22 with the walk group's
+        // WHAT THE ROW GREYS, re-derived 2026-09-23 with the walk group's
         // change. IN THE `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
-        // AND THE TWO HOLD-COLUMN NUDGES (bare Up/Down/Left/Right and
-        // Ctrl+Left/Right are neither the mode's vocabulary nor on its
-        // allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
+        // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on
+        // its allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
         // FLAG BUTTON (bare `j` and
         // bare Return are consumed in there like the
-        // verbs' own chords) — THIRTEEN of the seventeen. ADD TO SELECTION
+        // verbs' own chords) — ELEVEN of the fifteen. ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. The two SKIPS and
         // THE WALK stay lit, being the mode's own
@@ -14898,7 +14908,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // on a locked tab, their own gate, stated at their arm above — and,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable, Toggle
         // inherit and Edit flag (that same arm), on UP / DOWN,
-        // LEFT / RIGHT and the hold-column pair, THE WALK and COPY VALUE
+        // LEFT / RIGHT, THE WALK and COPY VALUE
         // (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
         // tempo bracket's two ends and the group step's whole refusal under
@@ -15119,22 +15129,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // iteration half is the membership predicate's (iteration_lock_greys,
         // which the pair's HINT reads too) and only the read-only half is the
         // tab's bare bit.
-        //
-        // THE HOLD-COLUMN PAIR (Ctrl+Left / Ctrl+Right, 2026-09-22) ASKS THE
-        // SAME THREE QUESTIONS: ctrl changes the camera and nothing the step
-        // does, so its face is the arrow's face exactly.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
-        case RedesignButton::TransportHoldLeft:
-        case RedesignButton::TransportHoldRight:
             if (active_view_state(a).read_only &&
                 !horizontal_arrow_step_lock_admits(a))
                 return false;
             if (iteration_lock_greys(a, b)) return false;
             if (!horizontal_arrow_step_actionable(
-                    a, audio,
-                    (b == RedesignButton::TransportLeft ||
-                     b == RedesignButton::TransportHoldLeft) ? -1 : +1))
+                    a, audio, b == RedesignButton::TransportLeft ? -1 : +1))
                 return false;
             break;
         case RedesignButton::TransportUp:
@@ -15524,8 +15526,10 @@ inline bool redesign_button_enabled(const AppState& a,
             return ab_audition_preflight_ok(a, audio, playback,
                                             target_render);
         default:
-            // REACHED BY EXACTLY NINE IDS, re-derived by walking the first
-            // switch 2026-09-23 (the least-movement walk left; ten from its
+            // REACHED BY EXACTLY SEVEN IDS, re-derived by walking the first
+            // switch 2026-09-23 (the two hold-column nudges left later that
+            // day; nine from the least-movement walk's departure that
+            // morning; ten from its
             // arrival 2026-09-22, nine earlier that day, when the walk pair
             // merged into one and the two
             // hold-column nudges joined; eight from 2026-09-14,
@@ -15536,8 +15540,8 @@ inline bool redesign_button_enabled(const AppState& a,
             // of their own above) — the bottom
             // row's members that break out of the first switch to take the
             // loading/blank guard and have nothing further to say here: the
-            // marker-walk three, the four arrows, COPY VALUE and ADD TO
-            // SELECTION. All nine
+            // walk, the four arrows, COPY VALUE and ADD TO
+            // SELECTION. All seven
             // refuse ahead of that break on their own predicate since the
             // truthful-buttons ruling — Add to selection on the iteration
             // lock's membership; the ruling, the 2026-08-15 reversal it
@@ -15557,7 +15561,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
 // buttons, row 3's tabs and row 4's TOGGLES — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
-// 2026-09-04; follow, iteration, the TRIM REGION toggle (a
+// 2026-09-04; follow (until 2026-09-23), iteration, the TRIM REGION toggle (a
 // toggle again since 2026-08-18, its lamp reading the overlay's visibility),
 // read-only, history, and the CUMULATIVE reading, which came back to this row
 // with the history group on 2026-08-18. THE
@@ -15629,24 +15633,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // reading the very axis its own chord flipped. The architect deleted
         // both buttons whole with bare `t`/`p`; the view bar's four above
         // are the axes' one remaining face.)
-        // FOLLOW'S LAMP IS THE ARM AT REST AND THE CHASE DURING A PROJECT PLAY
-        // (architect 2026-09-12): at rest the field is the one-shot the next
-        // play will spend, so the face says exactly what the lamp promises;
-        // while a project play runs the promise has already been spent and the
-        // only thing the lamp can honestly report is whether THAT play is
-        // chasing — so bare `f` mid-play lights it, a pan or a placement click
-        // mid-play puts it out, and it goes dark when the play ends, which is
-        // "a meaningless act, truthfully depicted".
-        // THE FORK IS toggle_follow's OWN, said in the painter's terms: a
-        // PROJECT play is the scanner active with the A/B audition NOT standing
-        // — the act's four bounded plays run the scanner too and never chase,
-        // each being framed by its own `c`, so a press during one is about the
-        // user's NEXT play and takes the lamp arm, which is exactly what the
-        // second term keeps the face reading.
-        case RedesignButton::IconFollow:
-            return (a.playhead_scanner_active && !audition_sequence_standing(a))
-                       ? a.follow_engaged
-                       : a.follow_armed;
+        // (FOLLOW'S LAMP stood here — the arm at rest, the chase during a
+        // project play — from 2026-09-12 until the architect deleted the
+        // button 2026-09-23: the camera postures that replaced it have no
+        // face, AppState::camera_hold.)
         // The restrict-undo-to-current-view lamp (2026-09-04): the same toggle
         // pattern, reading the live bit bare `z` flips, so the lit
         // face and the refusal cannot drift.
@@ -15686,7 +15676,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // old two-state face into this row: the glyph swaps closed/open with
         // the bit (redesign_button_icon, paint_handler.cpp) and the lit fill
         // says the same thing in the row's own vocabulary, which is how
-        // iteration and follow already report a mode that is ON.
+        // iteration already reports a mode that is ON.
         case RedesignButton::IconReadOnly:
             return active_view_state(a).read_only;
         // THE CUMULATIVE READING'S LAMP (2026-08-08), the same pattern over a
@@ -15770,7 +15760,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // redesign_button_enabled).
         case RedesignButton::HistoryRevert:
         // THE WALK'S TWO STEPS ARE MOMENTARY like copy and paste, not toggles
-        // like follow and iteration: each is a step that completes, with no
+        // like iteration: each is a step that completes, with no
         // state to stay lit for. WHERE the walk stands is the corner readout's
         // `n/N`, which says it in numbers, and since 2026-08-30 the pair's
         // ENABLED face at the walls; a lit arrow could only mean "you pressed
@@ -15782,7 +15772,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // between the Cumulative toggle going back up to the icon row and ADD
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
-        // two skips, the walk, the two hold-column nudges, the four arrows
+        // two skips, the walk, the four arrows
         // and the marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
@@ -15797,8 +15787,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::TransportPlayStop:
         case RedesignButton::TransportSkipForward:
         case RedesignButton::TransportWalk:
-        case RedesignButton::TransportHoldLeft:
-        case RedesignButton::TransportHoldRight:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportDown:
         case RedesignButton::TransportUp:
@@ -16023,9 +16011,16 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // window and never get back out of it — and the drop's rule puts it on the
 // button whose bare form is `0`. The plain press never greys, so the face
 // needs no twin term; the long press is the tablet's road.)
+// (CENTER JOINED 2026-09-23 with Shift+C (architect): its plain press is bare
+// `c` and its shifted press centres the same way and ARMS THE CHASE
+// (AppState::camera_chase) — the chase's one setter, the follow lamp that
+// armed it until that day having been deleted with its button. The drop's
+// rule once more, and the long press is the tablet's road to the chase. The
+// shifted press always differs from the plain one, so its line never drops.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
+           b == RedesignButton::IconZoomOriginal ||
            b == RedesignButton::TabA ||
            b == RedesignButton::TabB ||
            b == RedesignButton::HistoryOlder ||
@@ -16125,14 +16120,10 @@ static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportRight) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportLeft) &&
-                  !redesign_button_ctrl_admits(RedesignButton::TransportRight) &&
-                  !redesign_button_shift_admits(RedesignButton::TransportHoldLeft) &&
-                  !redesign_button_shift_admits(RedesignButton::TransportHoldRight) &&
-                  !redesign_button_ctrl_admits(RedesignButton::TransportHoldLeft) &&
-                  !redesign_button_ctrl_admits(RedesignButton::TransportHoldRight),
-    "Left / Right and their hold-column pair admit no modifier: the "
-    "horizontal ladder is retired, Shift binds nothing there, and Ctrl+Left / "
-    "Ctrl+Right are their own two buttons rather than a ctrl-click "
+                  !redesign_button_ctrl_admits(RedesignButton::TransportRight),
+    "Left / Right admit no modifier: the horizontal ladder is retired and "
+    "neither Shift+Left / Shift+Right nor Ctrl+Left / Ctrl+Right binds "
+    "anything — the step's camera is the hold posture's "
     "(chord_is_bound, gui_input.h)");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
@@ -16200,7 +16191,7 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // THE CASE IS THE PRODUCT'S TWO-CLASS RULE, NOT THIS TABLE'S (the
 // capitalization block, paint_handler.cpp, owns it and this comment states
 // only its own class): LINE 1 IS ALWAYS A NAME and so always TITLE CASE
-// ("Drop Marker (S)", "Toggle Follow (F)"), and LINE 2 IS ALWAYS A
+// ("Drop Marker (S)", "Toggle Add to Selection (K)"), and LINE 2 IS ALWAYS A
 // SENTENCE. It read sentence case throughout from 2026-09-01 until the evening
 // of 2026-09-03, when the rule that explains kdenlive's own strings landed;
 // the sentence-case LINE 1 that rule admitted — a state or a reason — has had
@@ -16212,7 +16203,7 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // which way the next press goes, and the text never has to swap between a
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
 // every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
-// line 1 begins "Toggle " and which redesign_button_selected lights: follow,
+// line 1 begins "Toggle " and which redesign_button_selected lights:
 // ignore waveform magnification, restrict undo to viewport, grid iterations, read-only,
 // history view, history walk, cumulative and add to selection — and by the
 // render player's Repeat one. Until then those rows named a CONSTANT ACT while
@@ -16303,12 +16294,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // there). TWO OF THE FOUR ARE STATE-FREE HERE ONLY (2026-09-01, the
         // overload): Full zoom out at the ceiling is the recall, and Center
         // with nothing focused centers on the playhead — each press does
-        // something, and the overload names which. FULL ZOOM
-        // OUT CARRIES THE ONE SECOND LINE (2026-09-22): its shifted twin is
+        // something, and the overload names which. TWO CARRY A SECOND LINE.
+        // FULL ZOOM OUT (2026-09-22): its shifted twin is
         // Shift+0, RESET TRIM, the words the Show trim region button's line
         // carried for the same act until that button's deletion the same day;
         // the overload drops it over a full trim window, where the maximizer's
-        // own guard refuses.
+        // own guard refuses. CENTER (2026-09-23): its shifted twin is Shift+C,
+        // the centring that also arms the chase (AppState::camera_chase), and
+        // the line stands in both of the overload's names, the shifted press
+        // always doing something the plain one does not.
         case RedesignButton::IconZoomIn:
             return {"Zoom In (=)", nullptr};
         case RedesignButton::IconZoomOut:
@@ -16316,18 +16310,15 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:
             return {"Full Zoom Out (0)", "Press Shift to reset the trim."};
         case RedesignButton::IconZoomOriginal:
-            return {"Center on Focus (C)", nullptr};
+            return {"Center on Focus (C)",
+                    "Press Shift to follow the playhead."};
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22), one
         // line: bare `[` toggles and has no shifted twin; the name is the
         // toggle's.
         case RedesignButton::IconIgnoreWaveformMagnification:
             return {"Toggle Ignore Waveform Magnification ([)", nullptr};
-        // THE FOLLOW LAMP, one line: bare `f` toggles and has no shifted twin.
-        // Its text NAMES THE TOGGLE (the lamp rule at this table's head,
-        // architect 2026-09-01): it read "Follow (F)" until that day.
-        case RedesignButton::IconFollow: return {"Toggle Follow (F)", nullptr};
         // THE UNDO POSTURE'S LAMP (2026-09-04), one line: bare `z` toggles and
-        // has no shifted twin. It NAMES THE TOGGLE like Follow — the
+        // has no shifted twin. It NAMES THE TOGGLE like every lamp — the
         // state is the lamp's to tell — and it names the SWITCH, never what
         // the switch makes conditional. Where the lamp refuses a step, the
         // Undo or Redo button simply greys and Ctrl+Z cards the reason; no
@@ -16662,15 +16653,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::TransportWalk:
             return {"Next Marker (Tab)",
                     "Press Shift for the previous marker."};
-        // THE HOLD-COLUMN PAIR (2026-09-22): the arrow's step with the held
-        // column, named as an act with its chord in parentheses — the arrows'
-        // bare direction word cannot serve, the key being Ctrl+ that word.
-        // One line each, the pair admitting no modifier. The P column's
-        // stateful name (a hop) is at the overload below, beside the arrows'.
-        case RedesignButton::TransportHoldLeft:
-            return {"Nudge Left Holding Column (Ctrl+Left)", nullptr};
-        case RedesignButton::TransportHoldRight:
-            return {"Nudge Right Holding Column (Ctrl+Right)", nullptr};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps the direction alone (one word, which the
@@ -16691,8 +16673,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // refuses alike (2026-09-02, R-17e): on the step's kind refusals; the
         // reasoning is at that arm.
         // LEFT / RIGHT CARRY NO SECOND LINE since 2026-09-21: the horizontal
-        // ladder is retired on every column, their ctrl form is its own two
-        // buttons (the hold-column pair) and the buttons admit no modifier (a held repeat outranks the long-press
+        // ladder is retired on every column, their ctrl form binds nothing
+        // since 2026-09-23, and the buttons admit no modifier (a held repeat outranks the long-press
         // shift — the principle at ToolbarChord::repeats, input_pointer.cpp).
         case RedesignButton::TransportDown:
             return {"Down", "Press Shift for a 10-step, Ctrl for 3."};
@@ -16994,7 +16976,8 @@ inline RedesignTooltipText redesign_button_tooltip(
         // inside it).
         case RedesignButton::IconZoomOriginal:
             if (!center_command_lands_on_focus(a))
-                return {"Center on Playhead (C)", nullptr};
+                return {"Center on Playhead (C)",
+                        redesign_button_tooltip(b).line2};
             break;
         // THE TWO SKIPS: the SECOND LINE DROPS where the bare and the
         // whole-piece landings coincide, AND THE COMPARE IS THE LANDING
@@ -17226,8 +17209,6 @@ inline RedesignTooltipText redesign_button_tooltip(
         // The key returns in parentheses because the name is no longer the
         // key's own word — the bound cells' "Lower Bound Up (Up)" shape. The
         // table's bare direction word stands on W and M.
-        // The HOLD-COLUMN PAIR (2026-09-22) forks on the same predicate for
-        // the same reason: its step is the arrow's, a hop on P.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
         {
@@ -17235,17 +17216,6 @@ inline RedesignTooltipText redesign_button_tooltip(
             if (horizontal_arrow_step(left ? -1 : +1, a.active_markers_view)
                     .unit == HorizontalArrowStep::Unit::Hops)
                 return {left ? "Hop Left (Left)" : "Hop Right (Right)", nullptr};
-            break;
-        }
-        case RedesignButton::TransportHoldLeft:
-        case RedesignButton::TransportHoldRight:
-        {
-            const bool left = b == RedesignButton::TransportHoldLeft;
-            if (horizontal_arrow_step(left ? -1 : +1, a.active_markers_view)
-                    .unit == HorizontalArrowStep::Unit::Hops)
-                return {left ? "Hop Left Holding Column (Ctrl+Left)"
-                             : "Hop Right Holding Column (Ctrl+Right)",
-                        nullptr};
             break;
         }
         // THE WALK'S TWO ARROWS: the shift line drops where the twin lands on

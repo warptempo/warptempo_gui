@@ -230,7 +230,7 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // product's ONE launch body for the PROJECT'S audio, and this cluster does not
 // use it, deliberately: that body's whole seed — the A/B audition clear, the
 // playable gate against the project's domain, the waveform scanner, the
-// follow-scroll, the waveform damage — belongs to the project's WAVEFORM,
+// launch page-in, the waveform damage — belongs to the project's WAVEFORM,
 // which the player does not display. The project's resting playhead does not
 // move while the player plays, its scanner never runs, and the item's domain
 // is the decoded buffer's own [0, frames). So play_item / resume / seek call

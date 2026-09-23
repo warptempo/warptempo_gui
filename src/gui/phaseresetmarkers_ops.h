@@ -51,8 +51,9 @@ struct GuiPhaseResetMarkersOps {
     // HOP of the engine's analysis lattice, through phase_reset_hop_step_frame
     // (architect 2026-09-21 — THE P COLUMN'S ARROW UNIT IS A HOP, the recorded
     // exception between columns). `camera` is the press's (NudgeCamera,
-    // gui_input.h: the bare press follows the edge, Ctrl holds the column),
-    // forwarded to the shared tail untouched.
+    // gui_input.h — the hold posture's answer, nudge_camera: dark follows
+    // the edge, standing holds the column), forwarded to the shared tail
+    // untouched.
     GuiOpRefusal nudge_selected_phase_resets(HorizontalArrowStep step,
                                              NudgeCamera camera,
                                              bool synthesized_repeat);

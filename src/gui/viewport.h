@@ -135,7 +135,7 @@ struct Viewport {
     //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
     //    release's or the nudge's plate lands in its own frame — the nudge
     //    asks the displayed plate rather than a pre-write hash because its
-    //    shared commit tail's at-working held-column move may already have rendered
+    //    shared commit tail's held-column move may already have rendered
     //    the new gain (architect 2026-09-16). THE LEVEL WRITERS THAT CARRY
     //    A GAIN-CHANGE KICK OF THEIR OWN call kick_waveform_sync_if_gain_changed
     //    (re-grepped 2026-09-16): the authoring cluster's four hash-comparing
@@ -402,9 +402,10 @@ struct Viewport {
     // with the incremental path retired every scroll renders synchronously.
     void scroll_viewport(int64_t delta_samples, bool continuous = false);
     void center_viewport_on_playhead();
-    // CTRL+LEFT / CTRL+RIGHT HOLD THEIR SUBJECT'S COLUMN (architect
-    // 2026-09-17; at every zoom and on the ctrl press alone since 2026-09-22):
-    // a step that moved something places the viewport so the playhead it just
+    // THE NUDGE HOLDS ITS SUBJECT'S COLUMN while the HOLD posture stands
+    // (architect 2026-09-17; chosen by AppState::camera_hold, which an
+    // explicit centring arms, since 2026-09-23 — the Ctrl modifier's choice
+    // for the day before): a step that moved something places the viewport so the playhead it just
     // landed paints in the column the subject painted in before the step
     // (prior subject sample against the prior viewport start), clamped into
     // the waveform's first and last columns, never changing the zoom. No
@@ -415,8 +416,9 @@ struct Viewport {
     // The changed-path tail the one-shot playhead camera moves share (the two
     // above and the two below).
     void finish_discrete_viewport_move();
-    // Follow's page-in: an offscreen subject lands the edge margin
-    // (kViewportEdgeMarginFraction, app_state.h) in from the LEFT edge.
+    // The chase's page-in (AppState::camera_chase): an offscreen subject
+    // lands the edge margin (kViewportEdgeMarginFraction, app_state.h) in
+    // from the LEFT edge. It keeps the chase across its own write.
     void follow_scroll_if_needed();
     // THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Tab walk's camera
     // in target view (marker_walk_landing_frame, app_state.h): an onscreen

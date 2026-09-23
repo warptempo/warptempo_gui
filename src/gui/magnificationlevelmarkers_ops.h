@@ -104,8 +104,9 @@ struct GuiMagnificationLevelMarkersOps {
     // say" (GuiOpRefusal, warpmarkers_ops.h). `step` is the press's one step
     // in its unit (horizontal_arrow_step, gui_input.h), on this column always
     // ONE PAINTED COLUMN (the horizontal ladder is retired), the two twins'
-    // own parameter; `camera` is the press's (NudgeCamera, gui_input.h),
-    // forwarded to the shared tail untouched.
+    // own parameter; `camera` is the press's (NudgeCamera, gui_input.h — the
+    // hold posture's answer, nudge_camera), forwarded to the shared tail
+    // untouched.
     GuiOpRefusal nudge_selected_magnification_levels(HorizontalArrowStep step,
                                                      NudgeCamera camera,
                                                      bool synthesized_repeat);

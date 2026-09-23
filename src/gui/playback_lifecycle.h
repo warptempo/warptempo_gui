@@ -11,7 +11,8 @@
 // (both stop edges and every gesture stop), the modal-open stop that names it,
 // toggle play/stop, the audition launch, the bounded audition the A/B sequence
 // plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
-// the one play), the keep-alive reseek and follow mode.
+// the one play), the keep-alive reseek and the chase posture's spend at the
+// play's end.
 // AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
@@ -271,24 +272,24 @@ struct GuiPlaybackLifecycle {
     // ALWAYS (architect 2026-09-17): the resting playhead is no term of it,
     // and a restart is the button itself — pause, then play. NO LEAD-IN OFFSET: the phase-reset overlay's N/2 is
     // Space's authoring aid, and the car's play takes none. The gates are
-    // toggle_playback's own — the defensive chase clear, the device reopen
-    // (carding a failed one) — ahead of the user-launch clear (owner (2) at
-    // GuiAuditionSequence: this is the second road into the launch body that
-    // is not the act's), the launch through launch_playback_window with the
-    // trim's begin as the loop target, and on success the follow lamp's spend
-    // (spend_follow_lamp — the car's play IS the next project-audio launch).
-    // THE CAMERA STAYS WHERE IT IS UNLESS FOLLOW IS ARMED (architect
-    // 2026-09-18): this is the ONE launch that may start OFF SCREEN — the
+    // toggle_playback's own — the device reopen (carding a failed one) —
+    // ahead of the user-launch clear (owner (2) at GuiAuditionSequence: this
+    // is the second road into the launch body that is not the act's), and the
+    // launch through launch_playback_window with the trim's begin as the loop
+    // target.
+    // THE CAMERA STAYS WHERE IT IS UNLESS THE CHASE STANDS (architect
+    // 2026-09-18; the chase posture since 2026-09-23, the follow lamp
+    // before): this is the ONE launch that may start OFF SCREEN — the
     // trim's begin is a fixed point and the passage he is working on is
     // habitually a couple of screens downstream of it, so a page-in on every
     // console press cost him a manual recentre per audition. The launch
-    // states `LaunchCamera::PageIn` iff app.follow_armed READ AT THE LAUNCH
-    // LINE (the spend runs in the success tail behind it, so the lamp still
-    // carries the user's arm there) and `LaunchCamera::Leave` otherwise —
-    // with the lamp armed, the spend hands the chase the paging it always
-    // had; with it dark nothing moves, at the launch or at any loop wrap
-    // (the wrap's consumer resyncs the predictor and damages, and writes no
-    // camera — main.cpp's tick).
+    // states `LaunchCamera::PageIn` iff AppState::camera_chase stands (Shift+C
+    // arms it; the page-in keeps it) and `LaunchCamera::Leave` otherwise —
+    // with the chase standing the pre-paint autopager pages the scanner for
+    // the whole play; with it dark nothing moves, at the launch or at any
+    // loop wrap (the wrap's consumer resyncs the predictor and damages, and
+    // writes no camera — main.cpp's tick). The play's end spends the chase
+    // (the one stop body).
     // A trim under two frames refuses in the body's own playable gate,
     // silently (the benign one-dimensional class: the playhead and the grey
     // say it). The target view's preview-readiness gate is THE CALLER'S on
@@ -307,10 +308,10 @@ struct GuiPlaybackLifecycle {
     // leaves a running loop running.
     void car_toggle_playback();
     // THE CAR'S PLAY, WITHOUT THE FORK (architect 2026-09-18): the toggle
-    // above past its stop arm, the whole of it — the defensive chase clear,
-    // the device reopen and its card, the trim window and its two clamps, the
-    // always-from-the-begin start, the user-launch clear, the looping launch
-    // with the camera term, the follow lamp's spend. TWO CALLERS, both the
+    // above past its stop arm, the whole of it — the device reopen and its
+    // card, the trim window and its two clamps, the always-from-the-begin
+    // start, the user-launch clear, the looping launch with the camera term
+    // the chase posture chooses. TWO CALLERS, both the
     // console's: car_toggle_playback's play arm, and the skips' play tail
     // (GuiCarTransport::car_play_after_step — directly, and again from the
     // pending play the tick fires), which wants the play and not the fork for
@@ -357,8 +358,9 @@ struct GuiPlaybackLifecycle {
     // natural-end teardown is its one terminal, and the resting cursor is
     // untouched exactly as under Space — the same launch body, the same
     // gates (playback_launch_playable, so a start at or past the domain end
-    // or leaving fewer than two frames refuses), the same follow behaviour,
-    // the same scanner. Returns whether it launched; the refusals are the
+    // or leaving fewer than two frames refuses), the same scanner — but NO
+    // CHASE: the pre-paint autopager asks the act's phase and pages none of
+    // its plays, each framed by its own `c`. Returns whether it launched; the refusals are the
     // launch body's own two — the POSITION gate, silent since 2026-08-31, and
     // the DEAD-DEVICE gate, which still cards — and the audition's press-time
     // preflight has already asked both ahead of the act (so a refusal here is
@@ -384,26 +386,10 @@ struct GuiPlaybackLifecycle {
     // well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);
 
-    // THE FOLLOW KEY'S ONE CHOKEPOINT, and it TAKES NO VALUE because the
-    // subject is not always the same bit (architect 2026-09-11, follow's
-    // one-shot): shared by the bare-`f` toggle and the icon-row button that
-    // synthesizes that chord, which since the `follow` key left the schema
-    // 2026-09-11 are the whole membership.
-    // IT FORKS ON THE TRANSPORT. With NO project play in flight it toggles
-    // app.follow_armed, the lamp that says "the next play follows" — and
-    // nothing else happens, the arming being a promise about a launch that has
-    // not happened yet. WITH A PROJECT PLAY IN FLIGHT (playback live and the
-    // A/B audition not standing) it toggles app.follow_engaged for that play
-    // alone and leaves the lamp untouched: the on edge resyncs the predictor
-    // and pages the scanner back into view if it had drifted offscreen — the
-    // chase resuming its paging, not just taking one jump — and the off edge
-    // writes nothing else. During the A/B AUDITION the lamp is the subject:
-    // the act's plays never chase, so the press is about the user's next play.
-    // WHAT IT WRITES IS UNCHANGED BY THE LAMP'S 2026-09-12 FACE, which took
-    // this very fork: with a project play in flight the face shows that play's
-    // chase, so the in-flight arm below now LIGHTS the lamp it does not touch,
-    // and the face is what says so (redesign_button_selected, app_state.h).
-    void toggle_follow();
+    // (THE FOLLOW KEY'S CHOKEPOINT, toggle_follow, IS DELETED — architect
+    // 2026-09-23, with bare `f`, its lamp and the armed / engaged pair it
+    // wrote. The chase is one posture Shift+C arms, AppState::camera_chase,
+    // whose rule and writers are at that declaration.)
 
 private:
     // The active view's PLAY END — the song's end in source view, the bound
@@ -414,36 +400,23 @@ private:
     int64_t active_view_play_end() const;
     // The view-end launch (contract at the definition): validate an absolute
     // paint-domain launch position and play from it to active_view_play_end.
-    // Returns whether it launched. Callers (toggle_playback's play edge,
-    // scrub_launch_at) run the defensive follow_engaged clear before
-    // delegating. Since 2026-08-26 this is a thin caller of
+    // Returns whether it launched. Callers: toggle_playback's play edge and
+    // scrub_launch_at. Since 2026-08-26 this is a thin caller of
     // launch_playback_window below, adding the end and — since 2026-09-01 —
     // THE USER-LAUNCH CLEAR of the A/B audition sequence ahead of the
     // delegation (owner (2) of the edge inventory at GuiAuditionSequence): a
     // launch of the user's own transport is a fresh session, refused or not,
     // and this entry is the only road into the body that is not the act's.
-    // IT IS ALSO WHERE THE FOLLOW LAMP IS SPENT (2026-09-11): its SUCCESS TAIL
-    // runs spend_follow_lamp below — app.follow_armed copied into
-    // app.follow_engaged and the lamp put out — which is exactly the
-    // project-audio launch roads and not the audition's (that road enters the
-    // body directly); since 2026-09-17 the car's launch spends it through the
-    // same tail from its own entry.
+    // (THE FOLLOW LAMP'S SPEND, spend_follow_lamp, ran in this entry's
+    // success tail and the car's until 2026-09-23: the chase posture is one
+    // bit, read at the launch and spent at the play's end by the one stop
+    // body, AppState::camera_chase.)
     bool launch_playback_from(int64_t launch_pos);
-    // THE FOLLOW LAMP'S SPEND, one body (2026-09-17, factored out of
-    // launch_playback_from's success tail when the car's launch became the
-    // third project-audio launch road): the lamp says "the next play
-    // follows", the caller's play IS that next play, so the arm becomes the
-    // chase and the lamp goes out. TWO CALLERS, each in its own success tail
-    // and nowhere ahead of a refusal: launch_playback_from (Space's play arm
-    // and the scrub) and car_toggle_playback (the head unit's play). The A/B
-    // audition's road passes neither. The lamp's writer inventory is at
-    // app.follow_armed, app_state.h.
-    void spend_follow_lamp();
     // THE LAUNCH'S CAMERA TERM, THE CALLER'S WORD (architect 2026-09-18):
     //   * `PageIn` — if the launch position is offscreen, left-edge-align the
     //     viewport on it before the scanner issues forth
-    //     (Viewport::follow_scroll_if_needed, the shape follow's own check
-    //     has). Every GUI launch road starts ON SCREEN by construction, so
+    //     (Viewport::follow_scroll_if_needed, the chase's own page-in). Every
+    //     GUI launch road starts ON SCREEN by construction, so
     //     this is a no-op on the ordinary press and a rescue on the rare one.
     //   * `Leave` — the launch writes no camera at all.
     // NO DEFAULT ARGUMENT: every caller states its own, as MarkerLandingFrame

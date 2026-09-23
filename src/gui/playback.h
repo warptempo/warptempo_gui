@@ -56,8 +56,7 @@
 // visible discontinuity, never inside the audio callback. The set of
 // resync events: playhead jumps via move_playhead, discrete zooms via the shared
 // apply_zoom_change helper, the resize zoom-out reclamp,
-// follow-mode off-to-on,
-// follow-scroll auto-shift, horizontal pan via scroll_viewport
+// the chase's page-in (follow_scroll_if_needed), horizontal pan via scroll_viewport
 // (the plain-wheel stepped pan and PageUp/PageDown), viewport recenter via
 // center_viewport_on_playhead (C key) — AND, SINCE 2026-09-17, THE LOOP WRAP.
 // Every GUI launch still runs [start, end) once and stops at the natural end
@@ -100,8 +99,8 @@
 // (apply_zoom_change, apply_strip_drag_zoom's final frame,
 // apply_zoom_to_start), the DISCRETE pan (scroll_viewport with
 // continuous=false — a drag pans without one and re-anchors once at its
-// end), the centring jump, follow's page and the on-edge of the follow
-// toggle, the map-change re-land (reseat_playhead_to), the resize whose
+// end), the centring jump, the chase's page (the follow toggle's on-edge
+// was one until the lamp's deletion 2026-09-23), the map-change re-land (reseat_playhead_to), the resize whose
 // level moved, the pointer ends (the nav drag's release and force-end, the
 // touch hard end), and — the one class whose event is the AUDIO THREAD'S
 // rather than the user's — THE LOOP WRAP (main.cpp's tick, on

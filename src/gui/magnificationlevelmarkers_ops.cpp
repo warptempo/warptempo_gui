@@ -309,7 +309,7 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
     // 2026-09-16, "prefer the correct way"): the M drag's release rule
     // (MarkerDragOps::commit_drag's tail) rather than the cluster's pre-write
     // hash compare. The tail above may already have rendered the new gain —
-    // the edge-align of (e) or, under Ctrl, the held-column move
+    // the edge-align of (e) or, under the hold posture, the held-column move
     // (hold_subject_column_after_nudge) may shift the viewport, whose synchronous kick reads the committed
     // store's profile and publishes the displayed fingerprint with it — and a
     // compare against the hash captured BEFORE the write would then render

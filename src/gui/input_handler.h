@@ -1109,8 +1109,8 @@ struct GuiInputHandler {
     //
     // IT DRIVES THE ZOOM FAMILY'S OWN APPLICATION CHOKEPOINT,
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
-    // synchronous per-frame rebuild, and the either-axis follow suppression
-    // all come from it), and DELIBERATELY NOT any pointer-press arm — the
+    // synchronous per-frame rebuild, and — through its clamp — the camera
+    // postures' clear on either axis all come from it), and DELIBERATELY NOT any pointer-press arm — the
     // gesture enters BELOW every one of them.
     // The recorded justification for stopping short of a mouse arm, per the
     // fallback the phase-1 ruling names, is structural twice over and outlived
@@ -1144,8 +1144,8 @@ struct GuiInputHandler {
     // consume as a double-click).
     //
     // Navigation-class whole: no playhead, no selection, no region, allowed in
-    // read-only, and a mid-audition frame suppresses follow through the
-    // chokepoint's own either-axis line. Implemented beside the strip drag in
+    // read-only, and a frame that moves the camera puts out the camera
+    // postures through the chokepoint's clamp (AppState::camera_hold). Implemented beside the strip drag in
     // input_pointer.cpp.
     void apply_touch_nav_update(const GuiTouchNavFrame& frame);
     // The gesture's end (any end commits — a finger lifted, wl_touch.cancel,
@@ -1386,7 +1386,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's four, row 3's two tabs, row 4's twenty-three (the
+    // the view bar's four, row 3's two tabs, row 4's twenty-two (the
     // toolbar four included since the 2026-08-12 relayout, the zoom four
     // whole again since 2026-09-22, the IGNORE
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
@@ -1395,10 +1395,10 @@ struct GuiInputHandler {
     // seven closing it — the opener, the walk lamp and the four companions
     // since 2026-08-18, Load in place at the tail since 2026-09-01) and the
     // bottom
-    // row's seventeen — the transport three, then the right block's
+    // row's fifteen — the transport three, then the right block's
     // MARKER-VERB GROUP of seven (kMarkerVerbGroup, paint_handler.cpp, owns
-    // that membership), the walk group's three (the walk and the two
-    // hold-column nudges) and four cardinal arrows. EVERY ONE OF THEM
+    // that membership), the walk group's one (the walk) and four cardinal
+    // arrows. EVERY ONE OF THEM
     // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
     // cluster swap, which published zero rects for whichever four it hid, went
     // with the history companions on 2026-08-18 (definitions beside
@@ -1975,7 +1975,7 @@ struct GuiInputHandler {
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
     // and the `h` history mode's own have in common: drop the
     // playhead at the clicked column, reseek a live scanner to it (keeping the
-    // session alive) and override follow for that session. NO selection, NO
+    // session alive) and end that session's chase (AppState::camera_chase). NO selection, NO
     // drag arm — each caller owns those, which is what lets the
     // mode reuse this recipe without inheriting a sweep it must not have.
     // FOUR ROUTES REACH IT since 2026-08-12 (re-derived 2026-08-13 at the
@@ -2206,8 +2206,9 @@ struct GuiInputHandler {
     // first. THE MODE FORK IS INSIDE — the live recipe walks the live stores
     // (repair_last_selected + jump_playhead_to_focused_marker), the history
     // mode's re-expression walks its own diff-flag list and its own focus — so
-    // the SIX call sites (re-greped 2026-09-14: the live `c` arm, the mode's
-    // `c` claim, run_overview_command's already-full-out arm, the A/B
+    // the call sites (re-greped 2026-09-23: run_center_key_command — the
+    // centre keys' act, which the live `c` arm, the mode's `c` claim and
+    // Shift+C reach — run_overview_command's already-full-out arm, the A/B
     // audition's GuiAbAudition::apply_working_zoom, Shift+`j`'s jump, which
     // calls it TWICE — once on the tab it leaves and once on the tab it
     // lands — and, since 2026-09-14, the Ctrl+Shift+Tab paired march, which
@@ -2230,6 +2231,17 @@ struct GuiInputHandler {
     // standing on, so THAT arm resolves the stamp itself and passes the working
     // zoom instead when it cannot move — its own comment carries the case.
     void run_center_command(double target_zoom_level = kWorkingZoomLevel);
+    // THE CENTRE KEYS' ACT (architect 2026-09-23): bare `c` (the live arm and
+    // the `h` view's claim) with `arm_chase` false, SHIFT+C with it true —
+    // run_center_command, then the camera postures the explicit centring
+    // writes (AppState::camera_hold): the HOLD posture armed whether or not
+    // the centring could move the camera, and the CHASE posture armed by
+    // Shift+C, or by bare `c` kept as it stood unless the centring's own
+    // landing stopped the play it was chasing (that stop spends it). The
+    // other callers of run_center_command — `0`'s second press, the A/B
+    // audition, and the marches and Shift+J, which arm the hold at their own
+    // tails — do not come through here.
+    void run_center_key_command(bool arm_chase);
 
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
@@ -2477,7 +2489,7 @@ private:
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
     // about the camera beyond what `frame` states and reads no preference of
-    // its own — follow mode never gated it. The three Tab arms pass
+    // its own — the chase never gated it. The three Tab arms pass
     // marker_walk_landing_frame (app_state.h) — MarkerLandingFrame::Center,
     // the landing centred at the standing zoom, in source view, and
     // MarkerLandingFrame::LeastMovement in target view (architect
@@ -2532,7 +2544,7 @@ private:
     // playhead coincident with the focus, and a later nudge/drag re-lands it on
     // the focused marker as that marker moves.
     // `frame` IS REQUIRED and this body resolves nothing (architect
-    // 2026-09-04): it asks no lamp, no follow bit and no mode, so every route
+    // 2026-09-04): it asks no lamp, no camera posture and no mode, so every route
     // that lands a focus states its own camera. `c` states Center; the walk
     // states what ITS caller handed it.
     // Its land is the movement owner; its
@@ -2624,17 +2636,17 @@ private:
 
     // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31, R12): the
     // stop, the stale-focus clear, the signed step and the camera, called by
-    // the bare form (handle_plain_bare_keys' Left / Right arms below) and the
-    // ctrl form (on_key's Ctrl+Left / Ctrl+Right arm, 2026-09-22). `step` is
+    // bare Left / Right (handle_plain_bare_keys' two arms below; Ctrl+Left /
+    // Ctrl+Right were a second road 2026-09-22 to 2026-09-23). `step` is
     // the press's one step in the active column's unit (horizontal_arrow_step,
     // gui_input.h) — one painted column, or ONE HOP on the phase-reset
-    // column — and `camera` the press's (NudgeCamera, gui_input.h). Reached
-    // only with an empty selection: the marker-lane branch claims the press
-    // first. The full contract is at the definition.
-    void run_waveform_lane_playhead_step(HorizontalArrowStep step,
-                                         NudgeCamera camera);
+    // column; the camera is the hold posture's (nudge_camera, app_state.h),
+    // read and kept by the body. Reached only with an empty selection: the
+    // marker-lane branch claims the press first. The full contract is at the
+    // definition.
+    void run_waveform_lane_playhead_step(HorizontalArrowStep step);
 
-    // Bare-key (no-modifier) dispatch: playhead move / zoom / follow / center /
+    // Bare-key (no-modifier) dispatch: playhead move / zoom / center /
     // Home-End / trim begin-end. Caller gates on no modifiers held. Its
     // Left/Right arms are the WAVEFORM-LANE half of the horizontal arrows' BARE
     // form: the marker-lane half returns before reaching the tail, so these run
@@ -3073,7 +3085,7 @@ private:
     // "definitely" carries the M column) and the engine settings — what
     // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
-    // tab, the camera, follow and projects_repo — and gui_scale is outside the question
+    // tab, the camera, the camera postures and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
     // view are how he then inspects what the load changed. (It SUPERSEDES the
@@ -3468,13 +3480,14 @@ private:
     // pan, so each click pays AT MOST one stop quiescence fence and a stopped
     // session's launch pays none. A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
-    // NOTHING else — no selection, region, cursor, follow, or double-click seed.
+    // NOTHING else — no selection, region, cursor, chase, or double-click seed.
     // THAT is what makes it the REGION'S PREVIEW GESTURE (architect 2026-07-30,
     // Q2): clicking inside a SHOWN trim region overlay auditions from the
     // clicked frame and leaves the overlay standing, which is why Space no
     // longer carries a region launch of its own. It is also THE HALVES' ONE
     // DIFFERENCE — read honestly, two: the upper half's act deselects, HIDES
-    // the overlay and overrides follow, and this one does none of the three.
+    // the overlay and ends a chasing play's chase, and this one does none of
+    // the three.
     // Playback stays alive from the press to the act (the press claims nothing
     // and stops nothing, and the drag-modal gate swallows every chord while the
     // pending stands); since the scrub always plays (architect 2026-09-21),

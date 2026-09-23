@@ -338,7 +338,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // the dispatch arm's own spelling through the shared predicate.
     const bool is_ab_audition = is_ab_audition_key(key, mods);
     // The horizontal arrows step the PLAYHEAD one step in the active column's
-    // unit (bare, or ctrl holding the column since 2026-09-22), and
+    // unit (bare only since 2026-09-23; ctrl held the column for the day
+    // before), and
     // they are admitted ONLY in the waveform lane, where that step is pure
     // navigation. In the MARKER lane (a non-empty selection) the very same press
     // steps the playhead AND the marker under it — a position nudge in either
@@ -363,14 +364,13 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // buttons' disabled face reads the same owner, so the lock's refusal and
     // the grey are one decision. (It read playhead_in_marker_lane() until
     // then, the lane predicate whose body that owner now is.)
-    // IT ADMITS THE BARE AND CTRL FORMS, the two the horizontal pair binds
-    // (chord_is_bound, gui_input.h — the ladder retired 2026-09-21, ctrl the
-    // held-column camera since 2026-09-22, the same step on the same lane
-    // term); an unbound modified arrow needs no admission and is silent
-    // whichever side of this gate it lands on.
+    // IT ADMITS THE BARE FORM, the one the horizontal pair binds
+    // (chord_is_bound, gui_input.h — the ladder retired 2026-09-21, the ctrl
+    // form 2026-09-23); an unbound modified arrow needs no admission and is
+    // silent whichever side of this gate it lands on.
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-         !alt && !shift &&
+         !ctrl && !alt && !shift &&
          horizontal_arrow_step_lock_admits(app));
     // HOME / END IN BOTH FORMS — bare (the trim-bound jump) and CTRL (the
     // whole-piece jump, 2026-08-24). Both are pure navigation: they move the
@@ -390,11 +390,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
          !ctrl && !shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
-    const bool is_follow =
-        (key == GuiKeys::F && !ctrl && !shift && !alt);
-    // RESTRICT UNDO TO CURRENT VIEW, bare `z` (2026-09-04): follow's reasoning
-    // once more — the bit decides whether an undo RUNS and authors nothing the
-    // lock protects, so the switch is admitted on a locked tab and its button
+    // RESTRICT UNDO TO CURRENT VIEW, bare `z` (2026-09-04): a posture — the
+    // bit decides whether an undo RUNS and authors nothing the lock protects, so the switch is admitted on a locked tab and its button
     // stays lit there. Ctrl+Z and Ctrl+Shift+Z are NOT on this allowlist and
     // do not join it: the acts the lamp governs are exactly what the lock
     // refuses.
@@ -407,8 +404,12 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // so there the press reaches the arm's own target-view card.
     const bool is_waveform_magnification =
         is_waveform_magnification_key(key, mods);
+    // THE CENTRE KEYS, bare `c` and SHIFT+C (2026-09-23, the chase posture's
+    // arm): navigation, writing no store — a camera and a session posture —
+    // so both are admitted here, and under the grid-iterations lock, whose
+    // gate falls through to this list.
     const bool is_center =
-        (key == GuiKeys::C && !ctrl && !shift && !alt);
+        (key == GuiKeys::C && !ctrl && !alt);
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
@@ -609,7 +610,6 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
-             is_follow ||
              is_restrict_undo || is_waveform_magnification ||
              is_center ||
              is_view_selector ||
@@ -2041,9 +2041,13 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // neither writing the zoom (no camera is derived from the zoom) — and
     // the march states NoFrame, its `c` behind each step being the one
     // framing.
+    // THE CENTRE ARM ARMS THE HOLD POSTURE (architect 2026-09-23), the live
+    // walk's own rule (AppState::camera_hold): a source-view walk landing is
+    // an explicit centring; the least-movement and NoFrame arms arm nothing.
     switch (frame) {
         case MarkerLandingFrame::Center:
-            viewport.center_viewport_on_playhead();      break;
+            viewport.center_viewport_on_playhead();
+            app.camera_hold = true;                      break;
         case MarkerLandingFrame::LeastMovement:
             viewport.least_movement_scroll_if_needed();  break;
         case MarkerLandingFrame::NoFrame:                break;
@@ -2390,6 +2394,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_history_diff_flag_focus(true, MarkerLandingFrame::NoFrame);
         run_center_command();
+        // Each step's `c` is an explicit centring, so the march arms the
+        // HOLD posture behind its last one (AppState::camera_hold).
+        app.camera_hold = true;
         target_render.trigger();
         return true;
     }
@@ -2467,7 +2474,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
     // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
-        run_center_command();
+        run_center_key_command(/*arm_chase=*/false);
         return true;
     }
 
@@ -4230,7 +4237,7 @@ bool GuiInputHandler::any_text_editor_active() const {
 // wheel and playback-stop readers deliberately keep the dialog predicate.
 // It is EXACTLY any_text_editor_active, and that identity is structural rather
 // than coincidental: an editor that swallows printable letters MUST own the
-// keyboard, or typing `f` into a flag would toggle follow mode. So this
+// keyboard, or typing `c` into a flag would recentre the camera. So this
 // delegates instead of restating the membership — one expression, two names,
 // and the two concepts can only ever be the same set.
 bool GuiInputHandler::keyboard_modal_editor_active() const {
@@ -4443,16 +4450,16 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // R12): a HELD REPEAT CARRIES ITS MODIFIER, so a held Shift+Up walks ten
     // cents a fire — the burst continues the gesture the press began, which
     // is the whole meaning of a hold. Up / Down bind bare, Shift and Ctrl
-    // (the ladder, arrow_step_magnitude); Left / Right bind BARE AND CTRL
-    // (the horizontal ladder retired 2026-09-21; ctrl the held-column camera
-    // since 2026-09-22), so a held Left / Right — key or button — walks one
-    // step of the active column's unit a fire, a hop on the phase-reset
-    // column, the held Ctrl form keeping its column at every fire. The lane
+    // (the ladder, arrow_step_magnitude); Left / Right bind BARE ONLY
+    // (the horizontal ladder retired 2026-09-21; the Ctrl form 2026-09-23),
+    // so a held Left / Right — key or button — walks one step of the active
+    // column's unit a fire, a hop on the phase-reset column, keeping its
+    // column at every fire while the hold posture stands. The lane
     // split and the unit are decided per fire at dispatch, so the arm is
-    // their own rather than a term in the bare list above; SHIFT and ALT
-    // spell nothing to repeat.
+    // their own rather than a term in the bare list above; CTRL, SHIFT and
+    // ALT spell nothing to repeat.
     if ((key == GuiKeys::Left || key == GuiKeys::Right) &&
-        !mods.alt && !mods.shift)
+        !mods.ctrl && !mods.alt && !mods.shift)
         return true;
     if (!mods.alt && !(mods.ctrl && mods.shift) &&
         (key == GuiKeys::Up || key == GuiKeys::Down))
@@ -8925,6 +8932,9 @@ void GuiInputHandler::jump_to_value_source() {
     selection.set_single_selection(destination);
     land_playhead_on_marker(app, audio, viewport, destination);
     run_center_command();
+    // Its closing `c` is an explicit centring, so the jump arms the HOLD
+    // posture behind it (AppState::camera_hold).
+    app.camera_hold = true;
 }
 
 void GuiInputHandler::render_player_load_in_place() {
@@ -9179,6 +9189,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
         cycle_marker_focus(true, MarkerLandingFrame::NoFrame);
         run_center_command();
+        // Each step's `c` is an explicit centring, so the march arms the
+        // HOLD posture behind its last one (AppState::camera_hold).
+        app.camera_hold = true;
         target_render.trigger();
         return true;
     }
@@ -9284,17 +9297,21 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 // the recorded exception keyed on the column and never on the subject. The
 // landing owner forks on the unit (playhead_arrow_step_landing, app_state.h);
 // everything below — the stop, the clear, the camera — is the same for
-// both. TWO CALLERS, one per camera (NudgeCamera, gui_input.h
-// — architect 2026-09-22): handle_plain_bare_keys' Left / Right case below
-// (FollowEdge) and on_key's Ctrl+Left / Ctrl+Right arm (HoldColumn). It was
-// written inline in that switch until the ladder gave it a second site, and
-// it stays extracted because the stop, the stale-focus clear and the step
-// read as one act.
+// both. ONE CALLER since 2026-09-23, handle_plain_bare_keys' Left / Right
+// case below (on_key's Ctrl+Left / Ctrl+Right arm was the second from
+// 2026-09-22, deleted with the chord); it stays extracted because the stop,
+// the stale-focus clear, the step and the camera read as one act.
 //
 // IT IS REACHED ONLY WITH AN EMPTY SELECTION, because on_key's marker-lane
 // branch claims the press first and returns.
-void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step,
-                                                      NudgeCamera camera) {
+void GuiInputHandler::run_waveform_lane_playhead_step(
+    HorizontalArrowStep step) {
+    // THE CAMERA IS THE HOLD POSTURE'S, read BEFORE the act, and the posture
+    // is KEPT across it — the nudge's one exemption (AppState::camera_hold):
+    // the step lands through a movement owner and may move the camera, each
+    // of which would otherwise put it out.
+    const NudgeCamera camera = nudge_camera(app);
+    const bool hold_before = app.camera_hold;
     // The membership half of the clear below is therefore already satisfied;
     // the FOCUS half is not — last_selected_marker survives an empty selection
     // (a ctrl-toggle that empties the set repairs the focus rather than
@@ -9319,11 +9336,12 @@ void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step,
     // live domain, so a hop near the end lands exactly ON the end and one
     // already resting there moves nothing; the buttons' face asks the same
     // step the press takes (horizontal_arrow_step_actionable).
-    // THE CAMERA IS THE PRESS'S, AT EVERY ZOOM (architect 2026-09-22): the
-    // BARE press follows the edge — the landing's own keep-visible edge-align
-    // and nothing more, so the camera holds while the cursor stays on screen
-    // and walks with it at the edge once it would leave. The CTRL press
-    // HOLDS THE COLUMN (the rule at Viewport::hold_subject_column_after_nudge):
+    // THE CAMERA, AT EVERY ZOOM, IS THE HOLD POSTURE'S (architect 2026-09-23;
+    // the press's modifier chose it from 2026-09-22): dark, the step follows
+    // the edge — the landing's own keep-visible edge-align and nothing more,
+    // so the camera holds while the cursor stays on screen and walks with it
+    // at the edge once it would leave. Standing, the step HOLDS THE COLUMN
+    // (the rule at Viewport::hold_subject_column_after_nudge):
     // the subject's place is captured BEFORE the step — the cursor and the
     // viewport it painted on, the landing's edge-align being free to scroll
     // that viewport — and a step that moved the cursor then places the
@@ -9331,8 +9349,8 @@ void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step,
     // waveform's edge columns (never changing the zoom), in every view,
     // target view on the warp column included; a walled step moved nothing
     // and moves no camera. Every press and every held repeat — the keys' and
-    // the arrow buttons' — runs through this body, so the camera their chord
-    // carries is kept at each step.
+    // the arrow buttons' — runs through this body, so the posture is kept
+    // and read again at each step.
     const int64_t cursor_before = app.playhead_cursor_sample;
     const int64_t viewport_start_before = app.viewport_start_sample;
     viewport.move_playhead_by_arrow_step(step);
@@ -9340,6 +9358,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(HorizontalArrowStep step,
         app.playhead_cursor_sample != cursor_before)
         viewport.hold_subject_column_after_nudge(cursor_before,
                                                  viewport_start_before);
+    app.camera_hold = hold_before;
 }
 
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
@@ -9378,26 +9397,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // THE WAVEFORM-LANE STEP — one step back in the active column's unit
         // (horizontal_arrow_step, gui_input.h: a painted column, or a hop on
         // the phase-reset column), through the act owner directly above this
-        // dispatch, following the edge (the ctrl form, holding the column, is
-        // on_key's own arm); the whole body lived here until 2026-08-31.
+        // dispatch, whose camera is the hold posture's; the whole body lived
+        // here until 2026-08-31.
         run_waveform_lane_playhead_step(
-            horizontal_arrow_step(-1, app.active_markers_view),
-            NudgeCamera::FollowEdge);
+            horizontal_arrow_step(-1, app.active_markers_view));
         break;
     case GuiKeys::Right:
         run_waveform_lane_playhead_step(
-            horizontal_arrow_step(+1, app.active_markers_view),
-            NudgeCamera::FollowEdge);
+            horizontal_arrow_step(+1, app.active_markers_view));
         break;
-    case GuiKeys::F:
-        // Toggle follow. The whole body — the fork between ARMING THE LAMP for
-        // the next play and toggling the CHASE of a play already in flight —
-        // lives in GuiPlaybackLifecycle::toggle_follow, shared with the
-        // icon-row button's synthesized chord and with nothing else. The press
-        // computes no desired value: which bit it is about is the transport's
-        // answer, not the dispatch's.
-        playback_lifecycle.toggle_follow();
-        break;
+    // (BARE `f`, the follow lamp's toggle, is DELETED — architect 2026-09-23:
+    // the chase is Shift+C's posture, AppState::camera_chase. The key binds
+    // nothing and falls to the default arm's silence.)
     case GuiKeys::Z:
         // Toggle the Restrict undo to current view lamp (2026-09-04). The setter
         // is GuiInputHandler::set_restrict_undo_to_current_view, shared with the
@@ -9427,11 +9438,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live
-        // at its owner (run_center_command). This arm is unreachable while the
-        // mode stands — handle_history_mode_key claims `c` above this dispatch —
-        // so the owner's fork decides nothing for it; it is the third caller,
-        // `0`'s already-full-out arm, that the fork exists for.
-        run_center_command();
+        // at its owner (run_center_command), through the centre keys' act,
+        // which writes the camera postures an explicit centring arms
+        // (run_center_key_command; AppState::camera_hold). This arm is
+        // unreachable while the mode stands — handle_history_mode_key claims
+        // `c` above this dispatch — so the owner's fork decides nothing for it.
+        run_center_key_command(/*arm_chase=*/false);
         break;
     case GuiKeys::Home:
         // The trim-begin jump. The body is shared with End and with the two

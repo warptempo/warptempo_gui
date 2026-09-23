@@ -223,10 +223,10 @@ struct GuiInputState {
 // the playhead alike (chord_is_bound), and silent as every unbound chord is.
 // Left / Right take ONE STEP IN THE ACTIVE COLUMN'S UNIT (horizontal_arrow_step
 // below); key repeat and the buttons' hold-repeat are the way to go further.
-// CTRL IS THE CAMERA MODIFIER, NOT A RUNG (architect 2026-09-22): Ctrl+Left /
-// Ctrl+Right take the SAME step and hold the subject's screen column where the
-// bare press follows the edge (NudgeCamera below), so this function is never
-// asked about them.
+// NO MODIFIER IS THE CAMERA EITHER: Ctrl+Left / Ctrl+Right held the subject's
+// column from 2026-09-22 to 2026-09-23 and BIND NOTHING now — the nudge's
+// camera is the hold posture's (NudgeCamera below), so this function is never
+// asked about a horizontal press.
 //
 // SHIFT IS THE LONG STRIDE (architect 2026-09-21, swapping the 2026-08-31
 // order, which had shift the three and ctrl the ten): "shift becomes the long
@@ -296,33 +296,27 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
     return HorizontalArrowStep::columns(direction);
 }
 
-// THE HORIZONTAL ARROW'S CAMERA IS THE KEY'S CHOICE (architect 2026-09-22: no
-// camera behaviour is derived from the zoom level). Two answers, at every zoom,
-// on every column and for the playhead alike:
-//   * FollowEdge — BARE Left / Right: the camera holds while the subject is
+// THE HORIZONTAL ARROW'S CAMERA IS THE HOLD POSTURE'S (architect 2026-09-23:
+// camera behaviour follows from what the user already did; no camera is
+// derived from the zoom level, 2026-09-22). Two answers, at every zoom, on
+// every column and for the playhead alike:
+//   * FollowEdge — the posture dark: the camera holds while the subject is
 //     on screen, and a step that would carry it off the window scrolls the
 //     viewport so it stands at the edge column and walks there — the
 //     movement owner's own keep-visible edge-align (Viewport::move_playhead_to
 //     / reseat_playhead_to), nothing called beyond it;
-//   * HoldColumn — CTRL+Left / Ctrl+Right: the subject keeps the screen
-//     column it painted in before the step and the waveform slides under it
-//     (Viewport::hold_subject_column_after_nudge).
-// Ctrl changes the camera and NOTHING ELSE: the step, its unit, its walls,
-// its refusals, its cards, its locks and its undo coalescing are the bare
-// press's — the GestureKind is the column's either way, so a held Ctrl+Left
-// burst coalesces exactly as a bare one does and a ctrl tap and a bare tap on
-// one subject merge in the tap window like two bare taps. THE ONE OWNER OF
-// THE FORK'S LOGIC IS nudge_camera, BUT IT HAS ONE CALLER: the marker lane's
-// arm (input_handler.cpp), which reads live mods because its bare and ctrl
-// forms share one dispatch site. The WAVEFORM lane's bare and ctrl forms are
-// two SEPARATE dispatch cases instead, so each states its own camera as the
-// matching literal directly rather than calling this function — FollowEdge
-// at the bare-key case (input_key_dispatch.cpp, which never reads mods) and
-// HoldColumn at the lane's own ctrl arm (input_handler.cpp).
+//   * HoldColumn — the posture standing (an explicit centring armed it): the
+//     subject keeps the screen column it painted in before the step and the
+//     waveform slides under it (Viewport::hold_subject_column_after_nudge).
+// The camera changes NOTHING ELSE: the step, its unit, its walls, its
+// refusals, its cards, its locks and its undo coalescing are the same under
+// either answer. THE ONE OWNER OF THE FORK is nudge_camera (app_state.h,
+// beside AppState::camera_hold, the bit it reads), asked by the two nudge
+// dispatch sites — the marker lane's arm (input_handler.cpp) and the
+// waveform lane's step (run_waveform_lane_playhead_step,
+// input_key_dispatch.cpp). It was the Ctrl modifier's choice from 2026-09-22
+// to 2026-09-23; Ctrl+Left / Ctrl+Right bind nothing now.
 enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
-constexpr NudgeCamera nudge_camera(GuiInputState mods) {
-    return mods.ctrl ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
-}
 
 // -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03, codex) -------------
 //
@@ -686,26 +680,29 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     switch (key) {
-        // -- letters, bare only, bound in EVERY state: the view toggle and the
-        // mode toggles (`c` centre, `i` iteration, `k` add to
-        // selection; `f` left this group 2026-09-19 for the two FLATTEN
-        // chords below, its bare form — the follow lamp — unchanged; `x` the
-        // value drag's lamp stood here 2026-09-10 to
+        // -- letters, bare only, bound in EVERY state: the mode toggles (`i`
+        // iteration, `k` add to selection; `c` left this group 2026-09-23
+        // for Shift+C, below; `f` left it 2026-09-19 for the two FLATTEN
+        // chords below; `x` the value drag's lamp stood here 2026-09-10 to
         // 2026-09-13, `y` the keep-centered lamp 2026-08-31 to 2026-09-14,
         // `m` the bpm opener and `t` the S/T flip both 2026-08-01 (`m`)/
         // earlier to 2026-09-15, when the architect moved the opener to
         // Ctrl+B, below, and deleted `t` whole with its view lamp).
-        case GuiKeys::C: case GuiKeys::I:
+        case GuiKeys::I:
         case GuiKeys::K:
             return bare;
-        // THE LETTER CARRIES THREE ACTS since 2026-09-19: bare `f` is the
-        // FOLLOW LAMP (unchanged, the group above's own kind), Ctrl+F flattens
-        // every warp marker's tempo deviations and Ctrl+Shift+F collapses
-        // them into one — the shifted form being the plain act's twin, `s`'s
-        // and `j`'s shape on a ctrl chord rather than a bare one. The ctrl
-        // spelling is what guards an authoring verb against a stray bare
-        // press, exactly as Ctrl+D and Ctrl+N do.
-        case GuiKeys::F: return bare || cl || cs;
+        // Centre, and SHIFT+C, centre and arm the chase (architect
+        // 2026-09-23; AppState::camera_chase) — the shifted form being the
+        // plain act's twin, `j`'s and `l`'s shape.
+        case GuiKeys::C: return bare || sh;
+        // Ctrl+F flattens every warp marker's tempo deviations and
+        // Ctrl+Shift+F collapses them into one (2026-09-19) — the shifted form
+        // being the plain act's twin, `s`'s and `j`'s shape on a ctrl chord
+        // rather than a bare one. The ctrl spelling is what guards an
+        // authoring verb against a stray bare press, exactly as Ctrl+D and
+        // Ctrl+N do. BARE `f` BINDS NOTHING since 2026-09-23, when the follow
+        // lamp it toggled was deleted (the chase is Shift+C's posture).
+        case GuiKeys::F: return cl || cs;
         // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
         // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
         case GuiKeys::B: return cl;
@@ -834,13 +831,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // nothing.
         case GuiKeys::Up: case GuiKeys::Down:
             return bare || sh || cl;
-        // The playhead / marker position step, BARE AND CTRL on every column
+        // The playhead / marker position step, BARE ONLY on every column
         // (architect 2026-09-21: the horizontal ladder is retired — placement
         // is graphical; the step's unit is the active column's,
-        // horizontal_arrow_step above). Ctrl is the camera, not a rung
-        // (2026-09-22, NudgeCamera above); Shift spells nothing.
+        // horizontal_arrow_step above). Shift spells nothing, and CTRL SPELLS
+        // NOTHING since 2026-09-23: it was the held-column camera for a day,
+        // and the camera is the hold posture's now (NudgeCamera above).
         case GuiKeys::Left: case GuiKeys::Right:
-            return bare || cl;
+            return bare;
         // The trim bounds, and the whole-piece ends under ctrl.
         case GuiKeys::Home: case GuiKeys::End: return bare || cl;
         // The viewport's stepped scroll.
@@ -876,6 +874,12 @@ static_assert(!chord_is_bound(GuiKeys::Escape,
                                   GuiInputState{false, true, false}, false),
               "Esc is bare-exact: no modified Escape binds anywhere, Ctrl+Esc "
               "included since it retired on 2026-09-01");
+static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::C,
+                                 GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::F, GuiInputState{}, false),
+              "bare `c` centres and Shift+C centres and arms the chase; bare "
+              "`f` (the retired follow lamp) binds nothing");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}, false) &&
@@ -967,17 +971,22 @@ static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
               "a vertical arrow binds bare, Shift and Ctrl — the step ladder's three "
               "magnitudes — and Ctrl+Shift spells no fourth");
 static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Left,
-                                 GuiInputState{true, false, false}, false) &&
+                  chord_is_bound(GuiKeys::Right, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Left,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::Right,
+                                  GuiInputState{true, false, false}, true) &&
                   !chord_is_bound(GuiKeys::Left,
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Right,
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Right,
                                   GuiInputState{false, true, false}, true),
-              "Left / Right bind bare and Ctrl (the held-column camera) on "
-              "every column — the horizontal ladder is retired, so Shift and "
-              "Ctrl+Shift spell nothing there");
+              "Left / Right bind bare only on every column — the horizontal "
+              "ladder is retired, so Shift and Ctrl+Shift spell nothing, and "
+              "Ctrl+Left / Ctrl+Right are unbound since 2026-09-23: the "
+              "nudge's camera is the hold posture's (AppState::camera_hold), "
+              "not a modifier's");
 // THE MODE TERM, pinned in both directions (2026-09-01, U4). Bare `v` is the
 // architect's own instance — the revert act, which binds nothing outside the
 // view, so the gates below it must say nothing there.
@@ -1183,11 +1192,11 @@ inline bool is_magnification_level_drop_key(GuiKey key, GuiInputState mods) {
 // the lamp keeping its state (the arm is BracketLeft's case in
 // handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
 // reaches). ITS ONE READER is the read-only allowlist (read_only_key_blocked,
-// which ADMITS it — a view posture, like Follow — and which the
+// which ADMITS it — a view posture — and which the
 // grid-iterations lock's gate falls through to). The `h` view's allowlist
-// (history_mode_key_blocked) deliberately does NOT name it: Follow and
-// Restrict Undo to Current View, its group's other two lamps, are refused there
-// too, so the view cards it like every chord it does not name.
+// (history_mode_key_blocked) deliberately does NOT name it: Restrict Undo to
+// Current View, its group's other lamp, is refused there too, so the view
+// cards it like every chord it does not name.
 inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::BracketLeft && !mods.ctrl && !mods.shift &&
            !mods.alt;
@@ -1261,6 +1270,18 @@ inline bool is_copy_value_key(GuiKey key, GuiInputState mods) {
 }
 inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::J && !mods.ctrl && mods.shift && !mods.alt;
+}
+
+// True for SHIFT+C exactly (architect 2026-09-23): bare `c`'s centring with
+// the CHASE posture armed (AppState::camera_chase) — its one setter. The
+// Center button's shift-click and long press dispatch it
+// (redesign_button_shift_admits). Read-only-legal and legal under the
+// grid-iterations lock (navigation: the allowlist admits `c` in both forms);
+// refused in the `h` view, whose allowlist does not name it, as it refuses
+// playback. ONE READER, on_key's dispatch arm (input_handler.cpp); the
+// allowlist spells `c` shift-agnostically beside it.
+inline bool is_center_and_chase_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::C && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 enum class GuiMouseButton {

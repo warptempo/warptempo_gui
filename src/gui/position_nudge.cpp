@@ -236,10 +236,12 @@ void finish_position_nudge(
     const int64_t prior_viewport_start = app.viewport_start_sample;
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — architect
-    // 2026-09-22, at every zoom and on every column): a BARE press follows the
-    // edge and needs nothing beyond (e)'s own keep-visible edge-align; a CTRL
-    // press holds the column — the viewport is placed so the playhead (e)
+    // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — at every zoom
+    // and on every column; the hold posture's answer since 2026-09-23,
+    // nudge_camera, read at the dispatch before this act and kept across it):
+    // with the posture dark the press follows the edge and needs nothing
+    // beyond (e)'s own keep-visible edge-align; with it standing the press
+    // holds the column — the viewport is placed so the playhead (e)
     // just landed on the nudged marker paints in the column the marker
     // painted in before the nudge, clamped to the waveform's edge columns — at
     // every step, a held key's repeats and a held button's fires included,

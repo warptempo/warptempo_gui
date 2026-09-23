@@ -92,7 +92,7 @@ struct ToolbarChord {
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
     // user just clicked). THE TAB PAIR AND THE VIEW BAR'S FOUR are the flag's
-    // users; the view lamps, the walk lamp, follow, read-only, history and
+    // users; the view lamps, the walk lamp, read-only, history and
     // Cumulative are TOGGLES and press through in both directions, which is why
     // this is a flag and not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP
     // PAIR was a radio for hours on 2026-08-15, and the S/T, W/P and WALK pairs
@@ -138,18 +138,17 @@ struct ToolbarChord {
     //
     // MEMBERSHIP (the bottom row's four
     // cardinal arrows from 2026-08-16, joined by UNDO AND REDO on 2026-09-13 —
-    // see below — and by the two HOLD-COLUMN nudges, Ctrl+Left / Ctrl+Right,
-    // on 2026-09-22; the waveform magnification pair carried it from
-    // 2026-08-26 until its deletion on 2026-09-14). The
+    // see below; the two HOLD-COLUMN nudges, Ctrl+Left / Ctrl+Right, carried
+    // it from 2026-09-22 until their deletion on 2026-09-23, and the waveform
+    // magnification pair from 2026-08-26 until its deletion on 2026-09-14). The
     // press arms the burst
     // on the ChromePress itself and tick_chrome_press_repeat fires it with
     // GuiInputState::synthesized_repeat set, so the undo coalescing is the
     // repeat-identity rule the keyboard already has, and a fired burst
     // suppresses the lift's own act. Defaulted, so the rows that do not repeat
-    // need no eighth column. EIGHT ROWS CARRY IT since 2026-09-22 (six from
-    // 2026-09-14, the waveform magnification pair leaving with its setting,
-    // eight from 2026-09-13): the four arrows; the two hold-column nudges
-    // (the arrows' step with another camera); and UNDO / REDO (architect
+    // need no eighth column. SIX ROWS CARRY IT since 2026-09-23, re-counted
+    // off the table when the two hold-column nudges left it: the four arrows
+    // and UNDO / REDO (architect
     // 2026-09-13, "like the Left/Right nudge") — stepping through history is
     // the continuous step gesture their held chords already were at
     // repeat_eligible, and the buttons are glass's only road to it. Neither
@@ -258,11 +257,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the derived partition answers with nothing hand-listed. THE STEPPING
     // PAIR (bare `=` / `-`) WAS DELETED 2026-09-14 AND RESTORED 2026-09-22
     // (architect): the tablet's pen has no pinch, so these two buttons are the
-    // pen's zoom in and out. ONE ADMITS A MODIFIER: Full zoom out takes SHIFT
-    // since 2026-09-22 (redesign_button_shift_admits), its shift-click or long
-    // press dispatching Shift+0, RESET TRIM; the other three are refused a
-    // modified click at the band gate. NONE REPEATS: the `repeats` column is
-    // unset on all four rows (the keys repeat).
+    // pen's zoom in and out. TWO ADMIT A MODIFIER, SHIFT
+    // (redesign_button_shift_admits): Full zoom out since 2026-09-22, its
+    // shift-click or long press dispatching Shift+0, RESET TRIM, and Center
+    // since 2026-09-23, dispatching Shift+C — `c` that also arms the chase
+    // (AppState::camera_chase); the two zoom steps are refused a modified
+    // click at the band gate. NONE REPEATS: the `repeats` column is unset on
+    // all four rows (the keys repeat).
     {RedesignButton::IconZoomIn,
      GuiKeys::Equal,  false, false, false, false, true},                            // bare =
     {RedesignButton::IconZoomOut,
@@ -271,7 +272,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
     // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — bare `[` (bare
     // `]` for its first hours), a TOGGLE with
-    // a lamp, right after `c` and ahead of Follow. Live on a locked tab and
+    // a lamp, right after `c`. Live on a locked tab and
     // under the read-only lock (a display posture on that allowlist), greyed
     // in target view where the key cards, and DEAD in the `h` view, whose
     // allowlist does not name it.
@@ -281,9 +282,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain is a per-section profile resolved from the
     // magnification level markers column now.)
-    // FOLLOW — the ZOOM GROUP'S LAST MEMBER since 2026-08-27, and the last
-    // survivor of the mass-marker category. Bare `f`, a TOGGLE with a lamp,
-    // consumed by the `h` view and greyed in there.
+    // (FOLLOW'S ROW IS DELETED — architect 2026-09-23, with its button and
+    // bare `f`: the chase is a posture Shift+C arms, the Center button's
+    // shift press, with no lamp and no row of its own. AppState::camera_chase.)
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave the propagate commands the
     // new EDIT MENU as their one pointer home, so Ctrl+P and Ctrl+Alt+P reach
@@ -301,8 +302,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // admission to move, which is why both rows come back below unchanged when
     // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
     // which puts them past the viewport group rather than here.)
-    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
-    // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04) — Follow's shape,
+    // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04) — a lamp
     // closing the same group: bare `z`, a TOGGLE reading the live bit its own
     // chord flips. It shares its letter with the pair it governs, which is the
     // whole argument for the key, and it stood beside that pair in the toolbar
@@ -372,13 +372,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // listen stays lit in every state this row is live in.
     {RedesignButton::IconListen, GuiKeys::L,   false, false, false, false, true},   // bare l
     // THE READ-ONLY TOGGLE (2026-08-14, the padlock's move off the tabs): bare
-    // `o` toggles the ACTIVE tab's read-only bit. A TOGGLE like follow and
+    // `o` toggles the ACTIVE tab's read-only bit. A TOGGLE like
     // iteration — its selected face reads the live bit its own chord flips —
     // and NOT a radio: it presses through in both directions. The button is
     // its chord with no exception now, which is exactly why the padlock moved
     // here (the roster record is at RedesignButton::IconReadOnly).
     {RedesignButton::IconReadOnly, GuiKeys::O, false, false, false, false, true},   // bare o
-    // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like follow and
+    // THE HISTORY MODE (2026-08-04): bare `h`, a TOGGLE like
     // iteration — its chord opens the mode and closes it, and the button
     // dispatches on both edges because the icon row's band claim sits ABOVE the
     // mode's pointer gate (the rows' presses are covered by the KEYBOARD gate
@@ -407,7 +407,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     //
     // THE CUMULATIVE READING'S TOGGLE (2026-08-08): bare `u` flips the history
     // view's delta between ITERATIVE (off) and CUMULATIVE (on). A TOGGLE like
-    // follow, iteration and the history button — the selected face reads the
+    // iteration and the history button — the selected face reads the
     // live bit its own chord flips — and like the three entries below it, its
     // key is bound ONLY inside the view. WHAT KEEPS THE FOUR FROM DISPATCHING
     // OUTSIDE ONE IS THEIR ENABLED BIT AGAIN since 2026-08-18: they paint in
@@ -667,8 +667,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false, true},                             // bare k
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
-    // behind a separator and ahead of the arrows — THE WALK and, since
-    // 2026-09-22, the two HOLD-COLUMN nudges. The declined double-click
+    // behind a separator and ahead of the arrows — THE WALK ALONE since
+    // 2026-09-23 (the two HOLD-COLUMN nudges stood beside it from 2026-09-22
+    // and were deleted with their chords). The declined double-click
     // rule's mechanical reason is recorded at the roster entry (every
     // double-click surface in this product acts on its FIRST click too).
     // WALK BOTH TABS was a member on Ctrl+Shift+Tab until the architect
@@ -695,16 +696,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // Alt Tab row from 2026-09-22, was deleted 2026-09-23 with that ruling.)
     {RedesignButton::TransportWalk,
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
-    // THE HOLD-COLUMN NUDGES (architect 2026-09-22): Ctrl+Left and
-    // Ctrl+Right as their OWN BASE CHORDS, the `ctrl` column set (Undo's
-    // shape), and REPEATING like the four arrows — the held button walks
-    // with the held column at every fire, the key's own hold. They admit no
-    // modifier. In the `h` view the chord is refused as bare Left / Right
-    // is, so the derived partition greys them with the arrows.
-    {RedesignButton::TransportHoldLeft,
-     GuiKeys::Left,   true,  false, false, false, true, true},                       // Ctrl+Left
-    {RedesignButton::TransportHoldRight,
-     GuiKeys::Right,  true,  false, false, false, true, true},                       // Ctrl+Right
+    // (THE HOLD-COLUMN NUDGES' ROWS — Ctrl+Left and Ctrl+Right, 2026-09-22 —
+    // ARE DELETED with their buttons and their chords, architect 2026-09-23:
+    // the held column is a posture an explicit centring arms, read by the
+    // bare arrows below, AppState::camera_hold.)
     // The arrows, in their painted order since 2026-08-14 (the architect's:
     // down, up, left, right, replacing the row's original vim order). The
     // lookup is by id, so this order is for the reader alone. The eighth
@@ -724,8 +719,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // HOLD-REPEAT's own chord so a held modified press repeats its own step.
     // LEFT / RIGHT ADMIT NEITHER since 2026-09-21 (the horizontal ladder
     // retired; their one step is the active column's unit, a hop on P), and
-    // their CTRL form — the same step holding the column, 2026-09-22 — is
-    // its own two buttons above rather than a ctrl-click here.
+    // Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23 — the camera their
+    // step takes is the hold posture's (AppState::camera_hold).
     // Setting a column here instead would make the modified form the
     // button's ONLY act.
     {RedesignButton::TransportDown,
@@ -1297,7 +1292,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   partition's dead one, and the walk says so with nothing hand-listed);
 //   copy phase (Ctrl+P), paste
 //   phase (Ctrl+Alt+P), the BPM
-//   opener (Ctrl+B), iteration mode (bare `i`), follow (bare `f`), listen
+//   opener (Ctrl+B), iteration mode (bare `i`), listen
 //   (bare `l`); the FOUR MARKER VERBS since
 //   the 2026-08-12 relayout (bare `s`, Delete, Ctrl+D, Ctrl+N — authoring,
 //   consumed like the rest, and unmoved by their 2026-08-18 change of ROW:
@@ -1554,6 +1549,10 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     // complete clearing-owner inventory is at GuiAuditionSequence
     // (app_state.h).
     clear_audition_sequence(app);
+    // AND THE HOLD POSTURE GOES OUT ON THE SAME MOVEMENT, for the same reason
+    // and above the same return: one of its three movement-owner clears (the
+    // rule and the nudge's exemption are at AppState::camera_hold).
+    app.camera_hold = false;
     reseat_playhead_on_marker(app, audio, viewport, hit);
 }
 
@@ -1590,8 +1589,10 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
 void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t src_frame) {
     // The A/B audition's end, this entry point's half of it — the argument is
-    // at the marker form above, the inventory at GuiAuditionSequence.
+    // at the marker form above, the inventory at GuiAuditionSequence. The
+    // hold posture's clear likewise (AppState::camera_hold).
     clear_audition_sequence(app);
+    app.camera_hold = false;
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
 }
 
@@ -1719,9 +1720,10 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 //     (GuiCarTransport); its comparator simply publishes the new session, and
 //     a pending car play dies at the click itself, launched or refused (the
 //     press count at the body's head).
-//   * FOLLOW: the stop clears the chase, and the lamp's spend is
-//     launch_playback_from's success tail as on every launch — an armed lamp
-//     is spent by the scrub's launch, a dark one leaves the play unchased.
+//   * THE CHASE: the stop over a live session spends the chase posture (the
+//     one stop body, AppState::camera_chase), so a scrub over a chasing play
+//     plays unchased; a scrub at rest with the chase armed launches into it,
+//     the posture standing until that play ends.
 //   * COST: the stop's quiescence fence is now paid on EVERY click over a
 //     live session (at most one per click; a stopped session pays none).
 // The stop body is called unconditionally: it is a no-op on a stopped
@@ -2888,7 +2890,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // the first and the centroid delta is 0 on the second, so the off term is a
     // literal no-op either way). Everything downstream is the strip drag's own
     // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
-    // either-axis follow suppression, and the mid-gesture true-no-op skip.
+    // camera postures' clear on either axis, and the mid-gesture true-no-op
+    // skip.
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    /*final=*/false);
 }
@@ -6282,12 +6285,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // the ONLY difference between the halves now, and it is TWO differences
         // read honestly, both pre-existing and neither touched by this ruling:
         // the placement also DESELECTS and ENDS A CHASING PLAY'S CHASE, while
-        // the scrub act touches no selection, no cursor and no follow state at
-        // all.
+        // the scrub act touches no selection, no cursor and no chase posture
+        // of its own (its stop spends a chase, as every stop does).
         //
         // WHAT THE LOWER HALF GAINS BY BEING A PENDING: for the press's whole
         // life it is a live pointer gesture like the upper half's — the wheel
-        // and every chord are swallowed, the follow chase is paused, and the
+        // and every chord are swallowed, the chase is paused, and the
         // cursor holds the uniform Arrow — which is exactly the symmetry the
         // ruling asked for and not a new rule of its own.
         //
@@ -6481,7 +6484,7 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
 // (the drag-modal keyboard gate swallows every chord while the pending
 // stands, so no command can change the state in between).
 //   LIVE arm: deselect-all, then the placement body — playhead to the column,
-//   live-session reseek, follow override (place_playhead_at_click_column).
+//   live-session reseek, the chase's end (place_playhead_at_click_column).
 //   The placement writes through the movement owner move_playhead_to, which
 //   ends an A/B audition (a placement moves the playhead's position in the
 //   music). A GUTTER column deselects and seats nothing.
@@ -6495,8 +6498,9 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
 //   press column and NOTHING ELSE — the act the lower half used to run at
 //   mouse-down, moved here whole so that nothing on this surface pops at a
 //   press any more. It is deliberately the FIRST arm and returns ahead of the
-//   other two: the scrub selects nothing, moves no cursor and overrides no
-//   follow, which is the halves' ONE difference (two, read honestly — the
+//   other two: the scrub selects nothing, moves no cursor and writes no
+//   chase of its own (its stop spends one, as every stop does), which is the
+//   halves' ONE difference (two, read honestly — the
 //   omissions are the second). It cannot coincide with the `h` arm (that view
 //   has no scrub half), and the scrub's own gutter no-op lives inside
 //   scrub_press_at.
@@ -6551,10 +6555,12 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     if (was_playing && sample != playhead_at_entry)
         playback_lifecycle.reseek_keeping_alive(sample);
     // END THE CHASE for the play in flight: the user placed the cursor
-    // deliberately, so follow must not page the viewport away from it. One of
-    // two producer classes (the other being any viewport pan); the inventory
-    // and the rest of the bit's writers live at its declaration, app_state.h.
-    if (was_playing) app.follow_engaged = false;
+    // deliberately, so the chase must not page the viewport away from it —
+    // the DAW convention (architect 2026-09-23). At rest the click leaves an
+    // armed chase standing: it moves no camera, and the next play is still
+    // the one the arm was for. The rest of the bit's rule is at its
+    // declaration, AppState::camera_chase.
+    if (was_playing) app.camera_chase = false;
     return sample;
 }
 
@@ -6865,7 +6871,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // A MOTIONLESS press is THE DEFERRED CLICK — run_nav_click_act at the
         // press column, running THE PRESSED HALF'S OWN ACT: the upper half's
         // placement (deselect / mode-land, playhead, reseek,
-        // follow override) or the lower half's audition SCRUB (2026-08-13),
+        // chase end) or the lower half's audition SCRUB (2026-08-13),
         // plus the EmptyLane double-click seed when the press was the marker
         // lane's empty stretch (release-side seeding, the TrimBar pattern: only
         // the release knows it stayed a click). No capture ever began, so
@@ -7573,7 +7579,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // TOGGLE — dispatching would switch AWAY from what the user just
         // clicked. So the press is a consumed nothing, which also makes "no
         // button was hit" and "the selected half was hit" the same silent
-        // outcome. Toggles (follow, iteration) are NOT radios and press through
+        // outcome. Toggles (iteration, read-only) are NOT radios and press through
         // in both directions.
         if (tc.radio && redesign_button_selected(app, tc.id)) return true;
         // THE ARM. The pressed face paints from it on the very next frame
@@ -10003,7 +10009,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the release bodies' standing shape. NO CLICK ACT RUNS HERE: it ran
         // at the press, so the stop, the select and the land
         // all already stand — the select is what paints the dragged flag
-        // BRIGHTENED, and the stop is why no follow override is needed below
+        // BRIGHTENED, and the stop is why no chase end is needed below
         // (nothing can restart playback under the held button: the drag-modal
         // gate swallows every chord while this pending stands).
         const PendingMarkerPress press = app.pending_marker_press;
@@ -10075,9 +10081,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // like any other and takes the loop tail's re-resolve like one.
                 return;
         }
-        // No follow override needed: the arming press ran the click act's
-        // stop, and nothing can have restarted playback since (the drag-modal
-        // gate), so there is no live playhead to chase.
+        // No chase end needed: the arming press ran the click act's stop, which
+        // spent any chase, and nothing can have restarted playback since (the
+        // drag-modal gate), so there is no live playhead to chase.
     }
     // THE VALUE DRAG'S LIVE ARM (2026-09-10), ahead of the marker drag's own
     // and in its shape exactly: a lost button ends the gesture through its

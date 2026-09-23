@@ -596,8 +596,8 @@ struct GuiPaintHandler {
     // see the routing rules at the definition). Undriven changes — resize (but
     // for a clamp that moves the effective gain, GuiPaintHandler::on_resize),
     // the launch load, the preview completion's repaint — stay on the worker;
-    // FOLLOW SCROLLING joined this route 2026-09-02 (the vanishing playhead
-    // line — the reasoning is at Viewport::follow_scroll_if_needed).
+    // THE CHASE'S PAGE TURN joined this route 2026-09-02 (the vanishing
+    // playhead line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();
 
     // True when a plate is displayed (wf_cache.fp_rendered) and its published
@@ -769,8 +769,9 @@ private:
     // had carried under them from 2026-08-13 was deleted for the one-day
     // status bar whose state text is row 8's own cell now),
     // the
-    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-three
-    // view/mode/action buttons since Zoom In and Zoom Out were restored
+    // ICON ROW (top lane 1 since that relayout, row 4: the twenty-two
+    // view/mode/action buttons since Follow's deletion 2026-09-23,
+    // twenty-three from Zoom In and Zoom Out's restoration
     // later on 2026-09-22, twenty-one from the Show trim region button's
     // deletion that day, twenty-two from the IGNORE WAVEFORM MAGNIFICATION
     // lamp's arrival that day, twenty-one from the FLATTEN button's arrival from the
@@ -786,7 +787,7 @@ private:
     // under it, 2026-08-29:
     // the transport three, the clock and the STATE CELL left, then the marker
     // verbs, the
-    // marker-walk three and the arrow four flush
+    // marker walk and the arrow four flush
     // right behind their separators, declared
     // below).
     // All four PUBLISH their buttons' hit rects into app.redesign_buttons —
@@ -812,7 +813,7 @@ private:
     // 2026-08-12; the arrows flush right since the same day's relayout): the
     // transport three at the left pad, then the right margin's block — the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp)
-    // + separator + marker-walk three + separator + arrow four (2026-08-15 for the walk
+    // + separator + marker walk + separator + arrow four (2026-08-15 for the walk
     // group, 2026-08-18 for the verbs) — at
     // the icon row's boxes, the
     // monospace clock at its own left-anchored pen behind the transport's
