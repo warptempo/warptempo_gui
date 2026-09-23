@@ -942,8 +942,9 @@ struct EditorTextDragState {
 // three-way selection fork, the land, and the plain arm's
 // double-click consume-open); the PLAIN shape then arms this record. SHIFT and
 // CTRL arm nothing — they have no drag to become and their click has already
-// committed — and a CONSUMED double-click open arms nothing either (the editor
-// owns input, and the consume must preempt the drag arm). A MOTIONLESS RELEASE
+// committed — and a RECOGNIZED double-click's second press arms nothing
+// either, its open run or refused (a double-click is never a drag — the rule
+// at DoubleClickSurface). A MOTIONLESS RELEASE
 // seeds the next Marker double-click candidate and nothing else (the seed is a
 // release act by family rule — only the release knows the press stayed still).
 // A CROSSING of drag_moved_threshold_px() (Chebyshev from the press; the one
@@ -1657,7 +1658,37 @@ enum class DoubleClickSurface {
 // if it lands within kDoubleClickMs and double_click_slack_px() of the recorded
 // position AND (for Marker) targets the same marker, is consumed as that
 // surface's double-click action instead of the single-click action. A drag that
-// MOVED records nothing and clears any candidate. Surfaces:
+// MOVED records nothing and clears any candidate.
+//
+// A DOUBLE-CLICK IS NEVER A DRAG (architect 2026-09-22) — THE RULE'S ONE HOME;
+// every consume site carries a one-line pointer here. The press that completes
+// a double-click performs its surface's act and ARMS NOTHING: no pending of
+// any kind (marker press, trim drag, nav press, click act) and no gesture, so
+// its release is inert and nothing freezes the displayed basis. A recognized
+// second press whose act REFUSES (a locked tab, the P column's payload, the
+// create's home-view gate) arms nothing either — it is still the second press
+// of a double-click. THE ONE STATED EXCEPTION is EditorText: its second press
+// arms the text drag BY WORDS (architect 2026-09-05), which is selection
+// inside an open field, not a drag gesture on the canvas. THE INVENTORY,
+// re-grepped 2026-09-22 — every consume of a candidate, all in
+// input_pointer.cpp and all reached through on_button_press, which the touch
+// translation drives with the same deliveries, so glass keeps the rule with
+// no touch-side code:
+//   (1) TrimBar, the live band (on_button_press's trim-bar arm) — frames and
+//       returns ahead of route_trim_bar_press (a fall-through into the
+//       cap/bridge arm stood until this ruling; its pending held the staged
+//       viewport's promote, so the trim bar snapped to the framing late);
+//   (2) TrimBar, the `h` view (handle_history_mode_press) — frames and
+//       returns, as it always did;
+//   (3) Marker (run_marker_click_act) — returns ahead of the
+//       PendingMarkerPress arm, the editor opened or refused (the refused
+//       consume fell through to that arm until this ruling);
+//   (4) EmptyLane (on_button_press's empty marker-lane arm) — creates and
+//       returns ahead of arm_nav_press, as it always did;
+//   (5) EditorText (the editor field's press arm, over
+//       editor_double_press_at, which the touch layer's DoublePress query
+//       also reads) — the exception above.
+// Surfaces:
 //   TrimBar    -> the SPAN-FRAMING command on the trim bar lane, its whole band
 //                 (run_span_framing_command: a proper trim sub-window, else the
 //                 whole song), IN EVERY STATE since 2026-08-18 — the `h` history
@@ -1672,12 +1703,8 @@ enum class DoubleClickSurface {
 //                 becomes a drag"; the one-day lift deferral of 2026-08-15 and
 //                 its verdict-before-arm machinery are deleted). A consumed
 //                 press seeds no TrimBarPressSeed (the family rule — a consumed
-//                 press never seeds) but DOES still fall through to the band's
-//                 cap/bridge arm, so a second press that then crosses into a
-//                 trim drag proceeds from the framed view — the architect's
-//                 accepted cost, trim's no-undo notwithstanding: "if I'm double
-//                 clicking specifically to do the double click action, I would
-//                 never double click into a drag". The
+//                 press never seeds) and arms no cap/bridge drag (the rule
+//                 above). The
 //                 seed is that lane's own press record (TrimBarPressSeed),
 //                 not a strip-drag field: the lane arms a pending trim drag
 //                 rather than a live one, so there is no drag state to hang it
@@ -1689,8 +1716,9 @@ enum class DoubleClickSurface {
 //                 marker-text lane's run in row 5). THE CONSUME ACTS AT THE
 //                 PRESS (2026-08-17 — the editor opens Enter-fast again; the
 //                 lift deferral was "a tad slow compared to the Enter key"),
-//                 its three gates read live at that press, and a consumed open
-//                 arms no drag and seeds nothing (the editor owns input). The
+//                 its three gates read live at that press, and the second
+//                 press arms no drag and seeds nothing, open or refused (the
+//                 rule above). The
 //                 SEED stays a release act: the motionless lift writes the next
 //                 candidate at the PRESS coordinates so the pairing stays
 //                 press-to-press. A press that becomes a real marker drag seeds
@@ -1764,8 +1792,8 @@ struct DoubleClickCandidate {
 // the same condition by construction — STILL TRUE with the framing consume back
 // at the press (2026-08-17; it spent one day at the lift, 2026-08-15..17): the
 // press that CONSUMES records no seed at all (a consumed press never seeds, the
-// double-click family rule — it frames and falls through to the cap/bridge arm
-// with no seed), so this record is only ever written by a NON-consuming press
+// double-click family rule — it frames and returns, arming nothing), so this
+// record is only ever written by a NON-consuming press
 // that armed the cap/bridge drag or claimed bare band, which are precisely
 // the two the "no trim drag went live" clause was written for. Cleared at every left release (the release
 // consumes it) and by the force-end finalizer, beside the candidate's own clear.

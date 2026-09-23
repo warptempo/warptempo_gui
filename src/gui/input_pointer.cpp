@@ -3884,11 +3884,13 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
 // reads the press-time candidate SNAPSHOT (dc_at_press), because
 // on_button_press's top-of-frame clear has already emptied the shared field.
 //
-// THE CONSUME PREEMPTS THE DRAG ARM: a consumed open returns before the arm,
-// so no drag can begin under the editor it just opened (the editor owns input;
+// THE CONSUME PREEMPTS THE DRAG ARM: a recognized second press returns before
+// the arm whether its open ran or refused — a double-click is never a drag
+// (architect 2026-09-22; the rule is at DoubleClickSurface, app_state.h) — so
+// no drag can begin under the editor it just opened (the editor owns input;
 // it is pointer-transparent, and a second press that then moves is the
-// editor's problem, not a marker drag). A consumed open seeds nothing either —
-// the family rule.
+// editor's problem, not a marker drag). It seeds nothing either — the family
+// rule.
 void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
                                            bool ctrl,
                                            const DoubleClickCandidate&
@@ -4034,15 +4036,19 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // editor) refuse SILENTLY — the gesture class's own answer, and the one
     // place this road parts from bare Enter, whose two refusals card since
     // 2026-08-30 (the lock at the key gate, the subject at the arm) — and
-    // a refused consume stays a plain second select that seeds afresh at its
-    // release. THE OFF-HOME COLUMN NO LONGER REFUSES (architect 2026-08-24):
+    // a refused consume is still the double-click's second press, so it arms
+    // nothing either (below). THE OFF-HOME COLUMN NO LONGER REFUSES (architect 2026-08-24):
     // the payload editor edits a marker's VALUES and never its position, so it
     // is a member of the fifth ruled exception to the home-view binding and
     // opens in W+target too (the inventory is at
     // active_column_authoring_allowed, app_state.h).
-    // A CONSUMED OPEN ARMS NOTHING AND SEEDS NOTHING: the editor owns input,
-    // and the return ahead of the arm below is what makes "nothing arms a
-    // marker drag after a consumed open" structural rather than policed.
+    // A RECOGNIZED SECOND PRESS ARMS NOTHING AND SEEDS NOTHING, OPENED OR
+    // REFUSED — A DOUBLE-CLICK IS NEVER A DRAG (architect 2026-09-22; the rule
+    // and its inventory are at DoubleClickSurface, app_state.h): the return
+    // ahead of the arm below is what makes "nothing arms a marker drag after a
+    // double-click" structural rather than policed. (Until that ruling a
+    // REFUSED consume — the P column's payload, a locked tab — fell through
+    // to the arm, so a double-click that then moved became a marker drag.)
     //
     // AND THE CELL DECIDES WHICH EDITOR (2026-08-19; every cell its own since
     // 2026-09-05 — "each should be like a mini flag with its own
@@ -4061,11 +4067,13 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // opens fully SELECTED (open-selected), so there is no clicked-glyph
     // caret to seat; a specific caret spot is a click inside the already-open
     // editor (the F2.1 path).
-    if (dc_at_press.surface == DoubleClickSurface::Marker &&
+    const bool double_click =
+        dc_at_press.surface == DoubleClickSurface::Marker &&
         dc_at_press.target == hit &&
         monotonic_ms() - dc_at_press.time_ms <= kDoubleClickMs &&
         std::abs(x - dc_at_press.press_x) <= double_click_slack_px() &&
-        std::abs(y - dc_at_press.press_y) <= double_click_slack_px() &&
+        std::abs(y - dc_at_press.press_y) <= double_click_slack_px();
+    if (double_click &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
         // Read-only refuses every one of the marker-lane editors, as it
         // always did. The ITERATION lock refuses the payload — it opens
@@ -4085,8 +4093,9 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
             // WARP column's canonical-line editor, and since 2026-09-15 the
             // MAGNIFICATION LEVEL column's one-digit LEVEL editor, which is
             // that column's whole payload. A phase reset authors no payload
-            // line at all, so the P column alone falls through to the pending
-            // arm, silent. (The bare-Return arm makes the same fork.)
+            // line at all, so the P column alone opens nothing, silent — and
+            // arms nothing, the double-click return below. (The bare-Return
+            // arm makes the same fork.)
             if (app.active_markers_view == 'M') {
                 flag_editor.enter_magnification_level_edit(hit);
                 return;
@@ -4107,10 +4116,11 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
             return;
         }
     }
+    if (double_click) return;
     // ARM THE PENDING — the drag the plain press may become (the crossing
     // begins it, its gates there) and the SEED its motionless
-    // release owes. UNCONDITIONAL: even a locked tab or an off-home column
-    // arms, because the release still seeds — only the DRAG is gated, at the
+    // release owes. UNCONDITIONAL past the double-click return above: even a
+    // locked tab or an off-home column arms, because the release still seeds — only the DRAG is gated, at the
     // crossing (a locked tab still selects and lands; read-only protects the
     // authored musical content, and a selection is navigation).
     app.pending_marker_press = PendingMarkerPress{};
@@ -5249,7 +5259,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // double-click-drag. On glass this press arrives at the
                 // finger's DOWN (the translation delivers a second press on
                 // contact once the seed makes it certain), so a double tap
-                // that then drags takes this same arm.
+                // that then drags takes this same arm. It is the one stated
+                // exception to "a double-click is never a drag" (the rule at
+                // DoubleClickSurface, app_state.h): selection inside an open
+                // field, not a drag gesture on the canvas.
                 if (editor_double_press_at(dc_at_press, x, y)) {
                     text_editor::select_word_at(
                         *g.ed, editor_byte_index_at(g, x));
@@ -6121,41 +6134,35 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // a marker or editor candidate from consuming here, and the TEST
                 // is shared with the history mode's own trim-bar double-click
                 // (trim_bar_double_click_at) so the two cannot drift on the
-                // gesture while running different commands on it. It DIVERGES
+                // gesture, and both run this one command. It DIVERGES
                 // from the bare `0` key, which only ever reaches the whole song
                 // (and, from there, `c`); this frames a proper trim sub-window,
                 // else the whole song (the region arm above those two died with
                 // the separate region state on 2026-08-18 — the overlay and the
                 // trim window are one span now).
                 //
-                // THE CONSUME ACTS AT THIS PRESS (2026-08-17, reverting the
-                // one-day verdict-before-arm deferral of 2026-08-15: a
-                // recognized second press acts immediately on every
-                // double-click surface — "if I'm double clicking specifically
-                // to do the double click action, I would never double click
-                // into a drag"). A consumed press FRAMES here and then FALLS
-                // THROUGH to the band's ordinary cap/bridge arm below, seeding
-                // nothing (a consumed press never seeds — the family rule, so
-                // the double-click cadence stays second-press-only).
-                //
-                // THE ACCEPTED COST, recorded because trim has no undo: a
-                // second press that then crosses into a cap/bridge drag
-                // proceeds FROM THE FRAMED VIEW — the framing changed the
-                // viewport under the held button, and the drag that follows
-                // moves a bound with nothing to take it back. The architect's
-                // ruling is that the drift-into-drag double-click is a
-                // nonexistent use case; the frame-then-drag, where it happens,
-                // is the user's own two-act gesture.
-                const bool framed = trim_bar_double_click_at(dc_at_press, x, y);
-                if (framed) run_span_framing_command();
+                // THE CONSUME ACTS AT THIS PRESS AND ARMS NOTHING — A
+                // DOUBLE-CLICK IS NEVER A DRAG (architect 2026-09-22; the rule
+                // and its inventory are at DoubleClickSurface, app_state.h):
+                // the second press frames and RETURNS, exactly as the `h`
+                // view's copy of this gesture always did, so its release is
+                // inert and no pending trim drag stands to freeze the
+                // displayed basis under the new framing. It seeds nothing (a
+                // consumed press never seeds — the family rule, so the cadence
+                // stays second-press-only). (Retired: the fall-through into
+                // the cap/bridge arm below and its "accepted cost" — the armed
+                // pending held the staged viewport's promote until the
+                // release, so the waveform zoomed at once and the trim bar
+                // snapped to the framing a release, a tick and a frame later.)
+                if (trim_bar_double_click_at(dc_at_press, x, y)) {
+                    run_span_framing_command();
+                    return;
+                }
                 // SEEDING is a RELEASE act (only the release knows the press
                 // stayed still), so the press records its point and the release
-                // decides — see TrimBarPressSeed. A consumed press records no
-                // seed (above); every other plain band press does.
-                if (!framed) {
-                    app.trim_bar_press = TrimBarPressSeed{
-                        .active = true, .press_x = x, .press_y = y};
-                }
+                // decides — see TrimBarPressSeed.
+                app.trim_bar_press = TrimBarPressSeed{
+                    .active = true, .press_x = x, .press_y = y};
                 // THE BAND'S READ-ONLY RETURN IS DELETED (architect 2026-08-07):
                 // it was the sole read-only defense for the whole trim-bar band,
                 // and the ruling removed the thing it was defending — read-only
@@ -6234,6 +6241,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         monotonic_ms() - dc.time_ms <= kDoubleClickMs &&
                         std::abs(x - dc.press_x) <= double_click_slack_px() &&
                         std::abs(y - dc.press_y) <= double_click_slack_px()) {
+                        // A double-click is never a drag: the rule at
+                        // DoubleClickSurface (app_state.h).
                         create_marker_at_empty_lane(x - area.x);
                         return;
                     }
@@ -8455,11 +8464,11 @@ bool GuiInputHandler::handle_history_mode_press(
     // release to resolve — TrimBarPressSeed, whose release-side owner needs no
     // mode arm of its own, since it seeds on "the pointer never left the slack
     // and no trim drag went live" and no trim drag can go live in here at all.
-    // A consumed press seeds nothing (the family rule) and, unlike the live
-    // band's, falls through to NO cap/bridge arm — the mode has none — so it
-    // frames and is done. NOTHING differs from the live band now but that
-    // fall-through, which is why the framing itself is the live owner's call
-    // rather than a mode arm.
+    // A consumed press seeds nothing (the family rule) and frames and is done,
+    // arming nothing — a double-click is never a drag (architect 2026-09-22;
+    // the rule is at DoubleClickSurface, app_state.h), which the live band
+    // now obeys too, so NOTHING differs between the two and the framing
+    // itself is the live owner's call rather than a mode arm.
     //
     // THE WAY TO SEE A WHOLE DELTA is to zoom out and come back: bare `0` is on
     // the mode's allowlist and the delta's flags are laid across the whole
