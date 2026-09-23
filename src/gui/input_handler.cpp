@@ -3132,13 +3132,21 @@ void GuiInputHandler::run_center_command() {
 // out at the chokepoint (clamp_viewport_start) and its focused landing may
 // stop the play: a chase that stood before `c` stands after it unless that
 // play ended under it, the stop being the chase's spend.
+// "A PLAY STOOD" IS THE STOP BODY'S OWN QUESTION, asked through its one owner
+// (GuiPlaybackLifecycle::project_session_stands) before and after the
+// centring — not the callback's playback.is_playing(), which reads false in
+// the sub-tick window after a natural end (or a lost device) while the
+// session still stands: a focused `c` there would take the play for a rest,
+// its landing's stop would spend the chase, and the restore would put it
+// back for a play that has already ended.
 void GuiInputHandler::run_center_key_command(bool arm_chase) {
     const bool chase_before = app.camera_chase;
-    const bool was_playing  = playback.is_playing();
+    const bool play_stood   = playback_lifecycle.project_session_stands();
     run_center_command();
     app.camera_hold = true;
     if (arm_chase ||
-        (chase_before && (!was_playing || playback.is_playing())))
+        (chase_before &&
+         (!play_stood || playback_lifecycle.project_session_stands())))
         app.camera_chase = true;
 }
 

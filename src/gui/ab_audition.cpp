@@ -176,9 +176,13 @@ void GuiAbAudition::start() {
     // bits are read here and written back behind the writes. The one
     // exception is a chase belonging to a plain play this press interrupts:
     // the switch's stop ends that play, which spends its chase as every
-    // project play's end does.
+    // project play's end does — asked through the stop body's own owner
+    // (GuiPlaybackLifecycle::project_session_stands), not the callback bit,
+    // which reads a play that has just reached its natural end as a rest
+    // while its session (and the spend) still stands.
     const bool hold_before  = app.camera_hold;
-    const bool chase_before = app.camera_chase && !playback.is_playing();
+    const bool chase_before =
+        app.camera_chase && !playback_lifecycle.project_session_stands();
     apply_working_zoom();
     // Step 1: the ordinary tab switch (the stop of any live audition, the
     // selection clear, the band swap, the coincidence auto-select and the

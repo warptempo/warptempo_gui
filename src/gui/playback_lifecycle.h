@@ -135,6 +135,23 @@ struct GuiPlaybackLifecycle {
     // definition's own contract, a handler about to commit a new cursor position.
     void stop_playback_if_playing();
 
+    // DOES A PROJECT PLAY STAND — the session the one stop body above would
+    // end AND spend the chase for (AppState::camera_chase), ONE owner
+    // (Sol review 2026-09-23): the audio callback is playing OR the playhead
+    // scanner is still active, with neither the A/B audition standing (whose
+    // stops spend nothing) nor the render player open (whose stops take their
+    // own fork). The stop body reads it for its spend, and the sites that must
+    // tell "at rest" from "a project play this act may stop" read it too:
+    // bare `c` / Shift+C (GuiInputHandler::run_center_key_command) and the
+    // A/B audition's start (GuiAbAudition::start). WHY NOT
+    // playback.is_playing() ALONE: that is the callback's bit, which drops at
+    // the natural end (and on a lost device) a sub-tick before the GUI tick
+    // runs the stop that clears the scanner and spends the chase — a
+    // session still stands in that window, and an act that read the callback
+    // bit there would take it for a rest and put back a chase the stop it
+    // triggers has just spent.
+    bool project_session_stands() const;
+
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
     // opens. THE CALLER INVENTORY, re-derived by grep 2026-09-22 — TEN

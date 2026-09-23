@@ -40,9 +40,12 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // the sub-tick window (the natural end observed by the tick's own branch,
     // which reads the phase before calling here and advances after). The
     // complete edge inventory is at GuiAuditionSequence (app_state.h).
-    // Whether the session this stop ends is one of the act's plays is read
-    // FIRST, for the chase's spend at the tail (the act's stops spend nothing).
-    const bool audition_session = audition_sequence_standing(app);
+    // Whether this stop ends a PROJECT play is read FIRST, for the chase's
+    // spend at the tail, through the one owner the acts that must tell a rest
+    // from a play also read (project_session_stands: not an audition's play,
+    // whose stops spend nothing, and not the player's). Read ahead of the
+    // audition clear below, which would otherwise hide the act.
+    const bool spends_chase = project_session_stands();
     clear_audition_sequence(app);
     // THE RENDER PLAYER'S FORK, INSIDE THE ONE STOP BODY (2026-08-28): the
     // player's transport is a session over ITS OWN buffer with no scanner and
@@ -114,8 +117,18 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // only if Shift+C arms it again. Past the guard, so a stop at rest spends
     // nothing (an armed chase waits for its launch); not at an A/B audition's
     // stop, whose plays the chase ignores; and the render player's stops
-    // returned above. The rule is at AppState::camera_chase.
-    if (!audition_session) app.camera_chase = false;
+    // returned above — the three terms of project_session_stands, read at the
+    // head. The rule is at AppState::camera_chase.
+    if (spends_chase) app.camera_chase = false;
+}
+
+bool GuiPlaybackLifecycle::project_session_stands() const {
+    // The guard's own test below the player fork of stop_playback_if_playing
+    // (the callback bit OR the tick-cleared scanner), minus the two sessions
+    // whose stops do not spend the chase. Contract at the declaration.
+    if (app.render_player.active) return false;
+    if (audition_sequence_standing(app)) return false;
+    return playback.is_playing() || app.playhead_scanner_active;
 }
 
 // The one owner of the modal-open stop. See the declaration for the decision

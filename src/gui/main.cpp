@@ -1104,13 +1104,17 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     // camera it settles somewhere other than where it settled last puts out
     // both postures here, once for every writer. The rule, the writer
     // inventory this claim rests on and the exempt writers (which keep or
-    // re-arm their bit after this call) are at AppState::camera_hold.
-    if (a.viewport_start_sample != a.camera_posture_viewport_start ||
-        a.zoom_level != a.camera_posture_zoom_level) {
+    // re-arm their bit after this call) are at AppState::camera_hold. THE
+    // CAMERA IS FOUR FIELDS (AppState::camera_posture_identity): the tab and
+    // the audio view ride beside the start and the zoom, so a switch that
+    // lands the same two numbers still registers as the change it is.
+    const AppState::CameraPostureIdentity settled{
+        a.viewport_start_sample, a.zoom_level,
+        a.active_tab_view, a.active_audio_view};
+    if (settled != a.camera_posture_identity) {
         a.camera_hold  = false;
         a.camera_chase = false;
-        a.camera_posture_viewport_start = a.viewport_start_sample;
-        a.camera_posture_zoom_level     = a.zoom_level;
+        a.camera_posture_identity = settled;
     }
 }
 

@@ -4653,9 +4653,10 @@ struct AppState {
     // viewport write — every writer of viewport_start_sample or zoom_level on
     // the live fields — funnels through clamp_viewport_start (main.cpp)
     // before anything reads the camera, and that function compares the camera
-    // it settles on with the one it settled on last
-    // (camera_posture_viewport_start / camera_posture_zoom_level below): a
-    // CHANGED CAMERA CLEARS BOTH BITS. So a write that lands the camera where
+    // it settles on with the one it settled on last (camera_posture_identity
+    // below — the viewport start, the zoom, the active tab and the active
+    // audio view): a CHANGED CAMERA CLEARS BOTH BITS, and a tab switch or an
+    // S/T flip is always a changed camera. So a write that lands the camera where
     // it already was (a wall-saturated pan, a resize that rounds back onto
     // the same grid point) clears nothing, and no writer can forget the clear.
     // THE WRITER INVENTORY THE CLAIM RESTS ON, grepped 2026-09-23 (every
@@ -4684,7 +4685,10 @@ struct AppState {
     // keep-visible edge-align keep CHASE; and the A/B AUDITION keeps BOTH
     // across its own camera writes (its `c`s and tab switches, GuiAbAudition::
     // start and advance_after_natural_end), the act ignoring the postures as
-    // it ignored the follow lamp. Each is listed under its bit.
+    // it ignored the follow lamp. Each is listed under its bit. Each writes
+    // its bit back AFTER the chokepoint has rewritten its memory (below), so
+    // the kept bit stands against the camera the writer left — the audition's
+    // switched tab included — and the next change still clears it.
     //
     // HOLD — THE NUDGE CAMERA. While it stands, bare Left / Right (their held
     // repeats, and the arrow buttons, which dispatch those chords) HOLD THE
@@ -4766,7 +4770,10 @@ struct AppState {
     //     subject.
     //   * SPENT BY THE PLAY'S END: the one stop body
     //     (GuiPlaybackLifecycle::stop_playback_if_playing, natural end
-    //     included) puts it out when a project session stood — not at rest,
+    //     included) puts it out when a project session stood
+    //     (GuiPlaybackLifecycle::project_session_stands, the one owner the
+    //     acts that keep the chase across a possible stop — bare `c`, the A/B
+    //     audition's start — read too) — not at rest,
     //     not at an A/B audition's stop, not at a render player stop — so it
     //     is a ONE-SHOT, and a REFUSED launch spends nothing.
     //   * CLEARED by every other camera change (the chokepoint above — the
@@ -4780,11 +4787,28 @@ struct AppState {
     bool    camera_chase           = false;
 
     // THE CAMERA THE CHOKEPOINT SETTLED ON LAST — the compare's memory
-    // (clamp_viewport_start, main.cpp), and nothing else reads them.
-    // Rewritten by that function whenever the camera it settles differs from
-    // them, which is also the moment it clears the two postures above.
-    int64_t camera_posture_viewport_start = 0;
-    double  camera_posture_zoom_level     = kWorkingZoomLevel;
+    // (clamp_viewport_start, main.cpp, its ONE reader and ONE writer; nothing
+    // else touches it). Rewritten by that function whenever the camera it
+    // settles differs from it, which is also the moment it clears the two
+    // postures above. THE IDENTITY IS FOUR FIELDS, NOT TWO: the viewport start
+    // and the zoom, AND the active tab letter and the active audio view
+    // (Sol review 2026-09-23). A tab switch or an S/T flip is a camera change
+    // by rule even when its destination happens to settle the same two
+    // numbers — both tabs at their default start and zoom, an identity map —
+    // so without the two letters such a switch would leave both postures
+    // standing and the other tab's next play would chase (or its nudges hold)
+    // on an arm made in the view just left. The two letters' writers are the
+    // tab switch (GuiActiveViews::switch_active_tab_view_to), the S/T flip
+    // (input_handler.cpp) and the load paths (file_loader.cpp), each passing
+    // clamp_viewport_start after its write.
+    struct CameraPostureIdentity {
+        int64_t viewport_start_sample = 0;
+        double  zoom_level            = kWorkingZoomLevel;
+        char    tab_view              = 'A';
+        char    audio_view            = 'S';
+        bool operator==(const CameraPostureIdentity&) const = default;
+    };
+    CameraPostureIdentity camera_posture_identity;
 
     // RESTRICT UNDO TO CURRENT VIEW — the lamp on bare `z` (architect
     // 2026-09-04; to Viewport until 2026-09-22).
