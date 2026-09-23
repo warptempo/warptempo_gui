@@ -225,7 +225,8 @@ struct Undo {
     // switch to the tab its file named; it lost its last producer on 2026-08-24
     // when the act stopped writing view state, and went with it.)
     //
-    // `op_mode` names the COLUMN the restore returns to and whose
+    // `op_mode` (and with it `landing_column`, UndoEntry) names the COLUMN
+    // the restore returns to and whose
     // post-restore rules run; all three snapshots — the magnification level
     // column's being this helper's own parameter, the one caller replacing
     // that store too — are written back whatever it says
@@ -248,20 +249,26 @@ struct Undo {
     // 2026-09-21) — the A/B tab (`tab`) and the S/T audio view
     // (`audio_view`), the two the restore writes back beside the column
     // (the three-axis restore is at restore_history_entry, the rule's prose
-    // home selection-model.md). Every push helper above reads them off the
+    // home selection-model.md), and `landing_column`, the column tag (the
+    // field, app_state.h, carries its split from op_mode). Every push helper above reads them off the
     // live view, which IS the landing view for every act that stays where it
     // is. THIS IS THE ONE REWRITE, for an act that pushes its entry and THEN
     // crosses views: called after the landing, it restamps the TOP undo
-    // entry's two tags from the live view. The caller calls it only on a
+    // entry's three view tags (tab, audio view, landing column) from the
+    // live view. The caller calls it only on a
     // press that pushed (its own push condition), so it can never touch an
     // older entry beneath. ITS CALLERS, re-grepped 2026-09-21: the two
     // phase-reset pastes (paste_apply / paste_state_apply,
     // phase_reset_propagate.cpp), W-column acts that land in T+P through
     // land_paste_in_target_view — every other crossing act (Shift+S,
     // Ctrl+Shift+S, bare `i`, the typed view keys) crosses before it pushes
-    // or pushes nothing. op_mode is NOT restamped: beyond naming the column
-    // the restore returns to, it names the store the entry changed, which
-    // recompute_dirty's per-column walk reads. Nothing between the push and
+    // or pushes nothing. op_mode is NOT restamped: it names the store the
+    // entry changed, which recompute_dirty's per-column walk and the
+    // post-restore rules read; the column the restore returns to is the
+    // landing column, which is (Sol review 2026-09-23 — before it, a paste
+    // whose target entry refused kept op_mode 'P' as its column, and the
+    // Restrict Undo to Current View lamp refused its undo from the S+W the
+    // restore would never have left). Nothing between the push and
     // this call reads the tags — the push clears the coalesce stamp, the
     // dirty walk reads op_mode alone, and the saved reference counts
     // entries — and the redo counter-entry copies them VERBATIM from the

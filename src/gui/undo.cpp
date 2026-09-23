@@ -168,6 +168,7 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'W';
+    e.landing_column     = 'W';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
@@ -187,6 +188,7 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'P';
+    e.landing_column     = 'P';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
@@ -207,6 +209,7 @@ void Undo::push_undo_magnification_level(
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = 'M';
+    e.landing_column     = 'M';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
     e.touched_snapshot   = std::move(touched_snapshot);
@@ -228,6 +231,7 @@ void Undo::push_undo_both(
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
     e.op_mode            = op_mode;
+    e.landing_column     = op_mode;
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
     app.history.push(std::move(e));
@@ -243,6 +247,7 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = std::move(pre_state);
     e.op_mode            = 'S';
+    e.landing_column     = 'S';
     e.tab                = app.active_tab_view;
     e.audio_view         = app.active_audio_view;
     app.history.push(std::move(e));
@@ -258,6 +263,10 @@ void Undo::stamp_top_entry_with_landing_view() {
     UndoEntry& top = app.history.undo_stack.back();
     top.tab        = app.active_tab_view;
     top.audio_view = app.active_audio_view;
+    // The column tag too — the live column, which is P after a landing that
+    // ran and the pressed column (W) after a refused target entry; op_mode
+    // keeps naming the store the entry changed (UndoEntry::landing_column).
+    if (top.op_mode != 'S') top.landing_column = app.active_markers_view;
 }
 
 bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
@@ -787,6 +796,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         app.magnificationlevelmarkers.markers();
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
+    counter.landing_column      = entry.landing_column;
     counter.tab                 = entry.tab;
     // The three context tags travel VERBATIM onto the counter rather than being
     // re-captured from live state: they describe the OP, and the counter is the
@@ -833,8 +843,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // the S/T domain translation of playhead and viewport with its target-view
     // entry gate and its flag-editor teardown, the column's selection clear.
     //
-    // THE ORDER IS TAB, DATA, COLUMN, SELECTION, AUDIO VIEW, and every step of
-    // it is decided rather than chosen:
+    // THE ORDER IS TAB, DATA, COLUMN, SELECTION, AUDIO VIEW for an entry
+    // landing in W (and for a settings-only entry, which writes no column),
+    // and TAB, DATA, AUDIO VIEW, COLUMN, SELECTION for one landing in P or M
+    // (the column that exists in one audio view only; the reason is at the
+    // column write below). Every step of it is decided rather than chosen:
     //   * THE TAB FIRST, because the S/T switch treats the two tabs
     //     DIFFERENTLY: the ACTIVE tab's playhead is translated and re-anchored
     //     on its own painted column (and re-expressed onto a focused marker),
@@ -947,8 +960,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // the tab's — the column switch's selection clear and the seated pinch's
     // anchor clear are that helper's, not a hand-kept copy of it; the hand-kept
     // copy that used to stand at this spot went with the move onto the owner).
-    // Gated off 'S' because op_mode is that entry kind's MARKER rather than a
-    // column: a settings-only entry carries no authoring column to return to.
+    // THE COLUMN WRITTEN IS THE ENTRY'S LANDING COLUMN, never its op_mode
+    // (UndoEntry::landing_column, app_state.h, which carries the split and its
+    // inventory): the one store kind whose landing can differ — a phase paste
+    // whose target entry refused — lands W here, the column the paste ended
+    // in, and the lamp's verdict reads the same tag. Gated off 'S' because
+    // op_mode is that entry kind's MARKER rather than a column: a
+    // settings-only entry carries no authoring column to return to.
     //
     // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15; the
     // column's home flipped 2026-09-16: the magnification level markers
@@ -986,12 +1004,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // column write then refuses in turn, the restore goes on in the view it
     // has — the audio restore's best-effort rule — and the post-restore rules
     // below stand down, the column the entry names not being the one shown.
-    if (entry.op_mode == 'M' || entry.op_mode == 'P') {
+    // "An 'M' / a 'P' entry" is read off the LANDING COLUMN, not op_mode: the
+    // phase paste whose own target entry refused carries a 'P' store change
+    // that landed in W, and it takes the W order (column, then audio).
+    if (entry.op_mode != 'S' &&
+        (entry.landing_column == 'M' || entry.landing_column == 'P')) {
         selection.clear_selection();
         if (input) input->switch_active_audio_view_to(entry.audio_view);
     }
     if (entry.op_mode != 'S') {
-        active_views.switch_active_markers_view_to(entry.op_mode);
+        active_views.switch_active_markers_view_to(entry.landing_column);
     }
 
     // Settings-only entries carry no marker or focus post-restore work. THE
@@ -1020,9 +1042,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // either way; only the selection's claim on it stands down. THE SAME ARM
     // CONTAINS THE PASTE'S REFUSED LANDING: a phase paste from S+W whose
     // target entry refused honestly records the view it ended in, S+W, over a
-    // 'P' entry, and its restore lands S, the column write refuses, and the
-    // selection clears here — so no tripwire guards the 'P'-says-'T' claim,
-    // which would only turn this contained case into a crash.
+    // 'P' store change (audio_view 'S', landing_column 'W'), and its restore
+    // lands S+W, the column shown is not the entry's store, and the selection
+    // clears here — so no tripwire guards the 'P'-says-'T' claim, which would
+    // only turn this contained case into a crash. (The rules compare the
+    // STORE KIND, op_mode, against the column shown: the indices they would
+    // install are that store's.)
     if (entry.op_mode != 'S' && app.active_markers_view != entry.op_mode) {
         selection.clear_selection();
     } else if (entry.op_mode == 'P') {

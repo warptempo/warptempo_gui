@@ -4322,7 +4322,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     T+P (the restore's contract is at UndoEntry, app_state.h;
 //     selection-model.md is authoritative). The view he
 //     pressed the key IN is not recoverable from a phase-reset entry —
-//     op_mode is that entry's KIND as well as its column tag — and the whole
+//     op_mode is that entry's KIND and its landing_column its column tag,
+//     neither the pressed view — and the whole
 //     act is one press either way.
 //   * THE KICK IS LAST, after the drop, for the reason the paste states: the
 //     column swap moves a flag-cache FINGERPRINT field, and on a W-column

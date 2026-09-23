@@ -273,7 +273,8 @@ struct SettingsSnapshot {
 // which list the op actually touched.
 //
 // THE VIEW TAGS ARE THREE, NOT TWO (architect bug report 2026-08-28):
-// `op_mode` is the W/P/M column, `tab` the A/B tab and `audio_view` the S/T audio
+// `landing_column` is the W/P/M column (split from `op_mode`, the entry's store
+// kind, 2026-09-23 — the field says why), `tab` the A/B tab and `audio_view` the S/T audio
 // view — the three axes the product's view state has, restored together at every
 // restore, as visual feedback for what is being undone. The third one was
 // missing until that report, and its absence had
@@ -305,7 +306,7 @@ struct UndoEntry {
     // The third marker column's pre-mutation snapshot (architect 2026-09-15),
     // carried on EVERY entry and restored on every undo/redo with the other
     // two, exactly as the phase-reset snapshot is. op_mode 'M' names this
-    // column as a VIEW TAG since 2026-09-15 (the column visible): the
+    // column (its store kind, and with landing_column its view tag) since 2026-09-15 (the column visible): the
     // column's own authoring files under it exactly as W's and P's file
     // under theirs, each with its identity hints, and the loads in place file
     // under the live column (push_undo_both) with none. An 'M' entry is filed
@@ -314,6 +315,26 @@ struct UndoEntry {
     std::vector<GuiMagnificationLevelMarker> magnification_level_snapshot;
     SettingsSnapshot          settings;
     char                      op_mode              = 'W';
+    // THE W/P/M COLUMN THE ACT LANDED IN — the entry's column VIEW TAG, kept
+    // apart from `op_mode` (Sol review 2026-09-23), which names the STORE the
+    // entry changed and so its KIND: the dirty walk (recompute_dirty) and the
+    // post-restore rules' store selection read op_mode, and every question of
+    // "which column does this entry land in" reads THIS. The two agree on
+    // every entry but one shape: a phase-reset paste whose target entry
+    // refused (the tripwire class) changed the P store while the session
+    // stayed in S+W, and its restamp records 'W' here over op_mode 'P'.
+    // Meaningful on a MARKER entry only; a settings-only entry carries 'S',
+    // the kind's marker, and every reader gates it off before asking.
+    // PRODUCERS (re-grepped 2026-09-23): the five push helpers (undo.cpp),
+    // each writing its own op_mode — the load in place's push_undo_both the
+    // live column, which is what it passes as op_mode; the one restamp,
+    // Undo::stamp_top_entry_with_landing_view, writing the live column after
+    // a phase paste's landing; and the redo counter-entry, copying it
+    // verbatim (restore_history_entry). READERS: the restore's column write
+    // and its audio-before-column order (restore_history_entry, undo.cpp) and
+    // the lamp's verdict, undo_restore_stays_in_current_view (below), so the
+    // step the lamp permits and the column the restore writes are one answer.
+    char                      landing_column       = 'W';
     char                      tab                  = 'A';
     // The S/T audio view the act LANDED in — the third context tag (with
     // `tab`, the view tags; the landing-view rule and its one restamp are at
@@ -12971,9 +12992,12 @@ std::set<int> restore_touched_indices(const UndoEntry& entry,
 // tag that differs from the live axis is a view switch the restore would make.
 //   * THE TAB and THE AUDIO VIEW are compared on every entry kind — a
 //     settings-only ('S') entry carries both and its restore writes both.
-//   * THE COLUMN is op_mode, and it is compared only on a MARKER entry: an
-//     'S' entry's op_mode is that kind's marker rather than a column, and its
-//     restore writes no column (the column restore is gated off 'S').
+//   * THE COLUMN is `landing_column` — the column tag, never op_mode, which
+//     names the store the entry changed (the two part on a phase paste whose
+//     target entry refused: a 'P' store change landed in S+W, and its restore
+//     writes W) — and it is compared only on a MARKER entry: an 'S' entry
+//     carries no column, and its restore writes none (the column restore is
+//     gated off 'S').
 // NO CAMERA TERM, by the same ruling: the restore's camera answers to what it
 // restores (the visual tail, undo.cpp) and the lamp no longer asks where that
 // is — the camera restriction left whole, the touched-span measurement under
@@ -12992,7 +13016,7 @@ inline bool undo_restore_stays_in_current_view(const AppState& a,
     if (entry.tab != a.active_tab_view) return false;
     if (entry.audio_view != a.active_audio_view) return false;
     if (entry.op_mode == 'S') return true;
-    return entry.op_mode == a.active_markers_view;
+    return entry.landing_column == a.active_markers_view;
 }
 
 // THE LAMP READ OF A WHOLE STEP: true when the step from `stack` is permitted
@@ -16319,7 +16343,7 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
 // every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
 // line 1 begins "Toggle " and which redesign_button_selected lights:
-// ignore waveform magnification, restrict undo to viewport, grid iterations, read-only,
+// ignore waveform magnification, restrict undo to current view, grid iterations, read-only,
 // history view, history walk, cumulative and add to selection — and by the
 // render player's Repeat one. Until then those rows named a CONSTANT ACT while
 // the lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
