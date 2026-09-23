@@ -15,11 +15,8 @@
 // THE BLOCK AND THE SLOT ARE SPLIT FROM THE PLACEMENT because the placement is
 // the part that carries a column's own meaning, and that split is why these
 // are templates. They had a SECOND INSTANTIATION from 2026-09-15 to
-// 2026-09-19, the magnification level propagate's clipboard, which bucketed by
-// the same named warp blocks; that family became a PURE FRAME DISTANCE from
-// the playhead and its clipboard is a flat list of offsets with no block in it
-// at all (magnification_level_clipboard.h), so what is left here is the phase
-// family's shape alone.
+// 2026-09-19, the since-deleted magnification level propagate's clipboard, so
+// what is left here is the phase family's shape alone.
 
 template <class Placement>
 struct PropagateClipboardBlock {

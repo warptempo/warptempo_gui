@@ -36,16 +36,15 @@ namespace {
 
 // True when restoring `entry` would write back the marker stores THAT ARE
 // ALREADY LIVE — the question the coalesced burst's net-zero pop asks
-// (Undo::record_gesture, where the rule is stated). ALL THREE columns, because
+// (Undo::record_gesture, where the rule is stated). BOTH columns, because
 // every entry carries the full set and a restore assigns each unconditionally,
 // so a 'W' entry that a merged press returned to its snapshot is only
-// byte-equal when the other two columns match too.
+// byte-equal when the other column matches too.
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the five coalescing kinds (GestureKind, undo.h, re-grepped 2026-09-16: the
-// THREE position nudges — warp, phase reset and magnification level — and the
-// two value steps, the tempo cent step and the magnification level step)
+// the three coalescing kinds (GestureKind, undo.h, re-grepped 2026-09-23: the
+// TWO position nudges — warp and phase reset — and the tempo cent step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
 // verdicted on. There are three of them, re-grepped at this writing
@@ -66,41 +65,33 @@ bool entry_restores_live_marker_stores(const AppState& app,
     // "these two stores hold the same state" has one spelling.
     return warp_rows_equal(entry.snapshot, app.warpmarkers.markers()) &&
            phase_reset_rows_equal(entry.phase_reset_snapshot,
-                                  app.phaseresetmarkers.markers()) &&
-           magnification_level_rows_equal(
-               entry.magnification_level_snapshot,
-               app.magnificationlevelmarkers.markers());
+                                  app.phaseresetmarkers.markers());
 }
 
 }  // namespace
 
 void Undo::recompute_dirty() {
     const auto& h = app.history;
-    // THE FOUR FLAGS ARE SET AND CLEARED AS ONE, so the three arms below and
-    // the per-entry walk each name all four (the flags' contract is at
-    // AppState::warp_dirty; the magnification level column took its own on
-    // 2026-09-15, when op_mode 'M' gained real producers and the walk's old
-    // `else` would have called a level edit a warp change).
+    // THE THREE FLAGS ARE SET AND CLEARED AS ONE, so the three arms below and
+    // the per-entry walk each name all three (the flags' contract is at
+    // AppState::warp_dirty).
     const auto clear_all = [&] {
-        app.warp_dirty                = false;
-        app.phase_reset_dirty         = false;
-        app.magnification_level_dirty = false;
-        app.settings_dirty            = false;
+        app.warp_dirty        = false;
+        app.phase_reset_dirty = false;
+        app.settings_dirty    = false;
     };
-    // ONE ARM PER op_mode, exhaustive over the four tags an entry can carry.
+    // ONE ARM PER op_mode, exhaustive over the three tags an entry can carry.
     const auto light = [&](char m) {
         switch (m) {
-            case 'P': app.phase_reset_dirty         = true; break;
-            case 'M': app.magnification_level_dirty = true; break;
-            case 'S': app.settings_dirty            = true; break;
-            default:  app.warp_dirty                = true; break;   // 'W'
+            case 'P': app.phase_reset_dirty = true; break;
+            case 'S': app.settings_dirty    = true; break;
+            default:  app.warp_dirty        = true; break;   // 'W'
         }
     };
     if (!h.saved_valid) {
-        app.warp_dirty                = true;
-        app.phase_reset_dirty         = true;
-        app.magnification_level_dirty = true;
-        app.settings_dirty            = true;
+        app.warp_dirty        = true;
+        app.phase_reset_dirty = true;
+        app.settings_dirty    = true;
     } else if (h.saved_distance == 0) {
         clear_all();
     } else if (h.saved_distance < 0) {
@@ -121,8 +112,7 @@ void Undo::recompute_dirty() {
             light(h.redo_stack[i].op_mode);
     }
     const bool was_dirty = app.dirty;
-    app.dirty = app.warp_dirty || app.phase_reset_dirty ||
-                app.magnification_level_dirty || app.settings_dirty;
+    app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
     // THE DIRTY MARK HAS ONE SURFACE AND ONE DERIVE-OWNER. This is where
     // app.dirty is derived, so every mutation, save and undo/redo transition
     // passes through here.
@@ -163,7 +153,6 @@ void Undo::push_undo_warp(std::vector<GuiWarpMarker> pre_state,
     UndoEntry e;
     e.snapshot           = std::move(pre_state);
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
-    e.magnification_level_snapshot = app.magnificationlevelmarkers.markers();
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
@@ -183,7 +172,6 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = std::move(pre_state);
-    e.magnification_level_snapshot = app.magnificationlevelmarkers.markers();
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
@@ -197,36 +185,13 @@ void Undo::push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
     last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
 }
 
-void Undo::push_undo_magnification_level(
-        std::vector<GuiMagnificationLevelMarker> pre_state,
-        std::vector<int> touched_snapshot,
-        std::vector<int> touched_live) {
-    UndoEntry e;
-    e.snapshot           = app.warpmarkers.markers();
-    e.phase_reset_snapshot = app.phaseresetmarkers.markers();
-    e.magnification_level_snapshot = std::move(pre_state);
-    strip_iter_fields(e.snapshot);
-    strip_iter_fields(e.phase_reset_snapshot);
-    e.settings           = capture_current_settings(app);
-    e.op_mode            = 'M';
-    e.landing_column     = 'M';
-    e.tab                = app.active_tab_view;
-    e.audio_view         = app.active_audio_view;
-    e.touched_snapshot   = std::move(touched_snapshot);
-    e.touched_live       = std::move(touched_live);
-    app.history.push(std::move(e));
-    last_gesture_kind_ = GestureKind::None;   // see coalesce_gesture
-}
-
 void Undo::push_undo_both(
         std::vector<GuiWarpMarker> warp_pre,
         std::vector<GuiPhaseResetMarker> phase_reset_pre,
-        std::vector<GuiMagnificationLevelMarker> magnification_level_pre,
         char op_mode) {
     UndoEntry e;
     e.snapshot           = std::move(warp_pre);
     e.phase_reset_snapshot = std::move(phase_reset_pre);
-    e.magnification_level_snapshot = std::move(magnification_level_pre);
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = capture_current_settings(app);
@@ -242,7 +207,6 @@ void Undo::push_settings_undo(SettingsSnapshot pre_state) {
     UndoEntry e;
     e.snapshot           = app.warpmarkers.markers();
     e.phase_reset_snapshot = app.phaseresetmarkers.markers();
-    e.magnification_level_snapshot = app.magnificationlevelmarkers.markers();
     strip_iter_fields(e.snapshot);
     strip_iter_fields(e.phase_reset_snapshot);
     e.settings           = std::move(pre_state);
@@ -295,8 +259,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // magnitude would need a fourth stamp field to buy nothing.
     //
     // EVERY CHANGE OF THE UNDO-STACK TOP CLEARS THE STAMP — the four push
-    // helpers (push_undo_warp / push_undo_phase_reset /
-    // push_undo_magnification_level / push_undo_both / push_settings_undo) and
+    // helpers (push_undo_warp / push_undo_phase_reset / push_undo_both /
+    // push_settings_undo) and
     // restore_history_entry, the shared do_undo/do_redo
     // core, one line each — so a valid stamp can never coexist with a foreign stack
     // top, and that is what lets BOTH arms assume the top of the undo stack is the
@@ -317,12 +281,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // the selection on one of TWO stores rather than the selection itself.
     // Both went with the kind on 2026-09-10, when the iteration bracket left
     // the undo domain: the bound step pushes nothing, so it has no entry for a
-    // later tap to merge into and no subject to keep apart. The five kinds
-    // standing now (GestureKind, undo.h, re-grepped 2026-09-16: WarpNudge,
-    // PhaseResetNudge, TempoStep, MagnificationLevelNudge,
-    // MagnificationLevelStep) are one-body kinds whose subject the selection
-    // carries whole — the two value steps' FIELDS keep apart by the kind
-    // itself, each field its own kind.)
+    // later tap to merge into and no subject to keep apart. The three kinds
+    // standing now (GestureKind, undo.h, re-grepped 2026-09-23: WarpNudge,
+    // PhaseResetNudge, TempoStep) are one-body kinds whose subject the
+    // selection carries whole.)
 
     bool merge = false;
     if (stamp_matches) {
@@ -492,18 +454,16 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // ONE SITE, DELIBERATELY: the invalidate lives HERE rather than being spelled at
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
-    // preference. The routes are the nudges' shared prologue, both arms of
-    // the Up/Down cent step, and the magnification level column's level step
-    // (grep this function's callers; the Up/Down BOUND
+    // preference. The routes are the nudges' shared prologue and both arms of
+    // the Up/Down cent step (grep this function's callers; the Up/Down BOUND
     // step was among them until 2026-09-10, when the iteration bracket left
     // the undo domain and that step stopped asking any verdict at all).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
     // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
-    // at every eligible route — SIX routes over FIVE call sites, re-grepped
-    // 2026-09-16 (the warp and phase-reset position nudges through their
-    // shared commit tail, the magnification level nudge and level step each
-    // at its own, and the singleton and group arms of the Up/Down cent
+    // at every eligible route — FOUR routes over THREE call sites, re-grepped
+    // 2026-09-23 (the warp and phase-reset position nudges through their
+    // shared commit tail, and the singleton and group arms of the Up/Down cent
     // step) — and ONLY
     // on the
     // accepted path, so a REFUSED press
@@ -547,12 +507,11 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // the subject terms are untouched.
     //
     // ONE SEAM FOR EVERY KIND: every eligible route reaches this call
-    // post-mutation on its accepted path — SIX routes over FIVE call sites,
-    // re-grepped 2026-09-16: the warp and phase-reset position nudges through
-    // their shared commit tail, the magnification level nudge and level step
-    // each at its own, and the singleton and group arms of the Up/Down cent
-    // step — so the equality question has ONE owner here
-    // rather than six copies; the
+    // post-mutation on its accepted path — FOUR routes over THREE call sites,
+    // re-grepped 2026-09-23: the warp and phase-reset position nudges through
+    // their shared commit tail, and the singleton and group arms of the
+    // Up/Down cent step — so the equality question has ONE owner here
+    // rather than four copies; the
     // per-column readers it uses are the row enumerations at the head of this
     // file. (The Up/Down BOUND step was a fifth route over a fourth call site
     // until 2026-09-10, when the iteration bracket left the undo domain: it
@@ -736,17 +695,6 @@ void Undo::apply_post_restore_rules_phase_reset(
         phase_reset_row_fields_differ);
 }
 
-void Undo::apply_post_restore_rules_magnification_level(
-        const UndoEntry& entry,
-        const std::vector<GuiMagnificationLevelMarker>& before) {
-    // The third column's applier, the two siblings' body over its own row
-    // comparator (magnification_level_row_fields_differ, app_state.h).
-    apply_post_restore_rules_impl(
-        selection, entry, before,
-        app.magnificationlevelmarkers.markers(),
-        magnification_level_row_fields_differ);
-}
-
 // True when do_undo / do_redo would actually act — the authoritative guard for
 // both, run on the source stack. Two ways a step is a silent no-op:
 //   - empty source stack;
@@ -792,8 +740,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     UndoEntry counter;
     counter.snapshot            = app.warpmarkers.markers();
     counter.phase_reset_snapshot = app.phaseresetmarkers.markers();
-    counter.magnification_level_snapshot =
-        app.magnificationlevelmarkers.markers();
     counter.settings            = capture_current_settings(app);
     counter.op_mode             = entry.op_mode;
     counter.landing_column      = entry.landing_column;
@@ -819,8 +765,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     counter.touched_live        = entry.touched_snapshot;
     std::vector<GuiWarpMarker>       before_w = counter.snapshot;
     std::vector<GuiPhaseResetMarker> before_t = counter.phase_reset_snapshot;
-    std::vector<GuiMagnificationLevelMarker> before_m =
-        counter.magnification_level_snapshot;
 
     to.push_back(std::move(counter));
     // No kCap trim here: each restore moves one entry between the stacks (`from`
@@ -911,10 +855,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // actual pre-edit settings restored here.
     app.engine_settings    = std::move(entry.settings.engine_settings);
 
-    // ALL THREE columns are assigned on EVERY entry — an undo entry carries
-    // the full set, so a 'W' entry restores byte-identical phase-reset and
-    // magnification level vectors and an 'S' entry restores all three
-    // unchanged — and the assigns are unconditional: a
+    // BOTH columns are assigned on EVERY entry — an undo entry carries
+    // the full set, so a 'W' entry restores a byte-identical phase-reset
+    // vector and an 'S' entry restores both unchanged — and the assigns are unconditional: a
     // field-only restore (a disabled toggle, a tempo, a label) moves no row but
     // must still land its values, and markers_mut's generation bump reports it
     // either way. No row-identity comparison rides these replaces any more: the
@@ -922,11 +865,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // selections' liveness rule, and both died 2026-07-29.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
-    // The magnification level column, which moves no pixel of the waveform
-    // (the picture's gain is the curve derived from the source): its flags
-    // repaint with the tail's synchronous rebuild (kick_waveform_sync, below).
-    app.magnificationlevelmarkers.markers_mut() =
-        std::move(entry.magnification_level_snapshot);
 
     // THE MAP-CHANGE RE-LAND, the shape the product already owns for a map
     // rebuilt under a STANDING view (the family contract is at the head of
@@ -967,47 +905,26 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // op_mode is that entry kind's MARKER rather than a column: a
     // settings-only entry carries no authoring column to return to.
     //
-    // AN 'M' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-15; the
-    // column's home flipped 2026-09-16: the magnification level markers
-    // column is source view only, and the column writer refuses 'M' outside
-    // it). Its audio tag is 'S' — the view the act landed in, which the push
-    // helper reads off the live view (the landing-view rule and its one
-    // restamp are at Undo::stamp_top_entry_with_landing_view, undo.h) — on ONE
-    // guarantee that covers every producer: an 'M' entry is filed only by an
-    // act gated on the M COLUMN, and the column writer refuses 'M' outside source view
-    // (GuiActiveViews::switch_active_markers_view_to) while the audio writer
-    // lands the column on W before it leaves for target — so a press that
-    // files one stood in S+M. (The magnification level PASTES needed a
-    // guarantee of their own while their gates read the W column and admitted
-    // them from T+W; both gate on M since 2026-09-19, so the exception is
-    // gone with the second guarantee.) So the audio restore below runs ahead of the column write rather
-    // than after it, landing source first so the writer admits 'M', the
-    // selection cleared first so the flip has no focus to re-express (the
-    // column switch would clear it one line later anyway). Leaving target
-    // never refuses, so on this road the column write always lands; the
-    // shape is kept as the audio restore's own best-effort rule, which goes
-    // on in the view it has whenever a switch refuses.
-    //
-    // A 'P' ENTRY TAKES ITS AUDIO VIEW FIRST TOO, THE TWIN (architect
-    // 2026-09-21: the phase-reset column is target view only, the column
-    // writer refusing 'P' outside it and the audio writer landing T+P on W
-    // before it leaves for source). Its audio tag is 'T', the view the act
-    // landed in — read off the live view at the push for every act that
-    // stays where it is, and RESTAMPED after the landing for the one pair
-    // that pushes before crossing, the phase-reset pastes (the rule is at
+    // A 'P' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-21: the
+    // phase-reset column is target view only, the column writer refusing 'P'
+    // outside it and the audio writer landing T+P on W before it leaves for
+    // source). Its audio tag is 'T', the view the act landed in — read off the
+    // live view at the push for every act that stays where it is, and
+    // RESTAMPED after the landing for the one pair that pushes before
+    // crossing, the phase-reset pastes (the rule is at
     // Undo::stamp_top_entry_with_landing_view, undo.h). The order is what
-    // lets the column write land:
-    // restored from S+W, audio first enters target and then the writer
-    // admits 'P', where column first would have been refused and left T+W.
-    // Unlike M's road, entering target CAN refuse (the tripwire class); the
+    // lets the column write land: restored from S+W, audio first enters
+    // target and then the writer admits 'P', where column first would have
+    // been refused and left T+W; the selection is cleared first so the flip
+    // has no focus to re-express (the column switch would clear it one line
+    // later anyway). Entering target CAN refuse (the tripwire class); the
     // column write then refuses in turn, the restore goes on in the view it
     // has — the audio restore's best-effort rule — and the post-restore rules
     // below stand down, the column the entry names not being the one shown.
-    // "An 'M' / a 'P' entry" is read off the LANDING COLUMN, not op_mode: the
-    // phase paste whose own target entry refused carries a 'P' store change
-    // that landed in W, and it takes the W order (column, then audio).
-    if (entry.op_mode != 'S' &&
-        (entry.landing_column == 'M' || entry.landing_column == 'P')) {
+    // "A 'P' entry" is read off the LANDING COLUMN, not op_mode: the phase
+    // paste whose own target entry refused carries a 'P' store change that
+    // landed in W, and it takes the W order (column, then audio).
+    if (entry.op_mode != 'S' && entry.landing_column == 'P') {
         selection.clear_selection();
         if (input) input->switch_active_audio_view_to(entry.audio_view);
     }
@@ -1015,17 +932,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         active_views.switch_active_markers_view_to(entry.landing_column);
     }
 
-    // Settings-only entries carry no marker or focus post-restore work. THE
-    // 'M' ARM IS THE OTHER TWO COLUMNS' (architect 2026-09-15, when the column
-    // gained its own authoring and so its own entries): a drop, a drag, a
-    // nudge, a delete, a disable toggle, a level step and the level editor's
-    // commit all file under 'M' now, each with the identity hints its twin on
-    // the other columns carries, so the restore re-selects the touched set
-    // exactly as a 'W' or 'P' restore does. (Until that day the column's one
-    // producer was the recipe load in place, which names no touched row at
-    // all and takes the empty set's own clear — which this arm still gives
-    // it, restore_touched_indices answering empty for a hint-less entry whose
-    // column did not move.)
+    // Settings-only entries carry no marker or focus post-restore work.
     //
     // THE RULES RUN ONLY WHERE THE ENTRY'S COLUMN STANDS. They install STORE
     // INDICES of the entry's column into the one selection, and every reader
@@ -1057,10 +964,6 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         apply_post_restore_rules_warp(entry, before_w);
         selection.sanitize_selection_after_restore(
             static_cast<int>(app.warpmarkers.markers().size()));
-    } else if (entry.op_mode == 'M') {
-        apply_post_restore_rules_magnification_level(entry, before_m);
-        selection.sanitize_selection_after_restore(
-            static_cast<int>(app.magnificationlevelmarkers.markers().size()));
     }
 
     // THE 'S' ARM CLEARS THE SELECTION (architect 2026-07-29): a
@@ -1105,7 +1008,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // from S+W, which is the defect it closed; since 2026-09-21 S+P is no
     // state at all (the phase-reset column is target view only), the two
     // writers holding it unreachable on this road as on every other — a 'P'
-    // or 'M' entry has taken its audio view above, and this call is then the
+    // entry has taken its audio view above, and this call is then the
     // same-view no-op, while any other entry leaving T+P for source lands the
     // column on W inside the switch.
     if (input) input->switch_active_audio_view_to(entry.audio_view);
@@ -1171,7 +1074,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // selection indices are always in range, so this guards an
             // impossible state, never a reachable one. The active column's
             // store through its selector pair (active_marker_count,
-            // app_state.h), all three columns.
+            // app_state.h), both columns.
             const bool in_range = (t >= 0 && t < active_marker_count(app));
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
@@ -1235,7 +1138,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             {
                 // The index bound and the frame from the active column's one
                 // selector pair (active_marker_count / active_marker_time_frame,
-                // app_state.h), all three columns.
+                // app_state.h), both columns.
                 const int n = active_marker_count(app);
                 for (int idx : app.selected_markers) {
                     if (idx < 0 || idx >= n) continue;   // defensive

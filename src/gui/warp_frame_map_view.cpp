@@ -2,7 +2,6 @@
 
 #include "app_state.h"
 #include "audio.h"
-#include "magnificationlevelmarkers.h"   // magnification_level_collapse_members
 #include "gui_display_context.h"
 #include "waveform_gain.h"   // kWaveformGainVersion, the gain field
 #include "warp_frame_map_build.h"   // resolve_warp_markers_for_render, build_warp_frame_map
@@ -202,44 +201,6 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
             for (int k = i; k < j; ++k) c.red.insert(k);
         i = j;
     }
-
-    c.markers_gen = gen;
-    c.valid       = true;
-    return c;
-}
-
-// The magnification level column's red set — the contract is at the
-// declaration (warp_frame_map_view.h). The phase-reset body's run walk over
-// the third store for `red`: the store is time-sorted, so a coincident group
-// is a run of adjacent equal frames. Participation-blind, so the cue is WIDER
-// than the picture's collapse (which counts enabled members alone), the warp
-// cue's own relation to warp_coincident_collapse_members. `collapsed` is the
-// warp body's shape (architect 2026-09-16): the classifier's per-row verdict
-// (magnification_level_collapse_members — the picture's own run walk) copied
-// into the subset in the same rebuild, under the same key, no second
-// computation anywhere.
-const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
-    const AppState& app) {
-    MagnificationLevelRedFlagCache& c = app.magnification_level_red_flag_cache;
-    const long long gen = app.magnificationlevelmarkers.generation();
-    if (c.valid && c.markers_gen == gen) return c;
-
-    c.red.clear();
-    c.collapsed.clear();
-    const std::vector<GuiMagnificationLevelMarker>& ml =
-        app.magnificationlevelmarkers.markers();
-    const int n = static_cast<int>(ml.size());
-    int i = 0;
-    while (i < n) {
-        int j = i + 1;
-        while (j < n && ml[j].time_frame == ml[i].time_frame) ++j;
-        if (j - i >= 2)
-            for (int k = i; k < j; ++k) c.red.insert(k);
-        i = j;
-    }
-    const std::vector<char> members = magnification_level_collapse_members(ml);
-    for (int k = 0; k < n; ++k)
-        if (members[static_cast<std::size_t>(k)]) c.collapsed.insert(k);
 
     c.markers_gen = gen;
     c.valid       = true;

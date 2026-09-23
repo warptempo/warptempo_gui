@@ -3,8 +3,6 @@
 #include "audio.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
-#include "magnificationlevelmarkers.h"
-#include "marker_magnification.h"   // format_marker_magnification, the flag label
 #include "text_shape.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -973,11 +971,11 @@ void iterate_visible_flags_impl(
 // (THE SHARED LABEL CAP IS GONE, 2026-09-19. cap_marker_label kept the first
 // nine bytes of whatever a column composed and appended the truncation
 // marker; the WARP payload was its only real subject — the phase-reset token
-// is five bytes and the magnification digit one — and once a tempo could
+// is five bytes — and once a tempo could
 // carry a chain, cutting by a byte count would have eaten the very terms the
 // feature exists to show. The cut now lives inside the one composer that
-// knows what it is cutting, flag_display_text above, and the other two
-// columns' labels reach the pass whole.)
+// knows what it is cutting, flag_display_text above, and the phase-reset
+// column's label reaches the pass whole.)
 
 // The two bound cells an eligible flag paints while iteration mode is on, or
 // nothing. The lambda form each column hands render_flag_boxes_impl answers
@@ -1099,7 +1097,7 @@ struct FlagFace {
     bool     has_stem;
 };
 
-// THE COLOR-CLASS LADDER, one owner for all three marker columns (the full
+// THE COLOR-CLASS LADDER, one owner for both marker columns (the full
 // statement is at render_flags' declaration): disabled wins outright, then
 // red, then the
 // default pair with selection swapping it for the bright one — and the DISABLED
@@ -1143,20 +1141,12 @@ struct FlagFace {
 // 2026-09-21, superseding the 2026-09-15 purple-on-either-column choice: the
 // cells wear their own column's hue) — every bound-cell call site passes the
 // face of the column the cells belong to, the same `column_face` its flag box
-// takes. THE THIRD FACE, MagnificationLevel (architect
-// 2026-09-15), is the magnification level markers column's ORANGE — all four
-// sampled off the architect's own crops
-// (kMarkerMagnificationFill/Edge/FillSel/EdgeSel, render.h) — on its flag box
-// and its stem; that column paints no bound cell, so the
-// face reaches nothing else. THE BLUE AND THE ORANGE TRADED COLUMNS
-// 2026-09-16 AND TRADED BACK 2026-09-17 (architect; the record is at the two
-// palette blocks: the magnification GREEN was the history view's added green
-// outright, which is why that column wears the orange now rather than its old
-// green, and the blue is back on the resets because he preferred it there).
-enum class FlagColumnFace { Warp, PhaseReset, MagnificationLevel };
+// takes. (A third face, the magnification level markers column's orange,
+// stood from 2026-09-15 until that column's deletion, architect 2026-09-23.)
+enum class FlagColumnFace { Warp, PhaseReset };
 
 // The default and selected pair of one column's flag box — the one place the
-// three columns' palettes are selected, so the live arm and the disabled arm
+// two columns' palettes are selected, so the live arm and the disabled arm
 // below cannot pick differently.
 static void flag_column_pair(FlagColumnFace column_face, bool selected,
                              GuiColor& fill, GuiColor& edge) {
@@ -1168,12 +1158,6 @@ static void flag_column_pair(FlagColumnFace column_face, bool selected,
         case FlagColumnFace::PhaseReset:
             fill = selected ? kPhaseResetFlagFillSel : kPhaseResetFlagFill;
             edge = selected ? kPhaseResetFlagEdgeSel : kPhaseResetFlagEdge;
-            return;
-        case FlagColumnFace::MagnificationLevel:
-            fill = selected ? kMarkerMagnificationFillSel
-                            : kMarkerMagnificationFill;
-            edge = selected ? kMarkerMagnificationEdgeSel
-                            : kMarkerMagnificationEdge;
             return;
     }
     fill = kMarkerFlagFill;
@@ -1267,9 +1251,9 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
     f.label = kMarkerFlagLabel;
     // The stem reads the CLASS ALONE, never the selection bit: a selected
     // default marker keeps its calm stem colour (the architect's explicit
-    // rule), so only the flag brightens — mirrored on the phase-reset column
-    // and the magnification level column since 2026-09-15, each default-class
-    // stem reading its own column's calm fill (the unselected pair's fill).
+    // rule), so only the flag brightens — mirrored on the phase-reset column,
+    // each default-class stem reading its own column's calm fill (the
+    // unselected pair's fill).
     GuiColor calm_edge;
     flag_column_pair(column_face, /*selected=*/false, f.stem, calm_edge);
     f.has_stem = true;
@@ -1294,7 +1278,7 @@ namespace {
 // bound cell, the upper bound cell. That is the one
 // left-to-right order this pass paints in, the editor's riding run re-paints
 // in, and FlagHitRect's two boundaries collapse along — and ranking it is
-// what lets ONE COMPARISON express the suppression for all three editor kinds
+// what lets ONE COMPARISON express the suppression for both editor kinds
 // (SuppressedBox, render.h): a box belongs to this pass iff it stands LEFT of
 // the edited one. Past the last rank sits kFlagBoxRankNone, the answer for
 // every marker no editor stands on.
@@ -1342,10 +1326,10 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
         cr, run, static_cast<double>(seam_x + border_w + pad_l), baseline);
 }
 
-// The one body all three columns' painters call. `label_of(i)` composes the
+// The one body both columns' painters call. `label_of(i)` composes the
 // marker's display text and `disabled_of(i)` answers its column's disabled
-// question (the warp side's label_ref cascade, the phase-reset and
-// magnification level sides' bare bool); the lambdas survive because the
+// question (the warp side's label_ref cascade, the phase-reset side's bare
+// bool); the lambdas survive because the
 // columns hold different marker types.
 template <typename MarkerVec, typename LabelFn, typename DisabledFn,
           typename CellsFn>
@@ -1776,17 +1760,6 @@ SuppressedBox suppressed_flag_box(const AppState& app) {
     switch (ed.kind) {
         case text_editor::Kind::FlagPayload:
             s.cell = MarkerCell::Payload; break;
-        // THE MAGNIFICATION LEVEL EDITOR IS ITS COLUMN'S PAYLOAD (2026-09-15):
-        // an M flag has exactly one box and this editor stands in for it, so
-        // the suppression names the payload exactly as the warp column's
-        // canonical-line editor does. WHICH COLUMN the index belongs to is the
-        // live view's, as it is for every kind here — no session carries a
-        // column, the view being unable to move under an open editor — and the
-        // painters fork on it at their own sites (render_flags drops a payload
-        // suppression it cannot own; render_magnification_level_flags does the
-        // same for a cell one).
-        case text_editor::Kind::MagnificationLevelText:
-            s.cell = MarkerCell::Payload; break;
         case text_editor::Kind::IterBound:
             // The session's own side bit, given its cell name at the one place
             // that names it (iter_bound_editor_side, app_state.h).
@@ -1890,58 +1863,6 @@ void render_phase_reset_flags(cairo_t* cr,
         iteration_on,
         focus_marker, focus_cell,
         FlagColumnFace::PhaseReset);
-}
-
-void render_magnification_level_flags(
-        cairo_t* cr,
-        GuiRect top_strip_area,
-        FlagLaneRects lanes,
-        int waveform_width,
-        const std::vector<GuiMagnificationLevelMarker>& magnification_levels,
-        long long viewport_start_sample,
-        long long viewport_end_sample,
-        int sample_rate,
-        const std::set<int>& selected_set,
-        const std::set<int>& red_set,
-        int focus_marker,
-        std::vector<FlagHitRect>* out_hit_rects,
-        std::vector<MarkerStem>* out_stems,
-        const std::vector<WarpFrameMapSegment>* warp_frame_map,
-        const DragOverlay* drag_overlay,
-        SuppressedBox suppressed) {
-    render_flag_boxes_impl(
-        cr, top_strip_area, lanes, waveform_width, magnification_levels,
-        viewport_start_sample, viewport_end_sample, sample_rate,
-        selected_set, red_set,
-        // THE LABEL IS THE LEVEL DIGIT, in its one canonical spelling — the
-        // same byte the sidecar line carries after its `|`.
-        [&](int i) {
-            return format_marker_magnification(
-                magnification_levels[static_cast<std::size_t>(i)].level);
-        },
-        // No label cascade on this column — the bool is the whole verdict.
-        [&](int i) {
-            return magnification_levels[static_cast<std::size_t>(i)].disabled;
-        },
-        // RECORDED ASYMMETRY: no bound cells — grid iterations never
-        // lights on this column (marker_paints_iter_cells' 'M' arm).
-        [](int) { return IterCellText{}; },
-        out_hit_rects, out_stems, warp_frame_map,
-        // THE DRAG OVERLAY: the flag's plain drag is the horizontal move on
-        // this column (the declaration's own note), so a dragged flag paints at
-        // its proposal exactly as the other two columns' do.
-        drag_overlay,
-        // THE SUPPRESSION, this column's alone — the PAYLOAD, which is the one
-        // box an M flag has and the one the level editor stands in for. A cell
-        // suppression belongs to another column's editor, so it is
-        // dropped here rather than applied to this store, the mirror of
-        // render_flags' own fork.
-        (suppressed.cell == MarkerCell::Payload) ? suppressed : SuppressedBox{},
-        /*iteration_on=*/false,
-        // The focus's addressed cell is always the payload here: a press
-        // resolves no other cell on a flag that paints no other box.
-        focus_marker, MarkerCell::Payload,
-        FlagColumnFace::MagnificationLevel);
 }
 
 void render_history_diff_flags(
@@ -2384,21 +2305,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     text_editor::State& ed = app.top_flag_editor;
     if (!text_editor::is_active(ed)) return;
-    // THREE KINDS PAINT IN THE MARKER LANE AND THEY ARE ONE MODEL. FlagPayload
+    // TWO KINDS PAINT IN THE MARKER LANE AND THEY ARE ONE MODEL. FlagPayload
     // unrolls the flag ITSELF to hold the payload; IterBound opens ONE BOUND
-    // CELL as the field; MagnificationLevelText (2026-09-15) unrolls the M
-    // flag ITSELF to hold its one digit — the payload editor's own shape on
-    // the third column, and the only kind here whose store is that column's.
-    // In every case the edited box yields in the cached pass, the field is the
+    // CELL as the field. In every case the edited box yields in the cached pass, the field is the
     // width of its own content, the boxes LEFT of it stand exactly where they
     // rest and the boxes RIGHT of it ride the field's edge (SuppressedBox,
     // render.h — the whole ruling). The BpmBracket kind paints in the bottom
     // row's modal instead and returns here.
     const bool bound_kind   = (ed.kind == text_editor::Kind::IterBound);
     const bool payload_kind = (ed.kind == text_editor::Kind::FlagPayload);
-    const bool level_kind =
-        (ed.kind == text_editor::Kind::MagnificationLevelText);
-    if (!payload_kind && !bound_kind && !level_kind) return;
+    if (!payload_kind && !bound_kind) return;
 
     // The PAYLOAD editor is a WARP-COLUMN surface by its own open gates, in
     // EITHER audio view since 2026-08-24 (the home-view binding's fifth ruled
@@ -2409,25 +2325,17 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // column carries an iteration bracket of its own), so its store is the
     // ACTIVE column's — the column the open route resolved the index against.
     // A target index the store has since shrunk past is the only failure
-    // shape, and it simply paints nothing. NO PAYLOAD OR BOUND EDITOR
-    // OPENS ON THE MAGNIFICATION LEVEL COLUMN (2026-09-15: the payload open is
-    // the warp column's, and that column paints no bound
-    // cell) — the LEVEL editor is its own, forked above on `level_kind` — so
-    // `phase` is W's or P's answer.
+    // shape, and it simply paints nothing.
     const bool phase = bound_kind && app.active_markers_view == 'P';
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv = app.phaseresetmarkers.markers();
-    const std::vector<GuiMagnificationLevelMarker>& lmv =
-        app.magnificationlevelmarkers.markers();
     const int idx = ed.target;
-    const int store_n = level_kind ? static_cast<int>(lmv.size())
-                      : phase      ? static_cast<int>(pmv.size())
-                                   : static_cast<int>(mv.size());
+    const int store_n = phase ? static_cast<int>(pmv.size())
+                              : static_cast<int>(mv.size());
     if (idx < 0 || idx >= store_n) return;
     const int64_t marker_frame =
-        level_kind ? lmv[static_cast<size_t>(idx)].time_frame
-      : phase      ? pmv[static_cast<size_t>(idx)].time_frame
-                   : mv[static_cast<size_t>(idx)].time_frame;
+        phase ? pmv[static_cast<size_t>(idx)].time_frame
+              : mv[static_cast<size_t>(idx)].time_frame;
 
     const GuiRect lane = top_marker_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -2454,7 +2362,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE CARET'S COLUMN, AND WHERE EVERY FIELD FINDS IT. The caret at
     // end-of-text stands one column past the last glyph, so a field must own a
     // column its run does not — and IT BORROWS THAT COLUMN FROM ITS OWN RIGHT
-    // PAD rather than buying one, on all three kinds alike (architect
+    // PAD rather than buying one, on both kinds alike (architect
     // 2026-09-05: "all flag editors should work under the same principle
     // graphically ... graphically to the user it should be transparent
     // switching between the comments, the bounds and the main payload; the
@@ -2631,16 +2539,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // second red to contrast against (see the declaration). It overrides the
     // whole pair because a failed commit must read as a state of THIS box and
     // not as a marker that suddenly normalized.
-    const bool dis = level_kind ? lmv[static_cast<size_t>(idx)].disabled
-                   : phase      ? pmv[static_cast<size_t>(idx)].disabled
-                                : effective_disabled(mv, idx);
+    const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
+                           : effective_disabled(mv, idx);
     // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
     // pass for this column reads, so the field and the boxes riding it wear
     // the red their resting twins wear on every column.
     const bool red_class =
-        level_kind
-            ? magnification_level_red_flag_set_cached(app).red.count(idx) > 0
-        : phase
+        phase
             ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
             : warp_red_flag_set_cached(
                   app, audio.sample_rate(),
@@ -2663,12 +2568,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // surface by its own open gates, so the only field this reaches on the
     // phase-reset column is a BOUND field, and it wears the phase-reset blue
     // as the resting cell does (architect 2026-09-21, superseding the
-    // 2026-09-15 purple on either column); the magnification level field
-    // wears its column's ORANGE.
+    // 2026-09-15 purple on either column).
     const FlagColumnFace column_face =
-        level_kind ? FlagColumnFace::MagnificationLevel
-        : phase    ? FlagColumnFace::PhaseReset
-                   : FlagColumnFace::Warp;
+        phase ? FlagColumnFace::PhaseReset : FlagColumnFace::Warp;
     FlagFace face = resolve_flag_face(dis, red_class, cell_selected(field_cell),
                                       column_face);
     // The border column the box wears: the flag's own for the payload editor,
@@ -2923,13 +2825,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // above.
     const int  field_rank  = flag_box_rank(field_cell);
     const bool ride_cells  = field_rank < flag_box_rank(MarkerCell::Upper);
-    // NOTHING RIDES A LEVEL FIELD, and it is stated rather than derived: an M
-    // flag has exactly ONE box — no cells (grid iterations never lights on that
-    // column) — so its payload field is
-    // also its rightmost box. The rank test below would answer the same way
-    // through the empty cell lookup, but that lookup reads the
-    // WARP store by index, and an M target is no index into it.
-    if (!level_kind && ride_cells) {
+    if (ride_cells) {
         // THE RUN'S SEAM COLUMNS ARE THE MARKER'S CLASS BORDER, never the
         // field's: `face` above may be the RED FLASH, which is a state of the
         // box being typed into and of nothing else, while these boxes keep

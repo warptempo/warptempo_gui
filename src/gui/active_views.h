@@ -10,9 +10,9 @@
 // lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
 // two view-axis swap operations (W/P markers and A/B tab) plus their
 // shared snapshot machinery: active-tab snapshot push
-// (refresh_active_tab_view_from_app), the W/P/M markers-view writer
-// (switch_active_markers_view_to), the absolute column entry that the
-// backtick, bare 1/2/3 and the typed `active_markers_view=` take
+// (refresh_active_tab_view_from_app), the W/P markers-view writer
+// (switch_active_markers_view_to), the absolute column entry that
+// bare 1/2/3 and the typed `active_markers_view=` take
 // (select_active_markers_view), and the Ctrl+Tab tab-view
 // flip (switch_active_tab_view_to). The S/T audio-view axis is handled
 // elsewhere (input_handler) — it's a domain translation, not a snapshot

@@ -101,7 +101,7 @@ struct Viewport {
     //    the damaged frame; it joins the class rather than growing a second
     //    flag-only kick (the reason is stated at its site, active_views.cpp), and
     //    the settings active_markers_view= key rides it through the same
-    //    function. The backtick and bare 1/2/3, the ABSOLUTE VIEW SELECTORS
+    //    function. Bare 1/2/3, the ABSOLUTE VIEW SELECTORS
     //    (2026-08-01; a fourth since 2026-09-15), add NO fourth site: they run the audio
     //    view's and the column's handlers themselves, so their kicks are those
     //    two entries and this list is unchanged by them.
@@ -134,12 +134,10 @@ struct Viewport {
     //    (GuiInputHandler::set_ignore_waveform_magnification) takes the
     //    before/after kick below (kick_waveform_sync_if_gain_changed), and the
     //    S/T FLIP, which owes no gain kick of its own, running an
-    //    unconditional kick_waveform_sync. The magnification level column's
-    //    writers still call kick_waveform_sync_if_gain_changed and the
-    //    marker drag's release and the level nudge's tail still ask
-    //    displayed_plate_gain_is_stale, but the store moves no gain since
-    //    2026-09-23, so those compares always come out equal and render
-    //    nothing. The column and the zoom are no inputs.
+    //    unconditional kick_waveform_sync. The marker drag's release still asks
+    //    displayed_plate_gain_is_stale, but no marker store moves the gain, so
+    //    that compare always comes out equal and renders nothing. The markers
+    //    and the zoom are no inputs.
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and the lamp takes the kick so the
@@ -252,9 +250,8 @@ struct Viewport {
     // rule is at MarkerDragOps::commit_drag's tail).
     // displayed_plate_gain_is_stale: true when a plate is displayed and its
     // published gain fingerprint (wf_cache.fp_gain_hash) differs from the
-    // live gain field (waveform_gain_fingerprint). TWO READERS since
-    // 2026-09-16: the drag's commit and the magnification level nudge's tail
-    // (GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels).
+    // live gain field (waveform_gain_fingerprint). ONE READER: the drag's
+    // commit.
     // Wired in main.cpp to GuiPaintHandler::displayed_plate_gain_is_stale;
     // false unwired (the tick's dirty-detect then catches the plate).
     std::function<bool()> displayed_plate_gain_is_stale_;

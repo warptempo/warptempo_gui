@@ -9,10 +9,6 @@
 #include "file_loader.h"     // source_load_dry_run (the Open project picker's act)
 #include "folder_overlay.h"  // the player's and the picker's key routers (the list walk)
 #include "frame_format.h"    // format_authored_frame (the revert act's line)
-#include "magnificationlevelmarkers.h"  // format_magnificationlevelmarkers_text
-                                        // (the revert act's third column)
-#include "marker_magnification.h"  // parse_marker_magnification (that column's
-                                   // one level reader)
 #include "marker_store_validate.h"  // first_past_eof_wall_defect (the three
                                     // promote roads' shared wall guard)
 #include "project_model.h"   // resolve_project / enumerate_project_names
@@ -24,7 +20,6 @@
 #include "history_folder.h"  // the `'` act's folder-road gate and its member
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
 #include "phase_reset_propagate.h"  // format_domain_timestamp (the family's one register)
-#include "magnification_level_propagate.h"
 #include "paint_handler.h"
 #include "render.h"
 #include "render_pipeline.h"
@@ -413,7 +408,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
-    // keys whole with their view lamps on 2026-09-15 (the four view selectors
+    // keys whole with their view lamps on 2026-09-15 (the three view selectors
     // are the axes' only keyboard road now, immediately below). Before that: each
     // used to write the warp store on one edge — entering target view exited
     // iteration mode through wipe_iter_state, clearing every bracket and
@@ -429,18 +424,15 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // The backtick and bare 1 / 2 / 3, the ABSOLUTE view selectors (S+M / S+W
-    // / T+P / T+W — the magnification level selector joined 2026-09-15, a
-    // switch like the other three, and took the backtick off the end of the
-    // digit run 2026-09-19). They are
+    // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+P / T+W). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no
     // store write at all (the S->T iter wipe that was the one exception is
     // deleted — see above). Nothing new to weigh.
     const bool is_view_selector =
-        ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
-          key == GuiKeys::Digit2 || key == GuiKeys::Digit3) &&
+        ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+          key == GuiKeys::Digit3) &&
          !ctrl && !shift && !alt);
     // THE WALK: bare Tab / Shift+Tab / IsoLeftTab — pure navigation, its
     // camera the audio view's (marker_walk_landing_frame). No ctrl: Ctrl+Tab
@@ -599,8 +591,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
-    // Delete, `;`, `i` and the propagate copy/paste chords of BOTH families
-    // (the Ctrl+P three and the Ctrl+M two) are likewise
+    // Delete, `;`, `i` and the phase-reset propagate's copy/paste chords
+    // (the Ctrl+P three) are likewise
     // absent (blocked here); `'` LEFT that list on 2026-09-01 for a
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
@@ -655,8 +647,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // toggles, were deleted whole with their view lamps on 2026-09-15, so the
 // column switch's only remaining road is the selectors below — see the S/T
 // paragraph's retirement note further down): THE COLUMN SWITCH's three chords — the
-// ABSOLUTE VIEW SELECTORS, the backtick and bare 1 / 2 / 3 (four since the
-// magnification level selector joined 2026-09-15), which run the `t` and `p` handler
+// ABSOLUTE VIEW SELECTORS, bare 1 / 2 / 3, which run the `t` and `p` handler
 // BODIES (unchanged; only their bare keys are gone) and so carry the column
 // with them (architect 2026-09-10: the mode is lit for the column you are IN,
 // which is also what retired the stamped column that stood beside the mode
@@ -751,23 +742,21 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     every other chord and the wrong one for the two the user pressed to ask
 //     about history. The arm refuses first, ahead of its own two terms, and
 //     history_step_actionable greys both buttons on the same fact.
-//   * THE TWO CLIPBOARD COPIES — Ctrl+P (the phase-reset placements) and
-//     Ctrl+M (the magnification levels) — which are
-//     CLIPBOARD-ONLY: each reads a selection into a session clipboard and
+//   * THE CLIPBOARD COPY — Ctrl+P (the phase-reset placements) — which is
+//     CLIPBOARD-ONLY: it reads a selection into a session clipboard and
 //     writes no store, no
 //     undo entry and no dirty bit, so the whole reason this lock exists says
 //     nothing about them (the lock protects the undo domain; nothing here can
 //     ever land in it). The base list refuses them because READ-ONLY is a
 //     different question — it protects one tab's authored content and eats
-//     both propagate families whole — and this is the one place the two locks
+//     the propagate family whole — and this is the one place the two locks
 //     part company in the admitting direction rather than the refusing one.
-//     EVERY PASTE STAYS REFUSED by the base — the phase family's Ctrl+Alt+P
-//     and Ctrl+Alt+Shift+P and the magnification family's Ctrl+Alt+M, three
-//     since 2026-09-19 — each rewriting a store and pushing, which is exactly
+//     EVERY PASTE STAYS REFUSED by the base — Ctrl+Alt+P and
+//     Ctrl+Alt+Shift+P — each rewriting a store and pushing, which is exactly
 //     what the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
 //     arm's own spelling — so the alt-bearing chords cannot reach this
-//     admission by widening it. THE EDIT MENU'S TWO COPY ROWS come back with
-//     it and needed no edit of their own: each synthesizes its chord through
+//     admission by widening it. THE EDIT MENU'S COPY ROW comes back with
+//     it and needed no edit of its own: it synthesizes its chord through
 //     on_key, so the row is the key.
 //   * CTRL+SHIFT+N — THE TIE (architect 2026-09-19), and it belongs here for
 //     the lock's own reason rather than as an exception to it: a tie says
@@ -799,9 +788,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // Toggle History View button, Edit flag and the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
-// 2026-09-10 — THE VIEW BAR'S FOUR SELECTORS (four since the magnification
-// level selector joined the bar on 2026-09-15), the column
-// quartet's other three chords, THE PADLOCK, delta (a)'s third member (WALK
+// 2026-09-10 — THE VIEW BAR'S THREE SELECTORS, the column
+// switch's three chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
 // TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
 // retired that refusal and this membership lost the button with it), and BPM
@@ -824,10 +812,10 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // edit there.
 //
 // TWO ROSTER MEMBERS THE GATE EATS HAVE NO SENTENCE TO CARRY, and they answer
-// it differently. THE VIEW BAR'S four selectors ARE in the membership since
+// it differently. THE VIEW BAR'S three selectors ARE in the membership since
 // 2026-09-10, so their PRESS dies at arm_redesign_press's disabled line as a
 // standing overlay's does, and their FACE followed the same day (architect, at
-// his mockup: the three dead UNSELECTED labels at kRedesignDisabledMix over the
+// his mockup: the two dead UNSELECTED labels at kRedesignDisabledMix over the
 // bar's ground, the selected one full — the view bar's painter,
 // paint_handler.cpp). The row still carries no tooltip, so this gate's card is
 // the only thing that SPEAKS (the account is at their arm in
@@ -838,11 +826,11 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the column switch (the backtick and
-    // bare 1/2/3 — bare `t`/`p`, the two individual axis toggles, were deleted
+    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3 —
+    // bare `t`/`p`, the two individual axis toggles, were deleted
     // whole with their view lamps on 2026-09-15, so the selectors are its only
     // road now), BARE `o` (the read-only toggle — the lock's own reachability,
-    // the header) and the paired march. Bare-exact on all five and
+    // the header) and the paired march. Bare-exact on all four and
     // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
     // them. (BARE `k` STOOD HERE TOO until 2026-09-19, and the header carries
     // why it left. They lived in an
@@ -850,9 +838,8 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // BESIDE the wider list on a locked tab; `o`'s arrival is what made that
     // state unreachable, and the owner went with it.)
     if (!alt && !ctrl && !shift &&
-        (key == GuiKeys::O || key == GuiKeys::Grave ||
-         key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-         key == GuiKeys::Digit3))
+        (key == GuiKeys::O || key == GuiKeys::Digit1 ||
+         key == GuiKeys::Digit2 || key == GuiKeys::Digit3))
         return true;
     if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
@@ -863,12 +850,9 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // THE TIE, ctrl-and-shift exact as its dispatch arm is — which is what
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
-    // The clipboard copies, ctrl-exact as their dispatch arms are — which is
-    // what keeps the three ALT-bearing pastes out of this
-    // admission. Ctrl+M,
-    // the magnification level copy (2026-09-15), on Ctrl+P's own standard: a
-    // copy writes a session clipboard and no store.
-    if ((key == GuiKeys::P || key == GuiKeys::M) && ctrl && !shift && !alt)
+    // The clipboard copy, ctrl-exact as its dispatch arm is — which is
+    // what keeps the two ALT-bearing pastes out of this admission.
+    if (key == GuiKeys::P && ctrl && !shift && !alt)
         return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
     // one (the arrows' lane term): the same chords mean two different acts and
@@ -1014,9 +998,7 @@ void GuiInputHandler::run_iter_tie_toggle() {
     selection_consumed(app);
     const bool untie = verdict.act == IterTieAct::Untie;
     bool changed = false;
-    // The lamp is target-view only and the magnification level column is
-    // source-view only, so the verdict's own lamp test has already made this
-    // fork W or P.
+    // The column axis has two letters, so this fork is W or P.
     if (app.active_markers_view == 'P') {
         std::vector<GuiPhaseResetMarker> proposed =
             app.phaseresetmarkers.markers();
@@ -1074,7 +1056,7 @@ void GuiInputHandler::run_iter_tie_toggle() {
 // included, so the view leaves it exactly where the review left it and each A/B
 // tab keeps whatever band it had. THE THREE LOAD-IN-PLACES ARE UNAFFECTED, and
 // the asymmetry that made this worth stating is GONE: all three route through
-// apply_recipe_in_place (2026-08-24), which writes the three marker columns
+// apply_recipe_in_place (2026-08-24), which writes the two marker columns
 // and the engine block and NOTHING ELSE — no tab band, no view bits, no clamps
 // — so the COMMIT load applies no band either now, and there is no restore under or
 // over any of them. AppState::HistoryMode's field block owns the ruling and the
@@ -1254,7 +1236,7 @@ void GuiInputHandler::close_history_mode() {
 // switch_active_tab_view_to ends in the same kick_waveform_sync, so the
 // arriving band's flags are republished inside the press. THE LIST ITSELF DOES
 // NOT CHANGE ACROSS A TAB SWITCH AT ALL, which is the stronger fact: the two
-// tabs share all three marker stores and the engine settings, so the delta a
+// tabs share both marker stores and the engine settings, so the delta a
 // switch arrives at is the delta it left — only the WINDOW the flags are laid
 // on moves.
 void GuiInputHandler::drop_lane_stash_across_history_edge() {
@@ -2691,7 +2673,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             is measured once and cannot change while the mode
 //                             stands (AppState::HistoryMode::head_delta_empty
 //                             owns it, the asymmetry included: "no changes" is
-//                             the delta's vocabulary, the three marker columns
+//                             the delta's vocabulary, the two marker columns
 //                             plus `scale`, so a settings-only drift greys the
 //                             act too). A PUSH-PENDING bit sat beside it for
 //                             one day of 2026-08-09, admitting the chord as an
@@ -2820,7 +2802,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // re-reads THE SAME piece — the same three sidecar texts the now side was
 // frozen from, the same delta, another column of it — and SO DOES A TAB SWITCH,
 // which is what makes the admission cheap rather than a re-entry: the tabs hold
-// a value-shaped band alone and share all three marker stores and the engine
+// a value-shaped band alone and share both marker stores and the engine
 // settings, so nothing the delta is made of moves with them. THE OLD REFUSAL'S
 // PREMISE was that a tab switch "swaps the per-tab band the session was
 // measured with", and the band is not what the session is measured with; the
@@ -3047,15 +3029,15 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // which this mode cannot hide.
     const bool is_sync_external = is_sync_external_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
-    // bare-exact, read off its own arm in on_key: the four absolute selectors
-    // on the backtick and bare 1/2/3, which compose the `t`/`p` handler bodies
+    // bare-exact, read off its own arm in on_key: the three absolute selectors
+    // on bare 1/2/3, which compose the `t`/`p` handler bodies
     // and are their only road since the architect deleted the individual
     // `t`/`p` keys and their view lamps 2026-09-15. Admitting a shape the
     // dispatch does not bind would admit a press that then does nothing, which
     // is the allowlist telling a lie about itself.
     const bool is_view_selector =
-        ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
-          key == GuiKeys::Digit2 || key == GuiKeys::Digit3) && bare);
+        ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+          key == GuiKeys::Digit3) && bare);
     // ADD TO SELECTION (architect 2026-09-17), bare-exact — exactly the
     // dispatch arm's own spelling and the roster row's, so the key, the button
     // and this admission cannot drift. The argument is in the header's bullet:
@@ -3073,8 +3055,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // THE MODE RE-BINDS NOTHING, and that is why this is one allowlist entry
     // rather than a re-entry: the A/B tabs hold a VALUE-SHAPED BAND ALONE
     // (viewport, zoom, playhead, trim, read_only) and share the warp store, the
-    // phase-reset store, the magnification level store and the engine settings,
-    // while the displayed delta's whole vocabulary is those three stores plus
+    // phase-reset store and the engine settings,
+    // while the displayed delta's whole vocabulary is those two stores plus
     // `scale` — so the two walks, the frozen now side and the head delta
     // describe the same piece on either tab.
     // The undo/redo stacks the LOCAL walk indexes are session-global for the
@@ -3584,7 +3566,7 @@ void GuiInputHandler::on_history_checkpoint_complete(
 namespace {
 
 // THE REVERT'S ONE APPLY BODY (2026-09-16, Sol round 16's P1), generic over
-// the three marker stores — they are one template, GuiMarkerStore — so the
+// the two marker stores — they are one template, GuiMarkerStore — so the
 // column arms in run_history_revert differ only in how a then line becomes a
 // marker, which `restore` answers: the marker, or nothing after its own
 // stderr line for the unreachable refused line. It writes the PROPOSED copy
@@ -3797,13 +3779,9 @@ void GuiInputHandler::run_history_revert() {
 
     // THE COLUMN, hoisted above the wall guard below because both read it:
     // the active one by construction (the lane paints only that half of a
-    // delta), so the store is chosen once for the whole act. ALL THREE COLUMNS
-    // REVERT since 2026-09-15 (the magnification level column refused whole
-    // for the hours between its arrival and its authoring, and the Revert face
-    // stayed lit while the key carded — the recorded residue, closed here).
-    const char column = app.active_markers_view;
-    const bool phase = (column == 'P');
-    const bool level = (column == 'M');
+    // delta), so the store is chosen once for the whole act. BOTH COLUMNS
+    // REVERT.
+    const bool phase = (app.active_markers_view == 'P');
 
     // THE PAST-EOF WALL, ahead of everything (2026-08-29): the flags' THEN
     // side is a commit's sidecar text, authored against whatever audio stood
@@ -3823,7 +3801,6 @@ void GuiInputHandler::run_history_revert() {
     {
         std::vector<GuiWarpMarker>       restored_warp;
         std::vector<GuiPhaseResetMarker> restored_phase;
-        std::vector<GuiMagnificationLevelMarker> restored_level;
         for (int idx : subject) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(idx)];
             if (!f.removed) continue;   // an added flag DELETES; it lands none
@@ -3831,10 +3808,6 @@ void GuiInputHandler::run_history_revert() {
                 GuiPhaseResetMarker nm;
                 nm.time_frame = f.time_frame;
                 restored_phase.push_back(nm);
-            } else if (level) {
-                GuiMagnificationLevelMarker nm;
-                nm.time_frame = f.time_frame;
-                restored_level.push_back(nm);
             } else {
                 GuiWarpMarker nm;
                 nm.time_frame = f.time_frame;
@@ -3842,7 +3815,7 @@ void GuiInputHandler::run_history_revert() {
             }
         }
         if (auto defect = in_place_load_wall_defect(
-                restored_warp, restored_phase, restored_level)) {
+                restored_warp, restored_phase)) {
             // AN APPENDED REASON IS LOWERCASE (the rule and its one owner
             // lowercase_initial are at notifications.h): the wall defect is a
             // sentence at its frozen producer because two consumers use it
@@ -3861,14 +3834,10 @@ void GuiInputHandler::run_history_revert() {
     // tail, after the last write, so a subject that changed nothing leaves no
     // entry behind.
     std::vector<GuiWarpMarker>       warp_pre =
-        (phase || level) ? std::vector<GuiWarpMarker>{}
-                         : app.warpmarkers.markers();
+        phase ? std::vector<GuiWarpMarker>{} : app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_pre =
         phase ? app.phaseresetmarkers.markers()
               : std::vector<GuiPhaseResetMarker>{};
-    std::vector<GuiMagnificationLevelMarker> level_pre =
-        level ? app.magnificationlevelmarkers.markers()
-              : std::vector<GuiMagnificationLevelMarker>{};
 
     // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
     // OLD map still stands — the subject of the target-view re-land at the
@@ -3888,14 +3857,13 @@ void GuiInputHandler::run_history_revert() {
     // until the install at the tail, which is what lets the grammar check
     // between the two judge the finished state and refuse the act with nothing
     // to undo — and, since 2026-09-16, what lets every flag resolve against the
-    // PRE-ACT rows (apply_history_revert_column). All three columns are copied
-    // and the act writes exactly one; the other copies are two vectors' worth
-    // of allocation on a keypress and are discarded.
+    // PRE-ACT rows (apply_history_revert_column). Both columns are copied
+    // and the act writes exactly one; the other copy is a vector's worth
+    // of allocation on a keypress and is discarded.
     GuiWarpMarkers       proposed_warp  = app.warpmarkers;
     GuiPhaseResetMarkers proposed_phase = app.phaseresetmarkers;
-    GuiMagnificationLevelMarkers proposed_level = app.magnificationlevelmarkers;
 
-    // THE APPLY, one body for the three columns (apply_history_revert_column
+    // THE APPLY, one body for the two columns (apply_history_revert_column
     // above owns the identity and the order); each arm supplies only how its
     // then line becomes a marker.
     if (phase) {
@@ -3907,39 +3875,6 @@ void GuiInputHandler::run_history_revert() {
                 GuiPhaseResetMarker nm;
                 nm.time_frame = f.time_frame;
                 nm.disabled   = f.then_disabled;
-                return nm;
-            });
-    } else if (level) {
-        // THE MAGNIFICATION LEVEL ARM, the phase arm's shape over the third
-        // store: its line is the frame, the disable bit and the LEVEL DIGIT,
-        // and the digit travels on the flag as `then_token` (the payload past
-        // the '|', history_diff.h), so this column needs no line parser
-        // either — the token IS the level, and the grammar's own reader
-        // judges it.
-        apply_history_revert_column(
-            proposed_level, flags, subject,
-            [](const HistoryDiffFlag& f)
-                -> std::optional<GuiMagnificationLevelMarker> {
-                GuiMagnificationLevelMarker nm;
-                nm.time_frame = f.time_frame;
-                nm.disabled   = f.then_disabled;
-                // THE LEVEL, through the grammar's ONE reader
-                // (parse_marker_magnification, marker_magnification.h). A
-                // token it refuses is UNREACHABLE BY CONSTRUCTION — every walk
-                // member is strict-load clean, so the digit was sliced out of
-                // a line this very grammar accepted — and is stated loudly
-                // rather than recovered from, the warp arm's own rule: one
-                // stderr line, then on to the next flag.
-                uint8_t     parsed = 0;
-                std::string level_err;
-                if (!parse_marker_magnification(f.then_token, parsed,
-                                                level_err)) {
-                    std::fprintf(stderr,
-                        "warptempo_gui: Revert skipped a magnification level "
-                        "the grammar refused: '%s'\n", f.then_token.c_str());
-                    return std::nullopt;
-                }
-                nm.level = parsed;
                 return nm;
             });
     } else {
@@ -3990,11 +3925,8 @@ void GuiInputHandler::run_history_revert() {
     const bool changed =
         phase ? format_phaseresetmarkers_text(proposed_phase.markers()) !=
                     format_phaseresetmarkers_text(phase_pre)
-        : level ? format_magnificationlevelmarkers_text(
-                      proposed_level.markers()) !=
-                      format_magnificationlevelmarkers_text(level_pre)
-                : format_warpmarkers_text(proposed_warp.markers()) !=
-                      format_warpmarkers_text(warp_pre);
+              : format_warpmarkers_text(proposed_warp.markers()) !=
+                    format_warpmarkers_text(warp_pre);
 
     // THE GRAMMAR'S OWN UNIQUENESS RULE, ASKED ONCE ON THE PROPOSED STORE AND
     // REFUSING THE WHOLE ACT (architect 2026-09-06, on Astra's P1). A label
@@ -4019,10 +3951,10 @@ void GuiInputHandler::run_history_revert() {
     // by construction — the loader refuses one and the column's only other
     // producer gates it, so the live store carried none.
     //
-    // THE OTHER TWO COLUMNS ARE CARVED OUT BY THEIR GRAMMARS: neither phase
-    // resets nor magnification level markers carry labels at all, so there is
-    // nothing to collide and no check to run.
-    if (!phase && !level) {
+    // THE PHASE-RESET COLUMN IS CARVED OUT BY ITS GRAMMAR: a phase reset
+    // carries no label at all, so there is nothing to collide and no check to
+    // run.
+    if (!phase) {
         const auto& pv = proposed_warp.markers();
         for (int i = 0; i < static_cast<int>(pv.size()); ++i) {
             const std::string& def = pv[static_cast<std::size_t>(i)].label_def;
@@ -4087,16 +4019,9 @@ void GuiInputHandler::run_history_revert() {
         // needs no reorder pass here. markers_mut() is what
         // bumps the generation, which is what the map memo and the flag cache
         // read.
-        // THE PLATE'S BEFORE-HASH, captured ahead of the install for the
-        // magnification level arm (the cluster's rule; no store moves the gain
-        // since 2026-09-23, so the compare comes out equal on every arm).
-        const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
         if (phase) {
             app.phaseresetmarkers.markers_mut() =
                 std::move(proposed_phase.markers_mut());
-        } else if (level) {
-            app.magnificationlevelmarkers.markers_mut() =
-                std::move(proposed_level.markers_mut());
         } else {
             app.warpmarkers.markers_mut() =
                 std::move(proposed_warp.markers_mut());
@@ -4105,10 +4030,8 @@ void GuiInputHandler::run_history_revert() {
         // load-in-place's own line, and the deletes'): it is a set of STORE
         // indices, and this act inserts and removes under them.
         selection.clear_selection();
-        if (phase)      undo.push_undo_phase_reset(std::move(phase_pre));
-        else if (level) undo.push_undo_magnification_level(
-                            std::move(level_pre));
-        else            undo.push_undo_warp(std::move(warp_pre));
+        if (phase) undo.push_undo_phase_reset(std::move(phase_pre));
+        else       undo.push_undo_warp(std::move(warp_pre));
         undo.recompute_dirty();
         // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT under a standing target
         // view (2026-09-02, R-17d): the warp arm has just rewritten the map the
@@ -4123,23 +4046,12 @@ void GuiInputHandler::run_history_revert() {
         // No kick of its own: the map is memoized on the warp store's
         // generation, so the forward translation below already reads the
         // rewritten map, and the close below invalidates the window whole.
-        if (!phase && !level && app.active_audio_view == 'T') {
+        if (!phase && app.active_audio_view == 'T') {
             viewport.reseat_playhead_to(
                 source_frame_to_active_domain(app, audio,
                                               playhead_source_frame));
         }
-        // AND THE MAGNIFICATION LEVEL ARM TRIGGERS NOTHING: its column is
-        // display-only — no sample, no engine input, no render fingerprint
-        // field reads a level — so a level revert owes the PREVIEW nothing.
-        // WHAT IT OWES IS THE PICTURE, and it pays it the way every writer of
-        // that store does (the rule is at GuiMagnificationLevelMarkersOps'
-        // header): the gain hash captured before the install above, handed to
-        // the kick here, so the reverted levels land in this press's own frame
-        // rather than a tick later on the async backstop.
-        if (level)
-            viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
-        else
-            target_render.trigger();
+        target_render.trigger();
     }
 
     // THEN THE VIEW CLOSES, and the order is the whole reasoning: this act has
@@ -4406,8 +4318,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Global dispatch: only the continuous step gestures repeat — the
     // ARROWS all four (Left/Right being the playhead step in the waveform lane
     // and the position nudge in the marker lane, Up/Down the
-    // VALUE STEP on the addressed cell — the tempo, a bound or the
-    // magnification level;
+    // VALUE STEP on the addressed cell — the tempo or a bound;
     // the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family — and since 2026-08-31 they repeat on their
     // shifted and ctrl spellings too, which the arm below this one owns),
@@ -4517,11 +4428,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL SIX editor kinds (text_editor::Kind, re-grepped
-// 2026-09-16) — the settings prompt,
+// dropped. It serves ALL FIVE editor kinds (text_editor::Kind, re-grepped
+// 2026-09-23) — the settings prompt,
 // the commit-title editor (2026-08-07), the bpm bracket, the ITERATION BOUND
-// editor (2026-09-05), the MAGNIFICATION LEVEL editor (2026-09-15) and
-// (architect 2026-07-28) the top-strip flag editor, which this ruling brought
+// editor (2026-09-05) and (architect 2026-07-28) the top-strip flag editor, which this ruling brought
 // under the same contract. While one is open the user can
 // reach the editor itself, bare Esc (exit), Ctrl+S (save; the editor stays
 // open), and Ctrl+Q (close routing) — nothing else: Space-as-playback, zoom,
@@ -5194,7 +5104,6 @@ void GuiInputHandler::run_iteration_sweep_render() {
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(cell_warp_markers),
             std::move(cell_phase_resets),
-            app.magnificationlevelmarkers.markers(),
             app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame,
             batch_folder.string(), std::move(basename));
@@ -5364,8 +5273,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // convention inside do_render.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
-            app.phaseresetmarkers.markers(),
-            app.magnificationlevelmarkers.markers(), app.engine_settings,
+            app.phaseresetmarkers.markers(), app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
@@ -5465,8 +5373,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
         // empty here and are assigned at dispatch-to-worker time.
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
-            app.phaseresetmarkers.markers(),
-            app.magnificationlevelmarkers.markers(), app.engine_settings,
+            app.phaseresetmarkers.markers(), app.engine_settings,
             app.trim.begin_frame, app.trim.end_frame);
         req.authoring = snapshot_current_authoring_state();
         attach_shared_render_resources(req);
@@ -5505,13 +5412,11 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
 // The promote roads' past-EOF wall guard (contract at the declaration): the
 // loader's own shared check, asked of a candidate marker set against this
-// session's audio. The live trim pair rides along because the guard's seven
-// checks are one call; only the three marker arms can answer here.
+// session's audio. The live trim pair rides along because the guard's six
+// checks are one call; only the two marker arms can answer here.
 std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
         const std::vector<GuiWarpMarker>& warp,
-        const std::vector<GuiPhaseResetMarker>& phase_resets,
-        const std::vector<GuiMagnificationLevelMarker>& magnification_levels)
-        const {
+        const std::vector<GuiPhaseResetMarker>& phase_resets) const {
     auto trim_of = [](const TrimState& t) {
         SettingsTrim s;
         s.begin_frame = t.begin_frame;
@@ -5520,7 +5425,6 @@ std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
     };
     return first_past_eof_wall_defect(
         slice_to_warp_markers(warp), slice_to_phase_reset_markers(phase_resets),
-        slice_to_magnification_level_markers(magnification_levels),
         trim_of(app.tab_a.trim), trim_of(app.tab_b.trim),
         audio.total_frames(), audio.sample_rate());
 }
@@ -5534,43 +5438,32 @@ std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
 void GuiInputHandler::apply_recipe_in_place(
         std::vector<GuiWarpMarker> warp,
         std::vector<GuiPhaseResetMarker> phase_resets,
-        std::vector<GuiMagnificationLevelMarker> magnification_levels,
         const EngineSettings& engine) {
     std::vector<GuiWarpMarker>       warp_pre = app.warpmarkers.markers();
     std::vector<GuiPhaseResetMarker> phase_reset_pre =
         app.phaseresetmarkers.markers();
-    std::vector<GuiMagnificationLevelMarker> magnification_level_pre =
-        app.magnificationlevelmarkers.markers();
 
     app.warpmarkers.markers_mut()       = std::move(warp);
     app.phaseresetmarkers.markers_mut() = std::move(phase_resets);
-    // The magnification level column rides the recipe (architect 2026-09-15:
-    // `'` "definitely" carries it) in this SAME one undo entry. It moves no
-    // pixel of the waveform (the picture's gain is the curve derived from the
-    // source), and the target preview never reads it.
-    app.magnificationlevelmarkers.markers_mut() =
-        std::move(magnification_levels);
     // Wholesale authoring reset: the ONE selection goes, and there is nothing
     // else to reset — no per-tab per-mode slot holds a copy (the parked
     // selections died 2026-07-29, so a wholesale store replace no longer has to
     // hunt down stale index sets in either ViewState).
     selection.clear_selection();
 
-    // ONE cross-file undo entry: the three marker columns plus the OUTGOING engine
+    // ONE cross-file undo entry: the two marker columns plus the OUTGOING engine
     // settings, which push_undo_both captures from `app` — so it must run
     // BEFORE the incoming block is applied below. It files under the LIVE tab
-    // and the LIVE column — W, P or M, the last since 2026-09-15 (the restore
-    // takes an 'M' entry's source view ahead of its column, undo.cpp) — which
-    // are the only ones this act touches now that it performs no tab or column
+    // and the LIVE column — W or P (the restore takes a 'P' entry's target
+    // view ahead of its column, undo.cpp) — which are the only ones this act touches now that it performs no tab or column
     // switch at all.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
-                        std::move(magnification_level_pre),
                         app.active_markers_view);
     undo.recompute_dirty();
 
     // THE LOAD IS NOT AN ITERATION-MODE EXIT ROUTE (architect 2026-09-02:
     // "iteration mode is where you stand"), and SINCE 2026-09-10 IT CANNOT
-    // RUN UNDER A LIT LAMP AT ALL: the load rewrites all three marker stores
+    // RUN UNDER A LIT LAMP AT ALL: the load rewrites both marker stores
     // and the engine block and pushes the entry above, so the ITERATION LOCK
     // refuses it — by key, by the player's button and by the `h` view's own
     // road (authoring_locked, app_state.h). The 2026-09-02 ruling therefore
@@ -5669,9 +5562,8 @@ void GuiInputHandler::apply_recipe_in_place(
 // declaration.
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
-// four sidecars (.warpmarkers, .phaseresetmarkers,
-// .magnificationlevelmarkers, .settings) must read and validate — all four
-// REQUIRED, and a MISSING one is caught by the set rule's own preflight
+// three sidecars (.warpmarkers, .phaseresetmarkers, .settings) must read and
+// validate — all three REQUIRED, and a MISSING one is caught by the set rule's own preflight
 // (sidecar_set_presence_core, sidecar_set.h) ahead of every reader since
 // 2026-09-16, so an absence is named as an absence rather than wearing the
 // first strict loader's cannot-open words. On ANY failure — the running-batch
@@ -5740,19 +5632,26 @@ bool GuiInputHandler::load_render_entry_in_place(
     }
 
     // THE REQUIRED-SIDECAR PREFLIGHT, AHEAD OF EVERY STRICT READER (architect
-    // 2026-09-16): the cell's recipe is the SAME FOUR-FILE SET a project source
+    // 2026-09-16): the cell's recipe is the SAME THREE-FILE SET a project source
     // carries, so it asks the set rule's one owner
     // (sidecar_set_presence_core, sidecar_set.h) before it opens anything — a
     // partial cell is then refused as the MISSING MEMBER it is, named on the
     // card, instead of by whichever strict reader ran first wearing that
     // reader's cannot-open words. NONE REFUSES HERE TOO, and for the CLI's
     // reason: `None` is the GUI source load's new-project fork, which answers
-    // by WRITING four templates, and this act authors nothing at all — a cell
-    // with no sidecars is four missing files. The refusal keeps this body's own
+    // by WRITING three templates, and this act authors nothing at all — a cell
+    // with no sidecars is three missing files. The refusal keeps this body's own
     // shape: `refuse` puts the full path on stderr and the card names the file
     // the folder-and-file way, lowercase, single-quoted.
+    //
+    // A RETIRED SIDECAR IN THE CELL IS LEFT UNREAD (RetiredSidecars::Ignore,
+    // architect 2026-09-23): the cell is a snapshot the product wrote, and one
+    // written while the magnification level markers column stood carries that
+    // column's copy beside the three members this act reads, which still say
+    // everything the product loads. So the Retired defect never arises here.
     {
-        auto presence = sidecar_set_presence_core(e.batch_folder, e.basename);
+        auto presence = sidecar_set_presence_core(e.batch_folder, e.basename,
+                                                  RetiredSidecars::Ignore);
         if (!presence) {
             const SidecarSetDefect& d = presence.error();
             if (d.kind == SidecarSetDefect::Kind::Missing) {
@@ -5830,21 +5729,6 @@ bool GuiInputHandler::load_render_entry_in_place(
         }
         src_phase_resets = t.markers();
     }
-    std::vector<GuiMagnificationLevelMarker> src_magnification_levels;
-    {
-        GuiMagnificationLevelMarkers ml;
-        const std::filesystem::path mlp =
-            sidecar_path(e.batch_folder, e.basename,
-                         kSidecarMagnificationLevel);
-        auto r = ml.load(mlp.string(), &load_reason);
-        if (!r) {
-            return refuse("invalid magnification level markers in '" +
-                              shown_project_path(mlp) + "': " +
-                              load_words(r.error()),
-                          mlp);
-        }
-        src_magnification_levels = ml.markers();
-    }
 
     // THE PAST-EOF WALL, the loader's own adversarial guard asked of the
     // parsed columns before anything is installed (in_place_load_wall_defect
@@ -5857,13 +5741,12 @@ bool GuiInputHandler::load_render_entry_in_place(
     // whole) and this is an APPENDING seam, so it lowercases through the one
     // owner lowercase_initial like its three siblings — notifications.h states
     // the rule, and every other reason handed to `refuse` is already lowercase.
-    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets,
-                                                src_magnification_levels)) {
+    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
         return refuse(lowercase_initial(*defect), {});
     }
 
     // Every input is in hand and valid; nothing below refuses. WHAT IS APPLIED
-    // IS THE RECIPE AND NOTHING ELSE — the three marker columns and the engine
+    // IS THE RECIPE AND NOTHING ELSE — the two marker columns and the engine
     // block —
     // through the shared owner apply_recipe_in_place, whose declaration
     // (input_handler.h) states the rule. The file's view keys, its two tab bands
@@ -5892,7 +5775,6 @@ bool GuiInputHandler::load_render_entry_in_place(
     close_history_mode();
 
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
-                          std::move(src_magnification_levels),
                           settings->engine);
 
     const std::filesystem::path batch_root =
@@ -6015,7 +5897,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // any other authoring
 // edit.
 //
-// WHAT IS APPLIED is THE RECIPE — the commit's three marker columns and its
+// WHAT IS APPLIED is THE RECIPE — the commit's two marker columns and its
 // engine block,
 // through the shared owner apply_recipe_in_place, which is also
 // load_render_entry_in_place's body and whose declaration (input_handler.h)
@@ -6057,7 +5939,7 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
     //
     // THE FOLDER ROAD'S address is the member FOLDER, and its gate is that
     // road's own twin of the same one predicate (load_history_folder_member_-
-    // strict, history_folder.h): the four files sit under their real names, so
+    // strict, history_folder.h): the three files sit under their real names, so
     // there is no spelling to resolve and no staging. `seq` is the listing's
     // order term and the load never reads it, so this builds the member with a
     // zero rather than asking the session for a parsed triple.
@@ -6097,8 +5979,6 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
     std::vector<GuiWarpMarker>       src_warp = std::move(loaded.warp_markers);
     std::vector<GuiPhaseResetMarker> src_phase_resets =
         std::move(loaded.phase_reset_markers);
-    std::vector<GuiMagnificationLevelMarker> src_magnification_levels =
-        std::move(loaded.magnification_level_markers);
 
     // THE PAST-EOF WALL, the sibling's own line and for its reason: a
     // checkpoint's sidecars are state authored against whatever audio stood
@@ -6106,8 +5986,7 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
     // them against no audio at all (in_place_load_wall_defect carries the
     // whole reasoning). The refusal is WHOLE and names its cause on stderr and
     // on a notification card like every other arm here.
-    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets,
-                                                src_magnification_levels)) {
+    if (auto defect = in_place_load_wall_defect(src_warp, src_phase_resets)) {
         // Appended, so lowercase through the one owner (notifications.h).
         const std::string reason = lowercase_initial(*defect);
         std::fprintf(stderr,
@@ -6133,7 +6012,6 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
     close_history_mode();
 
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
-                          std::move(src_magnification_levels),
                           settings.engine);
 
     // NO tmp/ WIPE. That step is the render-entry load-in-place's cleanup
@@ -6176,7 +6054,7 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 // There is no grammar and nothing to resolve: the bound is the walk's own
 // member count, and the index is a subscript into it.
 //
-// WHAT IS APPLIED: an undo entry carries the three MARKER COLUMNS and the
+// WHAT IS APPLIED: an undo entry carries the two MARKER COLUMNS and the
 // ENGINE BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
 // exactly what this restores — the same three pieces the walk's delta vocabulary
 // is built from, and, since 2026-08-24, exactly what BOTH SIBLINGS write too: a
@@ -6251,8 +6129,6 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
     std::vector<GuiWarpMarker>       src_warp   = *state->warp_markers;
     std::vector<GuiPhaseResetMarker> src_phase_resets =
         *state->phase_reset_markers;
-    std::vector<GuiMagnificationLevelMarker> src_magnification_levels =
-        *state->magnification_level_markers;
     EngineSettings                   src_engine = *state->engine_settings;
 
     // Every input is in hand and valid; nothing below refuses.
@@ -6287,7 +6163,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
     // playhead's clamp and the cold displayed target basis belong to every
     // recipe apply — a timeline state's included.
     apply_recipe_in_place(std::move(src_warp), std::move(src_phase_resets),
-                          std::move(src_magnification_levels), src_engine);
+                          src_engine);
 
     // NO tmp/ WIPE and NO DISK WRITE of any kind: this act moved state that
     // was already in memory from one place in memory to another.
@@ -6799,9 +6675,8 @@ void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
     // prompt VEILS everything and is itself the answer on screen — its
     // question is what the press has to deal with — while an editor is
-    // pointer-transparent in the three of its five kinds the top-strip flag
-    // editor takes (FlagPayload, IterBound and MagnificationLevelText,
-    // text_editor.h), so
+    // pointer-transparent in the two of its five kinds the top-strip flag
+    // editor takes (FlagPayload and IterBound, text_editor.h), so
     // the File menu's Open project row is reachable under it and owes a
     // sentence. The KEY road never reaches either arm: Ctrl+O under any
     // editor dies at on_key's editor gate, which says these very words with
@@ -7756,32 +7631,22 @@ void GuiInputHandler::on_external_sync_complete(
                          std::move(outcome.failure.display));
 }
 
-// P / M / I / K / L letter-key handlers. See the declaration for the chord list.
+// P / I / K / L letter-key handlers. See the declaration for the chord list.
 // THE CLIPBOARD CHORDS' SHARED SENTENCES (architect 2026-08-30, the
-// strictness ruling). FIVE CHORDS — the phase-reset propagate's copy and its
-// two pastes, and the magnification level propagate's copy and paste — and
-// only ONE sentence is common to both families now, the empty-clipboard
-// answer: where two chords refuse on the same fact they say the same words
-// and the literal lives once. What is NOT shared is each chord's own first
-// gate (what it copies from, what it pastes onto), which names its own
-// payload and is spelled at its arm — and the two families' gates diverged
-// with their models on 2026-09-19, the magnification pair reading the M
-// column while the phase three read W (magnification_level_propagate.h states
-// the whole divergence).
+// strictness ruling). THREE CHORDS — the phase-reset propagate's copy and its
+// two pastes: where two chords refuse on the same fact they say the same
+// words and the literal lives once.
 //
-// kSelectOneRun's readers, re-greped 2026-09-19: the PHASE copy's contiguity
+// kSelectOneRun's readers, re-greped 2026-09-23: the PHASE copy's contiguity
 // arm and the BPM sweep's below — the same test on the same set for the same
 // reason (the run must have one span meaning), so they answer in one
-// sentence. The magnification copy left them, its paste having no lockstep
-// walk to keep aligned.
+// sentence.
 constexpr const char* kSelectOneRun =
     "Select one consecutive run of markers";
-// The one sentence both families still share: each paste's empty-clipboard
-// answer, three readers (the phase pair and the magnification paste).
+// The two pastes' empty-clipboard answer.
 constexpr const char* kNothingCopiedYet = "Nothing has been copied yet";
-// The PHASE pastes' anchor gate, two readers — its paste is anchored on a
-// selected warp marker where the magnification paste is anchored on the
-// playhead.
+// The pastes' anchor gate, two readers — the paste is anchored on a selected
+// warp marker.
 constexpr const char* kSelectOneAnchor =
     "Select exactly one marker to paste onto";
 constexpr const char* kPastePhaseOntoWarp =
@@ -7792,11 +7657,8 @@ constexpr const char* kPastePhaseOntoWarp =
 // unlabeled or disabled markers passes every gate and captures nothing,
 // leaving an EMPTY clipboard that the paste then refuses with "Nothing has
 // been copied yet". It names the membership rather than the label alone
-// because a labeled but disabled marker propagates nothing either. ONE READER
-// since 2026-09-19: the magnification copy captures the SELECTED MAGNIFICATION
-// LEVEL MARKERS THEMSELVES, which no membership rule can thin out, so past its
-// non-empty-selection gate it always captures something and has no
-// empty-capture case to answer.
+// because a labeled but disabled marker propagates nothing either. ONE READER,
+// the phase copy.
 constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
 
@@ -7938,72 +7800,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // -- THE MAGNIFICATION LEVEL PROPAGATE: two arms on the letter M, and it
-    // is NOT the three above with a letter swapped (architect 2026-09-19).
-    // The phase three are W-column acts that carry a labeled phrase's resets
-    // from one occurrence of a label to another; these two are M-COLUMN acts
-    // that copy a group of magnification level markers and lay the same SHAPE
-    // — the frame distances between them — down again from the playhead. The
-    // whole model and every way it parts from the sibling are stated once at
-    // MagnificationLevelPropagate (magnification_level_propagate.h). The
-    // column exists in source view alone, so the marker view is the whole
-    // gate on both and neither needs an audio-view term.
-
-    // Ctrl+M: copy the SELECTED magnification level markers into the column's
-    // own clipboard. TWO GATES, not three: the column, and a standing
-    // selection. There is no consecutive-run gate — the sibling's exists for
-    // its lockstep block walk, and a gapped selection has perfectly
-    // well-defined offsets under a distance model.
-    if (key == GuiKeys::M && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'M') {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Magnification levels are copied in the magnification level view");
-            return true;
-        }
-        if (app.selected_markers.empty()) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Select the magnification level markers to copy");
-            return true;
-        }
-        // THE SELECTION IS SPENT past both gates, Ctrl+P's own placement
-        // (selection_consumed, app_state.h).
-        selection_consumed(app);
-        magnification_level_propagate.copy_from_selection();
-        // THE COPY SAYS SO (Ctrl+P's reasoning: nothing paints a clipboard).
-        // ONE ANSWER AND NOT TWO — past the gate above the capture is the
-        // selection itself, which no membership rule thins out, so this copy
-        // has no empty-capture case for the family's kNothingToCopy to
-        // answer.
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Copied the selected markers' magnification levels");
-        return true;
-    }
-
-    // Ctrl+Alt+M: lay the clipboard's shape down again with its first marker
-    // on the playhead. TWO GATES — the column, and an empty clipboard — and NO
-    // CONFIRMATION PROMPT: the act is purely additive (it clears nothing and
-    // matches nothing) and one undo entry away, where the sibling's paste
-    // clears the destination blocks' existing resets and so keeps its
-    // question. There is no anchor gate either: the anchor is the playhead,
-    // not a selected marker.
-    if (key == GuiKeys::M && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'M') {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Magnification levels are pasted in the magnification level view");
-            return true;
-        }
-        if (app.magnification_level_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingCopiedYet);
-            return true;
-        }
-        magnification_level_propagate.paste_apply();
-        return true;
-    }
-
     // `i` (no modifiers) toggles grid iterations, IN EITHER COLUMN since
     // 2026-09-09 (the arm below carries the ruling; the P-column card it used
     // to answer with is deleted with the premise that a phase reset had
@@ -8030,8 +7826,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // looking, and they stay there for the duration of the lamp being
         // lit."). It needs NO STAMP to be, and had one for a few hours of that
         // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
-        // (the four absolute view selectors, the backtick and bare 1/2/3, at
-        // iteration_lock_key_blocked; the view bar's four buttons grey with
+        // (the three absolute view selectors, bare 1/2/3, at
+        // iteration_lock_key_blocked; the view bar's three buttons grey with
         // the sentence), so the column cannot move while the lamp stands
         // and `iteration_column_lit` reads the LIVE column. There is no
         // second lamp, no second key and no column term on this button — and
@@ -8042,9 +7838,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // crossing shape (drop_phase_reset_in_target_view, input_handler.cpp),
         // below, past every refusal. The column is unchanged: S+W lights in
         // T+W, and S+W is the one source view this crossing starts from (the
-        // P column stands in target alone since 2026-09-21, and S+M refuses
-        // `i` ahead of here). While the lamp stands the lock refuses every road
-        // back to source (the four selectors are iteration_lock_key_blocked's
+        // P column stands in target alone since 2026-09-21). While the lamp
+        // stands the lock refuses every road back to source (the three
+        // selectors are iteration_lock_key_blocked's
         // delta (a)), so the OFF edge always runs in target and needs no
         // crossing;
         // the invariant is stated once at AppState::iteration_mode_enabled.
@@ -8063,7 +7859,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // AND THE LOCK'S SUBJECT HERE IS THE PIECE, WHICH IS THIS ARM'S OWN
         // REFUSAL (architect 2026-09-10, that evening: "simpler to just
         // prevent i mode if o mode is on anywhere and vice versa"). THE TWO
-        // A/B TABS SHARE ALL THREE MARKER STORES, so a bracket is common to
+        // A/B TABS SHARE BOTH MARKER STORES, so a bracket is common to
         // both
         // by construction and a lock on EITHER tab is a lock on the markers
         // the cells would tune — a piece-wide question about STATE that no
@@ -8086,25 +7882,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             notifications.notify(
                 AppState::NotificationClass::Normal,
                 read_only_chord_card(spell_chord(key, mods)));
-            return true;
-        }
-        // GRID ITERATIONS NEVER LIGHTS ON THE MAGNIFICATION LEVEL COLUMN
-        // (architect 2026-09-15): the column has no bracket for a cell to show
-        // (marker_paints_iter_cells' 'M' arm), so the ON edge refuses there
-        // with its own card and the Grid Iterations face greys on the same
-        // column (redesign_button_enabled's IconIter arm). THE REFUSAL STANDS
-        // AHEAD OF THE CROSSING BELOW (architect 2026-09-16, "refuses M as
-        // today"): the column is source view only now, so a press on it would
-        // otherwise cross to target — landing the column on W on the way —
-        // and light on T+W; refusing first means the press says why rather
-        // than silently changing both axes. The OFF edge never meets it: under
-        // a lit lamp the column cannot become M, by two rules — the lock
-        // refuses every column switch, and the lamp is target-view only where
-        // the column is source-view only.
-        if (!app.iteration_mode_enabled && app.active_markers_view == 'M') {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Grid iterations do not apply to magnification level markers");
             return true;
         }
         // ADD TO SELECTION NEEDS NO REFUSAL HERE AND NO LONGER HAS ONE
@@ -8937,7 +8714,7 @@ void GuiInputHandler::render_player_load_in_place() {
     // where what the site knows differs.
     //
     // AND IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h):
-    // the load rewrites all three marker stores and the engine block and
+    // the load rewrites both marker stores and the engine block and
     // pushes one undo entry, so grid iterations refuses it exactly as the
     // read-only bit does — through the one composer that forks the sentence
     // (authoring_lock_card). Bare `'` still OPENS the player under a lit lamp,
@@ -9101,7 +8878,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // held alongside makes the chord an unbound no-op, never this binding.
     //
     // THE ITERATION LOCK ADMITS IT IN EVERY STATE, and by construction rather
-    // than by exception: the two tabs SHARE all three marker stores, so a
+    // than by exception: the two tabs SHARE both marker stores, so a
     // bracket is common to both and a switch strands nothing. (It was refused
     // INTO A LOCKED TAB for one afternoon on 2026-09-10, the lamp being global where
     // `read_only` is per tab; the piece-wide exclusion ruled that evening —
@@ -9456,19 +9233,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 }
 
 // Top-flag editor key routing. See the declaration for the consumed/command
-// contract. ALL FOUR kinds take the shared modal route (architect 2026-07-28)
+// contract. ALL THREE kinds take the shared modal route (architect 2026-07-28)
 // and differ only in their commit / cancel bodies and their repaint area: the
 // bpm bracket editor draws in the MODAL DIALOG on the bottom row (like the
 // settings editor; its damage is that row's own lane owner) and commits into a
 // render sweep, the FlagPayload editor draws in the TOP strip and commits the
-// flag's own payload, the IterBound editor draws over its bound
-// cell in the TOP strip and commits that bound, and the MagnificationLevelText
-// editor draws in the TOP strip and commits the marker's level. None passes a bare-Tab hook,
+// flag's own payload, and the IterBound editor draws over its bound
+// cell in the TOP strip and commits that bound. None passes a bare-Tab hook,
 // having no vocabulary to complete: in the BPM editor, a DIALOG, bare Tab
-// walks the modal's focus ring from the first press, while for the three
+// walks the modal's focus ring from the first press, while for the two
 // top-strip kinds it never reaches this route at all — the on_key gate
 // swallows it, a flag editor publishing no dialog and so no ring
-// (route_modal_editor_key). For all four, Ctrl+S saves with the editor left
+// (route_modal_editor_key). For all three, Ctrl+S saves with the editor left
 // open and Esc / Enter are the session's only exits.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
@@ -9525,22 +9301,6 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
             [this] { flag_editor.commit_iter_bound_edit(); },
-            [this] { flag_editor.exit_top_flag_edit_no_commit(); },
-            [this] { viewport.invalidate_top_strip(); });
-    }
-    if (app.top_flag_editor.kind ==
-        text_editor::Kind::MagnificationLevelText) {
-        // The MAGNIFICATION LEVEL editor: the bound editor's route exactly —
-        // the same modal route, the same top-strip repaint, and no waveform
-        // edge, its red reaching no stem (the flash is gated on
-        // Kind::FlagPayload at paint_marker_stems) and its whole surface being
-        // the box in the strip. (The COMMIT's own gain kick is a separate
-        // matter and is the commit's, not this route's: a refusal renders
-        // nothing.)
-        return route_modal_editor_key(
-            app.top_flag_editor, key, mods,
-            /*autocomplete=*/nullptr,
-            [this] { flag_editor.commit_magnification_level_edit(); },
             [this] { flag_editor.exit_top_flag_edit_no_commit(); },
             [this] { viewport.invalidate_top_strip(); });
     }

@@ -30,10 +30,10 @@
 //
 //     <project>/history/                    its presence selects this road
 //     <project>/history/<seq>_<sha7>/       one member per exported checkpoint
-//         <stem>.warpmarkers                the four sidecars under their REAL
+//         <stem>.warpmarkers                the three sidecars under their REAL
 //         <stem>.phaseresetmarkers          names (kSidecarExtensions), so the
-//         <stem>.magnificationlevelmarkers  strict loaders are the same ones a
-//         <stem>.settings                   source's own sidecars meet
+//         <stem>.settings                   strict loaders are the same ones a
+//                                           source's own sidecars meet
 //
 //   <seq> is decimal digits — the checkpoint's 1-based ordinal in the piece's
 //   history, OLDEST FIRST. The exporter zero-pads to four (`0001`); the reader
@@ -50,8 +50,12 @@
 //
 //   NOTHING ELSE IS READ. There is no metadata file, no date and no title: the
 //   walk line shows `n/N <sha7>` and a scale clause derived from the sidecars,
-//   so a member needs its SHA and nothing more. Files beside the four are not
-//   looked at. An entry under `history/` that is not a directory, or whose
+//   so a member needs its SHA and nothing more. Files beside the three are
+//   not looked at — A RETIRED SIDECAR INCLUDED: a member exported while the
+//   set was four carries a `<stem>.magnificationlevelmarkers` beside them, and
+//   the member stays eligible on its three, that file never stat'd or read
+//   (architect approval 2026-09-23; the git road's own rule, history_diff.h's
+//   eligibility paragraph). An entry under `history/` that is not a directory, or whose
 //   name is not `<digits>_<7 lowercase hex>`, is NOT A MEMBER — it is skipped
 //   with one stderr line naming it and is not counted as hidden, hidden being
 //   reserved for an export the strict load refuses. A member the strict load
@@ -112,13 +116,13 @@ bool list_history_folder_members(const std::string& history_folder,
 // act, load_commit_sidecars_strict's twin over files instead of blobs and one
 // predicate for both askers exactly as that one is.
 //
-// The four files at `<member>/<base_name><ext>` must be REGULAR FILES (a
+// The three files at `<member>/<base_name><ext>` must be REGULAR FILES (a
 // missing one refuses naming it, the partial-commit arm's own rule: a load in
 // place is a whole-state replace, and some files from the export plus the rest
 // from nowhere composes a state no checkpoint ever was); their bytes are read
 // whole into the member's blob texts, which are the delta's then side; and the
-// four STRICT WHOLE-FILE LOADERS then judge THE FILES THEMSELVES in the
-// sibling's order — settings, warp, phase reset, magnification level. THERE IS
+// three STRICT WHOLE-FILE LOADERS then judge THE FILES THEMSELVES in the
+// sibling's order — settings, warp, phase reset. THERE IS
 // NO SCRATCH STAGING HERE: the files already sit under their real names, which
 // is the one thing this road has that the git one does not. First error only.
 //

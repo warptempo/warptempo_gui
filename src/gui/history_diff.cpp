@@ -3,7 +3,6 @@
 #include "app_state.h"
 #include "device_config.h"   // shown_project_path (the card's name for a file)
 #include "frame_format.h"
-#include "marker_magnification.h"   // parse_marker_magnification, the level digit
 // The commit walk's second road — the exported history folder, git-free.
 #include "history_folder.h"
 #include "history_prefetch.h"
@@ -101,10 +100,12 @@ constexpr const char* kBranchRef = "HEAD";
 // source's base name — the architect's checkpoints are complete sets, but a
 // partial one should still be FOUND rather than silently missed: the match
 // answers where the piece lives, and the strict load gate is what then refuses
-// a partial commit, at walk entry and at the `'` act alike. A COMMIT FROM
-// BEFORE THE SET WAS FOUR (the magnification level markers joined it
-// 2026-09-15) is such a partial commit: it stops loading and falls out of the
-// walk, accepted by the architect ("we never support legacy").
+// a partial commit, at walk entry and at the `'` act alike. THE MATCH READS
+// THE THREE MEMBERS OF THE SET AND NO OTHER NAME: a commit that also carries
+// the retired `.magnificationlevelmarkers` (the set was four from 2026-09-15
+// until that column's deletion, architect approval 2026-09-23) is matched,
+// listed and loaded on its three, the retired file never read — the
+// eligibility paragraph at history_diff.h's head.
 
 // Pathological-input guards for the line diff. The real files are tens to
 // a few hundred lines, so both are unreachable in practice; they exist so a
@@ -964,29 +965,6 @@ bool extract_phase_reset_entry(const std::string&         line,
     return parse_authored_frame(t, out.frame);
 }
 
-// The magnification level column's per-line mirror (architect 2026-09-15),
-// for the phase-reset mirror's reason exactly: its parser's parse_line is
-// file-local too. The same discipline — no whitespace anywhere, an optional
-// leading '#', the CANONICAL authored frame, one `|`, then the level through
-// the grammar's ONE implementation (parse_marker_magnification) and nothing
-// else.
-bool extract_magnification_level_entry(
-        const std::string& line, GuiHistoryMagnificationLevelEntry& out) {
-    std::string_view t = line;
-    if (t.find_first_of(" \t\r") != std::string_view::npos) return false;
-    out.disabled = false;
-    if (!t.empty() && t.front() == '#') {
-        out.disabled = true;
-        t.remove_prefix(1);
-    }
-    const std::size_t bar = t.find('|');
-    if (bar == std::string_view::npos) return false;
-    if (!parse_authored_frame(t.substr(0, bar), out.frame)) return false;
-    std::string level_error;
-    return parse_marker_magnification(t.substr(bar + 1), out.level,
-                                      level_error);
-}
-
 // Pair a removal and an addition sharing one frame into a change, leaving the
 // unpaired remainder in place. Coincident markers are legal on every column,
 // so the pairing is positional per frame — the first unclaimed addition at
@@ -1042,7 +1020,7 @@ void pair_changes_by_frame(std::vector<Entry>&  removed,
 // THE MATCH IS BY FILE NAME WITHIN `projects/`. One folder name is known
 // (kProjectsPrefix, the repository's layout convention) and nothing below it is:
 // the recheck looks for the committed file whose BASENAME is one of this
-// source's four sidecars, wherever under that folder it sits. So a piece's
+// source's three sidecars, wherever under that folder it sits. So a piece's
 // directory may be renamed or nested with no era knowledge to keep current,
 // while a sidecar name that happens to occur elsewhere in the tree — an
 // unrelated copy, a pre-`projects/` era — can no longer make the match
@@ -1087,7 +1065,7 @@ struct GuiHistoryTreeEntry {
 
 // The committed rows in a NUL-separated `ls-tree -z -l` listing that sit UNDER
 // `projects/` and whose BASENAME is
-// `<base_name>.<one of the four extensions>`.
+// `<base_name>.<one of the three extensions>`.
 //
 // THE LISTING IS `-l`, NOT `--name-only`, so each record is
 // `<mode> SP <type> SP <object> SP<pad><size> TAB <path>` and the size arrives
@@ -1383,7 +1361,7 @@ bool clone_is_projects_home(const std::string& repo_root,
 // per-commit snapshot
 // ---------------------------------------------------------------------------
 
-// One commit's committed path and blob size for each of the four sidecars,
+// One commit's committed path and blob size for each of the three sidecars,
 // empty/-1 where that commit carries none. Indexed to match kSidecarExtensions.
 //
 // `ambiguous` is a REFUSAL, not a variant of "carries none": the commit CHANGED
@@ -1392,14 +1370,14 @@ bool clone_is_projects_home(const std::string& repo_root,
 // session's own directory until the evidence became commit-local; no checkpoint
 // this program makes touches two folders, so it is somebody's hand commit).
 // `no_touch_evidence` below is its sibling and the opposite fact — an answer
-// about the commit versus the absence of one. All four paths are empty in
+// about the commit versus the absence of one. All three paths are empty in
 // either state and read_commit_sidecars refuses on both — which the walk's load
 // gate counts as ineligibility (neither kind ever enters the walk) and the `'`
 // act prints as its own refusal, the arm a pasted spelling naming a commit
 // outside the walk keeps live.
 struct GuiHistoryCommitPaths {
     std::string path[kSidecarCount];
-    long long   size[kSidecarCount] = {-1, -1, -1, -1};
+    long long   size[kSidecarCount] = {-1, -1, -1};
     bool        ambiguous = false;
     // The commit named NO directory it touched for this base name. Distinct
     // from `ambiguous` because it is a different fact and deserves a different
@@ -1413,7 +1391,7 @@ struct GuiHistoryCommitPaths {
 
 // Resolve where this commit kept the sidecars, from THAT COMMIT'S OWN TREE —
 // which is what replaces knowing the era's directory name. ONE subprocess per
-// commit, not one per file: the whole listing is fetched once and all four
+// commit, not one per file: the whole listing is fetched once and all three
 // extensions are picked out of it.
 //
 // A COMMIT MAY CARRY THE BASE NAME IN SEVERAL DIRECTORIES, and this is where
@@ -1425,7 +1403,7 @@ struct GuiHistoryCommitPaths {
 // either into one list. The old rule — most siblings, ties lexicographic — would
 // then silently display B's state as A's and let `'` load it in place.
 //
-// THE WALK'S FOUR PATHSPECS, built once for every asking (2026-08-09, when the
+// THE WALK'S THREE PATHSPECS, built once for every asking (2026-08-09, when the
 // touched-directory read below became a second consumer). `:(glob)` because the
 // `projects/**/` lead is a real wildcard and the base name is NOT — a source
 // legitimately called `take*.wav` would otherwise widen every asking to every
@@ -1472,7 +1450,7 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // Pinned off is raw adds and deletes with no inference — one answer whatever the
 // clone is configured to do — and IT COSTS THE SANCTIONED PATH NOTHING, verified
 // end to end: a folder renamed in a FILE MANAGER makes no commit at all, and the
-// act's next checkpoint is pathspec-scoped to the four NEW paths, so it ADDS
+// act's next checkpoint is pathspec-scoped to the three NEW paths, so it ADDS
 // them and deletes nothing (the old folder stays in the tree, which is what keeps
 // the pre-rename era's own commits resolvable). That commit answers the new
 // directory alone under the pin. A `git mv` done by hand in a terminal answers
@@ -1499,15 +1477,15 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 //
 // THE ANSWER IS ACCEPTED ONLY IN A WELL-FORMED SHAPE, and the shape is derived
 // from what a checkpoint can actually be rather than assumed. THE ACT WRITES ONE
-// FOLDER'S FOUR SIDECARS AND COMMITS PATHSPEC-SCOPED TO EXACTLY THOSE FOUR
+// FOLDER'S THREE SIDECARS AND COMMITS PATHSPEC-SCOPED TO EXACTLY THOSE THREE
 // (checkpoint_paths, and the commit argv beside it), SO THE COMMIT TOUCHES A
-// NONEMPTY SUBSET OF ONE FOLDER'S FOUR — a SUBSET, not the four: `git commit`
+// NONEMPTY SUBSET OF ONE FOLDER'S THREE — a SUBSET, not the three: `git commit`
 // records only what actually changed, and a checkpoint whose other sidecars
 // came out byte-identical touches ONE file. Measured, not reasoned: an
 // ordinary second checkpoint with only the warp markers moved reports exactly
 // one path. So "exactly all of them" would refuse the product's own commonest
 // commit, and the rule is instead every record RECOGNIZED, none repeated, and at
-// most a folder's four — plus the framing check below, which is what a
+// most a folder's three — plus the framing check below, which is what a
 // truncation actually breaks.
 //
 // THE RESIDUAL IS ADVERSARIAL AND ACCEPTED, recorded rather than defended: a
@@ -1520,7 +1498,7 @@ std::vector<std::string> sidecar_glob_pathspecs(const std::string& base_name) {
 // another thing to disagree with itself.
 //
 // IT COSTS ONE EXTRA CHILD PER CANDIDATE in the prefetch scan, beside the
-// rev-parse, the ls-tree and the four shows the load gate already runs. That is
+// rev-parse, the ls-tree and the three shows the load gate already runs. That is
 // the deliberate price of ONE resolution owner: the walk and the `'` act reach
 // this through the same call, so a member can never display one folder's
 // snapshot and load another's — which is exactly the divergence the containment
@@ -1774,13 +1752,11 @@ bool read_commit_sidecars(const std::string&        repo_root,
                       "names has no answer");
     }
     // kSidecarExtensions order, through its named indices (sidecar_set.h):
-    // the four named slots below and the blob array after them are that list
+    // the three named slots below and the blob array after them are that list
     // spelled out, so its size is pinned here.
-    static_assert(kSidecarCount == 4);
+    static_assert(kSidecarCount == 3);
     out.warpmarkers.path               = paths.path[kSidecarWarp];
     out.phaseresetmarkers.path         = paths.path[kSidecarPhaseReset];
-    out.magnificationlevelmarkers.path =
-        paths.path[kSidecarMagnificationLevel];
     out.settings.path                  = paths.path[kSidecarSettings];
 
     // THE BYTES, AND THE PROOF THEY ARE ALL OF THEM. A `show` that could not run
@@ -1794,8 +1770,7 @@ bool read_commit_sidecars(const std::string&        repo_root,
     // than believed. A commit the tree says carries nothing has no size to check
     // and reaches the caller's own partial-commit refusal.
     GuiHistorySidecarBlob* blobs[kSidecarCount] = {
-        &out.warpmarkers, &out.phaseresetmarkers,
-        &out.magnificationlevelmarkers, &out.settings};
+        &out.warpmarkers, &out.phaseresetmarkers, &out.settings};
     for (std::size_t e = 0; e < kSidecarCount; ++e) {
         if (paths.path[e].empty()) continue;
         if (!read_snapshot_at(repo_root, sha, paths.path[e], blobs[e]->text)) {
@@ -1865,9 +1840,10 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     // and inheriting some files from the commit and the rest from nowhere
     // would compose a state no checkpoint ever was. (For the walk the same
     // refusal is simple ineligibility: a checkpoint that cannot be loaded is
-    // not stepped to.) A COMMIT FROM BEFORE THE MAGNIFICATION LEVEL MARKERS
-    // JOINED THE SET carries no such file and refuses here, so it falls out of
-    // the walk (architect 2026-09-15, accepted).
+    // not stepped to.) A commit that also carries the RETIRED
+    // `.magnificationlevelmarkers` is not partial: that name is no member of
+    // the set, so it was never resolved into `snap` and nothing here asks it
+    // (architect approval 2026-09-23).
     auto missing = [&](const char* ext) {
         return refuse("commit " + snap.sha + " carries no '" + base_name +
                       ext + "'");
@@ -1876,16 +1852,14 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
         return missing(kSidecarExtensions[kSidecarWarp]);
     if (snap.phaseresetmarkers.path.empty())
         return missing(kSidecarExtensions[kSidecarPhaseReset]);
-    if (snap.magnificationlevelmarkers.path.empty())
-        return missing(kSidecarExtensions[kSidecarMagnificationLevel]);
     if (snap.settings.path.empty())
         return missing(kSidecarExtensions[kSidecarSettings]);
 
     // THE COMMITTED BYTES REACH THE LOADERS THROUGH A SCRATCH DIRECTORY,
-    // because all four whole-file entry points take a PATH and open the file
+    // because all three whole-file entry points take a PATH and open the file
     // themselves (read_settings_file, GuiWarpMarkers::load,
-    // GuiPhaseResetMarkers::load, GuiMagnificationLevelMarkers::load) and all
-    // four parse through the FROZEN parser, so
+    // GuiPhaseResetMarkers::load) and all three parse through the FROZEN
+    // parser, so
     // there is no string-shaped entry to hand a blob to. The alternative — a
     // GUI-side scanner over the strings — would be a SECOND GRAMMAR beside the
     // strict one, which is precisely what this gate exists to avoid; staging
@@ -1938,8 +1912,7 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
         return refuse("could not stage '" + blob.path + "' from commit " +
                       snap.sha);
     };
-    std::filesystem::path settings_file, warp_file, phase_reset_file,
-                          magnification_level_file;
+    std::filesystem::path settings_file, warp_file, phase_reset_file;
     if (!stage(snap.settings, kSidecarExtensions[kSidecarSettings],
                settings_file))                                   return false;
     if (!stage(snap.warpmarkers, kSidecarExtensions[kSidecarWarp],
@@ -1947,11 +1920,8 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
     if (!stage(snap.phaseresetmarkers,
                kSidecarExtensions[kSidecarPhaseReset],
                phase_reset_file))                                return false;
-    if (!stage(snap.magnificationlevelmarkers,
-               kSidecarExtensions[kSidecarMagnificationLevel],
-               magnification_level_file))                        return false;
 
-    // The four STRICT WHOLE-FILE LOADERS are the judges, in the render-entry
+    // The three STRICT WHOLE-FILE LOADERS are the judges, in the render-entry
     // load-in-place's own order, each refusal naming the committed path and
     // the SHA. First error only, by construction: every arm returns.
     //
@@ -2000,16 +1970,6 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
                           snap.sha + ": " + load_words(r.error()));
         }
         out.phase_reset_markers = t.markers();
-    }
-    {
-        GuiMagnificationLevelMarkers ml;
-        auto r = ml.load(magnification_level_file.string(), &load_reason);
-        if (!r) {
-            return refuse("invalid magnification level markers in '" +
-                          snap.magnificationlevelmarkers.path + "' at commit " +
-                          snap.sha + ": " + load_words(r.error()));
-        }
-        out.magnification_level_markers = ml.markers();
     }
     return true;
 }
@@ -2065,8 +2025,6 @@ GuiHistoryNowSide build_history_now_side(const AppState& app) {
     out.warpmarkers_text = format_warpmarkers_text(app.warpmarkers.markers());
     out.phaseresetmarkers_text =
         format_phaseresetmarkers_text(app.phaseresetmarkers.markers());
-    out.magnificationlevelmarkers_text = format_magnificationlevelmarkers_text(
-        app.magnificationlevelmarkers.markers());
     // THROUGH THE TWO OWNERS ABOVE, so the live state's bytes and every LOCAL
     // walk member's are spelled by one rule and can differ in nothing but the
     // engine block — which is the local delta's whole vocabulary anyway.
@@ -2465,7 +2423,7 @@ void scan_history_walk(
     // OUTSIDE the corpus cannot pull commits into the walk that carry no
     // checkpoint of this piece at all.
     //
-    // The four pathspecs are built by sidecar_glob_pathspecs, which owns the
+    // The three pathspecs are built by sidecar_glob_pathspecs, which owns the
     // escaping and the reason for it — and which the per-commit touched-directory
     // read shares, so the walk and the resolution can never disagree about what
     // "this piece's files" means.
@@ -2585,7 +2543,7 @@ void scan_history_walk(
 
     // THE LOAD GATE (architect 2026-08-04): each candidate's eligibility is
     // the load-in-place gate itself — load_commit_sidecars_strict, the exact
-    // resolution + staging + four strict loaders the `'` act runs, one
+    // resolution + staging + three strict loaders the `'` act runs, one
     // predicate — so every commit the walk carries is one the act can load.
     // Anything else (a missing sidecar, a parse refusal, an ambiguous
     // per-commit path resolution) leaves the walk here, counted; the parsed
@@ -2602,8 +2560,8 @@ void scan_history_walk(
     // otherwise the eager one it always was.
     //
     // THE ABANDON CHECK IS THE LOOP'S OWN TOP, and the finest grain that costs
-    // nothing: one candidate is a `rev-parse`, an `ls-tree`, four `show`s and
-    // four strict loads of tiny files, so a supersede or a quit waits out at
+    // nothing: one candidate is a `rev-parse`, an `ls-tree`, three `show`s and
+    // three strict loads of tiny files, so a supersede or a quit waits out at
     // most that.
     int hidden = 0;
     for (const std::string& sha : candidates) {
@@ -2662,8 +2620,8 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // THE NOW SIDE IS CAPTURED FIRST, ABOVE EVERY REFUSAL (2026-09-04), because
     // the visit's OTHER walk needs it even when this one cannot be
     // bootstrapped: a bootstrap the remote walk fails opens the view on the
-    // LOCAL walk, whose every member is measured against these four strings.
-    // It costs four in-memory formats and no git, so paying it on the refusing
+    // LOCAL walk, whose every member is measured against these three strings.
+    // It costs three in-memory formats and no git, so paying it on the refusing
     // path costs the refusal nothing.
     now_ = build_history_now_side(app);
 
@@ -2818,11 +2776,9 @@ GuiHistoryCommitDelta compute_commit_delta(
         const std::string& sha,
         const std::string& then_warp,
         const std::string& then_phase_reset,
-        const std::string& then_magnification_level,
         const std::string& then_settings,
         const std::string& now_warp,
         const std::string& now_phase_reset,
-        const std::string& now_magnification_level,
         const std::string& now_settings) {
     GuiHistoryCommitDelta d;
     d.sha = sha;
@@ -2830,8 +2786,6 @@ GuiHistoryCommitDelta compute_commit_delta(
     const LineDiff warp_diff = diff_lines(then_warp, now_warp);
     const LineDiff phase_reset_diff =
         diff_lines(then_phase_reset, now_phase_reset);
-    const LineDiff magnification_level_diff =
-        diff_lines(then_magnification_level, now_magnification_level);
     const LineDiff settings_diff = diff_lines(then_settings, now_settings);
 
     // EVERY LINE HERE PARSES: the then side passed the strict whole-set load
@@ -2882,13 +2836,6 @@ GuiHistoryCommitDelta compute_commit_delta(
             if (!extract_phase_reset_entry(line, e)) return std::nullopt;
             return e.frame;
         };
-    const auto magnification_level_frame_of =
-        [](const std::string& line) -> std::optional<int64_t> {
-            GuiHistoryMagnificationLevelEntry e;
-            if (!extract_magnification_level_entry(line, e))
-                return std::nullopt;
-            return e.frame;
-        };
     const std::vector<int> then_warp_ordinal =
         run_ordinals(warp_diff.then_lines, warp_frame_of);
     const std::vector<int> now_warp_ordinal =
@@ -2897,10 +2844,6 @@ GuiHistoryCommitDelta compute_commit_delta(
         run_ordinals(phase_reset_diff.then_lines, phase_reset_frame_of);
     const std::vector<int> now_phase_reset_ordinal =
         run_ordinals(phase_reset_diff.now_lines, phase_reset_frame_of);
-    const std::vector<int> then_magnification_level_ordinal = run_ordinals(
-        magnification_level_diff.then_lines, magnification_level_frame_of);
-    const std::vector<int> now_magnification_level_ordinal = run_ordinals(
-        magnification_level_diff.now_lines, magnification_level_frame_of);
 
     for (const std::size_t j : warp_diff.added) {
         const std::string&  line = warp_diff.now_lines[j];
@@ -2936,24 +2879,6 @@ GuiHistoryCommitDelta compute_commit_delta(
             d.phase_reset_removed.push_back(e);
         }
     }
-    // THE MAGNIFICATION LEVEL COLUMN (2026-09-15), the phase-reset loops'
-    // shape: no cascade, the local bit is the effective verdict.
-    for (const std::size_t j : magnification_level_diff.added) {
-        GuiHistoryMagnificationLevelEntry e;
-        if (extract_magnification_level_entry(
-                magnification_level_diff.now_lines[j], e)) {
-            e.ordinal = now_magnification_level_ordinal[j];
-            d.magnification_level_added.push_back(e);
-        }
-    }
-    for (const std::size_t i : magnification_level_diff.removed) {
-        GuiHistoryMagnificationLevelEntry e;
-        if (extract_magnification_level_entry(
-                magnification_level_diff.then_lines[i], e)) {
-            e.ordinal = then_magnification_level_ordinal[i];
-            d.magnification_level_removed.push_back(e);
-        }
-    }
 
     pair_changes_by_frame(
         d.warp_removed, d.warp_added, d.warp_changed,
@@ -2982,23 +2907,6 @@ GuiHistoryCommitDelta compute_commit_delta(
             c.now_disabled  = a.disabled;
             return c;
         });
-    // A same-frame pair is a changed LEVEL, a changed disable prefix, or both
-    // — the line's whole payload, as the phase-reset pair's is its bit.
-    pair_changes_by_frame(
-        d.magnification_level_removed, d.magnification_level_added,
-        d.magnification_level_changed,
-        [](const GuiHistoryMagnificationLevelEntry& r,
-           const GuiHistoryMagnificationLevelEntry& a) {
-            GuiHistoryMagnificationLevelChange c;
-            c.frame         = r.frame;
-            c.then_ordinal  = r.ordinal;
-            c.now_ordinal   = a.ordinal;
-            c.then_level    = r.level;
-            c.now_level     = a.level;
-            c.then_disabled = r.disabled;
-            c.now_disabled  = a.disabled;
-            return c;
-        });
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
@@ -3012,7 +2920,7 @@ GuiHistoryCommitDelta compute_commit_delta(
     // still diffed, coarsely, as replaced whole — unreachable on any real
     // corpus file (tens to a few hundred lines).
     if (warp_diff.degraded || phase_reset_diff.degraded ||
-        magnification_level_diff.degraded || settings_diff.degraded) {
+        settings_diff.degraded) {
         std::fprintf(stderr,
                      "warptempo_gui: History diff at %s exceeded the line cap; "
                      "the affected sidecar reads as replaced whole\n",
@@ -3036,7 +2944,7 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
     if (slots[index].has_value()) return &*slots[index];
 
     // THE THEN SIDE IS A SNAPSHOT THE LOAD GATE ALREADY READ, in both readings:
-    // walk membership required reading (and strictly loading) all four
+    // walk membership required reading (and strictly loading) all three
     // sidecars, so the walk carries every member's texts and a delta runs no git
     // at all, whichever pair of sides it takes.
     const GuiHistoryCommitSidecars& snap = commits[index];
@@ -3044,9 +2952,9 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
     if (compare == GuiHistoryCompare::Cumulative) {
         slots[index] = compute_commit_delta(
             snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
-            snap.magnificationlevelmarkers.text, snap.settings.text,
+            snap.settings.text,
             now_.warpmarkers_text, now_.phaseresetmarkers_text,
-            now_.magnificationlevelmarkers_text, now_.settings_text);
+            now_.settings_text);
         return &*slots[index];
     }
 
@@ -3075,17 +2983,17 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
     if (index == 0) {
         slots[index] = compute_commit_delta(
             snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
-            snap.magnificationlevelmarkers.text, snap.settings.text,
+            snap.settings.text,
             now_.warpmarkers_text, now_.phaseresetmarkers_text,
-            now_.magnificationlevelmarkers_text, now_.settings_text);
+            now_.settings_text);
         return &*slots[index];
     }
     const GuiHistoryCommitSidecars& newer = commits[index - 1];
     slots[index] = compute_commit_delta(
         snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
-        snap.magnificationlevelmarkers.text, snap.settings.text,
+        snap.settings.text,
         newer.warpmarkers.text, newer.phaseresetmarkers.text,
-        newer.magnificationlevelmarkers.text, newer.settings.text);
+        newer.settings.text);
     return &*slots[index];
 }
 
@@ -3117,7 +3025,7 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // ONE MEMBER'S THREE TEXTS, serialized on first ask. The mapping is the class
 // comment's, and it lives at entry_at below rather than here: index k < R is the
 // FUTURE state redo_stack[k], k == R is THE LIVE MEMBER (the frozen now side's
-// own four texts, nothing serialized), and k > R is the PAST state
+// own three texts, nothing serialized), and k > R is the PAST state
 // undo_stack[U + R - k], whose snapshots are the state BEFORE the event that
 // entry records.
 //
@@ -3172,13 +3080,12 @@ const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
 
     const UndoEntry* entry = entry_at(index);
     if (entry == nullptr) {
-        // THE LIVE MEMBER, verbatim from the frozen now side — the same four
+        // THE LIVE MEMBER, verbatim from the frozen now side — the same three
         // strings every delta's live side is already made of, so "the member and
         // the now side agree" is an identity here rather than two formattings
         // that had better match.
         m.warpmarkers_text       = now_.warpmarkers_text;
         m.phaseresetmarkers_text = now_.phaseresetmarkers_text;
-        m.magnificationlevelmarkers_text = now_.magnificationlevelmarkers_text;
         m.settings_text          = now_.settings_text;
         m.built                  = true;
         return &m;
@@ -3188,8 +3095,6 @@ const GuiHistoryLocalWalk::Member* GuiHistoryLocalWalk::member_at(
     m.warpmarkers_text       = format_warpmarkers_text(e.snapshot);
     m.phaseresetmarkers_text =
         format_phaseresetmarkers_text(e.phase_reset_snapshot);
-    m.magnificationlevelmarkers_text =
-        format_magnificationlevelmarkers_text(e.magnification_level_snapshot);
     // THE ENGINE BLOCK IS THE ONLY THING AN UNDO ENTRY CARRIES about the
     // settings file, and the captured GUI half is what fills in the rest — the
     // same half the now side was formatted with, so the two sides of every local
@@ -3212,11 +3117,9 @@ GuiHistoryLocalWalk::member_state(std::size_t index) const {
     if (entry == nullptr) {
         return MemberState{&app_->warpmarkers.markers(),
                            &app_->phaseresetmarkers.markers(),
-                           &app_->magnificationlevelmarkers.markers(),
                            &app_->engine_settings};
     }
     return MemberState{&entry->snapshot, &entry->phase_reset_snapshot,
-                       &entry->magnification_level_snapshot,
                        &entry->settings.engine_settings};
 }
 
@@ -3267,10 +3170,9 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
     // `n/N` alone).
     slots[index] = compute_commit_delta(
         std::string(), then_side->warpmarkers_text,
-        then_side->phaseresetmarkers_text,
-        then_side->magnificationlevelmarkers_text, then_side->settings_text,
+        then_side->phaseresetmarkers_text, then_side->settings_text,
         now_side->warpmarkers_text, now_side->phaseresetmarkers_text,
-        now_side->magnificationlevelmarkers_text, now_side->settings_text);
+        now_side->settings_text);
     return &*slots[index];
 }
 
@@ -3280,7 +3182,7 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
 
 namespace {
 
-// WHAT `git status` SAYS ABOUT THE FOUR CHECKPOINT PATHS, in an answer that
+// WHAT `git status` SAYS ABOUT THE THREE CHECKPOINT PATHS, in an answer that
 // proves it ran. The three outcomes are the ones the act needs to tell apart, and
 // telling them apart is exactly what the boolean capture could not do: "clean"
 // and "could not ask" were both the empty string, so a status that failed
@@ -3321,7 +3223,7 @@ namespace {
 // meets bluntly rather than diagnosing (the act's head owns the ruling).
 enum class GuiHistoryPathStatus {
     Unavailable,  // git did not run, or ran and failed
-    Clean,        // it ran; the four paths match the checked-out tip
+    Clean,        // it ran; the three paths match the checked-out tip
     Dirty,        // it ran; at least one differs
 };
 
@@ -3391,10 +3293,10 @@ std::string current_branch_name(const std::string& repo_root) {
     return name;
 }
 
-// THE FOUR COMMITTED PATHS a piece's checkpoint occupies, in kSidecarExtensions
+// THE THREE COMMITTED PATHS a piece's checkpoint occupies, in kSidecarExtensions
 // order (which is what pairs each path with its text). One owner: the act writes
 // them, stages them, commits them and asks `git status` about them, and all four
-// steps must be talking about the same four files. (A fourth staged path —
+// steps must be talking about the same three files. (An extra staged path —
 // `<project>/sheet/sheet.map`, the score-video map — rode the add and the
 // commit from 2026-08-20 until the 2026-08-21 sunset removed the score system
 // whole; the score folder is plain ignored local material again.)
@@ -3452,8 +3354,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //
 // THE FIVE STEPS, each numbered at its own site below:
 //   (1) CAPTURE — the symbolic branch read ONCE. Detached refuses immediately.
-//   (2) WRITE the four sidecars.
-//   (3) PRE-FLIGHT — one `git status --porcelain --branch` over those four
+//   (2) WRITE the three sidecars.
+//   (3) PRE-FLIGHT — one `git status --porcelain --branch` over those three
 //       paths, whose `##` header carries BOTH answers the act needs: are the
 //       paths dirty, and does the branch OWE ITS UPSTREAM A PUSH (`[ahead N]`,
 //       or `[gone]` for an upstream branch that is no longer there).
@@ -3501,7 +3403,7 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // than an addition. That case has ONE instance — a sidecar written into a
 // folder that had none.
 //
-// WHAT REMAINS AFTER A FAILURE. The four files are written first and are NEVER
+// WHAT REMAINS AFTER A FAILURE. The three files are written first and are NEVER
 // rolled back: a commit that fails leaves them in the working tree — staged, if
 // the `add` got that far — where `git status` shows them and a hand commit can
 // still land them, and a WRITE that fails part-way leaves the files it had
@@ -3554,13 +3456,13 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // kSidecarExtensions order, which is what pairs each text with its path.
     const std::string* texts[kSidecarCount] = {
         &bytes.warpmarkers_text, &bytes.phaseresetmarkers_text,
-        &bytes.magnificationlevelmarkers_text, &bytes.settings_text};
+        &bytes.settings_text};
     const std::vector<std::string> paths =
         checkpoint_paths(project_directory, base_name);
 
     // (2) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
     // rename — so a checkpoint is never half-written, into a directory that
-    // exists because the source is in it. THESE FOUR PATHS ARE THE ONES THE
+    // exists because the source is in it. THESE THREE PATHS ARE THE ONES THE
     // PRELUDE SAVE JUST WROTE, always and no longer only in one workflow: the
     // sidecars sit beside the source and the checkpoint sits in the source's own
     // folder, so the coincident double write is now the ONLY case — the same
@@ -3577,7 +3479,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
         }
     }
 
-    // EVERY PATH THAT REACHES GIT AFTER A `--` IS A PATHSPEC, so all four go
+    // EVERY PATH THAT REACHES GIT AFTER A `--` IS A PATHSPEC, so all three go
     // through literal_pathspec (whose comment owns why) — the pre-flight status
     // probe, the add and the commit, one list built once and used by all three.
     std::vector<std::string> pathspecs;
@@ -3600,7 +3502,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     };
 
     // (3) THE PRE-FLIGHT, AND IT IS THE ONLY READ THE ACT MAKES. One `git status`
-    // answers both of the act's questions at once — whether the four paths
+    // answers both of the act's questions at once — whether the three paths
     // differ from what is committed, and whether the branch owes its upstream a
     // push — so nothing here has to ask the repository a second question to
     // learn what a mutation did (status_of_paths owns the header's grammar).
@@ -3613,7 +3515,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                              "tree");
     }
 
-    // (4) DIRTY — stage and commit, both pathspec-scoped to the same four
+    // (4) DIRTY — stage and commit, both pathspec-scoped to the same three
     // paths, and BOTH DECIDED ON GIT'S EXIT STATUS. `add` is no longer advisory:
     // it fails only where the commit behind it could not succeed either (a
     // pathspec matching nothing, an unwritable index), and reporting the step

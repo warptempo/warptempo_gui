@@ -11,7 +11,7 @@
 
 namespace {
 
-// THE SAVE'S OWN FAILURE, one composer for the four write arms (architect
+// THE SAVE'S OWN FAILURE, one composer for the three write arms (architect
 // 2026-09-02; the two-clause shape the same day, the four-tier review's
 // R-11): a deliberate Ctrl+S that could not write is answered with words
 // rather than with a dirty dot that simply stays lit, which is what the
@@ -21,9 +21,9 @@ namespace {
 // after it, and the DISPLAY is ONE CLAUSE naming the file THE BASENAME
 // RULE'S WAY — the bare filename, not the folder-and-file form the loaders'
 // composer produces (shown_project_path, device_config.h), because these
-// four paths are the OPEN project's own sidecars: the folder is the one the
+// three paths are the OPEN project's own sidecars: the folder is the one the
 // window title already names, so the file alone identifies which of the
-// four writes fell over. `report` below is the one place either clause
+// three writes fell over. `report` below is the one place either clause
 // reaches its surface.
 GuiFailure save_write_failure(const char* stderr_tag, const std::string& path) {
     GuiFailure f;
@@ -42,16 +42,16 @@ void report(GuiNotifications& notifications, const GuiFailure& f) {
 
 bool GuiSaveOps::save() {
     // NO SAVE WHILE A CHECKPOINT IS PUBLISHING (architect 2026-08-08). The
-    // checkpoint worker writes the four sidecars into projects/<id>/ on its own
+    // checkpoint worker writes the three sidecars into projects/<id>/ on its own
     // thread, and that folder is the one the loaded SOURCE sits in — the
     // coincident workflow when this landed, and since 2026-08-09 the only shape
     // a checkpointable piece has, the source's folder BEING the project
-    // directory — so those are EXACTLY the four paths this function writes,
+    // directory — so those are EXACTLY the three paths this function writes,
     // through the same fixed `<path>.tmp` temp name. Two writers on one
     // temp name is a torn temp or a rename of captured-older bytes over a newer
     // save, so the window is closed by refusing the save rather than by naming
     // the temp files per-writer: with saves refused for the act's duration there
-    // is no concurrent writer of those four paths at all (a second checkpoint
+    // is no concurrent writer of those three paths at all (a second checkpoint
     // act is already refused, single-in-flight).
     //
     // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the editors' own Ctrl+S
@@ -117,7 +117,7 @@ bool GuiSaveOps::save() {
     // the .warpmarkers and .settings paths see a consistent snapshot.
     active_views.refresh_active_tab_view_from_app();
 
-    // The four sidecars publish sequentially, each individually atomic
+    // The three sidecars publish sequentially, each individually atomic
     // (tmp + fsync + rename). This is deliberately NOT a cross-file
     // transaction: if a later write fails (disk full, an I/O error) after an
     // earlier one has renamed, disk holds a mixed-generation set until the
@@ -143,21 +143,6 @@ bool GuiSaveOps::save() {
             report(notifications,
                    save_write_failure("Phase reset markers save failed",
                                       app.phaseresetmarkers_path));
-            return false;
-        }
-    }
-
-    // .magnificationlevelmarkers, the third marker column's file, written on
-    // every save like the phase-reset file (empty store, empty file) — the
-    // four sidecars are one required set (sidecar_set_presence,
-    // settings_io.h), so a save that left this one out would leave a project
-    // the next open refuses.
-    if (!app.magnificationlevelmarkers_path.empty()) {
-        if (!app.magnificationlevelmarkers.save(
-                app.magnificationlevelmarkers_path)) {
-            report(notifications,
-                   save_write_failure("Magnification level markers save failed",
-                                      app.magnificationlevelmarkers_path));
             return false;
         }
     }

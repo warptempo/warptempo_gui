@@ -2,7 +2,6 @@
 
 #include "warpmarkers_parse.h"        // WarpMarker
 #include "phaseresetmarkers_parse.h"  // PhaseResetMarker
-#include "magnificationlevelmarkers_parse.h"  // MagnificationLevelMarker
 #include "settings_file.h"            // SettingsTrim
 
 #include <cstdint>
@@ -24,12 +23,13 @@
 // first use) own any out-of-range value harmlessly.
 
 // The adversarial past-EOF load guard (see the past-EOF paragraph above),
-// shared by GUI file_loader and CLI so the seven wall checks can never
+// shared by GUI file_loader and CLI so the six wall checks can never
 // drift: warp markers (wall total-1), phase reset markers (wall total-1),
-// magnification level markers (wall total-1; the column and this arm landed
-// under architect approval 2026-09-15), then tab A trim begin (wall total-1), tab A end (wall total-1), tab B
-// begin, tab B end — first offender only, disabled markers included. All
-// authored positions — the three marker columns and both trim bounds — share
+// then tab A trim begin (wall total-1), tab A end (wall total-1), tab B
+// begin, tab B end — first offender only, disabled markers included (the
+// magnification level markers' wall left with that column, architect approval
+// 2026-09-23). All
+// authored positions — the two marker columns and both trim bounds — share
 // the one inclusive [0, total-1] domain; an end bound stored at exactly
 // total frames is adversarial load-fatal (the GUI can no longer author it,
 // and any pre-unification file carrying one fails the load — accepted, no
@@ -43,7 +43,6 @@
 std::optional<std::string> first_past_eof_wall_defect(
     const std::vector<WarpMarker>&       warp_markers,
     const std::vector<PhaseResetMarker>& phase_resets,
-    const std::vector<MagnificationLevelMarker>& magnification_level_markers,
     const SettingsTrim& tab_a_trim,
     const SettingsTrim& tab_b_trim,
     int64_t total_frames,

@@ -116,7 +116,7 @@ struct GuiInputHandler;
 //     (GuiInputHandler::car_play_refused_by_key_gates) — the gates alone,
 //     because the ACT is the car's own loop rather than toggle_playback: under
 //     a pointer drag it cards `Keys are ignored during a drag` as Space does,
-//     and UNDER A TOP-STRIP FLAG, BOUND OR LEVEL EDITOR IT IS CONSUMED IN
+//     and UNDER A TOP-STRIP FLAG OR BOUND EDITOR IT IS CONSUMED IN
 //     SILENCE, which is what Space does there too (Space is printable, so the
 //     field takes it as a typed character and the transport never sees it;
 //     the car has no character to type, so it borrows no sentence). A

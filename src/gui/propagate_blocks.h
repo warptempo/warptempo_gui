@@ -18,13 +18,10 @@
 // OF THE ANCHOR (phase_reset_anchor_frame, phase_reset_propagate.cpp) and stay
 // in that body.
 //
-// IT IS THE PHASE FAMILY'S ALONE (re-greped 2026-09-19). It was factored out
-// on 2026-09-15 for a second reader, the magnification level propagate, which
-// bucketed by named warp blocks under the same guard; that family became a
-// PURE FRAME DISTANCE from the playhead on 2026-09-19 and reads nothing here
-// any more — no block, no label, no window, no guard
-// (magnification_level_propagate.h states what it is instead). The file stays
-// where it is because what it holds is still shared across three acts.
+// IT IS THE PHASE FAMILY'S ALONE (re-greped 2026-09-23). It was factored out
+// on 2026-09-15 for a second reader, the since-deleted magnification level
+// propagate. The file stays where it is because what it holds is still shared
+// across three acts.
 
 // Boundary guard for near-end bucketing. The CONSTANT stays a seconds value
 // (an authoring tolerance — the largest the user ever nudges a destination

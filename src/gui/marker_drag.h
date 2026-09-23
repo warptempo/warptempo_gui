@@ -19,22 +19,14 @@ struct GuiTargetRender;
 // drag is the VERTICAL one (ValueDragOps, value_drag.{h,cpp}) and this one
 // does not begin at all, on any flag — "we never allow multi-axis
 // dragging; flags move up and down or not at all" (architect 2026-09-10).
-// Shared by ALL THREE COLUMNS since 2026-09-15 — the magnification level
-// markers column's flag drag is this one too ("horizontal move only", the
-// value drag's posture answering no there) — and
-// dispatched on app.active_markers_view (begin) and app.drag.drag_mode
-// (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
+// Shared by BOTH COLUMNS and dispatched on app.active_markers_view (begin)
+// and app.drag.drag_mode (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
 // the doctrine is at the head of position_nudge.h). It
 // lives in its own translation unit because it is the one cross-kind
 // gesture: the per-kind authoring and selection-shift operations stay in
-// GuiWarpMarkersOps, GuiPhaseResetMarkersOps and
-// GuiMagnificationLevelMarkersOps.
+// GuiWarpMarkersOps and GuiPhaseResetMarkersOps.
 //
-// ITS ONE PER-COLUMN ASYMMETRY IS THE PREVIEW (2026-09-15): an M drag's
-// COMMIT triggers no preview at all (the column reaches no render input), and
-// since 2026-09-23 its motion moves no pixel of the waveform either (the
-// picture's gain is the curve derived from the source). Under the frozen-coord
-// regime, motion writes app.drag.moveable_times only — the live per-list
+// Under the frozen-coord regime, motion writes app.drag.moveable_times only — the live per-list
 // stores stay untouched until commit_drag does the write-back.
 //
 // The TARGET-VIEW TEMPO DRAG lived here too and is DELETED (architect 2026-07-29,

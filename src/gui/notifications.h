@@ -74,9 +74,8 @@
 // THE ONE EXCEPTION IS THE CLIPBOARD WRITE (architect 2026-08-30, the
 // invariant that an accepted press shows something): NOTHING PAINTS A
 // CLIPBOARD, and since the resolved readout retired no standing surface
-// paints a resolved value either, so the FOUR COPIES — bare `j`'s resolved
-// value, Ctrl+P's phase resets, Ctrl+M's magnification level markers
-// (2026-09-15) and
+// paints a resolved value either, so the THREE COPIES — bare `j`'s resolved
+// value, Ctrl+P's phase resets and
 // the AV Sync Stats panel's own copy, each with its button or menu row
 // inheriting the chord — say so on a normal card, which is the whole
 // of what those presses show (bare `j`'s card naming the copied value in

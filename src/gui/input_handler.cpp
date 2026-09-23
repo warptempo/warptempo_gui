@@ -847,15 +847,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // true OR grid iterations stands (authoring_locked, app_state.h).
     //
     // THE LIST BELOW IS THE READ-ONLY ONE. The iteration lock's is that list
-    // MINUS THE COLUMN SWITCH — the four absolute view selectors, the backtick
-    // and bare 1 / 2 / 3, which run the S/T and column chokepoint BODIES and so
+    // MINUS THE COLUMN SWITCH — the three absolute view selectors, bare
+    // 1 / 2 / 3, which run the S/T and column chokepoint BODIES and so
     // carry the column with them (the individual bare `t`/`p` keys were deleted
     // whole with their view lamps 2026-09-15, so the selectors are the axis's
     // only road); the mode is lit for the column you are in —
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
     // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
-    // tabs sharing all three stores) — MINUS BARE `o`, the
+    // tabs sharing both stores) — MINUS BARE `o`, the
     // read-only toggle (architect 2026-09-10: the padlock refuses under a lit
     // lamp, half of what makes the two locks mutually exclusive; the other
     // half is bare `i`'s own arm, which refuses to LIGHT the lamp while
@@ -868,10 +868,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Up/Down and Return WITH A BOUND AXIS ADDRESSED (the bound cells are the
     // mode's own authoring surface), Ctrl+Z and Ctrl+Shift+Z (admitted not to
     // act but so their own arm can card the sentence that names undo), and the
-    // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+M, ctrl-exact (each reads a
-    // selection into a session clipboard and pushes nothing, so the undo domain
-    // this lock protects has no interest in them; the THREE ALT-BEARING PASTES
-    // stay refused). That
+    // CLIPBOARD COPY Ctrl+P, ctrl-exact (it reads a selection into a session
+    // clipboard and pushes nothing, so the undo domain this lock protects has
+    // no interest in it; the TWO ALT-BEARING PASTES stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
@@ -906,8 +905,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              working zoom centered on the playhead;
     //                              arms the hold posture (Shift+C, the same
     //                              with the chase armed, is on_key's own arm)
-    //   - backtick, 1/2/3        → the absolute view selectors (S+M / S+W /
-    //     (no mods)                T+P / T+W), the ONE road onto both view
+    //   - 1/2/3 (no mods)        → the absolute view selectors (S+W / T+P /
+    //                              T+W), the ONE road onto both view
     //                              axes: each composes the S/T chokepoint
     //                              switch_active_audio_view_to with the column
     //                              entry GuiActiveViews::select_active_markers_view
@@ -961,8 +960,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // deeper refusal: the marker / tempo / phase-reset drop / nudge /
     // status-toggle chords, Delete, `;` (the settings editor, whose engine-key
     // commits are authored content), `i`, `'` in the `h` view, the
-    // propagate copy/paste of BOTH families (the Ctrl+P three and the Ctrl+M
-    // two), and undo/redo
+    // phase-reset propagate's copy/paste (the Ctrl+P three), and undo/redo
     // (Ctrl+Z / Ctrl+Shift+Z) all drop here. This gate is the ONLY read-only
     // guard on the keyboard path — and since 2026-08-07 the only one on the
     // POINTER path too has gone, the trim band's gate having been deleted with
@@ -1134,24 +1132,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // (BARE `t` TOGGLED VIEW-DOMAIN (S <-> T) HERE FROM 2026-08-01 TO
     // 2026-09-15, when the architect deleted the key whole with its icon-row
-    // view lamp: source/target is reachable through the four view selectors
+    // view lamp: source/target is reachable through the three view selectors
     // and the view bar alone now. handle_active_audio_view_toggle is the body
     // it called — it stays, and the selectors below are its only remaining
     // keyboard road.)
 
-    // THE BACKTICK AND BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect
-    // 2026-08-01; a fourth 2026-09-15; the backtick 2026-09-19):
-    // the backtick is S+M, `1` is S+W, `2` is T+P, `3` is T+W — the one view
-    // done once, at the beginning of a piece and by sight, sits off the digit
-    // run, and the three the work lives in take the digits (architect
-    // 2026-09-19; the record is in tempo-and-home-view.md). They
-    // name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
+    // BARE 1 / 2 / 3 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01):
+    // `1` is S+W, `2` is T+P, `3` is T+W. (The backtick was a fourth, S+M,
+    // from 2026-09-19 until the magnification level markers column's
+    // deletion, architect 2026-09-23.) They name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
     // consumed no-op — that is the whole difference from the deleted `t` and
-    // `p` toggles. The four are the product's WHOLE view space: T+M and S+P
-    // are no states at all (the magnification level column is source view
-    // only, the phase-reset column target view only — architect 2026-09-16
-    // and 2026-09-21, both load-fatal), and the view bar's four buttons
-    // synthesize the four keys in the same order.
+    // `p` toggles. The three are the product's WHOLE view space: S+P is no
+    // state at all (the phase-reset column is target view only — architect
+    // 2026-09-21, load-fatal), and the view bar's three buttons synthesize the
+    // three keys in the same order.
     //
     // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very chokepoint
     // its own key used to use — switch_active_audio_view_to for S/T (the body
@@ -1188,34 +1182,22 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the state the handler writes rather than through a new return value —
     // one owner, no signature change.
     //
-    // THE BACKTICK IS S+M (architect 2026-09-19; it was bare 2 from
-    // 2026-09-17 and bare 4 with T+M from 2026-09-15), the magnification level
-    // markers column, which is SOURCE VIEW ONLY: leaving target for it never
-    // refuses, and the same audio-first order lands the column entry on a
-    // finished source view. The key sits off the digit run because that pass
-    // is done once, at the beginning of a piece and by sight, so the three
-    // views the work lives in keep bare 1/2/3.
-    //
     // THE COLUMN ENTRY IS ASKED BEFORE THE AUDIO SWITCH AND RUN AFTER IT.
-    // Leaving S+M for T+P or T+W, the audio switch itself lands the column on
-    // W (its T-never-pairs-with-M owner, switch_active_audio_view_to), and
-    // leaving T+P for S+W or S+M it lands W the same way (the twin,
-    // 2026-09-21), so a test read after it would find the column already
-    // right (bare 3 from S+M, bare 1 from T+P) and skip the entry's
+    // Leaving T+P for S+W, the audio switch itself lands the column on W (its
+    // S-never-pairs-with-P owner, switch_active_audio_view_to, 2026-09-21), so
+    // a test read after it would find the column already right (bare 1 from
+    // T+P) and skip the entry's
     // coincidence auto-select; the column change is what
     // this press asked for, so it is decided off the state the press started
     // in, and the entry (GuiActiveViews::select_active_markers_view) is
     // idempotent on its writer and runs its own tail whichever writer moved
     // the column. A refused target entry moves no column either way — the
-    // landing sits past the refusal in that body — so S+M stays whole.
-    if ((key == GuiKeys::Grave || key == GuiKeys::Digit1 ||
-         key == GuiKeys::Digit2 || key == GuiKeys::Digit3) &&
+    // landing sits past the refusal in that body — so S+W stays whole.
+    if ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
+         key == GuiKeys::Digit3) &&
         !ctrl && !shift && !alt) {
-        const char want_audio   =
-            (key == GuiKeys::Grave || key == GuiKeys::Digit1) ? 'S' : 'T';
-        const char want_markers = (key == GuiKeys::Grave)  ? 'M'
-                                : (key == GuiKeys::Digit2) ? 'P'
-                                                           : 'W';
+        const char want_audio   = (key == GuiKeys::Digit1) ? 'S' : 'T';
+        const char want_markers = (key == GuiKeys::Digit2) ? 'P' : 'W';
         const bool column_changes = (app.active_markers_view != want_markers);
         switch_active_audio_view_to(want_audio);
         if (app.active_audio_view != want_audio) return;   // refused
@@ -1698,25 +1680,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         if (!flag_editor_open_actionable(app)) {
             notifications.notify(AppState::NotificationClass::Normal,
-                                 app.active_markers_view == 'M'
-                                     ? "Select a magnification level marker to "
-                                       "edit its level"
-                                     : "Select a warp marker to edit its line");
+                                 "Select a warp marker to edit its line");
             return;
         }
         const int focus = app.last_selected_marker;
         switch (app.addressed_cell) {
         case MarkerCell::Payload:
-            // THE PAYLOAD AXIS OPENS ONE EDITOR PER COLUMN THAT HAS ONE, and
-            // since 2026-09-15 the MAGNIFICATION LEVEL column has one: the
-            // one-digit LEVEL editor, which is that column's whole payload. The
-            // fork is the predicate's own (flag_editor_open_actionable admits
-            // both columns on this axis and refuses P, which authors no payload
+            // THE PAYLOAD AXIS OPENS THE WARP column's line editor
+            // (flag_editor_open_actionable refuses P, which authors no payload
             // line at all).
-            if (app.active_markers_view == 'M') {
-                flag_editor.enter_magnification_level_edit(focus);
-                return;
-            }
             flag_editor.enter_top_flag_edit(focus);
             return;
         case MarkerCell::Lower:
@@ -1804,9 +1776,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // P / M / I / K / L letter keys (the Ctrl+P-family phase-reset clipboard
-    // ops, the Ctrl+M-family magnification level clipboard ops, `i` iteration
-    // mode, `k` add-to-selection, and `l` / Shift+L, the folder overlay's two
+    // P / I / K / L letter keys (the Ctrl+P-family phase-reset clipboard
+    // ops, `i` iteration mode, `k` add-to-selection, and `l` / Shift+L, the folder overlay's two
     // openers).
     if (handle_mode_keys(key, mods)) return;
 
@@ -1917,20 +1888,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             drop_phase_reset_in_target_view();
             return;
         }
-        // CTRL+SHIFT+S DROPS A MAGNIFICATION LEVEL MARKER FROM ANY VIEW
-        // (architect 2026-09-15) — Shift+S's shape on the third column, and it
-        // sits here for the same reason its sibling does: it needs no
-        // permission from the home-view gate below, because it GOES to the
-        // column's home view first and then drops there. Ctrl-and-shift-exact
-        // through the shared predicate, so this arm and the read-only
-        // allowlist cannot drift; the act's own body carries every other
-        // refusal. KEYBOARD-ONLY — the roster has no ctrl-shift button road
-        // and none was invented for it (the record is at the act's
-        // declaration).
-        if (is_magnification_level_drop_key(key, mods)) {
-            drop_magnification_level_in_source_view();
-            return;
-        }
         // THE BARE DROP, and the home-view gate lives INSIDE its arm since
         // 2026-08-30 rather than above it: the gate is the ACT'S refusal, so
         // it must not swallow a spelling that never meant to drop — an
@@ -1954,15 +1911,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                     "Markers are placed in source view");
                 return;
             }
-            // Past the gate the column is W (in source view), P, or — since
-            // 2026-09-15 — M, whose own in-column drop this is exactly as bare
-            // `s` is the phase column's: the CROSSING chord for each of those
-            // two columns (Shift+S, Ctrl+Shift+S) refuses in-column and leaves
-            // the drop to this key.
+            // Past the gate the column is W (in source view) or P, whose own
+            // in-column drop this is: the CROSSING chord Shift+S refuses
+            // in-column and leaves the drop to this key.
             if (app.active_markers_view == 'P')
                 phase_resets.drop_phase_reset_lead_in_at_playhead();
-            else if (app.active_markers_view == 'M')
-                magnification_levels.drop_magnification_level_at_playhead();
             else
                 warpops.drop_copy_previous_at_playhead();
             return;
@@ -1996,13 +1949,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             const char* card = "Select a marker to convert";
             switch (app.active_markers_view) {
                 case 'P': card = "Phase resets carry no tempo to inherit"; break;
-                // The third column's own sentence, its sibling's in its terms:
-                // a magnification level marker carries a LEVEL and no tempo, so
-                // there is nothing on it to inherit or collapse.
-                case 'M':
-                    card = "Magnification level markers carry no tempo to "
-                           "inherit";
-                    break;
                 case 'W': break;
             }
             notifications.notify(AppState::NotificationClass::Normal, card);
@@ -2068,9 +2014,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // ONE CARD PER PRESS, AND THE REFUSAL SAYS WHICH ONE IT IS, forked on the
     // predicate's own first term exactly as the Ctrl+N arm above forks: in
     // the W column the sentence is a statement about the PIECE and the kind
-    // picks which of the two it is, while the P and M columns each get a fact
-    // about the column — a phase reset and a magnification level marker carry
-    // no tempo at all, so the W sentences would be false there whenever warp
+    // picks which of the two it is, while the P column gets a fact about the
+    // column — a phase reset carries no tempo at all, so the W sentences would be false there whenever warp
     // markers do carry terms. The op's identical leading return is the belt
     // below it and stays silent; the Flatten button greys on the CLEAR kind,
     // so a plain lift never reaches this line while a shifted one still can
@@ -2084,10 +2029,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                       : "No marker carries tempo deviations";
             switch (app.active_markers_view) {
                 case 'P': card = "Phase resets carry no tempo to flatten"; break;
-                case 'M':
-                    card = "Magnification level markers carry no tempo to "
-                           "flatten";
-                    break;
                 case 'W': break;
             }
             notifications.notify(AppState::NotificationClass::Normal, card);
@@ -2127,16 +2068,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // rule — and neither op spells the lamp (selection_consumed,
         // app_state.h).
         selection_consumed(app);
-        // ONE ARM PER COLUMN since 2026-09-15: a disabled magnification level
-        // marker is invisible to the column's level rule exactly as a
-        // disabled reset is invisible to the render, so the toggle means the
-        // same thing on all three.
+        // ONE ARM PER COLUMN.
         if (app.active_markers_view == 'P') {
             phase_resets.toggle_phase_reset_disabled();
-            return;
-        }
-        if (app.active_markers_view == 'M') {
-            magnification_levels.toggle_magnification_level_disabled();
             return;
         }
         warpops.toggle_disabled();
@@ -2203,13 +2137,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // Ctrl+D arm's twin above: past the carded refusal, ahead of the column
         // fork, and spelled at neither op (selection_consumed, app_state.h).
         selection_consumed(app);
-        // ONE ARM PER COLUMN since 2026-09-15, the Ctrl+D arm's twin.
+        // ONE ARM PER COLUMN, the Ctrl+D arm's twin.
         if (app.active_markers_view == 'P') {
             phase_resets.delete_selected_phase_reset();
-            return;
-        }
-        if (app.active_markers_view == 'M') {
-            magnification_levels.delete_selected_magnification_levels();
             return;
         }
         warpops.delete_selected_marker();
@@ -2262,8 +2192,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // cards exactly as it cards the tempo step's. THIS ARM IS THE VALUE STEP — the chord's name — and the cell
     // is its subject. SAME LADDER: the bound step takes no repeat bit and no
     // coalescing at all (2026-09-10 — it records nothing, so a held run has no
-    // burst to open or merge into and simply steps), while the tempo and
-    // level steps keep both, each under its own GestureKind. The
+    // burst to open or merge into and simply steps), while the tempo step
+    // keeps both, under its own GestureKind. The
     // Up/Down buttons' face forks on the same axis.
     //
     // AND UNDER A LIT LAMP ONLY THE BOUND ARM IS REACHED: the composed gate
@@ -2276,19 +2206,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                               arrow_step_magnitude(mods);
         switch (app.addressed_cell) {
         case MarkerCell::Payload:
-            // AND THE PAYLOAD AXIS FORKS ON THE COLUMN since 2026-09-15: on
-            // the MAGNIFICATION LEVEL column the same chord at the same
-            // magnitude steps the LEVEL DIGIT through that column's own step
-            // body, whose refusal this arm cards exactly as it cards the tempo
-            // step's. It is the payload axis on both — an M flag has no other
-            // box — so the fork is here rather than a case of its own.
-            if (app.active_markers_view == 'M') {
-                card_op_refusal(
-                    notifications,
-                    magnification_levels.adjust_magnification_level_step(
-                        delta, mods.synthesized_repeat));
-                return;
-            }
             card_op_refusal(notifications,
                             warpops.adjust_tempo_cents(
                                 delta, mods.synthesized_repeat));
@@ -2305,8 +2222,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             // its own unit. NEITHER TAKES THE REPEAT BIT (2026-09-10): the
             // bound step records nothing, so a held run has no burst to open
             // or merge into and simply steps.
-            // (A bound cell is never addressed on the magnification level
-            // column — it paints none — so the fork is W or P.)
             if (app.active_markers_view == 'P') {
                 card_op_refusal(notifications,
                                 phase_resets.adjust_iter_bound_hops(
@@ -2512,13 +2427,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // gate's card, and the wall went silent on 2026-08-31 — and the arm
         // stays because the channel is the cluster's contract, not this
         // gesture's private arrangement.
-        // Past the gate the column is W (in source view), P or M — one twin
-        // per column since 2026-09-15, each the same body over its own store.
+        // Past the gate the column is W (in source view) or P — one twin per
+        // column, each the same body over its own store.
         const auto refusal =
-            app.active_markers_view == 'M'
-                ? magnification_levels.nudge_selected_magnification_levels(
-                      step, camera, rpt)
-            : app.active_markers_view == 'P'
+            app.active_markers_view == 'P'
                 ? phase_resets.nudge_selected_phase_resets(step, camera, rpt)
                 : warpops.nudge_selected_markers(step, camera, rpt);
         app.camera_hold = hold_before;
@@ -2782,7 +2694,7 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
 //
 // THE EDITOR ARM RAISES NO CARD, AND THE KEY IS WHY. Space is a PRINTABLE key
 // (text_editor::classify_key), so modal_editor_key_blocked ADMITS it and an
-// open flag, bound or level editor takes it as a typed space: the transport
+// open flag or bound editor takes it as a typed space: the transport
 // never sees the press, and the field showing the space is the whole answer.
 // The car has no character to type, so its play is consumed in that same
 // silence rather than borrowing the swallow's sentence, which would say Space
@@ -3824,7 +3736,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // THE SAME-VIEW NO-OP, the set-to form's own first line: naming the view you
     // are already in changes nothing — no stop, no translation, no editor
     // teardown, no kick. It is what lets a caller that names a COMBINATION (the
-    // four view selectors, the undo restore) hand this axis its tag unconditionally
+    // three view selectors, the undo restore) hand this axis its tag unconditionally
     // instead of spelling the guard by hand. The flip above can never reach it.
     if (target_view != 'S' && target_view != 'T') return;
     if (target_view == app.active_audio_view) return;
@@ -3877,44 +3789,22 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
         return;
     }
 
-    // TARGET VIEW NEVER PAIRS WITH THE MAGNIFICATION LEVEL MARKERS COLUMN
-    // (architect 2026-09-16: the column is source view only — a picture
-    // boundary for placing warp markers, beside their own authoring view; it
-    // was target view only from 2026-09-15 to this ruling), AND THIS IS THE
-    // AUDIO AXIS'S HALF OF THAT ONE INVARIANT — the column writer refuses 'M'
-    // outside source view, the other half (GuiActiveViews::
-    // switch_active_markers_view_to). Leaving S+M for target view LANDS THE
-    // COLUMN ON W FIRST, through the writer itself, so every road that names
-    // 'T' inherits it with no refusal of its own: bare 2 and 3 (whose own
-    // column entry then runs its coincidence auto-select), the settings
-    // editor's typed `active_audio_view=T`, the undo/redo restore of an entry
-    // tagged target view, Shift+S's crossing from S+M and bare `i`'s
-    // crossing (which never reaches here from M — its own refusal stands
-    // first, input_key_dispatch.cpp). PLACED PAST THE REFUSAL ABOVE, and the
-    // placement carries weight now that the landing is on the road INTO
-    // target, the one direction that CAN refuse: a refused target entry moves
-    // no column, so S+M stays whole — a switch that never happened changes
-    // nothing, the rule the absolute selectors read off the state. Ahead of
+    // SOURCE VIEW NEVER PAIRS WITH THE PHASE-RESET COLUMN (architect
+    // 2026-09-21: a phase reset is heard accurately only in target view, so
+    // S+P has no use and is load-fatal), AND THIS IS THE AUDIO AXIS'S HALF OF
+    // THAT ONE INVARIANT — the column writer refuses 'P' outside target view,
+    // the other half (GuiActiveViews::switch_active_markers_view_to). Leaving
+    // T+P for source view LANDS THE COLUMN ON W FIRST, through the writer
+    // itself, so every road that names 'S' inherits it: bare 1, the settings
+    // editor's typed `active_audio_view=S` and the undo/redo restore of an
+    // entry tagged source view. Leaving target never refuses, so the
+    // placement past the refusal above needs no reason of its own. Ahead of
     // the domain translation, so the writer's selection clear resolves its
     // damage against the leaving column's pixels in the leaving domain; with
-    // the selection empty the translation below has no focus to re-express.
-    // The writer runs no coincidence auto-select, which is right for the
-    // restore and the typed key (neither is a column entry the user asked
-    // for); bare 2 and 3 ask for one and get it at their own arm.
-    if (target_view == 'T' && app.active_markers_view == 'M') {
-        active_views.switch_active_markers_view_to('W');
-    }
-    // AND SOURCE VIEW NEVER PAIRS WITH THE PHASE-RESET COLUMN, THE TWIN
-    // (architect 2026-09-21: a phase reset is heard accurately only in target
-    // view, so S+P has no use and is load-fatal as T+M is). Leaving T+P for
-    // source view LANDS THE COLUMN ON W FIRST, through the same writer, so
-    // every road that names 'S' inherits it: bare 1 and the backtick, the
-    // settings editor's typed `active_audio_view=S`, the undo/redo restore of
-    // an entry tagged source view and Ctrl+Shift+S's crossing. Leaving
-    // target never refuses, so the placement past the refusal above is the
-    // M landing's shape rather than a need of its own. With the selection
-    // cleared by the writer, the translation below has no focus to
-    // re-express, exactly as on the M landing.
+    // the selection cleared the translation below has no focus to
+    // re-express. The writer runs no coincidence auto-select, which is right
+    // for the restore and the typed key (neither is a column entry the user
+    // asked for); bare 1 asks for one and gets it at its own arm.
     if (target_view == 'S' && app.active_markers_view == 'P') {
         active_views.switch_active_markers_view_to('W');
     }
@@ -3924,7 +3814,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // the PAINTED diff-flag list, and the switch is about to rebuild that list
     // (the contract, and the full clearer list, are at AppState::HistoryMode::
     // focus). This axis's clear lives HERE, at the S/T chokepoint, so the bare
-    // four view selectors and every other caller of this chokepoint inherit it
+    // three view selectors and every other caller of this chokepoint inherit it
     // with no second route; the column axis clears at its own switch. Placed
     // BELOW the refusal above (a switch that never
     // happened must not clear anything) and far above the kick at the tail,
@@ -4092,15 +3982,13 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // seats that cursor where the readout says it is. The overlay is DERIVED
     // from the trim every frame, through trim_overlay_span, which re-crosses
     // the bounds into whichever domain is live, so the flip owes it nothing.
-    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped: the four absolute
-    // view selectors on the backtick and bare 1/2/3 (and the view bar, which
+    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-09-23: the three
+    // absolute view selectors on bare 1/2/3 (and the view bar, which
     // synthesizes them),
-    // the settings editor's `active_audio_view=` GUI-key twin, the two
-    // crossings Shift+S and Ctrl+Shift+S, bare `i`'s own crossing into target,
-    // the undo/redo restore's audio-view tag, and the two propagate pastes'
-    // landing tails — the phase-reset paste's into target view, the
-    // magnification level paste's into source view (moot there — their column
-    // swap clears the selection immediately after).
+    // the settings editor's `active_audio_view=` GUI-key twin, the crossing
+    // Shift+S, bare `i`'s own crossing into target, the undo/redo restore's
+    // audio-view tag, and the phase-reset propagate paste's landing tail into
+    // target view.
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
@@ -4301,7 +4189,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //     kick_waveform_sync and the target render's ensure_ready — arrives by
 //     construction.
 //   * A REFUSED ENTRY STOPS THE WHOLE PRESS, the absolute view selectors' own
-//     rule (the backtick and bare 1/2/3, on_key): entering target view can fail its validity
+//     rule (bare 1/2/3, on_key): entering target view can fail its validity
 //     gate (the tripwire class, unreachable from program-written input, silent
 //     on screen), and dropping into the column while the audio view stayed
 //     behind would
@@ -4358,44 +4246,6 @@ void GuiInputHandler::drop_phase_reset_in_target_view() {
     // act asked for T+P and got there, which is honest even when the reset
     // could not be placed.
     phase_resets.drop_phase_reset_lead_in_at_playhead();
-    viewport.kick_waveform_sync();
-}
-
-// CTRL+SHIFT+S — the third column's crossing, its sibling's body over its own
-// two chokepoints and its own drop. The contract is at the declaration; every
-// clause here is drop_phase_reset_in_target_view's, and the TWO differences
-// are the direction — this column's home is SOURCE view (architect
-// 2026-09-16), so the trip is S then M where the sibling's is T then P — and
-// that the drop it ends in takes NO LEAD-IN (a magnification level is a
-// picture boundary at the playhead's own frame, not a synthesis event seeded
-// ahead of one).
-void GuiInputHandler::drop_magnification_level_in_source_view() {
-    // The blank/loading guard near the top of on_key already covers this; the
-    // helper is defensive for the sibling's reason.
-    if (app.loading || audio.total_frames() <= 0) return;
-    // ALREADY CROSSED, NOTHING TO DO — the phase chord's own rule: this chord
-    // IS the crossing, so with the M column standing there is nothing to cross
-    // and bare `s` is the drop there.
-    if (app.active_markers_view == 'M') {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Already in magnification level view");
-        return;
-    }
-    // LEAVING TARGET NEVER REFUSES (the exit falls back to the identity map),
-    // so the read-back below can never fire on this road; it is kept for the
-    // sibling's shape — the two crossings are one body with the letters
-    // swapped, and the verdict is read off the state in both.
-    switch_active_audio_view_to('S');
-    if (app.active_audio_view != 'S') return;   // the sibling's shape
-    active_views.switch_active_markers_view_to('M');
-    // The drop's own refusals — no sample rate, a frame past the EOF wall —
-    // are its, silent, and leave the view where these two switches put it.
-    magnification_levels.drop_magnification_level_at_playhead();
-    // THE KICK IS LAST, the sibling's own reason: the column swap moves a
-    // flag-cache FINGERPRINT field, so this is what lands the plate, the column
-    // and the new selection's flag in one frame. (The drop's own gain kick
-    // renders nothing — its marker copies the level already in force — so this
-    // is the only render of the press.)
     viewport.kick_waveform_sync();
 }
 

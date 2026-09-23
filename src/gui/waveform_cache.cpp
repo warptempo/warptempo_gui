@@ -1,5 +1,4 @@
 #include "paint_handler.h"
-#include "marker_magnification.h"   // format_marker_magnification, the M diff label
 
 #include "render.h"
 #include "text_editor.h"
@@ -838,8 +837,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
 
     // THE ACTIVE MARKERS VIEW PICKS THE COLUMN, exactly as it picks which store
     // the live lane walks: warp entries where warp flags paint, phase-reset
-    // entries where phase resets paint, magnification level entries where
-    // magnification level markers paint. The other column's delta is not shown —
+    // entries where phase resets paint. The other column's delta is not shown —
     // one lane, one column, and the mode is a view onto that lane.
     // THE THEN SIDE'S VALUE RIDES ALONG WITH ITS LABEL (2026-08-05) on every
     // flag that HAS a then side — the removed ones and the changed pairs — for
@@ -869,58 +867,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // both sides', a removed flag its then side's, an added flag its now
     // side's — off the same delta entry, so the row the flag shows is the row
     // the revert addresses (the contract is at HistoryDiffFlag, render.h).
-    if (app.active_markers_view == 'M') {
-        // THE MAGNIFICATION LEVEL COLUMN (architect 2026-09-15): the
-        // phase-reset arm's shape with the LEVEL DIGIT as the token — the
-        // line's own spelling after its `|` — and the local bit as the
-        // effective verdict (no cascade on this column). The then side's
-        // digit rides the flag as its then token for the same reason a warp
-        // token does.
-        for (const GuiHistoryMagnificationLevelChange& c :
-             d->magnification_level_changed) {
-            HistoryDiffFlag f;
-            f.time_frame   = c.frame;
-            f.removed      = true;
-            f.added        = true;
-            f.removed_text = history_diff_label(
-                "[-]", c.then_disabled,
-                format_marker_magnification(c.then_level));
-            f.added_text = history_diff_label(
-                "[+]", c.now_disabled,
-                format_marker_magnification(c.now_level));
-            f.then_token              = format_marker_magnification(c.then_level);
-            f.then_ordinal            = c.then_ordinal;
-            f.now_ordinal             = c.now_ordinal;
-            f.then_disabled           = c.then_disabled;
-            f.then_effective_disabled = c.then_disabled;
-            f.now_effective_disabled  = c.now_disabled;
-            out.push_back(std::move(f));
-        }
-        for (const GuiHistoryMagnificationLevelEntry& e :
-             d->magnification_level_removed) {
-            HistoryDiffFlag f;
-            f.time_frame   = e.frame;
-            f.removed      = true;
-            f.removed_text = history_diff_label(
-                "[-]", e.disabled, format_marker_magnification(e.level));
-            f.then_token              = format_marker_magnification(e.level);
-            f.then_ordinal            = e.ordinal;
-            f.then_disabled           = e.disabled;
-            f.then_effective_disabled = e.disabled;
-            out.push_back(std::move(f));
-        }
-        for (const GuiHistoryMagnificationLevelEntry& e :
-             d->magnification_level_added) {
-            HistoryDiffFlag f;
-            f.time_frame = e.frame;
-            f.added      = true;
-            f.added_text = history_diff_label(
-                "[+]", e.disabled, format_marker_magnification(e.level));
-            f.now_ordinal            = e.ordinal;
-            f.now_effective_disabled = e.disabled;
-            out.push_back(std::move(f));
-        }
-    } else if (app.active_markers_view == 'P') {
+    if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
             f.time_frame   = c.frame;
@@ -1094,8 +1041,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // Marker-driven inputs from app state.
     const long long warp_gen   = app.warpmarkers.generation();
     const long long phase_gen  = app.phaseresetmarkers.generation();
-    const long long magnification_level_gen =
-        app.magnificationlevelmarkers.generation();
     const uint64_t  drag_hash  = hash_drag_overlay(app.drag);
     const uint64_t  sel_hash   = hash_selection(
                                      app.selected_markers,
@@ -1177,8 +1122,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
         flag_cache.fp_warp_generation   == warp_gen &&
         flag_cache.fp_phase_reset_generation  == phase_gen &&
-        flag_cache.fp_magnification_level_generation ==
-            magnification_level_gen &&
         flag_cache.fp_drag_overlay_hash       == drag_hash &&
         flag_cache.fp_selection_hash          == sel_hash &&
         flag_cache.fp_active_markers_view     == mv &&
@@ -1318,31 +1261,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             // a removed marker lands on the column a live one at that frame
             // would.
             tmap_arg);
-    } else if (mv == 'M') {
-        // THE MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-15): its
-        // flags paint while it is the active column and at no other time, the
-        // other two columns' rule. The level digit on the ORANGE box (green
-        // until the 2026-09-16 hue swap, blue for that one day; render.h's
-        // palette block) and no cells (the painter's declaration, render.h);
-        // red is the column's coincidence set alone. IT TAKES A DRAG OVERLAY
-        // AND A SUPPRESSION since the column gained its authoring the same
-        // day — the flag's horizontal drag and the one-digit LEVEL EDITOR,
-        // which stands in for the payload box exactly as the warp column's
-        // canonical-line editor does.
-        const std::set<int>& ml_red =
-            magnification_level_red_flag_set_cached(app).red;
-        render_magnification_level_flags(
-            ccr, local_top_strip, flag_lanes, wave_w,
-            app.magnificationlevelmarkers.markers(),
-            vp_start, vp_end, sr,
-            app.selected_markers,
-            ml_red,
-            app.last_selected_marker,
-            &app.flag_hit_rects,
-            &app.marker_stems,
-            tmap_arg,
-            drag_overlay,
-            suppressed);
     } else if (mv == 'P') {
         const std::set<int>& pr_red =
             phase_reset_red_flag_set_cached(app).red;
@@ -1402,7 +1320,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;
     flag_cache.fp_phase_reset_generation  = phase_gen;
-    flag_cache.fp_magnification_level_generation = magnification_level_gen;
     flag_cache.fp_drag_overlay_hash       = drag_hash;
     flag_cache.fp_selection_hash          = sel_hash;
     flag_cache.fp_active_markers_view     = mv;

@@ -214,7 +214,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 //
 // TARGET VIEW IS THE BODY'S ONE VIEW (architect 2026-09-21): the phase-reset
 // column exists in target view alone — a phase reset is heard accurately only
-// there, so S+P has no use and is load-fatal, the twin of T+M — and the
+// there, so S+P has no use and is load-fatal — and the
 // source-view arm that stood here (S+P's STUB of 2026-09-02: no lead-in, the
 // reset seated exactly at the source cursor) had no producer left and is
 // deleted; the assert below is its belt (an error arm exists iff a producer
@@ -333,8 +333,8 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // (NudgeCamera::HoldColumn, position_nudge.h), never a different step or a
 // different wall, and no modifier reaches here — the horizontal ladder
 // retired Shift, and Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23. Every committed value is a
-// whole source frame. The warp and magnification twins take the same road
-// with one painted column instead (stepped_anchor_frame).
+// whole source frame. The warp twin takes the same road with one painted
+// column instead (stepped_anchor_frame).
 //
 // HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
 // 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
@@ -446,7 +446,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::PhaseResetNudge, merge,
                                 orig_f, committed_f, camera,
-                                &target_render);
+                                target_render);
     return std::nullopt;
 }
 

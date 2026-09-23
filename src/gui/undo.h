@@ -19,16 +19,16 @@ struct GuiInputHandler;
 // pure repeat-identity model's "separate presses are separate entries" clause on
 // the live complaint that rapid manual taps each pushed their own entry). A burst
 // of eligible keyboard
-// gestures — FIVE of them, re-grepped 2026-09-16 from GestureKind below (it
+// gestures — THREE of them, re-grepped 2026-09-23 from GestureKind below (it
 // was three from 2026-07-29, when the W+target tempo-IMAGE step was deleted
 // with the whole tempo-image family, marker_drag.h; four from 2026-09-04 with
 // the iteration bound step, which left the undo domain 2026-09-10; six from
-// 2026-09-15 with the magnification level column's nudge and level step, and
-// five since the measure step left with the measures feature 2026-09-16): the
-// THREE COLUMNS' position nudges (Left/Right in the
-// marker lane) and the two coalescing arms of the Up/Down VALUE STEP on the
-// addressed cell — the tempo cent step and the magnification
-// LEVEL step, each also
+// 2026-09-15 with the magnification level column's nudge and level step,
+// five once the measure step left with the measures feature 2026-09-16, and
+// three again since that column's deletion 2026-09-23): the
+// TWO COLUMNS' position nudges (Left/Right in the
+// marker lane) and the one coalescing arm of the Up/Down VALUE STEP on the
+// addressed cell — the tempo cent step, also
 // reached by the plain wheel over its flag cell — each in
 // the
 // step ladder's three magnitudes since 2026-08-31, which the coalescing is
@@ -92,11 +92,10 @@ struct GuiInputHandler;
 // without pushing anything — so the tap arm carries an explicit SUBJECT TEST in
 // their place (the stamped selection and A/B tab must still stand); the
 // derivation is at coalesce_gesture's definition.
-// THE ELIGIBLE KINDS, one per coalescing gesture plus None: the THREE position
-// nudges and the Up/Down value step's two coalescing arms — the cent step
-// (TempoStep, singleton and group) and the magnification level step
-// (MagnificationLevelStep, since 2026-09-15, singleton and group) — each its
-// own kind, so a nudge burst, a tempo burst and a level burst stay separate.
+// THE ELIGIBLE KINDS, one per coalescing gesture plus None: the TWO position
+// nudges and the Up/Down value step's one coalescing arm — the cent step
+// (TempoStep, singleton and group) — each its own kind, so a nudge burst and
+// a tempo burst stay separate.
 // TempoImageStep was a kind until 2026-07-29 and went caller-less with the
 // tempo-image family's deletion (marker_drag.h). ITERBOUNDSTEP WAS A FOURTH
 // FROM 2026-09-04 TO 2026-09-10 — the same arrows' second body, stepping a
@@ -107,16 +106,11 @@ struct GuiInputHandler;
 // terms that kind alone read — the addressed cell and the W/P column — went
 // with it. MEASURESTEP, the warp marker's measure step, was a kind from
 // 2026-09-14 until the measures feature was deleted whole 2026-09-16.
-// MAGNIFICATIONLEVELNUDGE AND MAGNIFICATIONLEVELSTEP (architect 2026-09-15,
-// with the magnification level markers column's authoring) are the third
-// column's two bursts — its POSITION nudge, the other two columns' twin, and
-// its VALUE STEP, bare Up/Down on the level digit (and the plain wheel over an
-// M flag). Each is its own kind for the reason every other one is: a burst
-// never merges across subjects, so a nudge tap then a level tap on the same
-// marker open two entries.
+// MAGNIFICATIONLEVELNUDGE AND MAGNIFICATIONLEVELSTEP, the magnification level
+// markers column's two bursts, were kinds from 2026-09-15 until that column's
+// deletion 2026-09-23.
 enum class GestureKind {
-    None, WarpNudge, PhaseResetNudge, TempoStep,
-    MagnificationLevelNudge, MagnificationLevelStep
+    None, WarpNudge, PhaseResetNudge, TempoStep
 };
 
 // THE TAP-COALESCE WINDOW (architect 2026-08-01): two consecutive PHYSICAL
@@ -210,26 +204,14 @@ struct Undo {
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
                              std::vector<int> touched_live = {});
-    // THE THIRD COLUMN'S PUSH (architect 2026-09-15), op_mode 'M': the
-    // phase-reset helper's body over the magnification level store, with the
-    // same identity-hint contract (restore_touched_indices, app_state.h) and
-    // the same stamp clear. NO ITER STRIP OF ITS OWN — the column carries no
-    // session-only field, so there is nothing to strip from its snapshot
-    // (GuiMagnificationLevelMarker, magnificationlevelmarkers.h).
-    void push_undo_magnification_level(
-        std::vector<GuiMagnificationLevelMarker> pre_state,
-        std::vector<int> touched_snapshot = {},
-        std::vector<int> touched_live = {});
-    // Files under the LIVE tab like the three helpers around it. (A
+    // Files under the LIVE tab like the two helpers around it. (A
     // `tab_override` parameter stood here for the load-in-place, which used to
     // switch to the tab its file named; it lost its last producer on 2026-08-24
     // when the act stopped writing view state, and went with it.)
     //
     // `op_mode` (and with it `landing_column`, UndoEntry) names the COLUMN
     // the restore returns to and whose
-    // post-restore rules run; all three snapshots — the magnification level
-    // column's being this helper's own parameter, the one caller replacing
-    // that store too — are written back whatever it says
+    // post-restore rules run; both snapshots are written back whatever it says
     // (restore_history_entry). ONE CALLER, the load in place. (The
     // iteration-mode wipe was a second until 2026-09-10, pushing a
     // session-only entry over both stores; it pushes nothing now, the bracket
@@ -238,7 +220,6 @@ struct Undo {
     void push_undo_both(
         std::vector<GuiWarpMarker> warp_pre,
         std::vector<GuiPhaseResetMarker> phase_reset_pre,
-        std::vector<GuiMagnificationLevelMarker> magnification_level_pre,
         char op_mode);
     // Settings-only undo entry. op_mode='S' marks it as settings-class so
     // do_undo / do_redo skip the mode-switch and post-restore-rules
@@ -261,7 +242,7 @@ struct Undo {
     // phase-reset pastes (paste_apply / paste_state_apply,
     // phase_reset_propagate.cpp), W-column acts that land in T+P through
     // land_paste_in_target_view — every other crossing act (Shift+S,
-    // Ctrl+Shift+S, bare `i`, the typed view keys) crosses before it pushes
+    // bare `i`, the typed view keys) crosses before it pushes
     // or pushes nothing. op_mode is NOT restamped: it names the store the
     // entry changed, which recompute_dirty's per-column walk and the
     // post-restore rules read; the column the restore returns to is the
@@ -278,9 +259,6 @@ struct Undo {
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                                             const std::vector<GuiPhaseResetMarker>& before);
-    void apply_post_restore_rules_magnification_level(
-        const UndoEntry& entry,
-        const std::vector<GuiMagnificationLevelMarker>& before);
     // EACH RETURNS WHETHER THE RESTORE ACTUALLY RAN — false exactly where the
     // authoritative belt below refuses (history_entry_actionable: an empty
     // source stack, or a top entry whose target tab is read-only), true when

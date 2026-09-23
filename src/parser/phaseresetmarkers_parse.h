@@ -21,10 +21,9 @@ struct PhaseResetMarker {
 
     // A phase reset carries nothing beside its position and its disabled
     // bit (architect approval 2026-09-16, comment only, with the measures
-    // feature's deletion). A magnification level is a field of neither this column nor the
-    // warp one: the magnification level markers column carries it as its own
-    // payload (MagnificationLevelMarker::level,
-    // magnificationlevelmarkers_parse.h) (architect approval 2026-09-16).
+    // feature's deletion). No marker of either column carries a waveform
+    // magnification: the picture's gain is derived from the source audio in
+    // the GUI (architect approval 2026-09-23).
 };
 
 // Parse a .phaseresetmarkers file. Never throws. Returns the parsed markers on

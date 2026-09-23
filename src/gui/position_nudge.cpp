@@ -11,10 +11,9 @@
 #include <cstdint>
 #include <vector>
 
-// The type-free flesh shared by the THREE position nudges
-// (GuiWarpMarkersOps::nudge_selected_markers,
-// GuiPhaseResetMarkersOps::nudge_selected_phase_resets and, since 2026-09-15,
-// GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels). The
+// The type-free flesh shared by the TWO position nudges
+// (GuiWarpMarkersOps::nudge_selected_markers and
+// GuiPhaseResetMarkersOps::nudge_selected_phase_resets). The
 // full doctrine
 // (horizontal movement is a focus act; the group-verb doctrine it instances) and
 // the step-by-step ordering rationale live at the declarations in
@@ -186,10 +185,8 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
     // doctrine at the head of position_nudge.h) and the collapse is the
     // press's own committed act, not a prelude to the step.
     if (a.selected_markers.size() >= 2) return true;
-    // The active column's store through its one selector (app_state.h). ALL
-    // THREE COLUMNS ASK: the magnification level column authors in S+M
-    // (active_column_authoring_allowed's 'M' arm is unconditional), and the
-    // selector answers each column's own frame.
+    // The active column's store through its one selector (app_state.h), which
+    // answers each column's own frame.
     const int64_t orig = active_marker_time_frame(a, f);
     return position_nudge_landing(a, audio, orig, step) != orig;
 }
@@ -198,7 +195,7 @@ void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, bool merged, int64_t prior_focused_frame,
     int64_t committed_focused_frame, NudgeCamera camera,
-    GuiTargetRender* target_render) {
+    GuiTargetRender& target_render) {
     // (a) settle the burst: re-stamp this press's kind for the next coalesce
     // test, or — on a MERGED press whose mutation returned the stores to the
     // burst entry's own snapshot — POP that entry, the byte-equal pop
@@ -258,9 +255,6 @@ void finish_position_nudge(
     // movement owner (the rule at Viewport::move_playhead_to, viewport.cpp).
     // Groups are never moved (the doctrine at the declarations), so there is
     // no extent to maintain here.
-    // (h) view-independent target preview — ON THE TWO COLUMNS THAT REACH ONE.
-    // The pointer is null exactly on the magnification level column, whose
-    // positions are display-only (the rule and why it is a pointer are at the
-    // declaration).
-    if (target_render) target_render->trigger();
+    // (h) view-independent target preview.
+    target_render.trigger();
 }

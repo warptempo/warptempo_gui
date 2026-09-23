@@ -39,10 +39,8 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int press_y) {
     // dragged simply does not drag.
     if (!value_drag_target(app, audio, marker, cell)) return false;
 
-    // `column` is W or P past the target rule: value_drag_target answers false
-    // for every cell on the magnification level column (the plain flag drag
-    // there is the HORIZONTAL move, value_drag_posture's own 'M' arm), so the
-    // `== 'P'` forks below and in the motion body never meet an M drag.
+    // `column` is W or P, the column axis's two letters, so the `== 'P'` forks
+    // below and in the motion body are exhaustive.
     const char column = app.active_markers_view;
     ValueDragState st;
     st.active  = true;

@@ -112,10 +112,8 @@ using warptempo_parse::prefix_line_error;
 //
 // THE WAVEFORM MAGNIFICATION LEVEL KEY LEFT THE SCHEMA 2026-09-14 (architect approval
 // 2026-09-14): the waveform picture's magnification is no longer one number for
-// the piece but a PER-SECTION PROFILE (marker_magnification.h owns the range
-// now as kMarkerMagnificationMax; the per-warp-marker field that first fed the
-// profile left the warp comment 2026-09-15, architect approval 2026-09-15).
-// The consequence is the standing one: a `.settings`,
+// the piece but the GUI's own, derived from the source audio since 2026-09-23
+// (retold under architect approval 2026-09-23). The consequence is the standing one: a `.settings`,
 // a `renders/` recipe or a checkpoint still carrying the key is load-fatal in
 // both products by the unknown-key refusal below — no migration, no reader
 // leniency, the recipe refusing `'` and the checkpoint dropping out of the `h`
@@ -281,16 +279,15 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return R(out);
     }
     if (key == "active_markers_view") {
-        // THE THIRD COLUMN, M — the magnification level markers (architect
-        // approval 2026-09-15, the column made visible): one ASCII letter per
-        // column, W / P / M. M is SOURCE VIEW ONLY (architect approval
-        // 2026-09-16; target view only from 2026-09-15 until then) and P is
-        // TARGET VIEW ONLY, its twin (architect approval 2026-09-21) — two
-        // PAIR rules this per-key grammar cannot see; read_settings_file
-        // refuses active_audio_view=T beside M and active_audio_view=S beside
-        // P once the whole file has scanned.
-        if (value != "W" && value != "P" && value != "M")
-            return err("must be W, P or M");
+        // One ASCII letter per column, W / P. P is TARGET VIEW ONLY
+        // (architect approval 2026-09-21) — a PAIR rule this per-key grammar
+        // cannot see; read_settings_file refuses active_audio_view=S beside P
+        // once the whole file has scanned. The third column's letter M left
+        // with the magnification level markers column (architect approval
+        // 2026-09-23): a file carrying it takes this value refusal, no
+        // migration.
+        if (value != "W" && value != "P")
+            return err("must be W or P");
         out.c = value[0];
         return R(out);
     }
@@ -456,28 +453,14 @@ std::expected<SettingsFile, std::string> read_settings_file(
         return {};
     });
     if (!scan) return std::unexpected(std::move(scan.error()));
-    // T+M IS A STATE THE GUI CAN NEVER PRODUCE (architect approval
-    // 2026-09-16, flipping the S+M refusal of 2026-09-15 — the column's home
-    // moved from target view to source view, a picture boundary for placing
-    // warp markers belonging beside their own authoring view): the
-    // magnification level markers column shows in source view alone, every
-    // GUI road into target view landing the column on W first and every road
-    // into M crossing to source first. A file carrying the pair is therefore
-    // adversarial by the two-category rule — load-fatal, identically in both
-    // products, with no migration for a file saved under the one-day rule —
-    // and the refusal is whole-file because the pair spans two keys.
-    if (out.active_markers_view == 'M' && out.active_audio_view == 'T') {
-        return std::unexpected<std::string>(
-            "active_markers_view=M requires active_audio_view=S");
-    }
-    // S+P IS ITS TWIN, A STATE THE GUI CAN NEVER PRODUCE EITHER (architect
-    // approval 2026-09-21, a granted parser touch): the phase-reset column
+    // S+P IS A STATE THE GUI CAN NEVER PRODUCE (architect approval
+    // 2026-09-21, a granted parser touch): the phase-reset column
     // belongs to TARGET view — a phase reset is heard accurately only there,
     // and S+P has no use — so every GUI road into source view lands the
-    // column on W first and every road into P crosses to target first, the
-    // mirror of the T+M pair above. A file carrying the pair is adversarial
-    // by the same two-category rule — load-fatal in both products, no
-    // migration — and whole-file for the same reason.
+    // column on W first and every road into P crosses to target first. A
+    // file carrying the pair is adversarial by the two-category rule —
+    // load-fatal in both products, no migration — and the refusal is
+    // whole-file because the pair spans two keys.
     if (out.active_markers_view == 'P' && out.active_audio_view == 'S') {
         return std::unexpected<std::string>(
             "active_markers_view=P requires active_audio_view=T");

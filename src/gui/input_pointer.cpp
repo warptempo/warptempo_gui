@@ -91,7 +91,7 @@ struct ToolbarChord {
     // RADIO: this button reports a state it can only ever turn ON, so a press
     // while it is already selected is a CONSUMED NOTHING (there is nothing to
     // switch to, and its chord is a TOGGLE that would switch away from what the
-    // user just clicked). THE TAB PAIR AND THE VIEW BAR'S FOUR are the flag's
+    // user just clicked). THE TAB PAIR AND THE VIEW BAR'S THREE are the flag's
     // users; the view lamps, the walk lamp, read-only, history and
     // Cumulative are TOGGLES and press through in both directions, which is why
     // this is a flag and not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP
@@ -102,7 +102,7 @@ struct ToolbarChord {
     // GENERIC throughout — keyed on the flag plus the lamp, with no id list
     // anywhere.)
     //
-    // THE VIEW BAR'S FOUR ARE RADIOS FOR A DIFFERENT REASON, worth stating
+    // THE VIEW BAR'S THREE ARE RADIOS FOR A DIFFERENT REASON, worth stating
     // because the toggle argument does not transfer: their chords are the
     // ABSOLUTE selectors, which are IDEMPOTENT — on_key's own handler
     // already makes a press on the current combination a no-op, so dispatching
@@ -183,15 +183,13 @@ struct ToolbarChord {
 // the prompt all read exactly as before. Everything else on rows 1, 3 and 4 and
 // the bottom row is here.
 constexpr ToolbarChord kToolbarChords[] = {
-    // Row 1's RIGHT FLOAT — the view bar (2026-08-02; the magnification level
-    // selector 2026-09-15, FIRST and on the backtick since 2026-09-19). The
-    // ABSOLUTE view selectors: S+M, S+W, T+P, T+W — THE ROW ORDER HERE IS THE
+    // Row 1's RIGHT FLOAT — the view bar (2026-08-02). The
+    // ABSOLUTE view selectors: S+W, T+P, T+W — THE ROW ORDER HERE IS THE
     // BAR'S (kViewBarButtons, paint_handler.cpp). Everything
     // the selectors own arrives by construction through on_key's own handler — the audio-first-then-markers
     // order, the refused-target-entry abort of the whole press, the coincidence
     // auto-select, the read-only admission (they are navigation), the modal
     // swallow. There is no second route to keep in step.
-    {RedesignButton::ViewSM,     GuiKeys::Grave,  false, false, false, true, true}, // bare backtick
     {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true, true}, // bare 1
     {RedesignButton::ViewTP,     GuiKeys::Digit2, false, false, false, true, true}, // bare 2
     {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true, true}, // bare 3
@@ -235,7 +233,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the radio-pair collapse, to 2026-09-15 — one button per axis where
     // IconS/IconT and IconW/IconP were four radios over the bare `t`/`p`
     // chords, each a plain TOGGLE carrying NO radio flag. The architect
-    // deleted the whole category with those two keys; the four view selectors
+    // deleted the whole category with those two keys; the three view selectors
     // below are the axes' only keyboard road now.)
     // (THE SHOW TRIM REGION BUTTON'S ROW IS DELETED — 2026-09-22, with its
     // button and its bare `[` chord: the architect uses the tablet's pen,
@@ -788,7 +786,7 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
 // rect is the painter's stash and nothing here re-shapes or re-measures, so the
 // pointer reads exactly what the painter published — which for every button but
-// the view bar's four is also the box it drew. THE VIEW BAR IS THE ONE
+// the view bar's three is also the box it drew. THE VIEW BAR IS THE ONE
 // INTENTIONAL PAINT-ONLY INSET (architect 2026-09-09: the hit box is the blue
 // div's own height): the walk publishes the lane-tall rect and paints the
 // vertically inset face through `view_bar_face_rect`, so the top and bottom
@@ -1204,8 +1202,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the view bar's ViewSM/ViewSW/ViewTP/ViewTW (the backtick and bare
-//   1/2/3, the admitted view selectors), Save (Ctrl+S, which in this mode IS the
+//   LIVE — the view bar's ViewSW/ViewTP/ViewTW (bare 1/2/3, the admitted
+//   view selectors), Save (Ctrl+S, which in this mode IS the
 //   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
 //   allowlist for the act, its own arm in redesign_button_enabled greying it
@@ -1576,7 +1574,7 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // rule this time" is the hand-listed inventory in disguise.
 void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
                                Viewport& viewport, int hit) {
-    // All three columns through the one store selector pair (active_marker_count
+    // Both columns through the one store selector pair (active_marker_count
     // / active_marker_time_frame, app_state.h).
     if (hit < 0 || hit >= active_marker_count(app)) return;
     seat_playhead_on_source_frame(app, audio, viewport,
@@ -1670,7 +1668,7 @@ static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport) {
-    // All three columns through the one store selector pair (active_marker_count
+    // Both columns through the one store selector pair (active_marker_count
     // / active_marker_time_frame, app_state.h).
     const auto scan = [&]() {
         const int n = active_marker_count(app);
@@ -2266,10 +2264,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                 return value_drag_target(app, audio, flag_hit, cell)
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
-            // A MAGNIFICATION LEVEL FLAG promises the HORIZONTAL move
-            // (architect 2026-09-15), so its box wears the same TrimResize the
-            // other two columns' positional flags do — the cursor promises the
-            // gesture, and on this column the plain drag is that one.
+            // Off the value drag's posture the flag's plain drag is the
+            // HORIZONTAL move, so its box wears TrimResize — the cursor
+            // promises the gesture.
             return GuiCursorKind::TrimResize;
         }
         // The rest of the strip: the button rows (claimed far above the
@@ -3804,22 +3801,13 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
     switch (cell) {
     case MarkerCell::Payload:
         // A phase reset's payload is a POSITION with no value to step: there
-        // the select was the whole act. THE OTHER TWO COLUMNS EACH STEP THEIR
-        // OWN PAYLOAD VALUE — the warp column's tempo, and since 2026-09-15 the
-        // magnification level column's LEVEL DIGIT — through that column's own
-        // step body, the same one bare Up/Down runs.
-        if (app.active_markers_view == 'M') {
-            (void)magnification_levels.adjust_magnification_level_step(
-                delta, /*synthesized_repeat=*/false);
-            return;
-        }
+        // the select was the whole act. THE WARP COLUMN STEPS ITS TEMPO through
+        // the same body bare Up/Down runs.
         if (app.active_markers_view != 'W') return;
         (void)warpops.adjust_tempo_cents(delta, /*synthesized_repeat=*/false);
         return;
     case MarkerCell::Lower:
     case MarkerCell::Upper:
-        // A bound cell is W's or P's: the magnification level column paints
-        // none, so no press resolves one there.
         if (app.active_markers_view == 'P') {
             (void)phase_resets.adjust_iter_bound_hops(cell,
                                                       static_cast<int>(delta));
@@ -4086,17 +4074,10 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
          dc_at_press.cell == MarkerCell::Upper)) {
         switch (dc_at_press.cell) {
         case MarkerCell::Payload:
-            // THE PAYLOAD AXIS OPENS ONE EDITOR PER COLUMN THAT HAS ONE: the
-            // WARP column's canonical-line editor, and since 2026-09-15 the
-            // MAGNIFICATION LEVEL column's one-digit LEVEL editor, which is
-            // that column's whole payload. A phase reset authors no payload
-            // line at all, so the P column alone opens nothing, silent — and
-            // arms nothing, the double-click return below. (The bare-Return
-            // arm makes the same fork.)
-            if (app.active_markers_view == 'M') {
-                flag_editor.enter_magnification_level_edit(hit);
-                return;
-            }
+            // THE PAYLOAD AXIS OPENS THE WARP column's canonical-line editor.
+            // A phase reset authors no payload line at all, so the P column
+            // opens nothing, silent — and arms nothing, the double-click
+            // return below. (The bare-Return arm makes the same fork.)
             if (app.active_markers_view == 'W') {
                 flag_editor.enter_top_flag_edit(hit);
                 return;
@@ -5941,10 +5922,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the SIX keyboard Ctrl+Alt
+        // proceeds. ALT survives ONLY in the FIVE keyboard Ctrl+Alt
         // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P,
-        // Ctrl+Alt+Shift+P, Ctrl+Alt+M and, since 2026-09-13,
-        // File → Revert's Ctrl+Alt+O)
+        // Ctrl+Alt+Shift+P and, since 2026-09-13, File → Revert's Ctrl+Alt+O;
+        // re-derived by grep of chord_is_bound 2026-09-23)
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to
@@ -6628,15 +6609,11 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
     // active_column_authoring_allowed admits W only in source view (warp
-    // drops legal there alone), P wherever it exists, which is target view
-    // alone (2026-09-21; both audio views from 2026-08-30 until then), and M
-    // wherever it exists, which is source view alone (2026-09-16; target view
-    // alone for its first day), so the view dispatch below needs no extra
-    // audio-view guard on any column.
+    // drops legal there alone) and P wherever it exists, which is target view
+    // alone (2026-09-21; both audio views from 2026-08-30 until then), so the
+    // view dispatch below needs no extra audio-view guard on either column.
     if (app.active_markers_view == 'P')
         phase_resets.drop_phase_reset_lead_in_at_playhead();
-    else if (app.active_markers_view == 'M')
-        magnification_levels.drop_magnification_level_at_playhead();
     else
         warpops.drop_copy_previous_at_playhead();
 }
@@ -7134,7 +7111,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE REDESIGNED BUTTONS' HOVER, in ONE transition writer over the whole roster
-// (row 1's three menu anchors and the view bar's four, row 3's two
+// (row 1's three menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
 // the iteration group since 2026-09-19, the IGNORE WAVEFORM MAGNIFICATION lamp in the
@@ -7339,7 +7316,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // whether a button has one. Re-derived from redesign_button_tooltip's
     // stateful overload, whose every arm returns a non-null line 1 and so
     // takes no hint away from any button (and since 2026-09-10 its shared
-    // iteration-lock fork would GIVE one to the view bar's four, which the
+    // iteration-lock fork would GIVE one to the view bar's three, which the
     // walk above never asks): it moved the words on THREE — SAVE
     // (a publishing checkpoint first, then the history view's "Save and
     // commit"), RENDER (the mid-render Cancel, then the iteration bit) and,
@@ -7535,7 +7512,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // button whose act it consumes across all the rows
         // (history_mode_disables_button, above) — row 4's history group
         // aside, which carries resting greys of its own. AND SINCE 2026-09-10 THE ITERATION LOCK reaches ROW 1:
-        // the VIEW BAR'S FOUR answer false while grid iterations stands
+        // the VIEW BAR'S THREE answer false while grid iterations stands
         // (iteration_lock_greys, app_state.h), so the press dies here — and
         // that row DOES have a disabled paint since the architect's mockup the
         // same day, the DEAD UNSELECTED selectors' labels at
@@ -8744,7 +8721,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE EDIT MENU JOINED THE LOCKOUT ON 2026-08-20, and the scope re-derived
     // above admits it on its own terms rather than by widening back to the
     // whole row: Edit is a COMMAND menu, so it has no direct call to shut —
-    // but unlike File, whose Ctrl+Q the mode ADMITS, every one of Edit's five
+    // but unlike File, whose Ctrl+Q the mode ADMITS, every one of Edit's three
     // rows is a chord the mode's allowlist drops. The per-item answer that
     // makes a command menu safe in here is "the command runs and its own gate
     // refuses", and when that is the answer for EVERY row the menu is a box
@@ -8825,7 +8802,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // row-1 button cannot be inside the flag editor's box, which lives in the
     // marker lane below the whole top strip's button rows.
     //
-    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's four
+    // THE REST OF ROW 1 IS DELIBERATELY OUT OF SCOPE. The view bar's three
     // selectors drop at the keyboard-modal gate as consumed nothings — the modality
     // ruling working as intended — and ending an edit there would be a behavior
     // change nobody asked for. (Quit needed nothing here while it was a button,
@@ -9154,7 +9131,7 @@ void GuiInputHandler::seed_roster_tooltip_dwell(RedesignButton b,
                                                 int64_t press_ms) {
     // The walk's own two terms before it stamps, asked in its order: no dwell
     // under a modal surface, and the CONSTANT table's membership (the menu-row
-    // anchors and the view bar's four carry no hint in any state — the
+    // anchors and the view bar's three carry no hint in any state — the
     // stateful overload is the painter's and is not asked here).
     if (tooltip_dwell_suppressed()) return;
     if (redesign_button_tooltip(b).line1 == nullptr) return;
@@ -9476,7 +9453,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // rather than named, so the rule covers whatever row 1 holds by the
         // fact "row 1" and a new row-1 button inherits it by existing. WHAT IT
         // COVERS TODAY, re-derived from the two predicates rather than
-        // remembered: THE VIEW BAR'S FOUR — row 1's other two buttons are the
+        // remembered: THE VIEW BAR'S THREE — row 1's other two buttons are the
         // anchors, and an
         // ANCHOR is skipped (the OPEN menu's own does nothing at all — no
         // re-open, no close — and another one SWITCHES through the walk below,
@@ -10054,14 +10031,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 value_drag.apply_motion(mouse_y);
             return;
         }
-        // No home-view test: T+W is the posture's, so S+W, T+P with grid
+        // No home-view test: T+W is the posture's, so S+W and T+P with grid
         // iterations dark (T+P the phase-reset column's only view since
-        // 2026-09-21) and — since 2026-09-15 — the magnification level
-        // column (S+M since 2026-09-16, its only view) reach here, all of them
-        // authoring views. THE MAGNIFICATION LEVEL COLUMN'S FLAG DRAG IS THIS
-        // ONE (architect 2026-09-15: "horizontal move only"): the value drag's
-        // posture answers no there, so the plain drag is the positional gesture
-        // and it begins here like the other two columns'.
+        // 2026-09-21) reach here, both of them authoring views.
         if (authoring_locked(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta

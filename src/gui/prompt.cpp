@@ -112,11 +112,8 @@ void GuiPrompt::activate_response(char k) {
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
         // ONE SUBJECT: the phase reset paste, raised by
-        // PhaseResetPropagate::open_paste_confirmation. It carried a second
-        // from 2026-09-15 to 2026-09-19, the magnification level paste, which
-        // now applies at the press with no prompt — so the tag the answer used
-        // to fork on is gone with it. The prompt closes first either way, so
-        // the act runs on the ordinary modal state.
+        // PhaseResetPropagate::open_paste_confirmation. The prompt closes
+        // first, so the act runs on the ordinary modal state.
         if (k == 'y') {
             app.prompt.active = false;
             viewport.invalidate_all();

@@ -19,13 +19,18 @@
 // (file_loader.{h,cpp} and the frozen parser behind it).
 //
 // THE SOURCE IS DEFINED BY THE SIDECAR, AND BY NOTHING ELSE. A folder that
-// carries any of the four sidecars — `<stem>.warpmarkers`,
-// `<stem>.phaseresetmarkers`, `<stem>.magnificationlevelmarkers`,
-// `<stem>.settings` (kSidecarExtensions, sidecar_set.h) — names its source by
-// that stem, and `<stem>.wav` must exist; whether it carries ALL FOUR is the
-// loaders' question (sidecar_set_presence, settings_io.h), not this model's. A folder with NO sidecar at all is a NEW
+// carries any of the three sidecars — `<stem>.warpmarkers`,
+// `<stem>.phaseresetmarkers`, `<stem>.settings` (kSidecarExtensions,
+// sidecar_set.h) — names its source by that stem, and `<stem>.wav` must exist;
+// whether it carries ALL THREE, and whether a RETIRED sidecar
+// (`<stem>.magnificationlevelmarkers`, kRetiredSidecarExtensions) stands
+// beside it, is the loaders' question (sidecar_set_presence, settings_io.h),
+// not this model's. A folder with NO sidecar at all is a NEW
 // project iff it holds EXACTLY ONE `.wav`: that wav is the source, and the
-// first open writes the template sidecars beside it as it always has. Every
+// first open writes the template sidecars beside it as it always has — unless
+// a retired sidecar for that stem stands there, which the load's preflight
+// refuses before any template is written (a retired name is no member of the
+// set, so the model does not count it as a sidecar). Every
 // other state is INVALID and says why, one sentence each: more than one sidecar
 // stem, the whole sorted set named so the words do not depend on the walk's
 // order; no wav for the sidecar's stem; several wavs and no sidecar; no wav at
@@ -62,7 +67,7 @@
 // its ordinary sentence. The remembered road needs no test: the config reader
 // already refused a name that fails the grammar.
 //
-// EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the four sidecar spellings
+// EXTENSIONS COMPARE EXACTLY, lowercase `.wav` and the three sidecar spellings
 // as written: the product's own writers and the sync convention name every
 // file this way, so a `.WAV` is simply not a source, and no case folding or
 // other leniency is offered — strict knowledge required, no fallbacks.

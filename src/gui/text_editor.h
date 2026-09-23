@@ -1,12 +1,8 @@
 #pragma once
 
 #include "gui_input.h"
-#include "marker_magnification.h"  // kMaxMarkerMagnificationBytes — the level
-                                   // cap's bound, taken from the grammar's owner
 #include "phaseresetmarkers.h"  // kIterHopMax — the hop cap's bound, taken
-                                // from its one owner rather than re-spelled,
-                                // exactly as the level cap takes
-                                // kMaxMarkerMagnificationBytes
+                                // from its one owner rather than re-spelled
 #include "value_format.h"
 
 #include <algorithm>
@@ -60,10 +56,9 @@ namespace text_editor {
 //
 // EVERY CAP IS ITS GRAMMAR'S WIDEST SPELLING (architect 2026-09-05): a field
 // whose cap is wider than what it can legally commit advertises longer typing
-// than it allows, which is the truthfulness defect the roster answers. FOUR
+// than it allows, which is the truthfulness defect the roster answers. THREE
 // CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
-// iteration bound, the magnification level (which takes the load bound from
-// its owner), and, since 2026-09-06, the BPM bracket, whose
+// iteration bound, and, since 2026-09-06, the BPM bracket, whose
 // beats field stopped admitting leading zeros and so gained a widest spelling
 // like every other field of that grammar. THE OTHER TWO ARE POLICY CEILINGS
 // and each says so where it stands: the settings value and the commit title
@@ -231,17 +226,6 @@ constexpr int kMaxPendingCharsSettings = 1024;
 // the field-less picker replaced it; that picker retired the next day and the
 // view's `'` raises a plain confirmation now, with nothing to type at all.)
 constexpr int kMaxPendingCharsCommitTitle = 256;
-// The MAGNIFICATION LEVEL editor (bare Return on a focused magnification level
-// marker, and that flag's double-click). ITS GRAMMAR IS ONE ASCII DIGIT `0`..`4`
-// — no sign, no leading zero, no whitespace (marker_magnification.h, the
-// grammar's one owner) — so ONE BYTE is its widest spelling and its cap, taken
-// from that owner rather than re-spelled (only the type changes — every cap
-// in this module is an int, which is what the cap tests read). A
-// TIGHT BOUND: the cap advertises exactly what parse_marker_magnification
-// accepts, and the second character is refused by the field-full card, which is
-// the truthful refusal for a field that could never commit one.
-constexpr int kMaxPendingCharsMagnificationLevel =
-    static_cast<int>(kMaxMarkerMagnificationBytes);
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -259,14 +243,11 @@ constexpr int kMaxPendingCharsMagnificationLevel =
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
-// they name. The MAGNIFICATION LEVEL editor uses MagnificationLevelText
-// (2026-09-15, with the magnification level markers column's authoring): the
-// one digit that IS a magnification level marker, judged at its commit by
-// marker_magnification.h, on the M column's flag alone. THERE ARE SIX KINDS
-// AND THREE OF THEM ARE
-// DIALOG EDITORS; the three top-strip kinds (FlagPayload,
-// IterBound, MagnificationLevelText) share the flag editor's State and paint in
-// the marker lane.
+// they name. THERE ARE FIVE KINDS AND THREE OF THEM ARE
+// DIALOG EDITORS; the two top-strip kinds (FlagPayload, IterBound) share the
+// flag editor's State and paint in the marker lane. (A sixth,
+// MagnificationLevelText, the magnification level markers column's one-digit
+// editor, stood from 2026-09-15 until that column's deletion 2026-09-23.)
 // IterBound arrived on
 // 2026-09-05, when every cell became a mini flag with its own editor (the
 // MeasureText kind, the marker measure editor, stood from 2026-08-19 until the
@@ -284,7 +265,6 @@ enum class Kind {
     SettingsAssignment,
     CommitTitle,
     IterBound,
-    MagnificationLevelText,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,

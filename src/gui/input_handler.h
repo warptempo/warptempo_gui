@@ -21,8 +21,6 @@
 #include "settings_editor.h"
 #include "target_render.h"
 #include "phase_reset_propagate.h"
-#include "magnification_level_propagate.h"
-#include "magnificationlevelmarkers_ops.h"
 #include "phaseresetmarkers_ops.h"
 #include "marker_drag.h"
 #include "value_drag.h"
@@ -383,16 +381,15 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // replaces S/T, W/P and A/B wholesale. So the rule now
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
-//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the four
-//     view selectors, the settings `active_audio_view=` key, the two crossings, bare
-//     `i`'s own, the undo restore's tag and the two propagate pastes' audio
-//     half), below its own refusals.
-//   * GuiActiveViews::switch_active_markers_view_to — the W/P/M writer, below
-//     its same-mode, M-outside-source and P-outside-target refusals (the four
-//     view selectors and the settings key through select_active_markers_view,
-//     the S/T writer's two landings on W — S+M's and T+P's — the two
-//     crossings, the two propagate pastes, which reach this helper
-//     direct, and
+//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the three
+//     view selectors, the settings `active_audio_view=` key, the Shift+S
+//     crossing, bare `i`'s own, the undo restore's tag and the phase-reset
+//     propagate paste's audio half), below its own refusals.
+//   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below
+//     its same-mode and P-outside-target refusals (the three view selectors
+//     and the settings key through select_active_markers_view, the S/T
+//     writer's landing on W from T+P, the Shift+S crossing and the phase-reset
+//     propagate paste, which reach this helper direct, and
 //     Undo's column restore, which reached it 2026-08-28 when the hand-kept copy
 //     of this body in restore_history_entry was deleted for it).
 //   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (Ctrl+Tab, the
@@ -412,7 +409,7 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The four view selectors, the view bar's four buttons (the two icon-row
+// The three view selectors, the view bar's three buttons (the two icon-row
 // VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
 // writers and inherit it.
 //
@@ -684,12 +681,6 @@ struct GuiInputHandler {
     Undo&                    undo;
     GuiWarpMarkersOps&       warpops;
     GuiPhaseResetMarkersOps& phase_resets;
-    // THE THIRD COLUMN'S AUTHORING CLUSTER (2026-09-15). Its readers are the
-    // same dispatch arms its two siblings' are, each forking on the live
-    // column: the drop (bare `s` and Ctrl+Shift+S's crossing), Delete, Ctrl+D,
-    // the Left/Right nudge and the Up/Down level step (which the plain wheel
-    // over an M flag reaches too).
-    GuiMagnificationLevelMarkersOps& magnification_levels;
     MarkerDragOps&           marker_drag;
     // THE VALUE DRAG (2026-09-10), the marker drag's sibling — and OWNED HERE
     // rather than passed in, which is the one place it parts from its
@@ -719,11 +710,6 @@ struct GuiInputHandler {
     // hover; the tick is main.cpp's.
     GuiNotifications&        notifications;
     PhaseResetPropagate&     phase_reset_propagate;
-    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the third column's own
-    // copy and paste — NOT the phase family's shape on another letter
-    // (magnification_level_propagate.h states the divergence): its two
-    // readers here are the Ctrl+M and Ctrl+Alt+M arms in handle_mode_keys.
-    MagnificationLevelPropagate& magnification_level_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
     // run_history_commit, which dispatches the captured job onto it; the
@@ -846,7 +832,6 @@ struct GuiInputHandler {
                     Undo&                    undo_,
                     GuiWarpMarkersOps&       warpops_,
                     GuiPhaseResetMarkersOps& phase_resets_,
-                    GuiMagnificationLevelMarkersOps& magnification_levels_,
                     MarkerDragOps&           marker_drag_,
                     GuiFlagEditor&           flag_editor_,
                     GuiRendersDir&           renders_dir_,
@@ -855,7 +840,6 @@ struct GuiInputHandler {
                     GuiRenderPlayer&         render_player_,
                     GuiNotifications&        notifications_,
                     PhaseResetPropagate&     phase_reset_propagate_,
-                    MagnificationLevelPropagate& magnification_level_propagate_,
                     GuiAsyncRenderer&        async_renderer_,
                     GuiHistoryCommitWorker&  history_commit_worker_,
                     GuiHistoryPrefetch&      history_prefetch_,
@@ -875,7 +859,6 @@ struct GuiInputHandler {
           undo(undo_),
           warpops(warpops_),
           phase_resets(phase_resets_),
-          magnification_levels(magnification_levels_),
           marker_drag(marker_drag_),
           // Built from the CONSTRUCTOR'S OWN PARAMETERS, never from the
           // members beside it: a reference member initialised from another
@@ -888,7 +871,6 @@ struct GuiInputHandler {
           render_player(render_player_),
           notifications(notifications_),
           phase_reset_propagate(phase_reset_propagate_),
-          magnification_level_propagate(magnification_level_propagate_),
           async_renderer(async_renderer_),
           history_commit_worker(history_commit_worker_),
           history_prefetch(history_prefetch_),
@@ -919,9 +901,6 @@ struct GuiInputHandler {
     // chokepoint in its set-to spelling (switch_active_audio_view_to); the
     // friendship lets it reach that private method through its back-pointer.
     friend struct PhaseResetPropagate;
-    // And its sibling's, the same tail landing in S+M (source view, the
-    // column's home since 2026-09-16) through the same chokepoint.
-    friend struct MagnificationLevelPropagate;
     // AND THE UNDO RESTORE, for the same private method (2026-08-28): an undo
     // entry records the S/T view beside the tab and the column, and the restore
     // hands each axis to its own owner — the other two live on GuiActiveViews,
@@ -1378,7 +1357,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's four, row 3's two tabs, row 4's twenty-two (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-two (the
     // toolbar four included since the 2026-08-12 relayout, the zoom four
     // whole again since 2026-09-22, the IGNORE
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
@@ -2105,8 +2084,7 @@ struct GuiInputHandler {
     // closes it; then the flag under (x, y) is SELECTED exactly as a plain
     // click selects it (run_marker_plain_select — no prior selection needed,
     // every audio view and column) and THAT CELL takes THE VALUE STEP as
-    // Up / Down would — the tempo, a bound or the magnification level,
-    // a phase reset's payload stepping nothing — one step per detent, up =
+    // Up / Down would — the tempo or a bound, a phase reset's payload stepping nothing — one step per detent, up =
     // increase, through the same bodies. The step asks the key's two lock
     // gates first; EVERY REFUSAL IS SILENT; synthesized_repeat is false, so a
     // burst merges through the tap window. Plastic only by nature — the touch
@@ -2157,8 +2135,8 @@ struct GuiInputHandler {
     // its kinds (unlike modal_dialog_editor_active, which names the three
     // DIALOG-hosted surfaces — those first two plus the flag editor's
     // BpmBracket kind — and omits
-    // the FlagPayload, IterBound and MagnificationLevelText
-    // kinds, all of which paint in the marker lane). The platform's
+    // the FlagPayload and IterBound kinds, both of which paint in the marker
+    // lane). The platform's
     // press-time probe for kLeftClickKey: while an editor is open kLeftClickKey
     // types its normal letter instead of the button. Public because main.cpp's
     // probe lambda calls it. keyboard_modal_editor_active delegates to this —
@@ -2596,9 +2574,8 @@ private:
     // selection like every other marker verb.
     void run_iter_tie_toggle();
 
-    // P / M / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
-    // clipboard ops, the Ctrl+M-family magnification level clipboard ops
-    // (2026-09-15; its own two shapes since 2026-09-19), `i` iteration mode, `k` ADD TO
+    // P / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
+    // clipboard ops, `i` iteration mode, `k` ADD TO
     // SELECTION (the sticky ctrl, 2026-08-18) and `l` / Shift+L, the folder
     // overlay's two openers. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
@@ -2684,12 +2661,11 @@ private:
 
     // Routes a key to the active top-flag editor. Returns true if the editor
     // consumed it (on_key then returns); false on Ctrl+Q so on_key runs the
-    // close routing. ALL FOUR kinds this editor state carries take
+    // close routing. ALL THREE kinds this editor state carries take
     // route_modal_editor_key: the bpm
     // bracket editor as ever, the FlagPayload flag editor since it became
-    // keyboard-modal, the
-    // IterBound editor since 2026-09-05 and the MagnificationLevelText level
-    // editor since 2026-09-15 — they differ only in their commit/cancel bodies and in which area
+    // keyboard-modal, and the
+    // IterBound editor since 2026-09-05 — they differ only in their commit/cancel bodies and in which area
     // they repaint. There is no longer a tail that cancels an edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
@@ -3057,8 +3033,7 @@ private:
     // A LOAD IN PLACE WRITES EXACTLY WHAT ITS ONE UNDO ENTRY RESTORES
     // (architect 2026-08-24: "load in place should overwrite elements which
     // have undo — so trim is excluded also"). That is the warp store, the phase
-    // reset store, the magnification level store (architect 2026-09-15: `'`
-    // "definitely" carries the M column) and the engine settings — what
+    // reset store and the engine settings — what
     // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
     // tab, the camera, the camera postures and projects_repo — and gui_scale is outside the question
@@ -3083,7 +3058,7 @@ private:
     // past its last refusal (nothing here can fail, and nothing may mutate
     // before it), and the `h` mode is already closed where each caller's own
     // reasoning puts that close. What it does, in order: snapshot the outgoing
-    // stores, replace all three, clear the selection, push ONE cross-file undo entry
+    // stores, replace both, clear the selection, push ONE cross-file undo entry
     // (the live W/P as its op_mode and NO tab override — the entry belongs to
     // the tab the user is standing in, no tab switch happening any more), run
     // the bpm scratch wipe (a statement over a set that already carries
@@ -3099,14 +3074,13 @@ private:
     void apply_recipe_in_place(
         std::vector<GuiWarpMarker> warp,
         std::vector<GuiPhaseResetMarker> phase_resets,
-        std::vector<GuiMagnificationLevelMarker> magnification_levels,
         const EngineSettings& engine);
 
     // THE PROMOTE ROADS' PAST-EOF WALL GUARD (2026-08-29), the ONE owner for
     // the three roads that install a marker set the LIVE stores did not
     // author. It asks the loader's own shared guard
     // (first_past_eof_wall_defect, marker_store_validate.h) of a candidate
-    // marker set — the three columns — against THIS session's audio and hands
+    // marker set — the two columns — against THIS session's audio and hands
     // back the guard's own first-offender sentence, or nullopt when every position is inside its
     // wall.
     //
@@ -3124,32 +3098,29 @@ private:
     // THE TRIM PAIR PASSED IN IS THE LIVE ONE and can only pass: a load in
     // place writes no trim, every trim gesture walls at total-1, and the load
     // boundary proved this pair at startup. It is passed because the guard's
-    // seven checks are one call; the marker arms are the only ones that can
+    // six checks are one call; the marker arms are the only ones that can
     // fire here.
     //
     // THREE CALLERS: load_render_entry_in_place and
-    // load_history_commit_in_place (each of the parsed three columns, before
+    // load_history_commit_in_place (each of the parsed two columns, before
     // apply_recipe_in_place) and run_history_revert (of the markers the
-    // subject's REMOVED flags would restore, refusing the whole revert — it
-    // writes no magnification level marker and passes that column empty). The
+    // subject's REMOVED flags would restore, refusing the whole revert). The
     // LOCAL-tab load is deliberately NOT a caller: its state is a snapshot of
     // THIS session's own stores, which were proved at the load boundary and
     // walled by every gesture since, so there is no foreign authoring in it.
     std::optional<std::string> in_place_load_wall_defect(
         const std::vector<GuiWarpMarker>& warp,
-        const std::vector<GuiPhaseResetMarker>& phase_resets,
-        const std::vector<GuiMagnificationLevelMarker>& magnification_levels)
-        const;
+        const std::vector<GuiPhaseResetMarker>& phase_resets) const;
 
     // load_render_entry_in_place: apply render entry `e`'s frozen sidecar recipe
-    // (.settings + the three marker columns) as the new authoring baseline,
+    // (.settings + the two marker columns) as the new authoring baseline,
     // view-agnostic (source OR target authoring view). Reads and validates the wav's
-    // existence and all four sidecars BEFORE mutating any store, and returns
+    // existence and all three sidecars BEFORE mutating any store, and returns
     // false leaving authoring untouched on any missing/malformed input — each
     // such genuine-failure arm naming its cause and path on stderr since
     // 2026-08-02, while the caller's unknown-id refusal (a typo) stays silent
     // behind its red flash; otherwise applies the recipe through
-    // apply_recipe_in_place above — the three marker columns and the engine
+    // apply_recipe_in_place above — the two marker columns and the engine
     // block, the
     // file's view keys and tab bands ignored — wipes tmp/, and returns true.
     // ONE CALLER, re-greped: the RENDER PLAYER's Load in place button through
@@ -3192,7 +3163,7 @@ private:
     // authoring baseline. Validate-before-mutate like both siblings: an index
     // past the walk's member count, or one the walk cannot answer for, is one
     // stderr line and a false return with nothing touched. It restores exactly what an undo
-    // entry carries — the three marker columns and the engine block — which since
+    // entry carries — the two marker columns and the engine block — which since
     // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well,
     // and since 2026-08-24 it writes them THROUGH the same body
     // (apply_recipe_in_place above), so the three differ only in where the three
@@ -3657,22 +3628,15 @@ private:
     // commit — and it is one line over the set-to
     // form, so both spellings own the same translation, the same target-view
     // entry gate, the same flag-editor teardown and the same history-focus
-    // clear — AND THE SAME T-NEVER-PAIRS-WITH-M LANDING (architect 2026-09-16,
-    // mirroring the S-never-pairs-with-M landing of 2026-09-15): entering
-    // target view while the magnification level markers column stands lands
-    // the column on W first, through its writer and PAST the target entry's
-    // refusal (a refused entry moves no column), the column writer's own
-    // refusal of 'M' outside source view being the invariant's other half —
-    // AND ITS TWIN, THE S-NEVER-PAIRS-WITH-P LANDING (architect 2026-09-21: a
-    // phase reset is heard accurately only in target view): leaving target
+    // clear — AND THE SAME S-NEVER-PAIRS-WITH-P LANDING (architect 2026-09-21:
+    // a phase reset is heard accurately only in target view): leaving target
     // view while the phase-reset column stands lands the column on W first,
-    // the column writer refusing 'P' outside target view.
+    // through its writer, the column writer's own refusal of 'P' outside
+    // target view being the invariant's other half.
     // The SET-TO form exists for the callers that name a view rather than
-    // an axis: the four absolute view selectors (and the settings editor's
-    // typed `active_markers_view=M` and `=P`, which cross to source and to
-    // target through it), the
-    // phase-reset propagate's land-in-target tail and the magnification level
-    // propagate's land-in-source tail, and — both since 2026-08-28 —
+    // an axis: the three absolute view selectors (and the settings editor's
+    // typed `active_markers_view=P`, which crosses to target through it), the
+    // phase-reset propagate's land-in-target tail, and — both since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, drop_phase_reset_in_target_view,
@@ -3715,28 +3679,6 @@ private:
     // long press synthesize this very chord (redesign_button_shift_admits),
     // so glass reaches the act with no keyboard and there is no second road.
     void drop_phase_reset_in_target_view();
-    // CTRL+SHIFT+S: DROP A MAGNIFICATION LEVEL MARKER FROM ANY VIEW (architect
-    // 2026-09-15) — Shift+S's shape on the third column, and its every clause
-    // for the same reasons. It switches to S (the column's home since
-    // 2026-09-16; T until then), then to M, and then runs the column's ONE
-    // drop body (drop_magnification_level_at_playhead); leaving target never
-    // refuses, so the trip always lands, the sibling's read-back kept for the
-    // shape alone; from the M column it REFUSES WHOLE as already crossed, bare
-    // `s` being the in-column drop there exactly as it is in the P column.
-    //
-    // THERE IS NO LEAD-IN TO CARRY: the phase chord's kN/2 is an engine
-    // geometry fact, and a magnification level is a picture boundary at the
-    // frame the playhead stands on — so the act is the crossing plus a plain
-    // drop, with no arm of its own.
-    //
-    // KEYBOARD-ONLY, and deliberately (architect's brief, 2026-09-15): the
-    // roster admits a SHIFT press on a button (redesign_button_shift_admits)
-    // and a CTRL press on one (redesign_button_ctrl_admits), and there is no
-    // ctrl-shift admission in the product. Rather than invent a third axis for
-    // one chord, the Drop button keeps its two roads — the plain lift's bare
-    // `s`, which drops on whichever column is live, and the shifted press's
-    // Shift+S — and this crossing stays the keyboard's.
-    void drop_magnification_level_in_source_view();
 
     // Apply a new GUI scale (percent), running the shared live sequence:
     // assign app.gui_scale, push it to the renderer
@@ -3957,7 +3899,7 @@ private:
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
     // EVERY editor does — the two single-State dialog ones (settings,
-    // commit title), the bpm bracket, the bound and level editors, and the
+    // commit title), the bpm bracket, the bound editor, and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.

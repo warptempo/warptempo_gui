@@ -108,16 +108,19 @@ struct GuiFileLoader {
 //     the decoder refuses is a corrupt-media fault of the class the load's own
 //     exit answers.
 //   * THE REQUIRED-FILE RULE (architect 2026-09-15), through the load's own
-//     owner `sidecar_set_presence` (settings_io.h): all four sidecars or none,
+//     owner `sidecar_set_presence` (settings_io.h): all three sidecars or none
+//     and no retired sidecar beside them,
 //     presence being `sidecar_present`'s EXISTS — so a non-regular object at a
 //     sidecar's name is a parse failure here exactly as it is there — a
-//     partial set refusing "Missing '<file>'", a stat that fails refusing in
-//     the system's words, and a set with no sidecar at all being what the load
-//     will template, so a new project passes trivially. Mirrored.
-//   * the three STRICT marker readers and the STRICT whole-file settings
+//     partial set refusing "Missing '<file>'", a retired sidecar refusing
+//     "'<file>' is no longer part of the sidecar set; delete it", a stat that
+//     fails refusing in the system's words, and a set with no sidecar at all
+//     being what the load will template, so a new project passes trivially.
+//     Mirrored.
+//   * the two STRICT marker readers and the STRICT whole-file settings
 //     schema, on an existing set. Mirrored.
 //   * `render_output_source_collision`, the source-clobber predicate. Mirrored.
-//   * `first_past_eof_wall_defect`, the seven walls, against the probe's frame
+//   * `first_past_eof_wall_defect`, the six walls, against the probe's frame
 //     count and rate (with no settings on disk the load's own full-window stamp
 //     is what the walls see, which is inside them by construction). Mirrored.
 //
@@ -143,7 +146,7 @@ std::optional<GuiFailure> source_load_dry_run(
 // the window exists — device_config.h, where audio_player then retired whole
 // 2026-08-28. A source load must not write any of them.) THE SOURCE LOAD IS THE ONLY CALLER since
 // 2026-08-24, when a load in place narrowed to what its undo entry restores —
-// the three marker columns and the engine block — and so stopped applying a
+// the two marker columns and the engine block — and so stopped applying a
 // file's view keys, tab bands and session prefs at all (the rule is stated at
 // GuiInputHandler::apply_recipe_in_place, input_handler.h). The routine stays a
 // named routine rather than folding into load_file: it is the whole-file

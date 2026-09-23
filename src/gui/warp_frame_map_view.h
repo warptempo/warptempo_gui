@@ -177,44 +177,6 @@ struct PhaseResetRedFlagCache {
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app);
 
-// The magnification level markers sibling (architect 2026-09-15, the column
-// made visible): a run of 2+ magnification level markers sharing one exact
-// frame reddens every member, WHATEVER THEIR DISABLED BITS — the other two
-// columns' participation-blind coincidence (3). It is this column's WHOLE red
-// cue, and it is WIDER THAN THE COLLAPSE IT CUES, exactly as the warp cue is
-// wider than the warp collapse: the column's level-per-frame rule
-// (magnificationlevelmarkers.h) collapses a run to the neutral LEVEL 0
-// counting ENABLED members alone, while this set reddens a run of 2+ ROWS
-// whether or not two of them are enabled. `red` stays the painter's (the
-// magnification level flag pass, its one reader), and SINCE 2026-09-16 THE SET
-// CARRIES A `collapsed` SUBSET BESIDE IT, the warp set's shape (architect
-// 2026-09-16, the level step refusing a coincident-collapse member as the
-// tempo step does): the ENABLED members of every run the rule collapses, the
-// classifier's verdict (magnification_level_collapse_members,
-// magnificationlevelmarkers.h — the one run walk the rule takes) filled in the
-// same rebuild as `red` under the same key. ITS READERS are the level step's
-// kind refusal (magnification_level_step_kind_refusal_for), the group step's
-// wall scan and the Up / Down face through it — the act and face readers that
-// must NOT read `red`, whose participation-blind coincidence (a marker sharing
-// its frame with a DISABLED one) collapses nothing. Unlike the warp subset it
-// holds ENABLED rows alone (every reader here composes the enabled test, so
-// the classifier answers it once); a disabled row inside a collapsed run is no
-// member for the rule and steps like any disabled marker. Keyed on the
-// magnification level store generation alone; the committed-store rule of
-// the two siblings, which is what lets the per-tick Up / Down face read it.
-struct MagnificationLevelRedFlagCache {
-    bool      valid       = false;
-    long long markers_gen = -1;
-    std::set<int> red;   // red magnification level store indices — PAINT only
-    // THE COLLAPSE MEMBERS ALONE — enabled rows of a run with 2+ enabled rows,
-    // the subset of `red` the rule actually collapses; the act and face
-    // readers' set (the contract is above).
-    std::set<int> collapsed;
-};
-
-const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
-    const AppState& app);
-
 // WHETHER THE WAVEFORM PICTURE IS MAGNIFIED, AND THE ONE GAIN GATE. The gain
 // itself is the continuous curve derived from the source at load
 // (GuiAudio::gain_curve, derive_waveform_gain in waveform_gain.h, which owns

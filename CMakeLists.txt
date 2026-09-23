@@ -48,7 +48,6 @@ set(WARPTEMPO_AUDIO_IO_SOURCES
 set(WARPTEMPO_PARSER_SOURCES
     src/parser/warpmarkers_parse.cpp
     src/parser/phaseresetmarkers_parse.cpp
-    src/parser/magnificationlevelmarkers_parse.cpp
     src/parser/engine_settings_io.cpp
     src/parser/settings_file.cpp
     src/parser/warp_frame_map_build.cpp
@@ -125,7 +124,6 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp
     src/gui/phaseresetmarkers.cpp
-    src/gui/magnificationlevelmarkers.cpp
     src/gui/playback_lifecycle.cpp
     # THE PORTABLE HALF of the playback engine (the render body, the
     # predictor, the domain/bind/speed logic). Shared: each backend arm
@@ -149,16 +147,7 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp
-    # THE THIRD COLUMN'S AUTHORING CLUSTER (2026-09-15): the magnification
-    # level markers' drop, delete, disable, nudge and level step, in their own
-    # translation unit beside the two siblings'.
-    src/gui/magnificationlevelmarkers_ops.cpp
     src/gui/phase_reset_propagate.cpp
-    # THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15): the phase reset
-    # propagate's three acts over the third column, in its own translation
-    # unit beside its sibling's; the shared walk is header-only
-    # (propagate_blocks.h).
-    src/gui/magnification_level_propagate.cpp
     # THE WAVEFORM GAIN (2026-09-23): the pure derivation of the picture's
     # continuous magnification from the source, in its own translation unit.
     src/gui/waveform_gain.cpp
@@ -449,9 +438,8 @@ endif()
 
 # ============================================================
 #  warptempo_cli — headless wav render binary (insurance render path).
-#  Reads <source-stem>.{warpmarkers,phaseresetmarkers,magnificationlevelmarkers,
-#  settings} and writes the
-#  warped wav the GUI would render for the same project. Runs the full PGHI
+#  Reads <source-stem>.{warpmarkers,phaseresetmarkers,settings} and writes
+#  the warped wav the GUI would render for the same project. Runs the full PGHI
 #  engine; renders are wav-only. Compiles the parser and engine sources
 #  directly, needing no Wayland/Cairo/JACK toolchain.
 # ============================================================

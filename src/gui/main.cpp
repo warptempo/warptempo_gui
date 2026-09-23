@@ -49,7 +49,6 @@
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
-#include "magnificationlevelmarkers_ops.h"
 #include "phaseresetmarkers_ops.h"
 #include "prompt.h"
 #include "undo.h"
@@ -1424,13 +1423,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
               target_render);
     GuiPhaseResetMarkersOps phase_resets(app, audio, viewport, selection, undo,
                                          playback_lifecycle, target_render);
-    // THE THIRD COLUMN'S AUTHORING CLUSTER (2026-09-15). IT TAKES NO
-    // GuiTargetRender, and the absence is the enforcement rather than an
-    // omission: a magnification level is display-only, so no act on that column
-    // may dispatch a preview, and with no member to reach there is nothing in
-    // the cluster that could (the rule is at its header).
-    GuiMagnificationLevelMarkersOps magnification_levels(
-        app, audio, viewport, selection, undo, playback_lifecycle);
     GuiWarpMarkersOps warpops(app, audio, viewport, selection, undo,
                               playback_lifecycle, target_render);
     MarkerDragOps marker_drag(app, audio, viewport, undo, target_render);
@@ -1453,15 +1445,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                               target_render, active_views,
                                               playback_lifecycle,
                                               notifications, selection);
-    // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the third column's own
-    // copy and paste. IT TAKES NO GuiTargetRender, the authoring cluster's
-    // rule above (a level reaches no render input, so no act on that column
-    // may dispatch a preview); it takes the audio itself instead, for the song
-    // end and the stop report's timestamp. ITS PASTE RAISES NO MODAL
-    // (architect 2026-09-19), so it holds no GuiPlaybackLifecycle.
-    MagnificationLevelPropagate magnification_level_propagate(
-        app, viewport, undo, audio, active_views,
-        notifications, selection);
     GuiSaveOps save_ops(app, undo, active_views, notifications);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate,
@@ -1484,13 +1467,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         });
     GuiInputHandler input_handler(app, audio, gui, playback,
                                   viewport, selection, undo,
-                                  warpops, phase_resets, magnification_levels,
+                                  warpops, phase_resets,
                                   marker_drag,
                                   flag_editor,
                                   renders_dir, active_views, ab_audition,
                                   render_player, notifications,
                                   phase_reset_propagate,
-                                  magnification_level_propagate,
                                   async_renderer,
                                   history_commit_worker,
                                   history_prefetch,
@@ -1525,9 +1507,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // input handler holds by reference — the cycle is resolved with this
     // pointer set).
     phase_reset_propagate.input = &input_handler;
-    // And its sibling's, for the same chokepoint and the same reason, its
-    // tail landing in S+M (source view, the column's home since 2026-09-16).
-    magnification_level_propagate.input = &input_handler;
     // And Undo's, for the same chokepoint: a restore puts the reader back in the
     // view the entry recorded (selection-model.md), and the S/T axis of it is
     // the input handler's (the other two are GuiActiveViews', which Undo holds

@@ -30,22 +30,19 @@ struct Selection {
     // shift-range anchor — because it is the same boundary: a membership
     // REPLACE is what ends it. (It rode beside the STICKY CTRL's clear until
     // 2026-09-10, when that lamp became a tool posture no Selection body
-    // writes; the contract is at AppState::add_to_selection.) THREE CALLERS,
-    // re-grepped 2026-09-16, in two classes. THE TWO PASTE LANDINGS install a
-    // set they just created: the phase-reset propagate's target-view landing
+    // writes; the contract is at AppState::add_to_selection.) TWO CALLERS,
+    // re-grepped 2026-09-23, in two classes. THE PASTE LANDING installs a
+    // set it just created: the phase-reset propagate's target-view landing
     // (PhaseResetPropagate::land_paste_in_target_view), for which this arity
     // was added — it wrote the two fields directly until 2026-08-29, leaning
     // on the column switch two lines above it to clear them (behaviour-neutral
     // — the paste is W-gated, so that switch always fires — but a property of
-    // the paste's entry gate rather than of the replace) — and the
-    // magnification level propagate's source-view landing
-    // (MagnificationLevelPropagate::land_paste_in_source_view), the third
-    // column's own tail, which joined 2026-09-15. THE UNDO RESTORE is
-    // the third (apply_post_restore_rules_impl, undo.cpp): it installs the
+    // the paste's entry gate rather than of the replace). THE UNDO RESTORE is
+    // the second (apply_post_restore_rules_impl, undo.cpp): it installs the
     // TOUCHED set rather than a created one, and its own comment carries why
     // the mutator rather than a hand-written pair. So a wholesale replace
     // outside a Selection mutator no longer exists anywhere.
-    // `focus` must be a member (the pastes hand the earliest created marker
+    // `focus` must be a member (the paste hands the earliest created marker
     // and the restore the earliest touched one, the programmatic group's own
     // rule); an EMPTY set with focus -1 degenerates to clear_selection's
     // state.

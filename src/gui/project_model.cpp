@@ -9,7 +9,7 @@
 
 namespace {
 
-// A sidecar extension is one of the product's four (kSidecarExtensions,
+// A sidecar extension is one of the product's three (kSidecarExtensions,
 // sidecar_set.h — the one list), read by the walk below.
 bool is_sidecar_extension(const std::string& ext) {
     for (const char* e : kSidecarExtensions) {
@@ -86,7 +86,7 @@ std::expected<GuiProjectSource, std::string> resolve_project(
     // rather than winnowed to a pair while walking, because a pair chosen by
     // the walk's order and sorted afterwards would still be the walk's pair:
     // the same folder always refuses with the same words, at any number of
-    // stems. (A folder holds four sidecar names per piece, so both vectors are
+    // stems. (A folder holds three sidecar names per piece, so both vectors are
     // a handful of strings and the sort is free.)
     std::sort(wav_stems.begin(), wav_stems.end());
     std::sort(sidecar_stems.begin(), sidecar_stems.end());

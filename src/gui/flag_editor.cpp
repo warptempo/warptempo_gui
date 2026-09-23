@@ -1,9 +1,6 @@
 #include "flag_editor.h"
 
 #include "frame_format.h"
-#include "marker_magnification.h"   // parse_marker_magnification /
-                                    // format_marker_magnification — the level
-                                    // grammar's one reader and writer
 
 #include "target_render.h"
 
@@ -81,10 +78,9 @@ bool parse_signed_hops(const std::string& v, int& out) {
 
 } // namespace
 
-// Flag-editor cluster: the marker lane's three editors (the flag's
-// canonical-line editor, the iteration bound editor and the magnification
-// level editor — text_editor::Kind's FlagPayload, IterBound and
-// MagnificationLevelText) —
+// Flag-editor cluster: the marker lane's two editors (the flag's
+// canonical-line editor and the iteration bound editor — text_editor::Kind's
+// FlagPayload and IterBound) —
 // their enter / commit / exit paths — and the bpm-bracket editor session,
 // reaching undo and viewport through the struct's reference members. The
 // eligibility and flag-text helpers (iter_bracket_carrier,
@@ -224,9 +220,7 @@ void GuiFlagEditor::enter_top_flag_edit(int idx) {
 void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
                                           MarkerCell side) {
     if (idx < 0) return;
-    // NO CELL ON THE MAGNIFICATION LEVEL COLUMN (2026-09-15): it paints no
-    // bound cell (marker_paints_iter_cells' 'M' arm), so the open refuses there
-    // ahead of the two-store fork below, which is W's or P's.
+    // THE TWO-STORE FORK below is W's or P's; any other letter is no column.
     if (column != 'W' && column != 'P') return;
     const bool phase = (column == 'P');
     const auto& mv  = app.warpmarkers.markers();
@@ -325,8 +319,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // this editor — so the session needs no stored column of its own. The
     // session's `iter_hops` bit is not that column: it exists for
     // text_editor.cpp alone, which selects the byte cap and cannot see the
-    // app. (The column is W or P: no bound editor opens on the magnification
-    // level column, enter_iter_bound_edit's own refusal.)
+    // app. (The column is W or P, the column axis's two letters.)
     if (app.active_markers_view == 'P') {
         this->commit_phase_iter_bound_edit(idx, side, next);
         return;
@@ -556,160 +549,6 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     // only damage.
     text_editor::deactivate(app.top_flag_editor);
     viewport.invalidate_top_strip();
-}
-
-// THE MAGNIFICATION LEVEL EDITOR'S OPEN. The contract is at the declaration;
-// this is the payload editor's open mechanics over the third store.
-//
-// NO PLAYBACK STOP, the top-strip family's recorded exemption (the decision
-// table is at GuiPlaybackLifecycle::stop_playback_for_modal_open, which this
-// surface, like its siblings, deliberately does not call).
-void GuiFlagEditor::enter_magnification_level_edit(int idx) {
-    if (app.active_markers_view != 'M') return;
-    if (idx < 0) return;
-    if (idx >= static_cast<int>(
-                   app.magnificationlevelmarkers.markers().size())) return;
-
-    if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind ==
-            text_editor::Kind::MagnificationLevelText &&
-        app.top_flag_editor.target == idx) {
-        // Re-open on the live session's own target: preserve the pending text
-        // and any in-progress state, just repaint (the family's rule).
-        viewport.invalidate_top_strip();
-        return;
-    }
-
-    // THE FOCUS IS REPAIRED FIRST, the bare-Return arm's twin; idempotent on
-    // an already-consistent focus, which is what the pointer route hands it.
-    selection.repair_last_selected();
-
-    // Target-switching: single-select the new target so the marker column's
-    // outline follows it, and LAND the playhead on it — the marker lane owns
-    // the playhead, and an editor open hands the lane a new focus (the rule is
-    // at land_playhead_on_marker, input_pointer.cpp). Both resolve against the
-    // ACTIVE column's store, which the guard above pinned to this one.
-    selection.set_single_selection(idx);
-    land_playhead_on_marker(app, audio, viewport, idx);
-    // NO CELL WRITE HERE, unlike the bound editor's open: this editor IS the
-    // payload box, and the select above already seated the addressed cell on
-    // the payload through the Selection chokepoint.
-
-    // Discard any prior edit silently before switching surfaces.
-    if (text_editor::is_active(app.top_flag_editor)) {
-        text_editor::deactivate(app.top_flag_editor);
-    }
-    // THE SEED IS THE MARKER'S OWN LEVEL DIGIT, in the grammar's one canonical
-    // spelling — the same byte the sidecar line carries after its `|` and the
-    // same one the resting flag paints, so what the flag shows and what the
-    // editor opens with are one field. NOTHING INHERITS: a level marker's level
-    // is its own (the INHERITANCE is the picture's, the profile holding each
-    // level forward until the next marker), so the seed is never a resolved
-    // value — which is what makes a re-commit of the untouched seed a no-op
-    // rather than a freeze.
-    const std::string seed = format_marker_magnification(
-        app.magnificationlevelmarkers.markers()[static_cast<size_t>(idx)].level);
-    text_editor::enter(app.top_flag_editor, idx, seed,
-                       text_editor::Kind::MagnificationLevelText);
-
-    // Open-selected, the family's rule: the seeded text is fully selected so
-    // the first keystroke replaces it wholesale. (The seed is never empty on
-    // this kind — a level is required — so the blank arm its siblings carry has
-    // no producer here and is not spelled.)
-    app.top_flag_editor.selection_anchor = 0;
-    app.top_flag_editor.cursor_pos =
-        static_cast<int>(app.top_flag_editor.pending.size());
-
-    viewport.invalidate_top_strip();
-}
-
-// THE MAGNIFICATION LEVEL COMMIT. Its validator is the GRAMMAR'S ONE READER,
-// parse_marker_magnification (marker_magnification.h) — the same one judge the
-// sidecar parser and the `h` view's revert use, which is what keeps "loadable
-// iff it commits" exact rather than merely likely. There is deliberately no
-// Kind-dependent keystroke filter; typing stays free and the commit decides.
-//
-// THE REFUSAL IS THE FAMILY'S SHAPE: `red = true`, a top-strip repaint, one
-// stderr line, a NORMAL CARD carrying the same composed sentence, and RETURN
-// WITHOUT DEACTIVATING, so the session stands with the offending text in place
-// for correction. The damage is the top strip alone — the stem flash the
-// FlagPayload refusal drives is gated on that Kind at the painter, so this red
-// reaches no waveform pixel.
-//
-// AN EMPTY BUFFER IS A REFUSAL, NOT A REMOVAL (architect 2026-09-15): a
-// LEVEL is what a magnification level marker IS, and a row with no level is
-// not a line the grammar can spell. Deleting the marker is Delete's act, and
-// this field has no state to clear back to. (The bound editor's empty commit
-// clears, a bracket being optional.)
-void GuiFlagEditor::commit_magnification_level_edit() {
-    if (!text_editor::is_active(app.top_flag_editor)) return;
-    if (app.top_flag_editor.kind != text_editor::Kind::MagnificationLevelText)
-        return;
-    const int idx = app.top_flag_editor.target;
-    const std::string next = app.top_flag_editor.pending;
-
-    uint8_t     parsed = 0;
-    std::string level_err;
-    if (!parse_marker_magnification(next, parsed, level_err)) {
-        app.top_flag_editor.red = true;
-        viewport.invalidate_top_strip();
-        // ONE COMPOSER, TWO READERS (architect 2026-08-30): the stderr
-        // line keeps the offending token after it; the card does not, that text
-        // being on screen in the red field the refusal leaves standing.
-        const std::string refusal = "Magnification level rejected: " + level_err;
-        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-                     refusal.c_str(), next.c_str());
-        notifications.notify(AppState::NotificationClass::Normal, refusal);
-        return;
-    }
-
-    // THE STORE IS THIS COLUMN'S, the open's own: the open refuses any other
-    // column, and the view CANNOT MOVE under an open session — every
-    // column-switching key is dropped at the keyboard-modal gate while any
-    // editor stands, and every column-switching BUTTON acts at the LIFT whose
-    // own PRESS already closed this editor.
-    //
-    // The target may have gone out from under the editor (an undo or a delete
-    // while it stood): drop the edit, exactly as the two siblings do.
-    const int n =
-        static_cast<int>(app.magnificationlevelmarkers.markers().size());
-    if (idx < 0 || idx >= n) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
-
-    // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no store
-    // bump, no kick — the shape every no-op commit in the product takes, and
-    // the reachable case here, the untouched seed re-committed with Enter.
-    const uint8_t before =
-        app.magnificationlevelmarkers.markers()[static_cast<size_t>(idx)].level;
-    if (before == parsed) {
-        this->exit_top_flag_edit_no_commit();
-        return;
-    }
-
-    // ONE UNDO ENTRY: a level is serialized content and its edit dirties the
-    // tab like any other authored change. The snapshot is taken before the
-    // write, the store's own convention, and the plate's gain hash with it
-    // (the rule for every writer of this store, and why the compare now
-    // always comes out equal, is at GuiMagnificationLevelMarkersOps' header).
-    const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
-    {
-        std::vector<GuiMagnificationLevelMarker> pre =
-            app.magnificationlevelmarkers.markers();
-        GuiMagnificationLevelMarker* m =
-            app.magnificationlevelmarkers.marker_mut(idx);
-        if (m) m->level = parsed;
-        undo.push_undo_magnification_level(std::move(pre));
-    }
-    undo.recompute_dirty();
-
-    // NO RE-RENDER AND NO MAP REBUILD: a level reaches neither the engine nor
-    // the render fingerprint, so nothing moved but the digit in the lane — and
-    // the WAVEFORM's own gain, which the kick lands in this frame.
-    text_editor::deactivate(app.top_flag_editor);
-    viewport.invalidate_top_strip();
-    viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
 }
 
 // Validate `pending` as a single canonical line and, on success, write

@@ -1,6 +1,5 @@
 #include "history_folder.h"
 
-#include "magnificationlevelmarkers.h"
 #include "phaseresetmarkers.h"
 #include "settings_file.h"
 #include "sidecar_set.h"
@@ -215,7 +214,7 @@ bool load_history_folder_member_strict(const GuiHistoryFolderMember& member,
     };
 
     // THE CALL'S OWN PRECONDITIONS, read_commit_sidecars's missing-input arms
-    // in this road's vocabulary: an empty base name would compose the four
+    // in this road's vocabulary: an empty base name would compose the three
     // paths out of an extension alone, and an empty member path would compose
     // them against the working directory — a silently different folder. They
     // refuse here rather than being handed to a loader.
@@ -231,9 +230,9 @@ bool load_history_folder_member_strict(const GuiHistoryFolderMember& member,
     // load in place is a whole-state replace, and inheriting some files from
     // the export and the rest from nowhere would compose a state no checkpoint
     // ever was. For the walk the same refusal is simple ineligibility — an
-    // export that cannot be loaded is not stepped to. The four are asked in
+    // export that cannot be loaded is not stepped to. The three are asked in
     // kSidecarExtensions order, so the first missing one is named.
-    static_assert(kSidecarCount == 4);
+    static_assert(kSidecarCount == 3);
     std::filesystem::path file[kSidecarCount];
     std::string           shown[kSidecarCount];
     for (std::size_t i = 0; i < kSidecarCount; ++i) {
@@ -257,7 +256,7 @@ bool load_history_folder_member_strict(const GuiHistoryFolderMember& member,
     out.sidecars.folder = member.path;
     GuiHistorySidecarBlob* blob[kSidecarCount] = {
         &out.sidecars.warpmarkers, &out.sidecars.phaseresetmarkers,
-        &out.sidecars.magnificationlevelmarkers, &out.sidecars.settings};
+        &out.sidecars.settings};
     for (std::size_t i = 0; i < kSidecarCount; ++i) {
         blob[i]->path = shown[i];
         if (!read_file_text(file[i], blob[i]->text)) {
@@ -266,10 +265,10 @@ bool load_history_folder_member_strict(const GuiHistoryFolderMember& member,
         }
     }
 
-    // THE FOUR STRICT WHOLE-FILE LOADERS ARE THE JUDGES, run on the files
+    // THE THREE STRICT WHOLE-FILE LOADERS ARE THE JUDGES, run on the files
     // THEMSELVES — no scratch anywhere, the export's files already sitting
     // under the very names a source's sidecars wear. (The git twin stages its
-    // blobs for exactly this: all four parse entry points are path-only and
+    // blobs for exactly this: all three parse entry points are path-only and
     // frozen, and a GUI-side scanner over the strings would be a SECOND
     // GRAMMAR beside the strict one, which is what the gate exists to avoid.)
     // The order is the render-entry load-in-place's own. First error only, by
@@ -318,18 +317,6 @@ bool load_history_folder_member_strict(const GuiHistoryFolderMember& member,
         }
         out.phase_reset_markers = t.markers();
     }
-    {
-        GuiMagnificationLevelMarkers ml;
-        auto r = ml.load(file[kSidecarMagnificationLevel].string(),
-                         &load_reason);
-        if (!r) {
-            return invalid("magnification level markers",
-                           file[kSidecarMagnificationLevel],
-                           shown[kSidecarMagnificationLevel],
-                           load_words(r.error()));
-        }
-        out.magnification_level_markers = ml.markers();
-    }
     return true;
 }
 
@@ -353,8 +340,8 @@ void scan_history_folder_walk(
     // load. A refusal hides that export and is counted; the parsed stores are
     // discarded and the SIDECAR SNAPSHOTS kept, being the walk's then sides in
     // both readings. THE ABANDON CHECK IS THE LOOP'S TOP and the finest grain
-    // that costs nothing — one member is four small file reads and four strict
-    // parses.
+    // that costs nothing — one member is three small file reads and three
+    // strict parses.
     int hidden = 0;
     for (const GuiHistoryFolderMember& m : members) {
         if (abandoned()) break;

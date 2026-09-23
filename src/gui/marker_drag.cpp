@@ -40,14 +40,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     if (hit < 0) return false;
     const int sr = audio.sample_rate();
     if (sr <= 0) return false;
-    // THE COLUMN IS THE DRAG'S MODE, all three of them since 2026-09-15 (the
-    // magnification level column's flag drag is the HORIZONTAL MOVE there —
-    // value_drag_posture answers no on it, and we never allow multi-axis
-    // dragging). Spelled per column so warp is never the else-branch of a
-    // two-arm fork.
+    // THE COLUMN IS THE DRAG'S MODE.
     const char column = app.active_markers_view;
     const bool phase_reset = (column == 'P');
-    const bool level       = (column == 'M');
     if (hit >= active_marker_count(app)) return false;
 
     // The active column's frame through its one selector (app_state.h).
@@ -159,9 +154,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // change; a drag that returns to its origin is discarded.
     if (phase_reset) {
         d.pre_drag_phase_reset_snapshot = app.phaseresetmarkers.markers();
-    } else if (level) {
-        d.pre_drag_magnification_level_snapshot =
-            app.magnificationlevelmarkers.markers();
     } else {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
@@ -322,8 +314,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // one expression; it also matches the COMMIT below, which maps an integer
     // frame by construction, so the ride and its landing now agree too.
     // Reachable through the PHASE-RESET column in target view (its only view
-    // since 2026-09-21), and through the magnification level column in source
-    // view, where the map below is the identity — a warp drag is source-home
+    // since 2026-09-21) — a warp drag is source-home
     // because the THRESHOLD CROSSING forks T+W into the value drag
     // (value_drag_posture) before it begins this one; the gate lives there,
     // not at the arming press, which is unconditional.
@@ -377,7 +368,6 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
 void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
     const bool phase_reset = (app.drag.drag_mode == 'P');
-    const bool level       = (app.drag.drag_mode == 'M');
     // ONE MARKER, PIXEL-ANCHORED: the proposal snaps to its painted column, so
     // stored equals shown for the pointer-authored flag. The rigid GROUP commit
     // this replaced — the grabbed member's snap folded into a uniform
@@ -444,10 +434,6 @@ void MarkerDragOps::commit_drag() {
         if (phase_reset) {
             if (GuiPhaseResetMarker* m = app.phaseresetmarkers.marker_mut(idx))
                 m->time_frame = committed;
-        } else if (level) {
-            if (GuiMagnificationLevelMarker* m =
-                    app.magnificationlevelmarkers.marker_mut(idx))
-                m->time_frame = committed;
         } else {
             if (GuiWarpMarker* m = app.warpmarkers.marker_mut(idx))
                 m->time_frame = committed;
@@ -465,11 +451,6 @@ void MarkerDragOps::commit_drag() {
             remap_marker_indices_after_reorder(
                 app,
                 reorder_markers_by_time(app.phaseresetmarkers.markers_mut()));
-        } else if (level) {
-            remap_marker_indices_after_reorder(
-                app,
-                reorder_markers_by_time(
-                    app.magnificationlevelmarkers.markers_mut()));
         } else {
             remap_marker_indices_after_reorder(
                 app, reorder_markers_by_time(app.warpmarkers.markers_mut()));
@@ -490,8 +471,6 @@ void MarkerDragOps::commit_drag() {
         std::move(app.drag.pre_drag_snapshot);
     std::vector<GuiPhaseResetMarker> snap_t =
         std::move(app.drag.pre_drag_phase_reset_snapshot);
-    std::vector<GuiMagnificationLevelMarker> snap_m =
-        std::move(app.drag.pre_drag_magnification_level_snapshot);
     app.drag = DragState{};
     if (net_changed) {
         // The position-DRAG commit (both columns). A restore owes no stem bit:
@@ -501,10 +480,6 @@ void MarkerDragOps::commit_drag() {
             undo.push_undo_phase_reset(std::move(snap_t),
                                        std::move(touched_snapshot),
                                        std::move(touched_live));
-        } else if (level) {
-            undo.push_undo_magnification_level(std::move(snap_m),
-                                               std::move(touched_snapshot),
-                                               std::move(touched_live));
         } else {
             undo.push_undo_warp(std::move(snap_w),
                                 std::move(touched_snapshot),
@@ -525,8 +500,7 @@ void MarkerDragOps::commit_drag() {
     // generation-keyed display cache — the shared Tab placement basis
     // (post-commit truth). A warp marker drag authors in the source home view
     // (home-view binding, architect 2026-07-22), where that call is identity, so
-    // the playhead lands on the committed frame directly, and a magnification
-    // level drag in its source home (2026-09-16) the same; a phase reset drag
+    // the playhead lands on the committed frame directly; a phase reset drag
     // in its target home maps through the post-commit map.
     if (land_playhead) {
         viewport.move_playhead_to(
@@ -573,11 +547,5 @@ void MarkerDragOps::commit_drag() {
         viewport.kick_waveform_sync();
     else
         viewport.refresh_flag_cache();
-    // AND THE MAGNIFICATION LEVEL COLUMN TRIGGERS NOTHING (architect
-    // 2026-09-15): its positions are display-only — no sample, no engine input,
-    // no render fingerprint field reads one — so a level drag owes the PREVIEW
-    // nothing (the rule for
-    // every writer of that store is at GuiMagnificationLevelMarkersOps'
-    // header).
-    if (net_changed && !level) target_render.trigger();
+    if (net_changed) target_render.trigger();
 }

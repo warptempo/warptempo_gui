@@ -159,9 +159,9 @@ inline bool trim_window_is_full(int64_t begin_frame, int64_t end_frame,
 
 // (THE WAVEFORM MAGNIFICATION LEVEL'S range constant and range predicate LEFT
 // THIS HEADER 2026-09-14 with that settings key, architect
-// approval 2026-09-14: the level's range has one owner,
-// kMarkerMagnificationMax in marker_magnification.h — retold under architect
-// approval 2026-09-15.)
+// approval 2026-09-14. The parser owns no magnification quantity at all: the
+// waveform picture's gain is the GUI's, derived from the source audio —
+// retold under architect approval 2026-09-23.)
 
 // (kDefaultProjectsRepo LEFT THIS HEADER 2026-08-27 with the `projects_repo`
 // key, architect approval 2026-08-27: the repository is a fact about the one
@@ -219,9 +219,9 @@ struct SettingsFile {
     // them from a file — a sidecar or checkpoint still carrying one is
     // load-fatal here by the unknown-key refusal, no migration and no reader
     // leniency. The waveform magnification level went 2026-09-14 (architect
-    // approval 2026-09-14): the waveform's magnification is a per-section
-    // profile of the GUI's own, never a settings key — retold under architect
-    // approval 2026-09-15.)
+    // approval 2026-09-14): the waveform's magnification is the GUI's own,
+    // derived from the source audio, never a settings key — retold under
+    // architect approval 2026-09-23.)
 };
 
 // Parse and validate the whole `.settings` file at `path`. An unopenable
@@ -303,7 +303,7 @@ std::optional<std::expected<void, std::string>> try_engine_key(
 // free-text keys that remain are all engine keys, typed into EngineSettings.)
 struct GuiSettingValue {
     bool        b    = false;   // tab_X_read_only
-    char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P/M, A/B)
+    char        c    = 0;       // active_audio_view / _markers_view / _tab_view (S/T, W/P, A/B)
     int64_t     i64  = 0;       // tab_X_viewport_start / _playhead_cursor / _trim_*
     double      d    = 0.0;     // tab_X_zoom
 };

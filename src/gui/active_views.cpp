@@ -37,8 +37,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     t.trim                = app.trim;
 }
 
-// Set the active marker column — 'W' (warp), 'P' (phase reset) or 'M'
-// (magnification level, 2026-09-15) — and
+// Set the active marker column — 'W' (warp) or 'P' (phase reset) — and
 // CLEAR THE SELECTION: a COLUMN switch clears (the scope rule, architect
 // 2026-07-29 — the columns hold different markers, so an index set means
 // nothing after the flip, and clearing is what returns the bare arrows to the
@@ -48,60 +47,44 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // the selection emptied this helper owes the marker lane no land at all. ITS
 // CALLERS OWN WHAT HAPPENS NEXT, and this is their inventory:
 // select_active_markers_view (the column entry, below) runs the coincidence
-// auto-select; the S/T audio switch (input_handler.cpp) lands S+M on W before
-// it leaves for target view and T+P on W before it leaves for source view
-// (2026-09-21, the twin) and runs nothing after;
-// the two propagate families' landing tails — the phase-reset paste's into
-// target view (phase_reset_propagate.cpp) and the magnification level paste's
-// into source view (magnification_level_propagate.cpp) — each write their OWN
-// selection and land on that; the undo restore (undo.cpp) writes the entry's
-// column tag with its data already installed; and the two crossings — Shift+S
-// into T+P and Ctrl+Shift+S into S+M (input_handler.cpp) — each land their
-// own drop after the clear (re-grepped 2026-09-21: seven callers, the audio
-// switch calling twice).
+// auto-select; the S/T audio switch (input_handler.cpp) lands T+P on W before
+// it leaves for source view (2026-09-21) and runs nothing after;
+// the phase-reset propagate's landing tail into target view
+// (phase_reset_propagate.cpp) writes its OWN selection and lands on that; the
+// undo restore (undo.cpp) writes the entry's column tag with its data already
+// installed; and the crossing Shift+S into T+P (input_handler.cpp) lands its
+// own drop after the clear (re-grepped 2026-09-23: five callers).
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
 // basis of the pixels it erases. Caller decides what further invalidations to
 // run; the only damage this helper owns is the one a SEATED PINCH's clear owes
 // (below), which is why it holds the viewport reference at all.
 //
-// 'M' IS REFUSED OUTSIDE SOURCE VIEW (architect 2026-09-16: the magnification
-// level markers column is source view only — it is a picture boundary for
-// placing warp markers, and it belongs beside the warp markers' own authoring
-// view; it was target view only from 2026-09-15 to this ruling) — the column
-// axis's half of the one T-never-pairs-with-M invariant, the audio switch
-// landing the column on W before it leaves SOURCE being the other
+// 'P' IS REFUSED OUTSIDE TARGET VIEW (architect 2026-09-21: a phase reset is
+// heard accurately only in target view, so S+P has no use and is load-fatal)
+// — the column axis's half of the S-never-pairs-with-P invariant, the audio
+// switch landing the column on W before it leaves TARGET being the other
 // (switch_active_audio_view_to, input_handler.cpp). A refusal writes nothing,
-// clears nothing and is silent: every caller that names 'M' crosses to source
-// first and reads the column back (the backtick and the view bar, the settings
-// editor's typed `active_markers_view=M`, the undo restore of an 'M' entry),
-// and leaving target never refuses, so the refusal is reached only through a
-// caller that never crossed at all, and the caller's own read of the state is
-// the answer. An unknown letter is refused the same way.
-//
-// 'P' IS REFUSED OUTSIDE TARGET VIEW, THE TWIN (architect 2026-09-21: a phase
-// reset is heard accurately only in target view, so S+P has no use and is
-// load-fatal as T+M is) — the column axis's half of the S-never-pairs-with-P
-// invariant, the audio switch landing the column on W before it leaves TARGET
-// being the other. Every caller that names 'P' crosses to target first and
-// reads the column back (the view selectors, the settings editor's typed
-// `active_markers_view=P`, the undo restore of a 'P' entry, Shift+S and the
-// phase-reset paste's landing). The one asymmetry with 'M' is the direction
-// of the crossing: ENTERING target CAN refuse (the tripwire class), so a
-// caller whose crossing refused meets this refusal, and each reads the state
-// back rather than acting on a column it did not get.
+// clears nothing and is silent. Every caller that names 'P' crosses to target
+// first and reads the column back (the view selectors, the settings editor's
+// typed `active_markers_view=P`, the undo restore of a 'P' entry, Shift+S and
+// the phase-reset paste's landing). ENTERING target CAN refuse (the tripwire
+// class), so a caller whose crossing refused meets this refusal, and each
+// reads the state back rather than acting on a column it did not get. An
+// unknown letter is refused the same way. (A third letter, M, refused
+// outside source view while the magnification level markers column stood,
+// 2026-09-15 to its deletion 2026-09-23.)
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
-    if (target_mode != 'W' && target_mode != 'P' && target_mode != 'M') return;
-    if (target_mode == 'M' && app.active_audio_view != 'S') return;
+    if (target_mode != 'W' && target_mode != 'P') return;
     if (target_mode == 'P' && app.active_audio_view != 'T') return;
     selection.clear_selection();
     // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
     // at the writer — rather than in the `p` toggle below, which is where codex
     // round 20 put it and where round 21 found the hole: the toggle is not this
     // helper's only caller, and the others reach it DIRECT and inherit nothing
-    // it spells (the undo restore's column tag, the two propagate pastes'
-    // landing tails and the two crossings' drops from any view all call this,
+    // it spells (the undo restore's column tag, the phase-reset paste's
+    // landing tail and the Shift+S crossing's drop from any view all call this,
     // each writing its own selection or landing its own act after the clear —
     // the inventory is at the head of this function; grep the name for the
     // live list). Below the same-mode early return, so a
@@ -223,20 +206,19 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 }
 
 // THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect
-// 2026-09-15, when the column axis grew its third letter and a toggle stopped
-// naming a destination): the writer above, then the entry's own tail. Its
-// callers are the backtick and bare 1/2/3 (and the view bar, which
+// 2026-09-15, when the column axis briefly grew a third letter and a toggle
+// stopped naming a destination): the writer above, then the entry's own tail. Its
+// callers are bare 1/2/3 (and the view bar, which
 // synthesizes them) and the
 // settings editor's typed `active_markers_view=`; the writer's other callers
 // reach it directly (its inventory).
 //
 // THE TAIL RUNS WHENEVER THE COLUMN IS THE TARGET AFTER THE WRITE, whichever
-// writer moved it: bare 3 from S+M finds the column already on W, the audio
-// switch having landed it there on its way into target view, and bare 1 from
-// T+P likewise on its way into source view (2026-09-21, the twin), and each
-// still owes the column entry's coincidence auto-select. A write the writer
-// REFUSED ('M' outside source view, 'P' outside target view) leaves the column
-// elsewhere, and the tail does not run.
+// writer moved it: bare 1 from T+P finds the column already on W, the audio
+// switch having landed it there on its way into source view (2026-09-21),
+// and still owes the column entry's coincidence auto-select. A write the
+// writer REFUSED ('P' outside target view) leaves the column elsewhere, and
+// the tail does not run.
 void GuiActiveViews::select_active_markers_view(char target_mode) {
     this->switch_active_markers_view_to(target_mode);
     if (app.active_markers_view != target_mode) return;   // refused

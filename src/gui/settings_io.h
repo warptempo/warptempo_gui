@@ -25,7 +25,7 @@ struct AppState;
 
 // Atomic write: tmp + fsync + rename, preserving the existing file's
 // permission bits when present (0644 fallback). Returns false on any I/O
-// failure, removing the partial `.tmp` first. Shared by the four sidecar
+// failure, removing the partial `.tmp` first. Shared by the three sidecar
 // writers (kSidecarExtensions, sidecar_set.h).
 bool atomic_write_string_to_path(const std::string& path,
                                  const std::string& data);
@@ -49,15 +49,19 @@ std::expected<bool, GuiFailure> sidecar_present(
 // THE REQUIRED-FILE RULE'S GUI FACE — sidecar_set_presence_core (sidecar_set.h,
 // where the rule itself is stated) with its defect composed into a GuiFailure:
 // SOME AND NOT ALL is "Missing '<file>'" naming the first absent member in
-// kSidecarExtensions order, an unreadable name is "Cannot read '<file>':
-// <words>", and nothing is written in either case. Read by BOTH GUI roads that
+// kSidecarExtensions order, a RETIRED sidecar standing beside the source
+// (kRetiredSidecarExtensions, architect approval 2026-09-23) is "'<file>' is
+// no longer part of the sidecar set; delete it", an unreadable name is "Cannot
+// read '<file>': <words>", and nothing is written in any case. Read by BOTH GUI roads that
 // must agree — the real load (GuiFileLoader::load_file, where `None` means a
-// NEW project and writes the four templates, and a refusal is fatal) and its
+// NEW project and writes the three templates, and a refusal is fatal) and its
 // strict preview (source_load_dry_run, where the refusal is the picker's and
 // Revert's card). THE OTHER TWO ROADS ASK THE CORE DIRECTLY, each composing
 // its own surface's sentence: the CLI (cli_main.cpp) and the render player's
 // load in place (load_render_entry_in_place, input_key_dispatch.cpp), neither
-// of which authors a template, so `None` refuses there.
+// of which authors a template, so `None` refuses there; the CLI refuses a
+// retired sidecar as this face does, and the batch-cell load leaves one unread
+// (RetiredSidecars, sidecar_set.h).
 std::expected<SidecarSetPresence, GuiFailure> sidecar_set_presence(
     const std::filesystem::path& parent, const std::string& stem);
 

@@ -1176,9 +1176,7 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
     const std::set<int>& collapsed = warp_red_flag_set_cached(
         a, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).collapsed;
-    // THE SENTENCE IS SHARED WITH THE LEVEL STEP'S KIND REFUSAL (architect
-    // 2026-09-16, kCoincidentCollapseStepCard at app_state.h): one condition,
-    // one sentence, on both value columns.
+    // THE SENTENCE IS kCoincidentCollapseStepCard (app_state.h), named once.
     return (collapsed.count(idx) && !effective_disabled(mv, idx))
                ? kCoincidentCollapseStepCard
                : nullptr;
@@ -1512,8 +1510,6 @@ bool iter_bound_step_direction_actionable(const AppState& a,
     // KEY still cards, the act asking this same predicate ahead of the wall
     // test (kBoundCellTiedCard, app_state.h).
     if (addressed_bound_cell_is_tie_follower(a)) return false;
-    // (Asked with a bound cell addressed, which never happens on the
-    // magnification level column — it paints none — so the fork is W or P.)
     // THE PHASE ARM: the same singleton compare in the hop domain. An
     // INELIGIBLE focus (a disabled reset) answers TRUE, its refusal being a
     // fact about the reset's state that the act cards through the kind refusal
@@ -1554,8 +1550,6 @@ bool iter_bound_step_direction_actionable(const AppState& a,
 // marker a CASCADE can disable without a toggle, a ref through a disabled
 // definition, is already answered by the first sentence.
 const char* iter_bound_step_kind_refusal(const AppState& a) {
-    // (A bound cell is never addressed on the magnification level column, so
-    // the fork is W or P.)
     // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
     // (there is no pass and no label ref on this column), so the only thing a
     // focused reset's kind can refuse on is being DISABLED — and a disabled
@@ -1785,6 +1779,6 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // pixels don't depend on the map). Ordering rationale at the declaration.
     finish_position_nudge(app, audio, viewport, undo,
                                 GestureKind::WarpNudge, merge, orig_f, committed_f,
-                                camera, &target_render);
+                                camera, target_render);
     return std::nullopt;
 }

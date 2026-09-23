@@ -212,8 +212,8 @@ struct GuiInputState {
 // ALONE: bare is ONE unit, Ctrl is THREE and Shift is TEN (the two rungs
 // swapped 2026-09-21, below), and the unit is
 // whatever the bare Up / Down's own act steps on the addressed cell — a CENT
-// on the tempo (singleton and group), a cent or a hop on a bound, a level on
-// the magnification level column's flag. The tempo is NUMERIC, so a count of
+// on the tempo (singleton and group), a cent or a hop on a bound. The tempo
+// is NUMERIC, so a count of
 // cents is a number the user thinks in.
 //
 // THE HORIZONTAL PAIR HAS NO LADDER (architect 2026-09-21, retiring the
@@ -720,25 +720,19 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
             return bare && history_view;
         // The value pair: copy, and the jump to where the value came from.
         case GuiKeys::J: return bare || sh;
-        // Drop on the live column / drop a phase reset from any view / save /
-        // drop a magnification level marker from any view (Ctrl+Shift+S,
-        // 2026-09-15 — the letter's fourth chord, the third column's crossing
-        // in Shift+S's shape).
-        case GuiKeys::S: return bare || sh || cl || cs;
+        // Drop on the live column / drop a phase reset from any view / save.
+        // Ctrl+Shift+S is unbound (it dropped a magnification level marker
+        // from 2026-09-15 until that column's deletion 2026-09-23).
+        case GuiKeys::S: return bare || sh || cl;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
         // The three phase-reset propagate chords (the W/P flip's bare `p` was
         // deleted whole with its view lamp 2026-09-15).
         case GuiKeys::P: return cl || ca || cas;
-        // The magnification level propagate's two chords, the copy and the
-        // paste (2026-09-15). NOT the phase-reset three's shape on another
-        // letter: that family's third chord pastes STATE onto the
-        // destination's existing resets block by block, and this one's paste
-        // walks no blocks, so there is nothing to hook a state onto
-        // (magnification_level_propagate.h). Ctrl+Alt+Shift+M is unbound
-        // again (Generate Magnification Level Markers held it from 2026-09-22
-        // until its deletion 2026-09-23). BARE `m` is unbound.
-        case GuiKeys::M: return cl || ca;
+        // (THE LETTER M BINDS NOTHING since 2026-09-23: its Ctrl and Ctrl+Alt
+        // chords were the magnification level propagate's copy and paste, and
+        // Ctrl+Alt+Shift+M Generate Magnification Level Markers, all deleted
+        // with the magnification level markers column.)
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven
@@ -771,13 +765,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the magnification lamp; `0` already means "the whole song" to the
         // camera, and its shifted form says it to the trim).
         case GuiKeys::Digit0: return bare || sh;
-        // The four absolute view selectors. S+M SITS OFF THE
-        // DIGIT RUN, ON THE BACKTICK (architect 2026-09-19): the magnification
-        // level pass is done once, at the beginning of a piece and by sight,
-        // so it is the view you never come back to and it gives up its digit
-        // to the three you live in. The backtick is S+M, bare 1 is S+W, bare 2
-        // T+P, bare 3 T+W, and 4..9 bind nothing.
-        case GuiKeys::Grave:
+        // The three absolute view selectors: bare 1 is S+W, bare 2 T+P, bare 3
+        // T+W, and the backtick and 4..9 bind nothing (the backtick was the
+        // S+M selector from 2026-09-19 until the magnification level markers
+        // column's deletion 2026-09-23).
         case GuiKeys::Digit1:
         case GuiKeys::Digit2: case GuiKeys::Digit3:
             return bare;
@@ -823,8 +814,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // The shifted Tab's own keysym, admitted shift-agnostically as the
         // live walk admits it.
         case GuiKeys::IsoLeftTab: return bare || sh;
-        // The value step on the addressed cell (the tempo, a bound or the
-        // magnification level), IN THREE MAGNITUDES since 2026-08-31 (R12):
+        // The value step on the addressed cell (the tempo or a bound), IN
+        // THREE MAGNITUDES since 2026-08-31 (R12):
         // bare one unit, Ctrl three, Shift ten since 2026-09-21 (the
         // ladder's owner is arrow_step_magnitude above). Ctrl+Shift spells
         // nothing.
@@ -854,13 +845,13 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
-static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
+static_assert(!chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "the bare backtick is the S+M view selector, bare 1 the S+W one "
-              "and bare 3 the T+W one; digits 4..9 are unbound");
+              "bare 1 is the S+W view selector and bare 3 the T+W one; the "
+              "backtick and digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "
               "arms (the notification stack's clear), and its top-level "
@@ -1155,28 +1146,6 @@ inline bool is_sync_external_key(GuiKey key, GuiInputState mods) {
 // content, exactly as bare `s` is) — and the same one-owner reason.
 inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && !mods.ctrl && mods.shift && !mods.alt;
-}
-
-// True for the chord that DROPS A MAGNIFICATION LEVEL MARKER FROM ANY VIEW
-// (architect 2026-09-15): CTRL+SHIFT+S exactly — no alt. It is Shift+S's shape
-// on the third column, and it took the letter's one remaining free decoration:
-// bare `s` is the live column's own drop, Shift+S the phase-reset crossing and
-// Ctrl+S the save, so ctrl-and-shift was what was left, and it was the strict
-// rule's consumed no-op until this date.
-//
-// IT IS THE COLUMN'S IN-COLUMN DROP WITH THE VIEW TRIP IN FRONT, not a second
-// act: from anywhere else the difference is exactly the two view chokepoints it
-// runs first, and then the same one drop body (the act is
-// GuiInputHandler::drop_magnification_level_in_source_view, input_handler.cpp).
-// IN THE M COLUMN THE CHORD REFUSES WHOLE, the phase chord's own rule: the
-// command IS the crossing, so with the column already standing there is nothing
-// to cross, and bare `s` is the drop there.
-// The same two readers as its sibling — on_key's dispatch arm and the
-// read-only allowlist (read_only_key_blocked, which DROPS the chord: a
-// magnification level marker is authored content, exactly as bare `s`'s subject
-// is) — and the same one-owner reason.
-inline bool is_magnification_level_drop_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::S && mods.ctrl && mods.shift && !mods.alt;
 }
 
 // True for the chord that toggles THE IGNORE WAVEFORM MAGNIFICATION LAMP

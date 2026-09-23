@@ -73,9 +73,8 @@ inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
 // THE PROPAGATE WALK'S MEMBERSHIP, one predicate for every walk that asks it —
 // re-greped 2026-09-19: the copy's selected-run loop
 // (phase_reset_propagate.cpp) and the pastes' destination walk
-// (walk_named_blocks, propagate_blocks.h). TWO READERS, both this family's —
-// the magnification level copy was a third until it stopped reading warp
-// markers at all. A marker takes part iff it CARRIES A LABEL NAME and is
+// (walk_named_blocks, propagate_blocks.h). TWO READERS, both this family's.
+// A marker takes part iff it CARRIES A LABEL NAME and is
 // EFFECTIVELY ENABLED.
 //
 // Both terms are load-bearing and neither is an efficiency filter. The LABEL is

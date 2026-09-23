@@ -238,7 +238,7 @@ namespace {
 // second term from 2026-09-02 and the architect took it out with the ruling
 // that left the File anchor live under the band ("the title bar is still the
 // regular one — the window has focus"). What that term was landed for — the
-// view bar's four reading as disabled under a modal — moved to the bar's own
+// view bar's three reading as disabled under a modal — moved to the bar's own
 // verdict, view_bar_focused, which is the only surface that needed it; the
 // owner carries both rulings and the successions between them. (GAP 1's band
 // took this shade from paint_menu_row while it opened above the row,
@@ -405,7 +405,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     {RedesignButton::File,       "File"},
     // THE EDIT MENU (architect 2026-08-20) — the row's THIRD dropdown again,
     // painted between File and Settings, the standard order and kdenlive's own.
-    // A COMMAND MENU of FIVE rows, the propagate family whole, and a
+    // A COMMAND MENU of THREE rows, the propagate family whole, and a
     // RELOCATION: IconCopy and IconPaste were deleted from the icon row in the
     // same ruling, so this menu is those commands' one pointer home rather than
     // a second road to them. Nothing here needed a width or pad term — the row
@@ -448,11 +448,13 @@ constexpr MenuButtonDef kMenuButtons[] = {
 
 // ROW 1'S RIGHT FLOAT — THE VIEW BAR (architect 2026-08-02), kdenlive's
 // workspace switcher (kden1.png's blue "Logging | Editing | Audio | Effects |
-// Color" bar, the one row the redesign had left out) reborn as the four
-// ABSOLUTE VIEW SELECTORS: S+M, S+W, T+P, T+W, which are the backtick and
-// bare 1/2/3 (architect 2026-09-19: S+M is done once, at the beginning of a
-// piece, so it leads the bar and sits off the digit run; the bar reads in the
-// selectors' order left to right).
+// Color" bar, the one row the redesign had left out) reborn as the three
+// ABSOLUTE VIEW SELECTORS: S+W, T+P, T+W, which are bare 1/2/3; the bar reads
+// in the selectors' order left to right. (A fourth, S+M on the backtick, led
+// the bar from 2026-09-15 until the magnification level markers column's
+// deletion, architect 2026-09-23. THE RIGHT-FLOAT FIGURES BELOW — 183 and 409
+// — WERE MEASURED WITH FOUR SELECTORS and are not re-measured: the bar is one
+// button narrower now, so every collision margin they feed only grows.)
 //
 // THE FLOAT'S ROOM, re-measured 2026-09-09 when the HELP ANCHOR was deleted
 // (and 2026-09-04 for the ITERATIONS one): the LEFT float is 173 authored px
@@ -545,7 +547,7 @@ struct ViewBarButtonDef {
     RedesignButton id;
     // THE TWO LETTERS, NOT THE LABEL: the painted word is composed from them
     // by the one speller view_pair_label (app_state.h, 2026-09-17), which the
-    // car transport's title reads too, so "S+M" is spelled in one place.
+    // car transport's title reads too, so "S+W" is spelled in one place.
     char           audio;
     char           column;
 };
@@ -553,12 +555,8 @@ struct ViewBarButtonDef {
 // below lays the buttons left to right as listed, and each is its key's button
 // (kToolbarChords, input_pointer.cpp, keeps the same row order).
 constexpr ViewBarButtonDef kViewBarButtons[] = {
-    // The magnification level markers column leads (architect 2026-09-19): it
-    // is the first thing done to a piece and the one view never come back to,
-    // so it heads the bar and its key is the backtick off the end of the digit
-    // run, the three lived-in views taking bare 1/2/3. Each is spelled audio
-    // letter then column letter.
-    {RedesignButton::ViewSM, 'S', 'M'},
+    // Bare 1, 2 and 3 in order. Each is spelled audio letter then column
+    // letter.
     {RedesignButton::ViewSW, 'S', 'W'},
     {RedesignButton::ViewTP, 'T', 'P'},
     {RedesignButton::ViewTW, 'T', 'W'},
@@ -1312,13 +1310,8 @@ constexpr double kPopupSepInsetPx    = 7.0;   // the separator, per side
 //   File       "Synchronize to External Storage" | "Ctrl+Q"   -> content
 //   Settings   "Projects Repository" (no column)              -> estimate FLOOR
 //   Edit       "Paste Phase Reset State" | "Ctrl+Alt+Shift+P"  -> content
-//              (374 at 100%, past the floor; re-derived 2026-09-19, when
-//              "Paste Magnification Level State" was deleted with the chord
-//              it advertised and left this the widest row again — the other
-//              candidate, "Paste Magnification Levels" | "Ctrl+Alt+M", trades
-//              a longer label for a shorter accelerator and is unmeasured,
-//              which moves no VERDICT: both ask more than the floor, so this
-//              popup derives at every scale either way)
+//              (374 at 100%, past the floor; the widest row since the
+//              magnification level rows' deletion, architect 2026-09-23)
 //   (Help      "AV Sync Stats" | "Shift+L"                    -> FLOOR, 2026-09-03..09)
 //
 // EVERY FIGURE HERE WAS MEASURED ON THE SENTENCE-CASE SPELLING these labels
@@ -1584,7 +1577,7 @@ double line_baseline(cairo_scaled_font_t* font, double line_y) {
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE MENU ROW (top lane 0, at the window edge): a flat kdenlive-sampled
     // ground carrying TWO FLOATS — the LEFT one, "File", "Edit" and
-    // "Settings", and the RIGHT one, the view bar's S+M / S+W / T+P / T+W (the right
+    // "Settings", and the RIGHT one, the view bar's S+W / T+P / T+W (the right
     // float 2026-08-02, File replacing the Quit button 2026-08-13, the
     // Navigation anchor deleted from between them 2026-08-15, Edit arriving
     // 2026-08-20, the Iterations and Help anchors deleted 2026-09-04 and
@@ -1617,8 +1610,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // deleted it — the keys had all grown buttons of their own.)
     //
     // THE RIGHT FLOAT IS A DIFFERENT SURFACE ON THE SAME ROW: its own background
-    // div, five faces from its own crops, and four chord buttons that are the
-    // backtick and bare 1/2/3. Its layout, its box model and its face rule are
+    // div, five faces from its own crops, and three chord buttons that are
+    // bare 1/2/3. Its layout, its box model and its face rule are
     // at kViewBarButtons and view_bar_face above; its colors at
     // kRedesignViewBarBg (render.h).
     const GuiRect row = top_menu_row_area(app);
@@ -1997,27 +1990,27 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // a focused window is untrue).
             //
             // THE SELECTED VIEW KEEPS ITS FULL INK even while it is dead: the
-            // four go dead TOGETHER under the lock (iteration_lock_greys,
-            // app_state.h — the whole quartet's chords), and dimming the one
+            // three go dead TOGETHER under the lock (iteration_lock_greys,
+            // app_state.h — all three selector chords), and dimming the one
             // that reports WHERE YOU STAND would dim a true statement. So the
             // face reads the selected bit beside the enabled one, and what
-            // greys is the three selectors the press can no longer reach.
+            // greys is the two selectors the press can no longer reach.
             // face.selected is redesign_button_selected, the live audio-view x
-            // column combination — exactly one of the four since 2026-09-21,
-            // T+M and S+P being no states — so the selected one keeps its ink
-            // and the other three grey.
+            // column combination — exactly one of the three since 2026-09-21,
+            // S+P being no state — so the selected one keeps its ink and the
+            // other two grey.
             //
             // IT READS THE ENABLED BIT AND NOT THE LOCK, which is the roster's
             // own rule (a face arm never restates an act's condition) and
             // costs a second membership list nowhere. THE FOLDER OVERLAY IS
             // ITS OTHER PRODUCER, redesign_button_enabled's first arm having
-            // killed these four under the player, the picker and the stats
+            // killed these three under the player, the picker and the stats
             // panel since long before the lock: there the dimmed labels join
             // the BAR'S UNFOCUSED GROUND (view_bar_focused's modal term), the
             // two halves of one disabled face rather than a doubled cue — it
             // was that ground alone that showed the state until 2026-09-10.
-            // THE `h` VIEW REACHES NEITHER: its four selectors are on the
-            // mode's allowlist, so all four answer enabled there.
+            // THE `h` VIEW REACHES NEITHER: its three selectors are on the
+            // mode's allowlist, so all three answer enabled there.
             const double keep = (face.enabled || face.selected)
                                     ? 1.0 : kRedesignDisabledMix;
             // Toward the BAR'S ground, which is what a dead selector sits on:
@@ -5504,7 +5497,7 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
 // where it is a fixed picture; source view would show a map-dependent,
 // varying width, misrepresenting it. Since 2026-09-21 the question no longer
 // arises: the phase-reset column exists in target view alone (S+P is
-// load-fatal, the twin of T+M), so the P-column gate below implies target view
+// load-fatal), so the P-column gate below implies target view
 // and the source-view refusal that stood beside it is an assert.
 // A seed grain is a phase-reset-only concept, so there is nothing on the
 // warp axis to mirror.
@@ -6078,7 +6071,7 @@ bool GuiPaintHandler::playhead_stem_suppressed() const {
                    app, audio) == app.playhead_cursor_sample;
     };
 
-    // The stash is the ACTIVE column's (all three columns publish one), so the
+    // The stash is the ACTIVE column's (both columns publish one), so the
     // store is the active one through its selector pair (active_marker_count /
     // active_marker_time_frame, app_state.h).
     const int n = active_marker_count(app);

@@ -54,8 +54,6 @@ struct LoadInPlaceCriticalSidecars {
 RenderRequest build_render_request(std::string source_audio_path,
                                    std::vector<GuiWarpMarker> warp_markers,
                                    std::vector<GuiPhaseResetMarker> phase_resets,
-                                   std::vector<GuiMagnificationLevelMarker>
-                                       magnification_level_markers,
                                    EngineSettings engine_settings,
                                    int64_t trim_begin_frame,
                                    int64_t trim_end_frame,
@@ -66,7 +64,6 @@ RenderRequest build_render_request(std::string source_audio_path,
     req.warp_markers            = std::move(warp_markers);
     req.engine_settings    = std::move(engine_settings);
     req.phase_resets       = std::move(phase_resets);
-    req.magnification_level_markers = std::move(magnification_level_markers);
     req.trim_begin_frame     = trim_begin_frame;
     req.trim_end_frame       = trim_end_frame;
     req.batch_folder       = std::move(batch_folder);
@@ -404,20 +401,6 @@ RenderOutcome do_render(const RenderRequest& req,
             }
             note_created(tm_path, existed);
 
-            // The magnification level markers, the fourth member of the set a
-            // source carries: required at every load, so a failed write fails
-            // the render as the other three do. Display-only — the render
-            // above read nothing of it.
-            const std::filesystem::path ml_path =
-                sidecar_path(bf, req.batch_basename,
-                             kSidecarMagnificationLevel);
-            existed = existed_before(ml_path);
-            if (!GuiMagnificationLevelMarkers::save(
-                    ml_path.string(), req.magnification_level_markers)) {
-                note_failure(ml_path);
-                return result;
-            }
-            note_created(ml_path, existed);
 
             // `.settings` sidecar: the SAME standard whole-file schema a
             // source carries, so the entry is a complete state on disk — a file
@@ -430,7 +413,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 //
                 // THE VIEW KEYS ARE WRITTEN FOR THE FILE, NOT FOR THE `'` LOAD.
                 // Since 2026-08-24 the load-in-place applies only the recipe —
-                // the three marker columns and the engine block — and IGNORES
+                // the two marker columns and the engine block — and IGNORES
                 // active_audio_view, both tab bands and every session pref this
                 // writer emits (the rule at
                 // GuiInputHandler::apply_recipe_in_place, input_handler.h). They
@@ -493,27 +476,13 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 // THE ENTRY'S AUDIO VIEW IS TARGET BY CONSTRUCTION — the render
                 // is a target-domain artefact and the two positions above were
-                // captured on the target axis — and TARGET NEVER PAIRS WITH THE
-                // MAGNIFICATION LEVEL MARKERS COLUMN (architect 2026-09-16), so
-                // a dispatch from S+M would otherwise write the one pair
-                // read_settings_file refuses: the app's own entry would fail
-                // the player's Load in place and the CLI's read. The column is
-                // therefore LANDED ON W here, which is not a second rule but
-                // THE AUDIO SWITCH'S OWN LANDING (GuiInputHandler::
-                // switch_active_audio_view_to, input_handler.cpp: naming 'T'
-                // from S+M lands the column on W through the column writer)
-                // applied to the FILE the way that switch applies it to the
-                // live state. The live state is untouched — the dispatch leaves
-                // the user standing in S+M — because the landing belongs to the
-                // written pair alone.
-                const char entry_markers_view =
-                    req.authoring.active_markers_view == 'M'
-                        ? 'W'
-                        : req.authoring.active_markers_view;
+                // captured on the target axis. Every live column pairs with
+                // target (W and P; S+P is no state), so the dispatch's own
+                // column is written as it stands.
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,
                     /*active_audio_view=*/'T',
-                    entry_markers_view,
+                    req.authoring.active_markers_view,
                     req.authoring.active_tab};
                 if (!write_settings_file(st_path.string(), gui,
                                          req.engine_settings)) {
@@ -703,7 +672,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // artifacts: .fingerprint is warning-only. Sweep batch wavs are
     // loadable-in-place artifact sets: wav plus source-domain .warpmarkers,
     // source-domain .phaseresetmarkers (including the empty-file form),
-    // .magnificationlevelmarkers (likewise), and .settings. Those load-in-place-critical sidecars must publish before the wav
+    // and .settings. Those load-in-place-critical sidecars must publish before the wav
     // is reported as successful. .fingerprint is written last of all: it is
     // the attestation that the artifact set is complete, so a fingerprint
     // match on a later render implies those files exist. Process death

@@ -57,10 +57,10 @@ static void remove_failed_render_files(
 }
 
 // A failed CELL's whole file set: the wav, its staging sibling, the
-// fingerprint attestation, and the four load-in-place sidecars do_render
+// fingerprint attestation, and the three load-in-place sidecars do_render
 // writes beside a batch wav (render_pipeline.cpp's
 // publish_load_in_place_critical_batch_sidecars is where they are authored;
-// the load road composes the same four, input_key_dispatch.cpp). Composed
+// the load road composes the same three, input_key_dispatch.cpp). Composed
 // from the cell's folder and basename, which the dispatch captures before the
 // request is moved onto the worker.
 static void remove_failed_batch_cell(const std::string& batch_folder,
@@ -75,7 +75,6 @@ static void remove_failed_batch_cell(const std::string& batch_folder,
         std::filesystem::path(fingerprint_sidecar_path(wav.string())),
         sidecar_path(folder, batch_basename, kSidecarWarp),
         sidecar_path(folder, batch_basename, kSidecarPhaseReset),
-        sidecar_path(folder, batch_basename, kSidecarMagnificationLevel),
         sidecar_path(folder, batch_basename, kSidecarSettings),
     });
 }
@@ -87,10 +86,8 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.trim_end_frame      = app.trim.end_frame;
     // Session prefs the per-entry .settings writer needs, captured live at
     // dispatch so the file carries the session's real values. The column is
-    // taken VERBATIM, 'M' included: the entry's file is an
-    // active_audio_view=T state and target never pairs with M, so the landing
-    // on W belongs to the writer, the one owner (render_pipeline.cpp, where the
-    // 'T' is stamped).
+    // taken VERBATIM: the entry's file is an active_audio_view=T state, and
+    // both columns pair with target.
     s.active_markers_view = app.active_markers_view;
 
     // Browse position, captured on the TARGET axis (the entry's .settings is
@@ -1093,7 +1090,6 @@ bool GuiInputHandler::render_bpm_sweep() {
 
         RenderRequest req = build_render_request(
             app.source_audio_path, std::move(*cell_warp_markers), base_phase_resets,
-            app.magnificationlevelmarkers.markers(),
             std::move(cell_settings),
             app.trim.begin_frame, app.trim.end_frame,
         batch_folder.string(), std::move(basename));

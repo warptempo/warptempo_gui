@@ -11,7 +11,7 @@
 // the file round-trips and the render never sees — architect approval
 // 2026-09-18), and the only fields the parser domain and the
 // engine-bound render path read. Three independent state axes (a per-marker
-// magnification left the marker whole — architect approval 2026-09-15 — and
+// waveform gain left the marker whole — architect approval 2026-09-15 — and
 // the measure reference, the ` //<measure>` comment past the canonical line,
 // left it whole too — architect approval 2026-09-16; the departure record is
 // at parse_single_canonical_line):

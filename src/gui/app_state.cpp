@@ -400,7 +400,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // very same question ahead of the landing: "am I standing on a marker?" now
 // has one spelling for the in-group step and for the cell step alike.
 int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
-    // All three columns through the one store selector pair
+    // Both columns through the one store selector pair
     // (active_marker_count / active_marker_time_frame, app_state.h).
     const int n = active_marker_count(a);
     const int last = a.last_selected_marker;
@@ -423,8 +423,6 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
     const std::vector<GuiWarpMarker>& warp_vec = a.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
         a.phaseresetmarkers.markers();
-    const std::vector<GuiMagnificationLevelMarker>& magnification_level_vec =
-        a.magnificationlevelmarkers.markers();
     const int n = active_marker_count(a);
     // frame_of / is_disabled are only asked for indices in [0, n), so an
     // empty store simply yields no candidate. Frames are read in the ACTIVE
@@ -434,14 +432,12 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
         return source_frame_to_active_domain(a, audio,
                                              active_marker_time_frame(a, i));
     };
-    // The warp side respects the label_ref cascade; a phase reset and a
-    // magnification level marker read their own bit (neither column has
-    // labels).
+    // The warp side respects the label_ref cascade; a phase reset reads its
+    // own bit (the column has no labels).
     auto is_disabled = [&](int i) -> bool {
         switch (a.active_markers_view) {
             case 'W': return effective_disabled(warp_vec, i);
             case 'P': return phase_reset_vec[i].disabled;
-            case 'M': return magnification_level_vec[i].disabled;
         }
         return false;
     };
@@ -551,10 +547,7 @@ PayloadEligibility payload_eligibility(const AppState& app,
     using E = PayloadEligibility;
     if (idx < 0) return E::NoResolvedValue;
     // THE COLUMN: the value pair is the WARP column's alone — a phase reset
-    // carries no tempo, and a magnification level marker carries no tempo
-    // either (architect 2026-09-15: `j` and Shift+J are not eligible on the
-    // M column, the key carding the copy's own sentence and Copy Resolved
-    // Value greying on this same verdict).
+    // carries no tempo.
     if (app.active_markers_view != 'W') return E::NoResolvedValue;
     const auto& mv = app.warpmarkers.markers();
     if (idx >= static_cast<int>(mv.size())) return E::NoResolvedValue;
