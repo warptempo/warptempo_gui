@@ -203,9 +203,18 @@ constexpr IconPath kMathmodePaths[] = {
 };
 
 
-// (FOLLOW MODE's go-jump, the chevron with its destination dot, stood here
-// from 2026-08-01 until the architect deleted the follow lamp 2026-09-23; its
-// paths, def and asset left with it.)
+// FOLLOW MODE's icon since 2026-08-01 (architect-picked, replacing
+// media-seek-forward): go-jump, the chevron with its destination dot — the
+// playhead's page reads as GOING somewhere, not as fast-forwarding a
+// transport. (Out for the hours of 2026-09-23 the lamp was deleted.)
+constexpr IconPath kGoJumpPaths[] = {
+    {kIconText,
+     "M 5.7070312 3 L 5 3.7070312 L 11.125 9.8320312 L 12.292969 11 L 11.125 "
+     "12.167969 L 5 18.292969 L 5.7070312 19 L 11.832031 12.875 L 13.707031 11 "
+     "L 11.832031 9.125 L 5.7070312 3 z M 16 10 C 15.446 10 15 10.446 15 11 C "
+     "15 11.554 15.446 12 16 12 C 16.554 12 17 11.554 17 11 C 17 10.446 16.554 "
+     "10 16 10 z "},
+};
 
 // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP's icon (2026-09-04, the architect's
 // pick, kept through the 2026-09-22 rename): timeline-lift, a clip's two end
@@ -361,9 +370,8 @@ constexpr IconPath kVcsDiffPaths[] = {
 //
 // EACH IS ONE OUTLINE PATH, not a stroked line: Breeze draws the chevron as a
 // closed shape whose two limbs are one unit thick at the viewBox's own scale,
-// exactly as go-jump's did (they are the same drawing, go-jump's carrying its
-// destination dot as a second subpath; go-jump was deleted 2026-09-23). So
-// the line weight scales with
+// exactly as go-jump's does (they are the same drawing, go-jump's carrying
+// its destination dot as a second subpath). So the line weight scales with
 // gui_scale like every other geometry in this table, with no stroke width to
 // set and nothing that could fatten at 200%.
 //
@@ -1007,6 +1015,7 @@ constexpr IconDef kEditUndo           {22.0, kEditUndoPaths,            1};
 constexpr IconDef kEditRedo           {22.0, kEditRedoPaths,            1};
 constexpr IconDef kMediaRecord        {22.0, kMediaRecordPaths,         1};
 constexpr IconDef kBlackSum           {22.0, kBlackSumPaths,            1};
+constexpr IconDef kGoJump             {22.0, kGoJumpPaths,              1};
 constexpr IconDef kTimelineLift       {22.0, kTimelineLiftPaths,        3};
 constexpr IconDef kMusicNote16th      {22.0, kMusicNote16thPaths,       1};
 constexpr IconDef kMathmode           {22.0, kMathmodePaths,            1};
@@ -1059,6 +1068,7 @@ const IconDef& icon_def(Icon icon) {
         case Icon::EditRedo:            return kEditRedo;
         case Icon::MediaRecord:         return kMediaRecord;
         case Icon::BlackSum:            return kBlackSum;
+        case Icon::GoJump:              return kGoJump;
         case Icon::TimelineLift:        return kTimelineLift;
         case Icon::MusicNote16th:       return kMusicNote16th;
         case Icon::Mathmode:            return kMathmode;

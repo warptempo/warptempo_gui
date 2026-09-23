@@ -40,12 +40,6 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // the sub-tick window (the natural end observed by the tick's own branch,
     // which reads the phase before calling here and advances after). The
     // complete edge inventory is at GuiAuditionSequence (app_state.h).
-    // Whether this stop ends a PROJECT play is read FIRST, for the chase's
-    // spend at the tail, through the one owner the acts that must tell a rest
-    // from a play also read (project_session_stands: not an audition's play,
-    // whose stops spend nothing, and not the player's). Read ahead of the
-    // audition clear below, which would otherwise hide the act.
-    const bool spends_chase = project_session_stands();
     clear_audition_sequence(app);
     // THE RENDER PLAYER'S FORK, INSIDE THE ONE STOP BODY (2026-08-28): the
     // player's transport is a session over ITS OWN buffer with no scanner and
@@ -111,24 +105,9 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // (app_state.h).
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
-    // THE STOP SPENDS THE CHASE (architect 2026-09-23): the posture is a
-    // one-shot, and the end of the project play it chased — Space's stop, the
-    // natural end, any gesture stop — puts it out, so the next play chases
-    // only if Shift+C arms it again. Past the guard, so a stop at rest spends
-    // nothing (an armed chase waits for its launch); not at an A/B audition's
-    // stop, whose plays the chase ignores; and the render player's stops
-    // returned above — the three terms of project_session_stands, read at the
-    // head. The rule is at AppState::camera_chase.
-    if (spends_chase) app.camera_chase = false;
-}
-
-bool GuiPlaybackLifecycle::project_session_stands() const {
-    // The guard's own test below the player fork of stop_playback_if_playing
-    // (the callback bit OR the tick-cleared scanner), minus the two sessions
-    // whose stops do not spend the chase. Contract at the declaration.
-    if (app.render_player.active) return false;
-    if (audition_sequence_standing(app)) return false;
-    return playback.is_playing() || app.playhead_scanner_active;
+    // THE STOP LEAVES THE FOLLOW LAMP ALONE (architect 2026-09-23): it is a
+    // lamp, not a one-shot, so the next play follows while it stays lit
+    // (AppState::follow).
 }
 
 // The one owner of the modal-open stop. See the declaration for the decision
@@ -307,7 +286,7 @@ bool space_launch_would_play(const AppState& a, const GuiPlayback& playback,
 // `frame` — an
 // absolute active-paint-domain position (the caller hands it in already
 // clamped to the live domain) — with the resting cursor, selection, region, and
-// camera postures all untouched. The SCANNER, not the cursor, is what the gesture
+// hold posture and follow lamp all untouched. The SCANNER, not the cursor, is what the gesture
 // drives: the
 // scanner fields are meaningful only while active, and this is exactly the
 // launches-the-scanner-independently-of-the-cursor consumer that contract
@@ -371,10 +350,6 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
     // PageIn: Space launches from the cursor and the scrub from a clicked
     // column, so both roads start on screen except when the cursor has been
     // left offscreen by a pan — which is exactly what the page-in rescues.
-    // NOTHING IS SPENT AT THE LAUNCH (architect 2026-09-23): a standing chase
-    // posture is the play's to read while it runs and the play's end spends
-    // it (the one stop body, AppState::camera_chase), so a refused launch
-    // leaves it standing for the press that does play.
     return launch_playback_window(launch_pos, active_view_play_end(),
                                   kPlaybackNoLoop, LaunchCamera::PageIn);
 }
@@ -441,17 +416,16 @@ void GuiPlaybackLifecycle::car_play_playback() {
     // playable on the begin — and the publish's own loop belt refuses the same
     // window one layer down; both silent, the benign one-dimensional class.
     //
-    // THE CAMERA IS THE CHASE POSTURE'S (architect 2026-09-18 for the
-    // camera term, 2026-09-23 for the posture; the ruling at the
-    // declaration): this is the one launch in the product that may start OFF
-    // SCREEN by design, the trim's begin being a fixed point while the
+    // THE CAMERA IS THE FOLLOW LAMP'S (architect 2026-09-18; the ruling at
+    // the declaration): this is the one launch in the product that may start
+    // OFF SCREEN by design, the trim's begin being a fixed point while the
     // passage under work sits screens downstream of it, so the page-in is
-    // the user's to ask for — Shift+C arms it (AppState::camera_chase), the
-    // page-in keeps it, the tick's chase takes over the paging the instant
-    // the launch succeeds, and the play's end spends it.
+    // the user's to ask for — lit, the launch pages in and the tick's
+    // autopager takes over the paging the instant it succeeds
+    // (AppState::follow).
     launch_playback_window(begin, end, begin,
-                           app.camera_chase ? LaunchCamera::PageIn
-                                            : LaunchCamera::Leave);
+                           app.follow ? LaunchCamera::PageIn
+                                      : LaunchCamera::Leave);
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -468,11 +442,10 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     // Defensive, scrub_launch_at's own guard: a live session never launches.
     if (playback.is_playing()) return false;
     if (span <= 0) return false;
-    // THE AUDITION NEITHER SPENDS THE CHASE NOR CHASES (architect
-    // 2026-09-11 for the lamp it replaced; AppState::camera_chase): its four
-    // bounded plays are each framed by their own `c`, so a chase would only
-    // fight that framing. The autopager asks the act's phase and pages none
-    // of its plays, and the one stop body spends nothing at the act's stops.
+    // THE AUDITION IGNORES THE FOLLOW LAMP (architect 2026-09-11;
+    // AppState::follow): its four bounded plays are each framed by their own
+    // `c`, so a page would only fight that framing. The autopager asks the
+    // act's phase and pages none of its plays.
     const int64_t view_end = active_view_play_end();
     if (start >= view_end - 1) return false;
     const int64_t end = std::min(start + span, view_end);
@@ -501,8 +474,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // audition (`end` = start + span, clamped) and the car's launch
 // (car_toggle_playback, `end` = the trim's end and `loop_begin` its begin,
 // 2026-09-17). `camera` is each caller's own word and takes no default — the
-// two GUI entries say PageIn, the car's says Leave unless the chase posture
-// stands (architect 2026-09-18; the enum's contract at the declaration). This
+// two GUI entries say PageIn, the car's says Leave unless the follow lamp
+// is lit (architect 2026-09-18; the enum's contract at the declaration). This
 // body never writes the
 // resting cursor — the scanner is the only playhead it touches, so a launch
 // is a pure scanner event and the cursor is untouched by construction.
@@ -633,19 +606,24 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     app.playhead_scanner_sample = start;
     app.playhead_scanner_precise = static_cast<double>(start);
     app.playhead_scanner_active = true;
+    // EVERY PLAY STARTS UNSUSPENDED (AppState::follow_suspended): a camera
+    // change during the play before this one suspended that play's paging,
+    // not this one's. Ahead of the page-in below, which keeps it as it
+    // stands.
+    app.follow_suspended = false;
     // THE CAMERA IS THE CALLER'S WORD (architect 2026-09-18; the enum's
     // contract at the declaration). Where the caller says PageIn and the
     // launch position is offscreen, left-edge-align the viewport on it before
-    // the scanner issues forth — the chase's own page-in has exactly the right
-    // shape for it whether or not this play will chase. EVERY GUI ROAD SAYS
+    // the scanner issues forth — follow's own page-in has exactly the right
+    // shape for it whether or not this play will follow. EVERY GUI ROAD SAYS
     // PageIn AND STARTS ON SCREEN ANYWAY: Space launches from the cursor, the
     // scrub from a column the user just clicked, the A/B audition's plays
     // from a half its own `c` has centred — so the page-in there is a rescue
     // for a cursor a pan has carried offscreen and a no-op otherwise. THE
     // CAR'S PLAY IS THE ONE LAUNCH THAT STARTS OFF SCREEN BY DESIGN: its
     // position is the trim's BEGIN, a fixed point the worked passage sits
-    // screens downstream of, so it says Leave unless the chase posture
-    // stands and the camera stays where the user left it.
+    // screens downstream of, so it says Leave unless the follow lamp is lit,
+    // and the camera stays where the user left it.
     if (camera == LaunchCamera::PageIn) viewport.follow_scroll_if_needed();
     // Damage the waveform area and the clock cell NOW, in the success tail
     // (strictly after every refusal return above). A launch's visible effect —
@@ -711,10 +689,9 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
 // immediate scanner teardown (stop_playback_if_playing). No page-in at
 // the reseek site: the reseek repositions without recentering the viewport.
 //
-// stop_playback_if_playing spends the chase posture, and the placement
-// caller clears it too immediately AFTER this returns (having already run
-// move_playhead_to before), so the two agree by construction whichever arm
-// runs — an aiming click ends the chase either way.
+// Neither arm touches the follow lamp: a placement click during a play moves
+// the playhead, not the camera, so a following play pages on from the placed
+// position (AppState::follow_suspended).
 // AND IT ENDS THE CAR'S LOOP (2026-09-17): both arms call play(), the
 // once-through face, so a placement click under a looping car play reseeks
 // into a session that plays to the view's end and stops — the loop is a
@@ -757,9 +734,24 @@ void GuiPlaybackLifecycle::reseek_keeping_alive(int64_t sample) {
     playback.play(sample, song_end);
 }
 
-// (toggle_follow, the follow key's chokepoint, is deleted with bare `f` and
-// its lamp — architect 2026-09-23; the chase posture's rule is at
-// AppState::camera_chase.)
+// The follow key's one chokepoint (contract at the header declaration),
+// shared by bare `f` and the icon-row button that synthesizes that chord.
+void GuiPlaybackLifecycle::toggle_follow() {
+    app.follow = !app.follow;
+    if (!app.follow) return;
+    // THE LIT EDGE RESUMES THE PAGING AT ONCE: whatever suspended the play in
+    // flight is forgiven, and during a play the predictor re-anchors (as
+    // every discrete camera move does) and the scanner is paged back into
+    // view if a pan had left it offscreen — a no-op when it is in view. At
+    // rest the page-in is skipped: the next launch pages for itself. The
+    // A/B audition's plays are not paged (the autopager asks its phase), so
+    // the lamp lit during the act waits for the user's next play too.
+    app.follow_suspended = false;
+    if (playback.is_playing() && !audition_sequence_standing(app)) {
+        playback.resync_predictor();
+        viewport.follow_scroll_if_needed();
+    }
+}
 
 // (set_playback_speed IS GONE — architect 2026-08-27, with the
 // `playback_speed` key it was the one writer of. It stored the value, pushed it

@@ -750,8 +750,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-two view/mode/action buttons since Follow's deletion
-// 2026-09-23, twenty-three from Zoom In and Zoom
+// ICON row (the twenty-three view/mode/action buttons since Follow's return
+// on the evening of 2026-09-23, twenty-two for the hours of that day it was
+// deleted, twenty-three from Zoom In and Zoom
 // Out's restoration later on 2026-09-22, twenty-one from the Show trim region
 // button's deletion that day, twenty-two from the IGNORE WAVEFORM
 // MAGNIFICATION lamp's arrival that day — twenty-one from the FLATTEN
@@ -1098,12 +1099,14 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
 
 void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
     clamp_viewport_start_body(a, audio);
-    // THE CAMERA POSTURES' ONE CLEAR (architect 2026-09-23): every viewport
+    // THE CAMERA CHOKEPOINT'S COMPARE (architect 2026-09-23): every viewport
     // write passes this function before anything reads the camera, so a
     // camera it settles somewhere other than where it settled last puts out
-    // both postures here, once for every writer. The rule, the writer
-    // inventory this claim rests on and the exempt writers (which keep or
-    // re-arm their bit after this call) are at AppState::camera_hold. THE
+    // the hold posture and suspends follow for the play in flight here, once
+    // for every writer (the follow lamp itself is never written here). The
+    // rule, the writer inventory this claim rests on and the exempt writers
+    // (which keep or re-arm their bit after this call) are at
+    // AppState::camera_hold and AppState::follow_suspended. THE
     // CAMERA IS FOUR FIELDS (AppState::camera_posture_identity): the tab and
     // the audio view ride beside the start and the zoom, so a switch that
     // lands the same two numbers still registers as the change it is.
@@ -1111,8 +1114,8 @@ void clamp_viewport_start(AppState& a, const GuiAudio& audio) {
         a.viewport_start_sample, a.zoom_level,
         a.active_tab_view, a.active_audio_view};
     if (settled != a.camera_posture_identity) {
-        a.camera_hold  = false;
-        a.camera_chase = false;
+        a.camera_hold      = false;
+        a.follow_suspended = true;
         a.camera_posture_identity = settled;
     }
 }
@@ -2874,7 +2877,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // column outside the waveform area and
             // invalidate_playhead_columns emits no damage for one, so a
             // scanner that has left the viewport (a launch inside a trim
-            // window the user then panned away from, no chase standing)
+            // window the user then panned away from, follow not paging)
             // leaves this tick producing NO damage at all — and with the
             // pre-paint hook the sole advancer of the scanner position
             // while playing, no damage means no paint means the position
@@ -2885,8 +2888,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // onscreen, so a paint is always produced, and it is the
             // honest rect — the clock tracks the SCANNER's time
             // while playing, so it is frozen alongside the line for
-            // exactly the same stretch. The chase is untouched: no
-            // viewport work is added here, and a chasing viewport keeps
+            // exactly the same stretch. Follow is untouched: no
+            // viewport work is added here, and a following viewport keeps
             // the column onscreen so the fallback simply never fires.
             if (playhead_invalidate_rect(waveform_area(app), px).w <= 0)
                 invalidate_clock_area();
@@ -2917,9 +2920,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
         // hand-spelled pair this branch and Space's stop edge both carried
         // collapsed onto stop_playback_if_playing, the product's one stop body. The
-        // follow-scroll tail that used to run here — a last chase page at the
+        // follow-scroll tail that used to run here — a last page at the
         // natural end — is DELETED, and the two asymmetries flagged against it
-        // (its chase guard was dead, the stop having just cleared the chase;
+        // (its guard was dead, the stop having just ended the play's paging;
         // and it could scroll the viewport BACK to the restored playhead,
         // which the Space stop never does) die WITH the arm rather than being
         // fixed inside it.
@@ -3095,8 +3098,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // that via its in_pre_paint_ flag).
         invalidate_playhead_columns(old_px, new_px);
         invalidate_clock_area();
-        // THE CHASE NEVER PAGES UNDER A LIVE AIM (the two refusal terms
-        // below). The chase is the product's one AUTONOMOUS viewport mover: it
+        // FOLLOW NEVER PAGES UNDER A LIVE AIM (the two refusal terms
+        // below). Follow's page is the product's one AUTONOMOUS viewport mover: it
         // fires from the clock rather than from an event, and every aiming
         // gesture converts a WINDOW COLUMN through the CURRENT viewport at some
         // later moment than the press the user aimed with —
@@ -3104,35 +3107,36 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         //     remembered press_x at the RELEASE, so a page in between would
         //     place the playhead on whatever frame had slid under that column;
         //   * the grab-pan's first leg folds the whole press->crossing delta,
-        //     and the chase's clear only lands once that first scroll_viewport
-        //     application fires;
+        //     and follow's suspension only lands once that first
+        //     scroll_viewport application fires;
         //   * a live marker / trim / region / strip drag converts each motion's
         //     window x the same way, so a page mid-drag would teleport the
         //     dragged subject under a motionless pointer;
         //   * on glass the conversion is deferred by design — a tap delivers its
         //     whole burst at the LIFT with the DOWN point's coordinates, and the
         //     region hold converts the down point at the beat's expiry.
-        // PAUSING THE MOVER is the whole fix: with the chase held, the
+        // PAUSING THE MOVER is the whole fix: with the page held, the
         // press-time viewport stays valid by construction and every existing
         // conversion is already correct — nothing captures frames at the press
         // and nothing about the click act or the fold moves. This is a PAUSE,
-        // not an end: it writes nothing, so the posture
-        // (AppState::camera_chase) is unchanged and the chase simply
+        // not an end: it writes nothing, so the lamp (AppState::follow) and
+        // the play's suspension are unchanged and the page simply
         // resumes and catches up on the next tick after the gesture ends —
         // including after a lost button or a force-end that ran no act at
-        // all. A long motionless HOLD therefore visibly freezes the chase for
+        // all. A long motionless HOLD therefore visibly freezes the page for
         // as long as it is held, which is the intended reading: the user is
         // aiming.
         // The touch term is the platform's (touch_contact_active — any finger
         // down), because nothing GUI-side is armed during the disambiguation
         // window; the contract is at the touch state block, input_core.h.
-        // THE BIT IS THE CHASE POSTURE (architect 2026-09-23), one bit armed
-        // by Shift+C and spent by the play's end, so standing during a play
-        // it means this play chases. THE A/B AUDITION IS NOT CHASED: its
-        // bounded plays are each framed by their own `c`, so the act's phase
-        // standing turns the page off (the render player never reaches here,
-        // its return above).
-        if (app.camera_chase && !audition_sequence_standing(app) &&
+        // THE LAMP IS READ LIVE (architect 2026-09-23, AppState::follow): lit
+        // and not suspended for this play by a camera change
+        // (AppState::follow_suspended), the play pages. THE A/B AUDITION IS
+        // NOT PAGED: its bounded plays are each framed by their own `c`, so
+        // the act's phase standing turns the page off (the render player
+        // never reaches here, its return above).
+        if (app.follow && !app.follow_suspended &&
+            !audition_sequence_standing(app) &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
     });

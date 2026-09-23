@@ -255,12 +255,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the derived partition answers with nothing hand-listed. THE STEPPING
     // PAIR (bare `=` / `-`) WAS DELETED 2026-09-14 AND RESTORED 2026-09-22
     // (architect): the tablet's pen has no pinch, so these two buttons are the
-    // pen's zoom in and out. TWO ADMIT A MODIFIER, SHIFT
+    // pen's zoom in and out. ONE ADMITS A MODIFIER, SHIFT
     // (redesign_button_shift_admits): Full zoom out since 2026-09-22, its
-    // shift-click or long press dispatching Shift+0, RESET TRIM, and Center
-    // since 2026-09-23, dispatching Shift+C — `c` that also arms the chase
-    // (AppState::camera_chase); the two zoom steps are refused a modified
-    // click at the band gate. NONE REPEATS: the `repeats` column is unset on
+    // shift-click or long press dispatching Shift+0, RESET TRIM; the other
+    // three are refused a modified click at the band gate. NONE REPEATS: the `repeats` column is unset on
     // all four rows (the keys repeat).
     {RedesignButton::IconZoomIn,
      GuiKeys::Equal,  false, false, false, false, true},                            // bare =
@@ -280,9 +278,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // their buttons and the setting they stepped, architect approval
     // 2026-09-14: the picture's gain varies over source time, the continuous
     // curve derived from the source since 2026-09-23.)
-    // (FOLLOW'S ROW IS DELETED — architect 2026-09-23, with its button and
-    // bare `f`: the chase is a posture Shift+C arms, the Center button's
-    // shift press, with no lamp and no row of its own. AppState::camera_chase.)
+    // FOLLOW (architect 2026-09-23) — bare `f`, a TOGGLE with a lamp
+    // (AppState::follow), behind the magnification lamp. Live on a locked tab
+    // and under the grid-iterations lock (navigation), DEAD in the `h` view,
+    // whose allowlist does not name it.
+    {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
     // (THE COPY AND PASTE ROWS ARE DELETED — 2026-08-20, with their buttons:
     // the architect's propagate relocation gave the propagate commands the
     // new EDIT MENU as their one pointer home, so Ctrl+P and Ctrl+Alt+P reach
@@ -1719,10 +1719,9 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 //     (GuiCarTransport); its comparator simply publishes the new session, and
 //     a pending car play dies at the click itself, launched or refused (the
 //     press count at the body's head).
-//   * THE CHASE: the stop over a live session spends the chase posture (the
-//     one stop body, AppState::camera_chase), so a scrub over a chasing play
-//     plays unchased; a scrub at rest with the chase armed launches into it,
-//     the posture standing until that play ends.
+//   * FOLLOW: the scrub's launch pages while the lamp is lit, as every
+//     project launch does, and starts unsuspended (the launch body's clear,
+//     AppState::follow_suspended); the lamp itself is untouched.
 //   * COST: the stop's quiescence fence is now paid on EVERY click over a
 //     live session (at most one per click; a stopped session pays none).
 // The stop body is called unconditionally: it is a no-op on a stopped
@@ -2888,7 +2887,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // the first and the centroid delta is 0 on the second, so the off term is a
     // literal no-op either way). Everything downstream is the strip drag's own
     // — level clamp, viewport clamp, the synchronous per-frame rebuild, the
-    // camera postures' clear on either axis, and the mid-gesture true-no-op
+    // camera chokepoint's compare on either axis, and the mid-gesture true-no-op
     // skip.
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    /*final=*/false);
@@ -6265,13 +6264,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // playhead placement or the LOWER half's audition scrub. That act is
         // the ONLY difference between the halves now, and it is TWO differences
         // read honestly, both pre-existing and neither touched by this ruling:
-        // the placement also DESELECTS and ENDS A CHASING PLAY'S CHASE, while
-        // the scrub act touches no selection, no cursor and no chase posture
-        // of its own (its stop spends a chase, as every stop does).
+        // the placement also DESELECTS and MOVES THE CURSOR, while the scrub
+        // act touches no selection and no cursor.
         //
         // WHAT THE LOWER HALF GAINS BY BEING A PENDING: for the press's whole
         // life it is a live pointer gesture like the upper half's — the wheel
-        // and every chord are swallowed, the chase is paused, and the
+        // and every chord are swallowed, follow's page is paused, and the
         // cursor holds the uniform Arrow — which is exactly the symmetry the
         // ruling asked for and not a new rule of its own.
         //
@@ -6465,7 +6463,7 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
 // (the drag-modal keyboard gate swallows every chord while the pending
 // stands, so no command can change the state in between).
 //   LIVE arm: deselect-all, then the placement body — playhead to the column,
-//   live-session reseek, the chase's end (place_playhead_at_click_column).
+//   live-session reseek (place_playhead_at_click_column).
 //   The placement writes through the movement owner move_playhead_to, which
 //   ends an A/B audition (a placement moves the playhead's position in the
 //   music). A GUTTER column deselects and seats nothing.
@@ -6479,8 +6477,7 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
 //   press column and NOTHING ELSE — the act the lower half used to run at
 //   mouse-down, moved here whole so that nothing on this surface pops at a
 //   press any more. It is deliberately the FIRST arm and returns ahead of the
-//   other two: the scrub selects nothing, moves no cursor and writes no
-//   chase of its own (its stop spends one, as every stop does), which is the
+//   other two: the scrub selects nothing and moves no cursor, which is the
 //   halves' ONE difference (two, read honestly — the
 //   omissions are the second). It cannot coincide with the `h` arm (that view
 //   has no scrub half), and the scrub's own gutter no-op lives inside
@@ -6535,13 +6532,10 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     viewport.move_playhead_to(sample);
     if (was_playing && sample != playhead_at_entry)
         playback_lifecycle.reseek_keeping_alive(sample);
-    // END THE CHASE for the play in flight: the user placed the cursor
-    // deliberately, so the chase must not page the viewport away from it —
-    // the DAW convention (architect 2026-09-23). At rest the click leaves an
-    // armed chase standing: it moves no camera, and the next play is still
-    // the one the arm was for. The rest of the bit's rule is at its
-    // declaration, AppState::camera_chase.
-    if (was_playing) app.camera_chase = false;
+    // FOLLOW IS UNTOUCHED (architect 2026-09-23): the follow lamp is a lamp,
+    // not a posture, and the click moves the playhead, not the camera, so a
+    // following play pages on from the placed position (AppState::follow,
+    // follow_suspended).
     return sample;
 }
 
@@ -6847,8 +6841,8 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         // next absolute event resolves it.
         // A MOTIONLESS press is THE DEFERRED CLICK — run_nav_click_act at the
         // press column, running THE PRESSED HALF'S OWN ACT: the upper half's
-        // placement (deselect / mode-land, playhead, reseek,
-        // chase end) or the lower half's audition SCRUB (2026-08-13),
+        // placement (deselect / mode-land, playhead, reseek)
+        // or the lower half's audition SCRUB (2026-08-13),
         // plus the EmptyLane double-click seed when the press was the marker
         // lane's empty stretch (release-side seeding, the TrimBar pattern: only
         // the release knows it stayed a click). No capture ever began, so
@@ -9987,9 +9981,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // the release bodies' standing shape. NO CLICK ACT RUNS HERE: it ran
         // at the press, so the stop, the select and the land
         // all already stand — the select is what paints the dragged flag
-        // BRIGHTENED, and the stop is why no chase end is needed below
-        // (nothing can restart playback under the held button: the drag-modal
-        // gate swallows every chord while this pending stands).
+        // BRIGHTENED, and the stop is why no live playback needs handling
+        // below (nothing can restart playback under the held button: the
+        // drag-modal gate swallows every chord while this pending stands).
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
         // THE DRAG'S GATES LIVE HERE, not at the arm: they guard the DRAG
@@ -10054,9 +10048,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // like any other and takes the loop tail's re-resolve like one.
                 return;
         }
-        // No chase end needed: the arming press ran the click act's stop, which
-        // spent any chase, and nothing can have restarted playback since (the
-        // drag-modal gate), so there is no live playhead to chase.
+        // No live playback to handle: the arming press ran the click act's
+        // stop, and nothing can have restarted playback since (the drag-modal
+        // gate).
     }
     // THE VALUE DRAG'S LIVE ARM (2026-09-10), ahead of the marker drag's own
     // and in its shape exactly: a lost button ends the gesture through its

@@ -186,9 +186,10 @@ enum class Icon {
     // still — no two buttons ever wore one math symbol, which is what the move
     // bought.
     BlackSum,            // The cumulative reading (`u`)
-    // (GO-JUMP, the chevron with its destination dot, dressed the FOLLOW lamp
-    // from 2026-08-01 until the architect deleted that button 2026-09-23 —
-    // enumerator, def and committed asset left with it, no second wearer.)
+    // GO-JUMP, the chevron with its destination dot (2026-08-01), dressing the
+    // FOLLOW lamp — out for the hours of 2026-09-23 the lamp was deleted and
+    // back with it that evening, asset and all.
+    GoJump,              // Follow (`f`)
     // Breeze's timeline-lift (2026-09-04, the architect's pick): a clip's two
     // end brackets with a red cross between them — a stretch of timeline the
     // editor declines to travel. The lamp it wears refuses an undo whose
@@ -252,8 +253,7 @@ enum class Icon {
     // table entry.
     KeyframePrevious,    // Older checkpoint (`,`)
     KeyframeNext,        // Newer checkpoint (`.`)
-    // The chevron pair, go-jump's own construction minus its destination dot
-    // (go-jump itself deleted 2026-09-23):
+    // The chevron pair, go-jump's own construction minus its destination dot:
     // ONE closed outline per file whose limbs are one viewBox unit thick, so
     // the weight rides the icon's scale like every other geometry here and
     // there is no stroke to set. Row 8's horizontal arrows are their whole
@@ -450,10 +450,11 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 49 SINCE THE FOLLOW LAMP AND THE HOLD-COLUMN NUDGES WERE DELETED (architect
-// 2026-09-23), re-counted off the enumerators above: go-jump and the two
-// turns of snap-nodes-midpoint left with the three buttons that wore them.
-// It was 52 from the hold-column nudges' glyph change earlier that day, when
+// 50 SINCE THE FOLLOW LAMP CAME BACK (architect 2026-09-23, evening),
+// re-counted off the enumerators above: go-jump returned with the button
+// that wears it. It was 49 from the follow lamp's and the hold-column nudges'
+// deletion earlier that day: go-jump and the two turns of snap-nodes-midpoint
+// left with the three buttons that wore them. It was 52 from the hold-column nudges' glyph change earlier that day, when
 // go-previous-context and go-next-context left and the two turns of
 // snap-nodes-midpoint joined. It was 52 from the least-movement walk's deletion
 // earlier that day: snap-orthogonal and snap-node left
@@ -483,7 +484,7 @@ enum class Icon {
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
 // leaving restates this number.
-inline constexpr int kIconCount = 49;
+inline constexpr int kIconCount = 50;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

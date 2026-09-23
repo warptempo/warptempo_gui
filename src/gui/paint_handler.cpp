@@ -969,7 +969,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // joined the zoom group, dissolving two separator-led groups into it; the
     // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
-    // carries the current count — TWENTY-TWO in FIVE.)
+    // carries the current count — TWENTY-THREE in FIVE.)
     // THE ZOOM GROUP OPENS HERE, on the separator the TRIM GROUP held from
     // 2026-08-11 — the scissors opened it then, the Show trim region button
     // filled it on 2026-08-16, the scissors were deleted on 2026-08-18, and on
@@ -981,8 +981,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // off the walk, no separator moving; ZOOM IN leads the group since Zoom
     // In and Zoom Out came back in front of Full zoom out that evening. What
     // the group collects is the VIEWPORT CLASS — the four zoom commands, the
-    // magnification lamp and RESTRICT UNDO (FOLLOW among them from 2026-08-27
-    // to 2026-09-23) — all in one
+    // magnification lamp, FOLLOW and RESTRICT UNDO — all in one
     // separator-led run. THIS TABLE IS THE
     // ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
@@ -1035,11 +1034,13 @@ constexpr IconRowDef kIconRowButtons[] = {
     // above rather than standing alone behind a divider. THE TWO BUTTONS AND
     // BOTH GLYPHS CAME BACK ON 2026-09-04 in a group of their own, further
     // down this table; the mass-marker group itself did not.)
-    // (FOLLOW stood here from 2026-08-27, wearing go-jump — the architect's
-    // chevron-and-dot of 2026-08-01, after the provisional "F" letter and
-    // media-seek-forward — until the button, its chord and its glyph were
-    // deleted 2026-09-23: the chase is Shift+C's posture with no face. One box
-    // and one 2px gap off the walk, no separator moving.)
+    // FOLLOW (bare `f`), wearing go-jump — the architect's chevron-and-dot of
+    // 2026-08-01, after the provisional "F" letter and media-seek-forward: the
+    // playing scanner's page reads as GOING to a place rather than as a
+    // transport control. Out for the hours of 2026-09-23 the Shift+C chase
+    // posture replaced it, and back that evening with its glyph: one box and
+    // one 2px gap onto the walk, no separator moving.
+    {RedesignButton::IconFollow, icons::Icon::GoJump},
     // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP (2026-09-04; to Viewport until
     // 2026-09-22) closes the same group, "it is also a viewport
     // gesture" being the architect's own reason for moving it here from the
@@ -2682,7 +2683,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-TWO members
+    // separator-divided groups of 32x32 buttons — TWENTY-THREE members
     // in FIVE groups (the width math below is the count's
     // one statement), RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
@@ -2691,10 +2692,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // architect's 2026-08-27 merge: the zoom four (2026-08-12; the stepping
     // pair out 2026-09-14 and back 2026-09-22) leading since the Show trim
     // region button that led it was deleted on 2026-09-22, THE IGNORE
-    // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22) and THE RESTRICT
-    // UNDO TO CURRENT VIEW LAMP closing the group (FOLLOW, in from the
-    // dissolved mass-marker group on 2026-08-27, stood between them until its
-    // deletion on 2026-09-23) (2026-09-04, arriving from the toolbar group later that day
+    // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW (in from
+    // the dissolved mass-marker group on 2026-08-27; out for the hours of
+    // 2026-09-23) and THE RESTRICT UNDO TO CURRENT VIEW LAMP closing the group
+    // (2026-09-04, arriving from the toolbar group later that day
     // because it is a viewport gesture too) — THE ITERATION GROUP (the BPM
     // opener and grid iteration mode, back from the deleted menu row later
     // that same day, with FLATTEN behind them since 2026-09-19) — the
@@ -2707,7 +2708,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-two paint on every
+    // hiding/showing icons in top icon row"): all twenty-three paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2722,34 +2723,33 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY-TWO MEMBERS IN FIVE GROUPS since 2026-09-23,
-    // when FOLLOW left the zoom group (one box and one gap off the walk, no
-    // separator):
-    //   8 + 22·32 + (22−5)·2 + (5−1)·9 = 8 + 704 + 34 + 36 = 782px,
+    // minus groups): TWENTY-THREE MEMBERS IN FIVE GROUPS since the evening
+    // of 2026-09-23, when FOLLOW came back to the zoom group (one box and one
+    // gap onto the walk, no separator):
+    //   8 + 23·32 + (23−5)·2 + (5−1)·9 = 8 + 736 + 36 + 36 = 816px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 790.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 824.
     //
-    // THE TABLET FIT CEILING IS 295 (re-derived 2026-09-23 at Follow's
-    // deletion), and it is taken off THE PAINTED WALK, not off
-    // 782·factor: every element above is its own scaled_px, rounded on its
-    // own, so the walk's device width is 8s + 22·[32s] + 17·[2s] +
-    // 4·(2·[4s] + [1s]) with each bracket a banker's rounding. At 295 that is
-    // 24 + 22·94 + 17·6 + 4·(24 + 3) = 2302 of 2304, and at 296 it is 2324
-    // (the box rounds up to 95). THE UNROUNDED PRODUCT DISAGREES HERE and is
-    // not the measure: 782·2.95 = 2306.9 would crop, but no painted element
-    // is that product — the box's 94.4 rounds down. (Counting the trailing
-    // pad the ceiling is 292 — 2302 at 292, the pad being ground, not ink, so
-    // the icons themselves are the thing measured.) The tablet's first-run
-    // 225 paints the walk 1750 device px wide, clearing the panel by 554 —
-    // 242 of its 1024 logical px at that scale, 782 authored. The laptop
-    // clears it outright at 790 of 1920. The row's width succession is in git
+    // THE TABLET FIT CEILING IS 282 (re-derived 2026-09-23 at Follow's
+    // return), and it is taken off THE PAINTED WALK, not off
+    // 816·factor: every element above is its own scaled_px, rounded on its
+    // own, so the walk's device width is 8s + 23·[32s] + 18·[2s] +
+    // 4·(2·[4s] + [1s]) with each bracket a banker's rounding. At 282 that is
+    // 23 + 23·90 + 18·6 + 4·(22 + 3) = 2301 of 2304, and at 283 it is 2324
+    // (the box rounds up to 91). The unrounded product agrees here
+    // (816·2.82 = 2301.1, 816·2.83 = 2309.3). (Counting the trailing pad the
+    // ceiling is 279 — 2299 at 279, the pad being ground, not ink, so the
+    // icons themselves are the thing measured.) The tablet's first-run 225
+    // paints the walk 1826 device px wide, clearing the panel by 478 — 208 of
+    // its 1024 logical px at that scale, 816 authored. The laptop clears it
+    // outright at 824 of 1920. The row's width succession is in git
     // history; a roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 225% paint as 76
     // and 92 device px (the box's 72 and the gap's 4.5 rounding to 4; the
-    // separator's 9 + 2 + 9 ahead of the leader's box) — room for SEVEN more
-    // members at 225% (1750 + 7·76 = 2282 of 2304), an eighth cropping
+    // separator's 9 + 2 + 9 ahead of the leader's box) — room for SIX more
+    // members at 225% (1826 + 6·76 = 2282 of 2304), a seventh cropping
     // (2358).
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1
@@ -2903,8 +2903,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // statements — that is what earns them the face, a refusal alone never
         // does. Since 2026-08-14 EVERY
         // button in this row the view consumes wears it — Undo / Redo /
-        // Render, listen (FOLLOW, the mass-marker category's one survivor
-        // since the 2026-08-27 relocation, until its deletion 2026-09-23), the read-only toggle, and the MOMENT-STATE
+        // Render, FOLLOW (the mass-marker
+        // category's one survivor since the 2026-08-27 relocation),
+        // listen, the read-only toggle, and the MOMENT-STATE
         // Save (an empty head delta or a checkpoint in flight). Nothing leaves
         // the walk any more; the two view lamps, the zoom group and the
         // history opener stay live, as do the FOUR HISTORY COMPANIONS and,
@@ -5194,7 +5195,7 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     //      for UNDRIVEN changes — resize, the launch load — and as the
     //      on_tick backstop for any residual fingerprint drift (a
     //      warp_frame_map hash included). Map EDITS themselves are
-    //      user-driven and take path 2, and so does THE CHASE'S PAGE TURN since
+    //      user-driven and take path 2, and so does FOLLOW'S PAGE TURN since
     //      2026-09-02 (it was on this list until then; the playhead line is
     //      drawn onto that very frame, so the page turn cannot wait a
     //      publish — Viewport::follow_scroll_if_needed).

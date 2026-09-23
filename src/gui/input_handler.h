@@ -1081,7 +1081,7 @@ struct GuiInputHandler {
     // IT DRIVES THE ZOOM FAMILY'S OWN APPLICATION CHOKEPOINT,
     // Viewport::apply_strip_drag_zoom (level clamp, viewport clamp, the one
     // synchronous per-frame rebuild, and — through its clamp — the camera
-    // postures' clear on either axis all come from it), and DELIBERATELY NOT any pointer-press arm — the
+    // chokepoint's compare on either axis all come from it), and DELIBERATELY NOT any pointer-press arm — the
     // gesture enters BELOW every one of them.
     // The recorded justification for stopping short of a mouse arm, per the
     // fallback the phase-1 ruling names, is structural twice over and outlived
@@ -1115,8 +1115,9 @@ struct GuiInputHandler {
     // consume as a double-click).
     //
     // Navigation-class whole: no playhead, no selection, no region, allowed in
-    // read-only, and a frame that moves the camera puts out the camera
-    // postures through the chokepoint's clamp (AppState::camera_hold). Implemented beside the strip drag in
+    // read-only, and a frame that moves the camera puts out the hold and
+    // suspends a following play's paging through the chokepoint's clamp
+    // (AppState::camera_hold, follow_suspended). Implemented beside the strip drag in
     // input_pointer.cpp.
     void apply_touch_nav_update(const GuiTouchNavFrame& frame);
     // The gesture's end (any end commits — a finger lifted, wl_touch.cancel,
@@ -1357,7 +1358,7 @@ struct GuiInputHandler {
 
     // THE REDESIGNED BUTTONS' HOVER FACES, in two entries over one transition
     // writer serving the WHOLE roster — row 1's three menu anchors and
-    // the view bar's three, row 3's two tabs, row 4's twenty-two (the
+    // the view bar's three, row 3's two tabs, row 4's twenty-three (the
     // toolbar four included since the 2026-08-12 relayout, the zoom four
     // whole again since 2026-09-22, the IGNORE
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
@@ -1946,7 +1947,8 @@ struct GuiInputHandler {
     // THE PLACEMENT'S PLAYHEAD HALF, and the whole of what the live routes
     // and the `h` history mode's own have in common: drop the
     // playhead at the clicked column, reseek a live scanner to it (keeping the
-    // session alive) and end that session's chase (AppState::camera_chase). NO selection, NO
+    // session alive; a following play pages on from there, AppState::follow).
+    // NO selection, NO
     // drag arm — each caller owns those, which is what lets the
     // mode reuse this recipe without inheriting a sweep it must not have.
     // FOUR ROUTES REACH IT since 2026-08-12 (re-derived 2026-08-13 at the
@@ -2177,8 +2179,8 @@ struct GuiInputHandler {
     // (repair_last_selected + jump_playhead_to_focused_marker), the history
     // mode's re-expression walks its own diff-flag list and its own focus — so
     // the call sites (re-greped 2026-09-23: run_center_key_command — the
-    // centre keys' act, which the live `c` arm, the mode's `c` claim and
-    // Shift+C reach — the A/B
+    // centre key's act, which the live `c` arm and the mode's `c` claim
+    // reach — the A/B
     // audition's GuiAbAudition::apply_working_zoom, Shift+`j`'s jump, which
     // calls it TWICE — once on the tab it leaves and once on the tab it
     // lands — and, since 2026-09-14, the Ctrl+Shift+Tab paired march, which
@@ -2193,18 +2195,15 @@ struct GuiInputHandler {
     // filled with its stamped level went with the 2026-09-23 toggle, which
     // restores the stamped view itself).
     void run_center_command();
-    // THE CENTRE KEYS' ACT (architect 2026-09-23): bare `c` (the live arm and
-    // the `h` view's claim) with `arm_chase` false, SHIFT+C with it true —
-    // run_center_command, then the camera postures the explicit centring
-    // writes (AppState::camera_hold): the HOLD posture armed whether or not
-    // the centring could move the camera, and the CHASE posture armed by
-    // Shift+C, or by bare `c` kept as it stood unless the centring's own
-    // landing stopped the play it was chasing (that stop spends it). The
-    // other callers of run_center_command — `0` at a ceiling it did not
-    // produce, the A/B
-    // audition, and the marches and Shift+J, which arm the hold at their own
-    // tails — do not come through here.
-    void run_center_key_command(bool arm_chase);
+    // THE CENTRE KEY'S ACT (architect 2026-09-23): bare `c` (the live arm and
+    // the `h` view's claim) — run_center_command, then the HOLD posture armed
+    // whether or not the centring could move the camera
+    // (AppState::camera_hold), and follow's suspension kept as it stood, the
+    // centring being on follow's own subject (AppState::follow_suspended). The
+    // other callers of run_center_command — the A/B audition, and the
+    // marches and Shift+J, which arm the hold at their own tails — do not
+    // come through here.
+    void run_center_key_command();
 
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
@@ -2451,7 +2450,7 @@ private:
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
     // about the camera beyond what `frame` states and reads no preference of
-    // its own — the chase never gated it. The three Tab arms pass
+    // its own — follow never gated it. The three Tab arms pass
     // marker_walk_landing_frame (app_state.h) — MarkerLandingFrame::Center,
     // the landing centred at the standing zoom, in source view, and
     // MarkerLandingFrame::LeastMovement in target view (architect
@@ -3036,7 +3035,7 @@ private:
     // reset store and the engine settings — what
     // push_undo_both captures — and NOTHING ELSE. Both tab bands stay live, TRIM INCLUDED (trim has no undo;
     // Shift+0 is its recovery), and so do the S/T bit, the W/P bit, the A/B
-    // tab, the camera, the camera postures and projects_repo — and gui_scale is outside the question
+    // tab, the camera, the hold posture, the follow lamp and projects_repo — and gui_scale is outside the question
     // entirely since 2026-08-27, an entry's sidecar not carrying it at all. A recipe is a set of markers and an engine block; where
     // the user is standing when he loads one is his own. Undo/redo and the `h`
     // view are how he then inspects what the load changed. (It SUPERSEDES the
@@ -3427,14 +3426,13 @@ private:
     // pan, so each click pays AT MOST one stop quiescence fence and a stopped
     // session's launch pays none. A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
-    // NOTHING else — no selection, region, cursor, chase, or double-click seed.
+    // NOTHING else — no selection, region, cursor, follow, or double-click seed.
     // THAT is what makes it the REGION'S PREVIEW GESTURE (architect 2026-07-30,
     // Q2): clicking inside a SHOWN trim region overlay auditions from the
     // clicked frame and leaves the overlay standing, which is why Space no
     // longer carries a region launch of its own. It is also THE HALVES' ONE
-    // DIFFERENCE — read honestly, two: the upper half's act deselects, HIDES
-    // the overlay and ends a chasing play's chase, and this one does none of
-    // the three.
+    // DIFFERENCE — read honestly, two: the upper half's act deselects and
+    // HIDES the overlay, and this one does neither.
     // Playback stays alive from the press to the act (the press claims nothing
     // and stops nothing, and the drag-modal gate swallows every chord while the
     // pending stands); since the scrub always plays (architect 2026-09-21),

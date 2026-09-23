@@ -11,8 +11,7 @@
 // (both stop edges and every gesture stop), the modal-open stop that names it,
 // toggle play/stop, the audition launch, the bounded audition the A/B sequence
 // plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
-// the one play), the keep-alive reseek and the chase posture's spend at the
-// play's end.
+// the one play), the keep-alive reseek and the follow lamp's toggle.
 // AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member. The only direct platform reach this cluster ever had
@@ -134,23 +133,6 @@ struct GuiPlaybackLifecycle {
     // the Tab family) are older and broader than the rule — they hold under the
     // definition's own contract, a handler about to commit a new cursor position.
     void stop_playback_if_playing();
-
-    // DOES A PROJECT PLAY STAND — the session the one stop body above would
-    // end AND spend the chase for (AppState::camera_chase), ONE owner
-    // (Sol review 2026-09-23): the audio callback is playing OR the playhead
-    // scanner is still active, with neither the A/B audition standing (whose
-    // stops spend nothing) nor the render player open (whose stops take their
-    // own fork). The stop body reads it for its spend, and the sites that must
-    // tell "at rest" from "a project play this act may stop" read it too:
-    // bare `c` / Shift+C (GuiInputHandler::run_center_key_command) and the
-    // A/B audition's start (GuiAbAudition::start). WHY NOT
-    // playback.is_playing() ALONE: that is the callback's bit, which drops at
-    // the natural end (and on a lost device) a sub-tick before the GUI tick
-    // runs the stop that clears the scanner and spends the chase — a
-    // session still stands in that window, and an act that read the callback
-    // bit there would take it for a rest and put back a chase the stop it
-    // triggers has just spent.
-    bool project_session_stands() const;
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
@@ -291,19 +273,17 @@ struct GuiPlaybackLifecycle {
     // is the second road into the launch body that is not the act's), and the
     // launch through launch_playback_window with the trim's begin as the loop
     // target.
-    // THE CAMERA STAYS WHERE IT IS UNLESS THE CHASE STANDS (architect
-    // 2026-09-18; the chase posture since 2026-09-23, the follow lamp
-    // before): this is the ONE launch that may start OFF SCREEN — the
+    // THE CAMERA STAYS WHERE IT IS UNLESS FOLLOW IS LIT (architect
+    // 2026-09-18): this is the ONE launch that may start OFF SCREEN — the
     // trim's begin is a fixed point and the passage he is working on is
     // habitually a couple of screens downstream of it, so a page-in on every
     // console press cost him a manual recentre per audition. The launch
-    // states `LaunchCamera::PageIn` iff AppState::camera_chase stands (Shift+C
-    // arms it; the page-in keeps it) and `LaunchCamera::Leave` otherwise —
-    // with the chase standing the pre-paint autopager pages the scanner for
-    // the whole play; with it dark nothing moves, at the launch or at any
-    // loop wrap (the wrap's consumer resyncs the predictor and damages, and
-    // writes no camera — main.cpp's tick). The play's end spends the chase
-    // (the one stop body).
+    // states `LaunchCamera::PageIn` iff the lamp AppState::follow is lit and
+    // `LaunchCamera::Leave` otherwise — lit, the pre-paint autopager pages
+    // the scanner for the whole play (unless a camera change suspends it,
+    // AppState::follow_suspended); dark, nothing moves, at the launch or at
+    // any loop wrap (the wrap's consumer resyncs the predictor and damages,
+    // and writes no camera — main.cpp's tick).
     // A trim under two frames refuses in the body's own playable gate,
     // silently (the benign one-dimensional class: the playhead and the grey
     // say it). The target view's preview-readiness gate is THE CALLER'S on
@@ -325,7 +305,7 @@ struct GuiPlaybackLifecycle {
     // above past its stop arm, the whole of it — the device reopen and its
     // card, the trim window and its two clamps, the always-from-the-begin
     // start, the user-launch clear, the looping launch with the camera term
-    // the chase posture chooses. TWO CALLERS, both the
+    // the follow lamp chooses. TWO CALLERS, both the
     // console's: car_toggle_playback's play arm, and the skips' play tail
     // (GuiCarTransport::car_play_after_step — directly, and again from the
     // pending play the tick fires), which wants the play and not the fork for
@@ -373,7 +353,7 @@ struct GuiPlaybackLifecycle {
     // untouched exactly as under Space — the same launch body, the same
     // gates (playback_launch_playable, so a start at or past the domain end
     // or leaving fewer than two frames refuses), the same scanner — but NO
-    // CHASE: the pre-paint autopager asks the act's phase and pages none of
+    // FOLLOW: the pre-paint autopager asks the act's phase and pages none of
     // its plays, each framed by its own `c`. Returns whether it launched; the refusals are the
     // launch body's own two — the POSITION gate, silent since 2026-08-31, and
     // the DEAD-DEVICE gate, which still cards — and the audition's press-time
@@ -400,10 +380,17 @@ struct GuiPlaybackLifecycle {
     // well-defined for in-range positions only.
     void reseek_keeping_alive(int64_t sample);
 
-    // (THE FOLLOW KEY'S CHOKEPOINT, toggle_follow, IS DELETED — architect
-    // 2026-09-23, with bare `f`, its lamp and the armed / engaged pair it
-    // wrote. The chase is one posture Shift+C arms, AppState::camera_chase,
-    // whose rule and writers are at that declaration.)
+    // THE FOLLOW KEY'S ONE CHOKEPOINT (architect 2026-09-23), shared by bare
+    // `f` and the icon-row button that synthesizes that chord — the lamp
+    // AppState::follow's one writer. It flips the lamp. The LIT EDGE also
+    // clears AppState::follow_suspended, and during a project play (the A/B
+    // audition not standing) resyncs the predictor and pages the scanner
+    // back into view if a pan had left it offscreen, so the paging resumes
+    // at once; the dark edge writes nothing else, the camera staying where
+    // the page left it. The face repaints through the per-tick comparator,
+    // so this mutator owes no damage. Refused in the `h` view by the
+    // dispatch (bare `f` is off that mode's allowlist), never here.
+    void toggle_follow();
 
 private:
     // The active view's PLAY END — the song's end in source view, the bound
@@ -421,15 +408,11 @@ private:
     // delegation (owner (2) of the edge inventory at GuiAuditionSequence): a
     // launch of the user's own transport is a fresh session, refused or not,
     // and this entry is the only road into the body that is not the act's.
-    // (THE FOLLOW LAMP'S SPEND, spend_follow_lamp, ran in this entry's
-    // success tail and the car's until 2026-09-23: the chase posture is one
-    // bit, read at the launch and spent at the play's end by the one stop
-    // body, AppState::camera_chase.)
     bool launch_playback_from(int64_t launch_pos);
     // THE LAUNCH'S CAMERA TERM, THE CALLER'S WORD (architect 2026-09-18):
     //   * `PageIn` — if the launch position is offscreen, left-edge-align the
     //     viewport on it before the scanner issues forth
-    //     (Viewport::follow_scroll_if_needed, the chase's own page-in). Every
+    //     (Viewport::follow_scroll_if_needed, follow's own page-in). Every
     //     GUI launch road starts ON SCREEN by construction, so
     //     this is a no-op on the ordinary press and a rescue on the rare one.
     //   * `Leave` — the launch writes no camera at all.

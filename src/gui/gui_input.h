@@ -680,29 +680,27 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
     const bool ca    =  ctrl &&  alt && !shift;   // Ctrl+Alt
     const bool cas   =  ctrl &&  alt &&  shift;   // Ctrl+Alt+Shift
     switch (key) {
-        // -- letters, bare only, bound in EVERY state: the mode toggles (`i`
-        // iteration, `k` add to selection; `c` left this group 2026-09-23
-        // for Shift+C, below; `f` left it 2026-09-19 for the two FLATTEN
-        // chords below; `x` the value drag's lamp stood here 2026-09-10 to
+        // -- letters, bare only, bound in EVERY state: the centring `c` and
+        // the mode toggles (`i` iteration, `k` add to selection; `f` left this
+        // group 2026-09-19 for the two FLATTEN chords below, its bare form —
+        // the follow lamp — unchanged; `x` the value drag's lamp stood here 2026-09-10 to
         // 2026-09-13, `y` the keep-centered lamp 2026-08-31 to 2026-09-14,
         // `m` the bpm opener and `t` the S/T flip both 2026-08-01 (`m`)/
         // earlier to 2026-09-15, when the architect moved the opener to
         // Ctrl+B, below, and deleted `t` whole with its view lamp).
+        case GuiKeys::C:
         case GuiKeys::I:
         case GuiKeys::K:
             return bare;
-        // Centre, and SHIFT+C, centre and arm the chase (architect
-        // 2026-09-23; AppState::camera_chase) — the shifted form being the
-        // plain act's twin, `j`'s and `l`'s shape.
-        case GuiKeys::C: return bare || sh;
-        // Ctrl+F flattens every warp marker's tempo deviations and
-        // Ctrl+Shift+F collapses them into one (2026-09-19) — the shifted form
-        // being the plain act's twin, `s`'s and `j`'s shape on a ctrl chord
-        // rather than a bare one. The ctrl spelling is what guards an
-        // authoring verb against a stray bare press, exactly as Ctrl+D and
-        // Ctrl+N do. BARE `f` BINDS NOTHING since 2026-09-23, when the follow
-        // lamp it toggled was deleted (the chase is Shift+C's posture).
-        case GuiKeys::F: return cl || cs;
+        // THE LETTER CARRIES THREE ACTS: bare `f` is the FOLLOW LAMP (the
+        // group above's own kind; architect 2026-09-23, back after the hours
+        // it was unbound that day), Ctrl+F flattens every warp marker's tempo
+        // deviations and Ctrl+Shift+F collapses them into one (2026-09-19) —
+        // the shifted form being the plain act's twin, `s`'s and `j`'s shape
+        // on a ctrl chord rather than a bare one. The ctrl spelling is what
+        // guards an authoring verb against a stray bare press, exactly as
+        // Ctrl+D and Ctrl+N do.
+        case GuiKeys::F: return bare || cl || cs;
         // The BPM opener, Ctrl+B since 2026-09-15 (moved off bare `m`: a Ctrl
         // chord guards against a stray bare press, as Ctrl+D / Ctrl+N do).
         case GuiKeys::B: return cl;
@@ -865,11 +863,11 @@ static_assert(!chord_is_bound(GuiKeys::Escape,
               "Esc is bare-exact: no modified Escape binds anywhere, Ctrl+Esc "
               "included since it retired on 2026-09-01");
 static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::C,
-                                 GuiInputState{false, true, false}, false) &&
-                  !chord_is_bound(GuiKeys::F, GuiInputState{}, false),
-              "bare `c` centres and Shift+C centres and arms the chase; bare "
-              "`f` (the retired follow lamp) binds nothing");
+                  !chord_is_bound(GuiKeys::C,
+                                  GuiInputState{false, true, false}, false) &&
+                  chord_is_bound(GuiKeys::F, GuiInputState{}, false),
+              "bare `c` centres and Shift+C binds nothing (the chase posture "
+              "it armed was deleted 2026-09-23); bare `f` is the follow lamp");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}, false) &&
@@ -1238,18 +1236,6 @@ inline bool is_copy_value_key(GuiKey key, GuiInputState mods) {
 }
 inline bool is_jump_to_value_source_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::J && !mods.ctrl && mods.shift && !mods.alt;
-}
-
-// True for SHIFT+C exactly (architect 2026-09-23): bare `c`'s centring with
-// the CHASE posture armed (AppState::camera_chase) — its one setter. The
-// Center button's shift-click and long press dispatch it
-// (redesign_button_shift_admits). Read-only-legal and legal under the
-// grid-iterations lock (navigation: the allowlist admits `c` in both forms);
-// refused in the `h` view, whose allowlist does not name it, as it refuses
-// playback. ONE READER, on_key's dispatch arm (input_handler.cpp); the
-// allowlist spells `c` shift-agnostically beside it.
-inline bool is_center_and_chase_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::C && !mods.ctrl && mods.shift && !mods.alt;
 }
 
 enum class GuiMouseButton {

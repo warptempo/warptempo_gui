@@ -399,12 +399,16 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // so there the press reaches the arm's own target-view card.
     const bool is_waveform_magnification =
         is_waveform_magnification_key(key, mods);
-    // THE CENTRE KEYS, bare `c` and SHIFT+C (2026-09-23, the chase posture's
-    // arm): navigation, writing no store — a camera and a session posture —
-    // so both are admitted here, and under the grid-iterations lock, whose
-    // gate falls through to this list.
+    // THE CENTRE KEY, bare `c`: navigation, writing no store — a camera and
+    // the hold posture — so it is admitted here, and under the
+    // grid-iterations lock, whose gate falls through to this list.
     const bool is_center =
-        (key == GuiKeys::C && !ctrl && !alt);
+        (key == GuiKeys::C && !ctrl && !shift && !alt);
+    // FOLLOW, bare `f` (architect 2026-09-23): a session lamp about the
+    // camera during playback, authoring nothing the lock protects, so it is
+    // admitted on a locked tab and under the grid-iterations lock.
+    const bool is_follow =
+        (key == GuiKeys::F && !ctrl && !shift && !alt);
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
@@ -603,7 +607,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
              is_home_end || is_page_updown ||
              is_zoom_symbol || is_zero ||
              is_restrict_undo || is_waveform_magnification ||
-             is_center ||
+             is_center || is_follow ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
              is_esc || is_ctrl_q ||
@@ -2454,7 +2458,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
     // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
-        run_center_key_command(/*arm_chase=*/false);
+        run_center_key_command();
         return true;
     }
 
@@ -9156,9 +9160,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         run_waveform_lane_playhead_step(
             horizontal_arrow_step(+1, app.active_markers_view));
         break;
-    // (BARE `f`, the follow lamp's toggle, is DELETED — architect 2026-09-23:
-    // the chase is Shift+C's posture, AppState::camera_chase. The key binds
-    // nothing and falls to the default arm's silence.)
+    case GuiKeys::F:
+        // Toggle the follow lamp (architect 2026-09-23). The whole body lives
+        // in GuiPlaybackLifecycle::toggle_follow, shared with the icon-row
+        // button's synthesized chord and with nothing else. History-less,
+        // legal on a locked tab and under the grid-iterations lock; refused in
+        // the `h` view at that mode's allowlist.
+        playback_lifecycle.toggle_follow();
+        break;
     case GuiKeys::Z:
         // Toggle the Restrict undo to current view lamp (2026-09-04). The setter
         // is GuiInputHandler::set_restrict_undo_to_current_view, shared with the
@@ -9188,12 +9197,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live
-        // at its owner (run_center_command), through the centre keys' act,
-        // which writes the camera postures an explicit centring arms
+        // at its owner (run_center_command), through the centre key's act,
+        // which arms the hold posture an explicit centring arms
         // (run_center_key_command; AppState::camera_hold). This arm is
         // unreachable while the mode stands — handle_history_mode_key claims
         // `c` above this dispatch — so the owner's fork decides nothing for it.
-        run_center_key_command(/*arm_chase=*/false);
+        run_center_key_command();
         break;
     case GuiKeys::Home:
         // The trim-begin jump. The body is shared with End and with the two

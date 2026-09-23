@@ -1042,8 +1042,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // not fit — center_span_in_view, deleted with that ruling.)
     //
     // THE HOLD POSTURE (AppState::camera_hold) SURVIVES A RESTORE THAT MOVES
-    // NO CAMERA: undo and redo are ordinary viewport writes, clearing both
-    // postures only through the chokepoint when their camera moves, and least
+    // NO CAMERA: undo and redo are ordinary viewport writes, clearing the
+    // posture only through the chokepoint when their camera moves, and least
     // movement mostly does not. So the restore's land keeps the bit across
     // itself — the land is the subject coming back to where the entry left
     // it, not the user turning elsewhere — and the camera write after it

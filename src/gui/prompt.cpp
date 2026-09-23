@@ -74,8 +74,8 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // just asked for; the three-way Save / Discard / Cancel prompts above and
 // below are no such confirmation and keep the last button. `o` is OK's letter,
 // the load confirmation's. The stop below is every prompt's own opening act, not
-// something this one adds: playback stops, an A/B audition ends and a
-// chasing play's chase is spent, exactly as raising any other prompt does.
+// something this one adds: playback stops and an A/B audition ends, exactly as
+// raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Discard unsaved changes and reload?",

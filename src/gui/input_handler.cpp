@@ -903,8 +903,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
     //                              working zoom centered on the playhead;
-    //                              arms the hold posture (Shift+C, the same
-    //                              with the chase armed, is on_key's own arm)
+    //                              arms the hold posture
+    //   - f (no mods)            → toggle the follow lamp (toggle_follow)
     //   - 1/2/3 (no mods)        → the absolute view selectors (S+W / T+P /
     //                              T+W), the ONE road onto both view
     //                              axes: each composes the S/T chokepoint
@@ -1504,16 +1504,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         jump_to_value_source();
         return;
     }
-    // SHIFT+C — `c` with the chase posture armed (architect 2026-09-23;
-    // AppState::camera_chase). Here for the value pair's reasons: below the
-    // read-only gate, which admits it as navigation, and below the `h` view's
-    // claim, whose allowlist refuses it. The bare form is
-    // handle_plain_bare_keys' own arm; both run the centre keys' one act.
-    if (is_center_and_chase_key(key, mods)) {
-        run_center_key_command(/*arm_chase=*/true);
-        return;
-    }
-
     // Space is the sole playback toggle, and it is modifier-strict — every
     // modified Space but ONE is unbound (is_play_pause_key owns that test; the
     // one is Shift+Space, the A/B audition, the arm just below this one).
@@ -2859,7 +2849,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // The walk is markers-only (trim is not a cycle stop). The playhead lands on
     // the focused marker unconditionally, and the camera below does whatever
     // `frame` says — this body resolves nothing, asking no lamp, no camera
-    // posture and no mode (architect 2026-09-04). The chase never gated the
+    // posture and no mode (architect 2026-09-04). Follow never gated the
     // cycle either.
     // FOCUS RESOLUTION, kept for the `false` RETURN ALONE: a missing or
     // out-of-range focus aborts the WHOLE jump, stop included, and the land
@@ -2893,7 +2883,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // working zoom right after this returns, the Tab family sets nothing
     // (architect 2026-08-05, "no zoom on Tab", at every level since
     // 2026-09-22) — so this tail frames the stop at whatever level it was
-    // called at, and only `c`'s zoom write re-centres after it. The chase does
+    // called at, and only `c`'s zoom write re-centres after it. Follow does
     // not gate it either (architect 2026-07-19, reversing the earlier
     // follow-only rule).
     // center_viewport_on_playhead is the SOLE viewport write in this arm: it
@@ -2942,8 +2932,8 @@ void GuiInputHandler::run_center_command() {
     // run_center_key_command (since 2026-09-23 the one road of the live `c`
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
     // handle_history_mode_key — which must claim the key to keep it off the
-    // mode's allowlist — and Shift+C, and the writer of the camera postures a
-    // centring key arms), since 2026-08-28 the A/B audition's
+    // mode's allowlist — and the writer of the hold posture a centring key
+    // arms), since 2026-08-28 the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame (the rule and the ordering it owes the audition's sequence are at
@@ -3038,27 +3028,16 @@ void GuiInputHandler::run_center_command() {
     viewport.center_viewport_on_playhead();
 }
 
-// THE CENTRE KEYS' ACT (contract at the declaration). The chase is read
-// before the centring because the centring's camera write puts both postures
-// out at the chokepoint (clamp_viewport_start) and its focused landing may
-// stop the play: a chase that stood before `c` stands after it unless that
-// play ended under it, the stop being the chase's spend.
-// "A PLAY STOOD" IS THE STOP BODY'S OWN QUESTION, asked through its one owner
-// (GuiPlaybackLifecycle::project_session_stands) before and after the
-// centring — not the callback's playback.is_playing(), which reads false in
-// the sub-tick window after a natural end (or a lost device) while the
-// session still stands: a focused `c` there would take the play for a rest,
-// its landing's stop would spend the chase, and the restore would put it
-// back for a play that has already ended.
-void GuiInputHandler::run_center_key_command(bool arm_chase) {
-    const bool chase_before = app.camera_chase;
-    const bool play_stood   = playback_lifecycle.project_session_stands();
+// THE CENTRE KEY'S ACT (contract at the declaration). Follow's suspension is
+// read before the centring because the centring's camera write suspends it
+// at the chokepoint (clamp_viewport_start): a centring on the scanner is a
+// move onto follow's own subject, so the suspension stands after `c` exactly
+// as it stood before (AppState::follow_suspended).
+void GuiInputHandler::run_center_key_command() {
+    const bool suspended_before = app.follow_suspended;
     run_center_command();
-    app.camera_hold = true;
-    if (arm_chase ||
-        (chase_before &&
-         (!play_stood || playback_lifecycle.project_session_stands())))
-        app.camera_chase = true;
+    app.camera_hold      = true;
+    app.follow_suspended = suspended_before;
 }
 
 // IS THERE A VIEW FOR BARE `0` TO RETURN TO — the contract is at the
@@ -3153,12 +3132,13 @@ void GuiInputHandler::run_overview_command() {
     // stamp was re-expressed through the live map and the unstamped ceiling
     // ran the `c` command; both arms are deleted.)
     //
-    // THE CAMERA POSTURES (AppState::camera_hold / camera_chase): `0` arms
-    // neither and keeps neither. Both acting presses put both out through the
-    // one chokepoint clear in clamp_viewport_start (the camera they settle
+    // THE HOLD POSTURE AND FOLLOW (AppState::camera_hold /
+    // follow_suspended): `0` arms no hold and keeps none. Both acting presses
+    // put the hold out and suspend a following play's paging through the one
+    // chokepoint compare in clamp_viewport_start (the camera they settle
     // differs from the last one settled), and the restore's movement owner
     // puts HOLD out as well; no exemption is spelled here. The no-op writes
-    // nothing and so keeps both.
+    // nothing and so changes neither.
     //
     // THE TWO RECORDS are this function's alone: it is the stamp's one writer
     // and the whole-song state's one setter (both declarations, app_state.h).
@@ -3349,7 +3329,8 @@ void GuiInputHandler::run_span_framing_command() {
 // a swallowed no-op.
 //
 // THE STEPPED PAN: the samples_visible / kViewportPanStepDivisor stride through
-// the scroll_viewport funnel, whose clamp puts out the camera postures,
+// the scroll_viewport funnel, whose clamp puts out the hold posture and
+// suspends a following play's paging,
 // over the waveform and the top strip alike (every context
 // id, one route; the two bools below say only "a wheel-live surface"). up =
 // earlier, down = later. HISTORY OF THE SPELLING: plain from 2026-08-12 (the

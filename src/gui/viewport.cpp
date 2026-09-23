@@ -294,14 +294,14 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
             new_sample - (visible - std::max<int64_t>(one_px, 1));
         viewport_changed = true;
     }
-    // THE KEEP-VISIBLE EDGE-ALIGN KEEPS THE CHASE (architect 2026-09-23): a
-    // camera move onto the playhead is a move onto the chase's own subject,
-    // not the user looking elsewhere, so the chokepoint's clear inside the
-    // clamp is undone for that one bit (AppState::camera_chase). HOLD is the
-    // movement owners' to clear, and a reseat is not one of them.
-    const bool chase_before = app.camera_chase;
+    // THE KEEP-VISIBLE EDGE-ALIGN SUSPENDS NO FOLLOW (architect 2026-09-23):
+    // a camera move onto the playhead is a move onto follow's own subject,
+    // not the user looking elsewhere, so the chokepoint's suspension inside
+    // the clamp is undone for that one bit (AppState::follow_suspended). HOLD
+    // is the movement owners' to clear, and a reseat is not one of them.
+    const bool suspended_before = app.follow_suspended;
     clamp_viewport_start(app, audio);
-    app.camera_chase = chase_before;
+    app.follow_suspended = suspended_before;
     if (app.viewport_start_sample != old_vp) viewport_changed = true;
 
     if (viewport_changed) {
@@ -572,13 +572,15 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // the predictor and rebuilds the plate exactly.
     if (!final && !level_changed && !vp_changed) return;
 
-    // THE CHASE ENDS AT THE CLAMP ABOVE, NOT HERE (architect 2026-09-23): a
-    // camera this applier moves — either axis, the level included, since a
-    // song-anchored zoom carries the view off the scanner as a pan does — is
-    // a camera change at clamp_viewport_start, which puts out both postures
-    // (AppState::camera_hold). The zoom STEP rides this applier and keeps the
-    // HOLD posture at its own site (apply_zoom_step); the chase has no
-    // exemption here, so a zoom during a chase collapses it. `level_changed`
+    // FOLLOW IS SUSPENDED AT THE CLAMP ABOVE, NOT HERE (architect
+    // 2026-09-23): a camera this applier moves — either axis, the level
+    // included, since a song-anchored zoom carries the view off the scanner
+    // as a pan does — is a camera change at clamp_viewport_start, which puts
+    // out the hold and suspends a following play's paging
+    // (AppState::camera_hold, AppState::follow_suspended). The zoom STEP rides
+    // this applier and keeps the HOLD posture at its own site
+    // (apply_zoom_step); follow has no exemption here, so a zoom during a
+    // following play suspends its paging. `level_changed`
     // reports a real move, not a request: ALL THREE callers — the nav drag's
     // zoom phase (apply_nav_zoom_at), the two-finger touch-nav body
     // (apply_touch_nav_update) and the zoom step (apply_zoom_step) —
@@ -670,8 +672,8 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
 // the ceiling the whole song is visible. The applier pays what every zoom
 // pays (the synchronous rebuild, the damage, the predictor resync while
 // playing) and clears the whole-song bit on a level move; as a song-anchored
-// camera move it also collapses a chase standing, as the pinch and the
-// ctrl-drag do (the chokepoint's clear, AppState::camera_chase). IT KEEPS THE
+// camera move it also suspends a following play's paging, as the pinch and
+// the ctrl-drag do (the chokepoint's compare, AppState::follow_suspended). IT KEEPS THE
 // HOLD POSTURE (architect 2026-09-23): the step pivots on the viewport's
 // centre, so a subject an explicit centring put there stays there, and the
 // nudges that follow keep holding its column — the one zoom that is an
@@ -717,10 +719,11 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     app.viewport_start_sample += delta_samples;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) {
-        // EVERY PAN ENDS BOTH CAMERA POSTURES — the chase and the hold — at
-        // the clamp above, which is the one clear every viewport write passes
-        // (AppState::camera_hold); a pan that moved nothing (wall-saturated)
-        // settles the same camera and ends nothing. This is the pan funnel —
+        // EVERY PAN ENDS THE HOLD AND SUSPENDS A FOLLOWING PLAY'S PAGING at
+        // the clamp above, the one compare every viewport write passes
+        // (AppState::camera_hold, AppState::follow_suspended); a pan that
+        // moved nothing (wall-saturated) settles the same camera and ends
+        // nothing. This is the pan funnel —
         // PageUp/PageDown, the plain-wheel stepped pan, touchpad scroll and
         // the plain-drag grab-pan all land here.
         invalidate_waveform_area();
@@ -865,7 +868,7 @@ void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }
 
-// The chase during playback (AppState::camera_chase): when the scanner leaves the viewport, scroll
+// Follow's page during playback (AppState::follow): when the scanner leaves the viewport, scroll
 // so the scanner lands THE EDGE MARGIN in from the new view's LEFT edge
 // (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
 // architect finding the old 10 % lead "starts way too late"; the class's
@@ -879,14 +882,14 @@ void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
 // on screen anyway (Space's cursor launch is the one that a pan can have
 // carried out of view; a scrub click is a visible column already), while the
 // CAR'S play of the trim — the one launch that begins off screen by design —
-// asks for it only when the chase posture stands, so the camera stays where
+// asks for it only when the follow lamp is lit, so the camera stays where
 // the user left it.
 //
-// THE PAGE IS THE CHASE'S OWN CAMERA MOVE AND KEEPS THE CHASE (architect
-// 2026-09-23): its write passes the chokepoint, which puts out both camera
-// postures, and the chase is restored behind it (AppState::camera_chase). The
-// HOLD posture stays out — a page is a camera move not on the subject a
-// centring asked to keep.
+// THE PAGE IS FOLLOW'S OWN CAMERA MOVE AND SUSPENDS NOTHING (architect
+// 2026-09-23): its write passes the chokepoint, which puts out the hold and
+// suspends follow, and the suspension is restored behind it
+// (AppState::follow_suspended). The HOLD posture stays out — a page is a
+// camera move not on the subject a centring asked to keep.
 void Viewport::follow_scroll_if_needed() {
     const int64_t visible = samples_visible(app, audio);
     if (visible <= 0) return;
@@ -898,9 +901,9 @@ void Viewport::follow_scroll_if_needed() {
         const int64_t old_vp = app.viewport_start_sample;
         app.viewport_start_sample = std::max<int64_t>(
             0, target - viewport_edge_margin_samples(visible));
-        const bool chase_before = app.camera_chase;
+        const bool suspended_before = app.follow_suspended;
         clamp_viewport_start(app, audio);
-        app.camera_chase = chase_before;
+        app.follow_suspended = suspended_before;
         // Viewport actually moved — THE PAGE TAKES THE DISCRETE MOVE'S TAIL,
         // and with it THE SYNCHRONOUS REBUILD (architect 2026-09-02), the same
         // body every user-driven pan/zoom frame takes. It kicked the ASYNC

@@ -353,9 +353,10 @@ struct Viewport {
     // The changed-path tail the one-shot playhead camera moves share (the two
     // above and the two below).
     void finish_discrete_viewport_move();
-    // The chase's page-in (AppState::camera_chase): an offscreen subject
-    // lands the edge margin (kViewportEdgeMarginFraction, app_state.h) in
-    // from the LEFT edge. It keeps the chase across its own write.
+    // Follow's page-in (AppState::follow): an offscreen subject lands the
+    // edge margin (kViewportEdgeMarginFraction, app_state.h) in from the LEFT
+    // edge. It suspends no follow with its own write
+    // (AppState::follow_suspended).
     void follow_scroll_if_needed();
     // THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Tab walk's camera
     // in target view (marker_walk_landing_frame, app_state.h) and the

@@ -1218,8 +1218,8 @@ struct TrimDragState {
 //     still leaves the cursor somewhere ordinary), the crossing event folds
 //     the whole press→crossing delta (last_x stays at the press until then),
 //     and each event pans 1:1 through scroll_viewport's funnel — which is
-//     what ends a standing chase (the camera postures' one clear, at
-//     AppState::camera_hold). A PAN IS A PURE VIEWPORT MOVE: it moves
+//     what suspends a following play's paging (the camera chokepoint's
+//     compare, at AppState::camera_hold and AppState::follow_suspended). A PAN IS A PURE VIEWPORT MOVE: it moves
 //     NO playhead, hides NO overlay and clears NO selection, seeds nothing.
 // THE ZOOM MODIFIER IS CTRL, LIVE MID-GESTURE (architect 2026-08-14, the
 // one-model ruling: PAN BY DEFAULT, ADD THE ZOOM MODIFIER AT ANY TIME, DROP
@@ -1808,7 +1808,7 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus)
 // plus the view bar's THREE, row 3's two
-// TABS, row 4's TWENTY-TWO
+// TABS, row 4's TWENTY-THREE
 // view / mode / action buttons (the deleted toolbar row's four lead them since
 // the 2026-08-12 relayout; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS close them since 2026-08-18, with LOAD IN PLACE at the tail since
@@ -1835,10 +1835,9 @@ struct TrimBarPressSeed {
 // `h` history view's mode-scoped dead face, 2026-08-04, reaches all three rows
 // and is the one exception, at redesign_button_enabled below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped 2026-09-23 against kDropdownMenus and the chord table (42 chord
-// rows + 3 anchors = 45 = kRedesignButtonCount, re-counted 2026-09-23 after
-// the S+M selector's row left the chord table with the magnification level
-// markers column);
+// re-greped 2026-09-23 against kDropdownMenus and the chord table (43 chord
+// rows + 3 anchors = 46 = kRedesignButtonCount, re-counted 2026-09-23 when
+// the follow lamp's row came back);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
 // (NAVIGATION was a third from 2026-08-02 until its menu was deleted whole on
@@ -1978,8 +1977,8 @@ enum class RedesignButton {
     // region button leading the zoom four (2026-08-12, the architect's live
     // placement "after the trim"; the stepping pair out 2026-09-14 and back
     // 2026-09-22, and the Show trim region button gone that same day, so Zoom
-    // In leads), the two lamps behind them (Follow stood among them from
-    // 2026-08-27 until its deletion 2026-09-23), the last of which arrived
+    // In leads), the three lamps behind them (Follow, the middle one, was out
+    // for the hours of 2026-09-23), the last of which arrived
     // from the toolbar group later on 2026-09-04 — THE ITERATION GROUP, the pair back from the menu row later
     // that same day with FLATTEN joining them 2026-09-19, the
     // render-entry pair with THE READ-ONLY TOGGLE, and THE ROW'S LAST GROUP —
@@ -2078,14 +2077,17 @@ enum class RedesignButton {
     // the derived continuous curve since 2026-09-23), so there is no
     // piece-wide level for a button to step. Both buttons, the step owner and
     // the applier were deleted whole.)
-    // (FOLLOW — bare `f`, the lamp that armed the next play's chase — stood
-    // here, the zoom group's last member, from 2026-08-27 until the architect
-    // deleted it 2026-09-23 with its chord: the chase is a posture Shift+C,
-    // the Center button's shift press, arms with no face of its own
-    // (AppState::camera_chase). Its go-jump glyph left with it. It had come
-    // into this group the day the mass-marker group dissolved under it, the
-    // propagate and Series relocations having taken that group's other
-    // members to the Edit and Series menus.)
+    // FOLLOW (bare `f`) — a VIEWPORT-CLASS act like everything else in this
+    // group: the lamp that keeps the playing scanner in view is about where
+    // the camera is. A plain per-project session lamp (AppState::follow;
+    // architect 2026-09-23, reinstated the evening the Shift+C chase posture
+    // that had replaced it that morning was deleted): lit, every project play
+    // pages the viewport in with the scanner; it stays lit across plays and
+    // stops until `f` puts it out. It wears a lamp, reading the live bit its
+    // own chord flips. It GREYS IN THE `h` VIEW, whose allowlist does not name
+    // `f`, through the derived partition; it does NOT grey on a locked tab or
+    // under the grid-iterations lock, bare `f` being navigation.
+    IconFollow,
     // (The Center on next marker lamp on bare `n` stood here from 2026-09-04
     // to 2026-09-13, when the Tab walk's framing became a function of the zoom
     // at the landing, and the lamp, its chord and this box were deleted; since
@@ -2799,17 +2801,16 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above (2026-09-23, when
-// the view bar's S+M selector left row 1 with the magnification level markers
-// column): SIX in row 1 (the three menu anchors and the view bar's three),
-// two in row 3, TWENTY-TWO in row 4 and FIFTEEN in the bottom row — 45. Of
-// those, FORTY-TWO carry a chord in
+// FOLLOW came back to row 4): SIX in row 1 (the three menu anchors and the
+// view bar's three), two in row 3, TWENTY-THREE in row 4 and FIFTEEN in the
+// bottom row — 46. Of those, FORTY-THREE carry a chord in
 // kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 45;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -2883,6 +2884,7 @@ inline constexpr bool redesign_button_in_menu_row(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:
         case RedesignButton::IconZoomOriginal:
         case RedesignButton::IconIgnoreWaveformMagnification:
+        case RedesignButton::IconFollow:
         case RedesignButton::IconBpm:
         case RedesignButton::IconIter:
         case RedesignButton::IconFlatten:
@@ -4558,8 +4560,8 @@ struct AppState {
     bool    loading               = false;
 
     // Live working copy of the active view's state — exactly the three view
-    // fields immediately below, playhead / zoom / viewport (the camera
-    // postures after them are session postures, not per-tab mirrors). The SELECTION is NOT one of
+    // fields immediately below, playhead / zoom / viewport (the hold posture
+    // and the follow lamp after them are session state, not per-tab mirrors). The SELECTION is NOT one of
     // them: it lives here alone and is parked nowhere, see selected_markers.
     // This is an INTENTIONAL cache of the active view's per-view slot, not
     // accidental duplication: the paint path and the input handlers touch
@@ -4571,15 +4573,16 @@ struct AppState {
     int64_t playhead_cursor_sample = 0;
     double  zoom_level             = kWorkingZoomLevel;
     int64_t viewport_start_sample  = 0;
-    // THE TWO CAMERA POSTURES (architect 2026-09-23), which replaced the
-    // follow lamp and the Ctrl+Left / Ctrl+Right hold-column chord: camera
-    // behaviour that follows from what the user already did rather than from
-    // a lamp he has to light. Two INDEPENDENT bits, both SESSION POSTURES in
-    // the add_to_selection family (the family's record is at that declaration
-    // below): per project, DARK AT EVERY PROJECT OPEN (run_project constructs
-    // this AppState fresh), outside undo, not carried by `'`, in no sidecar
-    // and no settings vocabulary — and WITH NO FACE: no lamp, no icon, no
-    // card when either is armed or cleared.
+    // THE HOLD POSTURE AND THE FOLLOW LAMP (architect 2026-09-23). The hold
+    // replaced the Ctrl+Left / Ctrl+Right hold-column chord: camera behaviour
+    // that follows from what the user already did rather than from a key he
+    // has to hold. Follow is a lamp he lights (bare `f`). Both are SESSION
+    // state in the add_to_selection family (the family's record is at that
+    // declaration below): per project, DARK AT EVERY PROJECT OPEN
+    // (run_project constructs this AppState fresh), outside undo, not carried
+    // by `'`, in no sidecar and no settings vocabulary. The hold has NO FACE
+    // (no lamp, no icon, no card when it is armed or cleared); follow wears
+    // its icon-row lamp.
     //
     // THE CLEARS ARE SEATED AT CHOKEPOINTS, NOT IN A HAND-KEPT LIST. Every
     // viewport write — every writer of viewport_start_sample or zoom_level on
@@ -4587,8 +4590,10 @@ struct AppState {
     // before anything reads the camera, and that function compares the camera
     // it settles on with the one it settled on last (camera_posture_identity
     // below — the viewport start, the zoom, the active tab and the active
-    // audio view): a CHANGED CAMERA CLEARS BOTH BITS, and a tab switch or an
-    // S/T flip is always a changed camera. So a write that lands the camera where
+    // audio view): a CHANGED CAMERA CLEARS THE HOLD AND SUSPENDS FOLLOW FOR
+    // THE PLAY IN FLIGHT (follow_suspended below; the lamp itself is never
+    // touched there), and a tab switch or an S/T flip is always a changed
+    // camera. So a write that lands the camera where
     // it already was (a wall-saturated pan, a resize that rounds back onto
     // the same grid point) clears nothing, and no writer can forget the clear.
     // THE WRITER INVENTORY THE CLAIM RESTS ON, grepped 2026-09-23 (every
@@ -4613,11 +4618,11 @@ struct AppState {
     // THE EXEMPT WRITERS KEEP OR RE-ARM THEIR BIT AFTER THE CHOKEPOINT, each
     // at its own site: the centring acts re-arm HOLD after their centring;
     // the stepped zoom keeps HOLD across its write; the nudge keeps HOLD
-    // across its whole act; the chase's page-in, bare `c` and the reseat's
-    // keep-visible edge-align keep CHASE; and the A/B AUDITION keeps BOTH
-    // across its own camera writes (its `c`s and tab switches, GuiAbAudition::
-    // start and advance_after_natural_end), the act ignoring the postures as
-    // it ignored the follow lamp. Each is listed under its bit. Each writes
+    // across its whole act; follow's own page-in, bare `c` and the reseat's
+    // keep-visible edge-align keep FOLLOW_SUSPENDED as it stood; and the A/B
+    // AUDITION keeps HOLD across its own camera writes (its `c`s and tab
+    // switches, GuiAbAudition::start and advance_after_natural_end), the act
+    // ignoring the posture. Each is listed under its bit. Each writes
     // its bit back AFTER the chokepoint has rewritten its memory (below), so
     // the kept bit stands against the camera the writer left — the audition's
     // switched tab included — and the next change still clears it.
@@ -4632,7 +4637,7 @@ struct AppState {
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
     //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
-    //     and in the `h` view), Shift+C, the SOURCE-VIEW Tab walk's landing
+    //     and in the `h` view), the SOURCE-VIEW Tab walk's landing
     //     (cycle_marker_focus / cycle_history_diff_flag_focus on their
     //     MarkerLandingFrame::Center arm — the target-view walk lands with
     //     least movement and arms nothing), the paired march Ctrl+Shift+Tab
@@ -4663,7 +4668,7 @@ struct AppState {
     //     across that land and lets its camera write decide.
     //   * CLEARED by every other camera change (the chokepoint above: the
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
-    //     also through move_playhead_to when it moves the playhead), the chase's
+    //     also through move_playhead_to when it moves the playhead), follow's
     //     page-in — a camera move not on the subject — the least-movement
     //     landing when it scrolls, the span framer, the undo restore's camera
     //     when it scrolls or zooms, the tab and
@@ -4677,59 +4682,62 @@ struct AppState {
     //     any other at the chokepoint.
     bool    camera_hold            = false;
 
-    // CHASE — THE PLAY CAMERA. While it stands and PROJECT audio plays, the
-    // camera chases the scanner: the pre-paint hook's autopager
+    // FOLLOW — THE `f` LAMP (architect 2026-09-23, reinstated the evening
+    // the Shift+C chase posture that had replaced it that morning was
+    // deleted). A PLAIN LAMP, NEVER A ONE-SHOT: lit, every PROJECT play pages
+    // the viewport in with the scanner; it stays lit across plays and stops
+    // until `f` puts it out; dark, no play moves the camera. At rest it does
+    // nothing. THE PLAY CAMERA READS IT LIVE: the pre-paint hook's autopager
     // (Viewport::follow_scroll_if_needed through main.cpp, which asks this
-    // bit with playback live, the A/B audition not standing and no pointer or
-    // touch aim held) pages the viewport so the scanner lands the edge margin
-    // in from the left edge, and the car's launch asks LaunchCamera::PageIn
-    // off it (car_play_playback). ONE BIT, NOT ARMED-THEN-ENGAGED: the same
-    // bit armed at rest is the one the next play reads. The A/B audition and
-    // the render player ignore it — the autopager asks the audition's phase
-    // and returns under the player, neither of their stops spends it, and
-    // the audition keeps it across its own camera writes.
-    //   * SET by Shift+C ONLY (GuiInputHandler::run_center_key_command with
-    //     arm_chase, is_center_and_chase_key's one road).
-    //     At rest it runs `c` and arms the chase for the next project-audio
-    //     launch; during a play it centres as `c` does during a play and
-    //     chases from there; a second Shift+C re-centres and leaves it
-    //     standing.
-    //   * KEPT by its own page-in (follow_scroll_if_needed), by bare `c`
-    //     (a centring on the playhead, the chase's own subject — the scanner
-    //     during a play — unless its focused landing stops the play, which
-    //     spends it), and by the movement owners' keep-visible
-    //     edge-align (reseat_playhead_to), a camera move onto the same
-    //     subject.
-    //   * SPENT BY THE PLAY'S END: the one stop body
-    //     (GuiPlaybackLifecycle::stop_playback_if_playing, natural end
-    //     included) puts it out when a project session stood
-    //     (GuiPlaybackLifecycle::project_session_stands, the one owner the
-    //     acts that keep the chase across a possible stop — bare `c`, the A/B
-    //     audition's start — read too) — not at rest,
-    //     not at an A/B audition's stop, not at a render player stop — so it
-    //     is a ONE-SHOT, and a REFUSED launch spends nothing.
-    //   * CLEARED by every other camera change (the chokepoint above — the
-    //     pans, the drags, the pointer zooms AND THE STEPPED ZOOMS, `0`'s both
-    //     presses, the
-    //     undo restore's camera, the switches) and by the PLACEMENT CLICK
-    //     during a play (place_playhead_at_click_column): the DAW convention —
-    //     a deliberate viewport act during a chase means the user is looking
-    //     elsewhere, so the camera stays where he put it and the audio runs
-    //     on. A zoom during a chase collapses it.
-    bool    camera_chase           = false;
+    // bit with playback live, follow_suspended below dark, the A/B audition
+    // not standing and no pointer or touch aim held) pages the viewport so
+    // the scanner lands the edge margin in from the left edge, and the car's
+    // launch asks LaunchCamera::PageIn off it (car_play_playback). The A/B
+    // audition and the render player ignore it — the autopager asks the
+    // audition's phase and returns under the player.
+    //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
+    //     `f` and its icon-row button share. Nothing else lights or darkens
+    //     it: no stop, no launch, no pan, no placement click, no load in
+    //     place. Refused in the `h` view (off that mode's allowlist);
+    //     admitted under both locks (navigation).
+    bool    follow                 = false;
+
+    // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
+    // 2026-07-30, "every pan suppresses", kept for the reinstated lamp
+    // 2026-09-23): a camera change during a play means the user has taken the
+    // viewport away to look elsewhere, so the autopager stops snatching it
+    // back until that play ends. The lamp stays lit. Meaningful only while a
+    // project play runs; its value at rest is never read.
+    //   * SET by every CHANGED CAMERA at the chokepoint above
+    //     (clamp_viewport_start) — the pans (PageUp/PageDown, the plain wheel,
+    //     touchpad scroll, the grab-pan), the pointer and stepped zooms, `0`,
+    //     the undo restore's camera, the tab and view switches, a resize that
+    //     moves the camera. A PLACEMENT CLICK DURING A PLAY DOES NOT SET IT:
+    //     the click moves the playhead, not the camera, and the play pages on
+    //     from where it was placed.
+    //   * KEPT AS IT STOOD by follow's own page-in (follow_scroll_if_needed),
+    //     by bare `c` (a centring on the scanner, follow's own subject) and by
+    //     the movement owners' keep-visible edge-align (reseat_playhead_to),
+    //     each restoring it behind its clamp.
+    //   * CLEARED by every launch (the one launch body's success tail,
+    //     GuiPlaybackLifecycle::launch_playback_window, ahead of its page-in),
+    //     so each play starts following while the lamp is lit, and by the lamp's
+    //     lit edge (toggle_follow), which during a play resumes the paging at
+    //     once.
+    bool    follow_suspended       = false;
 
     // THE CAMERA THE CHOKEPOINT SETTLED ON LAST — the compare's memory
     // (clamp_viewport_start, main.cpp, its ONE reader and ONE writer; nothing
     // else touches it). Rewritten by that function whenever the camera it
-    // settles differs from it, which is also the moment it clears the two
-    // postures above. THE IDENTITY IS FOUR FIELDS, NOT TWO: the viewport start
+    // settles differs from it, which is also the moment it clears the hold
+    // and suspends follow above. THE IDENTITY IS FOUR FIELDS, NOT TWO: the viewport start
     // and the zoom, AND the active tab letter and the active audio view
     // (Sol review 2026-09-23). A tab switch or an S/T flip is a camera change
     // by rule even when its destination happens to settle the same two
     // numbers — both tabs at their default start and zoom, an identity map —
-    // so without the two letters such a switch would leave both postures
-    // standing and the other tab's next play would chase (or its nudges hold)
-    // on an arm made in the view just left. The two letters' writers are the
+    // so without the two letters such a switch would leave the hold standing
+    // and the other tab's nudges would hold on an arm made in the view just
+    // left. The two letters' writers are the
     // tab switch (GuiActiveViews::switch_active_tab_view_to), the S/T flip
     // (input_handler.cpp) and the load paths (file_loader.cpp), each passing
     // clamp_viewport_start after its write.
@@ -4745,7 +4753,7 @@ struct AppState {
     // RESTRICT UNDO TO CURRENT VIEW — the lamp on bare `z` (architect
     // 2026-09-04; to Viewport until 2026-09-22).
     // SESSION-ONLY AND NEVER SERIALIZED, which is what it SHARES with the
-    // camera postures above it: they are session postures, in no settings
+    // hold posture and the follow lamp above it: they are session postures, in no settings
     // vocabulary, uncarried by `'`, and dark at every project open.
     //
     // WHAT IT DOES: while it stands, an undo or redo whose restore would
@@ -6817,8 +6825,7 @@ struct AppState {
     //   DEAD — Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), RENDER (Ctrl+Alt+R, which
     //   left the allowlist with its shifted twin on 2026-08-08 when the
     //   checkpoint act moved onto Ctrl+S), copy (Ctrl+P), paste (Ctrl+Alt+P),
-    //   the bpm opener (`m`), iteration (`i`), listen (`l`) (follow, `f`,
-    //   until its deletion 2026-09-23), and
+    //   the bpm opener (`m`), iteration (`i`), follow (`f`), listen (`l`), and
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
@@ -10730,11 +10737,8 @@ inline bool iter_tie_toggle_actionable(const AppState& a) {
 // IS THE A/B AUDITION STANDING — the act's one running bit in both halves
 // (`phase`, which a REST carries exactly as a PLAY does), named once so the
 // sites that ask it read one spelling. Its readers each state their own
-// reason: the transport-session statement below, the pre-paint chase gate
-// (main.cpp, the audition not being chased) and the one stop body's chase
-// spend (GuiPlaybackLifecycle::stop_playback_if_playing, the act's stops
-// spending nothing). The follow lamp's face read it until the lamp's
-// deletion 2026-09-23.
+// reason: the transport-session statement below and the pre-paint follow
+// gate (main.cpp, the audition's plays not being paged).
 inline bool audition_sequence_standing(const AppState& a) {
     return a.audition_sequence.phase != GuiAuditionSequence::Phase::Idle;
 }
@@ -12178,7 +12182,7 @@ enum class MarkerLandingFrame { Center, LeastMovement, NoFrame };
 // (handle_tab_switch_keys) and the `h` view's Tab arm over its diff-flag
 // cycle (handle_history_mode_key), which forks on the same live audio view.
 // Nothing else reads it: the paired march states NoFrame and runs `c`, and
-// undo's restore camera, the chase, `c`, Shift+J and the audition are their
+// undo's restore camera, follow's page-in, `c`, Shift+J and the audition are their
 // own rulings. THE CENTRE ARM ARMS THE HOLD POSTURE (AppState::camera_hold) at
 // the two walk bodies; the least-movement arm arms nothing.
 inline MarkerLandingFrame marker_walk_landing_frame(const AppState& a) {
@@ -13720,8 +13724,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     the TRIM REGION toggle (2026-08-16 —
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the VIEW BAR'S THREE
-//     (bare 1/2/3), the zoom four, follow (until
-//     2026-09-23), the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
+//     (bare 1/2/3), the zoom four, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
 //     not: the lamp is a posture switch that authors nothing, so its own chord
@@ -14169,6 +14172,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // being off that mode's allowlist as `f` and `z` are.
         case RedesignButton::IconIgnoreWaveformMagnification:
             return waveform_magnification_toggle_actionable(a);
+        // FOLLOW MIRRORS NOTHING (architect 2026-09-23): bare `f` flips the
+        // lamp on any loaded piece, at rest and during a play alike, and both
+        // locks admit it (navigation, not authored content). Its one refusal
+        // is the `h` view's, whose allowlist does not name `f`, and the
+        // derived partition above greys it there.
+        case RedesignButton::IconFollow:
+            return true;
         // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP MIRRORS NOTHING (2026-09-04),
         // the next on this answer: bare `z` toggles the posture in either
         // direction on any loaded piece and the lock admits it — the lamp
@@ -15255,7 +15265,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 1's three view-bar
 // buttons, row 3's tabs and row 4's TOGGLES — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
-// 2026-09-04; follow (until 2026-09-23), iteration, the TRIM REGION toggle (a
+// 2026-09-04; follow, iteration, the TRIM REGION toggle (a
 // toggle again since 2026-08-18, its lamp reading the overlay's visibility),
 // read-only, history, and the CUMULATIVE reading, which came back to this row
 // with the history group on 2026-08-18. THE
@@ -15323,10 +15333,12 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // reading the very axis its own chord flipped. The architect deleted
         // both buttons whole with bare `t`/`p`; the view bar's three above
         // are the axes' one remaining face.)
-        // (FOLLOW'S LAMP stood here — the arm at rest, the chase during a
-        // project play — from 2026-09-12 until the architect deleted the
-        // button 2026-09-23: the camera postures that replaced it have no
-        // face, AppState::camera_hold.)
+        // FOLLOW'S LAMP (architect 2026-09-23): the same toggle pattern,
+        // reading the live bit bare `f` flips. It reports the lamp, not
+        // whether the play in flight is paging — a pan during a play suspends
+        // that play's paging with the lamp still lit (AppState::follow).
+        case RedesignButton::IconFollow:
+            return a.follow;
         // The restrict-undo-to-current-view lamp (2026-09-04): the same toggle
         // pattern, reading the live bit bare `z` flips, so the lit
         // face and the refusal cannot drift.
@@ -15701,16 +15713,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // window and never get back out of it — and the drop's rule puts it on the
 // button whose bare form is `0`. The plain press never greys, so the face
 // needs no twin term; the long press is the tablet's road.)
-// (CENTER JOINED 2026-09-23 with Shift+C (architect): its plain press is bare
-// `c` and its shifted press centres the same way and ARMS THE CHASE
-// (AppState::camera_chase) — the chase's one setter, the follow lamp that
-// armed it until that day having been deleted with its button. The drop's
-// rule once more, and the long press is the tablet's road to the chase. The
-// shifted press always differs from the plain one, so its line never drops.)
+// (Center admitted shift for the hours of 2026-09-23 that Shift+C armed the
+// chase posture; the posture, the chord and the admission were deleted that
+// evening when the follow lamp came back.)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
-           b == RedesignButton::IconZoomOriginal ||
            b == RedesignButton::TabA ||
            b == RedesignButton::TabB ||
            b == RedesignButton::HistoryOlder ||
@@ -15983,15 +15991,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // there). TWO OF THE FOUR ARE STATE-FREE HERE ONLY (2026-09-01, the
         // overload): Full zoom out at the ceiling is the recall, and Center
         // with nothing focused centers on the playhead — each press does
-        // something, and the overload names which. TWO CARRY A SECOND LINE.
+        // something, and the overload names which. ONE CARRIES A SECOND LINE,
         // FULL ZOOM OUT (2026-09-22): its shifted twin is
         // Shift+0, RESET TRIM, the words the Show trim region button's line
         // carried for the same act until that button's deletion the same day;
         // the overload drops it over a full trim window, where the maximizer's
-        // own guard refuses. CENTER (2026-09-23): its shifted twin is Shift+C,
-        // the centring that also arms the chase (AppState::camera_chase), and
-        // the line stands in both of the overload's names, the shifted press
-        // always doing something the plain one does not.
+        // own guard refuses.
         case RedesignButton::IconZoomIn:
             return {"Zoom In (=)", nullptr};
         case RedesignButton::IconZoomOut:
@@ -15999,13 +16004,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconZoomFitBest:
             return {"Full Zoom Out (0)", "Press Shift to reset the trim."};
         case RedesignButton::IconZoomOriginal:
-            return {"Center on Focus (C)",
-                    "Press Shift to follow the playhead."};
+            return {"Center on Focus (C)", nullptr};
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22), one
         // line: bare `[` toggles and has no shifted twin; the name is the
         // toggle's.
         case RedesignButton::IconIgnoreWaveformMagnification:
             return {"Toggle Ignore Waveform Magnification ([)", nullptr};
+        // THE FOLLOW LAMP (architect 2026-09-23), one line: bare `f` toggles
+        // and has no shifted twin; the name is the toggle's.
+        case RedesignButton::IconFollow:
+            return {"Toggle Follow (F)", nullptr};
         // THE UNDO POSTURE'S LAMP (2026-09-04), one line: bare `z` toggles and
         // has no shifted twin. It NAMES THE TOGGLE like every lamp — the
         // state is the lamp's to tell — and it names the SWITCH, never what
@@ -16665,8 +16673,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // inside it).
         case RedesignButton::IconZoomOriginal:
             if (!center_command_lands_on_focus(a))
-                return {"Center on Playhead (C)",
-                        redesign_button_tooltip(b).line2};
+                return {"Center on Playhead (C)", nullptr};
             break;
         // THE TWO SKIPS: the SECOND LINE DROPS where the bare and the
         // whole-piece landings coincide, AND THE COMPARE IS THE LANDING
