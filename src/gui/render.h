@@ -4,6 +4,7 @@
 #include "magnificationlevelmarkers.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
 #include "gui_input.h"        // kHoldBeatMs for the tooltip dwell
+#include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 
 #include <cairo/cairo.h>
 #include <cmath>
@@ -1464,7 +1465,7 @@ void   set_gui_scale_percent(int percent);
 
 // THE LIVE PERCENT ITSELF, for the one thing a factor cannot serve: a CACHE
 // FINGERPRINT FIELD. The scale is an input to pixels the way an inset or a
-// gain profile is, and a fingerprint keys its inputs BY FIELD rather
+// gain field is, and a fingerprint keys its inputs BY FIELD rather
 // than through whatever else happens to move with them — an integer percent is
 // what makes that compare exact, where the factor is a double and a derived
 // dimension is a coincidence. Nothing paints through this: every painted
@@ -2776,29 +2777,30 @@ struct WaveformBasis {
 // through, and the SET pixels are what the one remaining after-the-fact
 // recolor reads: paint_region_ink masks kWaveformRegionInk through this same
 // alpha inside the region's column span, leaving the plate itself untouched.
-// THE VISUAL MAGNIFICATION is `gain_profile`: a column's level's gain (below)
-// multiplies the column's raw min/max, and the product is CLAMPED to [-1, 1]
-// before they become rows, which is the whole of it — one multiply at the tip
-// mapping, and nothing else in this painter moves (the column grid, the >=1px
-// floor, the carried-endpoint chain and the aliased-only writer are all
-// untouched). A loud passage therefore clips FLAT at the lane's edges while its
-// troughs still dip, which is the intended look: the picture exists to make a
-// quiet passage readable, and a marker goes on a transient rather than in a
-// sustain.
+// THE VISUAL MAGNIFICATION is `gain_or_null`: a column's gain multiplies the
+// column's raw min/max, and the product is CLAMPED to [-1, 1] before they
+// become rows, which is the whole of it — one multiply at the tip mapping,
+// and nothing else in this painter moves (the column grid, the >=1px floor,
+// the carried-endpoint chain and the aliased-only writer are all untouched).
+// A loud passage therefore clips FLAT at the lane's edges while its troughs
+// still dip, which is the intended look: the picture exists to make a quiet
+// passage's onsets readable.
 //
-// THE GAIN IS A FUNCTION OF SOURCE TIME (architect approval 2026-09-14), on
-// the waveform picture — this plate, which takes the profile
-// effective_waveform_gain_profile (warp_frame_map_view.h) builds from the
-// magnification level markers column.
-// A COLUMN TAKES THE LEVEL OF THE
-// SECTION CONTAINING ITS FIRST SOURCE FRAME s0 — the cell rule (CLAUDE.md
-// Rounding): the column's span [s0, s1) is a cell, and the section that contains
-// its origin owns it, so a section boundary inside a column never widens the
-// louder or the quieter side by more than that column. s0 is the same integer
-// the peak read takes, a pure function of the GLOBAL column index (the
-// authoring lattice below) in both views — target view maps the column through
-// the warp map before the lookup — so the lookup is pan-invariant by
-// construction.
+// THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
+// source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).
+// A COLUMN TAKES THE GAIN AT ITS CENTRE SOURCE FRAME, (s0 + s1) / 2 — one
+// evaluation per plate column (waveform_gain_at, linear between the curve's
+// hops). s0 and s1 are the same integers the peak read takes, pure functions
+// of the GLOBAL column index (the authoring lattice below) in both views —
+// target view maps the column through the warp map to its source span first —
+// so the lookup is pan-invariant by construction and nothing forks on the
+// view. At a coarse zoom a plate column covers many working-zoom columns whose
+// gains differ; the pixel takes the gain at its centre rather than a
+// per-working-column product before the min/max reduction, because the
+// pyramid reduces RAW peaks (a gained pyramid would be a second pyramid,
+// rebuilt on every lamp flip), the curve varies on the window's 1.5 s scale so
+// a pixel's spread of gain is small at every zoom this product shows, and the
+// plate is display-only.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate is pixels, playback
@@ -2806,9 +2808,9 @@ struct WaveformBasis {
 // this parameter anywhere.
 //
 // It is a PARAMETER rather than a read of app state so this primitive stays
-// free of it (the worker thread renders from a job snapshot, which copies the
-// profile as it copies the warp map). An empty profile is the untouched
-// picture.
+// free of it (the worker thread renders from a job snapshot; the curve itself
+// is immutable after load, so the job carries only whether to apply it).
+// NULL is the untouched picture, gain 1.0 everywhere.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
@@ -2816,23 +2818,8 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
-                     const WaveformGainProfile& gain_profile,
+                     const WaveformGainCurve* gain_or_null,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
-
-// THE ONE OWNER OF THE GAIN — the only place a waveform magnification LEVEL
-// becomes a multiplier, and a GUI fact rather than a grammar one: the picture
-// is the only thing that ever wants it, so the marker grammar owns the level's
-// range (kMarkerMagnificationMax, marker_magnification.h) and this owns what
-// the level means.
-//
-// The ladder is ×2 PER STEP: gain = 2^level, so every step doubles. Over the
-// grammar's bracket that is 1, 2, 4, 8, 16 — four steps from the untouched
-// picture to the cap, and capped where the architect stops wanting more (×8
-// already clips the quietest classical passages, and one step past it covers
-// the quietest masters).
-inline double waveform_magnification_gain(int level) {
-    return std::exp2(static_cast<double>(level));
-}
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering), in one solid `color` end

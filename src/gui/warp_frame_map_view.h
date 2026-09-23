@@ -182,26 +182,24 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // frame reddens every member, WHATEVER THEIR DISABLED BITS — the other two
 // columns' participation-blind coincidence (3). It is this column's WHOLE red
 // cue, and it is WIDER THAN THE COLLAPSE IT CUES, exactly as the warp cue is
-// wider than the warp collapse: the picture's own rule
-// (build_waveform_gain_profile, magnificationlevelmarkers.h) collapses a run to
-// the neutral LEVEL 0 counting ENABLED members alone, while this set reddens a
-// run of 2+ ROWS whether or not two of them are enabled. `red` stays the
-// painter's (the magnification level flag pass, its one reader), and SINCE
-// 2026-09-16 THE SET CARRIES A `collapsed` SUBSET BESIDE IT, the warp set's
-// shape (architect 2026-09-16, the level step refusing a coincident-collapse
-// member as the tempo step does): the ENABLED members of every run the
-// picture collapses, the classifier's verdict
-// (magnification_level_collapse_members, magnificationlevelmarkers.h — the
-// one run walk the profile builder takes, so it is the picture's own answer)
-// filled in the same rebuild as `red` under the same key. ITS READERS are the
-// level step's kind refusal (magnification_level_step_kind_refusal_for), the
-// group step's wall scan and the Up / Down face through it — the act and face
-// readers that must NOT read `red`, whose participation-blind coincidence
-// (a marker sharing its frame with a DISABLED one) collapses nothing, so a
-// refusal on `red` would refuse a picture-live step. Unlike the warp subset it
+// wider than the warp collapse: the column's level-per-frame rule
+// (magnificationlevelmarkers.h) collapses a run to the neutral LEVEL 0
+// counting ENABLED members alone, while this set reddens a run of 2+ ROWS
+// whether or not two of them are enabled. `red` stays the painter's (the
+// magnification level flag pass, its one reader), and SINCE 2026-09-16 THE SET
+// CARRIES A `collapsed` SUBSET BESIDE IT, the warp set's shape (architect
+// 2026-09-16, the level step refusing a coincident-collapse member as the
+// tempo step does): the ENABLED members of every run the rule collapses, the
+// classifier's verdict (magnification_level_collapse_members,
+// magnificationlevelmarkers.h — the one run walk the rule takes) filled in the
+// same rebuild as `red` under the same key. ITS READERS are the level step's
+// kind refusal (magnification_level_step_kind_refusal_for), the group step's
+// wall scan and the Up / Down face through it — the act and face readers that
+// must NOT read `red`, whose participation-blind coincidence (a marker sharing
+// its frame with a DISABLED one) collapses nothing. Unlike the warp subset it
 // holds ENABLED rows alone (every reader here composes the enabled test, so
 // the classifier answers it once); a disabled row inside a collapsed run is no
-// member for the picture and steps like any disabled marker. Keyed on the
+// member for the rule and steps like any disabled marker. Keyed on the
 // magnification level store generation alone; the committed-store rule of
 // the two siblings, which is what lets the per-tick Up / Down face read it.
 struct MagnificationLevelRedFlagCache {
@@ -209,7 +207,7 @@ struct MagnificationLevelRedFlagCache {
     long long markers_gen = -1;
     std::set<int> red;   // red magnification level store indices — PAINT only
     // THE COLLAPSE MEMBERS ALONE — enabled rows of a run with 2+ enabled rows,
-    // the subset of `red` the picture actually collapses; the act and face
+    // the subset of `red` the rule actually collapses; the act and face
     // readers' set (the contract is above).
     std::set<int> collapsed;
 };
@@ -217,96 +215,48 @@ struct MagnificationLevelRedFlagCache {
 const MagnificationLevelRedFlagCache& magnification_level_red_flag_set_cached(
     const AppState& app);
 
-// THE WAVEFORM GAIN PROFILE with its hash — the shape every waveform picture
-// takes (warpmarkers.h carries the profile's step-function contract). The
-// HASH alone keys the picture cache (the plate fingerprint), so a gain-only
-// change re-renders through the fingerprint
-// without touching the displayed basis.
-struct WaveformGainProfileCache {
-    bool                valid       = false;
-    long long           markers_gen = -1;
-    WaveformGainProfile profile;
-    uint64_t            hash        = 0;
-    // THE DRAG SLOT'S TWO EXTRA KEY FIELDS (waveform_gain_profile_drag_cached,
-    // below) — the dragged marker's store index and its commit-rounded
-    // proposal. The resting slot neither writes nor reads them.
-    int                 dragged_marker = -1;
-    int64_t             dragged_frame  = 0;
-};
-
-// THE PROFILE, memoized per MAGNIFICATION LEVEL MARKER STORE GENERATION
-// (architect 2026-09-15): build_waveform_gain_profile
-// (magnificationlevelmarkers.h, the step rules) over the LIVE store, with its
-// hash. The profile is a pure function of that store's frames, levels and
-// disabled bits, and every road that changes any of them bumps the
-// generation — the load, the three loads in place and the undo/redo restore
-// all assign through the store's mutators — so no road needs a call of its
-// own to re-key it. Its ONE reader is effective_waveform_gain_profile below.
-const WaveformGainProfileCache& waveform_gain_profile_cached(
-    const AppState& app);
-
-// THE GAIN PROFILE WHILE A MAGNIFICATION LEVEL MARKER IS DRAGGED (architect
-// 2026-09-15: the magnified sections follow the drag, not the release). A
-// marker drag leaves the live store untouched until its commit (DragState), so
-// the resting slot above cannot see the hand. This SECOND SLOT builds the
-// profile from a COPY of the magnification level store with the dragged marker
-// (DragState::dragging_markers[0]) at DragState::proposed_authored_frame — the
-// proposal converted by the commit's own conversion — re-sorted by
-// reorder_markers_by_time exactly as commit_drag re-sorts, so every motion
-// shows the picture the release would leave. Keyed (store generation, dragged
-// index, proposed frame), so the plate inputs and the
-// gain kick's hash share ONE build per distinct proposal. A proposal still at
-// the marker's stored frame answers the resting slot itself (same store, same
-// profile). Its one reader is effective_waveform_gain_profile, and only while
-// a MAGNIFICATION-LEVEL-column drag stands (DragState::drag_mode 'M') — the
-// other two columns' drags move no gain boundary at all.
-const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
-    const AppState& app);
-
-// THE PROFILE EVERY WAVEFORM PICTURE TAKES, AND THE ONE GAIN GATE.
-// MAGNIFICATION IS A MANUAL OVERRIDE IN SOURCE VIEW AND ABSENT IN TARGET VIEW
-// (architect 2026-09-22), two terms:
+// WHETHER THE WAVEFORM PICTURE IS MAGNIFIED, AND THE ONE GAIN GATE. The gain
+// itself is the continuous curve derived from the source at load
+// (GuiAudio::gain_curve, derive_waveform_gain in waveform_gain.h, which owns
+// the rule); this answers only whether a plate applies it (architect
+// 2026-09-22, retold for the continuous gain 2026-09-23), two terms:
 //
 //   TARGET view ('T') — flat, whatever the lamp says.
-//   SOURCE view ('S') — the live profile UNLESS the Ignore Waveform
-//                       Magnification lamp (AppState::ignore_waveform_magnification,
-//                       bare `[`, dark at every project open) is lit, then flat
-//                       — on every column and at every zoom.
-//
-// The live answer is the magnification level store's memoized profile
-// (waveform_gain_profile_cached above); flat is the EMPTY profile, level 0
-// everywhere, hash 0.
+//   SOURCE view ('S') — magnified UNLESS the Ignore Waveform Magnification
+//                       lamp (AppState::ignore_waveform_magnification, bare
+//                       `[`, dark at every project open) is lit, then flat —
+//                       on every column and at every zoom.
 //
 // WHY: magnification serves FINE HORIZONTAL PLACEMENT against the audio, and
 // the SOURCE views are what author against it, while the target view's own
 // column, the phase resets, moves on the HOP LATTICE in quantized steps that no
-// superfine picture helps — so target view never shows it. Inside source view
-// the architect chose a switch over any derivation: magnified by default, and
-// flattening it is his call at the moment, not a function of the zoom or the
-// column. (Superseded: the audio-view rule of 2026-09-17, magnified whenever
-// source view stood; and the view-and-zoom gate of 2026-09-19, the M column at
-// every zoom and every other source column at the working zoom or finer.)
+// superfine picture helps — so target view never shows it.
 //
-// NO MODE TERM — the `h` view follows the audio view it stands in, its plate
-// showing the LIVE store's gain, never the viewed checkpoint's. ONE place, so
-// the picture caches' existing hash keys re-render on every flip with no
-// per-caller code: the plate fingerprint carries this hash beside the viewport
-// geometry, the S/T switch ends in its own kick_waveform_sync and the lamp's
-// one setter kicks when the hash moved (a live store with no enabled level
-// above 0 is hash 0 as well, and there the two answers are rightly the same
-// picture). DISPLAY-ONLY: the M column's authoring, its red cue, the drag
-// slot's own cache and the render never read this answer. THREE READERS,
-// RE-GREPPED 2026-09-22: the plate's render inputs, which is also where the
-// fingerprint's gain field is captured (compute_waveform_render_inputs,
-// waveform_cache.cpp); the displayed plate's staleness compare against that
-// field (GuiPaintHandler::displayed_plate_gain_is_stale); and the gain kick's
-// hash (Viewport::waveform_gain_hash). While a MAGNIFICATION-LEVEL-column
-// marker drag stands with the lamp dark — source view with the M column active,
-// that column existing in no other view — the live answer is the DRAG SLOT's
-// (waveform_gain_profile_drag_cached, above), so the picture shows the store
-// as the release would leave it.
-const WaveformGainProfileCache& effective_waveform_gain_profile(
-    const AppState& app);
+// THE `[` LAMP IS THE ONLY EXCEPTIONS ROAD (architect 2026-09-23): no
+// per-passage override, no third state and no drawing of the gain. A passage
+// the derived gain serves badly is looked at flat, and the dynamics are what
+// the audio and the A/B tabs carry — both tabs always show the same picture,
+// the curve being a function of the one source.
+//
+// NO MODE TERM — the `h` view follows the audio view it stands in (the lamp
+// is dead there by its allowlist), its plate being the live plate. DISPLAY-
+// ONLY: no sample, no render input and no render fingerprint field reads it.
+bool waveform_magnified(const AppState& app);
+
+// THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
+// (kWaveformGainVersion) while the picture is magnified, 0 while it is flat —
+// the curve being a pure function of the one immutable source, the version
+// alone names it. ONE PLACE, so the picture caches' existing hash keys
+// re-render on every flip with no per-caller code: the plate fingerprint
+// carries it beside the viewport geometry, the S/T switch ends in its own
+// kick_waveform_sync and the lamp's one setter kicks when it moved. THREE
+// READERS, re-grepped 2026-09-23: the plate's render inputs, which is also
+// where the fingerprint's gain field is captured
+// (compute_waveform_render_inputs, waveform_cache.cpp); the displayed plate's
+// staleness compare against that field
+// (GuiPaintHandler::displayed_plate_gain_is_stale); and the gain kick's hash
+// (Viewport::waveform_gain_hash).
+uint64_t waveform_gain_fingerprint(const AppState& app);
 
 class GuiAudio;
 

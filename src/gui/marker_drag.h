@@ -30,13 +30,10 @@ struct GuiTargetRender;
 // GuiWarpMarkersOps, GuiPhaseResetMarkersOps and
 // GuiMagnificationLevelMarkersOps.
 //
-// ITS ONE PER-COLUMN ASYMMETRY IS THE PICTURE (2026-09-15): a magnification
-// level marker is a section boundary of the waveform's gain profile, so an M
-// drag's MOTION writes DragState::proposed_authored_frame for the profile's
-// drag slot and kicks a synchronous plate render when a boundary moved, and its
-// COMMIT triggers no preview at all (the column reaches no render input). The
-// other two columns write that field too — one write is cheaper than a fork —
-// and nothing reads it for them. Under the frozen-coord
+// ITS ONE PER-COLUMN ASYMMETRY IS THE PREVIEW (2026-09-15): an M drag's
+// COMMIT triggers no preview at all (the column reaches no render input), and
+// since 2026-09-23 its motion moves no pixel of the waveform either (the
+// picture's gain is the curve derived from the source). Under the frozen-coord
 // regime, motion writes app.drag.moveable_times only — the live per-list
 // stores stay untouched until commit_drag does the write-back.
 //

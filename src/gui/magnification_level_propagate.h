@@ -2,13 +2,10 @@
 
 #include "notifications.h"
 #include "app_state.h"
-#include "magnification_auto_detect.h"   // the generate act's parked breakpoints
-#include "playback_lifecycle.h"          // the generate act's modal stop
 #include "selection.h"    // the paste's membership replace rides the chokepoint
 #include "undo.h"
 #include "viewport.h"
 
-#include <optional>
 #include <set>
 #include <vector>
 
@@ -21,9 +18,7 @@ struct GuiInputHandler;
 // Ctrl+M and Ctrl+Alt+M, both of them S+M acts — the column exists in source
 // view alone (active_column_authoring_allowed's 'M' arm), so its own marker
 // view is the whole gate and the audio view is 'S' by construction at every
-// press. A THIRD S+M ACT SHARES THE STRUCT since 2026-09-22 — GENERATE
-// MAGNIFICATION LEVEL MARKERS on Ctrl+Alt+Shift+M, stated at the end of this
-// block — for the landing it reuses, not for any part of the model below.
+// press.
 //
 // WHAT IT IS, AND WHY IT IS NOT ITS SIBLING (architect 2026-09-19). The phase
 // reset propagate (PhaseResetPropagate, phase_reset_propagate.h) carries a
@@ -67,57 +62,25 @@ struct GuiInputHandler;
 //
 //   * THERE IS NO STATE PASTE. The sibling's Ctrl+Alt+Shift+P aligns the
 //     destination's EXISTING resets to the clipboard, block by block; with no
-//     block walk here there is nothing to hook a state onto. The letter M's
-//     THIRD CHORD, Ctrl+Alt+Shift+M, is therefore NOT a state paste: since
-//     2026-09-22 it is GENERATE MAGNIFICATION LEVEL MARKERS, below.
+//     block walk here there is nothing to hook a state onto, so the letter
+//     M's third chord, Ctrl+Alt+Shift+M, is unbound.
 //
 //   * IT TAKES NO GuiTargetRender, the authoring cluster's rule
 //     (GuiMagnificationLevelMarkersOps, magnificationlevelmarkers_ops.h): a
 //     level is display-only, so no act here may dispatch a preview, and the
 //     absence of the member is the enforcement. It takes the audio itself
-//     instead, for the song end and for the stop report's timestamp. WHAT IT
-//     OWES THE PICTURE it pays through the LANDING: every run that
-//     materialized a marker ends in land_paste_in_source_view, whose
-//     kick_waveform_sync is the UNCONDITIONAL synchronous rebuild — the
-//     store's generation re-keys the gain profile
-//     (waveform_gain_profile_cached, warp_frame_map_view.h), so that rebuild
-//     reads the new gain with no gain-change kick of its own, exactly as the
-//     three loads in place and the undo restore do (the inventory is at
-//     Viewport::kick_waveform_sync).
+//     instead, for the song end and for the stop report's timestamp. THE
+//     STORE MOVES NO PIXEL of the waveform (the picture's gain is the curve
+//     derived from the source, GuiAudio::gain_curve), so what a paste owes
+//     the screen is the flag lane: every run that materialized a marker ends
+//     in land_paste_in_source_view, whose kick_waveform_sync is the
+//     UNCONDITIONAL synchronous rebuild and its flag-cache tail (the
+//     inventory is at Viewport::kick_waveform_sync).
 //
 // WHAT IS THE SIBLING'S, CLAUSE FOR CLAUSE: the selection spend on both acts
 // (selection_consumed, past every refusal) and the paste ENDING WITH THE
 // CREATED MARKERS SELECTED, the first focused and the playhead landed on it.
 //
-// GENERATE MAGNIFICATION LEVEL MARKERS (architect 2026-09-22), Ctrl+Alt+Shift+M
-// and the Edit menu's first row, an M-column act like the two above. It LIVES
-// HERE rather than in a struct of its own because it needs exactly what this
-// one already holds — the audio (for the samples), no GuiTargetRender, and the
-// paste's landing, which it reuses rather than clones. THE RULE, whole:
-//   * THE ANALYSIS ALWAYS RUNS OVER THE FULL SONG, at the press and
-//     synchronously (detect_magnification_levels, magnification_auto_detect.h,
-//     the rule's owner), whatever the trim is.
-//   * THE REPLACEMENT: every magnification level marker, enabled or disabled,
-//     whose frame lies INSIDE THE ACTIVE TAB'S TRIM (`app.trim` — the M
-//     store both A/B tabs share, so it is the ACTIVE TAB's window that
-//     bounds the act, not a store term of its own) is deleted, and exactly
-//     the detected breakpoints whose frame lies inside that trim are
-//     inserted, all enabled. Nothing else: no patching at the trim's edges
-//     and no empty-trim case — if nothing is detected inside, the markers
-//     there are simply deleted. Membership is the trim store's own inclusive
-//     whole-frame pair (trim_contains_source_frame, app_state.h), so the full
-//     window — the old "unset" — replaces the whole column.
-//   * IT ASKS FIRST: an OK / Cancel prompt raised on OK ("Replace the N
-//     magnification levels in the trim with M generated ones?"), the counts
-//     being why the detection runs at the press. The detected in-trim list is
-//     PARKED on this struct for the answer and dropped on both close roads.
-//   * ON OK: ONE undo entry, op_mode 'M' — or NONE when the column comes out
-//     row-equal to what it was (magnification_level_rows_equal), so a re-run
-//     that regenerates what is there leaves no invisible entry and no dirty
-//     mark. The generated markers END SELECTED through the paste's landing
-//     (land_paste_in_source_view); with none generated the selection rests
-//     empty and the playhead stays. The selection is spent. No card: the
-//     prompt said what would happen and the flags show it.
 struct MagnificationLevelPropagate {
     AppState&           app;
     Viewport&           viewport;
@@ -136,11 +99,6 @@ struct MagnificationLevelPropagate {
     // must run through a Selection mutator or the shift anchor outlives it
     // (Selection::replace_selection carries the whole reasoning).
     Selection&            selection;
-    // THE GENERATE ACT'S MODAL STOP, held for one line: raising its
-    // confirmation is a modal open, and a modal open stops playback through
-    // the shared body (stop_playback_for_modal_open). The copy and the paste
-    // raise nothing and never reach it.
-    GuiPlaybackLifecycle& playback_lifecycle;
 
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this propagate by reference, so the
@@ -153,12 +111,10 @@ struct MagnificationLevelPropagate {
                                 const GuiAudio& audio_,
                                 GuiActiveViews& active_views_,
                                 GuiNotifications& notifications_,
-                                Selection& selection_,
-                                GuiPlaybackLifecycle& playback_lifecycle_)
+                                Selection& selection_)
         : app(app_), viewport(viewport_), undo(undo_), audio(audio_),
           active_views(active_views_),
-          notifications(notifications_), selection(selection_),
-          playback_lifecycle(playback_lifecycle_) {}
+          notifications(notifications_), selection(selection_) {}
 
     // Ctrl+M copy. Caller has already verified the M column and a non-empty
     // selection — the act's two gates, both carded there. Replaces THIS
@@ -175,42 +131,16 @@ struct MagnificationLevelPropagate {
     // entry (op_mode 'M') for the run.
     void paste_apply();
 
-    // The paste's tail, and since 2026-09-22 the generate act's: land in
+    // The paste's tail: land in
     // SOURCE view with the M column active and the newly created markers
     // selected (the column's only view), the first focused and the playhead
     // landed on it. `created` is the exact post-write index set of the markers
     // the act materialized, and it is never empty — the paste's own assert
-    // carries that derivation, and generate_apply calls it only when it
-    // generated something. The two
+    // carries that derivation. The two
     // view switches are NO-OPS ON
     // EVERY ROAD, the act being an S+M act at the press; they stand because
     // this tail is where the paste names the view it ends in, and naming it
     // through the two chokepoints is what keeps that claim true if a road ever
     // reaches here from elsewhere.
     void land_paste_in_source_view(const std::set<int>& created);
-
-    // Ctrl+Alt+Shift+M, the press. Caller has already verified the M column
-    // (carded there). Runs the detector over the full song, parks the
-    // breakpoints inside the active tab's trim, stops playback and raises
-    // the OK / Cancel confirmation (DialogTrigger::GENERATE_MAGNIFICATION_CONFIRM)
-    // naming how many markers would be deleted and how many inserted.
-    void open_generate_confirmation();
-
-    // The confirmation's OK (GuiPrompt::activate_response, the prompt already
-    // down): applies the replacement from the parked breakpoints and clears
-    // them. A no-op when nothing is parked.
-    void generate_apply();
-
-    // The confirmation's Cancel: drops the parked breakpoints. Nothing else
-    // was written at the press, so there is nothing else to undo.
-    void cancel_generate_confirmation() { pending_generated_.reset(); }
-
-private:
-    // THE PARKED ANSWER: the detected breakpoints inside the active tab's
-    // trim, set only while the generate confirmation stands (the modal
-    // prompt holds the store still under it) and cleared on both of its
-    // close roads, so it can never reach a later answer. EMPTY is a real
-    // answer — nothing detected inside — which is why "nothing parked" is
-    // the optional's own empty state.
-    std::optional<std::vector<GuiDetectedMagnificationLevel>> pending_generated_;
 };

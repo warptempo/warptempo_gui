@@ -721,9 +721,8 @@ struct GuiInputHandler {
     PhaseResetPropagate&     phase_reset_propagate;
     // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the third column's own
     // copy and paste — NOT the phase family's shape on another letter
-    // (magnification_level_propagate.h states the divergence): its three
-    // readers here are the Ctrl+M, Ctrl+Alt+M and — the generate act, since
-    // 2026-09-22 — Ctrl+Alt+Shift+M arms in handle_mode_keys.
+    // (magnification_level_propagate.h states the divergence): its two
+    // readers here are the Ctrl+M and Ctrl+Alt+M arms in handle_mode_keys.
     MagnificationLevelPropagate& magnification_level_propagate;
     GuiAsyncRenderer&        async_renderer;
     // The checkpoint act's background worker (2026-08-07). ONE user:
@@ -2599,8 +2598,7 @@ private:
 
     // P / M / I / K / L letter-key handlers: the Ctrl+P-family phase-reset
     // clipboard ops, the Ctrl+M-family magnification level clipboard ops
-    // (2026-09-15; its own two shapes since 2026-09-19) and the generate act
-    // on Ctrl+Alt+Shift+M (2026-09-22), `i` iteration mode, `k` ADD TO
+    // (2026-09-15; its own two shapes since 2026-09-19), `i` iteration mode, `k` ADD TO
     // SELECTION (the sticky ctrl, 2026-08-18) and `l` / Shift+L, the folder
     // overlay's two openers. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
@@ -3875,12 +3873,13 @@ private:
     // arm, carding). The bit (AppState::ignore_waveform_magnification) is a
     // per-project session posture, dark at every project open (source view
     // magnified), never serialized and never in the
-    // undo domain. Writes the field, then kicks the synchronous rebuild iff
-    // the EFFECTIVE gain profile changed across the write
-    // (Viewport::kick_waveform_sync_if_gain_changed), so the picture lands in
-    // the press's own frame and a toggle that changes nothing visible — a
-    // piece with no enabled level above 0 — renders nothing. The lamp's face
-    // rides the per-tick comparator. History-less; display-only.
+    // undo domain. DARK, the source-view picture carries the continuous gain
+    // derived from the source (GuiAudio::gain_curve); LIT, it is flat — the
+    // one exceptions road to the derived gain. Writes the field, then kicks
+    // the synchronous rebuild iff the plate's gain field changed across the
+    // write (Viewport::kick_waveform_sync_if_gain_changed), so the picture
+    // lands in the press's own frame. The lamp's face rides the per-tick
+    // comparator. History-less; display-only.
     void set_ignore_waveform_magnification(bool desired);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):

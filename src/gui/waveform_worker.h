@@ -1,7 +1,6 @@
 #pragma once
 
 #include "warp_frame_map.h"   // WarpFrameMapSegment
-#include "warpmarkers.h"      // WaveformGainProfile
 
 #include <atomic>
 #include <cairo/cairo.h>
@@ -57,16 +56,17 @@ struct WaveformJob {
     // font-derived geometry is snapshotted here for a coherent render.
     int       inset_px         = 0;
 
-    // THE WAVEFORM'S GAIN PROFILE — the per-section magnification, or the
-    // empty profile where the picture is flat (effective_waveform_gain_profile,
-    // warp_frame_map_view.h, which owns the gate that decides which) — an owned
-    // snapshot taken on the GUI thread at job submission exactly as the warp
-    // map is, so the worker reads no live store. Its HASH is the FINGERPRINT
-    // field (WaveformCache::fp_gain_profile_hash), which is what keeps a plate
-    // from being shown at a gain that is not the live one. PIXELS ONLY: this
-    // job produces a picture, and the profile reaches no sample anywhere.
-    WaveformGainProfile gain_profile;
-    uint64_t  gain_profile_hash = 0;
+    // THE WAVEFORM'S GAIN FIELD (waveform_gain_fingerprint,
+    // warp_frame_map_view.h, which owns the gate): the derivation's version
+    // while the picture is magnified, 0 while it is flat. It is the job's
+    // WHOLE gain input — the curve itself lives on the audio object beside the
+    // peaks pyramid (GuiAudio::gain_curve), immutable after load, so the
+    // worker reads it through `audio` below with no owned snapshot; nonzero
+    // means apply it. It is also the FINGERPRINT field
+    // (WaveformCache::fp_gain_hash), which is what keeps a plate from being
+    // shown at a gain that is not the live one. PIXELS ONLY: this job
+    // produces a picture, and the gain reaches no sample anywhere.
+    uint64_t  gain_hash = 0;
 
     // Frame-map snapshot the worker dereferences during the render. Populated
     // for target view from the memoized target display map (an owned copy taken
@@ -197,5 +197,5 @@ void render_waveform_to_cache_surface(
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,
-    const WaveformGainProfile& gain_profile,
+    bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);

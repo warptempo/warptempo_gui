@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cerrno>
 #include <cmath>
 #include <cstdint>
@@ -596,6 +597,16 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     std::array<PyramidLevel, kCacheLevels> next_levels;
     reset_levels(next_levels);
 
+    // THE PICTURE'S GAIN CURVE, a pure function of the decoded samples like
+    // the pyramid, derived on both of the pyramid's roads (the cache hit
+    // included: the .peaks sidecar carries no curve). Sources are stereo
+    // here by the loader's refusal, which is the layout the derivation reads.
+    const auto g0 = std::chrono::steady_clock::now();
+    WaveformGainCurve next_gain_curve =
+        derive_waveform_gain(next_samples.data(), next_total_frames, next_sample_rate);
+    const double next_gain_derive_ms = std::chrono::duration<double, std::milli>(
+        std::chrono::steady_clock::now() - g0).count();
+
     auto publish = [&]() {
         samples_         = make_immutable_samples(std::move(next_samples));
         total_frames_    = next_total_frames;
@@ -605,6 +616,8 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         load_identity_size_ = next_load_identity.size;
         load_identity_mtime_ = next_load_identity.mtime;
         levels_          = std::move(next_levels);
+        gain_curve_      = std::move(next_gain_curve);
+        gain_derive_ms_  = next_gain_derive_ms;
     };
 
     // Try the on-disk peaks cache first. Cache hit skips the build entirely

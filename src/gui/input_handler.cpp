@@ -225,9 +225,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // day, SUPERSEDING this gate's own "a prompt opens with no button
         // focused, so a stray Enter cannot answer": Enter DOES answer now, and
         // what makes it safe is that the focused button is the ESCAPE SENTINEL
-        // — on every prompt but the FIVE CONFIRMATIONS (the load's two
-        // raisers, File → Revert's, the phase reset paste's and Generate
-        // Magnification Level Markers'), which ask for
+        // — on every prompt but the FOUR CONFIRMATIONS (the load's two
+        // raisers, File → Revert's and the phase reset paste's), which ask for
         // their OK — or Yes — deliberately, each
         // being the second step of an explicit
         // act (PromptState's PromptInitialFocus) — plus the
@@ -872,7 +871,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // TWO CLIPBOARD COPIES Ctrl+P and Ctrl+M, ctrl-exact (each reads a
     // selection into a session clipboard and pushes nothing, so the undo domain
     // this lock protects has no interest in them; the THREE ALT-BEARING PASTES
-    // and the generate act, Ctrl+Alt+Shift+M, stay refused). That
+    // stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
     // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
@@ -2129,7 +2128,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // app_state.h).
         selection_consumed(app);
         // ONE ARM PER COLUMN since 2026-09-15: a disabled magnification level
-        // marker is invisible to the waveform's gain profile exactly as a
+        // marker is invisible to the column's level rule exactly as a
         // disabled reset is invisible to the render, so the toggle means the
         // same thing on all three.
         if (app.active_markers_view == 'P') {
@@ -3445,7 +3444,7 @@ void GuiInputHandler::run_span_framing_command() {
 // eighth glass ruling moved the pan onto the bare form), on ALT from
 // 2026-08-27 while the plain wheel stepped the waveform magnification, and
 // plain again since 2026-09-14, when that setting retired — the picture's gain
-// is a per-section profile now — with the ALT
+// varies over source time now — with the ALT
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
 // caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,

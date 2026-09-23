@@ -690,9 +690,9 @@ void GuiFlagEditor::commit_magnification_level_edit() {
 
     // ONE UNDO ENTRY: a level is serialized content and its edit dirties the
     // tab like any other authored change. The snapshot is taken before the
-    // write, the store's own convention, and the PICTURE's gain hash with it
-    // (the rule for every writer of this store is at
-    // GuiMagnificationLevelMarkersOps' header).
+    // write, the store's own convention, and the plate's gain hash with it
+    // (the rule for every writer of this store, and why the compare now
+    // always comes out equal, is at GuiMagnificationLevelMarkersOps' header).
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     {
         std::vector<GuiMagnificationLevelMarker> pre =

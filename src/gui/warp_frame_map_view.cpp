@@ -4,6 +4,7 @@
 #include "audio.h"
 #include "magnificationlevelmarkers.h"   // magnification_level_collapse_members
 #include "gui_display_context.h"
+#include "waveform_gain.h"   // kWaveformGainVersion, the gain field
 #include "warp_frame_map_build.h"   // resolve_warp_markers_for_render, build_warp_frame_map
 #include "engine/engine_geometry.h"  // kN, kRs — the phase-reset lattice
 #include <algorithm>
@@ -163,75 +164,18 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     return c;
 }
 
-const WaveformGainProfileCache& waveform_gain_profile_cached(
-    const AppState& app) {
-    WaveformGainProfileCache& c = app.waveform_gain_profile_cache;
-    const long long gen = app.magnificationlevelmarkers.generation();
-    if (c.valid && c.markers_gen == gen) return c;
-    c.profile     = build_waveform_gain_profile(
-        app.magnificationlevelmarkers.markers());
-    c.hash        = waveform_gain_profile_hash(c.profile);
-    c.markers_gen = gen;
-    c.valid       = true;
-    return c;
-}
-
-const WaveformGainProfileCache& effective_waveform_gain_profile(
-    const AppState& app) {
-    // THE FLAT ANSWER — level 0 everywhere, hash 0. One immutable instance, so
-    // every road that answers flat answers the same object and the same hash.
-    static const WaveformGainProfileCache kUnmagnified = [] {
-        WaveformGainProfileCache c;
-        c.valid = true;
-        c.hash  = waveform_gain_profile_hash(c.profile);
-        return c;
-    }();
-
+bool waveform_magnified(const AppState& app) {
     // TARGET VIEW IS FLAT whatever the lamp says (the rule and its reason are
     // at the declaration): the phase resets it authors move on the hop
     // lattice, which no magnified picture helps.
-    if (app.active_audio_view == 'T') return kUnmagnified;
-
+    if (app.active_audio_view == 'T') return false;
     // SOURCE VIEW: THE LAMP ALONE DECIDES, on every column and at every zoom —
     // Ignore Waveform Magnification lit is flat, dark (the default) magnified.
-    if (app.ignore_waveform_magnification) return kUnmagnified;
-
-    // A MAGNIFICATION-LEVEL-column DRAG shows the store as the release would
-    // leave it. drag_mode is the column the press began on, and 'M' exists in
-    // source view alone, so the drag reaches this arm whenever the lamp is dark.
-    if (app.drag.active && app.drag.drag_mode == 'M')
-        return waveform_gain_profile_drag_cached(app);
-    return waveform_gain_profile_cached(app);
+    return !app.ignore_waveform_magnification;
 }
 
-const WaveformGainProfileCache& waveform_gain_profile_drag_cached(
-    const AppState& app) {
-    const std::vector<GuiMagnificationLevelMarker>& live =
-        app.magnificationlevelmarkers.markers();
-    const int idx = app.drag.dragging_markers.empty()
-                        ? -1 : app.drag.dragging_markers[0];
-    // A degenerate slot, or a proposal still at the stored frame, is the
-    // resting store's own profile.
-    if (idx < 0 || idx >= static_cast<int>(live.size()) ||
-        live[static_cast<std::size_t>(idx)].time_frame ==
-            app.drag.proposed_authored_frame)
-        return waveform_gain_profile_cached(app);
-    WaveformGainProfileCache& c = app.waveform_gain_profile_drag_cache;
-    const long long gen   = app.magnificationlevelmarkers.generation();
-    const int64_t   frame = app.drag.proposed_authored_frame;
-    if (c.valid && c.markers_gen == gen && c.dragged_marker == idx &&
-        c.dragged_frame == frame)
-        return c;
-    std::vector<GuiMagnificationLevelMarker> proposed = live;
-    proposed[static_cast<std::size_t>(idx)].time_frame = frame;
-    (void)reorder_markers_by_time(proposed);
-    c.profile        = build_waveform_gain_profile(proposed);
-    c.hash           = waveform_gain_profile_hash(c.profile);
-    c.markers_gen    = gen;
-    c.dragged_marker = idx;
-    c.dragged_frame  = frame;
-    c.valid          = true;
-    return c;
+uint64_t waveform_gain_fingerprint(const AppState& app) {
+    return waveform_magnified(app) ? kWaveformGainVersion : 0;
 }
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(

@@ -8997,7 +8997,7 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // and delegates. When the level actually moved the reflow changed spp under
     // the playback predictor, so re-anchor it. (A level move here cannot
     // change the magnification — the gain gate reads the audio view and the
-    // `[` lamp and no zoom term, effective_waveform_gain_profile — so the
+    // `[` lamp and no zoom term, waveform_magnified — so the
     // resize owes the gain nothing; its picture re-renders because a resize
     // moves the area dimensions, fields of the one plate fingerprint, and the
     // tick's enqueue carries that.)

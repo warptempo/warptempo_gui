@@ -26,22 +26,15 @@ class GuiAudio;
 //     The absence of the member is the enforcement: there is nothing here to
 //     call. Its two siblings take one and trigger on every write.
 //
-//   * THE PICTURE IS WHAT IT OWES INSTEAD. Every write here moves the WAVEFORM
-//     GAIN PROFILE (build_waveform_gain_profile, magnificationlevelmarkers.h),
-//     which is memoized on this store's generation and keys the plate
-//     fingerprint by FIELD. So each body captures
-//     Viewport::waveform_gain_hash() BEFORE its store write and hands it to
-//     kick_waveform_sync_if_gain_changed AFTER, and the new gain lands in the
-//     frame its edit does rather than a tick late on the async backstop. A
-//     write the picture cannot see — a drop copying the level already in force,
-//     a nudge inside one section, any write while the `[` Ignore Waveform
-//     Magnification lamp is lit —
-//     moves no hash and renders nothing, which is that owner's own rule. THE
-//     NUDGE IS THE ONE EXCEPTION (architect 2026-09-16): its shared commit
-//     tail may already have rendered the new gain through the at-working
-//     held-column move, so it asks the DISPLAYED plate's gain fingerprint instead
-//     (Viewport::displayed_plate_gain_is_stale, the M drag release's rule)
-//     and renders only a plate that is still stale.
+//   * IT MOVES NO PIXEL OF THE WAVEFORM either, since 2026-09-23: the
+//     picture's gain is the continuous curve derived from the source
+//     (GuiAudio::gain_curve), gated by the audio view and the `[` lamp alone
+//     (waveform_magnified, warp_frame_map_view.h), so no level reaches the
+//     plate fingerprint. The bodies still capture
+//     Viewport::waveform_gain_hash() before their store write and hand it to
+//     kick_waveform_sync_if_gain_changed after (the nudge asks
+//     Viewport::displayed_plate_gain_is_stale instead); those compares now
+//     always come out equal and render nothing.
 //
 //   * THE COLUMN AUTHORS IN SOURCE VIEW, the only view it exists in
 //     (active_column_authoring_allowed's 'M' arm, app_state.h; architect

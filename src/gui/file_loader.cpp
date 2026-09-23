@@ -68,7 +68,7 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // fact about the panel, and this load must not overwrite what the config
     // said.)
     // (THE WAVEFORM MAGNIFICATION LEVEL LEFT THIS ROUTINE 2026-09-14 with its
-    // key: the picture's gain is a per-section profile, never a settings
+    // key: the picture's gain varies over source time, never a settings
     // field.)
     // (`projects_repo` LEFT THIS ROUTINE 2026-08-27 with its key: the projects
     // home is the DEVICE config's now, read once by gui_main and never by a
@@ -507,10 +507,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // Load the magnification level markers file, the phase-reset load's shape
     // and for its reasons: required, the empty file the no-markers form, and a
     // malformed sidecar aborting the load so an unconditional Ctrl+S can never
-    // overwrite the authored file with an emptied store. Display-only: the
-    // waveform's gain profile is built from this store
-    // (effective_waveform_gain_profile), and the first plate this load renders
-    // reads it.
+    // overwrite the authored file with an emptied store. The store moves no
+    // pixel: the waveform's gain is the continuous curve derived from the
+    // source (GuiAudio::gain_curve), and no render input reads a level.
     if (auto r = app.magnificationlevelmarkers.load(ml_path.string()); !r) {
         std::fprintf(stderr,
             "warptempo_gui: Source load aborted: invalid magnification level "
@@ -797,10 +796,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
         std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::fprintf(stderr,
                  "warptempo_gui: Loaded %s: sr=%d, channels=%d, frames=%lld, "
-                 "pyramid_levels=%d, load_time=%.1f ms\n",
+                 "pyramid_levels=%d, gain_derive=%.1f ms, load_time=%.1f ms\n",
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),
-                 audio.num_levels(), load_ms);
+                 audio.num_levels(), audio.gain_derive_ms(), load_ms);
 
     // Source-view load ends with an empty status; a target-view load lets
     // ensure_ready() -> trigger() replace it with "updating..." for the

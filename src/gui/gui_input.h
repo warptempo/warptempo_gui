@@ -731,15 +731,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // deleted whole with its view lamp 2026-09-15).
         case GuiKeys::P: return cl || ca || cas;
         // The magnification level propagate's two chords, the copy and the
-        // paste (2026-09-15), and since 2026-09-22 a THIRD, Ctrl+Alt+Shift+M,
-        // GENERATE MAGNIFICATION LEVEL MARKERS. NOT the phase-reset three's
-        // shape on another letter: that family's third chord pastes STATE
-        // onto the destination's existing resets block by block, and this
-        // one's paste walks no blocks, so there is nothing to hook a state
-        // onto (magnification_level_propagate.h) — the chord the deleted
-        // state paste freed on 2026-09-19 carries the generate act instead.
-        // BARE `m` is unbound.
-        case GuiKeys::M: return cl || ca || cas;
+        // paste (2026-09-15). NOT the phase-reset three's shape on another
+        // letter: that family's third chord pastes STATE onto the
+        // destination's existing resets block by block, and this one's paste
+        // walks no blocks, so there is nothing to hook a state onto
+        // (magnification_level_propagate.h). Ctrl+Alt+Shift+M is unbound
+        // again (Generate Magnification Level Markers held it from 2026-09-22
+        // until its deletion 2026-09-23). BARE `m` is unbound.
+        case GuiKeys::M: return cl || ca;
         // The history view's toggle — bound in BOTH modes, since it is what
         // opens the view and what closes it (handle_history_mode_key claims it
         // in every state), which is why it reads no mode term while the seven

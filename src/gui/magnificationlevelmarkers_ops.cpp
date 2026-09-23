@@ -13,14 +13,16 @@
 
 // THE MAGNIFICATION LEVEL AUTHORING CLUSTER — the phase-reset cluster's bodies
 // over the third store, with this column's two deltas stated once at the
-// header: NO GuiTargetRender (a level is display-only, so no act here may
-// dispatch a preview) and THE PICTURE'S OWN GAIN KICK in its place. Every body
-// below but the nudge captures the gain hash before its store write and hands
-// it to kick_waveform_sync_if_gain_changed after; THE NUDGE ASKS THE DISPLAYED
-// PLATE INSTEAD (architect 2026-09-16, at its tail), because its shared commit
-// tail may already have rendered the new gain through the at-working
-// held-column move, and a compare against the pre-write hash would render that same
-// plate twice. The comments here carry only what is this column's.
+// header: NO GuiTargetRender (a level reaches no render input, so no act here
+// may dispatch a preview) and a GAIN KICK in its place. Every body below but
+// the nudge captures the gain hash before its store write and hands it to
+// kick_waveform_sync_if_gain_changed after; THE NUDGE ASKS THE DISPLAYED PLATE
+// INSTEAD (architect 2026-09-16, at its tail). SINCE 2026-09-23 THE STORE
+// MOVES NO PIXEL — the waveform's gain is the curve derived from the source
+// (GuiAudio::gain_curve) — so every one of those compares comes out equal and
+// renders nothing; the bodies' comments below that speak of a level's gain
+// describe the rule the column's own acts still ask (magnificationlevelmarkers.h),
+// not the picture. The comments here carry only what is this column's.
 
 namespace {
 
@@ -100,8 +102,8 @@ void GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position(
         app.magnificationlevelmarkers.markers();
     GuiMagnificationLevelMarker nm;
     nm.time_frame = drop_frame;
-    // THE LEVEL IN FORCE AT THAT FRAME, off the one owner shared with the gain
-    // profile's builder (magnification_level_in_force,
+    // THE LEVEL IN FORCE AT THAT FRAME, off the column's one level-per-frame
+    // rule (magnification_level_in_force,
     // magnificationlevelmarkers.h): the new marker restates the level its
     // section already carries, so the drop is a boundary to author FROM rather
     // than a change to the picture.
@@ -191,9 +193,8 @@ void GuiMagnificationLevelMarkersOps::delete_selected_magnification_levels() {
 
 // Toggle the disabled flag on each selected magnification level marker.
 // Unconditional — this column has no label-def gating either — and a DISABLED
-// MARKER IS INVISIBLE TO THE PICTURE, the gain profile's builder walking
-// straight past it, which is what makes this toggle a picture act and so a
-// gain-kick one.
+// MARKER IS INVISIBLE TO THE LEVEL RULE, the run walk stepping straight past
+// it (magnificationlevelmarkers.h).
 void GuiMagnificationLevelMarkersOps::toggle_magnification_level_disabled() {
     // SILENT for the delete's reason: the Ctrl+D dispatch arm cards the
     // composed refusal ahead of this call.
@@ -305,22 +306,23 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
                           GestureKind::MagnificationLevelNudge, merge,
                           orig_f, committed_f, camera,
                           /*target_render=*/nullptr);
-    // THE PICTURE IS REPAID ONLY WHERE THE DISPLAYED PLATE IS STALE (architect
-    // 2026-09-16, "prefer the correct way"): the M drag's release rule
+    // THE PLATE IS REPAID ONLY WHERE THE DISPLAYED PLATE IS STALE (architect
+    // 2026-09-16, "prefer the correct way"; since 2026-09-23 the store moves no
+    // gain, so this answers false on every nudge): the M drag's release rule
     // (MarkerDragOps::commit_drag's tail) rather than the cluster's pre-write
     // hash compare. The tail above may already have rendered the new gain —
     // the edge-align of (e) or, under the hold posture, the held-column move
     // (hold_subject_column_after_nudge) may shift the viewport, whose synchronous kick reads the committed
-    // store's profile and publishes the displayed fingerprint with it — and a
+    // store's gain and publishes the displayed fingerprint with it — and a
     // compare against the hash captured BEFORE the write would then render
     // that same plate a second time, synchronously, on every held repeat that
     // moved a breakpoint. Asking the DISPLAYED plate's own gain fingerprint
     // (Viewport::displayed_plate_gain_is_stale — its published gain hash
-    // against the live effective profile's) answers both halves at once: a
+    // against the live gain field) answers both halves at once: a
     // camera move that rendered leaves the fingerprint current and nothing more
     // is owed; a hold whose offset already matched (or a bare press's
     // edge-align that found the subject already on screen) moves no viewport
-    // and leaves it stale exactly when the profile moved — at every zoom,
+    // and leaves it stale exactly when the gain moved — at every zoom,
     // since the hold and the edge-align both run there now (architect
     // 2026-09-22, the placement-instrument zoom gate retired). No hash fallback is kept
     // for the unwired case: the predicate is wired in main.cpp ahead of the
@@ -342,8 +344,8 @@ GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels(
 // are this column's: the step is SINGLETON AND GROUP, forking exactly as the
 // TEMPO step forks (architect 2026-09-16 — the singleton's clamp silent, the
 // group all-or-nothing and carded; there is no collapse to the focus, a value
-// step never being a movement), and the tail owes the PICTURE a gain kick and
-// no tempo tail — a level is not a map input.
+// step never being a movement), and the tail takes the gain kick and no tempo
+// tail — a level is not a map input.
 GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
         int64_t delta, bool synthesized_repeat) {
     if (!magnification_level_step_actionable(app))
@@ -440,9 +442,8 @@ GuiOpRefusal GuiMagnificationLevelMarkersOps::adjust_magnification_level_step(
     // BYTE-EQUAL POP of that entry (the rule is at Undo::record_gesture).
     undo.record_gesture(GestureKind::MagnificationLevelStep, merge);
     undo.recompute_dirty();
-    // The marker lane repaints its digits, and the PICTURE repaints its gain:
-    // nothing moved, so no stem moved and no image moved, but the section this
-    // marker opens now carries another level.
+    // The marker lane repaints its digits: nothing moved, so no stem moved
+    // and no image moved (the store moves no pixel of the waveform).
     viewport.invalidate_top_strip();
     viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
     return std::nullopt;

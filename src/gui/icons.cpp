@@ -755,7 +755,7 @@ constexpr IconPath kGoUpPaths[] = {
 // deleted with the button it was drawn for, enumerators, defs and assets
 // together. This is the roster's record of which files came and went
 // and makes no claim about what magnification does; that rule lives at
-// effective_waveform_gain_profile.) ZOOM-OUT-Y, the vertical magnifier's
+// waveform_magnified.) ZOOM-OUT-Y, the vertical magnifier's
 // minus, is the Ignore Waveform Magnification lamp's glyph (architect
 // 2026-09-22):
 // the same magnifier with a ruler on its dial beside a minus, transcribed

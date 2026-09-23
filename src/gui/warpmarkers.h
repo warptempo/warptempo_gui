@@ -287,37 +287,6 @@ inline int64_t section_end_frame(const std::vector<GuiWarpMarker>& mv, int i,
                                              : song_end_frame;
 }
 
-// THE WAVEFORM GAIN PROFILE — the picture magnification over source time,
-// built from the magnification level markers column
-// (build_waveform_gain_profile, magnificationlevelmarkers.h, which states the
-// step rules) and gated by the AUDIO VIEW AND THE `[` LAMP
-// (effective_waveform_gain_profile, warp_frame_map_view.h, which owns that
-// rule). A STEP FUNCTION OVER
-// SOURCE FRAMES: `breakpoints` is sorted strictly ascending by frame, each
-// entry's level holding from its frame up to the next entry's, and LEVEL 0
-// HOLDS BEFORE THE FIRST ENTRY (so level 0 everywhere is the empty
-// profile). Consecutive entries never repeat a level — a breakpoint
-// exists only where the level changes. The level is a count of doublings in
-// [0, kMarkerMagnificationMax] (marker_magnification.h, the ONE range owner);
-// waveform_magnification_gain (render.h) is what a level means.
-//
-// Source frames because marker time_frames are source frames: the waveform
-// picture already holds each column's source span (the plate maps target-view
-// columns through the warp map), so the
-// profile needs no view fork anywhere.
-struct WaveformGainBreakpoint {
-    int64_t source_frame = 0;
-    uint8_t level        = 0;
-};
-struct WaveformGainProfile {
-    std::vector<WaveformGainBreakpoint> breakpoints;
-};
-
-// The profile's identity for the picture cache (the plate fingerprint):
-// FNV-1a over every breakpoint. 0 for the
-// empty profile.
-uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile);
-
 // (parse_single_canonical_line is declared in warpmarkers_parse.h, included
 // above; flag_editor.cpp sees it transitively through this header.)
 

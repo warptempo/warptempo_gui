@@ -48,7 +48,7 @@ struct MagnificationLevelRun {
     bool        collapsed;
 };
 
-// THE COLUMN'S LEVEL-PER-FRAME RULE, THE ONE OWNER the three readers below
+// THE COLUMN'S LEVEL-PER-FRAME RULE, THE ONE OWNER the two readers below
 // call (architect 2026-09-16). The store is frame-ascending, so a coincident
 // group is a run of adjacent equal frames; `visit(run)` is called once per run
 // that contributes a level, in ascending frame order:
@@ -56,7 +56,7 @@ struct MagnificationLevelRun {
 //     warp column's coincident rule on this axis (a run of 2+ effectively
 //     enabled tempo markers collapses to a neutral 1.00 owner,
 //     warp_coincident_collapse_members) — so store order among equal frames is
-//     invisible to the picture, exactly as it is invisible to the render on W
+//     invisible to the rule, exactly as it is invisible to the render on W
 //     and P;
 //   * a run with EXACTLY ONE enabled member contributes that member's level;
 //   * a run with NO enabled member contributes nothing: a disabled marker is
@@ -98,24 +98,10 @@ void for_each_magnification_level_run(
 
 }  // namespace
 
-WaveformGainProfile build_waveform_gain_profile(
-        const std::vector<GuiMagnificationLevelMarker>& markers) {
-    WaveformGainProfile p;
-    auto& bp = p.breakpoints;
-    // One contribution per frame (the run walk above), so a breakpoint is
-    // pushed exactly where the level CHANGES and nothing is ever rewritten.
-    for_each_magnification_level_run(
-        markers, [&bp](const MagnificationLevelRun& run) {
-            const uint8_t current = bp.empty() ? uint8_t{0} : bp.back().level;
-            if (run.level != current) bp.push_back({run.frame, run.level});
-        });
-    return p;
-}
-
-// The contract is at the declaration. The same run walk the builder takes,
-// keeping the last contributed level at or before `frame` — which is the
-// builder's "each level holds to the next", its "a disabled marker is
-// invisible" and its coincident collapse to level 0, all at once.
+// The contract is at the declaration. The one run walk, keeping the last
+// contributed level at or before `frame` — which is the rule's "each level
+// holds to the next", its "a disabled marker is invisible" and its coincident
+// collapse to level 0, all at once.
 uint8_t magnification_level_in_force(
         const std::vector<GuiMagnificationLevelMarker>& markers,
         int64_t frame) {
@@ -127,10 +113,10 @@ uint8_t magnification_level_in_force(
     return level;
 }
 
-// The contract is at the declaration. The third reader of the one run walk:
-// a run the walk reports as collapsed is exactly a run the picture reads as
+// The contract is at the declaration. The second reader of the one run walk:
+// a run the walk reports as collapsed is exactly a run the rule reads as
 // level 0 for having 2+ enabled members, and its ENABLED rows are the members
-// this marks — the disabled rows of such a run are no members for the picture
+// this marks — the disabled rows of such a run are no members for the rule
 // (the walk never counted them) and step like any disabled marker.
 std::vector<char> magnification_level_collapse_members(
         const std::vector<GuiMagnificationLevelMarker>& markers) {

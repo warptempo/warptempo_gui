@@ -127,48 +127,23 @@ struct Viewport {
     //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
     //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
-    //  - THE PLATE'S OWN GAIN: TWO MEMBERS, re-grepped 2026-09-16 over
-    //    kick_waveform_sync_if_gain_changed's callers and this function's —
-    //    the MARKER DRAG's COMMIT (MarkerDragOps::commit_drag) and, since
-    //    2026-09-16, THE MAGNIFICATION LEVEL NUDGE'S TAIL
-    //    (GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels),
-    //    each calling this function direct when the displayed plate's gain
-    //    fingerprint is stale (displayed_plate_gain_is_stale below), so the
-    //    release's or the nudge's plate lands in its own frame — the nudge
-    //    asks the displayed plate rather than a pre-write hash because its
-    //    shared commit tail's held-column move may already have rendered
-    //    the new gain (architect 2026-09-16). THE LEVEL WRITERS THAT CARRY
-    //    A GAIN-CHANGE KICK OF THEIR OWN call kick_waveform_sync_if_gain_changed
-    //    (re-grepped 2026-09-16): the authoring cluster's four hash-comparing
-    //    bodies (magnificationlevelmarkers_ops.cpp — the drop, the delete, the
-    //    disable toggle and the level step), the level editor's
-    //    commit (GuiFlagEditor::commit_magnification_level_edit), the `h`
-    //    revert's level arm (run_history_revert) and the M drag's release
-    //    (MarkerDragOps::commit_drag). THE OTHER LEVEL WRITERS TAKE NO KICK
-    //    OF THEIR OWN because they already run the UNCONDITIONAL synchronous
-    //    rebuild after their store write — the source load's first plate, the
-    //    three loads in place (GuiInputHandler::apply_recipe_in_place's
-    //    tail), the undo/redo restore (Undo::restore_history_entry's tail)
-    //    and, since 2026-09-15, THE MAGNIFICATION LEVEL PROPAGATE'S PASTE,
-    //    whose every store-writing run ends in
-    //    land_paste_in_source_view's kick, and since 2026-09-22 THE GENERATE
-    //    ACT (MagnificationLevelPropagate::generate_apply), which ends in that
-    //    same landing or, with nothing generated, in a kick of its own — and
-    //    the store's generation
-    //    re-keys the profile (waveform_gain_profile_cached,
-    //    warp_frame_map_view.h), so each of those rebuilds reads the new gain
-    //    with no gain-change kick of its own.
-    //    (The gain gate's other inputs are the AUDIO VIEW and the `[` LAMP —
-    //    effective_waveform_gain_profile answers the empty profile in target
-    //    view, and in source view while the lamp is lit. The S/T flip owes no
-    //    gain kick of its own, running an unconditional kick_waveform_sync;
-    //    the lamp's one setter, GuiInputHandler::set_ignore_waveform_magnification,
-    //    takes the before/after hash kick above. The column and the zoom are no
-    //    inputs since 2026-09-22.)
+    //  - THE PLATE'S OWN GAIN. The gain is the continuous curve derived from
+    //    the source at load (GuiAudio::gain_curve), and the plate's gain
+    //    field (waveform_gain_fingerprint, warp_frame_map_view.h) has TWO
+    //    LIVE INPUTS, re-grepped 2026-09-23: the `[` LAMP, whose one setter
+    //    (GuiInputHandler::set_ignore_waveform_magnification) takes the
+    //    before/after kick below (kick_waveform_sync_if_gain_changed), and the
+    //    S/T FLIP, which owes no gain kick of its own, running an
+    //    unconditional kick_waveform_sync. The magnification level column's
+    //    writers still call kick_waveform_sync_if_gain_changed and the
+    //    marker drag's release and the level nudge's tail still ask
+    //    displayed_plate_gain_is_stale, but the store moves no gain since
+    //    2026-09-23, so those compares always come out equal and render
+    //    nothing. The column and the zoom are no inputs.
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
-    //    late with no kick of its own, and a level write takes the kick so the
-    //    new gain lands in the frame its edit does. A gain-only change is a
+    //    late with no kick of its own, and the lamp takes the kick so the
+    //    new gain lands in the frame its press does. A gain-only change is a
     //    plate CONTENT change with no geometry behind it, so the reclamp below
     //    is a pure no-op for it. It touches no audio: the gain is the
     //    picture's.
@@ -263,55 +238,29 @@ struct Viewport {
     }
 
     // THE GAIN CATEGORY'S ONE OWNER (the category is inventoried in the caller
-    // inventory above): a level write kicks the synchronous rebuild ONLY WHEN
-    // THE EFFECTIVE GAIN PROFILE (effective_waveform_gain_profile, which owns
-    // the gate that can answer flat) ACTUALLY CHANGED
-    // across it. The caller
-    // captures `waveform_gain_hash()` BEFORE its store write and hands it to
+    // inventory above): a gain input's writer kicks the synchronous rebuild
+    // ONLY WHEN THE PLATE'S GAIN FIELD (waveform_gain_fingerprint, which owns
+    // the gate that can answer flat) ACTUALLY CHANGED across it. The caller
+    // captures `waveform_gain_hash()` BEFORE its write and hands it to
     // `kick_waveform_sync_if_gain_changed` AFTER; the comparison lives here and
-    // nowhere else. A write the picture cannot see — a level equal to the one
-    // already in force —
-    // changes the store and not the profile, and must not drain the worker and
-    // re-render the whole plate. (Every level-writing caller runs with the
-    // MAGNIFICATION LEVEL COLUMN ACTIVE, which is source view by construction;
-    // while the `[` lamp is lit the gate answers flat on both sides of its
-    // write, so the hashes agree and nothing renders — the picture being
-    // flat, that is the right answer.)
+    // nowhere else. A write the picture cannot see must not drain the worker
+    // and re-render the whole plate.
     uint64_t waveform_gain_hash() const;
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // THE MARKER DRAG RELEASE'S TWO SEAMS (Sol round 11 of 2026-09-14; the
     // rule is at MarkerDragOps::commit_drag's tail).
     // displayed_plate_gain_is_stale: true when a plate is displayed and its
-    // published gain fingerprint (wf_cache.fp_gain_profile_hash) differs from
-    // the live effective gain profile's hash. TWO READERS since 2026-09-16:
-    // the drag's commit and the magnification level nudge's tail
-    // (GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels,
-    // architect 2026-09-16 — the same question for the same reason, a plate
-    // that may already carry the new gain). Wired in main.cpp to
-    // GuiPaintHandler::displayed_plate_gain_is_stale; false unwired (the tick's
-    // dirty-detect then catches the plate).
+    // published gain fingerprint (wf_cache.fp_gain_hash) differs from the
+    // live gain field (waveform_gain_fingerprint). TWO READERS since
+    // 2026-09-16: the drag's commit and the magnification level nudge's tail
+    // (GuiMagnificationLevelMarkersOps::nudge_selected_magnification_levels).
+    // Wired in main.cpp to GuiPaintHandler::displayed_plate_gain_is_stale;
+    // false unwired (the tick's dirty-detect then catches the plate).
     std::function<bool()> displayed_plate_gain_is_stale_;
     bool displayed_plate_gain_is_stale() const {
         return displayed_plate_gain_is_stale_ &&
                displayed_plate_gain_is_stale_();
-    }
-    // displayed_plate_geometry_is_live: true when a plate IS displayed and its
-    // published fingerprint's GEOMETRY — viewport, area, inset, domain and warp
-    // map hash — is what the live state would render under. ONE READER,
-    // MarkerDragOps::apply_drag_motion, which uses it to decide whether a
-    // magnification level drag's motion may render the new gain SYNCHRONOUSLY
-    // under the drag's displayed-basis freeze: where the geometry already
-    // differs (a job in flight at the aimed press that the freeze dropped), a
-    // render would publish the LIVE geometry under a hand aimed at the older
-    // one, so the motion records the debt instead and the release repays it.
-    // Wired in main.cpp to GuiPaintHandler::displayed_plate_geometry_is_live;
-    // FALSE UNWIRED, which is the conservative answer — the sections then wait
-    // for the release rather than rendering under an unknown basis.
-    std::function<bool()> displayed_plate_geometry_is_live_;
-    bool displayed_plate_geometry_is_live() const {
-        return displayed_plate_geometry_is_live_ &&
-               displayed_plate_geometry_is_live_();
     }
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the

@@ -15,10 +15,7 @@
 
 namespace {
 
-// THE COMMIT'S CONVERSION, spelled once for its two readers: commit_drag's
-// store write and the motion's DragState::proposed_authored_frame, which the
-// waveform gain profile's DRAG SLOT reads while a magnification level drag
-// stands (architect 2026-09-15). A proposal bit-equal
+// THE COMMIT'S CONVERSION, commit_drag's store write. A proposal bit-equal
 // to the original keeps the original (a wander returning exactly to the press
 // x, dodging the two-hop's non-bitwise identity); anything else snaps to its
 // painted column through authored_frame_at_column (which funnels the column
@@ -168,14 +165,6 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     } else {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
-    // THE PROPOSAL THE PICTURE READS, seeded where the marker rests (the
-    // untouched branch of committed_frame_for_proposal, verbatim). It is the
-    // MAGNIFICATION LEVEL column's alone — the gain profile's drag slot reads
-    // it while an M drag stands (waveform_gain_profile_drag_cached,
-    // warp_frame_map_view.h) — and is written by every motion below, on every
-    // column, because one write is cheaper than a fork and the other two
-    // columns' slots simply never read it.
-    d.proposed_authored_frame = d.original_times[0];
     // NO PRE-GESTURE CAPTURES HERE (all three deleted 2026-07-29): the selection
     // snapshot, the grab-playhead sample and the pre-drag region existed only for
     // an Esc/Ctrl+Q cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
@@ -308,18 +297,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (new_t < 0.0)      new_t = 0.0;
     if (new_t > eof_wall) new_t = eof_wall;
     if (app.drag.moveable_times[0] == new_t) return;
-    // THE GAIN FOLLOWS THE DRAG (architect 2026-09-15, the magnification level
-    // column's sections riding the hand): the hash is captured BEFORE the
-    // proposal moves, because the proposal is what the effective profile's drag
-    // slot reads (DragState::proposed_authored_frame). On the other two columns
-    // this is a cheap read of an unmoving number — their stores feed no gain
-    // profile — and the kick at the tail then renders nothing.
-    const bool level_drag = (app.drag.drag_mode == 'M');
-    const uint64_t prior_gain_hash =
-        level_drag ? viewport.waveform_gain_hash() : 0;
     app.drag.moveable_times[0] = new_t;
-    app.drag.proposed_authored_frame = committed_frame_for_proposal(
-        app, audio, dmap, new_t, app.drag.original_times[0]);
     // NO SELECTION WORK HERE, and none anywhere in this file since 2026-08-15:
     // the subject is named at the THRESHOLD CROSSING, by the CLICK ACT the
     // crossing runs before begin_drag, unconditionally. That placement is
@@ -373,45 +351,6 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // never moved; the doctrine is at the head of position_nudge.h).
     viewport.invalidate_waveform_area();
     viewport.invalidate_top_strip();
-    // THE MAGNIFIED SECTIONS RIDE THE HAND (architect 2026-09-15): a
-    // magnification level marker is a section boundary of the waveform's gain
-    // profile, and the profile reads the proposal while the drag stands, so a
-    // motion that moves a boundary re-renders the plate synchronously in THIS
-    // frame — through the gain category's one owner, which renders nothing when
-    // the hash did not move (a warp or phase-reset drag, a motion within one
-    // column, two neighbouring sections at the same level, any motion while
-    // the `[` lamp is lit and the gate answers flat on both sides). An M drag
-    // stands in SOURCE VIEW alone, the only view that column exists in, so the
-    // kick never runs against target view's flat answer.
-    //
-    // WHY A SYNCHRONOUS RENDER IS SAFE UNDER THE DRAG'S FREEZE HERE
-    // (displayed_basis_frozen names app.drag.active): the freeze protects the
-    // gesture from a basis that moves under it, and the guard below is what
-    // makes that exact — the kick runs only while the DISPLAYED plate's
-    // geometry IS the live geometry (Viewport::displayed_plate_geometry_is_live,
-    // which compares the viewport, the area, the inset, the domain AND the warp
-    // map hash), so gain is then the only difference it renders and no pixel
-    // the hand is aimed at moves. The viewport and the area cannot change
-    // mid-drag in any case (keys and wheels are gesture-gated, the chase is
-    // paused, a resize force-ends the drag first), and the rebuild drains the
-    // worker before it renders and clears the supersede slot, while the
-    // freeze's dispatch half keeps any new job off the worker until the
-    // release — so no async completion can publish over this render.
-    //
-    // THE ONE RESIDUAL IS A PLATE ALREADY OFF THE LIVE GEOMETRY AT THE PRESS —
-    // a job in flight at the aimed press (a resize catch-up, say) that the
-    // freeze dropped, so the plate on screen still shows the older geometry.
-    // Rendering there would publish the live geometry under a hand aimed at the
-    // older one, so the sections WAIT FOR THE RELEASE instead: a motion whose
-    // gain hash moved while the kick was withheld records the debt
-    // (DragState::gain_preview_deferred), and commit_drag repays it with a
-    // synchronous rebuild in the release's own frame.
-    if (level_drag) {
-        if (viewport.displayed_plate_geometry_is_live())
-            viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
-        else if (viewport.waveform_gain_hash() != prior_gain_hash)
-            app.drag.gain_preview_deferred = true;
-    }
 }
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
@@ -439,10 +378,6 @@ void MarkerDragOps::commit_drag() {
     if (!app.drag.active) return;
     const bool phase_reset = (app.drag.drag_mode == 'P');
     const bool level       = (app.drag.drag_mode == 'M');
-    // THE DEFERRED GAIN PREVIEW'S DEBT is read here, before the wholesale
-    // DragState reset below discards it; the rule that repays it is at the
-    // tail.
-    const bool gain_preview_owed = app.drag.gain_preview_deferred;
     // ONE MARKER, PIXEL-ANCHORED: the proposal snaps to its painted column, so
     // stored equals shown for the pointer-authored flag. The rigid GROUP commit
     // this replaced — the grabbed member's snap folded into a uniform
@@ -618,19 +553,15 @@ void MarkerDragOps::commit_drag() {
     // the view-independent target preview trigger below.
     //
     // THE RELEASE'S PLATE AND FLAG RULE (architect 2026-09-14; Sol round 11
-    // of 2026-09-14). With the drag state cleared above, the freeze is lifted
-    // and the effective gain profile reads the committed store.
-    //   THE PLATE: ONE WRITE CAN BE OWED, THE GAIN'S, and it is judged against
-    //   WHAT WAS PUBLISHED, never against the drag's own proposal profile
-    //   (which normally equals the committed one and so proves nothing about
-    //   the pixels): the release renders synchronously iff a motion DEFERRED
-    //   its gain preview (gain_preview_owed — the kick withheld while the
-    //   displayed geometry was off the live geometry) OR the committed gain
-    //   hash differs from the DISPLAYED plate's gain fingerprint
-    //   (Viewport::displayed_plate_gain_is_stale), so the render lands in the
-    //   release's own frame rather than a tick late. Otherwise (the common
-    //   case: the last motion already rendered this exact profile, or the drag
-    //   moved no gain boundary at all) no plate renders.
+    // of 2026-09-14). With the drag state cleared above, the freeze is lifted.
+    //   THE PLATE: judged against WHAT WAS PUBLISHED — the release renders
+    //   synchronously iff the live gain field differs from the DISPLAYED
+    //   plate's gain fingerprint (Viewport::displayed_plate_gain_is_stale), so
+    //   the render lands in the release's own frame rather than a tick late.
+    //   No column's store moves the waveform's gain (the picture's gain is the
+    //   curve derived from the source, gated by the audio view and the `[`
+    //   lamp alone), so a drag leaves the gain field where it found it and no
+    //   plate renders.
     //   THE FLAGS ARE REFRESHED ON EVERY RELEASE: a drag-time rebuild keyed
     //   the flag bitmap to the drag overlay, and the reorder/remap and the
     //   DragState reset above change what it must show, so a Wayland frame
@@ -638,14 +569,14 @@ void MarkerDragOps::commit_drag() {
     //   committed store. The synchronous rebuild's tail already rebuilds the
     //   flag cache; the no-render arm reaches the flag cache ALONE
     //   (Viewport::refresh_flag_cache — fingerprint-guarded, no plate render).
-    if (gain_preview_owed || viewport.displayed_plate_gain_is_stale())
+    if (viewport.displayed_plate_gain_is_stale())
         viewport.kick_waveform_sync();
     else
         viewport.refresh_flag_cache();
     // AND THE MAGNIFICATION LEVEL COLUMN TRIGGERS NOTHING (architect
     // 2026-09-15): its positions are display-only — no sample, no engine input,
     // no render fingerprint field reads one — so a level drag owes the PREVIEW
-    // nothing, the plate above being the whole of what it owes (the rule for
+    // nothing (the rule for
     // every writer of that store is at GuiMagnificationLevelMarkersOps'
     // header).
     if (net_changed && !level) target_render.trigger();

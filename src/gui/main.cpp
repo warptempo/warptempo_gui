@@ -1455,19 +1455,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                               notifications, selection);
     // THE MAGNIFICATION LEVEL PROPAGATE (2026-09-15), the third column's own
     // copy and paste. IT TAKES NO GuiTargetRender, the authoring cluster's
-    // rule above (a level is display-only, so no act on that column may
-    // dispatch a preview); it takes the audio itself instead, for the song end,
-    // the stop report's timestamp and, since 2026-09-22, the samples the
-    // generate act analyses. ITS PASTE RAISES NO MODAL (architect 2026-09-19),
-    // but the GENERATE act's confirmation does, which is the one reason it
-    // holds the GuiPlaybackLifecycle: the modal open's playback stop.
+    // rule above (a level reaches no render input, so no act on that column
+    // may dispatch a preview); it takes the audio itself instead, for the song
+    // end and the stop report's timestamp. ITS PASTE RAISES NO MODAL
+    // (architect 2026-09-19), so it holds no GuiPlaybackLifecycle.
     MagnificationLevelPropagate magnification_level_propagate(
         app, viewport, undo, audio, active_views,
-        notifications, selection, playback_lifecycle);
+        notifications, selection);
     GuiSaveOps save_ops(app, undo, active_views, notifications);
     GuiPrompt prompt(app, gui, viewport,
                      phase_reset_propagate,
-                     magnification_level_propagate,
                      save_ops, playback_lifecycle, render_player);
     GuiSettingsEditor settings_editor(app, audio, viewport, selection,
                                       active_views, undo,
@@ -1591,10 +1588,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&]() { return paint_handler.displayed_plate_gain_is_stale(); };
     viewport.refresh_flag_cache_ =
         [&]() { paint_handler.maybe_rebuild_flag_cache(); };
-    // And the MOTION's own seam, the magnification level drag's live gain
-    // preview (the contract at Viewport::displayed_plate_geometry_is_live).
-    viewport.displayed_plate_geometry_is_live_ =
-        [&]() { return paint_handler.displayed_plate_geometry_is_live(); };
 
     // Pointer capture: the input handler's begin/end hooks drive the platform's
     // cursor lock (pointer-constraints + relative-pointer). ONE CLIENT — the

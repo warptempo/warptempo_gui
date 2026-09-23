@@ -103,7 +103,7 @@ struct NonEngineSettingsSnapshot {
     // determines, so they became session state in AppState (the third
     // deleted whole 2026-09-13) and nothing serializes them.
     // The waveform magnification level left it 2026-09-14 with its key — the
-    // picture's gain is a per-section profile, never a settings field.)
+    // picture's gain varies over source time, never a settings field.)
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared

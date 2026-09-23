@@ -280,8 +280,8 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::BracketLeft, false, false, false, false, true},                      // bare [
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
-    // 2026-09-14: the picture's gain is a per-section profile resolved from the
-    // magnification level markers column now.)
+    // 2026-09-14: the picture's gain varies over source time, the continuous
+    // curve derived from the source since 2026-09-23.)
     // (FOLLOW'S ROW IS DELETED — architect 2026-09-23, with its button and
     // bare `f`: the chase is a posture Shift+C arms, the Center button's
     // shift press, with no lamp and no row of its own. AppState::camera_chase.)
@@ -5941,11 +5941,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // Ctrl+Shift off the
         // trim bar (its one claim is the END bound set above), Shift+Alt,
         // Ctrl+Alt+Shift, ... — no-ops here. Only a plain or Shift base press
-        // proceeds. ALT survives ONLY in the SEVEN keyboard Ctrl+Alt
+        // proceeds. ALT survives ONLY in the SIX keyboard Ctrl+Alt
         // chords (Ctrl+Alt+R, Ctrl+Alt+Shift+R, Ctrl+Alt+P,
-        // Ctrl+Alt+Shift+P, Ctrl+Alt+M, since 2026-09-13
-        // File → Revert's Ctrl+Alt+O, and since 2026-09-22 Generate
-        // Magnification Level Markers' Ctrl+Alt+Shift+M)
+        // Ctrl+Alt+Shift+P, Ctrl+Alt+M and, since 2026-09-13,
+        // File → Revert's Ctrl+Alt+O)
         // — every other alt keybinding was retired
         // 2026-07-28, and both of its pointer forms moved onto the PLAIN forms
         // with the eighth glass ruling; the alt+wheel STEPPED PAN came back to

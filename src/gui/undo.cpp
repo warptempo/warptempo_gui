@@ -922,10 +922,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // selections' liveness rule, and both died 2026-07-29.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
-    // The magnification level column, display-only: the gain profile it feeds
-    // re-keys by the store's generation, which this assign bumps, and the
-    // tail's synchronous plate render (kick_waveform_sync, below) reads the
-    // new profile — so the picture's gain lands in the restore's own frame.
+    // The magnification level column, which moves no pixel of the waveform
+    // (the picture's gain is the curve derived from the source): its flags
+    // repaint with the tail's synchronous rebuild (kick_waveform_sync, below).
     app.magnificationlevelmarkers.markers_mut() =
         std::move(entry.magnification_level_snapshot);
 

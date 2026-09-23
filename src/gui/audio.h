@@ -7,9 +7,11 @@
 #include <utility>
 #include <vector>
 
-// Owns an audio file's sample buffer and a fixed-stride min/max peak pyramid
-// (int16 cache levels on a powers-of-4 stride ladder). No knowledge of X11,
-// Cairo, or progress UI. Synchronous loader with a progress callback that the
+#include "waveform_gain.h"
+
+// Owns an audio file's sample buffer, a fixed-stride min/max peak pyramid
+// (int16 cache levels on a powers-of-4 stride ladder) and the waveform
+// picture's continuous gain curve. No knowledge of X11, Cairo, or progress UI. Synchronous loader with a progress callback that the
 // caller wires up to its UI.
 class GuiAudio {
 public:
@@ -108,6 +110,17 @@ public:
                                           int64_t start_sample,
                                           int64_t end_sample) const;
 
+    // THE PICTURE'S CONTINUOUS GAIN over source frames (derive_waveform_gain,
+    // waveform_gain.h, which owns the rule), derived inside load() from the
+    // decoded samples exactly as the pyramid is built from them, and
+    // immutable after load like the pyramid — so the waveform worker reads it
+    // through its job's audio pointer with no owned snapshot. Whether a plate
+    // applies it is the gate's (waveform_magnified, warp_frame_map_view.h).
+    // Pixels only: no sample and no render input reads it.
+    const WaveformGainCurve& gain_curve() const { return gain_curve_; }
+    // The derivation's wall time in load(), for the loader's load-stats line.
+    double gain_derive_ms() const { return gain_derive_ms_; }
+
 private:
     std::shared_ptr<const std::vector<float>> samples_;
     int64_t            total_frames_    = 0;
@@ -138,4 +151,7 @@ private:
     // audio.cpp). Populated either from the on-disk `<basename>.peaks` sidecar
     // or by streaming over the freshly built sample buffer on cache miss.
     std::array<PyramidLevel, kCacheLevels> levels_;
+
+    WaveformGainCurve gain_curve_;
+    double            gain_derive_ms_ = 0.0;
 };

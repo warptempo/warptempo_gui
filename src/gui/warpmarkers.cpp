@@ -116,14 +116,3 @@ bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
     return marker_effectively_disabled(markers, static_cast<size_t>(idx));
 }
 
-uint64_t waveform_gain_profile_hash(const WaveformGainProfile& profile) {
-    if (profile.breakpoints.empty()) return 0;
-    uint64_t h = 0xcbf29ce484222325ULL;
-    for (const auto& b : profile.breakpoints) {
-        h ^= static_cast<uint64_t>(b.source_frame);
-        h *= 0x100000001b3ULL;
-        h ^= static_cast<uint64_t>(b.level);
-        h *= 0x100000001b3ULL;
-    }
-    return h;
-}

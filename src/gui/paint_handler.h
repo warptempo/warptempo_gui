@@ -146,7 +146,7 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, inset_px, the GAIN PROFILE hash, target,
+    // vp_start, vp_end, area_w, area_h, inset_px, the GAIN field, target,
     // and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
     // to move with it.
@@ -166,18 +166,17 @@ struct WaveformCache {
     // was font-derived then. The proxy died with the grid; the thing itself is
     // what the job takes.)
     int       fp_inset_px = -1;
-    // THE GAIN PROFILE'S HASH the live pixels were rendered under — the
-    // per-section magnification, or the empty profile where the gate answers
-    // flat (effective_waveform_gain_profile, warp_frame_map_view.h, which owns
-    // that rule).
-    // A FINGERPRINT FIELD in its own right, keyed
-    // directly like the inset: the profile is an input to the tip mapping
-    // alone, so nothing else about the plate would move if it changed by
-    // itself (a level edit moves no map), and without it a plate rendered at
-    // one gain could go on being blitted after the profile changed. The hash alone is enough to re-render — no basis freeze and
-    // no map term rides with it. PIXELS ONLY — this cache holds a picture, and
-    // the profile reaches no sample anywhere.
-    uint64_t  fp_gain_profile_hash = 0;
+    // THE GAIN FIELD the live pixels were rendered under — the derived
+    // curve's version where the picture is magnified, 0 where the gate answers
+    // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
+    // rule). A FINGERPRINT FIELD in its own right, keyed directly like the
+    // inset: the gain is an input to the tip mapping alone, so nothing else
+    // about the plate would move if it changed by itself (the `[` lamp moves
+    // no map), and without it a plate rendered at one gain could go on being
+    // blitted after the gain changed. The field alone is enough to re-render —
+    // no basis freeze and no map term rides with it. PIXELS ONLY — this cache
+    // holds a picture, and the gain reaches no sample anywhere.
+    uint64_t  fp_gain_hash = 0;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no
     // sensible displayed-viewport values before the first waveform paint.
@@ -209,7 +208,7 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_inset_px = -1;
-    uint64_t  pending_fp_gain_profile_hash = 0;
+    uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
     uint64_t  pending_fp_warp_frame_map_hash = 0;
 
@@ -231,8 +230,7 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_inset_px    = 0;   // GUI-captured waveform inset
-    WaveformGainProfile supersede_gain_profile;      // GUI-captured profile
-    uint64_t  supersede_gain_profile_hash = 0;
+    uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
     uint64_t  supersede_warp_frame_map_hash = 0;
     std::vector<WarpFrameMapSegment> supersede_warp_frame_map;
@@ -259,12 +257,11 @@ struct WaveformCache {
         // guaranteed mismatch and re-dispatches — area_w = -1 is impossible for
         // any valid render (compute_waveform_render_inputs rejects area.w <= 0).
         pending_fp_area_w = -1;
-        // (The gain profile hash needs no poison of its own: area_w = -1 already
+        // (The gain field needs no poison of its own: area_w = -1 already
         // guarantees the mismatch, and this cache carries the one poison
         // rather than one per field.)
         supersede = false;
         supersede_warp_frame_map.clear();
-        supersede_gain_profile.breakpoints.clear();
         fp_warp_frame_map.clear();
         pending_fp_warp_frame_map.clear();
     }
@@ -316,7 +313,7 @@ struct FlagCache {
     // scale — the box, the pole, the label's font size, the cells'
     // padding — so it is an input to this surface exactly as the viewport and
     // the marker generations are, and it is keyed BY FIELD like the plate's own
-    // inset and gain profile rather than through whatever else happens to move
+    // inset and gain field rather than through whatever else happens to move
     // with it. (fp_area_h does move at every 1 % step on a 1080-px window,
     // because the waveform's 500-px cap and the strip's lanes are all scaled —
     // but that is arithmetic on one window size, not construction; a window
@@ -601,16 +598,10 @@ struct GuiPaintHandler {
     void force_synchronous_waveform_rebuild();
 
     // True when a plate is displayed (wf_cache.fp_rendered) and its published
-    // gain fingerprint (fp_gain_profile_hash) differs from the live effective
-    // gain profile's hash (effective_waveform_gain_profile). The contract and
-    // its readers are at Viewport::displayed_plate_gain_is_stale.
+    // gain fingerprint (fp_gain_hash) differs from the live gain field
+    // (waveform_gain_fingerprint). The contract and its readers are at
+    // Viewport::displayed_plate_gain_is_stale.
     bool displayed_plate_gain_is_stale() const;
-    // displayed_plate_geometry_is_live: true when a plate is displayed and
-    // every GEOMETRY field of its published fingerprint — the viewport pair,
-    // the area, the inset, the domain and the warp map hash — equals what the
-    // live state would render under. The contract and its one reader are at
-    // Viewport::displayed_plate_geometry_is_live.
-    bool displayed_plate_geometry_is_live() const;
 
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
@@ -697,13 +688,12 @@ private:
         // field — the plate's only non-area geometry, so nothing else would
         // move if it changed alone.
         int      inset_px      = 0;
-        // The waveform PICTURE's gain profile (effective_waveform_gain_profile,
-        // an owned snapshot for the job) and its hash. The profile is the
-        // render input and the HASH the fingerprint field, exactly like
-        // inset_px above: it feeds the tip mapping and nothing else, so nothing
-        // else would move if it changed alone.
-        WaveformGainProfile gain_profile;
-        uint64_t gain_profile_hash = 0;
+        // The waveform PICTURE's gain field (waveform_gain_fingerprint): nonzero
+        // means apply the audio's derived curve. It is both the render input
+        // and the fingerprint field, exactly like inset_px above: it feeds the
+        // tip mapping and nothing else, so nothing else would move if it
+        // changed alone.
+        uint64_t gain_hash = 0;
         bool     is_target     = false;
         uint64_t warp_frame_map_hash  = 0;
         // The translation map: the target-view map in target view, empty in

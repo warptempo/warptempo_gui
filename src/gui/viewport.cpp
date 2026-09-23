@@ -779,7 +779,7 @@ void Viewport::finish_discrete_viewport_move() {
 }
 
 uint64_t Viewport::waveform_gain_hash() const {
-    return effective_waveform_gain_profile(app).hash;
+    return waveform_gain_fingerprint(app);
 }
 
 void Viewport::kick_waveform_sync_if_gain_changed(uint64_t prior_hash) {

@@ -4,7 +4,6 @@
 #include "magnificationlevelmarkers_parse.h"
 #include "marker_magnification.h"   // the level grammar and its ONE range
                                     // owner, kMarkerMagnificationMax
-#include "warpmarkers.h"   // WaveformGainProfile, the picture's step function
 
 #include <expected>
 #include <optional>
@@ -12,10 +11,12 @@
 #include <vector>
 
 // THE MAGNIFICATION LEVEL MARKER COLUMN'S GUI STORE (architect 2026-09-15):
-// the third marker column, display-only — the waveform picture's gain profile
-// is its one reader (effective_waveform_gain_profile, warp_frame_map_view.h),
-// and no render, render fingerprint or preview input reads it. The grammar and
-// the column's reason are at the parser (magnificationlevelmarkers_parse.h).
+// the third marker column, and since 2026-09-23 an INERT one — it has NO
+// PICTURE READER: the waveform's magnification is the continuous gain derived
+// from the source (derive_waveform_gain, waveform_gain.h), so a level moves no
+// pixel. No render, render fingerprint or preview input reads it either. Its
+// authoring acts, its flags and its red cue still stand. The grammar and the
+// column's reason are at the parser (magnificationlevelmarkers_parse.h).
 //
 // The GUI type exists so the store has its own type over the shared
 // GuiMarkerStore, mirroring the WarpMarker / GuiWarpMarker and
@@ -48,69 +49,49 @@ inline bool magnification_level_rows_equal(
     return true;
 }
 
-// THE WAVEFORM GAIN PROFILE BUILT FROM THIS COLUMN — the whole meaning of a
-// magnification level marker (architect 2026-09-15). A step function over
-// source frames (the WaveformGainProfile contract, warpmarkers.h):
+// THE COLUMN'S LEVEL-PER-FRAME RULE (architect 2026-09-15; the coincident
+// collapse 2026-09-16), a step function over source frames that no picture
+// reads any more (the store is inert, above) and that the column's own acts
+// still ask:
 //   * LEVEL 0 HOLDS BEFORE THE FIRST ENABLED MARKER;
 //   * each ENABLED marker's level holds from its frame up to the next enabled
-//     marker's frame (the song end for the last) — a level-0 marker is how
-//     the picture returns to unmagnified;
+//     marker's frame (the song end for the last);
 //   * a DISABLED marker is invisible: the level in force walks straight past
 //     it;
-//   * COINCIDENT LEVELS COLLAPSE TO THE NEUTRAL LEVEL 0 (architect 2026-09-16):
-//     a run of 2+ ENABLED markers at one exact frame contributes level 0 at
-//     that frame, holding to the next enabled marker's frame — the WARP
-//     column's rule on this axis, where a run of 2+ effectively enabled tempo
-//     markers collapses to a neutral 1.00 owner
-//     (warp_coincident_collapse_members, warp_frame_map_build.h). The run's
-//     tally counts ENABLED members alone; a run with exactly one enabled member
-//     contributes that member's level, a run with none contributes nothing.
-//     STORE ORDER IS THEREFORE INVISIBLE TO THE PICTURE, as it is invisible to
-//     the render on W and P — an equal-frame insert or a paste that reorders a
-//     coincident run cannot move the gain;
-//   * a breakpoint exists only where the level CHANGES, so level 0 everywhere
-//     is the empty profile (hash 0).
-// Pure; memoized per store generation by waveform_gain_profile_cached
-// (warp_frame_map_view.h).
-WaveformGainProfile build_waveform_gain_profile(
-    const std::vector<GuiMagnificationLevelMarker>& markers);
+//   * COINCIDENT LEVELS COLLAPSE TO THE NEUTRAL LEVEL 0: a run of 2+ ENABLED
+//     markers at one exact frame contributes level 0 at that frame, holding
+//     to the next enabled marker's frame — the WARP column's rule on this
+//     axis, where a run of 2+ effectively enabled tempo markers collapses to a
+//     neutral 1.00 owner (warp_coincident_collapse_members,
+//     warp_frame_map_build.h). The run's tally counts ENABLED members alone; a
+//     run with exactly one enabled member contributes that member's level, a
+//     run with none contributes nothing. Store order among equal frames is
+//     therefore invisible to the rule.
+// One run walk in the .cpp (for_each_magnification_level_run) owns it, and
+// the two readers below both call it, so neither can drift from the other.
 
-// THE LEVEL IN FORCE AT A SOURCE FRAME — the step function above READ AT ONE
-// POINT, under the SAME rules (architect 2026-09-15; the coincident collapse
-// 2026-09-16): level 0 before the first enabled marker, each enabled marker's
-// level holding from its own frame forward, a DISABLED marker invisible, and a
-// coincident run of 2+ enabled markers reading as the neutral level 0. Its one
-// caller is THE DROP
+// THE LEVEL IN FORCE AT A SOURCE FRAME — the rule above READ AT ONE POINT.
+// Its one caller is THE DROP
 // (GuiMagnificationLevelMarkersOps::drop_magnification_level_at_position),
-// whose new marker copies the level already in force at the playhead, so a drop
-// changes the picture nowhere until its level is stepped or edited.
-//
-// A SEPARATE BODY RATHER THAN A PROBE OF THE BUILT PROFILE: the drop asks about
-// ONE frame on a store it is about to mutate, and the profile is memoized per
-// store generation for the PICTURE's sake; asking this directly costs one walk
-// and keeps the drop free of the cache's keying. The rule ITSELF is shared, not
-// merely agreed: both bodies call the one run walk in the .cpp
-// (for_each_magnification_level_run), as the collapse classifier below does,
-// so none of the three can drift from the others.
+// whose new marker copies the level already in force at the playhead.
 // `markers` is the store in its resting (frame-ascending) order.
 uint8_t magnification_level_in_force(
     const std::vector<GuiMagnificationLevelMarker>& markers, int64_t frame);
 
 // THE COLLAPSE MEMBERS (architect 2026-09-16): one byte per store row, 1 for
 // every ENABLED member of a frame run with 2+ enabled members — the rows whose
-// levels the picture reads as the neutral level 0 above — and 0 for every
-// other row, a disabled row inside such a run included (the picture never
-// counted it, so it is no member and steps like any disabled marker). The
-// warp column's classifier in this column's terms
-// (warp_coincident_collapse_members, warp_frame_map_build.h; that one marks
-// the whole raw run and leaves the enabled test to its readers, this one
-// answers the enabled question itself because every reader asks it). ONE
-// READER, the red-flag cache's `collapsed` subset
-// (magnification_level_red_flag_set_cached, warp_frame_map_view.h), which
-// memoizes it per store generation for the level step's kind refusal, the
-// group step's wall and the Up / Down face. The same run walk the builder and
-// the level-in-force take, so a run is collapsed here iff the picture collapses
-// it. `markers` is the store in its resting (frame-ascending) order.
+// levels the rule above reads as the neutral level 0 — and 0 for every other
+// row, a disabled row inside such a run included (the rule never counts it,
+// so it is no member and steps like any disabled marker). The warp column's
+// classifier in this column's terms (warp_coincident_collapse_members,
+// warp_frame_map_build.h; that one marks the whole raw run and leaves the
+// enabled test to its readers, this one answers the enabled question itself
+// because every reader asks it). ONE READER, the red-flag cache's `collapsed`
+// subset (magnification_level_red_flag_set_cached, warp_frame_map_view.h),
+// which memoizes it per store generation for the level step's kind refusal,
+// the group step's wall and the Up / Down face. The same run walk the
+// level-in-force takes, so a run is collapsed here iff the rule collapses it.
+// `markers` is the store in its resting (frame-ascending) order.
 std::vector<char> magnification_level_collapse_members(
     const std::vector<GuiMagnificationLevelMarker>& markers);
 

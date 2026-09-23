@@ -764,9 +764,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 //     EVERY PASTE STAYS REFUSED by the base — the phase family's Ctrl+Alt+P
 //     and Ctrl+Alt+Shift+P and the magnification family's Ctrl+Alt+M, three
 //     since 2026-09-19 — each rewriting a store and pushing, which is exactly
-//     what the lock holds back, AND SO DOES THE GENERATE ACT on
-//     Ctrl+Alt+Shift+M (2026-09-22), which replaces the M markers inside the
-//     trim and pushes. Ctrl-exact, no shift and no alt, the dispatch
+//     what the lock holds back. Ctrl-exact, no shift and no alt, the dispatch
 //     arm's own spelling — so the alt-bearing chords cannot reach this
 //     admission by widening it. THE EDIT MENU'S TWO COPY ROWS come back with
 //     it and needed no edit of their own: each synthesizes its chord through
@@ -866,7 +864,7 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
     // The clipboard copies, ctrl-exact as their dispatch arms are — which is
-    // what keeps the three ALT-bearing pastes and the generate act out of this
+    // what keeps the three ALT-bearing pastes out of this
     // admission. Ctrl+M,
     // the magnification level copy (2026-09-15), on Ctrl+P's own standard: a
     // copy writes a session clipboard and no store.
@@ -4089,9 +4087,9 @@ void GuiInputHandler::run_history_revert() {
         // needs no reorder pass here. markers_mut() is what
         // bumps the generation, which is what the map memo and the flag cache
         // read.
-        // THE PICTURE'S BEFORE-HASH, captured ahead of the install for the
-        // magnification level arm (the cluster's rule; a no-op on the other
-        // two, whose stores move no gain profile).
+        // THE PLATE'S BEFORE-HASH, captured ahead of the install for the
+        // magnification level arm (the cluster's rule; no store moves the gain
+        // since 2026-09-23, so the compare comes out equal on every arm).
         const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
         if (phase) {
             app.phaseresetmarkers.markers_mut() =
@@ -5547,10 +5545,9 @@ void GuiInputHandler::apply_recipe_in_place(
     app.warpmarkers.markers_mut()       = std::move(warp);
     app.phaseresetmarkers.markers_mut() = std::move(phase_resets);
     // The magnification level column rides the recipe (architect 2026-09-15:
-    // `'` "definitely" carries it) in this SAME one undo entry. Display-only:
-    // the store's generation bump re-keys the gain profile, and the tail's
-    // synchronous plate render below reads it, so the new gain lands in this
-    // act's own frame; the target preview never reads it.
+    // `'` "definitely" carries it) in this SAME one undo entry. It moves no
+    // pixel of the waveform (the picture's gain is the curve derived from the
+    // source), and the target preview never reads it.
     app.magnificationlevelmarkers.markers_mut() =
         std::move(magnification_levels);
     // Wholesale authoring reset: the ONE selection goes, and there is nothing
@@ -7941,8 +7938,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // -- THE MAGNIFICATION LEVEL PROPAGATE: two arms on the letter M (the
-    // generate act's third follows them, 2026-09-22), and it
+    // -- THE MAGNIFICATION LEVEL PROPAGATE: two arms on the letter M, and it
     // is NOT the three above with a letter swapped (architect 2026-09-19).
     // The phase three are W-column acts that carry a labeled phrase's resets
     // from one occurrence of a label to another; these two are M-COLUMN acts
@@ -8005,25 +8001,6 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             return true;
         }
         magnification_level_propagate.paste_apply();
-        return true;
-    }
-
-    // Ctrl+Alt+Shift+M: GENERATE MAGNIFICATION LEVEL MARKERS (architect
-    // 2026-09-22) — the letter's third chord, and NOT a state paste (the
-    // header states why the family has none). It replaces the M markers inside
-    // the trim with the detector's, behind an OK / Cancel confirmation; the
-    // whole rule is at MagnificationLevelPropagate (magnification_level_-
-    // propagate.h). ONE GATE, the column, carded in the paste's own register;
-    // the locks and the `h` view refuse it upstream, at the allowlists this
-    // chord is on none of, exactly as they refuse Ctrl+Alt+M.
-    if (key == GuiKeys::M && ctrl && shift && alt) {
-        if (app.active_markers_view != 'M') {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Magnification levels are generated in the magnification level view");
-            return true;
-        }
-        magnification_level_propagate.open_generate_confirmation();
         return true;
     }
 
@@ -9422,8 +9399,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         break;
     case GuiKeys::BracketLeft:
         // Toggle the Ignore Waveform Magnification lamp (architect
-        // 2026-09-22): dark shows the magnification in source view, lit
-        // flattens it. The
+        // 2026-09-22): dark shows the continuous gain derived from the source
+        // in source view (GuiAudio::gain_curve), lit flattens it. The
         // one bare form reaches here (is_waveform_magnification_key, the
         // caller having gated on no modifiers). In TARGET VIEW the lamp has no
         // effect, so the press refuses on its card and the bit keeps its state
