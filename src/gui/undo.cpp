@@ -3,14 +3,13 @@
 #include "input_handler.h"        // land_playhead_on_marker,
                                   // GuiInputHandler::switch_active_audio_view_to
                                   // — the S/T tag's restore chokepoint,
-                                  // bring_span_into_view — the restore visual
-                                  // tail's group framing (the shared owner
-                                  // since 2026-08-16; frame_span_into_view is
-                                  // its cannot-fit arm and is no longer called
+                                  // center_span_in_view — the restore visual
+                                  // tail's group camera (frame_span_into_view
+                                  // is its cannot-fit arm and is not called
                                   // from this TU)
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // singleton recenter and the group framing,
+                                  // singleton centre and the group camera,
                                   // and active_domain_to_source_frame for the
                                   // restore's map-change re-land
 
@@ -26,17 +25,16 @@
 namespace {
 
 // THE ROW EQUALITY BASIS AND THE TOUCHED-SET RECONSTRUCTION BOTH LIVE IN
-// app_state.h since 2026-09-04 — warp_row_fields_differ,
-// phase_reset_row_fields_differ and restore_touched_indices — where the
-// Restrict undo to viewport lamp's predicate can reach them: that lamp greys
-// the Undo and Redo buttons on the touched set a restore WOULD produce, and a
-// face compiled in that header cannot ask a matcher that lives here. The
-// enumerations and the matcher's arms are unchanged and their argument is at
-// their new home, and the whole-list pair built on them (warp_rows_equal /
-// phase_reset_rows_equal) followed them there when the lamp's proposed target
-// map became the warp face's second reader. This file is still their applier,
-// and entry_restores_live_marker_stores below is still where a whole store is
-// asked the row question.
+// app_state.h — warp_row_fields_differ, phase_reset_row_fields_differ,
+// restore_touched_indices and the whole-list pair built on the first two
+// (warp_rows_equal / phase_reset_rows_equal). They moved there 2026-09-04 so
+// the Restrict undo to viewport lamp's face could ask the touched set a
+// restore WOULD produce; that measurement left with the camera restriction on
+// 2026-09-22 (the lamp is Restrict Undo to Current View now and reads the
+// entry's view tags alone), and they stay where they are because the header
+// is a neutral home and nothing gains from the move back. This file is still
+// their applier, and entry_restores_live_marker_stores below is still where a
+// whole store is asked the row question.
 
 // True when restoring `entry` would write back the marker stores THAT ARE
 // ALREADY LIVE — the question the coalesced burst's net-zero pop asks
@@ -653,8 +651,7 @@ namespace {
 // THE RECONSTRUCTION IS NOT THIS FUNCTION'S — restore_touched_indices
 // (app_state.h) owns it, and this is its applier. The classification, the
 // identity hints, the three count arms and the row-equality basis they consume
-// are all stated there, where the Restrict undo to viewport lamp's predicate
-// asks the same question of the same entry before the restore runs.
+// are all stated there.
 //
 // THE TOUCHED SET WINS UNCONDITIONALLY, THE EMPTY CASE INCLUDED — an empty set
 // EMPTIES the selection rather than leaving the prior one standing, and the
@@ -682,7 +679,8 @@ namespace {
 // The VISUAL tail — the playhead land (on the FOCUS in both arms, which is the
 // touched marker for a singleton and the earliest touched member for a group;
 // the universal land-on-the-focus rule at land_playhead_on_marker) and the
-// offscreen framing/recenter — lives in restore_history_entry AFTER sanitize.
+// camera that centres what was restored — lives in restore_history_entry AFTER
+// sanitize.
 template <class M, class FieldsDiffer>
 void apply_post_restore_rules_impl(Selection& selection,
                                    const UndoEntry& entry,
@@ -922,20 +920,27 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
 
     // THE MAP-CHANGE RE-LAND, the shape the product already owns for a map
     // rebuilt under a STANDING view (the family contract is at the head of
-    // warpmarkers_ops.cpp; the writer is Viewport::reseat_playhead_to, and a
-    // TRANSLATION IS NOT A MOVEMENT — it hides no trim region overlay and ends
-    // no audition). TARGET VIEW ONLY: in source view the swap changes no domain
-    // and the cursor's number already names its own instant. It carries the
-    // cursor across the re-warp, so the audio-view switch below — and the
-    // visual tail after it — start from the instant the user stood on rather
-    // than from a number the replaced map minted. The subject is the PLAYHEAD's
-    // own instant rather than a focus's image, for the delete's reason: a
-    // restore may leave no focus at all (a removal empties the selection).
+    // warpmarkers_ops.cpp) — A TRANSLATION, NOT A MOVEMENT, and on this road
+    // NOT A SCROLL EITHER (architect 2026-09-22): the writer is
+    // Viewport::translate_playhead_to, which carries the cursor with no
+    // keep-visible edge-align. The family's other members take the reseat's
+    // edge-align; this one does not, because the restore's camera answers to
+    // the markers it restores and never to the playhead — through the reseat,
+    // an OFFSCREEN playhead dragged the viewport to where its instant now
+    // painted, the "random spot" a target-view undo used to land on. TARGET
+    // VIEW ONLY: in source view the swap changes no domain and the cursor's
+    // number already names its own instant. It carries the cursor across the
+    // re-warp, so the audio-view switch below — and the visual tail after it —
+    // start from the instant the user stood on rather than from a number the
+    // replaced map minted. The subject is the PLAYHEAD's own instant rather
+    // than a focus's image, for the delete's reason: a restore may leave no
+    // focus at all (a removal empties the selection), and then this is the
+    // whole of what happens to the cursor and the camera stays put.
     // NO KICK OF ITS OWN, unlike the family's other members: the target map
     // cache rebuilds on demand for the conversion, and this body's tail already
     // renders the plate synchronously once for the finished state.
     if (app.active_audio_view == 'T') {
-        viewport.reseat_playhead_to(source_frame_to_active_domain(
+        viewport.translate_playhead_to(source_frame_to_active_domain(
             app, viewport.audio, playhead_source_frame));
     }
 
@@ -1084,53 +1089,46 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
-    // language, superseding "undo/redo shows its target WITHOUT the playhead"):
-    // a SINGLETON restore LANDS the playhead on its touched marker (which is its
-    // focus; the land is the movement owner, so it takes the trim region overlay
-    // with it) and its flag BRIGHTENS from the
-    // restored selection (no stamp); a GROUP
-    // restore re-selects the touched set (done above) and LANDS the playhead on
-    // its FOCUS — the EARLIEST touched member, by the focus rule above — the
-    // visible cursor on that member plus the members' own brightened flags
-    // being the group's whole cue since the SPAN FORM retired (architect
-    // 2026-07-30); then,
-    // when any member is
-    // offscreen, it PREFERS a plain scroll and only ZOOMS OUT if the group cannot fit
-    // at the current level (the group arm below, which derives the framed span
-    // from the restored members' positions). Runs AFTER
-    // sanitize_selection_after_restore so the land sees the final membership,
-    // and BEFORE the recompute/invalidate/kick block below so restore's one sync
-    // render covers the final geometry. The LAND/FRAMING block is gated off 'S', and
-    // the 'S' gate is now SIMPLE: a settings-only restore selects nothing, shows
-    // no overlay, and lands nothing — it HIDES the overlay and clears the
-    // selection (below), which is why the narrowing it briefly carried (a
-    // target-view re-land onto a surviving focus) is gone with the surviving focus
-    // itself. It is
-    // branches on the POST-sanitize live size, so a defensive edge takes the
-    // matching arm (a group entry sanitized down to one member lands as a
-    // singleton; a removal cleared to empty is the size == 0 no-op).
+    // language; THE CAMERA RULED 2026-09-22): the restore re-selects the
+    // touched set (done above) and LANDS the playhead on its FOCUS — the
+    // touched marker for a singleton, the EARLIEST touched member for a group
+    // (the focus rule at apply_post_restore_rules_impl) — the members' own
+    // brightened flags and the always-visible cursor on the focus being the
+    // whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS AND NEVER TO THE
+    // PLAYHEAD (architect 2026-09-22):
+    //   * ONE MARKER is CENTRED, ALWAYS, at the current zoom — onscreen or
+    //     not, so every restore of one marker lands it in the same place;
+    //   * SEVERAL MARKERS have their range's MIDDLE centred, ALWAYS, at the
+    //     current zoom, and when the range plus the edge margin on each side
+    //     cannot fit the window the camera ZOOMS OUT until it does; it never
+    //     zooms in (center_span_in_view, input_handler.cpp);
+    //   * NO MARKER (a removal, or an entry that touched nothing in this
+    //     column) moves NO CAMERA: the only cursor write such a restore makes
+    //     is the map-change re-land's translation above, which scrolls
+    //     nothing.
+    // Runs AFTER sanitize_selection_after_restore so the land sees the final
+    // membership, after the tab / data / column / audio-view restores so it
+    // centres in the view the restore ends in, and BEFORE the
+    // recompute/invalidate/kick block below so restore's one sync render
+    // covers the final geometry. It branches on the POST-sanitize live size,
+    // so a defensive edge takes the matching arm (a group entry sanitized
+    // down to one member lands as a singleton; a removal cleared to empty is
+    // the size == 0 no-op).
     //
-    // Both marker arms LAND the playhead on the restored focus below, through
-    // the land, a movement owner. A SETTINGS-ONLY ('S') restore lands nothing —
-    // it moves no playhead and touches no marker. (The restore hid the trim
-    // region overlay until 2026-08-19 at its own site and through the land
-    // until the resting overlay was deleted on 2026-09-22; trim is outside the
-    // undo stacks by ruling.)
-    // The 'S' gate stands
-    // exactly as it did: a settings restore still must not select and must not
-    // SHOW an overlay, and the whole land/framing block stays inside it. The
-    // no-LAND half is EXCEPTIONLESS again:
-    // the target-view re-land it briefly allowed — onto a selection
-    // surviving the restore — died with the selection clear above, which
-    // leaves no focus to land on.
+    // A SETTINGS-ONLY ('S') restore lands nothing and moves no camera: it
+    // selects nothing (the clear above), touches no marker, and the whole
+    // land/camera block is gated off it. (The restore hid the trim region
+    // overlay until 2026-08-19 at its own site and through the land until the
+    // resting overlay was deleted on 2026-09-22; trim is outside the undo
+    // stacks by ruling.)
     if (entry.op_mode != 'S') {
         const size_t sel_size = app.selected_markers.size();
         if (sel_size == 1) {
             const int t = *app.selected_markers.begin();
             // Resolve the touched marker's source frame with ONE bounds check up
             // front — an out-of-range t skips the WHOLE singleton visual (land +
-            // recenter) rather than half-applying it (a bad t would else
-            // land nothing but recenter on the src_f=0 default). Defensive only:
+            // centre) rather than half-applying it (a bad t would else land
+            // nothing but centre on the src_f=0 default). Defensive only:
             // post-sanitize the selection indices are always in range, so this
             // guards an impossible state, never a reachable one.
             // The active column's store through its selector pair
@@ -1144,49 +1142,22 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // move, through the movement owner. Playback is already
                 // stopped above, so land's scanner-inactive premise holds.
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
-                // OFFSCREEN -> plain recenter at the CURRENT zoom (no framer, no
-                // zoom change): center on the touched marker's active-domain image
-                // and re-snap/clamp through the one chokepoint only when it is
-                // outside the visible span.
-                //
-                // "OUTSIDE THE VISIBLE SPAN" IS THE ONE OWNER'S QUESTION since
-                // 2026-09-04 (span_columns_visible, app_state.h), asked of the
-                // degenerate span [frame, frame]. This arm used to ask it in
-                // raw samples ([start, start + visible)) while the group arm
-                // below and the Restrict undo to viewport lamp's predicate both
-                // asked it in painted columns, and the three disagreed within
-                // one column of the viewport's edge — so a restore could
-                // recentre where the lamp had just promised the camera would
-                // stand still. The recentre itself is unchanged.
-                //
-                // AND THE FRAME IS CLAMPED BEFORE EITHER READS IT, which is
-                // what makes the three agree in full: the crossing into the
-                // active domain can round a right-wall marker onto
-                // domain_total_frames itself, one past the last frame, and both
-                // of the other two answers already clamp that away — the LAND
-                // just above through seat_playhead_on_source_frame's
-                // clamp_playhead_to_live_domain, and the lamp's predicate
-                // through clamp_frame_to_domain on the domain a restore would
-                // install (undo_restore_within_viewport, app_state.h). Asking
-                // the column test at the unclamped value asked about a position
-                // nothing else believed in, so a marker at the wall could be
-                // called offscreen and recentred on while the lamp had
-                // promised the camera would stand still — the very drift the
-                // shared owner was hoisted to end. The group arm below spells
-                // the same clamp per member; this is the singleton's. ONE
-                // VALUE SERVES BOTH READERS here, so the recentre arithmetic
-                // centres on the frame the test judged and on the frame the
-                // land seated.
+                // CENTRE, ALWAYS, at the CURRENT zoom (architect 2026-09-22 —
+                // until then only an OFFSCREEN marker was recentred, so a
+                // restore's camera depended on where the marker happened to
+                // stand): the touched marker's active-domain image at the
+                // window's middle, re-snapped and wall-clamped through the one
+                // chokepoint, no zoom change. The frame is the LAND'S, exactly
+                // — the crossing into the active domain then the live-domain
+                // clamp (the crossing can round a right-wall marker onto
+                // domain_total_frames itself, one past the last frame) — so the
+                // centre is the frame the land seated.
                 const int64_t domain_frame = clamp_playhead_to_live_domain(
                     source_frame_to_active_domain(app, viewport.audio, src_f),
                     app, viewport.audio);
                 const int64_t visible = samples_visible(app, viewport.audio);
-                const int64_t start   = app.viewport_start_sample;
-                if (!span_columns_visible(app, viewport.audio, start,
-                                          domain_frame, domain_frame)) {
-                    app.viewport_start_sample = domain_frame - visible / 2;
-                    clamp_viewport_start(app, viewport.audio);
-                }
+                app.viewport_start_sample = domain_frame - visible / 2;
+                clamp_viewport_start(app, viewport.audio);
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
                 // full-waveform invalidates below repaint it. Stems do not
@@ -1202,43 +1173,26 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // restore's focus IS the earliest touched member by construction
             // (apply_post_restore_rules_impl) — spelled as
             // *selected_markers.begin() rather than last_selected_marker so a
-            // sanitize that pruned the focus still lands somewhere live. The
-            // group's visual is the restored members' brightened flags plus the
-            // always-visible cursor sitting on the earliest of them — the
-            // extent-region write that used to follow this land is gone: the
-            // region IS THE TRIM, which a restore has no business writing.
+            // sanitize that pruned the focus still lands somewhere live.
             // land_playhead_on_marker is internally bounds-guarded (an
             // impossible out-of-range index no-ops the land) and writes NO
-            // viewport, so the three-way offscreen arm below is unaffected;
-            // playback is already stopped above (land's scanner-inactive
-            // premise).
+            // viewport, so the camera below is its own; playback is already
+            // stopped above (land's scanner-inactive premise).
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());
-            // OFFSCREEN handling: PREFER a plain scroll at the current zoom,
-            // ZOOM only when the group cannot fit — this restore's own rule
-            // since 2026-07-25 and, since 2026-08-16, SHARED CODE. The whole
-            // argument (the painted-column fit contract, the three arms, the
-            // ceiling/half-pixel exception to the framer's no-op guard, and the
-            // accepted duplicate render) lives at bring_span_into_view's
-            // definition, input_handler.cpp; it was hoisted verbatim out of
-            // this spot when the Show trim region button (deleted 2026-09-22)
-            // asked for the same behaviour, so this arm is unchanged in effect and only its home
-            // moved. WHAT IS THIS SITE'S OWN: it hands the owner an
-            // ACTIVE-DOMAIN extent derived just below, and the unconditional
-            // invalidate + kick_waveform_sync at the tail of this body is the
-            // damage the owner deliberately does not do.
-            // THE SPAN THE FRAMING DECIDES ON IS THE TOUCHED SET'S OWN
-            // [earliest, latest] ACTIVE-DOMAIN EXTENT, derived right here from
-            // the restored members' positions (architect 2026-07-30): it used to
-            // be read back out of the region this arm had just written, and with
-            // that write retired the framing owns its span source directly. The
-            // per-member formula is the LAND'S, exactly —
-            // clamp_playhead_to_live_domain(source_frame_to_active_domain(...)) —
-            // so the endpoints are the same playable frames the old extent
-            // carried and every framing decision below is unchanged. `have`
-            // false (every restored index stale — degenerate, and impossible
-            // post-sanitize) frames nothing, matching the old extent owner's own
-            // no-op return.
+            // THE CAMERA CENTRES THE RANGE'S MIDDLE, zooming out only when the
+            // range plus the edge margin cannot fit (the rule and its fit
+            // arithmetic at center_span_in_view's definition,
+            // input_handler.cpp; the restore is its one caller). WHAT IS THIS
+            // SITE'S OWN: the ACTIVE-DOMAIN extent derived just below, and the
+            // unconditional invalidate + kick_waveform_sync at the tail of this
+            // body, which is the damage the owner deliberately does not do.
+            // THE RANGE IS THE TOUCHED SET'S OWN [earliest, latest]
+            // ACTIVE-DOMAIN EXTENT, each member through the LAND'S formula —
+            // clamp_playhead_to_live_domain(source_frame_to_active_domain(...))
+            // — so the endpoints are the playable frames the land would seat.
+            // `have` false (every restored index stale — degenerate, and
+            // impossible post-sanitize) moves no camera.
             int64_t lo = 0, hi = 0;
             bool    have = false;
             {
@@ -1257,11 +1211,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 }
             }
             if (have) {
-                bring_span_into_view(app, viewport.audio, viewport, lo, hi);
+                center_span_in_view(app, viewport.audio, viewport, lo, hi);
             }
         }
-        // sel_size == 0: nothing — the removal branch cleared, viewport/playhead
-        // stay put.
+        // sel_size == 0: nothing — the removal branch cleared, and the camera
+        // stays where it stands.
     }
 
     // (AN ADDRESSED-CELL WRITE-BACK STOOD HERE from 2026-09-05 to 2026-09-10:
@@ -1277,8 +1231,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // One-shot discrete jump: undo/redo restored markers / phase resets /
     // settings, changing the displayed plate (the target-view warp_frame_map).
     // The visual tail above may have LANDED the playhead (on the restored focus
-    // in either arm) and recentered
-    // or framed the viewport; these invalidations and the
+    // in either arm) and centred the restored markers, zooming out for a
+    // group that cannot fit; these invalidations and the
     // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about

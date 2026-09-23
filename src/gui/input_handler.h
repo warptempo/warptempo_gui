@@ -522,46 +522,26 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // (only the final start is rounded). A floor-saturated span rests CENTERED rather
 // than left-aligned, and the unclamped case degenerates to the span's left edge
 // (unrounded spp_t * W == the margined span by the solve). Shared by
-// run_span_framing_command (both arms) and the GROUP undo/redo
-// restore's offscreen framing. Definition in input_handler.cpp.
+// run_span_framing_command (both arms) and the GROUP undo/redo restore's
+// cannot-fit arm (center_span_in_view below). Definition in input_handler.cpp.
 void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin);
 
-// PREFER A SCROLL, ZOOM ONLY WHEN THE SPAN CANNOT FIT — the three-arm framing
-// the GROUP undo/redo restore has taken since 2026-07-25, HOISTED into its own
-// owner on 2026-08-16 when the Show trim region button needed the identical
-// behaviour ("like undo in terms of zoom/viewport", architect). It is the
-// framer above's caller, not its sibling: arm three IS
-// frame_span_into_view(margin=true).
-//
-// ONE CALLER TODAY, the restore it was written for (undo.cpp), re-greped
-// 2026-09-04: the Show trim region act LEFT on that date, when the architect
-// ruled that showing the trim never moves the camera. The owner stays hoisted
-// rather than folding back into the restore — the hoist is what gives "inside
-// the viewport" a single definition shared with span_columns_visible and the
-// Restrict undo to viewport lamp, and that reason never was the caller count.
-//
-// [lo, hi] are ACTIVE-DOMAIN frames, the same domain frame_span_into_view
-// takes and the same one BOTH callers already hold — the restore derives its
-// extent through clamp_playhead_to_live_domain(source_frame_to_active_domain
-// (...)) and the region's endpoints ARE active-domain frames by definition. A
-// caller holding SOURCE frames (the trim bounds, say) would convert before it
-// calls; no such caller stands today.
-//
-// It writes ONLY the viewport (level and start) and only through the family's
-// clamp chokepoints; it damages nothing and kicks no render, exactly as the
-// inline version did — each caller owns its own damage, which is why the
-// restore's unconditional invalidate + kick tail is unchanged by the hoist.
-// Order-agnostic: both arms read the pair symmetrically, so no swap is needed
-// (the framer's own defensive swap still stands for its other callers).
-//
-// THE WHOLE ARGUMENT — the three arms, the painted-column fit contract, the
-// ceiling/half-pixel exception the framer's no-op guard cannot cover, and the
-// accepted duplicate render — lives at the DEFINITION in input_handler.cpp.
-// Definition in input_handler.cpp.
-void bring_span_into_view(AppState& app, const GuiAudio& audio,
-                          Viewport& viewport, int64_t lo, int64_t hi);
+// THE GROUP UNDO/REDO RESTORE'S CAMERA (architect 2026-09-22): centre the
+// ACTIVE-DOMAIN range [lo, hi]'s middle at the current zoom, ALWAYS, and zoom
+// OUT through frame_span_into_view(margin=true) only when the range plus the
+// edge margin on each side cannot fit the window; never zoom in. It is the
+// framer above's caller, not its sibling. ONE CALLER, the restore
+// (undo.cpp), which derives its extent through
+// clamp_playhead_to_live_domain(source_frame_to_active_domain(...)); a caller
+// holding SOURCE frames would convert first. It writes ONLY the viewport,
+// through the family's clamp chokepoints, and damages nothing — the restore's
+// tail owns the damage and the kick. The two arms, the margin arithmetic and
+// the record of the three-arm bring_span_into_view it replaced are at the
+// DEFINITION in input_handler.cpp.
+void center_span_in_view(AppState& app, const GuiAudio& audio,
+                         Viewport& viewport, int64_t lo, int64_t hi);
 
 // THE `h` HISTORY MODE'S TWO PURE KEY PREDICATES (bodies in
 // input_key_dispatch.cpp, beside the mode's other keyboard work; the mode itself
@@ -3873,20 +3853,21 @@ private:
     std::string modal_editor_swallow_card(GuiKey key, GuiInputState mods);
     bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods);
 
-    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE SETTER (architect 2026-09-04) —
+    // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP'S ONE SETTER (architect 2026-09-04) —
     // set_tab_read_only's shape with ONE road: bare `z`, which the
     // icon row's own button reaches by synthesizing that press. There is no
     // settings-editor road, because there is no key: the bit is a per-project
-    // SESSION POSTURE (AppState::restrict_undo_to_viewport), dark at every
+    // SESSION POSTURE (AppState::restrict_undo_to_current_view), dark at every
     // project open, in no sidecar and in no vocabulary.
     //
     // WHAT THE BIT GOVERNS IS UNDO AND REDO AND NOTHING ELSE. Lit, a step whose
-    // restore would move the viewport refuses, cards and leaves both stacks
-    // untouched; the verdict has one owner,
-    // undo_step_permitted_by_viewport_lamp (app_state.h), which the Ctrl+Z arm
-    // and the two buttons' faces read — the tooltips read it too until
-    // 2026-09-12, when a tooltip stopped stating reasons. The bit
-    // reaches no camera, no walk and no other act.
+    // restore would switch the view — the tab, the audio view or the marker
+    // column the entry landed in (architect 2026-09-22; it asked whether the
+    // restore would move the camera until then) — refuses, cards and leaves
+    // both stacks untouched; the verdict has one owner,
+    // undo_step_permitted_by_current_view_lamp (app_state.h), which the Ctrl+Z
+    // arm and the two buttons' faces read. The bit reaches no camera, no walk
+    // and no other act.
     //
     // What it does: writes the field. No damage call — the lamp's face and the
     // two faces it can grey all ride the per-tick comparator like every other
@@ -3894,7 +3875,7 @@ private:
     // undo entry, no dirty bit, and nothing to persist. Nothing moves at the
     // toggle either way — the bit is read at the NEXT Ctrl+Z, so lighting it
     // changes nothing already on screen.
-    void set_restrict_undo_to_viewport(bool desired);
+    void set_restrict_undo_to_current_view(bool desired);
 
     // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect
     // 2026-09-22) — the restrict-undo lamp's shape with ONE road: bare `[`,

@@ -764,7 +764,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // stay unbound.
         case GuiKeys::N: return cl || cs;
         // Undo, and redo on the one meaningful shift bit — plus, since
-        // 2026-09-04, the RESTRICT UNDO TO VIEWPORT lamp on the bare letter,
+        // 2026-09-04, the RESTRICT UNDO TO CURRENT VIEW lamp on the bare letter,
         // which was free. The lamp governs exactly the pair it shares the key
         // with, so the letter reads as one subject; the ctrl forms are
         // untouched.
@@ -1184,7 +1184,7 @@ inline bool is_magnification_level_drop_key(GuiKey key, GuiInputState mods) {
 // which ADMITS it — a view posture, like Follow — and which the
 // grid-iterations lock's gate falls through to). The `h` view's allowlist
 // (history_mode_key_blocked) deliberately does NOT name it: Follow and
-// Restrict Undo to Viewport, its group's other two lamps, are refused there
+// Restrict Undo to Current View, its group's other two lamps, are refused there
 // too, so the view cards it like every chord it does not name.
 inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::BracketLeft && !mods.ctrl && !mods.shift &&

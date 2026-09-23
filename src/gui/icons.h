@@ -190,9 +190,9 @@ enum class Icon {
     // Breeze's timeline-lift (2026-09-04, the architect's pick): a clip's two
     // end brackets with a red cross between them — a stretch of timeline the
     // editor declines to travel. The lamp it wears refuses an undo whose
-    // restore would carry the camera off the stretch on screen. A verbatim
+    // restore would switch the view on screen (2026-09-22). A verbatim
     // 22px transcription, and the roster's fourth two-colour file.
-    TimelineLift,        // Toggle restrict undo to viewport (`z`)
+    TimelineLift,        // Toggle restrict undo to current view (`z`)
     // THE ITERATION GROUP'S TWO GLYPHS, BACK WITH THEIR BUTTONS (architect
     // 2026-09-04): the row had room again, so the Iterations dropdown was
     // deleted and the BPM opener (bare `m` then, Ctrl+B since 2026-09-15) and

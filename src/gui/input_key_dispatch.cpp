@@ -392,7 +392,7 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
-    // RESTRICT UNDO TO VIEWPORT, bare `z` (2026-09-04): follow's reasoning
+    // RESTRICT UNDO TO CURRENT VIEW, bare `z` (2026-09-04): follow's reasoning
     // once more — the bit decides whether an undo RUNS and authors nothing the
     // lock protects, so the switch is admitted on a locked tab and its button
     // stays lit there. Ctrl+Z and Ctrl+Shift+Z are NOT on this allowlist and
@@ -9418,12 +9418,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::Z:
-        // Toggle the Restrict undo to viewport lamp (2026-09-04). The setter
-        // is GuiInputHandler::set_restrict_undo_to_viewport, shared with the
+        // Toggle the Restrict undo to current view lamp (2026-09-04). The setter
+        // is GuiInputHandler::set_restrict_undo_to_current_view, shared with the
         // icon-row button's synthesized chord and with nothing else.
         // History-less, one-shot — and nothing moves at the press: the bit is read at the NEXT Ctrl+Z, through
-        // undo_step_permitted_by_viewport_lamp, and by nothing else.
-        set_restrict_undo_to_viewport(!app.restrict_undo_to_viewport);
+        // undo_step_permitted_by_current_view_lamp, and by nothing else.
+        set_restrict_undo_to_current_view(!app.restrict_undo_to_current_view);
         break;
     case GuiKeys::BracketLeft:
         // Toggle the Ignore Waveform Magnification lamp (architect

@@ -428,7 +428,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // The STICKY CTRL does NOT ride that belt (architect 2026-09-10). It is a
     // session TOOL POSTURE now, in the family the lamp beside it is already
     // in — this body clears neither (`add_to_selection` and
-    // `restrict_undo_to_viewport`), and it has nothing to clear either: this
+    // `restrict_undo_to_current_view`), and it has nothing to clear either: this
     // is the FRESH AppState's own first load, load_file having exactly one
     // caller (main.cpp's project entry), so both are already dark when it
     // runs. Their writers are their own toggles — plus, for the sticky ctrl,

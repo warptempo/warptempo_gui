@@ -302,7 +302,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
     // which puts them past the viewport group rather than here.)
     {RedesignButton::IconFollow, GuiKeys::F,   false, false, false, false, true},   // bare f
-    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — Follow's shape,
+    // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04) — Follow's shape,
     // closing the same group: bare `z`, a TOGGLE reading the live bit its own
     // chord flips. It shares its letter with the pair it governs, which is the
     // whole argument for the key, and it stood beside that pair in the toolbar
@@ -1514,7 +1514,9 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 //     reason too: a re-land onto a marker whose IMAGE moved is a translation,
 //     not a movement, so it must not end an A/B audition. The undo/redo restore
 //     rejoined that family on 2026-08-28 — through the RESEAT, on the cursor's
-//     own instant rather than on a focus, so nothing about this list changes.)
+//     own instant rather than on a focus — and since 2026-09-22 takes the
+//     reseat's no-scroll twin, Viewport::translate_playhead_to; nothing about
+//     this list changes.)
 // The two-step placement
 // basis the Tab family lands with (source_frame_to_active_domain then
 // clamp_playhead_to_live_domain), against the active column's store, so the

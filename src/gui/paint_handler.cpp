@@ -1041,13 +1041,12 @@ constexpr IconRowDef kIconRowButtons[] = {
     // settling on the chevron-and-dot, which reads as GOING to a place rather
     // than as a transport control.
     {RedesignButton::IconFollow, icons::Icon::GoJump},
-    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP (2026-09-04) closes the same group
-    // behind Follow, "it is also a viewport gesture"
-    // being the architect's own reason for moving it here from the toolbar
-    // group, where it had stood between Redo and Render for the hours of its
-    // first day. What it decides is whether an undo or redo may take the CAMERA
-    // somewhere else, which is the question every lamp in this group answers
-    // for its own gesture. Breeze's timeline-lift, a clip's two end brackets
+    // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP (2026-09-04; to Viewport until
+    // 2026-09-22) closes the same group behind Follow, "it is also a viewport
+    // gesture" being the architect's own reason for moving it here from the
+    // toolbar group, where it had stood between Redo and Render for the hours
+    // of its first day. What it decides is whether an undo or redo may SWITCH
+    // THE VIEW — the tab, the audio view or the marker column. Breeze's timeline-lift, a clip's two end brackets
     // with a red cross between them — a stretch of timeline the editor declines
     // to travel. It joins the group rather than opening one, so the move adds
     // no box and no gap; what the same ruling took off the walk is one
@@ -2700,7 +2699,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // region button that led it was deleted on 2026-09-22, THE IGNORE
     // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW, which came
     // in from the
-    // dissolved mass-marker group the same day, and THE RESTRICT UNDO TO VIEWPORT LAMP closing
+    // dissolved mass-marker group the same day, and THE RESTRICT UNDO TO CURRENT VIEW LAMP closing
     // the group (2026-09-04, arriving from the toolbar group later that day
     // because it is a viewport gesture too) — THE ITERATION GROUP (the BPM
     // opener and grid iteration mode, back from the deleted menu row later

@@ -2683,22 +2683,24 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
                   "read-only");
         return false;
     }
-    // THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S REFUSAL (architect 2026-09-04),
-    // ranked behind the two terms above because emptiness and the other
-    // tab's lock are the older answers and one press owes one card. With
-    // the lamp lit, a step whose restore would carry the camera off the
-    // picture on screen is a CONSUMED NO-OP: nothing is popped, nothing is
-    // pushed, and both stacks are byte-identical afterwards — the ops are
-    // never reached. The verdict is the one owner both buttons grey on
-    // (undo_step_permitted_by_viewport_lamp, app_state.h), vacuous while
+    // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP'S REFUSAL (architect 2026-09-04,
+    // its question narrowed 2026-09-22 from the camera to the view), ranked
+    // behind the two terms above because emptiness and the other tab's lock
+    // are the older answers and one press owes one card. With the lamp lit, a
+    // step whose restore would SWITCH THE VIEW — the tab, the audio view or
+    // the marker column the entry landed in differing from the live one — is
+    // a CONSUMED NO-OP: nothing is popped, nothing is pushed, and both stacks
+    // are byte-identical afterwards — the ops are never reached. The verdict
+    // is the one owner both buttons grey on
+    // (undo_step_permitted_by_current_view_lamp, app_state.h), vacuous while
     // the lamp is dark. A HELD Ctrl+Z CARDS ONCE PER BURST with nothing
     // added here: on_key's HeldRepeatDispatchScope is the one seam, and a
     // synthesized repeat MOVES this card to the top of the stack rather
     // than adding one.
-    if (!undo_step_permitted_by_viewport_lamp(app, audio, stack)) {
+    if (!undo_step_permitted_by_current_view_lamp(app, stack)) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             redo ? kRedoOutsideViewCard
-                                  : kUndoOutsideViewCard);
+                             redo ? kRedoSwitchesViewCard
+                                  : kUndoSwitchesViewCard);
         return false;
     }
     return redo ? undo.do_redo() : undo.do_undo();
@@ -3349,106 +3351,67 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     viewport.apply_zoom_to_start(target_level, target_start);
 }
 
-// PREFER A SCROLL, ZOOM ONLY WHEN THE SPAN CANNOT FIT (architect 2026-07-25
-// post-labwc, decided on PAINTED COLUMNS). This body was the GROUP undo/redo
-// restore's inline tail from that day until 2026-08-16, when the
-// SHOW TRIM REGION button asked for the identical behaviour in the architect's
-// own words — "like undo in terms of zoom/viewport: if the region can fit at
-// current zoom and is not fully in view, it is brought into view just like undo
-// marker group, without affecting zoom; if it cannot fit, zoom is made to fit"
-// — and it was HOISTED rather than described twice. The restore keeps its own
-// class plus a pointer here; this is the one authoritative statement.
+// THE GROUP RESTORE'S CAMERA: CENTRE THE RANGE'S MIDDLE AT THE CURRENT ZOOM,
+// ZOOM OUT ONLY WHEN THE RANGE CANNOT FIT WITH ITS MARGIN (architect
+// 2026-09-22). The undo/redo restore of several markers hands its touched
+// set's [earliest, latest] active-domain extent here and the camera answers to
+// that range and to nothing else — never to the playhead, and never to where
+// the range happened to stand: an onscreen range is centred exactly as an
+// offscreen one is, so every group restore lands its markers in the same place.
 //
-// THE FIT CONTRACT IS PAINTED COLUMNS, not a sample span — an endpoint paints
-// at its OWN column and the painter does NOT edge-clamp it, so the capacity is
-// the pixel range [0, W), NOT q*W samples (which overcounts by up to a column)
-// and NOT the grid-snapped start (clamp_viewport_start moves it ~half a pixel).
-// Both tests decide on the endpoints' columns under the painter's own basis
-// (painter_samples_per_pixel + the shared displayed_column_at rounding — the
-// endpoints already live in the active display domain, so no warp map is
-// walked). THREE ARMS:
-//   - fully visible (both endpoint columns in [0, W) under the CURRENT start)
-//     -> no viewport write at all;
-//   - otherwise TENTATIVELY center at the current zoom (viewport_start =
-//     midpoint - visible/2, then clamp_viewport_start) and re-test the columns
-//     under the clamped start: both in [0, W) -> the SCROLL stands (no zoom
-//     change, no margin);
-//   - else -> frame_span_into_view with margin (the cannot-fit fallback; the
-//     framer only ever zooms OUT to fit — fit level + the edge margin per side, centered,
-//     clamped [kMinZoom, effective ceiling], NO playhead recenter). It
-//     OVERWRITES the tentative viewport wholesale (level + start via
-//     apply_zoom_to_start), so the tentative write needs no revert.
+// TWO ARMS, decided on the EDGE MARGIN (kViewportEdgeMarginFraction,
+// app_state.h — this is one of its readers, inventoried there):
+//   * the range FITS when its width is at most 1 − 2 × margin of the visible
+//     window at the current zoom — the room the span framer leaves it, so the
+//     two arms agree on the boundary — and then the viewport is placed so the
+//     range's middle is the window's middle, through the one clamp chokepoint,
+//     with NO zoom change;
+//   * otherwise frame_span_into_view with margin, which fits the range plus
+//     the margin on each side and centres the same middle. It only ever ZOOMS
+//     OUT on this arm: a range wider than 1 − 2 × margin of the current window
+//     solves to a coarser level than the current one, and the framer's clamp
+//     into [kMinZoom, the effective ceiling] cannot bring it below the current
+//     level, which is itself inside that interval. NEVER ZOOM IN — a narrow
+//     range keeps the zoom the user chose.
+// The fit test is in the framer's own unrounded domain (spp × W at the live
+// level, the framer's `visible_t`) rather than in painted columns, so the arm
+// that centres and the arm that zooms out read one arithmetic. At the
+// effective ceiling a range wider than the whole song's window saturates the
+// framer at the ceiling, where apply_zoom_to_start centres what it can and the
+// wall clamp owns the rest.
 //
-// THE FRAMER'S no-op GUARD AND ITS ONE EXCEPTION (accepted, architect
-// 2026-07-25, ratified after talk-through). apply_zoom_to_start's
-// current-vs-target no-op normally cannot leave the failing tentative state
-// standing, because a fit that failed at the current level forces the framer to
-// a DIFFERENT (more zoomed-out) level to seat the MARGIN-widened span — the
-// level differs, so the guard does not short-circuit. THE EXCEPTION is the
-// CONJUNCTION the two code paths already embody: (a) an endpoint's painted
-// column still fails the [0, W) test after the ceiling / start-0 clamp — which
-// happens for ANY hi landing in the final half-pixel interval at the ceiling q,
-// NOT only total-1 (e.g. W=1920, total=4,410,000, q=2296.875: hi = total-1000
-// rounds to column W without ending at EOF) — AND (b) the margined fit request
-// clamps back to that SAME ceiling, so apply_zoom_to_start no-ops and the
-// ceiling rest at start 0 stands. Both are required: a NARROW EOF-ending span
-// fails (a) but not (b) — e.g. [4,000,000, total-1] ends at EOF yet its
-// 5%-widened span frames to a DEEPER level, exercising no no-op — while the
-// (a)-failing wide case no-ops because its margined span is already at least
-// song-wide. When the conjunction holds the endpoint rests AT or PAST the
-// effective waveform's right edge: half-culled, or (at a non-multiple-of-16
-// window width) sitting in the 0-15px inert right gutter, where a flag at its
-// painted width can show WHOLE just outside the effective span — flag centers
-// use the effective W (floored to a multiple of 16) while the flag surface
-// spans the full strip. At the ruled deployment widths (1920 / 2560 / 3840, all
-// multiples of 16) the gutter is empty and it half-culls. Either way NO route
-// places the endpoint INSIDE the effective span at whole-song-visible — the
-// standing flags-may-hang-half-offscreen geometry (cull only when FULLY out),
-// the SAME cull the level-preserving navigation routes show there (Tab, which
-// keeps the level; the marker-click land, which writes no viewport; and the
-// trim-bar double-click framer itself, no-op under this conjunction) — not a
-// framing defect, and identical under every option reachable within the
-// whole-song-ceiling and centered-flag rulings. The futile framer call is left
-// as-is (a harmless no-op there); a ceiling special-case would be a branch for
-// ZERO behavioral difference. THIS WHOLE BODY DIVERGES from the trim-bar
-// DOUBLE-CLICK's unconditional zoom-to-span; the framer itself is untouched.
+// UNTIL 2026-09-22 THIS WAS bring_span_into_view, three arms on painted
+// columns — no write for a range already on screen, a scroll at the current
+// zoom when centring alone fitted it, the framer otherwise — shared with the
+// Restrict undo to viewport lamp through span_columns_visible. The restore is
+// its only caller (the Show trim region button, the other, left 2026-09-04),
+// so the ruling changed the owner rather than growing a second one; the lamp
+// stopped measuring the camera the same day and span_columns_visible went with
+// its last reader.
 //
-// ACCEPTED COST on the framer arm: apply_zoom_to_start runs one sync render and
-// each caller's own unconditional kick runs a second over identical final state
-// — a bounded duplicate on a discrete keystroke (the keyboard zoom's per-press
-// cost).
-//
-// IT WRITES ONLY THE VIEWPORT and damages nothing: the caller owns its own
-// damage and its own sync kick, which is what keeps the restore behaviourally
-// unchanged by the hoist — its tail already invalidated and kicked
-// unconditionally. THE TRIM REGION TOGGLE WAS THE SECOND CALLER and left on
-// 2026-09-04, when the architect ruled that showing the trim moves no camera
-// (the toggle itself was deleted on 2026-09-22).
-// A degenerate geometry (q <= 0 or W <= 0) leaves the viewport put — the
-// visibility owner's own answer since 2026-09-04 (span_columns_visible,
-// app_state.h), and the inline guard's before that.
-void bring_span_into_view(AppState& app, const GuiAudio& audio,
-                          Viewport& viewport, int64_t lo, int64_t hi) {
-    // THE ENDPOINT-COLUMN TEST LEFT THIS BODY 2026-09-04 for
-    // span_columns_visible (app_state.h), when the Restrict undo to viewport
-    // lamp needed to ask the same question of a restore that has not happened:
-    // "inside the viewport" now has ONE definition and this framer is one of
-    // its two readers. The behaviour is unchanged, the degenerate guard
-    // included — the owner answers TRUE on q <= 0 or W <= 0, which is exactly
-    // the `q > 0.0 && W > 0` this condition used to spell.
-    if (!span_columns_visible(app, audio, app.viewport_start_sample, lo, hi)) {
-        // Tentatively center at the current zoom and clamp.
+// IT WRITES ONLY THE VIEWPORT (level and start) and damages nothing: the
+// restore's tail owns the damage and its one synchronous kick. ACCEPTED COST on
+// the framer arm: apply_zoom_to_start runs one sync render and the restore's
+// unconditional kick runs a second over identical final state — a bounded
+// duplicate on a discrete keystroke. Degenerate geometry (no strip width, no
+// sample rate) leaves the viewport where it stands.
+void center_span_in_view(AppState& app, const GuiAudio& audio,
+                         Viewport& viewport, int64_t lo, int64_t hi) {
+    if (hi < lo) std::swap(lo, hi);   // defensive; the restore passes in order
+    const GuiRect area = waveform_area(app);
+    const int     W    = area.w;
+    const int     sr   = audio.sample_rate();
+    if (W <= 0 || sr <= 0) return;
+    const double visible_t = samples_per_pixel_at(app.zoom_level, sr) *
+                             static_cast<double>(W);
+    const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) * visible_t;
+    if (static_cast<double>(hi - lo) <= room) {
         const int64_t visible = samples_visible(app, audio);
-        app.viewport_start_sample = (lo + hi) / 2 - visible / 2;
+        app.viewport_start_sample = lo + (hi - lo) / 2 - visible / 2;
         clamp_viewport_start(app, audio);
-        if (!span_columns_visible(app, audio, app.viewport_start_sample,
-                                  lo, hi)) {
-            // Cannot fit at this level even centered -> zoom out to fit
-            // (overwrites the tentative viewport wholesale).
-            frame_span_into_view(app, audio, viewport, lo, hi,
-                                 /*margin=*/true);
-        }
+        return;
     }
+    frame_span_into_view(app, audio, viewport, lo, hi, /*margin=*/true);
 }
 
 void GuiInputHandler::run_span_framing_command() {
@@ -4541,14 +4504,14 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     if (tab_view == app.active_tab_view) viewport.invalidate_top_strip();
 }
 
-void GuiInputHandler::set_restrict_undo_to_viewport(bool desired) {
+void GuiInputHandler::set_restrict_undo_to_current_view(bool desired) {
     // The contract — sole writer, per-project, history-less, no damage — is at
     // the declaration (input_handler.h), which also states the scope: this bit
-    // is read by undo_restore_within_viewport's caller and by nothing else. The
+    // is read by undo_step_permitted_by_current_view_lamp and by nothing else. The
     // ONE caller is the bare-`z` arm, which the icon row's button reaches by
     // synthesizing that press, and there is nothing else: there is no settings
     // key to commit it from.
-    app.restrict_undo_to_viewport = desired;
+    app.restrict_undo_to_current_view = desired;
 }
 
 void GuiInputHandler::set_ignore_waveform_magnification(bool desired) {

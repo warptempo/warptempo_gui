@@ -205,11 +205,11 @@ constexpr IconPath kGoJumpPaths[] = {
      "10 16 10 z "},
 };
 
-// THE RESTRICT-UNDO-TO-VIEWPORT LAMP's icon (2026-09-04, the architect's
-// pick): timeline-lift, a clip's two end brackets with a red cross standing
-// between them — a stretch of timeline the editor declines to travel, which is
-// what the lamp does to an undo whose restore would carry the camera off the
-// stretch on screen. THREE paths in file order, TWO COLOURS: the brackets and
+// THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP's icon (2026-09-04, the architect's
+// pick, kept through the 2026-09-22 rename): timeline-lift, a clip's two end
+// brackets with a red cross standing between them — a place the editor
+// declines to leave, which is what the lamp does to an undo whose restore
+// would switch the view on screen. THREE paths in file order, TWO COLOURS: the brackets and
 // their two tick marks are the scheme's #fcfcfc, the cross carries its own
 // literal #d24d57. Command coverage: relative `m` with implicit repetition,
 // absolute `M` with `H` / `V`, absolute `M` with implicit absolute linetos, and

@@ -201,7 +201,8 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // means the playhead's POSITION IN THE MUSIC is changing. THE RULE'S SECOND
 // OWNER is the land (land_playhead_on_marker / land_playhead_on_source_frame,
 // input_pointer.cpp), and it has THREE EXEMPTIONS, none of which reaches an
-// owner: a TRANSLATION (reseat_playhead_to below and
+// owner: a TRANSLATION (reseat_playhead_to below, translate_playhead_to — the
+// undo/redo restore's re-land, which scrolls nothing — and
 // reseat_playhead_on_marker — the S/T flip, the map-change re-lands, the
 // coincidence auto-select's no-op), a RESTORE (the tab switch's band swap,
 // which writes the cursor direct — the act's own two tab switches are
@@ -225,31 +226,31 @@ void Viewport::move_playhead_to(int64_t new_sample) {
 //
 // THE WRITE ALONE, WITH NO AUDITION END IN IT, and the callers who want it
 // that way are the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP
-// 2026-09-02 — NINE, in two families:
+// 2026-09-22 — EIGHT, in two families:
 //   * THE MAP-CHANGE RE-LANDS, all in a target-view re-warp tail: both arms of
 //     the Up/Down tempo cent step (warpmarkers_ops.cpp) and, since 2026-08-25,
 //     the WARP STATUS/VALUE FAMILY admitted in W+target with them — Ctrl+D,
 //     Ctrl+N and Delete (warpmarkers_ops.cpp) and the flag editor's payload
 //     commit (flag_editor.cpp), whose shared contract is stated at the head of
-//     warpmarkers_ops.cpp; since 2026-08-28, THE UNDO/REDO RESTORE
-//     (undo.cpp), whose settings-and-marker swap rebuilds the map under a
-//     STANDING view, before the restore flips the audio view onto the finished
-//     one; and since 2026-09-02 (the four-tier review's R-17d) THE TWO OTHER
+//     warpmarkers_ops.cpp; and since 2026-09-02 (the four-tier review's R-17d) THE TWO OTHER
 //     WHOLE-MAP REWRITES, which had kept the playhead's NUMBER where the family
 //     keeps its INSTANT — the SETTINGS ENGINE COMMIT (settings_editor.cpp; the
 //     engine scale is a warp-map input) and the `h` view's WARP REVERT
 //     (input_key_dispatch.cpp; its phase arm is carved out, phase resets being
-//     no map input). In five of the nine the focus does not change and the
+//     no map input). In five of the eight the focus does not change and the
 //     playhead does not leave it — the marker's IMAGE moved out from under the
 //     cursor and the cursor follows it into the new domain. That is the `t`
 //     flip's translation in another spelling, and a translation is not a
-//     movement. THE OTHER FOUR ARE THE WHOLE-STORE ACTS AND THEIR SUBJECT
-//     DIFFERS: the delete, the restore, the engine commit and the revert can
-//     each leave no focus at all (the delete, the engine commit and the revert
-//     clear the selection outright, and a restore whose touched set comes up
-//     empty clears it too), so what they follow into the new domain is the
-//     playhead's own musical instant, inverted to a source frame before the
-//     write.
+//     movement. THE OTHER THREE ARE THE WHOLE-STORE ACTS AND THEIR SUBJECT
+//     DIFFERS: the delete, the engine commit and the revert clear the
+//     selection outright and so leave no focus at all, and what they follow
+//     into the new domain is the playhead's own musical instant, inverted to a
+//     source frame before the write.
+//   * THE UNDO/REDO RESTORE'S RE-LAND WAS THE NINTH until 2026-09-22 and
+//     left for translate_playhead_to below: the keep-visible edge-align here
+//     scrolled the camera to an offscreen playhead's old instant, and the
+//     restore's camera answers to the markers it restores, never to the
+//     playhead (architect 2026-09-22).
 //   * THE SWEEP'S OWN PER-MOTION CARRY is NOT here and never was: it writes
 //     app.playhead_cursor_sample direct, because a keep-visible edge-align would
 //     scroll the viewport out from under a live gesture (input_pointer.cpp). The
@@ -317,6 +318,38 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
     }
     invalidate_clock_area();
     if (playback.is_playing()) playback.resync_predictor();
+}
+
+// translate_playhead_to: THE CURSOR FOLLOWS ITS OWN MUSICAL INSTANT INTO A
+// REBUILT DOMAIN AND THE CAMERA DOES NOT FOLLOW IT (architect 2026-09-22). The
+// reseat above is the same write plus a keep-visible edge-align, and on the
+// undo/redo restore that edge-align was the whole defect: in target view the
+// restore re-lands the playhead after the map swap, and a playhead that stood
+// OFFSCREEN dragged the viewport to wherever its instant now painted — a
+// camera move with no subject the user asked about, target view only and so
+// seemingly random. The restore's camera answers to the markers it restores
+// (the visual tail, undo.cpp), and a translation is not a movement, so this
+// write moves neither the camera nor the audition (no audition end, the
+// reseat's own exemption).
+//
+// ONE CALLER, the restore's map-change re-land (undo.cpp). The live-domain
+// clamp is the shared ruling (clamp_playhead_to_live_domain); the viewport's
+// own domain wall is re-derived through clamp_viewport_start because the swap
+// may have shortened the domain under a standing viewport — a wall, not a
+// scroll toward the cursor. NO RENDER: the caller's tail renders the plate
+// synchronously once for the finished state, so this owes only the damage.
+void Viewport::translate_playhead_to(int64_t new_sample) {
+    if (audio.total_frames() <= 0) return;
+    app.playhead_cursor_sample =
+        clamp_playhead_to_live_domain(new_sample, app, audio);
+    clamp_viewport_start(app, audio);
+    // Full waveform-area damage for the no-scroll branch's reason above (the
+    // cursor's pixels are plate-registered; rule at playhead_pixel_x).
+    invalidate_waveform_area();
+    invalidate_clock_area();
+    // NO PREDICTOR RESYNC, unlike the reseat: the one caller has stopped
+    // playback before it reaches this write (restore_history_entry's head),
+    // so there is no play in flight to re-anchor.
 }
 
 // Repair the LIVE display-state fields after a total-changing map edit. The

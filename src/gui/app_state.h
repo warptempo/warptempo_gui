@@ -96,14 +96,21 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //     an offscreen one lands the margin in from whichever edge it was beyond;
 //   * frame_span_into_view's `margin` arm (input_handler.cpp) — the span
 //     framer pads each side by this fraction OF THE WINDOW, so the framed
-//     span occupies 1 − 2 × margin of it.
+//     span occupies 1 − 2 × margin of it;
+//   * center_span_in_view (input_handler.cpp) — the group undo/redo
+//     restore's camera, whose fit test asks whether the restored range is at
+//     most 1 − 2 × margin of the window at the current zoom (centre there),
+//     else zooms out through the framer's margin arm above (added
+//     2026-09-22).
 // NOT READERS, by ruling: the Ctrl+Left / Ctrl+Right held column
 // (Viewport::hold_subject_column_after_nudge), which brings an offscreen
 // subject to the window's own edge column, and the movement owners'
 // keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
-// minimum. viewport_edge_margin_samples below is the two viewport readers'
-// one conversion to samples; the span framer works in the unrounded double
-// domain and reads the fraction itself.
+// minimum; and the undo/redo restore's SINGLETON camera, which centres its
+// marker outright. viewport_edge_margin_samples below is the two viewport
+// readers' one conversion to samples; the span framer and the group restore's
+// fit test work in the unrounded double domain and read the fraction
+// themselves.
 constexpr double kViewportEdgeMarginFraction = 0.05;
 
 // The edge margin in whole samples of a window `visible` samples wide,
@@ -2038,7 +2045,7 @@ enum class RedesignButton {
     // has no effect and bare `[` cards (waveform_magnification_toggle_actionable,
     // the face and the key's one verdict); LIVE on a locked tab and under the
     // read-only lock; DEAD in the `h` view, whose allowlist does not name `[`
-    // (Follow's and Restrict Undo to Viewport's answer there), through the
+    // (Follow's and Restrict Undo to Current View's answer there), through the
     // derived partition. (It revives the 2026-09-14 / 2026-09-17 lamp's name
     // and sense, now scoped to source view with no zoom term.)
     IconIgnoreWaveformMagnification,
@@ -2082,19 +2089,20 @@ enum class RedesignButton {
     // 2026-09-22 the bare walk centres at the standing zoom and the Alt walk
     // moves the camera least, at every zoom, no lamp deciding either.)
     //
-    // RESTRICT UNDO TO VIEWPORT (architect 2026-09-04) — the `z` lamp, closing
-    // the viewport-class group behind Follow, because
-    // it is also a viewport gesture. That is the architect's own reason for
-    // moving it here later the same day it landed, from the toolbar group,
-    // where it had stood between Redo and Render touching the pair it governs:
-    // what the lamp decides is whether an undo or redo may take the CAMERA
-    // somewhere else, which is the question Follow beside it answers for its
-    // own gesture. Lit, a
-    // step whose restore would move the viewport refuses instead, cards, and
-    // leaves both stacks exactly as they were.
+    // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04 as Restrict Undo to
+    // Viewport; renamed and re-scoped 2026-09-22) — the `z` lamp, closing the
+    // viewport-class group behind Follow, because it is also a viewport
+    // gesture. That is the architect's own reason for moving it here later the
+    // same day it landed, from the toolbar group, where it had stood between
+    // Redo and Render touching the pair it governs. Lit, a step whose restore
+    // would SWITCH THE VIEW — land on the other A/B tab, the other audio view
+    // or another marker column — refuses instead, cards, and leaves both
+    // stacks exactly as they were. (Until 2026-09-22 it refused a step whose
+    // restore would move the CAMERA; the restore's camera now centres what it
+    // restores, and the lamp asks the view alone.)
     //
     // A PER-PROJECT SESSION POSTURE like every other lamp in this group: the
-    // bit is AppState::restrict_undo_to_viewport, DARK AT EVERY PROJECT OPEN
+    // bit is AppState::restrict_undo_to_current_view, DARK AT EVERY PROJECT OPEN
     // (architect 2026-09-14, with the other lamps — the fresh per-project
     // AppState is the reset), in no settings file and in no vocabulary. It is
     // a working posture — "hold my place while I take these back" — not a
@@ -3059,7 +3067,8 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // and moved ONE MEMBER between groups. IconMarkerColumn stopped opening a
 // group, so the two view lamps the radio-pair collapse had left as a group of
 // one each are one group of two, which is what they read as: one lamp per view
-// axis, side by side. And the RESTRICT UNDO TO VIEWPORT lamp left the toolbar
+// axis, side by side. And the RESTRICT UNDO lamp (to Viewport then, to
+// Current View since 2026-09-22) left the toolbar
 // group for the viewport-class group's tail — the architect's reason is that
 // "it is also a viewport gesture" — putting the toolbar group back at the four
 // it had held all day. No box was added or taken away; exactly one separator
@@ -4549,8 +4558,9 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         plays is identical only because the cursor it launches from cannot
 //         move. (The trim overlay's hide rule shared these owners from
 //         2026-08-26 until that rule was deleted on 2026-09-22.) So a MOVEMENT
-//         interrupts, while a TRANSLATION (Viewport::reseat_playhead_to and
-//         reseat_playhead_on_marker, the named non-movement entries) and a
+//         interrupts, while a TRANSLATION (Viewport::reseat_playhead_to,
+//         Viewport::translate_playhead_to and reseat_playhead_on_marker, the
+//         named non-movement entries) and a
 //         RESTORE (the tab switch's band swap,
 //         which writes app.playhead_cursor_sample direct) do not — and the act
 //         needs both of those exemptions, its own two tab switches being
@@ -4708,21 +4718,22 @@ struct AppState {
     // chase off and the audition's own plays run with it off by that write.
     bool    follow_engaged         = false;
 
-    // RESTRICT UNDO TO VIEWPORT — the lamp on bare `z` (architect 2026-09-04).
+    // RESTRICT UNDO TO CURRENT VIEW — the lamp on bare `z` (architect
+    // 2026-09-04; to Viewport until 2026-09-22).
     // SESSION-ONLY AND NEVER SERIALIZED, which since 2026-09-11 is what it
     // SHARES with follow's bits above it rather than what separates it from
     // them: they are session postures, in no settings vocabulary, uncarried by
     // `'`, and dark at every project open.
     //
-    // WHAT IT DOES: while it stands, an undo or redo whose restore would move
-    // the viewport is a consumed no-op that cards, and the stacks are left
-    // untouched. The question "would it move the viewport" has ONE owner,
-    // undo_restore_within_viewport (below), which the refusal and the
-    // Undo/Redo buttons' faces read — their tooltips said the reason too
-    // until 2026-09-12, when a tooltip stopped stating one. Nothing else in the
+    // WHAT IT DOES: while it stands, an undo or redo whose restore would
+    // switch the view (the tab, the audio view or the marker column) is a
+    // consumed no-op that cards, and the stacks are left untouched. The
+    // question "would it switch the view" has ONE owner,
+    // undo_restore_stays_in_current_view (below), which the refusal and the
+    // Undo/Redo buttons' faces read. Nothing else in the
     // product asks this bit: it does not reach the camera, the walk or any
     // other act — it only decides whether one step runs at all.
-    bool    restrict_undo_to_viewport = false;
+    bool    restrict_undo_to_current_view = false;
 
     // IGNORE WAVEFORM MAGNIFICATION — the lamp on bare `[` (architect
     // 2026-09-22), a manual override. A
@@ -5086,9 +5097,9 @@ struct AppState {
     // click, a marker drop, an undo restore and a LOAD IN PLACE all leave it
     // lit, and the plain flag press keeps taking the ctrl branch until an act
     // consumes what was built. That is bare `z`'s posture exactly
-    // (restrict_undo_to_viewport): the two session lamps are one family, in
+    // (restrict_undo_to_current_view): the two session lamps are one family, in
     // no settings vocabulary, never serialized, and per-project state for as
-    // long as the project stays open. `restrict_undo_to_viewport` is written
+    // long as the project stays open. `restrict_undo_to_current_view` is written
     // by its own toggle alone; this bit took a COMPANION WRITE, the act class
     // below (selection_consumed), a USE CASE ending rather than one lamp's
     // toggle reaching across to another. (Bare `x`'s VALUE DRAG lamp was the
@@ -5197,13 +5208,6 @@ struct AppState {
     // Memoized target-view warp_frame_map (see warp_frame_map_view.h). Mutable: consulted and
     // refreshed from const hit-test paths.
     mutable TargetWarpFrameMapCache target_warp_frame_map_cache;
-
-    // Memoized target-view maps for states that are not live — the two slots
-    // behind proposed_display_context (warp_frame_map_view.h), whose one
-    // reader is the Restrict undo to viewport lamp's predicate. Mutable for
-    // the cache above's reason: the predicate is asked from const face and
-    // tooltip paths.
-    mutable ProposedTargetWarpFrameMapCache proposed_target_map_cache;
 
     // Memoized red-flag sets — `red` (all three caches) is the marker lane's PAINT
     // cue, painted whether or not the row is selected: the render's own
@@ -11357,24 +11361,19 @@ inline void reset_displayed_target_basis(AppState& a) {
 // once audio is loaded, zero-frame sources refuse) has no in-domain frame
 // and clamps to 0.
 //
-// THE CLAMP ITSELF TAKES ITS DOMAIN AS A NUMBER (clamp_frame_to_domain,
-// directly below), so the rule has one body and two faces: the live face
-// clamp_playhead_to_live_domain under it, which names the LIVE domain, and the
-// Restrict undo to viewport lamp's predicate, which asks the same clamp of the
-// domain a restore WOULD install (undo_restore_within_viewport). This block is
-// the rule and its rationale for both; the bodies state only arithmetic.
-inline int64_t clamp_frame_to_domain(int64_t frame,
-                                     int64_t domain_total_frames) {
-    if (domain_total_frames <= 0) return 0;
-    if (frame < 0) return 0;
-    if (frame >= domain_total_frames) return domain_total_frames - 1;
-    return frame;
-}
-
+// (THE CLAMP HAD A SECOND FACE from 2026-09-04 to 2026-09-22 —
+// clamp_frame_to_domain, taking its domain as a number so the Restrict undo to
+// viewport lamp could ask it of the domain a restore WOULD install. The lamp
+// stopped measuring the camera and the face went with its one other reader;
+// the body is this one again.)
 inline int64_t clamp_playhead_to_live_domain(int64_t frame,
                                              const AppState& a,
                                              const GuiAudio& audio) {
-    return clamp_frame_to_domain(frame, live_total_frames(a, audio));
+    const int64_t total = live_total_frames(a, audio);
+    if (total <= 0) return 0;
+    if (frame < 0) return 0;
+    if (frame >= total) return total - 1;
+    return frame;
 }
 
 // THE TRIM REGION OVERLAY'S SPAN, DERIVED AND NEVER STORED — the one owner of
@@ -12559,14 +12558,15 @@ inline bool history_step_actionable(const AppState& a,
 // field list would have been exactly the drift the "one authoritative
 // enumeration per concept" preference exists to prevent; hoisted again into
 // this header 2026-09-04, when the Restrict undo to viewport lamp's face —
-// which is compiled here — became its fourth reader).
+// compiled here — measured a restore's touched set; that measurement left
+// 2026-09-22 and the comparators stayed).
 // `differ(a, b)` is false exactly when the two rows are identical in EVERY
 // field the store holds, serialized and session-only alike — row identity means
-// the WHOLE struct. THE FOUR READERS: restore_touched_indices below, which asks
-// it of one row pair at a time to reconstruct a touched set, and through that
-// one function the post-restore selection (undo.cpp), the lamp's predicate and
-// its two button faces; plus entry_restores_live_marker_stores (undo.cpp),
-// which asks it of a whole store.
+// the WHOLE struct. THE READERS, re-grepped 2026-09-22: restore_touched_indices
+// below, which asks it of one row pair at a time to reconstruct a touched set
+// for the post-restore selection (undo.cpp); plus, through the whole-list pair
+// below, entry_restores_live_marker_stores (undo.cpp), which asks it of a whole
+// store.
 // EXACT COMPARES, no epsilon and no re-rounding: an authored position is a
 // whole frame and an authored tempo whole cents BY TYPE, and the two double
 // fields (tempo_scale, the bpm bracket) are compared as stored — what a restore
@@ -12623,14 +12623,11 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
 // WHOLE-LIST ROW EQUALITY, one pair over the row comparators above: same
 // length and every row equal, which is what "these two stores hold the same
 // state" means wherever the question is asked of a list rather than a row.
-// TWO READERS: the coalesced burst's net-zero pop, which asks both faces at
-// once (entry_restores_live_marker_stores, undo.cpp), and the Restrict undo to
-// viewport lamp's proposed target map, which asks the warp face alone and of
-// an arbitrary list rather than a store — a restore whose warp list is already live
-// installs the map that is already built, so the live cache answers it
-// (proposed_display_context, warp_frame_map_view.cpp). The phase face has no
-// second reader of its own and ships with the warp one under the co-equal
-// axes rule; it is the net-zero pop's phase half.
+// ONE READER, re-grepped 2026-09-22: the coalesced burst's net-zero pop, which
+// asks both faces at once (entry_restores_live_marker_stores, undo.cpp). (The
+// warp face had a second from 2026-09-04 to 2026-09-22, the Restrict undo to
+// viewport lamp's proposed target map, deleted with the lamp's camera
+// measurement.)
 inline bool warp_rows_equal(const std::vector<GuiWarpMarker>& a,
                             const std::vector<GuiWarpMarker>& b) {
     if (a.size() != b.size()) return false;
@@ -12667,16 +12664,12 @@ inline bool magnification_level_row_fields_differ(
 // THE TOUCHED SET A RESTORE OF `entry` WOULD PRODUCE, in `after` coordinates —
 // `after` being the entry's own snapshot for the column, the state a restore of
 // it writes back, and `before` the store that is live now. PURE: it reads two
-// vectors and returns a set, so the same answer is available before the restore
-// (the Restrict undo to viewport lamp's predicate) and after it (the
-// post-restore selection, undo.cpp's apply_post_restore_rules_impl, this
-// function's one applier).
-//
-// It lives in this header rather than beside its applier because the LAMP'S
-// FACE is compiled here — redesign_button_enabled greys Undo and Redo on the
-// same answer the act refuses on — and a second reconstruction would be the
-// drift a truthful button cannot survive: a face that decides "outside the
-// view" over one touched set while the act decides it over another.
+// vectors and returns a set. ONE READER, re-grepped 2026-09-22: the
+// post-restore selection (undo.cpp's apply_post_restore_rules_impl, this
+// function's applier). It came to this header 2026-09-04 so the Restrict undo
+// to viewport lamp's face could ask it before a restore ran; the lamp stopped
+// measuring the touched set 2026-09-22 (it reads the entry's view tags alone)
+// and the body stayed where it is.
 //
 // THE ARMS, in the order they rank:
 //   * EXPLICIT IDENTITY HINTS FIRST: entry.touched_snapshot names the touched
@@ -12726,8 +12719,8 @@ inline bool magnification_level_row_fields_differ(
 //   * A GROWN COLUMN: the after-rows whose time_frame no before-row can be
 //     spent on, one match per row.
 //   * A SHRUNK COLUMN: a removal leaves no touched row at all, so the answer is
-//     EMPTY — which the applier reads as "clear the selection" and the lamp's
-//     predicate reads as "this restore frames nothing".
+//     EMPTY — which the applier reads as "clear the selection", and the
+//     restore's camera then stays put.
 //   * THE SAME COUNT: identity-based row matching. A crossing drag reorders the
 //     store (reorder_markers_by_time), so before and after are a permutation
 //     plus one changed row: comparing before[i] vs after[i] POSITIONALLY would
@@ -12812,167 +12805,61 @@ std::set<int> restore_touched_indices(const UndoEntry& entry,
     return target_set;
 }
 
-// "INSIDE THE VIEWPORT" HAS ONE DEFINITION AND IT IS THE FRAMER'S OWN: an
-// active-domain span [lo, hi] is inside iff BOTH endpoints land on painted
-// columns of the waveform strip, read at `vp_start` on the flag painters'
-// basis (displayed_column_at, warp_frame_map_view.h). Degenerate geometry —
-// no strip width, no zoom — answers TRUE, because a framer that cannot measure
-// leaves the viewport where it stands, which is the inline guard this hoist
-// replaced.
-//
-// THREE READERS: bring_span_into_view (input_handler.cpp), which asks it at the
-// resting start and again at the tentative one it just wrote;
-// undo_restore_within_viewport below, which asks it of a restore that has not
-// happened yet; and, since 2026-09-04, the undo restore's own SINGLETON visual
-// arm (undo.cpp), which asks it of the degenerate span [frame, frame] — the
-// restore and the lamp that judges it must not mean different things by
-// "inside the viewport". `vp_start` is a parameter for the first reader's
-// second ask and for no other reason.
-inline bool span_columns_visible(const AppState& a, const GuiAudio& audio,
-                                 int64_t vp_start, int64_t lo, int64_t hi) {
-    const GuiRect area = waveform_area(a);
-    const int     W    = area.w;
-    const double  q    = painter_samples_per_pixel(a, audio, area);
-    if (q <= 0.0 || W <= 0) return true;
-    const int lo_col = displayed_column_at(static_cast<double>(lo),
-                                           static_cast<double>(vp_start), q);
-    const int hi_col = displayed_column_at(static_cast<double>(hi),
-                                           static_cast<double>(vp_start), q);
-    return lo_col >= 0 && lo_col < W && hi_col >= 0 && hi_col < W;
-}
-
-// THE RESTRICT-UNDO-TO-VIEWPORT LAMP'S ONE PREDICATE (architect 2026-09-04):
-// true when restoring `entry` would leave the camera where it stands. TWO
-// READERS and no third answer anywhere — the act's refusal (the Ctrl+Z arm,
-// input_handler.cpp) and the Undo and Redo BUTTONS' faces
-// (redesign_button_enabled below); the tooltips read it too until 2026-09-12,
-// when a tooltip stopped stating reasons. The face does not restate the act's
-// condition; it asks it.
+// THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP'S ONE PREDICATE (architect
+// 2026-09-22, replacing the 2026-09-04 Restrict Undo to Viewport measurement):
+// true when restoring `entry` would leave the VIEW as it stands — the A/B tab,
+// the S/T audio view and the W/P/M marker column. TWO READERS and no third
+// answer anywhere, both through the step read below — the act's refusal (the
+// Ctrl+Z arm, GuiInputHandler::run_undo_redo_command) and the Undo and Redo
+// BUTTONS' faces (redesign_button_enabled). The face does not restate the
+// act's condition; it asks it.
 //
 // IT IS ASKED ONLY WHILE THE LAMP STANDS. Dark, no caller consults it and every
 // step runs as it always has.
 //
-// THE THREE VIEW TAGS COME FIRST, and a mismatch on any of them is OUTSIDE BY
-// DEFINITION. A restore writes the tab, the W/P column and the S/T audio view
-// back before it lands anything, and each of those three is a whole change of
-// what the window shows — a different tab's viewport, a different marker
-// column, a different domain under the same pixels. There is no span to compare
-// across such a switch, and none is wanted: the user asked to keep the picture
-// in front of them.
+// THE ENTRY'S OWN THREE VIEW TAGS ARE THE WHOLE QUESTION: they record THE VIEW
+// THE ACT LANDED IN (UndoEntry, and the one restamp at
+// Undo::stamp_top_entry_with_landing_view), and a restore writes exactly those
+// three back before it lands anything (restore_history_entry, undo.cpp), so a
+// tag that differs from the live axis is a view switch the restore would make.
+//   * THE TAB and THE AUDIO VIEW are compared on every entry kind — a
+//     settings-only ('S') entry carries both and its restore writes both.
+//   * THE COLUMN is op_mode, and it is compared only on a MARKER entry: an
+//     'S' entry's op_mode is that kind's marker rather than a column, and its
+//     restore writes no column (the column restore is gated off 'S').
+// NO CAMERA TERM, by the same ruling: the restore's camera centres what it
+// restores (the visual tail, undo.cpp) and the lamp no longer asks where that
+// is — the camera restriction left whole, the touched-span measurement under
+// the map a restore would install with it.
 //
-// A SETTINGS-ONLY ENTRY ('S') NEVER MOVES THE CAMERA. Its restore selects
-// nothing, lands nothing and frames nothing (the 'S' gate at
-// restore_history_entry, undo.cpp), so with the three tags matched it is always
-// inside.
-//
-// OTHERWISE THE SPAN IS THE RESTORE'S OWN: the touched set the restore would
-// produce, mapped from the entry's snapshot positions into the domain the
-// restore ends in the same way the visual tail maps them (the forward
-// translation then the domain clamp, the land's own formula), and asked of
-// span_columns_visible at the resting viewport — which is exactly what the
-// tail's group arm hands bring_span_into_view. An EMPTY touched set frames
-// nothing and is inside.
-//
-// THE MAP IS THE ONE THE RESTORE INSTALLS, NOT THE ONE STANDING NOW (architect
-// 2026-09-04, closing the second residue). In target view the picture is drawn
-// through the warp map and the map IS the warp marker list, so an entry that
-// rewrites that list moves every later image with it: undoing a tempo change on
-// marker 12 shifts everything after 12 by the section's whole length change,
-// not by a column. Measuring the touched span under the live map therefore
-// answered about a picture that will not exist — "inside" for a span the
-// restore carries offscreen, "outside" for one that would have stood still.
-// The span is measured under proposed_display_context of the entry's own
-// snapshot and engine block (warp_frame_map_view.h), the pair a restore
-// installs, and the clamp takes that context's own domain total.
-//   * A PHASE-RESET ENTRY NEEDS NO NEW MAP and gets none: every entry carries a
-//     full column pair and a restore assigns both, so a 'P' entry's warp list
-//     is the live one and the proposed context hands back the live cache. The
-//     warp list is the right argument in both columns for that reason.
-//   * SOURCE VIEW IS UNTOUCHED: the proposed context reads the live one for the
-//     domain rule, so source view is the identity map exactly as before and the
-//     answer there stays exact.
-//
-// THE VIEWPORT IS THE ONE STANDING, and that is not an approximation: a restore
-// leaves viewport_start_sample as the target-domain number it already is —
-// nothing re-derives it from a source anchor — so the span the camera shows
-// after the restore is the same span under the new map, and only the marker
-// side moves. What CAN still shift it is the restore's own playhead work: the
-// map-change re-land (Viewport::reseat_playhead_to) scrolls to keep the
-// playhead visible, and its clamp re-seats a viewport left past a shortened
-// domain's end. Both are camera moves this predicate does not measure, because
-// their subject is the playhead rather than the touched set; they cost a
-// step that runs and moves the picture, never a wrong restore.
-//
-// THE FIRST RESIDUE IS CLOSED TOO (the same ruling): the visual tail's
-// SINGLETON arm asked its offscreen question in samples where this asks it in
-// painted columns, and the two disagreed within one column of the viewport's
-// edge. The tail now asks span_columns_visible as well, so the restore and the
-// lamp have ONE definition of "inside the viewport" (undo.cpp).
-inline bool undo_restore_within_viewport(const AppState& a,
-                                         const GuiAudio& audio,
-                                         const UndoEntry& entry) {
+// UNDO AND REDO ASK THE SAME QUESTION OF THE SAME TAGS. The step reads the TOP
+// ENTRY OF THE STACK IT WOULD POP — the undo stack for an undo, the redo stack
+// for a redo — and the redo stack's entries are the counter-entries the undo
+// pushed, which carry the undone entry's three tags VERBATIM (the counter's
+// construction in restore_history_entry: it is the same op in the opposite
+// direction, so redoing it lands the view undoing it did). So a redo is refused
+// exactly when re-applying the op would switch the view, the symmetric twin of
+// the undo's verdict, with no direction term here.
+inline bool undo_restore_stays_in_current_view(const AppState& a,
+                                               const UndoEntry& entry) {
     if (entry.tab != a.active_tab_view) return false;
     if (entry.audio_view != a.active_audio_view) return false;
     if (entry.op_mode == 'S') return true;
-    if (entry.op_mode != a.active_markers_view) return false;
-
-    // ONE ARM PER COLUMN, the magnification level column's since 2026-09-15
-    // (it answered TRUE outright while its only entry was the recipe load in
-    // place, which names no touched row and restores no marker visual; with
-    // the column authoring, an 'M' entry moves flags exactly as the other two
-    // columns' do and is measured exactly as theirs are).
-    const char column = entry.op_mode;
-    const std::set<int> touched =
-        column == 'P'
-            ? restore_touched_indices(entry, a.phaseresetmarkers.markers(),
-                                      entry.phase_reset_snapshot,
-                                      phase_reset_row_fields_differ)
-        : column == 'M'
-            ? restore_touched_indices(
-                  entry, a.magnificationlevelmarkers.markers(),
-                  entry.magnification_level_snapshot,
-                  magnification_level_row_fields_differ)
-            : restore_touched_indices(entry, a.warpmarkers.markers(),
-                                      entry.snapshot, warp_row_fields_differ);
-    if (touched.empty()) return true;
-
-    // The domain the restore ends in — built once for the whole set, and the
-    // identity in source view.
-    const GuiDisplayContext restored = proposed_display_context(
-        a, audio, entry.snapshot, entry.settings.engine_settings);
-
-    int64_t lo = 0, hi = 0;
-    bool    have = false;
-    for (const int idx : touched) {
-        const std::size_t at = static_cast<std::size_t>(idx);
-        const int64_t src_f =
-            column == 'P' ? entry.phase_reset_snapshot[at].time_frame
-          : column == 'M' ? entry.magnification_level_snapshot[at].time_frame
-                          : entry.snapshot[at].time_frame;
-        const int64_t pos = clamp_frame_to_domain(
-            source_frame_to_domain(restored, src_f),
-            restored.domain_total_frames);
-        if (!have) { lo = hi = pos; have = true; }
-        else { if (pos < lo) lo = pos; if (pos > hi) hi = pos; }
-    }
-    if (!have) return true;
-    return span_columns_visible(a, audio, a.viewport_start_sample, lo, hi);
+    return entry.op_mode == a.active_markers_view;
 }
 
 // THE LAMP READ OF A WHOLE STEP: true when the step from `stack` is permitted
 // to run — vacuously true while the lamp is dark, and true with it lit only
-// when the step's top entry would leave the camera put. It exists so its
+// when the step's top entry would leave the view as it stands. It exists so its
 // readers ask ONE question rather than each spelling "the lamp is up AND the
-// entry is outside" — the Ctrl+Z arm's refusal and the two buttons' faces
-// since 2026-09-12, their tooltips' reasons having been the third until a
-// tooltip stopped stating one; an EMPTY stack answers true here and is refused by
+// entry switches the view" — the Ctrl+Z arm's refusal and the two buttons'
+// faces; an EMPTY stack answers true here and is refused by
 // history_step_actionable, which is the term that owns emptiness.
-inline bool undo_step_permitted_by_viewport_lamp(
-        const AppState& a, const GuiAudio& audio,
-        const std::vector<UndoEntry>& stack) {
-    if (!a.restrict_undo_to_viewport) return true;
+inline bool undo_step_permitted_by_current_view_lamp(
+        const AppState& a, const std::vector<UndoEntry>& stack) {
+    if (!a.restrict_undo_to_current_view) return true;
     if (stack.empty()) return true;
-    return undo_restore_within_viewport(a, audio, stack.back());
+    return undo_restore_stays_in_current_view(a, stack.back());
 }
 
 // DROP THE HISTORY VIEW'S OWN FOCUS AND SELECTION — the ONE clearer for the
@@ -13289,16 +13176,16 @@ inline constexpr const char* kIterSweepUnloadableCellCard =
 // bracket stands the mode is lit, and while it is lit the piece is locked.)
 static_assert(kMaxIterSweepCells == 1000,
               "kIterSweepOverCapCard spells the cap; move both together");
-// THE RESTRICT-UNDO-TO-VIEWPORT REFUSAL'S TWO SENTENCES (architect
-// 2026-09-04): one clause per direction, sentence case, raised by the key that
-// refuses (input_handler.cpp's Ctrl+Z arm). EACH HAD A `Hint` TWIN — the same
-// sentence plus the accelerator, worn by the greyed button — and both went on
-// 2026-09-12 with the class: a tooltip names the act, the grey says the press
+// THE RESTRICT-UNDO-TO-CURRENT-VIEW REFUSAL'S TWO SENTENCES (architect
+// 2026-09-04, reworded 2026-09-22 when the lamp's question became the view
+// rather than the camera): one clause per direction, sentence case, raised by
+// the key that refuses (GuiInputHandler::run_undo_redo_command's lamp arm).
+// No tooltip carries them: a tooltip names the act, the grey says the press
 // would do nothing, and the reason is the key's card.
-inline constexpr const char* kUndoOutsideViewCard =
-    "Undo is outside the view";
-inline constexpr const char* kRedoOutsideViewCard =
-    "Redo is outside the view";
+inline constexpr const char* kUndoSwitchesViewCard =
+    "That undo would switch the view";
+inline constexpr const char* kRedoSwitchesViewCard =
+    "That redo would switch the view";
 
 // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE VERDICT (architect 2026-09-22):
 // the lamp governs SOURCE VIEW alone — target view is flat whatever it says
@@ -14084,7 +13971,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     it writes no trim at all, only the overlay's visibility bit and then the
 //     viewport), the VIEW BAR'S FOUR
 //     (the backtick and bare 1/2/3), the zoom four, follow, the
-//     RESTRICT-UNDO-TO-VIEWPORT lamp, and the
+//     RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
 //     not: the lamp is a posture switch that authors nothing, so its own chord
@@ -14513,7 +14400,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // being off that mode's allowlist as `f` and `z` are.
         case RedesignButton::IconIgnoreWaveformMagnification:
             return waveform_magnification_toggle_actionable(a);
-        // THE RESTRICT-UNDO-TO-VIEWPORT LAMP MIRRORS NOTHING (2026-09-04),
+        // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP MIRRORS NOTHING (2026-09-04),
         // the next on this answer: bare `z` toggles the posture in either
         // direction on any loaded piece and the lock admits it — the lamp
         // authors nothing, it only decides whether a step runs. What the lamp
@@ -15540,27 +15427,28 @@ inline bool redesign_button_enabled(const AppState& a,
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
                    (!a.history_mode.active || history_checkpoint_actionable(a));
-        // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-VIEWPORT LAMP
-        // (architect 2026-09-04), and it is the truthful-button rule's own
-        // shape: with the lamp lit the key refuses a step whose restore would
-        // carry the camera off the picture on screen, so the face has to grey
-        // exactly there. It ASKS the act's predicate rather than restating it
-        // — undo_step_permitted_by_viewport_lamp (above) is the one owner the
-        // refusal and this face read (the tooltip's reason read it too until
-        // 2026-09-12, when that class of line left the roster), and it is
-        // vacuously true while the lamp is dark, so nothing changes for a user
-        // who never lights it. Ranked after the stack term because emptiness is
-        // the older and simpler answer.
+        // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
+        // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
+        // and it is the truthful-button rule's own shape: with the lamp lit
+        // the key refuses a step whose restore would switch the tab, the audio
+        // view or the marker column, so the face has to grey exactly there. It
+        // ASKS the act's predicate rather than restating it —
+        // undo_step_permitted_by_current_view_lamp (above) is the one owner
+        // the refusal and this face read — and it is vacuously true while the
+        // lamp is dark, so nothing changes for a user who never lights it.
+        // Ranked after the stack term because emptiness is the older and
+        // simpler answer. A held button's burst rests on this grey as it rests
+        // on the empty stack's (tick_chrome_press_repeat).
         case RedesignButton::Undo:
             return !active_view_state(a).read_only &&
                    history_step_actionable(a, a.history.undo_stack) &&
-                   undo_step_permitted_by_viewport_lamp(
-                       a, audio, a.history.undo_stack);
+                   undo_step_permitted_by_current_view_lamp(
+                       a, a.history.undo_stack);
         case RedesignButton::Redo:
             return !active_view_state(a).read_only &&
                    history_step_actionable(a, a.history.redo_stack) &&
-                   undo_step_permitted_by_viewport_lamp(
-                       a, audio, a.history.redo_stack);
+                   undo_step_permitted_by_current_view_lamp(
+                       a, a.history.redo_stack);
         // RENDER'S ITERATION TERM (2026-09-02, the four-tier review's R-10):
         // with grid iterations on, this button's chord IS the sweep, so the
         // face reads the sweep's own pre-dispatch verdict
@@ -15725,11 +15613,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
             return (a.playhead_scanner_active && !audition_sequence_standing(a))
                        ? a.follow_engaged
                        : a.follow_armed;
-        // The restrict-undo-to-viewport lamp (2026-09-04): the same toggle
+        // The restrict-undo-to-current-view lamp (2026-09-04): the same toggle
         // pattern, reading the live bit bare `z` flips, so the lit
         // face and the refusal cannot drift.
         case RedesignButton::IconRestrictUndo:
-            return a.restrict_undo_to_viewport;
+            return a.restrict_undo_to_current_view;
         // The Ignore Waveform Magnification lamp (architect 2026-09-22): the
         // same toggle pattern, reading the live bit bare `[` flips — lit is
         // ignoring, the picture flat in source view. In target view
@@ -16415,7 +16303,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // Undo or Redo button simply greys and Ctrl+Z cards the reason; no
         // tooltip anywhere says it (the rule at this table's head).
         case RedesignButton::IconRestrictUndo:
-            return {"Toggle Restrict Undo to Viewport (Z)", nullptr};
+            return {"Toggle Restrict Undo to Current View (Z)", nullptr};
         // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
         // menu), one line each: neither chord has a shifted twin, so neither
         // carries a second line. THESE TWO STRINGS ARE THE VOCABULARY'S OWNER
@@ -17010,7 +16898,7 @@ inline RedesignTooltipText redesign_button_tooltip(
     // iteration_lock_greys that gave every other greyed member the same
     // sentence, the three lamp-exclusion lines, Grid Iterations' read-only
     // line and Undo's and Redo's "Turn off grid iterations to undo/redo".
-    // THEN the rest of the class, the restrict-undo-to-viewport pair among
+    // THEN the rest of the class, the restrict-undo lamp's pair among
     // them: from 2026-09-04 Undo and Redo wore "Undo is outside the view
     // (Ctrl+Z)" / "Redo is outside the view (Ctrl+Shift+Z)" wherever the lamp
     // greyed the face, with two lock terms spelled into the condition to keep
@@ -17022,7 +16910,8 @@ inline RedesignTooltipText redesign_button_tooltip(
     // Nothing about the cards changed: every one of those chords still says its
     // sentence when the KEY is pressed, which is the road that has a press to
     // answer — the lamp's pair at input_handler.cpp's Ctrl+Z arm
-    // (kUndoOutsideViewCard / kRedoOutsideViewCard) like all the others. A
+    // (kUndoSwitchesViewCard / kRedoSwitchesViewCard since the 2026-09-22
+    // rewording) like all the others. A
     // greyed button raises no card and now states no reason either.)
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
     // one button over bare Space, so the hint names whichever act the press
