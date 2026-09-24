@@ -853,8 +853,9 @@ struct RegionDragState {
     int     press_y      = 0;
     // THE TRIM'S FIXED END — a whole SOURCE frame in the authored int64 domain,
     // taken at the press column through the sweep's one column route
-    // (sweep_trim_frame_at_column, input_trim.cpp: authored_frame_at_column
-    // over the displayed-or-live target map, walls after, snap_authored_frame
+    // (sweep_trim_frame_at_column, input_trim.cpp:
+    // authored_frame_at_column_on_basis over the displayed-or-live target map
+    // on the item viewport basis, walls after, snap_authored_frame
     // the one double->authored conversion — the lattice every other trim
     // former commits on). EVERY SWEEP COLUMN YIELDS TWO VALUES, THE DOMAINS
     // KEPT APART: the ACTIVE-domain frame from playhead_frame_at_click_column
@@ -5376,8 +5377,7 @@ struct AppState {
     // for the viewport half of the same event-synchronized hit geometry. The
     // flag item pixels are painted from the flag cache's rebuild-time
     // fingerprint (wf_cache.fp_vp_start / fp_vp_end / fp_area_w), NOT the live
-    // viewport; painted_column_of_source_frame reads the LIVE viewport
-    // (app.viewport_start_sample). During an async plate-publish window (a
+    // viewport (app.viewport_start_sample). During an async plate-publish window (a
     // worker-dispatched viewport change — a compositor resize is the one left,
     // follow-scroll having taken the synchronous route 2026-09-02 and
     // center-on-playhead long before it) the
@@ -5387,9 +5387,11 @@ struct AppState {
     // area_w the LAST COMMITTED frame's flag cache was built against, promoted
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
     // that cache, so the flag editor's box placement (see item_viewport_basis
-    // in this header) and the LIVE TRIM pass (GuiPaintHandler::paint_trim —
+    // in this header), the LIVE TRIM pass (GuiPaintHandler::paint_trim —
     // its bar/endcaps paint on this basis and it publishes them for the trim
-    // hits, AppState::trim_bar_hit) ride the same basis the flags do. (The selected-stem DAMAGE was listed here until
+    // hits, AppState::trim_bar_hit) and, since 2026-09-24, the GESTURE
+    // MECHANICS (the consumer list is at item_viewport_basis) ride the same
+    // basis the flags do. (The selected-stem DAMAGE was listed here until
     // 2026-07-30 and never belonged: that stem painted on the PLATE basis, so
     // its item-basis narrow damage was the wrong epoch. Both the damage and the
     // stem it served are gone — row 5's stems key on no selection at all.)
@@ -9522,7 +9524,12 @@ double  samples_per_pixel_at(double zoom_level, int sample_rate);
 // (area.w - 1). Mouse-driven marker moves clamp the grabbed marker to this so
 // it can never hide offscreen, where its precise location would be lost. The
 // playhead is exempt — it alone may reach 1px past the strip, and only at EOF.
-// Returns {lo, hi} as active-domain samples.
+// Returns {lo, hi} as active-domain samples. THE STRIP IS THE PAINTED ONE
+// (architect 2026-09-24, strictly as painted): the span and spp come from
+// item_viewport_basis — the viewport the grabbed item was painted on — since
+// both callers are gesture clamps, the marker drag's begin (begin_drag) and
+// the single-bound trim drag's motion (update_trim_drag), and a gesture runs on
+// one painted basis; cold, the basis is the live viewport by its own contract.
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio);
 
@@ -17145,9 +17152,12 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // anchor/motion/clamp/release snap, both nudges' pixel anchoring and the
 // phase-reset overlay's map all convert through this owner per motion event,
 // so the grabbed subject tracks the pointer against WHAT IS PAINTED even
-// where the displayed map lags the live one. The recorded LIVE-BASIS families
+// where the displayed map lags the live one — and, since 2026-09-24 (architect,
+// strictly as painted), on the viewport twin item_viewport_basis below, so
+// the whole basis a gesture converts on is the painted one. The recorded
+// LIVE-BASIS families
 // are the click/land/follow placement family — the column-based playhead
-// placements (the sweep's endpoints included) and the post-commit
+// placements (the sweep's playhead half included) and the post-commit
 // land/follow placements — while walls stay integer source frames outside
 // either basis; pointer-hit-testing.md is the AUTHORITATIVE inventory of
 // both sides and of the THREE-GATE freeze (worker dispatch + completion drop
@@ -17240,8 +17250,9 @@ inline bool displayed_basis_frozen(const AppState& app) {
 }
 
 // item_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
-// the viewport span the item PAINTERS decide against, so an endcap is drawn and
-// the flag editor's box is centered on the column the flag pixels were painted
+// the viewport span the item PAINTERS and the GESTURE MECHANICS decide
+// against, so an endcap is drawn, the flag editor's box is centered, and a
+// grabbed or nudged item converts on the column the flag pixels were painted
 // at. (NO HIT reads it: hit_test_flag takes the flag painter's published
 // rects and, since 2026-09-24, hit_test_trim_endcap and
 // point_in_trim_bridge_span take the trim painter's — both that basis by
@@ -17259,9 +17270,23 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // flag and trim hits read before either had a stash).
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
-// its TWO consumers, re-derived by grep 2026-09-24 — render_flag_editor_box
-// (the unrolled editor box's column) and the LIVE TRIM paint pass
-// (GuiPaintHandler::paint_trim) — share ONE basis, both on the PAINT side.
+// its consumers share ONE basis. Re-derived by grep 2026-09-24, on the PAINT
+// side: render_flag_editor_box (the unrolled editor box's column) and the LIVE
+// TRIM paint pass (GuiPaintHandler::paint_trim). On the GESTURE side (architect
+// 2026-09-24, strictly as painted — a gesture runs on ONE painted basis, map
+// and viewport alike, so a viewport-dispatched worker job in flight at the
+// press cannot move the grid the mechanics convert on ahead of the pixels):
+// the marker drag's anchor (MarkerDragOps::begin_drag) and motion (the drag
+// arm of on_motion) and its commit snap (committed_frame_for_proposal);
+// viewport_marker_bounds, the marker drag's and the single-bound trim drag's
+// visible-strip clamp; the trim drags' column landing
+// (trim_mouse_x_to_active_frame, which trim_mouse_x_to_source_frame rides) and
+// release snap (commit_trim_drag); the sweep's TRIM half
+// (sweep_trim_frame_at_column); the trim bar's bound-set click
+// (trim_bound_click_frame); and both nudges' column step
+// (stepped_anchor_frame). The click-placement family stays on the live
+// viewport by ruling (playhead_frame_at_click_column), and so does the
+// navigation that writes the viewport itself.
 // (Five former consumers left the list for a PAINTER'S STASH, the stronger
 // form of the same guarantee: the marker-text lane's run resolver,
 // marker_hit_at and lane_text_left_x in row 5, when hit_test_flag and the
@@ -17299,10 +17324,13 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // geometry; do not collapse them on the strength of the plate-writer equality —
 // any future unification has to resolve the resize window first.
 //
-// The double vp_start/spp serve the editor-box column math
-// (painted_column_of_source_frame_on_basis); the int64
+// The double vp_start/spp serve the column math
+// (painted_column_of_source_frame_on_basis, the pointer-to-frame anchors); the
+// int64 vp_start_frame serves the grid landings
+// (authored_frame_at_column_on_basis, trim_mouse_x_to_active_frame), and
 // vp_start_frame/vp_end_frame/area_w serve the trim painter, which passes the
-// integer span + width to trim_bound_column verbatim. (compute_flag_hit_rects
+// integer span + width to trim_bound_column verbatim, and the strip clamp
+// (viewport_marker_bounds). (compute_flag_hit_rects
 // and the trim hit test were the other verbatim consumers until each was
 // replaced with its painter's stash — row 5 and 2026-09-24.)
 struct ItemViewportBasis {

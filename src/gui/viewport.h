@@ -107,22 +107,30 @@ struct Viewport {
     //    scroll_viewport — every pan/scroll class, which joined this route
     //    2026-07-26 when the incremental shift-and-strip path was retired),
     //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
-    //    toggle and the Ctrl+Tab A/B tab switch (both domain flips) and the `p`
-    //    W/P marker-column toggle — `p` moves neither viewport nor domain, so its
-    //    plate render is redundant, but active_markers_view is a flag-cache
-    //    FINGERPRINT field and this is the route that lands the flag rebuild in
-    //    the damaged frame; it joins the class rather than growing a second
-    //    flag-only kick (the reason is stated at its site, active_views.cpp), and
-    //    the settings active_markers_view= key rides it through the same
-    //    function. Bare 1/2/3, the ABSOLUTE VIEW SELECTORS
-    //    (2026-08-01; a fourth since 2026-09-15), add NO fourth site: they run the audio
+    //    switch (GuiInputHandler::switch_active_audio_view_to) and the A/B tab
+    //    switch (GuiActiveViews::switch_active_tab_view_to — Ctrl+Tab and the
+    //    audition's legs) (both domain flips) and the W/P marker-column switch
+    //    (GuiActiveViews::select_active_markers_view) — the column switch moves
+    //    neither viewport nor domain, so its plate render is redundant, but
+    //    active_markers_view is a flag-cache FINGERPRINT field and this is the
+    //    route that lands the flag rebuild in the damaged frame; it joins the
+    //    class rather than growing a second flag-only kick (the reason is stated
+    //    at its site, active_views.cpp), and the settings active_markers_view=
+    //    key rides it through the same function. Bare 1/2/3, the ABSOLUTE VIEW
+    //    SELECTORS (2026-08-01), add NO fourth site: they run the audio
     //    view's and the column's handlers themselves, so their kicks are those
     //    two entries and this list is unchanged by them.
+    //    THE `h` VIEW'S LANE REPUBLISH (GuiInputHandler::republish_history_lane_now,
+    //    input_key_dispatch.cpp) is the column switch's class through the
+    //    history view's door: its every edge — the entry, the exit and the
+    //    `,`/`.` walk's steps — moves flag-cache FINGERPRINT fields (the
+    //    history_mode state) and no viewport, and kicks so the arriving lane
+    //    lands in the damaged frame (the reason is stated at its site).
     //    The PROPAGATE PASTE'S TARGET-VIEW TAIL
-    //    (land_paste_in_target_view, phase_reset_propagate.cpp) is the `p` case
-    //    reached by a different door and joined 2026-07-30: it calls
+    //    (land_paste_in_target_view, phase_reset_propagate.cpp) is the
+    //    column-switch case reached by a different door and joined 2026-07-30: it calls
     //    switch_active_markers_view_to('P') directly rather than through the
-    //    toggle, so it kicks at its own tail — after the created selection, so the
+    //    selector, so it kicks at its own tail — after the created selection, so the
     //    column and the selection hash rebuild together — and on its W+source
     //    entry that is a harmless SECOND kick, the audio-view toggle's own having
     //    run before the column swap. SHIFT+S — THE DROP FROM ANY VIEW
@@ -134,11 +142,15 @@ struct Viewport {
     //    the drop, so the column, the plate and the new reset's flag land in
     //    one frame; entered from W its audio switch kicked before the column
     //    swap, making this the harmless second. Also here: the
-    //    settings tab_X_viewport_start commit, the strip drag's TERMINATING-EVENT
-    //    finalize — re-derived 2026-07-29, the true terminating events being
-    //    release, button loss, and the force-end finalizer's three callers
-    //    (Ctrl+Q, resize, WM close); Esc is NOT one of them any more, pointer
-    //    gestures having no cancel — and main.cpp's tick backstop for an ASYNC
+    //    settings tab_X_viewport_start commit
+    //    (GuiSettingsEditor::commit_gui_setting),
+    //    the nav drag's ZOOM-PHASE FORCE-END (finalize_active_drags,
+    //    input_pointer.cpp — the force-end finalizer, whose callers are Ctrl+Q,
+    //    resize and WM close; a moved zoom-phase drag owes one synchronous
+    //    rebuild there, having no release coordinates for a final apply; the
+    //    strip drag whose terminating-event finalize stood here was deleted
+    //    2026-08-15, and Esc is no terminating event, pointer gestures having
+    //    no cancel) — and main.cpp's tick backstop for an ASYNC
     //    total change (a preview completion) live here.
     //  - THE PLATE'S OWN GAIN. The gain is the continuous curve derived from
     //    the source at load (GuiAudio::gain_curve), and the plate's gain
@@ -162,9 +174,14 @@ struct Viewport {
     //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
     //    tempo-image family was deleted (marker_drag.h), which took TWO entries
     //    off this list — the bare Left/Right tempo-image step and the pointer tempo
-    //    DRAG. What remains: the bare Up/Down tempo step
-    //    (adjust_tempo_cents, singleton AND group — the whole tempo surface now),
-    //    the settings engine-scale commit, undo/redo, and THE LOAD-IN-PLACE
+    //    DRAG. What remains: THE TEMPO WRITES, through their one shared tail
+    //    (warp_tempo_write_tail, warpmarkers_ops.cpp) — the bare Up/Down tempo
+    //    step (adjust_tempo_cents, singleton AND group, which the flag-cell
+    //    wheel's payload arm, run_flag_cell_wheel, also reaches) and the VALUE
+    //    DRAG's commit (value_drag.cpp, once at the release, the drag having
+    //    written the store per motion under the displayed-basis freeze) — the
+    //    settings engine-scale commit (GuiSettingsEditor::commit), undo/redo
+    //    (Undo::restore_history_entry), and THE LOAD-IN-PLACE
     //    FAMILY, which reaches this through its ONE shared body since 2026-08-24
     //    (apply_recipe_in_place, input_key_dispatch.cpp — called by
     //    load_render_entry_in_place for the render player's load of a batch
@@ -227,7 +244,7 @@ struct Viewport {
         // zoom-out. clamp_viewport_start clamps the level first (clamp_zoom_level)
         // then snaps/clamps the viewport, and is IDEMPOTENT: for every caller that
         // already clamped before kicking (the zoom paths, move_playhead_to,
-        // center-on-playhead, apply_zoom_to_start, the strip drag, undo, the
+        // center-on-playhead, apply_zoom_to_start, apply_strip_drag_zoom, undo, the
         // load-in-place,
         // active_views, the settings editor, the tick backstop) it is a pure no-op.
         // The tick backstop (main.cpp) remains cheap belt-and-braces insurance

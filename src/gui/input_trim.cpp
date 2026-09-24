@@ -346,9 +346,9 @@ void GuiInputHandler::handle_trim_clear_both() {
 // function orders and writes and maps nothing. (The old set-from-region's hop
 // — ACTIVE-domain ends crossed through active_domain_to_source_frame in here —
 // took the CURSOR's value as the trim's, an authored write off the
-// authored_frame_at_column -> snap_authored_frame chokepoint every other trim
-// former commits through: numerically the same frame in source view, but a
-// second route.) Equality is the only collapse a stroke's two ends can
+// authored_frame_at_column_on_basis -> snap_authored_frame chokepoint every
+// other trim former commits through: numerically the same frame in source
+// view, but a second route.) Equality is the only collapse a stroke's two ends can
 // produce, and an equal pair is a legal thing to write here: the release's
 // commit tail turns it into the whole song (below).
 //
@@ -430,8 +430,8 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // and carries the PLAYHEAD (the press placement, the live cursor carry, the
 // playback reseat, the `h` view's playhead-only former — that road is
 // untouched by this one), and THIS whole SOURCE frame goes into the TRIM. Same
-// display grid, two routes: this one is authored_frame_at_column over the
-// displayed-or-live target map — the single-rounding grid in both views, the
+// display grid, two routes: this one is authored_frame_at_column_on_basis over
+// the displayed-or-live target map — the single-rounding grid in both views, the
 // target arm quantizing to a target frame and inverse-mapping at full
 // precision, snap_authored_frame the one double->authored conversion — with
 // the song walls applied AFTER in source space (walls win over the grid),
@@ -442,16 +442,25 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // write off that chokepoint (the shape this replaced), and feeding this source
 // value into the cursor would jump a target-view playhead into source
 // coordinates — hence two values per column. In source view the two agree
-// frame for frame (the same rounding under the same grid); in target view this
-// is the inverse image the cursor's value only names. Returns 0 on degenerate
-// geometry (unloaded audio, no strip width), which no caller reaches: every
-// arm refuses unloaded audio and the gutter, and the motion path returns on an
-// empty strip.
+// frame for frame (the same rounding under the same grid) at rest; in target
+// view this is the inverse image the cursor's value only names. THE TWO HALVES
+// SIT ON TWO VIEWPORTS BY RULING (architect 2026-09-24): the TRIM half is an
+// authoring gesture and reads the ITEM viewport basis — the viewport the trim
+// bar is painted on, the displayed map's twin, so a worker job in flight at
+// the press cannot move the grid the trim lands on ahead of the pixels (cold,
+// the basis is the live viewport by its own contract) — while the PLAYHEAD
+// half is the click-placement family and stays on the live viewport, so the
+// two part by the in-flight job's shift for as long as it is in flight.
+// Returns 0 on degenerate geometry (unloaded audio, no strip width), which no
+// caller reaches: every arm refuses unloaded audio and the gutter, and the
+// motion path returns on an empty strip.
 int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
     if (audio.total_frames() <= 0) return 0;
     const int64_t wall = audio.total_frames() - 1;
-    int64_t frame = authored_frame_at_column(
-        app, audio, col, displayed_or_live_target_map(app, audio));
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    int64_t frame = authored_frame_at_column_on_basis(
+        app, audio, col, displayed_or_live_target_map(app, audio),
+        basis.vp_start_frame, basis.spp);
     if (frame < 0)    frame = 0;
     if (frame > wall) frame = wall;
     return frame;
@@ -494,16 +503,27 @@ void GuiInputHandler::handle_trim_maximize() {
 // column->frame landing on the single-rounding grid — it spelled the banned
 // two-rounding viewport_start + nearbyint(col*q) until 2026-08-22, the last one
 // left after the playhead step, the click placement and both
-// authored_frame_at_column arms.
+// authored_frame_at_column_on_basis arms.
 //
 // THE COLUMN IS A WAVEFORM COLUMN whatever surface the press came from: `rel` is
 // measured off waveform_area's x and clamped to its width for the 10 px bar's
 // endcaps and bridge, the bar standing directly over the waveform's own span. So the basis is the WAVEFORM-width
-// painter q — the grid actually drawn, the same input the click placement takes
-// (under the multiple-of-16 effective-width contract it equals the logical spp,
-// but the painted grid is the principled one). `rel` is already a whole column
-// out of an integer mouse_x, so there is no column rounding to do here; the
-// landing's single rounding is the owner's.
+// painter q — the grid actually drawn (under the multiple-of-16 effective-width
+// contract it equals the logical spp, but the painted grid is the principled
+// one). `rel` is already a whole column out of an integer mouse_x, so there is
+// no column rounding to do here; the landing's single rounding is the owner's.
+//
+// THE VIEWPORT IS THE ITEM BASIS (architect 2026-09-24, strictly as painted):
+// item_viewport_basis's vp_start and spp — the span the trim pass drew the bar
+// and endcaps on, the displayed map's twin — not the live viewport, which a
+// viewport-dispatched worker job in flight at the press has already moved ahead
+// of the pixels. Its spp is this same painter quantization of the span the
+// flags were built against. Every trim-drag conversion rides it through this
+// function and its source-domain sibling below — the begin anchor, both motion
+// arms — beside commit_trim_drag's release snap and the bound-set click
+// (trim_bound_click_frame) on the same basis, and the freeze holds it from the
+// aimed press to the release. Cold, the basis is the live viewport by its own
+// contract.
 //
 // ACTIVE DOMAIN, NO FORK — the name's promise and the source-domain sibling's
 // contract: consumers that need source frames cross through
@@ -513,14 +533,15 @@ bool GuiInputHandler::trim_mouse_x_to_active_frame(int mouse_x,
                                                    int64_t& out_frame) {
     if (audio.total_frames() <= 0) return false;
     const GuiRect area = waveform_area(app);
-    const double q = painter_samples_per_pixel(app, audio, area);
-    if (q <= 0.0) return false;
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    if (basis.spp <= 0.0 || area.w <= 0) return false;
 
     int rel = mouse_x - area.x;
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
     out_frame = static_cast<int64_t>(std::llrint(
-        displayed_grid_position_at_column(app.viewport_start_sample, rel, q)));
+        displayed_grid_position_at_column(basis.vp_start_frame, rel,
+                                          basis.spp)));
     return true;
 }
 
@@ -817,8 +838,9 @@ void GuiInputHandler::commit_trim_drag() {
         // Release-time column snap, the marker commit_drag shape: each bound
         // the drag actually MOVED snaps to the time of the pixel column it is
         // painted at — the stem painter's own math via
-        // painted_column_of_source_frame / authored_frame_at_column (which
-        // funnels through snap_authored_frame) — so the stored value is the
+        // painted_column_of_source_frame_on_basis /
+        // authored_frame_at_column_on_basis (which funnels through
+        // snap_authored_frame) — so the stored value is the
         // whole frame of the shown column: stored equals shown, in both views
         // at all zooms. An untouched bound keeps its stored value bit-exact
         // (commit_drag's moved-only rule); on a rigid two-bound drag each
@@ -839,7 +861,11 @@ void GuiInputHandler::commit_trim_drag() {
         // worker job dispatched by a
         // viewport change and still in flight across the grab, carrying the
         // then-current map. That is the same displayed basis route_trim_bar_press's
-        // hit test and the drag mechanics above all read. The absolute walls
+        // hit test and the drag mechanics above all read, and the VIEWPORT is
+        // its twin, the item basis (architect 2026-09-24, strictly as painted:
+        // the span the bar was drawn on, the freeze holding it since the aimed
+        // press — so the job in flight above moves neither half; cold, the
+        // live viewport by the basis's own contract). The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
         // wall-clamped release rests exactly on its wall. Degenerate paint
@@ -847,16 +873,19 @@ void GuiInputHandler::commit_trim_drag() {
         // keeps the tracked value: trim has no undo, so routing a bound
         // through the helpers' 0-fallback would be unrecoverable.
         const int sr = audio.sample_rate();
+        const ItemViewportBasis basis = item_viewport_basis(app, audio);
         if (sr > 0 && audio.total_frames() > 0 &&
-            current_samples_per_pixel(app, audio) > 0.0) {
+            current_samples_per_pixel(app, audio) > 0.0 && basis.spp > 0.0) {
             const std::vector<WarpFrameMapSegment>& map =
                 displayed_or_live_target_map(app, audio);
             const auto snap_moved_bound = [&](int64_t& field, int64_t orig,
                                               int64_t wall) {
                 if (field == orig) return;  // untouched: bit-exact, no snap
-                const int c = painted_column_of_source_frame(
-                    app, audio, static_cast<double>(field), map);
-                int64_t v = authored_frame_at_column(app, audio, c, map);
+                const int c = painted_column_of_source_frame_on_basis(
+                    app, audio, static_cast<double>(field), map,
+                    basis.vp_start, basis.spp);
+                int64_t v = authored_frame_at_column_on_basis(
+                    app, audio, c, map, basis.vp_start_frame, basis.spp);
                 if (v < 0)    v = 0;
                 if (v > wall) v = wall;
                 field = v;
@@ -867,7 +896,8 @@ void GuiInputHandler::commit_trim_drag() {
             // drag-onto-partner quick-clear ("if they are set coincident, make
             // trim 0 to EOF") reads that equality at the commit tail — but the
             // release column-snap below round-trips the pinned value through
-            // painted_column_of_source_frame / authored_frame_at_column, and an
+            // painted_column_of_source_frame_on_basis /
+            // authored_frame_at_column_on_basis, and an
             // arbitrary resting partner need not sit on the painted authoring
             // grid, so the snap can move the bound OFF the partner. The
             // pre-snap tracked value is the pin's own evidence, so it is read
@@ -1005,10 +1035,11 @@ void GuiInputHandler::commit_trim_drag() {
 // 2026-08-01 with a NEW strict refusal, after a one-day retirement (the form is
 // 853c2c4's, restored onto the redesigned TRIM BAR rather than the chip row it
 // grew up on). The click moves one bound of the resting window: the column maps
-// to a source frame through authored_frame_at_column over the DISPLAYED paint map
-// — the same release-snap basis commit_trim_drag uses (its snap_moved_bound goes
-// source_frame -> painted_column -> authored_frame; a click carries the column
-// directly). The absolute walls [0, total-1] apply after the snap.
+// to a source frame through authored_frame_at_column_on_basis over the DISPLAYED
+// paint map on the ITEM viewport basis — the same release-snap basis
+// commit_trim_drag uses (its snap_moved_bound goes source_frame ->
+// painted_column -> authored_frame; a click carries the column directly). The
+// absolute walls [0, total-1] apply after the snap.
 // ADJUST-ONLY is a statement about what the click DOES — it moves one bound of the
 // window that always rests — rather than a condition it tests, the pair gate
 // having died with the unset state (2026-07-30).
@@ -1088,12 +1119,23 @@ std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
     if (current_samples_per_pixel(app, audio) <= 0.0) return std::nullopt;
     const GuiRect area = waveform_area(app);
     if (area.w <= 0) return std::nullopt;
+    // THE PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
+    // column converts on the item basis, the displayed map's twin — the span
+    // the trim bar under the pointer was drawn on, which the freeze holds
+    // from this press to either end (pending_click is a member) — never the
+    // live viewport a worker job in flight at the press has already moved.
+    // Cold, the basis is the live viewport by its own contract. The cursor
+    // cue asks this same question per motion, so it names the frame the
+    // pixels show too.
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    if (basis.spp <= 0.0) return std::nullopt;
     int col = mouse_x - area.x;
     if (col < 0)         col = 0;
     if (col >= area.w)   col = area.w - 1;
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
-    int64_t frame = authored_frame_at_column(app, audio, col, dmap);
+    int64_t frame = authored_frame_at_column_on_basis(
+        app, audio, col, dmap, basis.vp_start_frame, basis.spp);
     const int64_t wall = audio.total_frames() - 1;
     if (frame < 0)    frame = 0;
     if (frame > wall) frame = wall;

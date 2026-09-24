@@ -993,12 +993,13 @@ double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
 
 std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
                                                    const GuiAudio& audio) {
-    const GuiRect area = waveform_area(a);
-    const double  spp  = current_samples_per_pixel(a, audio);
-    const int64_t lo   = a.viewport_start_sample;
-    const int64_t hi   = a.viewport_start_sample +
+    // The ITEM basis, not the live viewport: both callers are gesture clamps
+    // (the rule at the declaration).
+    const ItemViewportBasis basis = item_viewport_basis(a, audio);
+    const int64_t lo = basis.vp_start_frame;
+    const int64_t hi = basis.vp_start_frame +
         static_cast<int64_t>(std::nearbyint(
-            static_cast<double>(area.w - 1) * spp));
+            static_cast<double>(basis.area_w - 1) * basis.spp));
     return { lo, hi };
 }
 
@@ -1087,10 +1088,11 @@ void clamp_viewport_start_body(AppState& a, const GuiAudio& audio) {
 
     // Snap the viewport to a whole-pixel (grid) boundary: every rest viewport is
     // then a true grid point, so the SOURCE-view single-rounding warp-marker commit
-    // (authored_frame_at_column's source branch via displayed_grid_position_at_column)
-    // lands EXACTLY on the frame-0 authoring grid, and the waveform rests pixel-
-    // aligned. The same painter spp authored_frame_at_column uses, so viewport grid
-    // and marker grid are one grid.
+    // (authored_frame_at_column_on_basis's source branch via
+    // displayed_grid_position_at_column) lands EXACTLY on the frame-0 authoring
+    // grid, and the waveform rests pixel-aligned. The same painter spp the item
+    // basis carries into authored_frame_at_column_on_basis, so viewport grid and
+    // marker grid are one grid.
     //
     // Snap the viewport to its nearest grid point, then clamp into
     // [0, max_start_grid]. (Single clamp: do NOT also clamp to the off-grid

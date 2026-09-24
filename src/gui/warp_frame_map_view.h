@@ -250,8 +250,8 @@ uint64_t waveform_gain_fingerprint(const AppState& app);
 //
 // NOT for sites translating against an explicit caller-supplied map — a
 // proposed (pre-commit) marker list. Those use the explicit-map pixel-anchoring
-// helpers (painted_column_of_source_frame / authored_frame_at_column) with
-// their own map.
+// helpers (painted_column_of_source_frame_on_basis /
+// authored_frame_at_column_on_basis) with their own map.
 int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio,
                                       int64_t source_frame);
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
@@ -269,11 +269,13 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
 // The stem painters' samples-per-pixel and the single source of truth for the
 // on-screen column grid: the visible span nearbyint-quantized to whole samples
 // (matching the vp_end the waveform cache carries, vp_start +
-// nearbyint(spp * area.w)) divided back over the strip width. The
-// pixel-anchoring pair below and the viewport snap in clamp_viewport_start
-// (main.cpp) all take their `q` from here, so the viewport grid and the marker
-// grid are one grid at any window width (not just multiples of 8). Returns 0.0
-// on degenerate geometry (no strip width / no zoom).
+// nearbyint(spp * area.w)) divided back over the strip width. The viewport
+// snap in clamp_viewport_start (main.cpp), the click placement and the plate's
+// dispatch all take their `q` from here, and the pixel-anchoring pair below
+// takes the item basis's spp, which is this same quantization of the span the
+// flags were built against, so the viewport grid and the marker grid are one
+// grid at any window width (not just multiples of 8). Returns 0.0 on
+// degenerate geometry (no strip width / no zoom).
 struct GuiRect;
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area);
@@ -393,9 +395,9 @@ inline int strip_anchor_stem_column(double displayed, double vp_start,
 // pointer position (marker AND trim drag commits both snap their release to
 // the painted column) anchors to the on-screen column grid through these two
 // helpers: read the item's
-// currently painted column with painted_column_of_source_frame, pick the
-// destination column, and commit authored_frame_at_column of it — which
-// funnels through snap_authored_frame (app_state.h), the single
+// currently painted column with painted_column_of_source_frame_on_basis, pick
+// the destination column, and commit authored_frame_at_column_on_basis of it —
+// which funnels through snap_authored_frame (app_state.h), the single
 // fractional-to-authored route. Anchoring to the column grid re-derives
 // the pixel phase on every gesture, so whole-frame rounding residue can
 // never accumulate on top of an off-grid sub-pixel phase; the painted
@@ -405,60 +407,70 @@ inline int strip_anchor_stem_column(double displayed, double vp_start,
 // are never moved, the doctrine at the head of position_nudge.h) and a drag
 // moves the marker it grabbed.
 //
-// painted_column_of_source_frame: the pixel column (offset from
-// waveform_area(app).x) the stem painters draw `source_frame` at,
-// computed with the painters' own math (the marker-stem overlay
-// paint_marker_stems): nearbyint the frame; in the TargetLive domain
-// forward-map it through `warp_frame_map` and nearbyint the map output;
-// then divide by the painters' samples-per-pixel — the visible span
-// nearbyint-quantized to whole samples over the strip width — and round
-// with the painters' std::nearbyint. `warp_frame_map` is the map the item is painted through:
-// the DISPLAYED map (displayed_or_live_target_map — the event-synchronized paint
-// basis, falling back to the live cache when cold), at rest and at drag commit.
-// Ignored in the Source domain; an empty map in a mapped domain falls
-// back to identity, exactly like paint. Returns 0 when the strip has no
-// width (callers guard the degenerate geometry).
-int painted_column_of_source_frame(
-    const AppState& app, const GuiAudio& audio, double source_frame,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map);
-
-// The explicit-basis variant of painted_column_of_source_frame: the same
-// painters' math, but the viewport (`vp_start`) and samples-per-pixel (`spp`)
-// come from the CALLER instead of the live viewport / painter_samples_per_pixel.
-// painted_column_of_source_frame delegates here with the LIVE basis; the flag
-// EDITOR's unrolled box passes the ITEM basis (item_viewport_basis in
-// app_state.h) — damage follows the pixels it erases, so the box unrolls from
-// the column the flag pixels were painted at even mid-publish, when the live
-// viewport already holds a not-yet-blitted span. (Two other ITEM-basis callers
-// died in row 5 with the marker-text lane: the run centering and the run hit.
-// The selected-stem invalidator was the other _on_basis caller until
-// 2026-07-30; it rode the ITEM basis for PLATE-painted pixels, was widened to a
-// full waveform-area invalidate rather than re-based, and is gone entirely with
-// the singleton selected-marker stem itself.)
-// `spp` must be > 0 (returns 0, a valid column, on a degenerate spp — callers
-// guard the geometry, exactly like the live-basis form). The domain and the
-// source->target mapping are unchanged (they don't depend on the viewport).
+// THE BASIS IS THE CALLER'S, AND EVERY GESTURE PASSES THE ITEM BASIS
+// (architect 2026-09-24, strictly as painted: a gesture runs on ONE painted
+// basis). The map is the DISPLAYED map (displayed_or_live_target_map) and the
+// viewport is its twin, item_viewport_basis (app_state.h) — the vp_start and
+// samples-per-pixel the committed flag cache was built against, so the column
+// read and the column committed are the ones on screen even while a
+// viewport-dispatched worker job is in flight across the press (the freeze
+// drops its completion, but the LIVE viewport has already moved; converting on
+// it would author on a grid the pixels never showed). Cold, the item basis IS
+// the live viewport by its own contract, so nothing here forks on warmth. The
+// gesture callers — the marker drag's commit snap (marker_drag.cpp), the trim
+// drags' release snap, the sweep's trim half and the trim bar's bound-set
+// click (input_trim.cpp), and both nudges' column step (stepped_anchor_frame,
+// position_nudge.h) — are the whole caller list of the pair apart from the
+// flag editor's unrolled box (render.cpp), which rides the same item basis on
+// the paint side. THE LIVE-VIEWPORT FORMS ARE DELETED (2026-09-24): with the
+// gesture class moved no caller was left on them. The families that stay on
+// the live viewport by ruling never reached them — the click-placement family
+// (the nav click, the drops at the playhead, the sweep's PLAYHEAD half, the
+// empty-lane double-click create) lands through playhead_frame_at_click_column
+// (input_pointer.cpp), and the playhead's damage columns come from
+// playhead_pixel_x (main.cpp) on the basis of the pixels they erase.
+//
+// painted_column_of_source_frame_on_basis: the pixel column (offset from
+// waveform_area(app).x) the stem painters draw `source_frame` at on the
+// caller's basis, computed with the painters' own math (the marker-stem
+// overlay paint_marker_stems): nearbyint the frame; in the TargetLive domain
+// forward-map it through `warp_frame_map` and nearbyint the map output; then
+// divide by the basis's samples-per-pixel (`spp` — the visible span
+// nearbyint-quantized to whole samples over the strip width, the painters'
+// own) from its viewport start (`vp_start`) and round with the painters'
+// std::nearbyint through displayed_column_at. `warp_frame_map` is the map the
+// item is painted through — the DISPLAYED map at every caller. Ignored in the
+// Source domain; an empty map in a mapped domain falls back to identity,
+// exactly like paint. The flag EDITOR's unrolled box passes the ITEM basis
+// too — damage follows the pixels it erases, so the box unrolls from the
+// column the flag pixels were painted at even mid-publish. (Two other
+// ITEM-basis callers died in row 5 with the marker-text lane: the run
+// centering and the run hit. The selected-stem invalidator was an _on_basis
+// caller until 2026-07-30; it is gone with the singleton selected-marker stem
+// itself.) `spp` must be > 0 (returns 0, a valid column, on a degenerate spp —
+// callers guard the geometry). The domain and the source->target mapping do
+// not depend on the viewport.
 int painted_column_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
     double vp_start, double spp);
 
-// authored_frame_at_column: the authored source-frame value of pixel
-// column `col` under the same coordinate system — the active-domain time is
-// displayed_grid_position_at_column above (the single-rounding grid at the
-// painters' samples-per-pixel), in EVERY domain; in the
-// TargetLive domain that time is quantized to an integer target frame
-// (llrint, floored at 0 — the same quantization the target-view nudges
+// authored_frame_at_column_on_basis: the authored source-frame value of pixel
+// column `col` under the same coordinate system and the caller's basis — the
+// active-domain time is displayed_grid_position_at_column above at the
+// basis's viewport start (`vp_start`, the integer frame — the grid owner
+// recovers its column index from it) and samples-per-pixel (`spp`), in EVERY
+// domain; in the TargetLive domain that time is quantized to an integer target
+// frame (llrint, floored at 0 — the same quantization the target-view nudges
 // have always applied) and inverse-mapped through `warp_frame_map` at full
-// precision. The
-// result returns through snap_authored_frame, so it is a whole source
-// frame in the authored int64 domain; callers apply their own walls
-// AFTER — the walls win over the
-// pixel grid, and every wall is itself an integer frame. Returns 0 when
-// the strip has no width (callers guard the degenerate geometry).
-int64_t authored_frame_at_column(
+// precision. The result returns through snap_authored_frame, so it is a whole
+// source frame in the authored int64 domain; callers apply their own walls
+// AFTER — the walls win over the pixel grid, and every wall is itself an
+// integer frame. Returns 0 on a degenerate `spp` (callers guard the geometry).
+int64_t authored_frame_at_column_on_basis(
     const AppState& app, const GuiAudio& audio, int col,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map);
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    int64_t vp_start, double spp);
 
 // -- THE PHASE-RESET LATTICE (the engine's seed geometry, GUI-side) ---------
 //

@@ -212,8 +212,8 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 
 // Definition; the descriptive comment lives at the declaration in
 // warp_frame_map_view.h. Exposed (non-anonymous) so main.cpp's viewport snap
-// in clamp_viewport_start takes its `q` from the same source as the
-// pixel-anchoring helpers below — one grid for viewport and markers.
+// in clamp_viewport_start takes its `q` from the same source as the click
+// placement — one grid for viewport and markers.
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area) {
     if (area.w <= 0) return 0.0;
@@ -236,38 +236,18 @@ int painted_column_of_source_frame_on_basis(
     return displayed_column_at(ms, vp_start, spp);
 }
 
-int painted_column_of_source_frame(
-    const AppState& app, const GuiAudio& audio, double source_frame,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
-    const GuiRect area = waveform_area(app);
-    const double spp = painter_samples_per_pixel(app, audio, area);
-    if (spp <= 0.0) return 0;
-    // The LIVE basis: the live viewport start and the painter-quantized spp.
-    // Gesture-commit callers (the nudges, drag commits, trim drags) anchor to the
-    // LIVE on-screen grid by ruling, and live-painted DAMAGE (playhead columns)
-    // stays live too. The boundary is damage-follows-the-pixels: damage rides the
-    // basis of the pixels it erases, so the flag editor's box placement instead
-    // rides the ITEM basis via _on_basis — the box paints on the promoted item
-    // mirror, so its geometry must read it too.
-    return painted_column_of_source_frame_on_basis(
-        app, audio, source_frame, warp_frame_map,
-        static_cast<double>(app.viewport_start_sample), spp);
-}
-
-int64_t authored_frame_at_column(
+int64_t authored_frame_at_column_on_basis(
     const AppState& app, const GuiAudio& audio, int col,
-    const std::vector<WarpFrameMapSegment>& warp_frame_map) {
-    const GuiRect area = waveform_area(app);
-    const double spp = painter_samples_per_pixel(app, audio, area);
+    const std::vector<WarpFrameMapSegment>& warp_frame_map,
+    int64_t vp_start, double spp) {
     if (spp <= 0.0) return 0;
     const GuiDisplayContext& ctx = active_display_context(app, audio);
     // The column's ACTIVE-DOMAIN time on the single-rounding grid (the
     // grid-snapped viewport is a true grid point, so the recovered column index
     // is exact). Both arms below land on it, so a commit is anchored at frame 0
-    // of the domain it was authored in rather than at the current viewport
+    // of the domain it was authored in rather than at the basis's viewport
     // start.
-    const double g =
-        displayed_grid_position_at_column(app.viewport_start_sample, col, spp);
+    const double g = displayed_grid_position_at_column(vp_start, col, spp);
     if (ctx.domain == GuiDisplayDomain::Source) {
         // snap_authored_frame stays the sole double-to-authored conversion.
         return snap_authored_frame(g);

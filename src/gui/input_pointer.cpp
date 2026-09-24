@@ -955,9 +955,13 @@ bool point_on_nav_surface(const AppState& app, const GuiAudio& audio,
 // used to take the domain-spp form on the reasoning that the source-frame commit
 // routes through the inverse map and so carried no source-grid claim; the
 // target-domain lattice is an authoring lattice in its own right (the
-// phase-reset drop commits the playhead's sample, and authored_frame_at_column's
-// target arm rides this same grid), and an unanchored landing relabels by a
-// frame across a pan or a zoom round trip.
+// phase-reset drop commits the playhead's sample, and
+// authored_frame_at_column_on_basis's target arm rides this same grid), and an
+// unanchored landing relabels by a frame across a pan or a zoom round trip.
+// THE VIEWPORT IS THE LIVE ONE, BY RULING: this is the click-placement family,
+// which stayed live when the gesture mechanics moved to the item viewport basis
+// (architect 2026-09-24); the two are one grid whenever no viewport-dispatched
+// worker job is in flight.
 // The fallback covers degenerate geometry only (no strip width / no zoom), where
 // there is no painted grid to land on.
 int64_t playhead_frame_at_click_column(const AppState& app,
@@ -10185,15 +10189,19 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     const int sr = audio.sample_rate();
     if (sr <= 0) return;
     const GuiRect area = waveform_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
     // The delta handed to apply_drag_motion is an ACTIVE-domain frame delta:
     // mouse_frame is the pointer's plain active-domain position — one
     // expression, both views, no inverse map anywhere in its derivation.
     // The displayed-map hops that carry the delta into the source domain
     // live inside apply_drag_motion, which anchors the proposal in the
     // DISPLAYED target domain so the painted flag tracks the pointer 1:1.
-    const double mouse_frame = static_cast<double>(app.viewport_start_sample) +
-        static_cast<double>(mouse_x - area.x) * spp;
+    // The position is taken on the ITEM viewport basis, begin_drag's anchor's
+    // own (architect 2026-09-24, strictly as painted — the rationale at that
+    // anchor, marker_drag.cpp), so the delta is pure pointer travel on the
+    // painted grid.
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    const double mouse_frame =
+        basis.vp_start + static_cast<double>(mouse_x - area.x) * basis.spp;
     marker_drag.apply_drag_motion(mouse_frame - app.drag.anchor_mouse_time_frame);
     // Playhead rule: the playhead follows the dragged marker through the drag
     // inside apply_drag_motion (the crossing's click act landed it on the

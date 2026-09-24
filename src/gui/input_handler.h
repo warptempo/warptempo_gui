@@ -3236,8 +3236,9 @@ private:
     bool write_trim_from_sweep(int64_t anchor_source, int64_t moving_source);
 
     // THE SWEEP'S ONE COLUMN->TRIM ROUTE: the whole SOURCE frame a
-    // waveform-relative column authors, through authored_frame_at_column over
-    // the displayed-or-live target map with the song walls applied after —
+    // waveform-relative column authors, through
+    // authored_frame_at_column_on_basis over the displayed-or-live target map
+    // on the item viewport basis with the song walls applied after —
     // the lattice every other trim former commits on. Both of the sweep's
     // trim ends (the arm's anchor, the motion path's moving end) come from
     // here and nowhere else; the PLAYHEAD those same columns seat and carry
@@ -3386,8 +3387,9 @@ private:
 
     // Set ONE trim bound (begin or end) at the clicked column, REINSTATED on the
     // redesigned TRIM BAR (architect 2026-08-01, after a one-day retirement) —
-    // the trim-drag release-snap basis (authored_frame_at_column over the
-    // displayed paint map), walls [0, total-1], then the shared commit tail.
+    // the trim-drag release-snap basis (authored_frame_at_column_on_basis over
+    // the displayed paint map on the item viewport basis), walls [0, total-1],
+    // then the shared commit tail.
     // ADJUST-ONLY is now a statement about what the click DOES — it moves one
     // bound of the window that always rests — rather than a condition it tests,
     // the pair gate having died with the unset state (2026-07-30).
@@ -3412,8 +3414,9 @@ private:
 
     // WHAT THAT CLICK WOULD WRITE, or nullopt when it refuses — the whole of the
     // decision half of set_trim_bound_at_click above (its
-    // degenerate-geometry gate, the column clamp, the map + authored_frame_at_column
-    // derivation, the absolute walls, and the STRICTLY-INSIDE guard), leaving that
+    // degenerate-geometry gate, the column clamp, the map + item basis +
+    // authored_frame_at_column_on_basis derivation, the absolute walls, and the
+    // STRICTLY-INSIDE guard), leaving that
     // function nothing but the write and its tail. It is a shared owner for the
     // same reason the two trim-bar hit predicates are: the pointer CURSOR asks
     // whether the ctrl / ctrl+shift click at this column would set a bound

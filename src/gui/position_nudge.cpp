@@ -4,8 +4,8 @@
 #include "input_handler.h"      // land_playhead_on_marker (the collapse's
                                 // land)
 #include "target_render.h"
-#include "warp_frame_map_view.h"  // painted_column_of_source_frame,
-                                  // authored_frame_at_column,
+#include "warp_frame_map_view.h"  // painted_column_of_source_frame_on_basis,
+                                  // authored_frame_at_column_on_basis,
                                   // source_frame_to_active_domain
 
 #include <cstdint>
@@ -115,9 +115,14 @@ int64_t stepped_anchor_frame(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& map,
     int64_t orig_frame, int step_columns) {
-    const int cf = painted_column_of_source_frame(
-        app, audio, static_cast<double>(orig_frame), map);
-    return authored_frame_at_column(app, audio, cf + step_columns, map);
+    // The ITEM viewport basis, the displayed map's twin (the rule at the
+    // declaration).
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    const int cf = painted_column_of_source_frame_on_basis(
+        app, audio, static_cast<double>(orig_frame), map,
+        basis.vp_start, basis.spp);
+    return authored_frame_at_column_on_basis(
+        app, audio, cf + step_columns, map, basis.vp_start_frame, basis.spp);
 }
 
 int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,

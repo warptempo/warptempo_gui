@@ -18,17 +18,23 @@ namespace {
 // THE COMMIT'S CONVERSION, commit_drag's store write. A proposal bit-equal
 // to the original keeps the original (a wander returning exactly to the press
 // x, dodging the two-hop's non-bitwise identity); anything else snaps to its
-// painted column through authored_frame_at_column (which funnels the column
-// time through snap_authored_frame, the ONE double-to-authored route) against
-// the displayed map `dmap`, then takes the integer walls.
+// painted column through authored_frame_at_column_on_basis (which funnels the
+// column time through snap_authored_frame, the ONE double-to-authored route)
+// against the displayed map `dmap` on the ITEM viewport basis — the viewport
+// the flag was painted on, which the freeze has held since the aimed press
+// (architect 2026-09-24, strictly as painted; cold, the basis is the live
+// viewport by its own contract) — then takes the integer walls.
 int64_t committed_frame_for_proposal(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& dmap,
     double proposed, int64_t original) {
     if (proposed == static_cast<double>(original)) return original;
     const int64_t eof_wall = audio.total_frames() - 1;
-    const int c = painted_column_of_source_frame(app, audio, proposed, dmap);
-    int64_t t = authored_frame_at_column(app, audio, c, dmap);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    const int c = painted_column_of_source_frame_on_basis(
+        app, audio, proposed, dmap, basis.vp_start, basis.spp);
+    int64_t t = authored_frame_at_column_on_basis(
+        app, audio, c, dmap, basis.vp_start_frame, basis.spp);
     if (t < 0)        t = 0;
     if (t > eof_wall) t = eof_wall;
     return t;
@@ -82,12 +88,18 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
     // anchor_mouse_time_frame) therefore lives in active-domain frames, and
     // apply_drag_motion carries it into the source domain through the
     // DISPLAYED map's two hops, so the painted flag moves by exactly the
-    // pointer's travel.
+    // pointer's travel. THE VIEWPORT IS THE ITEM BASIS, the displayed map's
+    // twin (architect 2026-09-24, strictly as painted): the vp_start and spp
+    // the grabbed flag was painted on, not the live viewport, which a
+    // viewport-dispatched worker job in flight at the press has already moved
+    // ahead of the pixels. The motion path (the drag arm of on_motion,
+    // input_pointer.cpp) converts through the same basis, and the freeze holds
+    // it from the aimed press to the release; cold, it is the live viewport by
+    // its own contract.
     const GuiRect area = waveform_area(app);
-    const double spp = current_samples_per_pixel(app, audio);
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     d.anchor_mouse_time_frame =
-        static_cast<double>(app.viewport_start_sample) +
-        static_cast<double>(mouse_x - area.x) * spp;
+        basis.vp_start + static_cast<double>(mouse_x - area.x) * basis.spp;
 
     // Compute scalar delta_min / delta_max as the dragged marker's ACTIVE-domain
     // wall headroom (architect 2026-07-23, retiring the earlier source-domain
@@ -117,8 +129,9 @@ bool MarkerDragOps::begin_drag(int hit, int mouse_x) {
 
     // Viewport clamp on top of the absolute data walls above, so a mouse drag
     // can't push the marker FURTHER offscreen, where its precise position — the
-    // one being authored — would be hidden. Same active domain:
-    // viewport_marker_bounds already returns active-domain values,
+    // one being authored — would be hidden. Same active domain and the same
+    // painted viewport as the anchor above: viewport_marker_bounds reads the
+    // item basis and already returns active-domain values,
     // so its edges fold in directly as [vb.first − fwd(orig), vb.second −
     // fwd(orig)] — no inverse translation to source (that dance existed
     // only because the walls were source-domain).
@@ -404,9 +417,10 @@ void MarkerDragOps::commit_drag() {
 
     // The commit: bit-exact untouched short-circuit (a wander returning exactly to
     // the press x keeps the original, dodging the two-hop's non-bitwise identity),
-    // else the painted column snap through authored_frame_at_column (which funnels
-    // the column time through snap_authored_frame, the ONE double-to-authored
-    // route) against the displayed map, then the integer walls.
+    // else the painted column snap through authored_frame_at_column_on_basis
+    // (which funnels the column time through snap_authored_frame, the ONE
+    // double-to-authored route) against the displayed map on the item viewport
+    // basis, then the integer walls.
     // (committed_frame_for_proposal, above, is that conversion's one spelling.)
     int64_t committed = 0;
     int64_t original  = 0;

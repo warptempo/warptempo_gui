@@ -224,10 +224,19 @@ PositionNudgePrologue position_nudge_prologue(
     GestureKind kind, bool synthesized_repeat, HorizontalArrowStep step);
 
 // THE pixel-column step, and the ONLY COLUMN derivation any nudge uses: read
-// the marker's currently painted column (painted_column_of_source_frame — the
-// stem painters' own math against the displayed paint basis) and commit the
-// frame at cf + step_columns (authored_frame_at_column, which funnels through
-// snap_authored_frame, the one fractional-to-authored route). Returns the
+// the marker's currently painted column
+// (painted_column_of_source_frame_on_basis — the stem painters' own math
+// against the displayed paint basis) and commit the frame at cf + step_columns
+// (authored_frame_at_column_on_basis, which funnels through
+// snap_authored_frame, the one fractional-to-authored route). BOTH HALVES OF
+// THE BASIS ARE THE PAINTED ONES (architect 2026-09-24, strictly as painted):
+// the caller's `map` is the displayed map and the viewport is its twin,
+// item_viewport_basis, read here — the column the flag is on screen at, not
+// the one the live viewport would put it at while a viewport-dispatched worker
+// job is still in flight; cold, the basis is the live viewport by its own
+// contract. The press's CAMERA is another matter: the hold's column
+// (finish_position_nudge's prior viewport) is a camera write placed against
+// the live viewport it writes, navigation and not this step. Returns the
 // committed frame RAW — walls are NOT this helper's business: the landing
 // owner applies them to the result. Exactly one call per COLUMN press, on the
 // focus. THE PHASE-RESET COLUMN'S HOP (2026-09-21) IS NOT A COLUMN STEP and
