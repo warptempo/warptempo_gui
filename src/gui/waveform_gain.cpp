@@ -50,16 +50,17 @@ static_assert(working_zoom_column_frames(48000) == 60, "60 source frames per col
 // were the sharper case).
 constexpr double kStepSeconds = 0.1;
 
-// No window is audible anywhere: x8 flat (the min_fraction default's LEAVE AS
-// IS ruling below), clamped by the cap like any other gain.
+// No window is audible anywhere: x8 flat (kMinFraction's LEAVE AS IS ruling
+// below), clamped by the cap like any other gain.
 constexpr double kSilentGain = 8.0;
 
-// --- the defaults' reasons ---------------------------------------------------
-// The five tunables are the device config's (WaveformGainParams,
-// waveform_gain.h; the grammar and brackets at device_config.h). These are the
-// reasons for the DEFAULTS both first-run templates stamp.
+// --- the constants' reasons --------------------------------------------------
+// The seven picture values, HARD-CODED 2026-09-24 (architect: every project
+// shares one frame of reference, so they are set once and left; a retune is a
+// recompile, by design — waveform_gain.h). Until then they were device-config
+// keys, `waveform_gain_*` and `waveform_expander_*`, for a tuning phase.
 //
-// `waveform_gain_window_s` 3.0: the EBU short-term loudness length, chosen by
+// kWindowSeconds 3.0: the EBU short-term loudness length, chosen by
 // eye (architect 2026-09-23) for the contrast it gives and for the earlier
 // dip before a forte. The 1.5 s that stood before it was the marker regime's
 // "finest window whose exposition and repeat still agree", a criterion that
@@ -72,8 +73,9 @@ constexpr double kSilentGain = 8.0;
 // before a loud section, and the material just before a tutti carries less
 // meaning. The window's shape — the half-window ramp on each side of a loud
 // entry, the lone accent's halo — is at the header.
-//
-// `waveform_gain_target_db` -14: measured 2026-09-24 on the 40th's first and
+constexpr double kWindowSeconds = 3.0;
+
+// kTargetDb -14: measured 2026-09-24 on the 40th's first and
 // second movements, each window's peak against the same window's short-term
 // RMS on the samples, the peak sits 14.3 / 14.8 dB above the RMS at the
 // median with a 4 dB spread from p10 to p90 — so -14 puts the typical
@@ -84,68 +86,56 @@ constexpr double kSilentGain = 8.0;
 // 2024 mastering of this 1972 recording was made for (the architect's
 // reading; not a coincidence), and the material he brings in is expected to
 // be mastered to it or slightly lower.
-//
-// `waveform_gain_gate_db` -50: columns whose peak is under it are silence or
+constexpr double kTargetDb = -14.0;
+
+// kGateDb -50: columns whose peak is under it are silence or
 // tape hiss (the architect's old gates ran -40..-50), and they are left out of
 // the window's mean so a rest does not lower the loudness of the notes around
 // it.
-//
-// `waveform_gain_min_fraction` 0.25: a window with less audible material than
+constexpr double kGateDb = -50.0;
+
+// kMinFraction 0.25: a window with less audible material than
 // this share is silence. Ruled LEAVE AS IS (architect 2026-09-23), together
 // with the gate above and the x8 all-silent fallback above: the architect
 // never works on a short excerpt or on a file under -50 dBFS, and his oldest
 // usable recordings (1970s tape remastered in the 2020s) pass the hiss gate.
 // No further criterion.
-//
-// `waveform_gain_max` 16, the cap: four doublings, the old level ladder's top.
-//
-// THE FLOOR IS FIXED, not a key: it forbids attenuation. A window louder than
+constexpr double kMinFraction = 0.25;
+
+// kGainMax 16, the cap: four doublings, the old level ladder's top.
+constexpr double kGainMax = 16.0;
+
+// THE FLOOR, kGainMin 1: it forbids attenuation. A window louder than
 // the target takes x1 rather than being pulled under its own level — its raw
 // samples cannot exceed the edge — and every quieter window is raised to the
 // target.
 constexpr double kGainMin = 1.0;
 
-// THE EXPANDER'S DEFAULTS (WaveformExpanderParams, waveform_gain.h, which
-// owns the stage; the grammar and brackets at device_config.h), architect
-// 2026-09-24, one line each, on the leveled scale — dB of a column's leveled
-// peak under the lane edge:
-//
-// `waveform_expander_threshold_db` -8: the sustain between notes sits at
-// -5..-7 on the leveled scale and the quiet passages at -10 and below.
-// `waveform_expander_ratio` 1.00: off for a fresh device; the architect
-// tunes from 2.00.
-// `waveform_expander_range_db` 40, the floor: a rest never falls below a
-// visible line.
-// `waveform_expander_knee_db` 4: the width of the band where the leveled
-// sustain lives, his to tune.
-// `waveform_expander_hold_ms` 50: the manual's ceiling is 250 and he expects
-// 50-100.
-// `waveform_expander_release_ms` 20: a slight fade rather than a cliff.
+static_assert(kGainMax >= kGainMin, "the clamp's bounds are ordered");
 
-// THE GAIN COMPUTER (waveform_gain.h, THE EXPANDER): the target reduction in
-// dB, >= 0 and capped at the Range, for a column whose leveled peak reads
-// `x` dB. `x` may be minus infinity (a zero peak), which takes the full Range
-// under any ratio over 1; Ratio 1 returns 0 before any arithmetic, so the
-// identity is exact and never meets an infinity.
-double expander_target_reduction_db(double x, const WaveformExpanderParams& e) {
-    const double over = e.ratio - 1.0;
-    if (over <= 0.0) return 0.0;
-    const double k  = e.knee_db;
-    const double hi = e.threshold_db + k / 2;
-    const double lo = e.threshold_db - k / 2;
-    double target;
-    if (x >= hi) {
-        return 0.0;
-    } else if (x >= lo) {
-        // The quadratic soft knee, its slope running 0 -> over (reached only
-        // when k > 0: at k = 0, lo = hi and every x under hi falls below).
-        target = over * (hi - x) * (hi - x) / (2 * k);
-    } else {
-        // The knee's value at its lower edge, over * k / 2, then over dB per
-        // dB under it: the output drops `ratio` dB per dB of input.
-        target = over * k / 2 + over * (lo - x);
-    }
-    return std::min(target, e.range_db);
+// THE EXPANDER'S TWO (waveform_gain.h owns the stage), architect 2026-09-24,
+// on the leveled scale — dB of a column's leveled peak under the lane edge:
+//
+// kExpanderThresholdDb -8: the sustain between notes sits at -5..-7 on the
+// leveled scale and the quiet passages at -10 and below. The architect
+// weighed -4, -3 and -2 against it and returned to -8 with the ratio at 2,
+// because it stays closest to the raw picture while accentuating the peaks;
+// the higher thresholds made the waveform "emaciated".
+constexpr double kExpanderThresholdDb = -8.0;
+
+// kExpanderRatio 2: the ratio the criterion is stated at (the swell before an
+// onset roughly doubles). Over 1 by construction: at 1 the curve would be the
+// identity, and a zero peak's minus infinity would meet a zero slope.
+constexpr double kExpanderRatio = 2.0;
+static_assert(kExpanderRatio > 1.0, "the expander reduces under the threshold");
+
+// THE CURVE (waveform_gain.h, THE EXPANDER): the reduction in dB, >= 0 and
+// uncapped, for a column whose leveled peak reads `x` dB — 0 at or above the
+// threshold, (ratio - 1) dB per dB under it. `x` may be minus infinity (a
+// zero peak), which returns plus infinity, the multiplier 0.
+double expander_reduction_db(double x) {
+    if (x >= kExpanderThresholdDb) return 0.0;
+    return (kExpanderRatio - 1.0) * (kExpanderThresholdDb - x);
 }
 
 // Reads the column pass's two arrays in place; they outlive it (the
@@ -194,8 +184,7 @@ private:
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate, const WaveformGainParams& params,
-                                       const WaveformExpanderParams& expander) {
+                                       int sample_rate) {
     if (total_frames <= 0) return {};
 
     const int64_t col = working_zoom_column_frames(sample_rate);
@@ -226,21 +215,21 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     const double cps = static_cast<double>(sample_rate) / static_cast<double>(col);
     const int64_t st = static_cast<int64_t>(std::nearbyint(cps * kStepSeconds));
     assert(st >= 1);
-    const double gate = std::pow(10.0, params.gate_db / 20);
+    const double gate = std::pow(10.0, kGateDb / 20);
 
-    const Analysis an(peaks, mean_squares, gate, params.min_fraction);
+    const Analysis an(peaks, mean_squares, gate, kMinFraction);
 
     // THE MEASURE at the analysis hop, then THE GAIN per hop,
     // g = 10^((target - L) / 20): the window's loudness brought to the target.
     std::vector<double> coarse;
     {
-        const int64_t hw = static_cast<int64_t>(params.window_s * cps / 2);
+        const int64_t hw = static_cast<int64_t>(kWindowSeconds * cps / 2);
         std::vector<std::optional<double>> raw;
         std::vector<int64_t> known;
         for (int64_t i = 0; i < n; i += st) {
             const std::optional<double> level = an.short_term_loudness(i - hw, i + hw);
             raw.push_back(level ? std::optional<double>(
-                                      std::pow(10.0, (params.target_db - *level) / 20))
+                                      std::pow(10.0, (kTargetDb - *level) / 20))
                                 : std::nullopt);
             if (raw.back()) known.push_back(static_cast<int64_t>(raw.size()) - 1);
         }
@@ -274,56 +263,30 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         }
     }
 
-    // THE CLAMP to [kGainMin, gain_max] (gain_max >= 1 by the config reader's
-    // bracket): never attenuated, never past the cap. Nothing else.
+    // THE CLAMP to [kGainMin, kGainMax]: never attenuated, never past the cap.
+    // Nothing else.
     WaveformGainCurve out;
     out.hop_frames = st * col;
     out.gain.resize(coarse.size());
     for (size_t k = 0; k < coarse.size(); ++k)
-        out.gain[k] = std::clamp(coarse[k], kGainMin, params.gain_max);
+        out.gain[k] = std::clamp(coarse[k], kGainMin, kGainMax);
 
-    // THE EXPANDER, after the leveler (waveform_gain.h owns the stage): one
-    // walk over the working columns in time order. Each column's level is its
-    // leveled peak in dB, its target the gain computer's; ATTACK 0 opens the
-    // gate the instant a column exceeds the threshold and re-arms the HOLD;
-    // once the hold has run out, the RELEASE walks `red` toward the target at
-    // Range / release_ms dB per ms, never past it, and a target under `red`
-    // takes it at once. LOOKAHEAD is off: nothing here reads ahead.
+    // THE EXPANDER, after the leveler (waveform_gain.h owns the stage): a
+    // static curve on each working column's leveled peak in dB, no state
+    // carried from one column to the next.
     out.column_frames = col;
     out.expander_multiplier.resize(static_cast<size_t>(n));
-    {
-        const int64_t hold_cols =
-            static_cast<int64_t>(std::nearbyint(expander.hold_ms * cps / 1000));
-        // dB per column; release_ms 0 is the target at once.
-        const double release_step =
-            expander.release_ms > 0.0
-                ? expander.range_db / (expander.release_ms * cps / 1000)
-                : std::numeric_limits<double>::infinity();
-        double  red  = 0.0;
-        int64_t hold = 0;
-        for (int64_t k = 0; k < n; ++k) {
-            const int64_t f0 = k * col;
-            const int64_t f1 = std::min(total_frames, f0 + col);
-            const double leveled =
-                peaks[static_cast<size_t>(k)] * waveform_gain_at(out, (f0 + f1) / 2);
-            const double x = leveled > 0.0 ? 20 * std::log10(leveled)
-                                           : -std::numeric_limits<double>::infinity();
-            const double target = expander_target_reduction_db(x, expander);
-            if (x > expander.threshold_db) {
-                red  = 0.0;
-                hold = hold_cols;
-            } else if (hold > 0) {
-                red = 0.0;
-                --hold;
-            } else if (red >= target) {
-                red = target;
-            } else {
-                red = std::min(target, red + release_step);
-            }
-            // 10^0 is exactly 1, so an open column's multiplier is exact.
-            out.expander_multiplier[static_cast<size_t>(k)] =
-                static_cast<float>(std::pow(10.0, -red / 20));
-        }
+    for (int64_t k = 0; k < n; ++k) {
+        const int64_t f0 = k * col;
+        const int64_t f1 = std::min(total_frames, f0 + col);
+        const double leveled =
+            peaks[static_cast<size_t>(k)] * waveform_gain_at(out, (f0 + f1) / 2);
+        const double x = leveled > 0.0 ? 20 * std::log10(leveled)
+                                       : -std::numeric_limits<double>::infinity();
+        // 10^0 is exactly 1, so an open column's multiplier is exact, and
+        // 10^-inf is exactly 0.
+        out.expander_multiplier[static_cast<size_t>(k)] =
+            static_cast<float>(std::pow(10.0, -expander_reduction_db(x) / 20));
     }
     return out;
 }

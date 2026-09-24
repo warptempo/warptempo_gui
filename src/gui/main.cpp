@@ -3279,7 +3279,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its seventeen keys describe the MACHINE, not the piece, so they live in
+    // Its six keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's

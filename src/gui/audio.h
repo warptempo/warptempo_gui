@@ -38,12 +38,9 @@ public:
     // Returns true on success. On failure, writes a diagnostic to stderr and
     // returns false. `on_progress` is invoked with a value in [0.0, 1.0]
     // periodically during pyramid construction; it may be empty.
-    // `gain_params` and `expander_params` are the device config's waveform
-    // gain and expander tunables, handed to derive_waveform_gain
-    // (waveform_gain.h) as the two structs they are.
-    bool load(const std::string& path, const WaveformGainParams& gain_params,
-              const WaveformExpanderParams& expander_params,
-              const ProgressCallback& on_progress);
+    // The picture's gain curve (gain_curve below) is derived inside load()
+    // from the decoded samples exactly as the pyramid is.
+    bool load(const std::string& path, const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }
     uint64_t source_load_size()  const { return load_identity_size_; }

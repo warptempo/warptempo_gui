@@ -4,11 +4,9 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "value_format.h"      // format_value_double / parse_value_double
 
 #include <cstddef>
 #include <cstdio>
-#include <iterator>
 #include <cstdlib>
 #include <fstream>
 #include <optional>
@@ -19,17 +17,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SEVENTEEN keys since the
-// six waveform_expander_* tunables were appended 2026-09-24 in the stage's
-// own order, after the gain keys; eleven before them, since the
-// waveform_gain_* tunables arrived 2026-09-23 in the rule's own order — seven
-// arrived, and the expander on L's two left the same day, then the percentile, with
-// the upward ratio appended last; fourteen for a day when the upward
-// compression's threshold, knee and range were appended 2026-09-24, and
-// eleven again the same day when the four upward keys left and
-// `waveform_gain_target_db` took the second gain place;
-// kWaveformGainKeys and kWaveformExpanderKeys, device_config.h, own their
-// names and walls, and the pairing below is checked at compile time; six since
+// set the shared scanner enforces after the loop (SIX keys since the eleven
+// waveform picture keys — the `waveform_gain_*` tunables appended 2026-09-23,
+// the `waveform_expander_*` ones 2026-09-24, as many as seventeen in all —
+// left 2026-09-24 with the values hard-coded in waveform_gain.cpp; six since
 // `max_waveform_height` arrived 2026-09-13 with the waveform cap leaving
 // render.h; five from `sync_path`'s arrival 2026-08-30 with the mirror's
 // configured destination; four from
@@ -51,83 +42,9 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
-    "waveform_gain_window_s",
-    "waveform_gain_target_db",
-    "waveform_gain_gate_db",
-    "waveform_gain_min_fraction",
-    "waveform_gain_max",
-    "waveform_expander_threshold_db",
-    "waveform_expander_ratio",
-    "waveform_expander_range_db",
-    "waveform_expander_knee_db",
-    "waveform_expander_hold_ms",
-    "waveform_expander_release_ms",
 };
 
-constexpr size_t kGainKeyCount     = std::size(kWaveformGainKeys);
-constexpr size_t kExpanderKeyCount = std::size(kWaveformExpanderKeys);
-constexpr size_t kGainKeysFirst =
-    std::size(kDeviceConfigKeys) - kGainKeyCount - kExpanderKeyCount;
-constexpr size_t kExpanderKeysFirst = kGainKeysFirst + kGainKeyCount;
-
-// The eleven names are spelled twice — here as the emitted list, in the
-// header as the two grammar tables — and this is what keeps them one list:
-// the tail of kDeviceConfigKeys IS kWaveformGainKeys then
-// kWaveformExpanderKeys, name for name and in order.
-consteval bool tunable_keys_are_the_tail() {
-    for (size_t i = 0; i < kGainKeyCount; ++i) {
-        if (std::string_view(kDeviceConfigKeys[kGainKeysFirst + i]) !=
-            std::string_view(kWaveformGainKeys[i].key))
-            return false;
-    }
-    for (size_t i = 0; i < kExpanderKeyCount; ++i) {
-        if (std::string_view(kDeviceConfigKeys[kExpanderKeysFirst + i]) !=
-            std::string_view(kWaveformExpanderKeys[i].key))
-            return false;
-    }
-    return true;
-}
-static_assert(tunable_keys_are_the_tail(),
-              "kDeviceConfigKeys' tail must be kWaveformGainKeys then "
-              "kWaveformExpanderKeys, in order");
-
-// The row named `key` in `table`, or nullptr.
-template <class Params, size_t N>
-const WaveformTunableKey<Params>* find_tunable_key(
-        const WaveformTunableKey<Params> (&table)[N], std::string_view key) {
-    for (const WaveformTunableKey<Params>& k : table)
-        if (key == k.key) return &k;
-    return nullptr;
-}
-
 } // namespace
-
-std::string format_waveform_gain_value(double v) {
-    // format_value_double prints a negative value's own '-' (std::to_chars),
-    // so the one serializer covers the dB key's negative values too.
-    return format_value_double(v, 2);
-}
-
-bool parse_waveform_gain_value(const std::string& s, double& out) {
-    // parse_value_double refuses a leading '-' (no authored value is
-    // negative), so the sign is taken here and the magnitude handed on.
-    const bool negative = !s.empty() && s.front() == '-';
-    double magnitude = 0.0;
-    if (!parse_value_double(std::string_view(s).substr(negative ? 1 : 0), magnitude))
-        return false;
-    if (negative && magnitude == 0.0) return false;   // zero has one spelling
-    const double v = negative ? -magnitude : magnitude;
-    // ONE CANONICAL SPELLING: the text must be exactly what the writer emits
-    // for the value it names (`1.5`, `1.500` and `+1.50` all refuse).
-    if (format_waveform_gain_value(v) != s) return false;
-    out = v;
-    return true;
-}
-
-std::string waveform_gain_grammar_reason(double lo, double hi) {
-    return "must be a number in [" + format_waveform_gain_value(lo) + ", " +
-           format_waveform_gain_value(hi) + "] in canonical spelling";
-}
 
 std::string format_gui_scale_percent(int percent) {
     char buf[32];
@@ -185,15 +102,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
-        } else if (const WaveformGainKey* g = find_tunable_key(kWaveformGainKeys, k)) {
-            // The five waveform_gain_* tunables, through their one
-            // serializer.
-            s += format_waveform_gain_value(cfg.waveform_gain.*(g->member));
-        } else {
-            // The six waveform_expander_* tunables, through the same
-            // serializer; the static_assert above makes this arm total.
-            s += format_waveform_gain_value(
-                cfg.waveform_expander.*(find_tunable_key(kWaveformExpanderKeys, k)->member));
         }
         s += '\n';
     }
@@ -287,28 +195,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kSyncPathGrammarReason);
             }
             out.sync_path = value;
-            return {};
-        }
-        if (const WaveformGainKey* g = find_tunable_key(kWaveformGainKeys, key)) {
-            // One canonical spelling through the one parser, then the
-            // bracket — both owned in the header (kWaveformGainKeys).
-            double v = 0.0;
-            if (!parse_waveform_gain_value(value, v) ||
-                !is_waveform_gain_value(*g, v)) {
-                return bad_value(ln, key, value, waveform_gain_grammar_reason(*g));
-            }
-            out.waveform_gain.*(g->member) = v;
-            return {};
-        }
-        if (const WaveformExpanderKey* e = find_tunable_key(kWaveformExpanderKeys, key)) {
-            // The same grammar over the expander's table
-            // (kWaveformExpanderKeys).
-            double v = 0.0;
-            if (!parse_waveform_gain_value(value, v) ||
-                !is_waveform_gain_value(*e, v)) {
-                return bad_value(ln, key, value, waveform_gain_grammar_reason(*e));
-            }
-            out.waveform_expander.*(e->member) = v;
             return {};
         }
         return warptempo_parse::prefix_line_error(
