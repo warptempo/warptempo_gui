@@ -1288,9 +1288,12 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // trim_bridge_gap) — so a hit lands on what is drawn BY PUBLICATION, even in
 // the frame between a trim write and its repaint. Nothing is derived here.
 // The remaining seams are all ACCEPTED: commit-to-scanout plus human reaction
-// (irreducible — input responds to the previously presented frame), the COLD
-// state (nothing painted yet, nothing grabbable), and the playhead-placement
-// clicks (column-based, out of scope by ruling — a far subtler seam).
+// (irreducible — input responds to the previously presented frame), and the
+// COLD state (nothing painted yet, nothing grabbable). The playhead-placement
+// clicks (column-based) are no longer among them: since 2026-09-24 (architect,
+// strictly as-painted) they convert through item_viewport_basis, the same
+// painted twin every aimed gesture here reads, so they no longer trail the
+// live viewport.
 bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
     // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).

@@ -17262,12 +17262,17 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // so the grabbed subject tracks the pointer against WHAT IS PAINTED even
 // where the displayed map lags the live one — and, since 2026-09-24 (architect,
 // strictly as painted), on the viewport twin item_viewport_basis below, so
-// the whole basis a gesture converts on is the painted one. The recorded
-// LIVE-BASIS families
-// are the click/land/follow placement family — the column-based playhead
-// placements (the sweep's playhead half included) and the post-commit
-// land/follow placements — while walls stay integer source frames outside
-// either basis; pointer-hit-testing.md is the AUTHORITATIVE inventory of
+// the whole basis a gesture converts on is the painted one. THE CLICK FAMILY
+// JOINED THAT SAME DAY: the column-based playhead placements (the nav click,
+// the sweep's playhead half, the scrub click, the empty-lane double-click
+// create) were this contract's recorded LIVE-BASIS exception and now convert
+// through item_viewport_basis instead, the same painted twin. THE RECORDED
+// LIVE-BASIS FAMILY IS NARROWER NOW: the post-commit land/follow placements
+// alone — land_playhead_on_marker, land_playhead_on_source_frame and the
+// follow lamp's camera paging, which WRITE the viewport rather than read a
+// snapshot of it, so staying live is what keeps them from chasing their own
+// tail — while walls stay integer source frames outside either basis;
+// pointer-hit-testing.md is the AUTHORITATIVE inventory of
 // both sides and of the THREE-GATE freeze (worker dispatch + completion drop
 // + the frame paint's staged promote, all gated by displayed_basis_frozen
 // below, the promote additionally by its own outstanding repair debt) that
@@ -17279,8 +17284,10 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // (a) commit-to-scanout plus human reaction — irreducible for any GUI, since
 // input is always a response to the previously PRESENTED frame; (b) the
 // cold-state fallback (first paint / view toggle / just-after-load, live map
-// until the first committed target frame); (c) the column-based
-// playhead-placement clicks (live-basis by ruling — a far subtler seam).
+// until the first committed target frame). The column-based
+// playhead-placement clicks are no longer a third seam here: since 2026-09-24
+// they read the painted item_viewport_basis in place of the live viewport,
+// same as every other aimed gesture on this surface.
 const std::vector<WarpFrameMapSegment>&
 displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 
@@ -17323,9 +17330,17 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // re-asked LIVE at the lift (the strictly-inside partner test above all, a
 // state question the lift decides); what the freeze holds is the GEOMETRY of
 // its aim, which is every aimed press's. THE DELIBERATE NON-MEMBERS: the
-// nav/grab-pan and sweep families stay OUT — live-basis by ruling
-// (pointer-hit-testing.md owns the derivation; the pan renders synchronously,
-// the sweep holds no grabbed subject). This is a
+// nav/grab-pan family stays OUT because it WRITES the viewport itself rather
+// than reading a painted snapshot of it — live-basis by ruling, and it renders
+// synchronously so there is no lag to protect against. THE SWEEP FAMILY STAYS
+// OUT FOR AN UNRELATED REASON: since 2026-09-24 (architect, strictly
+// as-painted) both its playhead half and its trim half convert on the item
+// basis exactly like every other click-placement conversion
+// (item_viewport_basis; playhead_frame_at_click_column,
+// sweep_trim_frame_at_column) — it is excluded here because it writes the
+// trim from a fixed anchor to the live pointer and holds no grabbed subject
+// to protect, not because its conversion reads the live viewport
+// (pointer-hit-testing.md owns the derivation). This is a
 // SUBSET of any_pointer_gesture_active under its own derivation, not a
 // consumer of it: that predicate answers "some pointer gesture is live", this
 // one "the displayed paint basis may not move".

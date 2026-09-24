@@ -6545,11 +6545,12 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     // gutter sentinel alone — the arm authors its own trim anchor from the
     // COLUMN, arm_region_drag_at — and the sweep's motion path clamps its
     // cursor carry by this same rule): move_playhead_to clamps internally, but
-    // at a fractional flush-right zoom the painter-quantized wall
-    // (q = nearbyint(spp*W)/W) differs from the click conversion's
-    // current_samples_per_pixel, so the last visible column's frame can compute
-    // to domain_total — one past [0, domain_total-1], which the display-state
-    // validator would clear wholesale. The clamp also
+    // the clamp here stays required because the conversion reads
+    // ItemViewportBasis::spp, the PAINTED item epoch, which can extend past
+    // the CURRENT live domain — a resize or a target-domain contraction after
+    // the last item commit leaves the lagging painted basis's last column
+    // computing to domain_total or beyond, one past [0, domain_total-1], which
+    // the display-state validator would clear wholesale. The clamp also
     // makes -1 a sentinel no seated frame can collide with. THE COLUMN
     // CONVERTS ON THE PAINTED VIEWPORT, the item basis
     // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
@@ -9345,11 +9346,13 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // separately at the write below through the sweep's one column->trim
     // route (sweep_trim_frame_at_column), which needs no domain hop in the
     // writer. Also clamped into the
-    // live domain: at a fractional flush-right zoom the painter-quantized
-    // wall differs from the click conversion, so the last visible column's
-    // frame can land at domain_total — one past [0, domain_total-1] — which
-    // the display-state validator would clear wholesale (same rule as the
-    // press seat, place_playhead_at_click_column). BOTH VALUES RIDE ONE
+    // live domain: the conversion reads ItemViewportBasis::spp, the PAINTED
+    // item epoch, which can extend past the CURRENT live domain (a resize or
+    // a target-domain contraction after the last item commit), so the
+    // lagging painted basis's last column can land at domain_total — one past
+    // [0, domain_total-1] — which the display-state validator would clear
+    // wholesale (same rule as the press seat, place_playhead_at_click_column).
+    // BOTH VALUES RIDE ONE
     // PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
     // playhead's through playhead_frame_at_click_column and the trim's through
     // sweep_trim_frame_at_column both convert on the item basis (cold, the
