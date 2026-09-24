@@ -2814,8 +2814,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // (A FRAMING STEP FROM A FINER ZOOM RETURNED TO WORKING here from
     // 2026-09-15 to 2026-09-22, on a Center the zoom-derived walk stated; it
     // went with that derivation.)
-    // THE HOLD POSTURE is the landing owner's to arm, on its centring of the
-    // single landing (AppState::camera_hold); nothing here arms it.
+    // THE HOLD POSTURE is the landing owner's to arm, on the walk's centring
+    // of the single landing (AppState::camera_hold); nothing here arms it.
     jump_playhead_to_focused_marker(frame);
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because

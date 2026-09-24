@@ -380,9 +380,9 @@ struct Viewport {
     // margin in from the LEFT edge. RESTORE: a subject WHOLLY ON SCREEN moves
     // nothing at every zoom; an off-screen one that fits is CENTRED on its
     // midpoint at every zoom; a range that CANNOT FIT (wider than 1 − 2 × the
-    // edge margin of the window) returns FALSE having written nothing. Every
-    // centring of a single marker (lo == hi) ARMS THE HOLD POSTURE; a group's
-    // centring arms nothing. The zoom is never written. Its readers, the one
+    // edge margin of the window) returns FALSE having written nothing. The
+    // WALK's centring ARMS THE HOLD POSTURE; a restore's centring never arms
+    // it (architect 2026-09-24). The zoom is never written. Its readers, the one
     // caller of the false verdict and the ruled-out cameras are at the
     // definition (viewport.cpp).
     [[nodiscard]] bool land_subject(int64_t lo, int64_t hi, LandingKind kind);

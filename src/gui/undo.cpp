@@ -1044,8 +1044,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // on-screen subject moves none. So the restore's land keeps the bit
     // across itself — the land is the subject coming back to where the entry
     // left it, not the user turning elsewhere — and the camera write after it
-    // decides alone: the singleton's centring arms the posture, while a
-    // group's centring and the framer's zoom-out put it out.
+    // decides alone: any centring of an off-screen subject (singleton or
+    // group) and the framer's zoom-out put it out at the chokepoint. THE
+    // RESTORE NEVER ARMS THE POSTURE (architect 2026-09-24): only the walk's
+    // centring, bare `c` and Shift+J do, and the playhead head's lamp shows
+    // which posture stands.
     //
     // Runs AFTER sanitize_selection_after_restore so the land sees the final
     // membership, after the tab / data / column / audio-view restores so it

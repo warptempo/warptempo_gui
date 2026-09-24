@@ -970,15 +970,21 @@ void Viewport::follow_scroll_if_needed() {
 //     caller's;
 //   * OFF SCREEN AND FITS: CENTRED on its midpoint AT EVERY ZOOM, coarse
 //     included; never a page-in.
-// THE HOLD POSTURE (AppState::camera_hold) IS ARMED BY EVERY CENTRING OF A
-// SINGLE MARKER (lo == hi), the walk's and the restore's alike, after the
-// chokepoint — a centred marker is expected to hold its column, and it arms
-// even where a wall keeps it off the centre. A GROUP'S CENTRING (lo < hi) ARMS
-// NOTHING: a multi-marker selection is for toggling or deleting, not nudging,
-// and the nudge collapses to the focus anyway. A page-in passes the
-// chokepoint, which puts the hold out as at any page; a no-move answer leaves
-// the posture as it stands. Degenerate geometry (no strip width, no sample
-// rate, nothing visible) writes nothing and answers true. clamp_viewport_start
+// THE HOLD POSTURE (AppState::camera_hold) IS ARMED BY THE WALK'S CENTRING
+// ALONE (architect 2026-09-24), after the chokepoint — a walked marker centred
+// at the working zoom is expected to hold its column, and it arms even where a
+// wall keeps it off the centre. THE RESTORE NEVER ARMS (its singleton centring
+// included) and never clears on its own: its centring of an off-screen
+// subject clears the bit at the chokepoint like any camera move, and its
+// no-move answer leaves it as it stands. WHY: an automatic arm on arrival at
+// the centre would freeze the viewport under a run of nudges that happened to
+// reach the middle; `c` then nudging means "I'm looking for a place to drop a
+// marker" and wants the hold, `c` then panning means "I want the working zoom
+// but my own viewport" and the pan clears it — and the playhead head's lamp
+// (kPlayheadHeadHeld, render.h) now shows which posture stands. A walk's
+// page-in passes the chokepoint, which puts the hold out as at any page; a
+// no-move answer leaves the posture as it stands. Degenerate geometry (no
+// strip width, no sample rate, nothing visible) writes nothing and answers true. clamp_viewport_start
 // owns the song's two ends and the grid; the changed path takes the discrete
 // move's tail.
 //
@@ -992,6 +998,9 @@ void Viewport::follow_scroll_if_needed() {
 //     "feels odd even at coarse zooms";
 //   * THE AUDIO-VIEW FORK of the walk's camera (2026-09-23, one day): the walk
 //     frames alike in both audio views.
+//   * AN UNDO / REDO CENTRING ARMING THE HOLD (f25778d1, one morning,
+//     2026-09-24): a lamp now shows the posture, so only the walk and `c`
+//     arm it.
 //
 // ITS READERS, re-grepped 2026-09-24:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
@@ -1039,7 +1048,7 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
         ? centred_viewport_start(lo + (hi - lo) / 2, visible)
         : paged_in_viewport_start(lo, visible);
     clamp_viewport_start(app, audio);
-    if (centre && lo == hi) app.camera_hold = true;
+    if (kind == LandingKind::Walk && centre) app.camera_hold = true;
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
     return true;
 }

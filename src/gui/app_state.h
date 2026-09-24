@@ -4578,9 +4578,12 @@ struct AppState {
     // state in the add_to_selection family (the family's record is at that
     // declaration below): per project, DARK AT EVERY PROJECT OPEN
     // (run_project constructs this AppState fresh), outside undo, not carried
-    // by `'`, in no sidecar and no settings vocabulary. The hold has NO FACE
-    // (no lamp, no icon, no card when it is armed or cleared); follow wears
-    // its icon-row lamp.
+    // by `'`, in no sidecar and no settings vocabulary. THE HOLD'S LAMP IS
+    // THE PLAYHEAD HEAD (architect 2026-09-24): the head paints white
+    // (kPlayheadHeadHeld, render.h) while the bit stands and its grey
+    // (kPlayheadHead) when it does not, repainted by the per-tick face
+    // comparator (main.cpp) — no icon, no card when it is armed or cleared;
+    // follow wears its icon-row lamp.
     //
     // THE CLEARS ARE SEATED AT CHOKEPOINTS, NOT IN A HAND-KEPT LIST. Every
     // viewport write — every writer of viewport_start_sample or zoom_level on
@@ -4615,8 +4618,8 @@ struct AppState {
     //
     // THE EXEMPT WRITERS KEEP OR RE-ARM THEIR BIT AFTER THE CHOKEPOINT, each
     // at its own site: the centring acts re-arm HOLD after their centring
-    // (the landing owner on its centring of a single marker, inside
-    // Viewport::land_subject);
+    // (bare `c` and Shift+J at run_center_key_command; the landing owner on
+    // the WALK's centring, inside Viewport::land_subject);
     // the stepped zoom keeps HOLD across its write; the nudge keeps HOLD
     // across its whole act; follow's own page-in, bare `c` and the reseat's
     // keep-visible edge-align keep FOLLOW_SUSPENDED as it stood; and the A/B
@@ -4637,21 +4640,27 @@ struct AppState {
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
     //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
-    //     and in the `h` view), EVERY CENTRING OF A SINGLE MARKER BY THE
-    //     LANDING OWNER (Viewport::land_subject, architect 2026-09-24 — the
-    //     walk's centring at the working zoom or finer, on screen or not: the
-    //     Tab walk in both audio views and each step of the paired march
-    //     Ctrl+Shift+Tab, live and `h`; and the undo / redo singleton's
-    //     centring of an off-screen marker, at every zoom) and Shift+J. A
-    //     group restore's centring arms nothing. A centring act that
-    //     cannot centre (a wall) still arms: the bit means "hold the column
-    //     the subject is in", not "the subject is at the centre".
+    //     and in the `h` view; run_center_key_command), Shift+J (its closing
+    //     `c`), and THE WALK'S CENTRING BY THE LANDING OWNER
+    //     (Viewport::land_subject's LandingKind::Walk at the working zoom or
+    //     finer, on screen or not: the Tab walk in both audio views and each
+    //     step of the paired march Ctrl+Shift+Tab, live and `h`). A centring
+    //     act that cannot centre (a wall) still arms: the bit means "hold the
+    //     column the subject is in", not "the subject is at the centre".
+    //     WHY SO FEW (architect 2026-09-24): an automatic arm on arrival at
+    //     the centre would freeze the viewport under a run of nudges that
+    //     happened to reach the middle; `c` then nudging means "I'm looking
+    //     for a place to drop a marker" and wants the hold, `c` then panning
+    //     means "I want the working zoom but my own viewport" and the pan
+    //     clears it. The head's lamp tells the two postures apart.
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     a drop, a click), by the landing owner's no-move and page-in
-    //     answers or its group centring, by the A/B audition's internal `c` (which neither sets nor
-    //     clears it), by a launch's own camera, or by `0` in either press
-    //     (neither is a centring since 2026-09-23: the second press restores
-    //     the stamped view).
+    //     a drop, a click), by THE UNDO / REDO RESTORE in any arm (its
+    //     singleton centring of an off-screen marker included: the landing
+    //     owner's LandingKind::Restore never arms), by the walk's no-move and
+    //     page-in answers, by the A/B audition's internal `c` (which neither
+    //     sets nor clears it), by a launch's own camera, or by `0` in either
+    //     press (neither is a centring since 2026-09-23: the second press
+    //     restores the stamped view).
     //   * KEPT by the two stepped zooms (`=` / `-`, Zoom In / Zoom Out — they
     //     pivot on the viewport's centre; Viewport::apply_zoom_step), by every
     //     play and every stop that moves no camera (a stop moves no
@@ -4670,7 +4679,8 @@ struct AppState {
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), follow's
     //     page-in — a camera move not on the subject — the landing owner's
-    //     page-in, the span framer, the tab and
+    //     page-in, the undo / redo restore's centring of an off-screen
+    //     subject, the span framer, the tab and
     //     view switches), and by the three playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
     //     land_playhead_on_source_frame) — play-then-stop leaves the hold
@@ -4680,6 +4690,12 @@ struct AppState {
     //     offscreen cursor, a shrunken domain's wall) is a camera change like
     //     any other at the chokepoint.
     bool    camera_hold            = false;
+    // THE HOLD LAMP'S LAST-SEEN BIT (architect 2026-09-24): the value of
+    // camera_hold the per-tick face comparator (main.cpp) last damaged the
+    // ruler lane for, so the playhead head (paint_ruler_row) repaints white
+    // or grey on every flip of the bit — which the writers above spell no
+    // damage for. Written by that comparator alone; read by nothing else.
+    bool    camera_hold_lamp_last  = false;
 
     // FOLLOW — THE `f` LAMP (architect 2026-09-23, reinstated the evening
     // the Shift+C chase posture that had replaced it that morning was
@@ -12163,7 +12179,8 @@ enum class MarkerLandingFrame { Center, Land };
 
 // THE NUDGE'S CAMERA, ONE OWNER (architect 2026-09-23): the hold posture
 // read — HoldColumn while AppState::camera_hold stands (an explicit centring
-// armed it), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
+// armed it: bare `c`, Shift+J or the walk's centring; the playhead head's
+// white is its lamp), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
 // marker lane's arm, input_handler.cpp, and the waveform lane's step,
 // run_waveform_lane_playhead_step), each reading it BEFORE its act, since the
 // act's own movement would put the posture out and the nudge keeps it (the

@@ -648,6 +648,18 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // shape in a single flat grey; the STEM is the paper white that replaces the
 // old cursor line at this surface.
 //
+// THE HEAD IS THE HOLD POSTURE'S LAMP (architect 2026-09-24): while
+// AppState::camera_hold stands it paints in kPlayheadHeadHeld, the stem's
+// white, and dark it keeps kPlayheadHead's grey — the posture read where the
+// eye already is, the centre column, at no cost in height. A STATE COLOUR,
+// NOT A CLASS (the accent_for_focus idiom: a named constant and a fork at the
+// painter, paint_ruler_row): the marker classes' ladder DISABLED > RED >
+// default is untouched and the head joins none of it. The held head takes
+// the SAME kPlayheadHeadAlpha — the head stays translucent in both states, so
+// the one alpha exception stays one. The stem, the scanner and the column do
+// not change. Its repaint is the per-tick comparator's (main.cpp), since the
+// bit flips with no damage of its own.
+//
 // THE HEAD IS THE OPAQUE PALETTE'S ONE RULED EXCEPTION (architect 2026-09-23,
 // when the head moved up onto the ruler lane's bottom rows): it composites at
 // kPlayheadHeadAlpha over the ruler's timestamps and ticks, "slightly
@@ -662,6 +674,9 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 inline constexpr GuiColor kPlayheadHead      = hex(0x8E8F91);
 inline constexpr double   kPlayheadHeadAlpha = 0.8;
 inline constexpr GuiColor kPlayheadStem      = hex(0xFCFCFC);
+// The hold lamp's lit head (above): the stem's white by ruling, one fact, so
+// it is spelled as the stem's constant rather than a second sample.
+inline constexpr GuiColor kPlayheadHeadHeld  = kPlayheadStem;
 
 // THE MARKER LANE's colors, measured off row_5_lane_3_marker_{unselected,
 // selected,red}.png (56x20, and 56x17 for red). Each class is a FILL plus a

@@ -2476,7 +2476,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // painted bit whose source mutates with no damage — with the same
         // answer. `f` and `i` are the pure cases (a bare flag flip and nothing
         // else); `t` and `p` happen to damage anyway and still go through here
-        // rather than being trusted to.
+        // rather than being trusted to. WHAT IT WATCHES, per roster button:
+        // the enabled bit, the selected bit and the glyph; and, in its own
+        // block after the walk, one face outside the roster — the playhead
+        // head's hold lamp (AppState::camera_hold).
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
@@ -2589,6 +2592,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             if (drift_top) invalidate_top_strip();
             if (drift_transport)
                 viewport.invalidate_rect(bottom_row_area(app));
+        }
+
+        // THE HOLD LAMP ON THE PLAYHEAD HEAD (architect 2026-09-24), the
+        // roster comparator's own mechanism for one more stateful face: the
+        // head paints white while AppState::camera_hold stands and grey when
+        // it does not (paint_ruler_row), and the bit flips inside camera
+        // writes that do not always damage the ruler lane — bare `c` on an
+        // already-centred playhead arms it and moves nothing, the nudge
+        // keeps it, the chokepoint clears it on writes that may not touch the
+        // lane. So this watches the bit against the one it last damaged for
+        // (AppState::camera_hold_lamp_last) and on a drift invalidates the
+        // RULER LANE (top_ruler_row_area, the rect the head's painter
+        // computes; the head sits on its bottom rows). No writer of the bit
+        // spells the damage. Above the loading return, so a flip during a
+        // load is paid too.
+        if (app.camera_hold != app.camera_hold_lamp_last) {
+            app.camera_hold_lamp_last = app.camera_hold;
+            viewport.invalidate_rect(top_ruler_row_area(app));
         }
 
         // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster

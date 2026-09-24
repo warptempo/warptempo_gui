@@ -5064,8 +5064,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // than the head at every scale, so the band never leaves the lane.
             const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;
-            cairo_set_source_rgba(cr, kPlayheadHead.r, kPlayheadHead.g,
-                                  kPlayheadHead.b, kPlayheadHeadAlpha);
+            // THE HOLD LAMP (architect 2026-09-24): the head is white while
+            // the hold posture stands and grey when it does not, at the one
+            // alpha either way (kPlayheadHeadHeld, render.h). Repainted on the
+            // bit's flip by the per-tick comparator (main.cpp).
+            const GuiColor head = app.camera_hold ? kPlayheadHeadHeld
+                                                  : kPlayheadHead;
+            cairo_set_source_rgba(cr, head.r, head.g, head.b,
+                                  kPlayheadHeadAlpha);
             for (int r = 0; r < rows; ++r) {
                 // Each device row reads its SOURCE row's half-width through the
                 // ONE silhouette accessor (playhead_head_half_px, render.h),
