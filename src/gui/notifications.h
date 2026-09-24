@@ -284,8 +284,8 @@
 // ACT and so need no chord in it: the settings editor's ENGINE-KEY commit arm
 // (an engine key is the piece; the arm took the sentence from the editor's
 // opener on 2026-09-04, when the lock moved from the surface to the keys — the
-// account is at GuiSettingsEditor::open, and the Settings menu's items still
-// never grey, so their commands owe the answer themselves), the render
+// account is at GuiSettingsEditor::open, and the Settings menu's items grey
+// on a load alone, so the commit owes the answer itself), the render
 // player's Load in place, and the `h` view's bare `v`, whose admission
 // composes the subject with this same lock. THE FIRST TWO READ IT THROUGH
 // authoring_lock_card BELOW SINCE 2026-09-10 — the lock gained a second

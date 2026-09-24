@@ -2457,7 +2457,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 // below) asks the same question rather than a second copy of it. The gates'
 // rulings and their rankings stay stated at their sites in on_key.
 bool GuiInputHandler::no_audio_to_dispatch_on() const {
-    return app.loading || audio.total_frames() <= 0;
+    return ::no_audio_to_dispatch_on(app, audio.total_frames());
 }
 
 bool GuiInputHandler::keyboard_owned_by_pointer_gesture() const {
@@ -2480,11 +2480,9 @@ std::string GuiInputHandler::modal_editor_swallow_card(GuiKey key,
 // chord, the card raised for a bound chord alone.
 bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
                                                    GuiInputState mods) {
+    if (!authoring_lock_drops_chord(app, key, mods)) return false;
     const bool read_only_says_no =
-        active_view_state(app).read_only && read_only_key_blocked(key, mods);
-    const bool iteration_says_no =
-        app.iteration_mode_enabled && iteration_lock_key_blocked(key, mods);
-    if (!read_only_says_no && !iteration_says_no) return false;
+        active_view_state(app).read_only && read_only_key_blocked(app, key, mods);
     if (chord_is_bound(key, mods, app.history_mode.active))
         notifications.notify(AppState::NotificationClass::Normal,
                              read_only_says_no

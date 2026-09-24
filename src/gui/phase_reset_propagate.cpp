@@ -181,6 +181,39 @@ std::string format_domain_timestamp(double source_frame,
     return format_timestamp(dom_seconds) + " target time";
 }
 
+// The three propagate ladders; the contract is at the declarations.
+PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
+    if (app.active_markers_view != 'W')
+        return PhaseResetCopyRefusal::NotWarpColumn;
+    if (app.selected_markers.empty())
+        return PhaseResetCopyRefusal::NothingSelected;
+    // Contiguity, the `m` sweep's own spelling: std::set is ascending, so a
+    // run [first .. last] is contiguous iff its extent equals its count.
+    if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
+            != static_cast<int>(app.selected_markers.size()))
+        return PhaseResetCopyRefusal::NotOneRun;
+    if (!phase_reset_copy_captures(app))
+        return PhaseResetCopyRefusal::NothingToCopy;
+    return PhaseResetCopyRefusal::None;
+}
+
+bool phase_reset_copy_captures(const AppState& app) {
+    const auto& mv = app.warpmarkers.markers();
+    for (int i : app.selected_markers)
+        if (warp_marker_propagates(mv, i)) return true;
+    return false;
+}
+
+PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {
+    if (app.active_markers_view != 'W')
+        return PhaseResetPasteRefusal::NotWarpColumn;
+    if (app.phase_reset_clipboard.empty())
+        return PhaseResetPasteRefusal::ClipboardEmpty;
+    if (app.selected_markers.size() != 1)
+        return PhaseResetPasteRefusal::NotOneAnchor;
+    return PhaseResetPasteRefusal::None;
+}
+
 void PhaseResetPropagate::copy_from_selection() {
     const auto& mv = app.warpmarkers.markers();
     const auto& tv = app.phaseresetmarkers.markers();
@@ -219,7 +252,9 @@ void PhaseResetPropagate::copy_from_selection() {
     std::vector<PropagateBlock> src_blocks;
     for (int i : app.selected_markers) {
         if (i < 0 || i >= n) continue;
-        // The same membership the destination walk takes, through the one
+        // The same membership the destination walk takes — and the one
+        // phase_reset_copy_captures asks ahead, so a copy that reaches here
+        // captures at least one block — through the one
         // predicate rather than a second spelling of it: labeled AND
         // EFFECTIVE-enabled. Unlike the bpm owner predicate (which tests a raw
         // owning marker, where raw == effective), a copy-eligible marker may be

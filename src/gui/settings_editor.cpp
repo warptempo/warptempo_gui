@@ -730,8 +730,9 @@ void GuiSettingsEditor::commit() {
     // The sentence forks at the one composer (authoring_lock_card,
     // notifications.h) because this site knows its act and needs no chord in
     // it. The editor still OPENS under the lock: `;` is dropped at the
-    // keyboard gate, and the Settings dropdown's rows never grey, so their
-    // commands owe the answer themselves.
+    // keyboard gate, and the Settings dropdown's rows grey on a load alone
+    // (the open refuses nothing under the lock), so the commit owes the
+    // answer itself.
     if (authoring_locked(app)) {
         const char* card = authoring_lock_card(app);
         app.settings_editor.red = true;

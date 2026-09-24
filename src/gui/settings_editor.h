@@ -88,8 +88,9 @@ struct GuiSettingsEditor {
     // keys). The SETTINGS DROPDOWN's item clicks are the only road onto a
     // locked tab's editor — bare `;` is off the read-only allowlist and dies
     // at the keyboard gate, whose own card says the same words — and the
-    // dropdown items never grey by ruling, so their commands' refusals are
-    // what answer them.
+    // dropdown items grey on a load alone (dropdown_item_enabled), the lock
+    // being no refusal of the OPEN, so the commit's refusals are what answer
+    // them.
     GuiNotifications&     notifications;
     // Back-pointer to the input handler, wired in main.cpp after both are
     // constructed (the input handler holds this editor by reference, so the

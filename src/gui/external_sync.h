@@ -404,3 +404,12 @@ private:
 
     int completion_fd_ = -1;
 };
+
+// DOES A RUNNING MIRROR REFUSE A CLOSE — the pure half of the close road's
+// gate (architect 2026-09-24, split from the carding gate so a face can ask
+// it). THREE READERS: GuiInputHandler::close_refused_by_external_sync (the
+// gate, which adds the card), and the File menu's Revert and Quit rows
+// (dropdown_item_enabled), which grey on it.
+inline bool close_blocked_by_external_sync(const GuiExternalSyncWorker& w) {
+    return w.is_busy();
+}

@@ -30,6 +30,7 @@
 #include <vector>
 
 class GuiAudio;
+class GuiExternalSyncWorker;
 struct GuiTargetRender;
 
 // Zoom level numbering: the range constants (kMinZoom, kMaxZoom) live in
@@ -3396,25 +3397,24 @@ struct CommandPopupItem {
 // paints no accelerator on that row alone) — there were two such rows until
 // Open took its chord on 2026-08-28 and one until Synchronize took its.
 //
-// AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE, with NO EXCEPTION since
-// 2026-08-15: a command that cannot act right now still dispatches and its own
-// arm answers, which is the roster's standing buttons-never-grey rule ("one
-// that cannot act right now simply does nothing, exactly like its key") applied
-// one surface further out. THE RULE HELD ONE RULED EXCEPTION from 2026-08-08
-// until the Navigation menu's deletion, and it is recorded because the argument
-// is the good one and would apply again: "Walk both tabs" greyed INSIDE the `h`
-// HISTORY VIEW, where Ctrl+Shift+Tab was not the A/B walk at all — the mode
-// claimed it as the REVERSE cycle of its own walk-selector row — so an item left
-// live would have dispatched a chord doing something else entirely under a label
-// promising the walk. (The premise is gone since 2026-08-18: the walk selector
-// has its own surface in row 4 and the chord marches the flags in there too, over
-// the diff flags.) It greyed rather than lying, which is a difference in KIND
-// from every other refusal on a command menu, all of which are "the same
-// command, with nothing to act on". THAT ROW DIED WITH ITS MENU and the
-// predicate that served it (dropdown_item_enabled) is deleted producer-less with
-// its four readers; the rule above is complete again rather than having lost a
-// clause, and a future item whose LABEL would lie in some mode needs the
-// predicate back, not a grey bolted onto a caller.
+// AN ITEM GREYS WHEN ITS COMMAND WOULD REFUSE, on the command's CHEAP
+// refusals (architect 2026-09-24, the truthful menus): each row's face reads
+// the act's own predicate through the one item verdict, dropdown_item_enabled
+// (declared with the anchor verdict further down, the per-item term lists at
+// its definition beside the acts), so face and act are one decision — the
+// 2026-08-30 truthful-buttons ruling ("Any time a button would be a no-op,
+// grey it") carried one surface further out. The EXPENSIVE refusals are not
+// mirrored and keep their cards (Revert's and the picker's folder checks,
+// which touch the filesystem). A greyed row paints the disabled inks, takes no
+// hover or press face, and a press on it is CONSUMED SILENTLY WITH THE MENU
+// LEFT OPEN; the keyboard chords still card their refusals. An anchor greys
+// when every row under it does (menu_anchor_live).
+// (RECORD: "AN ITEM NEVER GREYS OUT AND NEVER REFUSES HERE" stood from
+// 2026-08-15 to 2026-09-24, resting on the roster's buttons-never-grey rule
+// that the truthful-buttons ruling had overturned; its one earlier exception,
+// the Navigation menu's "Walk both tabs" row greyed in the `h` view
+// 2026-08-08..15, was the deleted dropdown_item_enabled's first reader, and
+// the predicate returns under that name.)
 inline constexpr CommandPopupItem kFilePopupItems[] = {
     {"Open Project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
     {"Revert",       "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
@@ -3459,14 +3459,14 @@ inline constexpr int kFilePopupItemCount =
 // The spelling convention is the crop's: modifiers spelled out with `+`, and a
 // non-letter key written as itself (`\`).
 //
-// AN ITEM NEVER GREYS, the standing rule stated in full at kFilePopupItems: a
-// command that cannot act right now — wrong mode, wrong selection, an empty
-// clipboard, a locked tab — still dispatches, and its own arm answers exactly
-// as the key does, which for all three of these is a notification card naming
-// the rule it failed (2026-08-30, the strictness ruling; they were silent
-// no-ops before it). So there is nothing here that could lie the way the
-// deleted Navigation menu's one ruled exception could — the row acts, and the
-// act says what it found.
+// EACH ROW GREYS ON ITS CHORD'S CHEAP REFUSALS (architect 2026-09-24; the
+// rule is stated in full at kFilePopupItems): the column not W, the selection
+// the act needs (one contiguous run holding a labeled, enabled marker for the
+// copy; exactly one marker for the pastes), an empty clipboard, and the head
+// gates that drop the chords — the `h` view, the read-only and iteration
+// locks, the folder overlay, the load. The chords still
+// card every one of those refusals (2026-08-30, the strictness ruling).
+// (RECORD: "AN ITEM NEVER GREYS" stood here until 2026-09-24.)
 inline constexpr CommandPopupItem kEditPopupItems[] = {
     {"Copy Phase Resets",      "Ctrl+P",           GuiKeys::P,
      true,  false, false, false},
@@ -3551,7 +3551,8 @@ inline constexpr int kEditPopupItemCount =
 // enumerator, dropdown_item_enabled and its four readers (the menu's "Walk both
 // tabs" row inside the `h` view was that predicate's ONE producer — the full
 // record, and the argument that would bring it back, are at kFilePopupItems
-// above), and the two sampled disabled inks it drew with. WHAT DID NOT: the
+// above), and the two sampled disabled inks it drew with — the predicate and
+// the inks both returned 2026-09-24 with the truthful menus. WHAT DID NOT: the
 // accelerator column, which File's "Ctrl+Q" alone carried for a time and
 // whose producers are table-driven and have since widened (paint_handler.cpp's
 // paint site carries the current reach); the command
@@ -6703,6 +6704,15 @@ struct AppState {
         bool         menu_row_armed      = false;
         GuiRect      rect{0, 0, 0, 0};
         std::array<GuiRect, kDropdownMaxItemCount> item_rects{};
+        // THE ITEMS' ENABLED BITS AS PAINTED (2026-09-24, the truthful
+        // menus) — the stash the per-tick comparator (main.cpp) holds against
+        // the live verdict (dropdown_item_enabled), so an open menu whose rows
+        // change verdict with no damage of their own — a mirror finishing, a
+        // checkpoint landing, a load ending — repaints within one tick with no
+        // writer spelling the damage. AS-PAINTED, NOT AS-COMPUTED: paint_dropdown
+        // republishes it only when the current clip covers the whole box,
+        // publish_button_face's rule for the roster's own bits.
+        std::array<bool, kDropdownMaxItemCount> item_enabled{};
 
         bool open() const { return menu != DropdownMenu::None; }
     };
@@ -8641,6 +8651,19 @@ inline bool folder_overlay_stands(const AppState& a) {
     return a.folder_overlay.owner != AppState::FolderOverlay::Owner::None;
 }
 
+// IS THERE NO PIECE TO DISPATCH ON — a load in flight, or no audio at all (the
+// blank window before the startup load). ONE OWNER for the one condition three
+// surfaces answer (architect 2026-09-24): on_key's head gate, which drops
+// every chord but Ctrl+Q there (GuiInputHandler::no_audio_to_dispatch_on
+// forwards here); the roster's face, which greys every button but the File
+// anchor there (redesign_button_enabled's head); and the dropdown items' faces
+// (dropdown_item_enabled), where Quit alone stays live. It takes the frame
+// count rather than the GuiAudio because this header only forward-declares
+// the class.
+inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
+    return a.loading || total_frames <= 0;
+}
+
 // IS THE CHROME FOCUSED? THE ONE VERDICT behind the HEADER's own faces —
 // the menu row's ground (redesign_row_ground, paint_handler.cpp, which is also
 // the mix TARGET of that row's disabled label and of its click fill). IT IS
@@ -9384,8 +9407,8 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // ruler, the marker lane, the waveform entire and gap 2 — and THE MENU ROW
 // AND THE ICON ROW STAND ABOVE IT, VISIBLE AND CARRYING THE `h` VIEW'S
 // PARTITION (File live, the other two anchors, the view bar and every icon
-// dead: the face is redesign_button_enabled's first arm over
-// menu_anchor_dead_in_mode, and the press is the veil's with the live anchor
+// dead: the face is redesign_button_enabled's head over
+// menu_anchor_live, and the press is the veil's with the live anchor
 // exempted — architect 2026-09-03 evening). The height is the bottom row's
 // top edge less the icon row's foot, both resolved by the lane accessors on
 // the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
@@ -13250,37 +13273,17 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
     return bpm_sweep_plan(a, audio).refusal == BpmSweepRefusal::None;
 }
 
-// (THE MENUS' ONE PER-ITEM DISABLED STATE IS DELETED — dropdown_item_enabled,
-// 2026-08-08 to 2026-08-15, gone PRODUCER-LESS with the Navigation dropdown.
-// It answered "is this dropdown item live", and FOUR readers went through it:
-// the painter (which drew the greyed inks and no hover or press face), the
-// popup's press claim, its hover recompute — which resolved a greyed row to NO
-// ITEM, covering both faces with one line — and its release body's derive.
-// Geometry was deliberately outside it: an item kept its row, its rect and its
-// place in the layout whether it greyed or not (kdenlive's disabled rows do), so
-// dropdown_item_at stayed the one geometric answer and this was the one
-// enablement answer, asked beside it.
-//
-// IT HAD EXACTLY ONE PRODUCER FOR ITS WHOLE LIFE (architect 2026-08-08): the
-// Navigation menu's "Walk both tabs" row while the `h` history view stood, where
-// Ctrl+Shift+Tab was then the mode's own reverse walk-source cycle rather than
-// the walk the label promised (the chord is that walk in the view too since
-// 2026-08-18, marching the diff flags). The SETTINGS menu never had one (it does not open in that
-// view — its anchor is refused at toggle_dropdown — and outside it its eight items
-// keep the never-grey rule, their own refusals answering) and neither did FILE
-// (its one row is Ctrl+Q, admitted everywhere the menu can be opened, the
-// history view included). So deleting the Navigation menu left the predicate
-// answering an unconditional true at four sites, and the producer-less rule
-// applies rather than a defensive keep: three readers dropped a term and the
-// hover walk dropped its resolve-to-no-item line.
-//
-// THE RULING AND ITS ARGUMENT ARE KEPT AT kFilePopupItems, which owns the
-// command menus' never-grey rule and now states it as COMPLETE rather than as
-// having lost a clause. It also states what would bring this back: an item whose
-// LABEL would lie in some mode — not an item that merely cannot act, which is
-// what the never-grey rule is FOR. The two sampled disabled inks went with it,
-// producer-less by the same grep (render.h's palette block carries their record
-// and their derivations, both of which stay useful the day a menu greys again).)
+// (THE MENUS' PER-ITEM DISABLED STATE WAS DELETED 2026-08-15 AND RETURNED
+// 2026-09-24. dropdown_item_enabled stood 2026-08-08..15 with ONE producer —
+// the Navigation menu's "Walk both tabs" row inside the `h` view, whose chord
+// then meant something else there — and went producer-less with that menu,
+// its four readers (the painter, the press claim, the hover recompute, the
+// release's derive) and the two sampled disabled inks with it; the items took
+// a never-grey rule. The truthful menus (architect 2026-09-24) overturned that
+// rule, and the predicate is back under its old name with the same four
+// readers, the same geometry-free shape and the same inks, now greying every
+// item on its command's cheap refusals — declared with the anchor verdict
+// below, defined beside the acts.)
 
 // WOULD THIS BUTTON'S ACT BE CONSUMED BY THE `h` HISTORY VIEW? True for exactly
 // the buttons the view refuses, false for the ones that still work in it.
@@ -13309,72 +13312,59 @@ inline bool bpm_sweep_open_actionable(const AppState& a,
 // restates none of its terms.
 bool history_mode_disables_button(const AppState& app, RedesignButton b);
 
-// WHICH MENU ANCHORS ARE DEAD IN THE STANDING MODE — ONE OWNER for row 1's
-// partition under the `h` history view AND under the folder overlay's three
-// contents, and the one place that set is spelled. FILE IS LIVE and the other
-// TWO anchors are dead; a button that is not an anchor gets no opinion here
-// at all — its own arm answers it.
+// A DROPDOWN ITEM'S ONE ENABLED VERDICT (architect 2026-09-24, the truthful
+// menus) — ONE OWNER, read by the dropdown's painter (the disabled ink, no
+// hover or press face), by the pointer's three item roads (the hover walk,
+// the item press, the release's derive — a greyed row is never lit, and a
+// press on one is CONSUMED SILENTLY WITH THE MENU LEFT OPEN, kdenlive's own
+// answer), by the per-tick comparator's dropdown block (main.cpp) and by the
+// anchor verdict below. Each item greys on its command's CHEAP refusals only,
+// each read off the act's own predicate so face and act are one decision;
+// the EXPENSIVE ones (Revert's resolve_project and source_load_dry_run, the
+// picker's commit-time checks on the chosen folder) are not mirrored and keep
+// their cards. The per-item term lists are at the definition
+// (input_key_dispatch.cpp, beside the acts). The keyboard chords are
+// unchanged: they still card their refusals.
+bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
+                           const GuiExternalSyncWorker& sync,
+                           DropdownMenu menu, int item);
+
+// THE MENU ANCHOR'S ONE VERDICT — row 1's File, Edit and Settings — read by
+// the anchor's face (redesign_button_enabled's head), by the OPEN
+// (toggle_dropdown's guard, the one body every open route converges on: the
+// press, the armed hover open, the hover switch) and by the veils' live-anchor
+// exemption (press_on_live_menu_anchor, input_pointer.cpp). A button that is
+// not an anchor answers false; no caller asks one. TWO CLAUSES:
 //
-// THE CRITERION: an anchor whose every row the mode consumes would open onto
-// nothing, which is the face promising more than the keys deliver. SETTINGS is
-// dead because its rows reach the settings editor by a DIRECT call that meets
-// no gate at all; EDIT (2026-08-20) because every one of its rows is a chord
-// the view's allowlist drops. (ITERATIONS answered the same way from
-// 2026-08-27 until its own deletion on 2026-09-04, both of its rows being
-// chords the allowlist drops; its two commands are icon-row buttons again and
-// the DERIVED partition greys them with nothing hand-listed, which is what a
-// chord-bearing button buys that an anchor cannot. HELP answered the same way
-// from 2026-09-03 until its deletion on 2026-09-09, its one row Shift+L, a
-// chord the allowlist does not name — and Settings' case for the hours that
-// row had no chord at all.) That is the criterion working rather than a
-// carve-out. FILE is LIVE
-// (2026-08-13): its four rows — Ctrl+O, Ctrl+Alt+O (Revert, 2026-09-13),
-// bare `\` (since 2026-08-31) and Ctrl+Q — are all on the allowlist, so its
-// menu opens onto four working rows.
+//   * THE MODE PARTITION (the `h` history view and the folder overlay's three
+//     contents — the render player, the Open project picker, the AV Sync
+//     Stats panel): EDIT AND SETTINGS ARE DEAD, FILE IS NOT. Settings because
+//     its rows reach the settings editor by a direct call that meets no mode
+//     gate; Edit because every row is a chord the view's allowlist and the
+//     overlay's routers drop (architect 2026-08-04, 2026-08-20, and for the
+//     overlay 2026-09-03 evening: "leave File open, because Quit should still
+//     be enabled — everything else like what we do with history").
+//   * AN ANCHOR GREYS WHEN EVERY ITEM UNDER IT GREYS (architect 2026-09-24),
+//     through dropdown_item_enabled — so during a load Edit and Settings grey
+//     and File stays live through Quit, and a menu that would open onto
+//     nothing but greyed rows does not open. Edit therefore greys whenever
+//     no propagate command can act (no selection, for one).
 //
-// THE FOLDER OVERLAY TAKES THE SAME PARTITION AS THE `h` VIEW — FILE LIVE,
-// THE OTHER THREE DEAD (architect 2026-09-03 evening, at his first look at the
-// closed gap: "File, Edit, Iterations, etc. looks odd disabled when the
-// player's on, especially because the title bar is still the regular one —
-// the window has focus. So leave File open, because Quit should still be
-// enabled — everything else like what we do with history: all the commands in
-// File are available in history mode. Leave that for the player, the picker
-// and the AV stats."). So the mode term is the LAST arm and File's exception
-// is asked ahead of BOTH modes: there is ONE partition, and the render
-// player, the Open project picker and the AV Sync Stats panel take it exactly
-// as the history view does. (For the hours between the gap's close that
-// evening and this ruling the overlay killed every anchor, File included —
-// kdenlive's modal admitting no menu; on 2026-09-02, when the band stopped at
-// row 1's foot, File was lit under it; and while the band ran to the window's
-// top the roster was unseen and this owner carried no overlay term at all.)
-//
-// THE CRITERION HOLDS UNDER THE BAND WITHOUT AN EXCEPTION: File's four rows
-// are Ctrl+O, Ctrl+Alt+O, bare `\` and Ctrl+Q, and under all three contents
-// Quit falls through every router to the ordinary close road and
-// Synchronize's row calls its own gated body directly, so the menu opens onto
-// working rows. Open Project and Revert are the two rows the routers consume
-// in silence there (the unbound-keys ruling, each router's catch-all) — two
-// rows of four, which is not "every row would open onto nothing" and so not a
-// reason to kill the anchor. The other two die under the band for their `h`-view reasons said
-// once above: Settings is a direct call its act refuses under a modal, and
-// Edit's rows are chords every router drops.
-//
-// THE FACE IS redesign_button_enabled's FIRST ARM (which asks this owner for
-// the anchors and greys everything else under the band) and THE PRESS IS THE
-// VEIL'S, exempted for a LIVE anchor at press_on_live_menu_anchor
-// (input_pointer.cpp) — the one place the three veils let a press through to
-// the menu-row claim. THE ACT'S OWN GATE STILL READS WHAT THE FACE READS:
-// toggle_dropdown is the one body every open route converges on (the press,
-// the armed hover open, the hover switch), which is what makes the hover
-// switch off File refuse to open a dead neighbour.
-//
-// ITS TWO READERS: history_mode_disables_button's anchor arm (the face, inside
-// the `h` view) and toggle_dropdown's guard (the OPEN). No third copy of the
-// set exists.
-inline bool menu_anchor_dead_in_mode(const AppState& a, RedesignButton b) {
-    if (!redesign_button_is_menu_anchor(b)) return false;
-    if (b == RedesignButton::File) return false;
-    return folder_overlay_stands(a) || a.history_mode.active;
+// It replaces menu_anchor_dead_in_mode (2026-09-02 .. 2026-09-24), which
+// carried the first clause alone; the two clauses are one verdict now.
+inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
+                             const GuiExternalSyncWorker& sync,
+                             RedesignButton b) {
+    DropdownMenu menu = DropdownMenu::None;
+    for (const DropdownMenu m : kDropdownMenus)
+        if (dropdown_anchor_button(m) == b) menu = m;
+    if (menu == DropdownMenu::None) return false;
+    if (menu != DropdownMenu::File &&
+        (folder_overlay_stands(a) || a.history_mode.active))
+        return false;
+    for (int i = 0; i < dropdown_item_count(menu); ++i)
+        if (dropdown_item_enabled(a, audio, sync, menu, i)) return true;
+    return false;
 }
 
 // (THE MODE-COLLAPSING ROSTER'S PREDICATE — redesign_button_collapsed, which
@@ -13750,8 +13740,11 @@ inline bool playback_launch_playable(const AppState& a,
 // view"): while the band stands — under the render player, the picker or the
 // AV Sync Stats panel — EVERY roster button is dead BUT THE FILE ANCHOR,
 // which the menu row keeps lit above the band (architect 2026-09-03 evening;
-// the arm at the head of the body defers to menu_anchor_dead_in_mode, so the
-// other two anchors and the view bar are dead with the rest).
+// the anchors answer at the head of the body from menu_anchor_live, whose
+// mode clause kills the other two, and the view bar is dead with the rest).
+// THE LOAD IS THE SAME SHAPE (architect 2026-09-24): with no piece to
+// dispatch on every button greys but the File anchor, whose Quit row stays
+// live.
 // All three are MODES like
 // the `h` view rather than questions like a prompt, and the whole chrome is
 // what they take away; each veil already makes the chrome inert, and the
@@ -13760,7 +13753,8 @@ inline bool playback_launch_playable(const AppState& a,
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
 // second switch can take a `default` because the first has already returned for
-// every id whose answer does not sit below the loading/blank guard: the
+// every id that has nothing to ask of a loaded piece (the loading/blank
+// guard is the body's head term since 2026-09-24, ahead of both): the
 // toolbar four (Save / Undo / Redo / Render — icon-row members since the
 // 2026-08-12 relayout, keeping their mirrored derivations), THE SET THE
 // READ-ONLY LOCK GREYS (its membership is the read-only arm of the switch
@@ -13956,7 +13950,29 @@ inline bool redesign_button_enabled(const AppState& a,
                                     int64_t total_frames,
                                     const GuiPlayback& playback,
                                     const GuiTargetRender& target_render,
+                                    const GuiExternalSyncWorker& sync,
                                     RedesignButton b) {
+    // THE THREE MENU ANCHORS ANSWER FIRST, IN EVERY STATE, FROM THEIR ONE
+    // VERDICT (menu_anchor_live, above: the mode partition, then "an anchor
+    // greys when every item under it greys" — architect 2026-09-24). Ranked
+    // ahead of the load and the overlay below because both of those grey
+    // everything else while File stays live through Quit, and the verdict
+    // already says so from the items. The `sync` parameter is the anchors'
+    // alone: the File items' Synchronize, Revert and Quit read the worker's
+    // busy bit.
+    if (redesign_button_is_menu_anchor(b))
+        return menu_anchor_live(a, audio, sync, b);
+    // THE LOAD GREYS THE ROSTER (architect 2026-09-24): while there is no
+    // piece to dispatch on — a load in flight, or the blank window before the
+    // startup load — every chord but Ctrl+Q drops at on_key's own head gate,
+    // so every button greys through the one owner that gate reads
+    // (no_audio_to_dispatch_on). It replaced the loading/blank guard that sat
+    // between this body's two switches, which greyed only the buttons that
+    // broke out of the first one: the rest stayed lit through the load while
+    // their chords dropped (the recorded exception "the roster stays live
+    // under the loading sign while keys drop", ruled out the same day). The
+    // magnification lamp's own gain-derivation grey outlasts this one.
+    if (no_audio_to_dispatch_on(a, total_frames)) return false;
     // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER BUT THE FILE ANCHOR,
     // whichever content owns it (architect 2026-08-28, the ruled exception
     // recorded above the signature: "everything else greys as in the `h`
@@ -13976,20 +13992,18 @@ inline bool redesign_button_enabled(const AppState& a,
     // and "everything
     // else like what we do with history: all the commands in File are
     // available in history mode. Leave that for the player, the picker and
-    // the AV stats"). So the answer here is the ANCHOR OWNER'S,
-    // menu_anchor_dead_in_mode, which File alone survives; every other
-    // button on the row and off it — the view bar's three included, whose
-    // grey shows through view_bar_focused's ground swap — is dead. The
-    // anchors' OPEN reads that same owner at toggle_dropdown's guard, and the
-    // veil consumes every press but a live anchor's
-    // (press_on_live_menu_anchor, input_pointer.cpp). (The band killed File
-    // too for the hours between the gap's close and this ruling; it covered
-    // row 1 whole earlier that day and this face had no viewer; on 2026-09-02
-    // the band stopped at row 1's foot and File alone stayed lit under it,
-    // which is the shape this ruling restores.)
-    if (folder_overlay_stands(a))
-        return redesign_button_is_menu_anchor(b) &&
-               !menu_anchor_dead_in_mode(a, b);
+    // the AV stats"). The anchors answered above, from the ANCHOR OWNER
+    // (menu_anchor_live), which File alone survives; every other button on
+    // the row and off it — the view bar's three included, whose grey shows
+    // through view_bar_focused's ground swap — is dead. The anchors' OPEN
+    // reads that same owner at toggle_dropdown's guard, and the veil consumes
+    // every press but a live anchor's (press_on_live_menu_anchor,
+    // input_pointer.cpp). (The band killed File too for the hours between the
+    // gap's close and this ruling; it covered row 1 whole earlier that day and
+    // this face had no viewer; on 2026-09-02 the band stopped at row 1's foot
+    // and File alone stayed lit under it, which is the shape this ruling
+    // restores.)
+    if (folder_overlay_stands(a)) return false;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -14053,19 +14067,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // Their presses
         // always dispatch and the CHORDS' OWN refusals answer: the read-only
         // gate blocks the authoring
-        // ones, the loading gate blocks everything, each arm keeps its own
+        // ones, the loading gate blocks everything (and greys them, at the
+        // head of this body, since 2026-09-24), each arm keeps its own
         // guards. Inherited through on_key, never mirrored here — which is why
         // these are a plain `return true` and not a second copy of those gates.
         // (The history view above is the one thing that greys them, and it is
         // scoped to that mode: leave the view and these rows answer true again
         // on the very next frame, no latched state anywhere.)
         //
-        // (EDIT joined the row and this arm 2026-08-20, and
-        // ITERATIONS did too for the eight days it stood, 2026-08-27 to
-        // 2026-09-04: an anchor
-        // is a popup toggle and has nothing to refuse, so each is never-grey
-        // here like its siblings. Their `h`-view greys are the derived
-        // partition's, hand-named at history_mode_disables_button.)
+        // (THE THREE MENU ANCHORS stood in this arm as never-grey — "an
+        // anchor is a popup toggle and has nothing to refuse" — until
+        // 2026-09-24, when the truthful menus gave them a verdict of their
+        // own; they answer at the head of this body from menu_anchor_live and
+        // never reach this switch. They are listed here for -Wswitch alone.)
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
@@ -14204,11 +14218,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // closes the view, which is never gated (the publishing term is false
         // there, and the Grid Iterations lamp cannot be lit there).
         //
-        // WHAT IT DOES NOT MIRROR is the blank / loading state: `h` drops
-        // there at on_key's own head return (above every dispatch), yet the
-        // roster paints on every frame class and this face stays lit through
-        // it — the whole roster's standing answer for that transient window,
-        // not this button's.
+        // THE BLANK / LOADING STATE is not this arm's: `h` drops there at
+        // on_key's own head return, and the whole roster greys there at the
+        // head of this body (2026-09-24; it stayed lit through that window
+        // until then).
         //
         // IT HAS NO READ-ONLY TERM, the Toggle Marker Column lamp's shape one
         // button over: bare `h` is not on read_only_key_blocked's allowlist
@@ -14231,9 +14244,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // GRID ITERATION MODE (bare `m`, bare `i`) left the same way on
         // 2026-08-27 with the Series-menu relocation — blocked by the gate
         // with no face to grey, their menu ITEMS never greying by the command
-        // menus' own standing rule (kFilePopupItems), so a locked tab's click
-        // on either closed the menu and the chord refused silently exactly as
-        // the key did — AND THEY ARE BACK HERE SINCE 2026-09-04, that menu
+        // menus' then-standing rule (superseded 2026-09-24), so a locked tab's
+        // click on either closed the menu and the chord refused silently
+        // exactly as the key did — AND THEY ARE BACK HERE SINCE 2026-09-04, that menu
         // deleted and both buttons in the icon row again, each with its own
         // arm below.
         //
@@ -14278,17 +14291,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //     with the rest and owns no term here, the same carve-out
         //     iteration_lock_greys states for it.
         //
-        // WHY THEY SIT ABOVE THE LOADING/BLANK GUARD rather than below it with
-        // the other mirrored arms: the 2026-08-15 arm added ONE term and was
-        // to add no second one; the second term arrived by ruling, and the
-        // seat stayed because the guard would change nothing here — every
-        // selection term is false on a blank piece, the Drop's column-pair
-        // term reads view state a blank piece still has (harmless: its
-        // chords drop at on_key's loading return either way), and Load in
-        // place, carrying none, keeps the seat's original argument.
-        // Dropping them past the guard would grey them during a load —
-        // arguably truthful, since their chords drop at on_key's own loading
-        // return, but a change no ruling has made.
+        // (THEY SAT ABOVE THE LOADING/BLANK GUARD, lit through a load while
+        // their chords dropped, until 2026-09-24: the guard is the body's
+        // head term now and greys them with the whole roster — the change
+        // this note used to call "arguably truthful, but a change no ruling
+        // has made", made by ruling that day.)
         //
         // THE MEMBERSHIP IS HAND-LISTED AND ITS OWNER IS NAMED, not derived —
         // the walk that would derive it, and the buttons it gets wrong,
@@ -15046,7 +15053,11 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::Render:
             break;
     }
-    if (a.loading || total_frames <= 0) return false;
+    // (THE LOADING/BLANK GUARD stood here until 2026-09-24 and is the head
+    // term now — no_audio_to_dispatch_on, above every arm — so every member
+    // reaching this switch has a loaded piece, which is what the transport
+    // three's predicates below still need. "The loading/blank guard" in this
+    // body's comments names that head term.)
     // THE READ-ONLY TERM IS UNDO'S AND REDO'S ALONE among the toolbar four
     // since 2026-08-07 (it stood
     // here as a blanket line over all four until then): the gate admits Ctrl+S

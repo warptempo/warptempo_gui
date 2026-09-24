@@ -1242,13 +1242,17 @@ inline constexpr double kRedesignHoverLightenMix = 0.15;
 // the whole cue, exactly as the settings menu's rows have always worked).
 inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 
-// (A DISABLED MENU ITEM'S TWO INKS ARE DELETED — kRedesignPopupDisabledLabel
-// #686a6c and kRedesignPopupDisabledHotkey #515356, 2026-08-08 to 2026-08-15,
-// producer-less with the Navigation dropdown and the one per-item disabled state
-// it was the only menu ever to have (dropdown_item_enabled's record is at
-// app_state.h, and the never-grey rule's own is at kFilePopupItems). Their
-// SAMPLE AND THEIR DERIVATIONS ARE KEPT, because a menu that greys again wants
-// exactly these numbers and re-sampling a retired crop is the expensive half.
+// A DISABLED MENU ITEM'S TWO INKS — kRedesignPopupDisabledLabel #686a6c and
+// kRedesignPopupDisabledHotkey #515356. They stood 2026-08-08 to 2026-08-15 for
+// the Navigation dropdown's one greyed row, were deleted producer-less with it
+// (their sample and derivations kept here, "because a menu that greys again
+// wants exactly these numbers"), and RETURN 2026-09-24 with the truthful menus
+// (dropdown_item_enabled, app_state.h): every command and settings row now
+// greys on its command's cheap refusals, and paint_dropdown inks a greyed row
+// with this pair in place of kRedesignLabel / kRedesignPopupHotkey. They are
+// the dropdown's own sampled disabled class, not kRedesignDisabledMix (the
+// roster's, which would give (100, 102, 104) here — the derivation below
+// says why the two differ).
 //
 // They were sampled off dropdown_disabled.png — its "Group Clips" / "Ungroup
 // Clips" rows, which kdenlive greys with no selection in the timeline; the same
@@ -1274,10 +1278,12 @@ inline constexpr GuiColor kRedesignPopupHotkey = hex(0xB8B9BA);
 // row once and its accelerator twice, exactly the relationship the live pair
 // still has (kRedesignPopupHotkey records the same 178/255 over kRedesignLabel).
 //
-// LIKE THE LIVE INKS THEY WERE THE ROW'S INK IN EVERY FACE — which for a
-// disabled row meant the only face there was: the input side never hovered or
-// armed one, and the painter read that same predicate before drawing a face at
-// all.)
+// LIKE THE LIVE INKS THEY ARE THE ROW'S INK IN EVERY FACE — which for a
+// disabled row means the only face there is: the input side never hovers or
+// arms one, and the painter reads that same predicate before drawing a face at
+// all.
+inline constexpr GuiColor kRedesignPopupDisabledLabel  = hex(0x686A6C);
+inline constexpr GuiColor kRedesignPopupDisabledHotkey = hex(0x515356);
 
 
 // THE MODAL SURFACE'S CHROME — TWO CONSTANTS, THE FIELD'S (paint_modal_dialog

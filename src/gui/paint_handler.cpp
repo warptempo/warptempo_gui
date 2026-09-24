@@ -840,6 +840,7 @@ AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
     const GuiTargetRender& target_render,
+    const GuiExternalSyncWorker& external_sync_worker,
     RedesignButton id, const GuiRect& rect) {
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
@@ -856,7 +857,8 @@ AppState::RedesignButtonFace& publish_button_face(
     }
     if (pixels_covered) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
-                                                playback, target_render, id);
+                                                playback, target_render,
+                                                external_sync_worker, id);
         face.selected = redesign_button_selected(app, id);
         face.glyph_swapped = redesign_button_glyph_swapped(app, id);
     }
@@ -1685,7 +1687,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id,
+            cr, app, audio, playback, target_render, external_sync_worker,
+            def.id,
             GuiRect{x, row.y, btn_w, content_h});
 
         // A MENU BUTTON STAYS LIT WHILE ITS DROPDOWN IS UP (architect
@@ -1945,7 +1948,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             // reads, the box is what the eye sees, and the second is the
             // first less its two vertical margins, nowhere restated.
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, audio, playback, target_render,
+                cr, app, audio, playback, target_render, external_sync_worker,
                 kViewBarButtons[i].id, GuiRect{vx, row.y, btn_w, content_h});
             const GuiRect box = view_bar_face_rect(face.rect, mar);
 
@@ -2285,7 +2288,8 @@ void GuiPaintHandler::paint_tab_row(cairo_t* cr) {
             // RECT IS THE TAB'S OWN BOX — the hit rect — never the extended
             // fill an unselected tab paints under its neighbour.
             AppState::RedesignButtonFace& face = publish_button_face(
-                cr, app, audio, playback, target_render, def.id,
+                cr, app, audio, playback, target_render, external_sync_worker,
+                def.id,
                 GuiRect{x, content_y, tab_w, content_h});
             boxes[i].x        = x;
             boxes[i].w        = tab_w;
@@ -2892,7 +2896,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         first = false;
 
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id,
+            cr, app, audio, playback, target_render, external_sync_worker,
+            def.id,
             GuiRect{x, btn_y, btn, btn});
 
         // THE SIXTH FACE, WORN FOR TWO MODES: the `h` history view (architect
@@ -3567,7 +3572,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // toggle relies on and now relies on up in row 4.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
-            cr, app, audio, playback, target_render, def.id,
+            cr, app, audio, playback, target_render, external_sync_worker,
+            def.id,
             GuiRect{x, btn_y, btn, btn});
 
         const double keep = face.enabled ? 1.0 : kRedesignDisabledMix;
@@ -4520,9 +4526,11 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // tabs" row inside the `h` history view was its ONE producer for its whole
     // life, and it went producer-less with that menu; this painter's own
     // disabled arms — the two dim inks and the face suppression — went with it.
-    // Geometry was untouched on any menu, a greyed row still occupying its slot
-    // at its full height, which is why nothing about the layout below moved when
-    // the arms left. The record is at kFilePopupItems, app_state.h.)
+    // THEY RETURNED 2026-09-24 with the truthful menus, below, the predicate
+    // under its old name and asked of every row of every menu. Geometry is
+    // untouched on any menu, a greyed row still occupying its slot at its full
+    // height, which is why nothing about the layout below moves with the grey.
+    // The record is at kFilePopupItems, app_state.h.)
     app.dropdown.rect = GuiRect{0, 0, 0, 0};
     app.dropdown.item_rects = {};
     if (!app.dropdown.open()) return;
@@ -4629,6 +4637,29 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     paint_popup_chrome(cr, app.dropdown.rect, kRedesignPopupGround,
                        kRedesignTabLine);
 
+    // THE ITEMS' ENABLED VERDICTS (architect 2026-09-24, the truthful menus),
+    // asked once per paint of the one owner the input side asks
+    // (dropdown_item_enabled). The as-painted stash is republished only when
+    // the clip covers the whole box — publish_button_face's rule — so a
+    // narrow damage in the frame a verdict flips cannot record a face these
+    // pixels never took, and the per-tick comparator (main.cpp) repairs it.
+    bool enabled[kDropdownMaxItemCount] = {};
+    for (int i = 0; i < count; ++i)
+        enabled[i] = dropdown_item_enabled(app, audio, external_sync_worker,
+                                           menu, i);
+    {
+        double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
+        cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
+        const GuiRect& r = app.dropdown.rect;
+        if (static_cast<double>(r.x) >= cx1 &&
+            static_cast<double>(r.y) >= cy1 &&
+            static_cast<double>(r.x + r.w) <= cx2 &&
+            static_cast<double>(r.y + r.h) <= cy2) {
+            for (int i = 0; i < count; ++i)
+                app.dropdown.item_enabled[static_cast<size_t>(i)] = enabled[i];
+        }
+    }
+
     // The item block opens BELOW the border by its own margin, and closes with
     // the same margin above the bottom border — the crop's 3px, mirrored.
     int iy = y + border + block_mar;
@@ -4661,8 +4692,11 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // which is the roster's disabled-button doctrine one surface out. The
         // predicate went producer-less with the Navigation menu and the two
         // terms below are unconditional again.)
-        const bool pressed = (app.dropdown.pressed_item == i);
-        const bool hovered = (app.dropdown.hovered_item == i);
+        // A GREYED ROW WEARS NO FACE, gated here rather than trusted to the
+        // input side's resolve: a row can grey under a resting hover with no
+        // pointer event to refresh it.
+        const bool pressed = enabled[i] && (app.dropdown.pressed_item == i);
+        const bool hovered = enabled[i] && (app.dropdown.hovered_item == i);
         if (pressed || hovered) {
             // TWO FACES FROM THE ITEM CROPS, and they are built differently
             // because one has an outline and the other does not:
@@ -4714,8 +4748,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const double base = redesign_baseline(font,
                                               static_cast<double>(item.y),
                                               static_cast<double>(item.h));
-        cairo_set_source_rgb(cr, kRedesignLabel.r, kRedesignLabel.g,
-                             kRedesignLabel.b);
+        const GuiColor& label_ink =
+            enabled[i] ? kRedesignLabel : kRedesignPopupDisabledLabel;
+        cairo_set_source_rgb(cr, label_ink.r, label_ink.g, label_ink.b);
         text_shape::show_shaped_run(cr, runs[i],
                                     static_cast<double>(x + pad_l), base);
 
@@ -4742,9 +4777,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
-            cairo_set_source_rgb(cr, kRedesignPopupHotkey.r,
-                                 kRedesignPopupHotkey.g,
-                                 kRedesignPopupHotkey.b);
+            const GuiColor& hot_ink = enabled[i] ? kRedesignPopupHotkey
+                                                 : kRedesignPopupDisabledHotkey;
+            cairo_set_source_rgb(cr, hot_ink.r, hot_ink.g, hot_ink.b);
             text_shape::show_shaped_run(cr, hot_runs[i], hot_x, base);
         }
         iy += item_h;
@@ -6342,7 +6377,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // taken its right anchor to the tab row with it.
     if (modal_owns_bottom_row(app)) {
         for (const TransportRowDef& def : kTransportGroup) {
-            publish_button_face(cr, app, audio, playback, target_render, def.id,
+            publish_button_face(cr, app, audio, playback, target_render,
+                                external_sync_worker, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         // The RIGHT BLOCK's three groups stand down with them — the MARKER
@@ -6354,15 +6390,18 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         // of the two the mode would have painted), and those four are the icon
         // row's again.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
-            publish_button_face(cr, app, audio, playback, target_render, def.id,
+            publish_button_face(cr, app, audio, playback, target_render,
+                                external_sync_worker, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportWalkGroup) {
-            publish_button_face(cr, app, audio, playback, target_render, def.id,
+            publish_button_face(cr, app, audio, playback, target_render,
+                                external_sync_worker, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportArrowGroup) {
-            publish_button_face(cr, app, audio, playback, target_render, def.id,
+            publish_button_face(cr, app, audio, playback, target_render,
+                                external_sync_worker, def.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};

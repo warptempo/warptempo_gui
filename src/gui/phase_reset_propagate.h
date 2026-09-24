@@ -34,6 +34,40 @@ struct GuiInputHandler;
 std::string format_domain_timestamp(double source_frame, const AppState& app,
                                     const GuiAudio& audio);
 
+// THE PROPAGATE CHORDS' CHEAP REFUSALS, each ladder in its arm's own order —
+// ONE DECISION for the act and its face (architect 2026-09-24, the truthful
+// menus): the Ctrl+P / Ctrl+Alt+P / Ctrl+Alt+Shift+P arms (handle_mode_keys,
+// input_key_dispatch.cpp) switch on these to card, and the Edit menu's rows
+// grey on anything but None (dropdown_item_enabled). Pure: they read the
+// AppState and write nothing.
+//
+// THE COPY'S LAST RUNG, NothingToCopy, is phase_reset_copy_captures below,
+// asked BEFORE the clipboard is touched: until 2026-09-24 the arm ran
+// copy_from_selection first and only then found the clipboard empty, so a
+// copy over a run with nothing to capture ERASED whatever the clipboard held.
+// Now such a copy refuses and the clipboard stands as it was.
+enum class PhaseResetCopyRefusal : uint8_t {
+    None, NotWarpColumn, NothingSelected, NotOneRun, NothingToCopy,
+};
+PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
+
+// WOULD copy_from_selection CAPTURE ANYTHING — true iff the selection holds a
+// marker that warp_marker_propagates (in range, LABELED and EFFECTIVELY
+// ENABLED — a disabled def, or a ref whose def the cascade disables, captures
+// nothing), which is the copy loop's own membership through the same one
+// predicate. Each such marker contributes one block whether or not any phase
+// reset falls inside its section (a block with no placements is a real
+// capture: its paste clears the matched destination block), so "captures
+// anything" is "the clipboard would come out non-empty", exactly the test the
+// arm used to make after the fact.
+bool phase_reset_copy_captures(const AppState& app);
+
+// The two pastes share one ladder, term for term (their arms say why).
+enum class PhaseResetPasteRefusal : uint8_t {
+    None, NotWarpColumn, ClipboardEmpty, NotOneAnchor,
+};
+PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app);
+
 // Copy/paste operations for the W-mode phase reset propagate feature.
 // Both methods operate on warp-marker selection in W-mode and mutate
 // the phase reset list as a side effect (paste only). Mode/selection-
@@ -98,6 +132,8 @@ struct PhaseResetPropagate {
     // the warp map is built, so it bounds nothing; the extent rule is stated in
     // full at section_end_index, warpmarkers.h). Non-mutating
     // beyond clipboard state — no undo entry, no marker changes.
+    // THE CALLER HAS ALSO ASKED phase_reset_copy_captures (2026-09-24), so
+    // the clipboard this replaces is never replaced by an empty one.
     void copy_from_selection();
 
     // Build the named-block list for the paste confirmation prompt

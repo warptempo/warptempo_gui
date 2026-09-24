@@ -290,7 +290,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // horizontal arrows' lane term (horizontal_arrow_step_lock_admits) and, since
 // 2026-09-01, bare `'`, whose admission turns on the `h` view's own bit, which
 // the Load in place button's arm composes for itself.
-bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
+bool read_only_key_blocked(const AppState& app, GuiKey key,
+                           GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -323,8 +324,9 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // project entirely, onto the folder `sync_path` names — so the lock has
     // nothing to protect from it. Bare-exact through the shared predicate the
     // dispatch arm reads, so the key and this gate cannot drift. NO FACE
-    // FOLLOWS IT: the act's one button is a MENU ROW, and a menu item never
-    // greys (kFilePopupItems).
+    // FOLLOWS IT: the act's one button is a MENU ROW, which the lock never
+    // greys because this admission holds (its own greys are the act's
+    // external_sync_refusal, dropdown_item_enabled).
     const bool is_sync_external = is_sync_external_key(key, mods);
     const bool is_play_pause = is_play_pause_key(key, mods);
     // THE A/B AUDITION (2026-08-26) is admitted on the header's own standard:
@@ -821,10 +823,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
 // bar's ground, the selected one full — the view bar's painter,
 // paint_handler.cpp). The row still carries no tooltip, so this gate's card is
 // the only thing that SPEAKS (the account is at their arm in
-// redesign_button_enabled). Every propagate PASTE is not: its surface is a MENU
-// ROW and menu rows never grey.
-bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
-                                                 GuiInputState mods) {
+// redesign_button_enabled). Every propagate PASTE's surface is a MENU ROW,
+// which greys on this same list since 2026-09-24 (dropdown_item_enabled asks
+// authoring_lock_drops_chord).
+bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
+                                GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
@@ -872,7 +875,20 @@ bool GuiInputHandler::iteration_lock_key_blocked(GuiKey key,
             !ctrl && !shift && !alt)
             return false;
     }
-    return read_only_key_blocked(key, mods);
+    return read_only_key_blocked(app, key, mods);
+}
+
+// THE AUTHORING LOCK'S VERDICT, card-free — the two locks are mutually
+// exclusive (authoring_locked, app_state.h), so at most one list is asked.
+// THREE READERS: on_key's gate (authoring_lock_refuses_chord, which adds the
+// card), the flag-cell wheel's silent refusal (input_pointer.cpp) and the
+// Edit menu's rows (dropdown_item_enabled, below).
+bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
+                                GuiInputState mods) {
+    return (active_view_state(app).read_only &&
+            read_only_key_blocked(app, key, mods)) ||
+           (app.iteration_mode_enabled &&
+            iteration_lock_key_blocked(app, key, mods));
 }
 
 // -- THE TIE TOGGLE, CTRL+SHIFT+N (architect 2026-09-19) --------------------
@@ -4118,9 +4134,11 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 // this is true that key types a normal letter rather than emulating the left
 // button.
 bool GuiInputHandler::any_text_editor_active() const {
-    return text_editor::is_active(app.settings_editor) ||
-           text_editor::is_active(app.commit_title_editor) ||
-           text_editor::is_active(app.top_flag_editor);
+    // The five kinds' one membership, AppState::text_editor_session (the
+    // settings and commit-title editors and the top-strip editor in every
+    // kind) — shared since 2026-09-24 with the Synchronize act's ladder
+    // (external_sync_refusal), a free function the File row's face reads.
+    return app.text_editor_session() != 0;
 }
 
 // Keyboard modality — see the declaration for the readers and for why the
@@ -7143,9 +7161,9 @@ void GuiInputHandler::open_av_sync_stats() {
     if (picker_active()) return;
     if (stats_panel_active()) return;
     // THE `h` HISTORY VIEW IS REFUSED (and this refusal is what made the Help
-    // anchor DEAD in that view while it stood: menu_anchor_dead_in_mode's
-    // criterion is "every row would open onto nothing", and this was the row
-    // saying no). The view is
+    // anchor DEAD in that view while it stood: the mode clause of
+    // menu_anchor_live has the criterion "every row would open onto nothing",
+    // and this was the row saying no). The view is
     // a read-only walk over past checkpoints and the panel measures the live
     // hardware; nothing about the two is related, and the panel's band would
     // cover the diff lane the view exists to show.
@@ -7450,7 +7468,7 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
 // inventory of roads it covers are at the declaration (input_handler.h); this
 // body is the predicate and the sentence, and it owns neither.
 bool GuiInputHandler::close_refused_by_external_sync() {
-    if (!external_sync_worker.is_busy()) return false;
+    if (!close_blocked_by_external_sync(external_sync_worker)) return false;
     notifications.notify(AppState::NotificationClass::Normal, kSyncRunning);
     return true;
 }
@@ -7471,10 +7489,13 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // always the easier admission of the two: it is READ-ONLY-LEGAL already,
     // authors nothing, stops no playback and writes outside the project
     // entirely, so a viewer running it is a viewer copying files.)
-    if (app.prompt.active || keyboard_modal_editor_active()) return;
-    if (app.loading) return;
-    // Nothing loaded is nothing to mirror.
-    if (app.source_audio_path.empty() || app.project_name.empty()) return;
+    // THE CHEAP REFUSALS ARE ONE LADDER, external_sync_refusal (below the
+    // body), the one decision the File menu's Synchronize row greys on
+    // (architect 2026-09-24): the silent ones first — a modal standing, a
+    // load in flight, nothing loaded — then the two that card.
+    const ExternalSyncRefusal refusal =
+        external_sync_refusal(app, external_sync_worker);
+    if (refusal == ExternalSyncRefusal::Silent) return;
 
     // EVERY SENTENCE THIS ACT WRITES IS A NOTIFICATION CARD (2026-08-29) —
     // the unset-key refusal, the already-running answer and the worker's
@@ -7500,10 +7521,9 @@ void GuiInputHandler::synchronize_to_external_storage() {
         notifications.notify(AppState::NotificationClass::Normal, std::move(line));
     };
 
-    // SINGLE ACT IN FLIGHT, answered in words: the menu item never greys (the
-    // standing rule at kFilePopupItems), so a second row press while one act
-    // runs is a consumed no-op that says which one it was.
-    if (external_sync_worker.is_busy()) {
+    // SINGLE ACT IN FLIGHT, answered in words on the KEY: the menu row greys
+    // while one runs (2026-09-24), so the card is bare `\`'s.
+    if (refusal == ExternalSyncRefusal::Running) {
         report(kSyncRunning);
         return;
     }
@@ -7523,11 +7543,13 @@ void GuiInputHandler::synchronize_to_external_storage() {
     // names THE KEY BY ITS SPELLING (`sync_path is not set`): a config key is
     // named the way it is written in the file everywhere in the product, so
     // the sentence tells the reader exactly what to add. Nothing runs.
-    const std::string& sync_path = app.device_config->sync_path;
-    if (sync_path.empty()) {
+    // (The row greys on it too — permanently on the tablet, whose key stays
+    // empty — so this card is the key's alone.)
+    if (refusal == ExternalSyncRefusal::NoSyncPath) {
         report("sync_path is not set");
         return;
     }
+    const std::string& sync_path = app.device_config->sync_path;
 
     // THE JOB, captured whole by value on this thread. TWO FOLDERS AND NO
     // TITLE (architect 2026-09-02): the job carries `render/` and `tmp/`
@@ -7586,6 +7608,100 @@ void GuiInputHandler::synchronize_to_external_storage() {
 // at the declaration). A successful act carries an empty failure by
 // construction (GuiExternalSyncOutcome), so this fork and that emptiness are
 // one statement and neither invents the other.
+// The Synchronize act's ladder; the contract is at the declaration
+// (input_handler.h).
+ExternalSyncRefusal external_sync_refusal(const AppState& app,
+                                          const GuiExternalSyncWorker& sync) {
+    // A modal owns input (keyboard_modal_editor_active's membership, read
+    // off the AppState) — the act's own first gate, silent.
+    if (app.prompt.active || app.text_editor_session() != 0)
+        return ExternalSyncRefusal::Silent;
+    if (app.loading) return ExternalSyncRefusal::Silent;
+    // Nothing loaded is nothing to mirror.
+    if (app.source_audio_path.empty() || app.project_name.empty())
+        return ExternalSyncRefusal::Silent;
+    if (sync.is_busy()) return ExternalSyncRefusal::Running;
+    if (app.device_config->sync_path.empty())
+        return ExternalSyncRefusal::NoSyncPath;
+    return ExternalSyncRefusal::None;
+}
+
+// THE DROPDOWN ITEMS' ONE ENABLED VERDICT (architect 2026-09-24, the truthful
+// menus; the contract is at the declaration, app_state.h). Each row greys on
+// its command's CHEAP refusals, read off the act's own predicates; the
+// EXPENSIVE ones (filesystem I/O) are not mirrored and keep their cards. The
+// term lists, per row:
+//
+//   FILE
+//   * Open Project (Ctrl+O): the two head gates every chord row but Quit
+//     can meet on its way to its arm while a menu is open — the folder
+//     overlay (the player's, the picker's and the stats panel's routers
+//     consume the chord in silence) and the load (on_key's no-audio gate) —
+//     which also cover the opener's own terms (the picker already standing
+//     is the overlay, a load in flight the load). The chosen folder's
+//     resolve and dry run are the commit's, not mirrored.
+//   * Revert (Ctrl+Alt+O): the two head gates; a checkpoint publishing
+//     (revert_project's first refusal); a running mirror (the close road's
+//     gate, close_blocked_by_external_sync). resolve_project and
+//     source_load_dry_run are not mirrored.
+//   * Synchronize to External Storage (its row calls the act directly):
+//     external_sync_refusal, the act's whole cheap ladder — which on the
+//     tablet, whose sync_path stays empty, greys the row for good.
+//   * Quit (Ctrl+Q): a running mirror alone. Ctrl+Q passes every head gate
+//     (the overlay routers, the load and the editor gate all admit it).
+//
+//   EDIT (all three need the chord to reach handle_mode_keys)
+//   * the two head gates; the `h` view's allowlist (history_mode_key_blocked
+//     on a chord the mode does not own); the authoring lock
+//     (authoring_lock_drops_chord — read-only drops all three, the iteration
+//     lock the two pastes); then the arm's own ladder:
+//     Copy Phase Resets — phase_reset_copy_refusal (not W, no selection, not
+//     one contiguous run, nothing to capture); the two pastes —
+//     phase_reset_paste_refusal (not W, clipboard empty, not exactly one
+//     selected).
+//
+//   SETTINGS: the load alone — the editor's opener refuses nothing cheap.
+//
+// A STANDING MODAL IS NOT A TERM (on_key's prompt and editor gates): no menu
+// can be open under one — a prompt or a dialog editor veils the anchor press,
+// and toggle_dropdown's open ENDS the pointer-transparent flag editor — so a
+// modal term could only ever grey an ANCHOR, and falsely: pressing Edit with
+// a flag edit standing ends the edit and opens onto live rows. (The
+// Synchronize ladder carries its act's own modal term; File's anchor is
+// live through Quit whatever it answers.)
+bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
+                           const GuiExternalSyncWorker& sync,
+                           DropdownMenu menu, int item) {
+    if (item < 0 || item >= dropdown_item_count(menu)) return false;
+    const bool no_audio = no_audio_to_dispatch_on(a, audio.total_frames());
+    if (!dropdown_is_command_menu(menu)) return !no_audio;
+    const CommandPopupItem& it = command_popup_item(menu, item);
+    if (it.act == GuiPopupAct::SyncExternal)
+        return external_sync_refusal(a, sync) == ExternalSyncRefusal::None;
+    GuiInputState chord{};
+    chord.ctrl  = it.ctrl;
+    chord.shift = it.shift;
+    chord.alt   = it.alt;
+    if (it.key == GuiKeys::Q && chord.ctrl && !chord.shift && !chord.alt)
+        return !close_blocked_by_external_sync(sync);
+    if (folder_overlay_stands(a) || no_audio) return false;
+    if (is_open_project_key(it.key, chord)) return true;
+    if (is_revert_project_key(it.key, chord))
+        return !a.history_checkpoint_in_flight &&
+               !close_blocked_by_external_sync(sync);
+    if (a.history_mode.active && !history_mode_owns_key(it.key, chord) &&
+        history_mode_key_blocked(it.key, chord, a))
+        return false;
+    if (authoring_lock_drops_chord(a, it.key, chord)) return false;
+    if (it.key == GuiKeys::P && chord.ctrl && !chord.alt && !chord.shift)
+        return phase_reset_copy_refusal(a) == PhaseResetCopyRefusal::None;
+    if (it.key == GuiKeys::P && chord.ctrl && chord.alt)
+        return phase_reset_paste_refusal(a) == PhaseResetPasteRefusal::None;
+    // A row this list does not name answers live — the face it had before
+    // the ruling — rather than greying on a refusal nobody has written.
+    return true;
+}
+
 void GuiInputHandler::on_external_sync_complete(
         GuiExternalSyncOutcome outcome) {
     // The process line comes down here, and it comes down by itself: the
@@ -7620,16 +7736,40 @@ constexpr const char* kSelectOneAnchor =
     "Select exactly one marker to paste onto";
 constexpr const char* kPastePhaseOntoWarp =
     "Phase resets are pasted onto warp markers";
-// THE PHASE COPY'S "NOTHING WAS CAPTURED" SENTENCE (2026-08-30), the
+// THE PHASE COPY'S "NOTHING TO CAPTURE" SENTENCE (2026-08-30), the
 // kNothingMatched twin on the copy side (propagate_blocks.h): its membership
 // is warp_marker_propagates — labeled AND effectively enabled — so a run of
-// unlabeled or disabled markers passes every gate and captures nothing,
-// leaving an EMPTY clipboard that the paste then refuses with "Nothing has
-// been copied yet". It names the membership rather than the label alone
-// because a labeled but disabled marker propagates nothing either. ONE READER,
-// the phase copy.
+// unlabeled or disabled markers captures nothing. Since 2026-09-24 that is a
+// REFUSAL asked before the clipboard is touched (phase_reset_copy_captures),
+// so the clipboard keeps what it held; the copy used to run and leave it
+// EMPTY. It names the membership rather than the label alone because a
+// labeled but disabled marker propagates nothing either. ONE READER, the
+// phase copy.
 constexpr const char* kNothingToCopy =
     "No labeled, enabled markers are selected, so nothing was copied";
+
+// THE TWO PASTES' SHARED LADDER, CARDED — phase_reset_paste_refusal
+// (phase_reset_propagate.h) is the decision, read by both arms below and by
+// the Edit menu's two paste rows (2026-09-24); this is its sentences. True =
+// refused and carded.
+bool GuiInputHandler::card_phase_reset_paste_refusal() {
+    const char* sentence = nullptr;
+    switch (phase_reset_paste_refusal(app)) {
+        case PhaseResetPasteRefusal::NotWarpColumn:
+            sentence = kPastePhaseOntoWarp;
+            break;
+        case PhaseResetPasteRefusal::ClipboardEmpty:
+            sentence = kNothingCopiedYet;
+            break;
+        case PhaseResetPasteRefusal::NotOneAnchor:
+            sentence = kSelectOneAnchor;
+            break;
+        case PhaseResetPasteRefusal::None:
+            return false;
+    }
+    notifications.notify(AppState::NotificationClass::Normal, sentence);
+    return true;
+}
 
 bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -7657,50 +7797,48 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // the gate it failed: the 2026-07-23 "gesture refusals are silent by
     // convention" ruling was withdrawn for this family with the rest.
     if (key == GuiKeys::P && ctrl && !shift && !alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 "Phase resets are copied from warp markers");
-            return true;
-        }
-        if (app.selected_markers.empty()) {
-            notifications.notify(
-                AppState::NotificationClass::Normal,
-                "Select the markers whose phase resets to copy");
-            return true;
-        }
-        // Contiguity gate, same spelling as the `m` sweep: std::set is
-        // ascending, so a run [first .. last] is contiguous iff its extent
-        // equals its count.
-        if (*app.selected_markers.rbegin() - *app.selected_markers.begin() + 1
-                != static_cast<int>(app.selected_markers.size())) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneRun);
-            return true;
+        // THE LADDER IS phase_reset_copy_refusal (phase_reset_propagate.h),
+        // the one decision the Edit menu's Copy row greys on (2026-09-24).
+        // Each rung cards in its own sentence. The contiguity rung is the
+        // `m` sweep's own test. THE LAST RUNG IS ASKED BEFORE THE CLIPBOARD
+        // IS TOUCHED (2026-09-24): a run holding no labeled, enabled marker
+        // captures nothing, and until that day the copy ran anyway and then
+        // found an EMPTY clipboard — having erased whatever it held. Now it
+        // refuses on kNothingToCopy and the clipboard stands.
+        switch (phase_reset_copy_refusal(app)) {
+            case PhaseResetCopyRefusal::NotWarpColumn:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     "Phase resets are copied from warp markers");
+                return true;
+            case PhaseResetCopyRefusal::NothingSelected:
+                notifications.notify(
+                    AppState::NotificationClass::Normal,
+                    "Select the markers whose phase resets to copy");
+                return true;
+            case PhaseResetCopyRefusal::NotOneRun:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kSelectOneRun);
+                return true;
+            case PhaseResetCopyRefusal::NothingToCopy:
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kNothingToCopy);
+                return true;
+            case PhaseResetCopyRefusal::None:
+                break;
         }
         // THE SELECTION IS SPENT (architect 2026-09-12, the lamps resolved by
         // use case): a copy is one of the acts he named — "copy/paste
-        // reset/measure" — so a press past the three gates above ends Add to
-        // selection's building pass, whatever the capture then turns out to
-        // hold. Past every refusal and ahead of the empty-clipboard answer
-        // below, which reports what the act found rather than refusing the
-        // press (selection_consumed, app_state.h, where the class lives).
+        // reset/measure" — so a copy that runs ends Add to selection's
+        // building pass. Past every refusal, the nothing-to-copy rung
+        // included since it became one (selection_consumed, app_state.h,
+        // where the class lives).
         selection_consumed(app);
         phase_reset_propagate.copy_from_selection();
-        // THE COPY SAYS SO, and says WHICH of the two things it did: a
-        // clipboard write paints nothing (the reasoning is at bare `j`'s own
-        // card, copy_focused_marker_value), and the write here can come out
-        // EMPTY behind passed gates, which is a different fact and takes the
-        // family's own sentence for it. The card is the ARM'S, beside the
-        // gates it follows: the propagate's COPY body carries no sentence of
-        // its own (unlike the pastes beside it), and the arm is where the rest
-        // of this chord's answers already live.
-        // THE MENU ROW INHERITS IT: Edit -> Copy phase resets dispatches this
-        // chord.
-        if (app.phase_reset_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingToCopy);
-            return true;
-        }
+        // THE COPY SAYS SO: a clipboard write paints nothing (the reasoning
+        // is at bare `j`'s own card, copy_focused_marker_value). The card is
+        // the ARM'S: the propagate's COPY body carries no sentence of its own
+        // (unlike the pastes beside it). THE MENU ROW INHERITS IT: Edit ->
+        // Copy Phase Resets dispatches this chord.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Copied the selected markers' phase resets");
         return true;
@@ -7719,21 +7857,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // line — the card is the whole answer.
     // Opens a confirmation prompt before any mutation.
     if (key == GuiKeys::P && ctrl && !shift && alt) {
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kPastePhaseOntoWarp);
-            return true;
-        }
-        if (app.phase_reset_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingCopiedYet);
-            return true;
-        }
-        if (app.selected_markers.size() != 1) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneAnchor);
-            return true;
-        }
+        if (card_phase_reset_paste_refusal()) return true;
         phase_reset_propagate.open_paste_confirmation();
         return true;
     }
@@ -7750,21 +7874,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // THE THREE GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
         // its sentences (2026-08-30): it is the same family, and a silent arm
         // beside two that speak would be drift.
-        if (app.active_markers_view != 'W') {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kPastePhaseOntoWarp);
-            return true;
-        }
-        if (app.phase_reset_clipboard.empty()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kNothingCopiedYet);
-            return true;
-        }
-        if (app.selected_markers.size() != 1) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kSelectOneAnchor);
-            return true;
-        }
+        if (card_phase_reset_paste_refusal()) return true;
         phase_reset_propagate.paste_state_apply();
         return true;
     }

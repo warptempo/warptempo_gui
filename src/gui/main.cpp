@@ -2579,7 +2579,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(
                                       app, audio, audio.total_frames(),
-                                      playback, target_render, id) ||
+                                      playback, target_render,
+                                      external_sync_worker, id) ||
                     f.selected != redesign_button_selected(app, id) ||
                     f.glyph_swapped !=
                         redesign_button_glyph_swapped(app, id);
@@ -2592,6 +2593,27 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             if (drift_top) invalidate_top_strip();
             if (drift_transport)
                 viewport.invalidate_rect(bottom_row_area(app));
+        }
+
+        // THE OPEN DROPDOWN'S ITEMS, the same comparator for one more stash
+        // (architect 2026-09-24, the truthful menus): a row's verdict
+        // (dropdown_item_enabled) moves with background state — a mirror
+        // finishing, a checkpoint landing, a load ending — that damages no
+        // part of the box, so the as-painted bits (AppState::Dropdown::
+        // item_enabled, published by paint_dropdown under a covering clip)
+        // are held against the live verdict here and any drift pays one
+        // damage of the box's published rect. No writer of those states
+        // spells the repaint. Above the loading return, like the roster's.
+        if (app.dropdown.open()) {
+            const DropdownMenu menu = app.dropdown.menu;
+            for (int i = 0; i < dropdown_item_count(menu); ++i) {
+                if (app.dropdown.item_enabled[static_cast<size_t>(i)] !=
+                    dropdown_item_enabled(app, audio, external_sync_worker,
+                                          menu, i)) {
+                    viewport.invalidate_rect(app.dropdown.rect);
+                    break;
+                }
+            }
         }
 
         // THE HOLD LAMP ON THE PLAYHEAD HEAD (architect 2026-09-24), the

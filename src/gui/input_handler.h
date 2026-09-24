@@ -591,6 +591,59 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods);
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
                               const AppState& app);
 
+// Source-view read-only allowlist. Returns true if key+mods is NOT on the
+// allowlist of navigation / playback / zoom / view-switch / close-prompt /
+// band / save / render keys honored in a read-only source tab — i.e. should
+// be dropped.
+// READ-ONLY PROTECTS THE AUTHORED MUSICAL CONTENT — the two marker stores
+// and the engine settings — AND NOTHING ELSE (architect 2026-08-07,
+// superseding the old "blocks persistent mutation" standard); the definition
+// carries the ruling, and it is the model's ONE authoritative home.
+// Authoring-mutation chords (Delete, undo/redo, the propagate commands, `;`,
+// `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
+// renders and the Shift+0 trim reset are ADMITTED — a save writes the state
+// the tab already holds, a render reads it, and trim is band.
+// One entry is
+// STATE-DEPENDENT: the horizontal arrows are admitted as navigation
+// only while playhead_in_marker_lane is false, since in the marker lane the
+// same press authors — the lane decides (the horizontal pair binds bare
+// only since 2026-09-21, so no modifier enters the decision).
+// A free function over the AppState since 2026-09-24 (it read nothing else),
+// so the Edit menu's item faces can ask it (dropdown_item_enabled).
+bool read_only_key_blocked(const AppState& app, GuiKey key, GuiInputState mods);
+
+// THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
+// (architect 2026-09-10). Returns true if key+mods should be dropped while
+// GRID ITERATIONS stands; the gate asks exactly one of the two lists,
+// because the two locks are MUTUALLY EXCLUSIVE (authoring_locked,
+// app_state.h — a lit lamp cannot be locked and a locked tab cannot be
+// lit). It is written as
+// read_only_key_blocked's answer plus its own deltas rather than as a
+// second copy of that list, and both deltas are stated at the definition.
+// (A SECOND PREDICATE STOOD BESIDE IT until 2026-09-10, spelling delta (a)
+// on its own so the gate could ask it BESIDE the wider list on a locked
+// tab. Bare `o`'s refusal under a lit lamp made that state unreachable and
+// the predicate went with it, its members becoming plain first tests.)
+bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
+                                GuiInputState mods);
+
+// THE AUTHORING LOCK'S CARD-FREE VERDICT — the active tab's read-only list or
+// the lit iteration lamp's; the readers are at the definition.
+bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
+                                GuiInputState mods);
+
+// THE SYNCHRONIZE ACT'S CHEAP REFUSALS, one ladder in the act's own order
+// (architect 2026-09-24): Silent — a prompt or a keyboard-modal editor
+// standing, a load in flight, nothing loaded; Running — one mirror already in
+// flight; NoSyncPath — the device config names no destination. TWO READERS:
+// GuiInputHandler::synchronize_to_external_storage, which returns or cards on
+// each, and the File menu's Synchronize row (dropdown_item_enabled), which
+// greys on anything but None.
+enum class ExternalSyncRefusal : uint8_t { None, Silent, Running, NoSyncPath };
+ExternalSyncRefusal external_sync_refusal(const AppState& app,
+                                          const GuiExternalSyncWorker& sync);
+
+
 // THE CLIPBOARD REFUSAL'S ONE SENTENCE, composed for whichever write met it —
 // the verb is the act's own word ("copy", "cut"). The body and the reasoning
 // are at its definition (input_key_dispatch.cpp); it is declared here because
@@ -1454,7 +1507,7 @@ struct GuiInputHandler {
     //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
     //     the two held-motion producers are recorded at the call). The four
     //     anchors the `h` view and the folder overlay kill are refused inside
-    //     toggle_dropdown (menu_anchor_dead_in_mode), not here. SO THE ARMED
+    //     toggle_dropdown (menu_anchor_live), not here. SO THE ARMED
     //     HOVER OPEN IS UNREACHABLE UNDER THE BAND — the three overlay
     //     branches return above this tail — while the hover SWITCH, which
     //     lives in the open-dropdown branch above them, is live there: File
@@ -1484,6 +1537,8 @@ struct GuiInputHandler {
     // can grey (the retired per-item disabled state's record is at the
     // definition, input_pointer.cpp).
     int  dropdown_item_at(int x, int y) const;
+    // Is this item of the open menu enabled (dropdown_item_enabled, app_state.h)?
+    bool dropdown_item_live(int item) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
     // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
     // THE POINTER — CLOSE FIRST, then the menu's own action (settings: the modal
@@ -2568,6 +2623,9 @@ private:
     // overlay's two openers. Returns true if key+mods matched one (on_key then
     // returns), false otherwise.
     bool handle_mode_keys(GuiKey key, GuiInputState mods);
+    // The two phase-reset pastes' shared refusal ladder, carded (true =
+    // refused); the decision is phase_reset_paste_refusal.
+    bool card_phase_reset_paste_refusal();
 
     // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /
     // Shift+Tab / IsoLeftTab cycle marker focus with the landing owner's
@@ -2959,8 +3017,8 @@ private:
     // and changes no audio; nothing about the sound is different while it
     // runs). A SECOND ACT WHILE ONE RUNS is a consumed no-op that says so on
     // a notification card — the checkpoint act's single-in-flight shape,
-    // answered in words rather than with a grey, since a menu item never
-    // greys. Then the DESTINATION: an EMPTY `sync_path` is the device saying
+    // answered in words on the key; the menu row greys while one runs
+    // (2026-09-24, external_sync_refusal). Then the DESTINATION: an EMPTY `sync_path` is the device saying
     // it has none, answered `sync_path is not set` on a card — the key named
     // by its own spelling — and the act ends there. Otherwise the job is
     // captured whole by value — the sync root, the
@@ -3845,40 +3903,6 @@ private:
     // once, out there, and this member keeps the lane's name and contract.
     bool playhead_in_marker_lane() const;
 
-    // Source-view read-only allowlist. Returns true if key+mods is NOT on the
-    // allowlist of navigation / playback / zoom / view-switch / close-prompt /
-    // band / save / render keys honored in a read-only source tab — i.e. should
-    // be dropped.
-    // READ-ONLY PROTECTS THE AUTHORED MUSICAL CONTENT — the two marker stores
-    // and the engine settings — AND NOTHING ELSE (architect 2026-08-07,
-    // superseding the old "blocks persistent mutation" standard); the definition
-    // carries the ruling, and it is the model's ONE authoritative home.
-    // Authoring-mutation chords (Delete, undo/redo, the propagate commands, `;`,
-    // `i`, `'`) are blocked here at the gate, while Ctrl+S, the two Ctrl+Alt+R
-    // renders and the Shift+0 trim reset are ADMITTED — a save writes the state
-    // the tab already holds, a render reads it, and trim is band.
-    // One entry is
-    // STATE-DEPENDENT: the horizontal arrows are admitted as navigation
-    // only while playhead_in_marker_lane is false, since in the marker lane the
-    // same press authors — the lane decides (the horizontal pair binds bare
-    // only since 2026-09-21, so no modifier enters the decision).
-    bool read_only_key_blocked(GuiKey key, GuiInputState mods);
-
-    // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
-    // (architect 2026-09-10). Returns true if key+mods should be dropped while
-    // GRID ITERATIONS stands; the gate asks exactly one of the two lists,
-    // because the two locks are MUTUALLY EXCLUSIVE (authoring_locked,
-    // app_state.h — a lit lamp cannot be locked and a locked tab cannot be
-    // lit). It is written as
-    // read_only_key_blocked's answer plus its own deltas rather than as a
-    // second copy of that list, and both deltas are stated at the definition.
-    // It takes the live AppState through the handler's own member, exactly as
-    // its base does for the arrows' lane term.
-    // (A SECOND PREDICATE STOOD BESIDE IT until 2026-09-10, spelling delta (a)
-    // on its own so the gate could ask it BESIDE the wider list on a locked
-    // tab. Bare `o`'s refusal under a lit lamp made that state unreachable and
-    // the predicate went with it, its members becoming plain first tests.)
-    bool iteration_lock_key_blocked(GuiKey key, GuiInputState mods);
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.

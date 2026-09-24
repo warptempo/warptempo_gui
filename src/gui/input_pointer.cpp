@@ -801,14 +801,16 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // menu-row claim at the foot of on_button_press instead of dying in the veil
 // — and this predicate, ONE OWNER read by all three veils, is where that is
 // said. It walks kDropdownMenus like every other anchor road here and asks
-// the anchors' own gate (menu_anchor_dead_in_mode, app_state.h), so the
+// the anchors' own verdict (menu_anchor_live, app_state.h), so the
 // exemption cannot part from the FACE or from toggle_dropdown's guard: what
 // is lit is pressable and what is grey is veiled, one enumeration behind all
 // three.
-bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
+bool press_on_live_menu_anchor(const AppState& app, const GuiAudio& audio,
+                               const GuiExternalSyncWorker& sync,
+                               int x, int y) {
     for (const DropdownMenu m : kDropdownMenus) {
         const RedesignButton b = dropdown_anchor_button(m);
-        if (menu_anchor_dead_in_mode(app, b)) continue;
+        if (!menu_anchor_live(app, audio, sync, b)) continue;
         if (redesign_button_hit(app, b, x, y)) return true;
     }
     return false;
@@ -1106,9 +1108,11 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // five from 2026-09-03, one dead of two until 2026-08-20, two of three until
 // 2026-08-27, and one of three from 2026-08-08). The anchors are the
 // roster's only NON-chord actions, so there is no chord to ask the gate
-// about and each has to be answered — through the ONE owner both this
-// partition and toggle_dropdown read, menu_anchor_dead_in_mode
-// (app_state.h), which is where the per-menu reasoning lives. In short:
+// about and each has to be answered — through the ONE owner the face and
+// toggle_dropdown read, menu_anchor_live (app_state.h), which is where the
+// per-menu reasoning lives, and which redesign_button_enabled asks at its
+// head, AHEAD of this partition (2026-09-24), so this walk is never asked
+// about an anchor. In short:
 // SETTINGS is dead because its rows reach a modal by a DIRECT call the view
 // has no place for; EDIT because every one of its rows is a chord the view's
 // allowlist drops (ITERATIONS and HELP answered the same way while they
@@ -1327,34 +1331,15 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // arrows paint unconditionally and every roster button publishes a real rect in
 // every state.
 bool history_mode_disables_button(const AppState& app, RedesignButton b) {
-    // THE THREE ANCHORS ARE ONE ARM AND ONE OWNER (menu_anchor_dead_in_mode,
-    // app_state.h — the predicate the OPEN reads too, at toggle_dropdown).
-    // SETTINGS is dead because
-    // its items reach the settings editor by a DIRECT call that meets no gate
-    // at all; EDIT (2026-08-20) because every one
-    // of its rows is a CHORD the mode's allowlist drops, so the menu would
-    // open onto nothing — the face promising more than the keys deliver, which
-    // is what this partition exists to prevent (HELP answered the same way
-    // 2026-09-03..09, its one row's Shift+L being a chord the allowlist does
-    // not name either, until the anchor was deleted with the top strip
-    // relayout); FILE is LIVE (2026-08-13, its
-    // four rows Ctrl+O, Ctrl+Alt+O (2026-09-13), bare `\` (2026-08-31) and
-    // Ctrl+Q, all on the allowlist), so the menu opens onto four working rows.
-    //
-    // THEY ARE ANSWERED HERE RATHER THAN LEFT TO THE WALK BELOW because an
-    // anchor carries no chord for that walk to ask about, and the walk's
-    // default for an unlisted button is LIVE — which also keeps the tail's
-    // "not in the table and not an anchor" claim true. The set moved out to a
-    // shared owner on 2026-09-02, when the folder overlay's band first stood
-    // under row 1 and needed the identical partition, and since 2026-09-03
-    // evening THE OVERLAY TAKES THIS PARTITION WHOLE — File live, the other
-    // two dead under the player, the picker and the AV sync panel exactly as
-    // in this view (the architect's ruling is at the owner). This arm never
-    // reaches that term from here — it is inside `a.history_mode.active`, and
-    // redesign_button_enabled asks the owner directly for the band — but it
-    // is one enumeration with two readers either way.
-    if (redesign_button_is_menu_anchor(b))
-        return menu_anchor_dead_in_mode(app, b);
+    // THE THREE ANCHORS ARE NOT THIS PARTITION'S (2026-09-24): their one
+    // verdict, menu_anchor_live (app_state.h), answers them at the head of
+    // redesign_button_enabled, ahead of the `h` test that reaches this walk —
+    // its mode clause is the partition this arm used to carry (Edit and
+    // Settings dead in the view, File live), and the item clause joined it.
+    // The arm stays so an anchor, which carries no chord for the walk below
+    // to ask about, is never answered by that walk's LIVE default; it names
+    // no set.
+    if (redesign_button_is_menu_anchor(b)) return false;
     for (const ToolbarChord& tc : kToolbarChords) {
         if (tc.id != b) continue;
         GuiInputState chord{};
@@ -3786,10 +3771,7 @@ void GuiInputHandler::run_flag_cell_wheel(GuiMouseButton dir, int count,
     const bool up = dir == GuiMouseButton::WheelUp;
     const GuiKey key = up ? GuiKeys::Up : GuiKeys::Down;
     const GuiInputState no_mods{};
-    if (active_view_state(app).read_only && read_only_key_blocked(key, no_mods))
-        return;
-    if (app.iteration_mode_enabled && iteration_lock_key_blocked(key, no_mods))
-        return;
+    if (authoring_lock_drops_chord(app, key, no_mods)) return;
     const int64_t delta = (up ? +1 : -1) * static_cast<int64_t>(std::max(count, 1));
     switch (cell) {
     case MarkerCell::Payload:
@@ -4966,20 +4948,20 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // no item carries a modified binding, and leaving the popup open
             // under a press it refused would be the worse answer.
             const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
+            // A GREYED ITEM ARMS NOTHING AND DISMISSES NOTHING (architect
+            // 2026-09-24, the truthful menus; it stood 2026-08-08..15 too): the
+            // press is consumed where it landed and the MENU STAYS UP,
+            // kdenlive's own answer for a greyed row — pressing one is a
+            // nothing, not a dismissal — so this arm RETURNS rather than
+            // falling into the close below, which is the answer for the
+            // separator, the chrome and the box's outside: those are the
+            // popup's DEAD SPACE, and a greyed item is a row that is simply not
+            // for you. The predicate is the painter's own
+            // (dropdown_item_live → dropdown_item_enabled), so the grey face
+            // and the inert press are one fact read twice. No claim is set,
+            // so the release that follows arms nothing either.
+            if (hit >= 0 && plain && !dropdown_item_live(hit)) return;
             if (hit >= 0 && plain) {
-                // (A DISABLED ITEM ARMED NOTHING AND DISMISSED NOTHING,
-                // 2026-08-08 to 2026-08-15: the press was consumed where it
-                // landed and the MENU STAYED UP, kdenlive's own answer for a
-                // greyed row — pressing one is a nothing, not a dismissal — so
-                // that arm RETURNED rather than falling into the close below,
-                // which is the answer for the separator, the chrome and the
-                // box's outside: those are the popup's DEAD SPACE, and a greyed
-                // item is a row that is simply not for you. The predicate was
-                // the painter's own, so the grey face and the inert press were
-                // one fact read twice, the roster's disabled-press rule one
-                // surface out. It went producer-less with the Navigation menu
-                // — no surviving item can grey — and the arm is deleted with
-                // it; the record is at kFilePopupItems, app_state.h.)
                 // ITEMS ACT ON RELEASE — this press only ARMS one. The items
                 // were the redesign's FIRST act-on-release surface (the
                 // universal menu convention: press, slide, release on what you
@@ -5049,7 +5031,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // defect — with it, ANY coordinate was exempt while a menu stood, so a
     // press on the overlay's modal row armed a button under a popup that
     // should have swallowed the press whole.
-    const bool menu_row_press_admitted = press_on_live_menu_anchor(app, x, y);
+    const bool menu_row_press_admitted =
+        press_on_live_menu_anchor(app, audio, external_sync_worker, x, y);
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
@@ -7232,7 +7215,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         const bool inside =
             under_pointer &&
             redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render, id);
+                                    playback, target_render,
+                                    external_sync_worker, id);
         if (f.hovered != inside) {
             f.hovered = inside;
             if (redesign_button_in_transport_row(id))
@@ -7447,7 +7431,11 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     // one walk over the published rects for this face derivation, for the press
     // claim and for the release's derive, so "which item is here" cannot mean
     // three slightly different things.
-    const int hit = dropdown_item_at(app.last_mouse_x, app.last_mouse_y);
+    // A GREYED ROW RESOLVES TO "NO ITEM" here (2026-09-24): it is never
+    // hovered or armed, so it wears no face and the release can never find
+    // it lit.
+    int hit = dropdown_item_at(app.last_mouse_x, app.last_mouse_y);
+    if (hit >= 0 && !dropdown_item_live(hit)) hit = -1;
     const bool press_live =
         mods.primary_button_held && app.dropdown.press_began_on_item;
     const int armed = press_live ? hit : app.dropdown.pressed_item;
@@ -7538,7 +7526,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // deletion on 2026-09-14). The READ-ONLY lock never carried it, a
         // selection being navigation.
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render, tc.id))
+                                    playback, target_render,
+                                    external_sync_worker, tc.id))
             return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
         // TOGGLE — dispatching would switch AWAY from what the user just
@@ -7720,7 +7709,8 @@ void GuiInputHandler::finish_chrome_press_release(
         // lift a consumed nothing.
         if (arm.shift && !redesign_button_shift_admits(tc.id)) return;
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render, tc.id))
+                                    playback, target_render,
+                                    external_sync_worker, tc.id))
             return;
         if (tc.radio && redesign_button_selected(app, tc.id)) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
@@ -7944,7 +7934,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
             return;
         }
         if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render, tc.id)) return;
+                                    playback, target_render,
+                                    external_sync_worker, tc.id)) return;
         // THE OPENER IS THE FIRST FIRE (the flip's statement is at this
         // function's head).
         chord.synthesized_repeat = arm.repeat_fired;
@@ -7963,19 +7954,26 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 // boxes, so a hit is exactly the box that lights; a closed popup has zero rects
 // and therefore contains no point, which is the correct cold answer.
 //
-// PURE GEOMETRY, DELIBERATELY, and since 2026-08-15 it is the whole answer: no
-// item on either surviving menu can grey. (Whether a row could be hovered, armed
-// or activated was a SEPARATE question, dropdown_item_enabled's, asked by each of
-// this function's three callers on its own side — one geometric answer, one
-// enablement answer, neither hiding inside the other. That predicate went
-// producer-less with the Navigation menu; the separation is recorded because it
-// is the shape a future disabled item takes, rather than a term folded in here.)
+// PURE GEOMETRY, DELIBERATELY. Whether a row can be hovered, armed or
+// activated is a SEPARATE question, dropdown_item_live's (the handler's
+// forwarder to dropdown_item_enabled, app_state.h), asked by each of this
+// function's three callers on its own side — one geometric answer, one
+// enablement answer, neither hiding inside the other. (The separation was
+// kept through 2026-08-15..09-24, when no item could grey, as the shape a
+// disabled item takes; the truthful menus put it back to work.)
 int GuiInputHandler::dropdown_item_at(int x, int y) const {
     for (int i = 0; i < dropdown_item_count(app.dropdown.menu); ++i) {
         const GuiRect& r = app.dropdown.item_rects[static_cast<size_t>(i)];
         if (rect_contains(r, x, y)) return i;
     }
     return -1;
+}
+
+// THE ONE ITEM-ENABLED QUESTION the three item roads ask (the hover walk, the
+// item press, the release's derive) — the painter asks the same owner.
+bool GuiInputHandler::dropdown_item_live(int item) const {
+    return dropdown_item_enabled(app, audio, external_sync_worker,
+                                 app.dropdown.menu, item);
 }
 
 // THE DROPDOWN'S RELEASE — the one place in the redesign where an action fires
@@ -8072,14 +8070,15 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     int armed = app.dropdown.press_began_on_item
                     ? dropdown_item_at(x, y)
                     : app.dropdown.pressed_item;
-    // (A DISABLED ITEM ACTIVATED NOTHING AND CLOSED NOTHING, 2026-08-08 to
-    // 2026-08-15. The recorded arm could never name one — the hover walk
-    // resolved a greyed row to "no item" — but the DERIVE reads raw geometry, so
-    // the gate belonged on this side of it too, and answering -1 routed the
-    // release into the armed-nothing return below: consumed, menu still up,
-    // the same answer the press over that row already gave. The predicate went
-    // producer-less with the Navigation menu and this gate with it — which is
-    // the whole reason the derive can now read geometry alone.)
+    // A GREYED ITEM ACTIVATES NOTHING AND CLOSES NOTHING (2026-09-24, and
+    // 2026-08-08..15 before it). The recorded arm can never name one — the
+    // hover walk resolves a greyed row to "no item" — but the DERIVE reads raw
+    // geometry, so the gate belongs on this side of it too, and answering -1
+    // routes the release into the armed-nothing return below: consumed, menu
+    // still up, the same answer the press over that row already gave. The
+    // verdict is asked AT THE RELEASE, so a row that greyed under a held
+    // press (a background act landing) does not fire.
+    if (armed >= 0 && !dropdown_item_live(armed)) armed = -1;
     // The press claim ends here whatever it armed, so nothing the pointer does
     // afterwards can move an arm this button-down no longer owns.
     app.dropdown.press_began_on_item = false;
@@ -8097,9 +8096,10 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // THE ITEM IS ITS KEY, dispatched through on_key exactly as a redesigned
         // button dispatches its chord: every gate the keyboard route passes
         // (loading/blank, the modal gates, the read-only allowlist, the arm's own
-        // refusals) applies identically, so an item whose command cannot act
-        // right now simply does nothing — the buttons-never-grey rule, one
-        // surface further out. No stop, no modal, nothing restated here. TWO OF
+        // refusals) applies identically. An item whose command would refuse
+        // cheaply never gets here — it is greyed and the derive above dropped
+        // it (2026-09-24) — and an expensive refusal cards from the act. No
+        // stop, no modal, nothing restated here. TWO OF
         // THREE OF THE FILE MENU'S FOUR ROWS RIDE THIS BODY WHOLE (Revert, on
         // Ctrl+Alt+O, since 2026-09-13, reaching its one act the way Open does):
         // Ctrl+Q reaches on_key's own close route — the drag-modal hatch, the
@@ -8114,7 +8114,8 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         // carried the zoom and framing rows, with history_mode_owns_key claiming
         // the rest — and the one Navigation row that would have meant something
         // else in there greyed above and never reached this dispatch at all.
-        // Nothing greys now: that menu and its predicate are deleted.
+        // That menu is deleted; since 2026-09-24 every row greys on its own
+        // command's cheap refusals, the `h` view's allowlist among them.
         const CommandPopupItem& it = command_popup_item(menu, armed);
         close_dropdown();
         // THE ONE ROW THAT DOES NOT DISPATCH ITS KEY (the File menu's
@@ -8158,10 +8159,9 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // the lock's sentence when they commit, while the five device rows commit
     // regardless (the account is at GuiSettingsEditor::open). The modal
     // playback stop stays at that opener, where it moved off this line in
-    // 2026-08-07. THE ITEM IS NOT GREYED, deliberately — the never-grey rule
-    // for these items is the standing ruling (and since 2026-08-15 it has no
-    // exception anywhere; the record is at kFilePopupItems), and their
-    // commands' own refusals answer.
+    // 2026-08-07. THE ITEMS GREY DURING A LOAD ALONE (2026-09-24,
+    // dropdown_item_enabled): the opener refuses nothing cheap, and the
+    // commit arms' refusals answer on the editor's own surfaces.
     const char* key = kSettingsPopupItems[static_cast<size_t>(armed)].key;
     close_dropdown();
     settings_editor.open_prefilled(key);
@@ -8714,7 +8714,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // refuses", and when that is the answer for EVERY row the menu is a box
     // that opens onto nothing. Refusing it is the same criterion the narrowing
     // used, read the other way: the face must not promise more than the keys
-    // deliver. Its anchor greys beside this (history_mode_disables_button).
+    // deliver. Its anchor greys beside this (menu_anchor_live, the face's read).
     //
     // (THE SERIES MENU JOINED THE LOCKOUT ON 2026-08-27 on that same
     // criterion and left it with its own deletion on 2026-09-04: both of its
@@ -8734,10 +8734,12 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // the panel's two roads are the chord and the Play renders button's
     // shifted press, and the view answers both for itself.)
     //
-    // THE SET IS THE SHARED OWNER'S (menu_anchor_dead_in_mode, app_state.h),
-    // which is the same enumeration history_mode_disables_button's anchor arm
-    // reads for the FACE — so which menus open and which anchors grey cannot
-    // drift apart. THE FOLDER OVERLAY IS IN THAT OWNER TOO and takes the same
+    // THE VERDICT IS THE SHARED OWNER'S (menu_anchor_live, app_state.h),
+    // the one the anchor's FACE reads at redesign_button_enabled's head — so
+    // which menus open and which anchors grey cannot drift apart. Since
+    // 2026-09-24 it carries a second clause beside the mode partition: an
+    // anchor whose every item greys is dead too (during a load, Edit and
+    // Settings), so no menu opens onto nothing but greyed rows. THE FOLDER OVERLAY IS IN THAT OWNER TOO and takes the same
     // partition (2026-09-03 evening: the menu row stands above the band with
     // File LIVE and the other anchors dead — two since the Help menu's
     // 2026-09-09 deletion — the architect's ruling at the
@@ -8749,7 +8751,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // close and that ruling, when no route reached this term at all; it was
     // File-exempt like this on 2026-09-02, when the panel stopped at row 1's
     // foot.)
-    if (menu_anchor_dead_in_mode(app, dropdown_anchor_button(menu))) return;
+    if (!menu_anchor_live(app, audio, external_sync_worker,
+                          dropdown_anchor_button(menu)))
+        return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on ANOTHER menu's
     // button switches — the close below runs first, damaging the box that is
@@ -9482,7 +9486,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // they are skipped above, and toggle_dropdown asks the mode
                 // gate for itself.
                 if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                             playback, target_render, id))
+                                             playback, target_render,
+                                             external_sync_worker, id))
                     continue;
                 close_dropdown();
                 // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the
