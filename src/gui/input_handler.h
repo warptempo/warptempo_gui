@@ -1507,7 +1507,8 @@ struct GuiInputHandler {
     //     returns on it: a HELD PRIMARY BUTTON refuses the open (codex round 2;
     //     the two held-motion producers are recorded at the call). The four
     //     anchors the `h` view and the folder overlay kill are refused inside
-    //     toggle_dropdown (menu_anchor_live), not here. SO THE ARMED
+    //     toggle_dropdown (the anchor's painted face, stamped from
+    //     menu_anchor_live), not here. SO THE ARMED
     //     HOVER OPEN IS UNREACHABLE UNDER THE BAND — the three overlay
     //     branches return above this tail — while the hover SWITCH, which
     //     lives in the open-dropdown branch above them, is live there: File
@@ -1533,12 +1534,10 @@ struct GuiInputHandler {
     void update_menu_row_exit(int mouse_x, int mouse_y);
     void disarm_menu_row();
     // Which item is at (x, y), or -1 — the painter's published boxes. PURE
-    // GEOMETRY, and since 2026-08-15 the whole answer: no item on any menu
-    // can grey (the retired per-item disabled state's record is at the
-    // definition, input_pointer.cpp).
+    // GEOMETRY: whether the row is live is its painted enabled bit
+    // (AppState::Dropdown::item_enabled), asked by each caller on its own
+    // side (the record is at the definition, input_pointer.cpp).
     int  dropdown_item_at(int x, int y) const;
-    // Is this item of the open menu enabled (dropdown_item_enabled, app_state.h)?
-    bool dropdown_item_live(int item) const;
     // The dropdown's RELEASE body: the redesign's one act-on-release surface.
     // Returns true when the popup owned the release. It TRIGGERS THE ITEM UNDER
     // THE POINTER — CLOSE FIRST, then the menu's own action (settings: the modal
@@ -1649,11 +1648,14 @@ struct GuiInputHandler {
     // take_chrome_press consumes the arm whole (armed or not) at the top of
     // on_button_release, damaging the un-pressed face.
     // finish_chrome_press_release is the release half: re-hit the armed
-    // target at the release's own coordinates and re-ask every press-time
-    // gate — the modal veil FIRST, for every kind alike, then the roster's own
-    // shift admission under the CARRIED shift, the enabled bit, the radio
-    // rule, the Render cancel face — then run the act (the chord through
-    // on_key). A lift anywhere else, or a
+    // target at the release's own coordinates and re-ask the press-time
+    // gates — the modal veil FIRST, for every kind alike, then the roster's own
+    // shift admission under the CARRIED shift, then the enabled bit and the
+    // radio rule ON THE PAINTED FACE (architect 2026-09-24, strictly
+    // as-painted; never the live predicates) — then run the act: the painted
+    // Cancel glyph's cancel act, else the chord through on_key, a face
+    // painted live dispatching and its act answering for itself. A lift
+    // anywhere else, or a
     // gate that no longer holds, dispatches nothing. It also owns THE SHIFT LONG PRESS: the hold
     // measured against the arm's press stamp and ORed into the one shift term
     // the chord is built from, on the shift-admitting buttons alone
@@ -2221,12 +2223,6 @@ struct GuiInputHandler {
     // not come this way — it is state, written at the cell's dispatch. Cheap:
     // one empty-string test per tick when nothing is parked.
     void tick_promote_render_status();
-
-    // Per-iteration transition writer for the Render button's mid-render
-    // CANCEL face (AppState::render_cancel_face — the contract is at the bit),
-    // wired from main.cpp's on_tick beside tick_promote_render_status. One
-    // bool compare per tick at rest.
-    void tick_render_cancel_face();
 
     // THE BARE `c` COMMAND, and the ONE owner of both its recipes: the working
     // zoom centered on the playhead, with a focused stop re-landed under it

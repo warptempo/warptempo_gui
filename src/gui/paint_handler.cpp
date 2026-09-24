@@ -854,6 +854,13 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
 // bit; `glyph_swapped` is stashed here for exactly that reason and its whole
 // argument is at the predicate (app_state.h).
 //
+// AND THE INPUT CLAIMS ON THESE BITS (architect 2026-09-24, strictly
+// as-painted): the roster's press, lift, hold-repeat, menu-row slide and
+// hover pill read the stash this publishes rather than the live predicates,
+// so the gate is what keeps a press agreeing with the pixels under it — a
+// bit stamped over pixels that never took it would now misdirect a press as
+// well as blind the comparator.
+//
 // IT TOOK A GuiPlayback WITH THAT POLICY, GAVE IT BACK WITH IT, AND TOOK IT
 // AGAIN WITH THE POLICY'S REVERSAL: the PLAY button's honest arm is the only
 // reader of the object down this path (redesign_button_enabled asks
@@ -1195,9 +1202,9 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
         // while a render or sweep is live — dialog-cancel, the circle-slash,
         // transcribed for row 8's short-lived Esc button and kept for exactly
-        // this face when that button was deleted. The bit, its rank over the
-        // iteration label and the click's divergence are all at
-        // AppState::render_cancel_face.
+        // this face when that button was deleted. The condition and its
+        // contract are at redesign_button_glyph_swapped's Render arm, the
+        // click's divergence at finish_chrome_press_release's Render arm.
         case RedesignButton::Render: return icons::Icon::DialogCancel;
         // THE READ-ONLY TOGGLE'S PADLOCK (2026-08-14): the CLOSED lock while
         // the active tab is read-only — which is its TABLE glyph — and the
@@ -1697,10 +1704,11 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // width above exists only here, so the pointer code reads this stash
         // rather than re-shaping the string. Written every paint — a font, scale
         // or window change lands in it on the frame that displays it.
-        // No menu button has a selected face, and all are live during a
-        // load and on a blank state — which is the whole reason this row paints
-        // outside the audio branches. (The one state that DOES dead them is the
-        // history view, which cannot be entered from either.) The stash is
+        // No menu button has a selected face, and this row paints outside
+        // the audio branches because it stands in every state. Since
+        // 2026-09-24 Edit and Settings grey during a load or on a blank state,
+        // in the history view and under the folder overlay, File alone staying
+        // live for Quit (menu_anchor_live, app_state.h, owns the verdict). The stash is
         // written anyway
         // (through the one publisher) so the tick comparator's vector is total
         // over the roster with no membership test.
@@ -4656,8 +4664,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                        kRedesignTabLine);
 
     // THE ITEMS' ENABLED VERDICTS (architect 2026-09-24, the truthful menus),
-    // asked once per paint of the one owner the input side asks
-    // (dropdown_item_enabled). The as-painted stash is republished only when
+    // asked once per paint of the one owner (dropdown_item_enabled); the
+    // input side claims on the stash this publishes, never on the owner
+    // (strictly as-painted). The as-painted stash is republished only when
     // the clip covers the box's DRAWABLE part — publish_button_face's rule,
     // one owner (clip_covers_drawable) — so a narrow damage in the frame a
     // verdict flips cannot record a face these pixels never took, the
@@ -6647,6 +6656,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // outliving it.
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     const uint64_t prev_session = dlg.session;
+    // THE OUTGOING ENABLED BITS, AS PAINTED — read before the reset clears the
+    // stash, for the player row's as-painted publication at the button walk
+    // below (the rule is there).
+    std::vector<std::pair<AppState::PlayerButtonAct, bool>> prev_enabled;
+    prev_enabled.reserve(dlg.buttons.size());
+    for (const AppState::ModalDialogButton& pb : dlg.buttons)
+        prev_enabled.emplace_back(pb.player_act, pb.enabled);
     dlg.valid   = false;
     dlg.owner   = AppState::ModalDialogOwner::None;
     dlg.session = 0;
@@ -7928,6 +7944,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         out.player_act   = plan[i].player_act;
         out.stats_act    = plan[i].stats_act;
         out.enabled      = plan[i].enabled;
+        // THE PLAYER'S ENABLED BIT IS PUBLISHED AS PAINTED (architect
+        // 2026-09-24, strictly as-painted): the claim reads this bit and the
+        // per-tick comparator (main.cpp) holds it against the live predicate,
+        // so it must be what these pixels show — publish_button_face's rule on
+        // this surface. This body runs whole under any damage touching the
+        // lane (the player's clock and scrub damage at scanner cadence), so a
+        // button whose drawable rect the clip does not cover KEEPS the bit it
+        // was last painted with (same session, same slot, same act), and
+        // with no such paint to keep it is false — nothing painted, nothing
+        // clickable — which the comparator sees as drift and repaints within
+        // a tick. Every other owner's buttons publish a constant true and
+        // need no gate.
+        if (player_up && !clip_covers_drawable(cr, app, r)) {
+            const bool carry = !face_state_reset &&
+                               i < prev_enabled.size() &&
+                               prev_enabled[i].first == out.player_act;
+            out.enabled = carry && prev_enabled[i].second;
+        }
         // THE HINT, composed from the word and the DISPATCH (2026-08-13, the
         // ruling that took the accelerators off the labels and put the key on
         // a tooltip): the composer is the one owner of the format and of the

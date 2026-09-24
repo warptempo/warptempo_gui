@@ -2376,7 +2376,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // compare, and keeping them adjacent keeps the two status owners' tick
         // work in one place.
         input_handler.tick_promote_render_status();
-        input_handler.tick_render_cancel_face();
 
         // Dirty-detect for the waveform cache. Compares the
         // current desired fingerprint against pending_fp_* and either
@@ -2471,6 +2470,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // single invalidate_top_strip. The repaint rewrites the whole stash, so
         // this settles in one pass — including the cold case, where the roster's
         // bits start at their defaults and the first compare corrects them.
+        // IT IS ALSO WHAT MAKES THE PAINTED CLAIM TRUTHFUL (architect
+        // 2026-09-24, strictly as-painted): every chrome claim — the roster's
+        // press, lift, hold-repeat and menu-row slide, the dropdown's rows, the
+        // render player's modal row — reads the painted bit rather than the
+        // live predicate, so these walks are what carry reality to the face
+        // the input acts on.
         // ONE MECHANISM, BOTH HALVES: the selected half joined with row 4 rather
         // than growing a second comparator, because it is the same problem — a
         // painted bit whose source mutates with no damage — with the same
@@ -2566,9 +2571,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // read-only toggle and the collapsed play/stop button — and only
             // the read-only toggle's rode a bit already stashed (its lamp).
             // RENDER'S mid-render Cancel face is the one that was quietly
-            // uncovered before this term: render_cancel_face moves neither
+            // uncovered before this term: queue_running moves neither
             // enabled nor selected, so its repaint rested on the render
-            // routes' own damage alone.
+            // routes' own damage alone. This term is now the one repaint of
+            // that edge (finalize_render_run clears the bit from an async
+            // completion), the glyph predicate reading queue_running itself
+            // with no per-tick mirror between them (architect 2026-09-24).
             bool drift_top       = false;
             bool drift_transport = false;
             for (int i = 0;
@@ -2611,6 +2619,31 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                     dropdown_item_enabled(app, audio, external_sync_worker,
                                           menu, i)) {
                     viewport.invalidate_rect(app.dropdown.rect);
+                    break;
+                }
+            }
+        }
+
+        // THE RENDER PLAYER'S MODAL ROW, the same comparator for the third
+        // stash (architect 2026-09-24, strictly as-painted): a button's face
+        // (render_player_button_enabled) moves with state that damages no part
+        // of the row — the device coming up or going absent, a render run
+        // starting or finishing under the Load face, a lock flipping — so the
+        // as-painted bits (AppState::ModalDialogButton::enabled, published by
+        // paint_modal_dialog under a covering clip) are held against the live
+        // predicate here, and any drift pays one damage of the bottom row.
+        // Only while the stash is the player's own (the owner and session the
+        // painter stamped), since a prompt standing over the player owns the
+        // row and its buttons carry no enabled split. Above the loading
+        // return, like the roster's.
+        if (app.render_player.active && app.modal_dialog.valid &&
+            app.modal_dialog.owner == AppState::ModalDialogOwner::Player &&
+            app.modal_dialog.session == app.render_player.session) {
+            for (const AppState::ModalDialogButton& b :
+                 app.modal_dialog.buttons) {
+                if (b.enabled != render_player_button_enabled(
+                                     app, playback, b.player_act)) {
+                    viewport.invalidate_rect(bottom_row_area(app));
                     break;
                 }
             }

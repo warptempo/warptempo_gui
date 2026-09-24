@@ -801,16 +801,19 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // menu-row claim at the foot of on_button_press instead of dying in the veil
 // — and this predicate, ONE OWNER read by all three veils, is where that is
 // said. It walks kDropdownMenus like every other anchor road here and asks
-// the anchors' own verdict (menu_anchor_live, app_state.h), so the
-// exemption cannot part from the FACE or from toggle_dropdown's guard: what
-// is lit is pressable and what is grey is veiled, one enumeration behind all
-// three.
+// each anchor's PAINTED face (RedesignButtonFace::enabled, which
+// publish_button_face stamps from menu_anchor_live) — the claim reads what is
+// on screen (architect 2026-09-24, strictly as-painted), the per-tick
+// comparator keeping it true — so the exemption cannot part from the FACE or
+// from toggle_dropdown's guard, which reads the same bit: what is lit is
+// pressable and what is grey is veiled, one enumeration behind all three.
 bool press_on_live_menu_anchor(const AppState& app, const GuiAudio& audio,
                                const GuiExternalSyncWorker& sync,
                                int x, int y) {
     for (const DropdownMenu m : kDropdownMenus) {
         const RedesignButton b = dropdown_anchor_button(m);
-        if (!menu_anchor_live(app, audio, sync, b)) continue;
+        if (!app.redesign_buttons[static_cast<size_t>(
+                 redesign_button_index(b))].enabled) continue;
         if (redesign_button_hit(app, b, x, y)) return true;
     }
     return false;
@@ -1108,8 +1111,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // five from 2026-09-03, one dead of two until 2026-08-20, two of three until
 // 2026-08-27, and one of three from 2026-08-08). The anchors are the
 // roster's only NON-chord actions, so there is no chord to ask the gate
-// about and each has to be answered — through the ONE owner the face and
-// toggle_dropdown read, menu_anchor_live (app_state.h), which is where the
+// about and each has to be answered — through the ONE owner the face is
+// painted from (toggle_dropdown claiming on that painted face),
+// menu_anchor_live (app_state.h), which is where the
 // per-menu reasoning lives, and which redesign_button_enabled asks at its
 // head, AHEAD of this partition (2026-09-24), so this walk is never asked
 // about an anchor. In short:
@@ -3394,9 +3398,11 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // A DISABLED PLAYER BUTTON'S PRESS IS A CONSUMED NOTHING (architect
     // 2026-08-30: the transport keys are their own class) — the roster's
     // arm_redesign_press rule on this surface: nothing arms, no face paints,
-    // no card (the grey is the message). The bit read is the STASH'S, which
-    // may only SELECT — a press that slipped through on a stale stash still
-    // dies at the dispatch's live re-ask. THE PLAYER'S SEVEN ARE THE ONLY
+    // no card (the grey is the message). The bit read is the STASH'S — THE
+    // CLAIM READS THE PAINTED FACE (architect 2026-09-24, strictly
+    // as-painted), the per-tick comparator (main.cpp) keeping it honest, and
+    // a face painted live dispatches, its act answering for itself. THE
+    // PLAYER'S SEVEN ARE THE ONLY
     // BUTTONS THAT PUBLISH IT (re-greped 2026-09-03; the stats panel's Copy
     // to clipboard did for one day, off a backend capability that is gone),
     // so this line is inert off every other owner's row.
@@ -3516,6 +3522,9 @@ int GuiInputHandler::modal_dialog_focus_live() const {
 //   save-failed rung leaves live-keyed rects where the new box is not);
 //   the RESPONSE KEY the stash names is validated against the LIVE response
 //   set, a different question from the stash's and asked separately.
+// THE ONE THING THE STASH DECIDES is a button's ENABLED bit (architect
+// 2026-09-24, strictly as-painted): the claim reads the painted face, never
+// the live predicate, and the act answers for itself (the player's arm below).
 // Returns true iff something dispatched, so a caller can tell a consumed
 // nothing from an act.
 bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
@@ -3538,17 +3547,25 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // THE RENDER PLAYER'S BUTTONS (2026-08-28): the act the stash names,
     // decided against the live player — each act's own body re-asks its own
     // state (an item to pause, an item to seek inside, a load-capable
-    // highlight), so a stale stash can select at worst a consumed nothing.
+    // highlight) and answers its own refusal.
     if (app.render_player.active) {
-        // THE LIVE ENABLED RE-ASK (architect 2026-08-30): a greyed button's
-        // act is consumed with no card — the grey is the message — whichever
-        // road armed it (the pointer's lift, the ring's Enter/Space
-        // release). The KEYS never come through here, so their own cards and
-        // their ruled silences are untouched, and THE CAR never comes through
-        // here either: on_media_command runs the player's bodies DIRECT, so a
-        // head unit's button reaches neither this line nor a button's face.
-        if (!render_player_button_enabled(app, playback, b.player_act))
-            return true;
+        // THE CLAIM IS THE PAINTED FACE (architect 2026-09-24, strictly
+        // as-painted, superseding 2026-08-30's live enabled re-ask here): a
+        // button painted grey never arms — the pointer's press claim and the
+        // ring's Enter/Space road both select on ModalDialogButton::enabled —
+        // and the lift asks the same painted bit once more (a face the
+        // comparator repainted grey under the hold is consumed, the roster
+        // lift's rule), so what passes was painted live and DISPATCHES.
+        // Where the act has become refused since that paint (at most one tick,
+        // the per-tick comparator in main.cpp repainting the row on drift),
+        // the act's own body answers exactly as its key does: carding where
+        // the key cards (the load in place's three refusals), silent where
+        // the silence is ruled (the folder walks' and the seeks' benign
+        // refusals at their state, R5). The KEYS never come through here, and
+        // THE CAR never does either: on_media_command runs the player's bodies
+        // DIRECT, so a head unit's button reaches neither this line nor a
+        // button's face.
+        if (!b.enabled) return true;
         switch (b.player_act) {
             // THE TWO SKIPS ARE THE ROW'S SHIFT-ADMITTING PAIR (R37): their
             // keys are Home and End since 2026-08-31 — the main window's
@@ -4956,11 +4973,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // falling into the close below, which is the answer for the
             // separator, the chrome and the box's outside: those are the
             // popup's DEAD SPACE, and a greyed item is a row that is simply not
-            // for you. The predicate is the painter's own
-            // (dropdown_item_live → dropdown_item_enabled), so the grey face
-            // and the inert press are one fact read twice. No claim is set,
-            // so the release that follows arms nothing either.
-            if (hit >= 0 && plain && !dropdown_item_live(hit)) return;
+            // for you. THE CLAIM READS THE PAINTED BIT (architect 2026-09-24,
+            // strictly as-painted): the row's face as paint_dropdown last
+            // published it (AppState::Dropdown::item_enabled), never the live
+            // verdict, so the press does what the row shows; the per-tick
+            // comparator (main.cpp) keeps the bit honest. No claim is set, so
+            // the release that follows arms nothing either.
+            if (hit >= 0 && plain &&
+                !app.dropdown.item_enabled[static_cast<size_t>(hit)])
+                return;
             if (hit >= 0 && plain) {
                 // ITEMS ACT ON RELEASE — this press only ARMS one. The items
                 // were the redesign's FIRST act-on-release surface (the
@@ -7211,12 +7232,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // 2026-08-07): a disabled button keeps its dead face under the pointer
         // and still explains itself, kdenlive's own behaviour. This is the ONE
         // place the two consumers of a hover part company, which is why both are
-        // resolved in this single walk.
-        const bool inside =
-            under_pointer &&
-            redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render,
-                                    external_sync_worker, id);
+        // resolved in this single walk. The term is the PAINTED bit
+        // (f.enabled), the one the press claims on (architect 2026-09-24,
+        // strictly as-painted): the pill lights exactly where a press would
+        // arm, and the per-tick comparator keeps the bit honest.
+        const bool inside = under_pointer && f.enabled;
         if (f.hovered != inside) {
             f.hovered = inside;
             if (redesign_button_in_transport_row(id))
@@ -7433,9 +7453,12 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     // three slightly different things.
     // A GREYED ROW RESOLVES TO "NO ITEM" here (2026-09-24): it is never
     // hovered or armed, so it wears no face and the release can never find
-    // it lit.
+    // it lit. GREYED MEANS PAINTED GREY — the as-painted bit, the one the
+    // press and the release claim on (architect 2026-09-24, strictly
+    // as-painted).
     int hit = dropdown_item_at(app.last_mouse_x, app.last_mouse_y);
-    if (hit >= 0 && !dropdown_item_live(hit)) hit = -1;
+    if (hit >= 0 && !app.dropdown.item_enabled[static_cast<size_t>(hit)])
+        hit = -1;
     const bool press_live =
         mods.primary_button_held && app.dropdown.press_began_on_item;
     const int armed = press_live ? hit : app.dropdown.pressed_item;
@@ -7467,7 +7490,8 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
 // does not re-read modifiers, the modal release's own rule — the
 // shift-admitting buttons must see the shift held at the press), and the
 // feint's inside bit. The lift runs the act through
-// finish_chrome_press_release below, which re-asks every gate.
+// finish_chrome_press_release below, which re-asks every gate, the face's
+// bits as painted (architect 2026-09-24).
 bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
     for (const ToolbarChord& tc : kToolbarChords) {
         if (!redesign_button_hit(app, tc.id, x, y)) continue;
@@ -7478,11 +7502,19 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         if (mods.shift && !redesign_button_shift_admits(tc.id)) return true;
         // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: nothing arms, so
         // nothing can dispatch at the lift, and a SHIFT press is swallowed
-        // exactly like the plain one (one predicate, both routes — a greyed
-        // Render is greyed for both of its chords). The predicate is the
-        // painter's (redesign_button_enabled, app_state.h), so the greyed face
-        // and the inert press are the same fact read twice and the press
-        // cannot slip through on a frame the paint disagreed with. Rows 1, 3
+        // exactly like the plain one (one bit, both routes — a greyed
+        // Render is greyed for both of its chords). THE CLAIM READS THE
+        // PAINTED BIT (architect 2026-09-24, strictly as-painted): the press
+        // asks the face the painter last published
+        // (RedesignButtonFace::enabled), never the live predicate, so the
+        // press does exactly what the screen shows. The per-tick comparator
+        // (main.cpp) is what keeps that bit honest, holding it against
+        // redesign_button_enabled and repainting on drift, so it is at most one
+        // tick behind reality; and a face painted live whose act has become
+        // refused in that window dispatches, the act's own body answering for
+        // itself, a card preferred over a no-op on a face that advertised an
+        // act. What follows names the predicate's arms the bit is painted
+        // from (redesign_button_enabled, app_state.h). Rows 1, 3
         // and 4 have no disabled face of their own, so the predicate is simply
         // true there — EXCEPT in two states. The `h` history view greys every
         // button whose act it consumes across all the rows
@@ -7525,17 +7557,18 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // WALK BOTH TABS took the same refusal for the march until its
         // deletion on 2026-09-14). The READ-ONLY lock never carried it, a
         // selection being navigation.
-        if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render,
-                                    external_sync_worker, tc.id))
-            return true;
+        const AppState::RedesignButtonFace& face =
+            app.redesign_buttons[static_cast<size_t>(
+                redesign_button_index(tc.id))];
+        if (!face.enabled) return true;
         // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
         // TOGGLE — dispatching would switch AWAY from what the user just
         // clicked. So the press is a consumed nothing, which also makes "no
         // button was hit" and "the selected half was hit" the same silent
         // outcome. Toggles (iteration, read-only) are NOT radios and press through
-        // in both directions.
-        if (tc.radio && redesign_button_selected(app, tc.id)) return true;
+        // in both directions. The selected bit is the painted one too, the
+        // radio's lit half being what the screen shows.
+        if (tc.radio && face.selected) return true;
         // THE ARM. The pressed face paints from it on the very next frame
         // (redesign_button_pressed_face — Roster kind, inside true, and the
         // row's click_face column deciding whether a pressed interior exists
@@ -7644,9 +7677,15 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // (the arm's `inside` bit serves the paint alone) — and iff every press-time
 // gate still holds, re-asked here exactly as the modal dialog's release
 // re-asks its own: the surface may have changed under the hold (a dialog
-// opened by a key, the history view toggled, a button disabled), and an arm
-// must never outrank the live state. A lift anywhere else, or any gate gone,
-// dispatches nothing — the consumed-nothing the press would have been.
+// opened by a key, the history view toggled), and an arm must never outrank
+// the live state. A lift anywhere else, or any gate gone, dispatches nothing —
+// the consumed-nothing the press would have been. THE ROSTER'S FACE BITS ARE
+// RE-ASKED AS PAINTED, NOT LIVE (architect 2026-09-24, strictly as-painted:
+// "the live painted face should correspond to reality, and reality to the
+// face, with cards being preferred over no-ops on a face that falsely
+// advertises an action"): a button disabled under the hold is consumed once
+// the comparator has repainted it grey, and a face still painted live
+// dispatches, the act's own body answering.
 //
 // THE BUTTON IS ITS CHORD, dispatched through on_key: the action is not merely
 // the same FUNCTION the key calls, it is the same ROUTE — every gate the chord
@@ -7703,21 +7742,29 @@ void GuiInputHandler::finish_chrome_press_release(
         // (The editor veil is re-asked once for every kind at the top of this
         // body — the roster's own copy lived here until the walk tab was found
         // to be missing it.)
-        // The press-time refusals, re-asked against the live state — the
-        // shift admission under the CARRIED shift, the enabled bit, the radio
-        // rule. Each held at the press; any that no longer does makes the
-        // lift a consumed nothing.
+        // The press-time refusals the lift re-asks — the shift admission
+        // under the CARRIED shift (a constant table), then the enabled bit and
+        // the radio rule ON THE PAINTED FACE, never the live predicates
+        // (architect 2026-09-24, strictly as-painted: the lift asks what the
+        // screen shows). The press arms and damages the strip, so by the lift
+        // the painted bits are at most one frame old, and the per-tick
+        // comparator carries any drift under the hold onto the face. A face
+        // painted grey is a consumed nothing; a face painted live dispatches,
+        // and where its act has become refused inside that frame the act's
+        // own body answers — carding where its key would card, silent only
+        // where its silence is ruled — rather than the lift consuming a press
+        // the screen advertised.
+        const AppState::RedesignButtonFace& face =
+            app.redesign_buttons[static_cast<size_t>(arm.index)];
         if (arm.shift && !redesign_button_shift_admits(tc.id)) return;
-        if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render,
-                                    external_sync_worker, tc.id))
-            return;
-        if (tc.radio && redesign_button_selected(app, tc.id)) return;
+        if (!face.enabled) return;
+        if (tc.radio && face.selected) return;
         // THE RENDER BUTTON IS CANCEL WHILE A RENDER IS LIVE (architect
         // 2026-08-11) — THE ROSTER'S ONE RULED EXCEPTION TO "THE BUTTON IS ITS
-        // CHORD": while app.render_cancel_face stands (the painted face's own
-        // bit — the mirror of cancel_archival_session's predicate, contract at
-        // its declaration) the lift runs THE CANCEL ACT ITSELF, the Esc
+        // CHORD": while the face is PAINTED as Cancel (its stashed
+        // glyph_swapped bit, whose Render arm at redesign_button_glyph_swapped
+        // is queue_running and holds the face's contract) the lift runs THE
+        // CANCEL ACT ITSELF, the Esc
         // arm's own body, and dispatches no chord at all. The divergence is
         // his ruling, both halves: the KEYBOARD keeps Ctrl+Alt+R's own
         // semantics unchanged (a dispatch kills the running render and starts
@@ -7739,15 +7786,26 @@ void GuiInputHandler::finish_chrome_press_release(
         // the honest reading — the face says Cancel for the whole hold, and a
         // button that changed its act at some invisible mark while its label
         // stood still would be the lie this exception exists to prevent.
-        if (tc.id == RedesignButton::Render && app.render_cancel_face) {
-            // BOTH HALVES OF THE FACE-MIRRORS-THE-ACT HONESTY (the contract is
-            // at the bit's declaration): the CLAIM reads the painted bit, so a
-            // lift on a painted Cancel never dispatches a render; the ACT is
-            // gated on the LIVE explicit-act bit, so on the stale edge it is a
-            // consumed no-op and can never reach a PREVIEW session through
-            // cancel_archival_session's wider is_busy branch — the face never
-            // advertised one.
-            if (app.queue_running) cancel_archival_session();
+        if (tc.id == RedesignButton::Render && face.glyph_swapped) {
+            // BOTH HALVES OF THE FACE-MIRRORS-THE-ACT HONESTY (architect
+            // 2026-09-24, strictly as-painted): the CLAIM reads the painted
+            // glyph, so a lift on a painted Cancel never dispatches a render;
+            // the ACT is gated on the LIVE explicit-act bit, so it can never
+            // reach a PREVIEW session through cancel_archival_session's wider
+            // is_busy branch — the face never advertised one. ON THE STALE
+            // EDGE (the explicit render finished, the lift landed before the
+            // comparator's repaint) the face advertised Cancel and there is
+            // nothing to cancel, so the lift CARDS it (kNoRenderRunningCard)
+            // rather than consuming a press the screen asked for. The reverse
+            // edge needs no arm: a painted RENDER whose queue has gone live
+            // dispatches the chord below, and a dispatch killing the running
+            // render and starting anew is the keyboard's own semantics
+            // (render-pipeline.md).
+            if (app.queue_running)
+                cancel_archival_session();
+            else
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kNoRenderRunningCard);
             return;
         }
         // THE SHIFT LONG PRESS (architect 2026-08-13): a press HELD past
@@ -7881,8 +7939,9 @@ void GuiInputHandler::finish_chrome_press_release(
 // off the button PAUSES (the scrollbar-button rule — sliding back on resumes,
 // the hold standing throughout; a leave that exits the WINDOW ends the hold
 // outright through the pointer-leave hook, and this body's first line sees the
-// arm gone), a dead enabled bit PAUSES (the disabled-press consume's mirror —
-// and since 2026-09-13 THE HISTORY'S END for Undo / Redo: a burst that walks
+// arm gone), a dead PAINTED enabled bit PAUSES, the claim's own bit since
+// 2026-09-24 and the disabled-press consume's mirror (and since 2026-09-13
+// THE HISTORY'S END for Undo / Redo: a burst that walks
 // the history to its end meets the dead bit on its next fire and rests there
 // under the held pointer, greyed, nothing un-pausing it while the hold
 // stands, and the lift that ends a fired burst is consumed, their faces
@@ -7933,9 +7992,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
             arm.repeat_due_ms = 0;
             return;
         }
-        if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                    playback, target_render,
-                                    external_sync_worker, tc.id)) return;
+        if (!app.redesign_buttons[static_cast<size_t>(arm.index)].enabled)
+            return;
         // THE OPENER IS THE FIRST FIRE (the flip's statement is at this
         // function's head).
         chord.synthesized_repeat = arm.repeat_fired;
@@ -7955,9 +8013,9 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 // and therefore contains no point, which is the correct cold answer.
 //
 // PURE GEOMETRY, DELIBERATELY. Whether a row can be hovered, armed or
-// activated is a SEPARATE question, dropdown_item_live's (the handler's
-// forwarder to dropdown_item_enabled, app_state.h), asked by each of this
-// function's three callers on its own side — one geometric answer, one
+// activated is a SEPARATE question, the row's PAINTED enabled bit
+// (AppState::Dropdown::item_enabled, architect 2026-09-24), asked by each of
+// this function's three callers on its own side — one geometric answer, one
 // enablement answer, neither hiding inside the other. (The separation was
 // kept through 2026-08-15..09-24, when no item could grey, as the shape a
 // disabled item takes; the truthful menus put it back to work.)
@@ -7967,13 +8025,6 @@ int GuiInputHandler::dropdown_item_at(int x, int y) const {
         if (rect_contains(r, x, y)) return i;
     }
     return -1;
-}
-
-// THE ONE ITEM-ENABLED QUESTION the three item roads ask (the hover walk, the
-// item press, the release's derive) — the painter asks the same owner.
-bool GuiInputHandler::dropdown_item_live(int item) const {
-    return dropdown_item_enabled(app, audio, external_sync_worker,
-                                 app.dropdown.menu, item);
 }
 
 // THE DROPDOWN'S RELEASE — the one place in the redesign where an action fires
@@ -8075,10 +8126,15 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // hover walk resolves a greyed row to "no item" — but the DERIVE reads raw
     // geometry, so the gate belongs on this side of it too, and answering -1
     // routes the release into the armed-nothing return below: consumed, menu
-    // still up, the same answer the press over that row already gave. The
-    // verdict is asked AT THE RELEASE, so a row that greyed under a held
-    // press (a background act landing) does not fire.
-    if (armed >= 0 && !dropdown_item_live(armed)) armed = -1;
+    // still up, the same answer the press over that row already gave. THE
+    // BIT IS THE PAINTED ONE (architect 2026-09-24, strictly as-painted),
+    // asked AT THE RELEASE: a row the comparator has already repainted grey
+    // under a held press does not fire, and a row still painted live
+    // dispatches — the command's own body answering a refusal that landed
+    // inside that one tick, carding where its key would card (the expensive
+    // checks card there already).
+    if (armed >= 0 && !app.dropdown.item_enabled[static_cast<size_t>(armed)])
+        armed = -1;
     // The press claim ends here whatever it armed, so nothing the pointer does
     // afterwards can move an arm this button-down no longer owns.
     app.dropdown.press_began_on_item = false;
@@ -8734,9 +8790,12 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // the panel's two roads are the chord and the Play renders button's
     // shifted press, and the view answers both for itself.)
     //
-    // THE VERDICT IS THE SHARED OWNER'S (menu_anchor_live, app_state.h),
-    // the one the anchor's FACE reads at redesign_button_enabled's head — so
-    // which menus open and which anchors grey cannot drift apart. Since
+    // THE GUARD READS THE ANCHOR'S PAINTED FACE (architect 2026-09-24,
+    // strictly as-painted): RedesignButtonFace::enabled, which
+    // publish_button_face stamps from the shared owner (menu_anchor_live,
+    // app_state.h) at redesign_button_enabled's head and the per-tick
+    // comparator keeps true — so which menus open and which anchors look
+    // live cannot drift apart, the open agreeing with the screen. Since
     // 2026-09-24 it carries a second clause beside the mode partition: an
     // anchor whose every item greys is dead too (during a load, Edit and
     // Settings), so no menu opens onto nothing but greyed rows. THE FOLDER OVERLAY IS IN THAT OWNER TOO and takes the same
@@ -8751,8 +8810,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // close and that ruling, when no route reached this term at all; it was
     // File-exempt like this on 2026-09-02, when the panel stopped at row 1's
     // foot.)
-    if (!menu_anchor_live(app, audio, external_sync_worker,
-                          dropdown_anchor_button(menu)))
+    if (!app.redesign_buttons[static_cast<size_t>(
+             redesign_button_index(dropdown_anchor_button(menu)))].enabled)
         return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on ANOTHER menu's
@@ -8803,6 +8862,12 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     if (text_editor::is_active(app.top_flag_editor)) {
         flag_editor.exit_top_flag_edit_no_commit();
     }
+    // THE ITEMS OPEN COLD. close_dropdown's reset above (or the default
+    // state, when nothing was open) left AppState::Dropdown::item_enabled all
+    // false and item_rects all zero, and nothing else writes them before
+    // paint_dropdown's first pass publishes both — so an open whose first
+    // paint has not run yet offers nothing clickable, the stash doctrine
+    // (nothing painted, nothing clickable), for at most one frame.
     app.dropdown.menu         = menu;
     app.dropdown.hovered_item = -1;
     // OPENING A MENU ARMS THE ROW — the mode's ONE producer, and it sits here
@@ -9481,13 +9546,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // A DEAD BUTTON PERFORMS NO MENU ACT (2026-09-02): the hit is
                 // GEOMETRY ALONE, so a control that answers nothing must not
                 // close the standing menu and re-arm the row on the way past.
-                // The ENABLED term is the same one the FACE reads, so what
-                // looks dead behaves dead. The anchors need no such guard —
-                // they are skipped above, and toggle_dropdown asks the mode
-                // gate for itself.
-                if (!redesign_button_enabled(app, audio, audio.total_frames(),
-                                             playback, target_render,
-                                             external_sync_worker, id))
+                // The ENABLED term is the painted face's own bit (architect
+                // 2026-09-24, strictly as-painted), so what looks dead behaves
+                // dead. The anchors need no such guard — they are skipped
+                // above, and toggle_dropdown asks the mode gate for itself.
+                if (!app.redesign_buttons[static_cast<size_t>(i)].enabled)
                     continue;
                 close_dropdown();
                 // THE MODE SURVIVES THIS ONE CLOSE (architect 2026-08-03, the

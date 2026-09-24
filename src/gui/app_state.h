@@ -5591,6 +5591,13 @@ struct AppState {
     // audition joined that fact on 2026-08-26, by the sequence's own arm and
     // clear too). The predicate and the full argument are at
     // redesign_button_glyph_swapped.
+    // THE THREE BITS ARE ALSO THE CLAIM (architect 2026-09-24, strictly
+    // as-painted: "the live painted face should correspond to reality, and
+    // reality to the face"): the roster's press, lift, hold-repeat fire,
+    // menu-row slide and hover pill read these stashed bits and never the live
+    // predicates, so input agrees with what is on screen; the comparator is
+    // what keeps them true, and a face painted live whose act has since become
+    // refused dispatches and its act answers for itself.
     struct RedesignButtonFace {
         GuiRect rect{0, 0, 0, 0};
         bool    hovered       = false;
@@ -5736,7 +5743,10 @@ struct AppState {
     // that acts on it refuses a stash that does not name the surface currently
     // owning input. THERE IS NO INPUT LAG IN THIS, because nothing defers —
     // the mismatch span is one dispatch batch, reachable only by a queued
-    // burst, which is exactly what must be refused.
+    // burst, which is exactly what must be refused. ONE PUBLISHED BIT DOES
+    // DECIDE, the player row's enabled face (architect 2026-09-24, strictly
+    // as-painted — input agrees with what is on screen; the rule is at
+    // ModalDialogButton::enabled), the per-tick comparator keeping it true.
     //
     // THE PAINTER IS THE ONE WRITER of both identity fields (`owner` Prompt on
     // the prompt branch, Editor on the editor branch, None in the no-dialog
@@ -5903,14 +5913,16 @@ struct AppState {
         StatsButtonAct  stats_act  = StatsButtonAct::None;   // the panel's
         // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
         // transport keys are their own class), published per frame exactly
-        // as the rects are and read under the owner-tag doctrine: the
-        // stash's bit may only SELECT (the press claim's consume, the ring
-        // walk's skip, the painter's disabled rung), while the release
-        // road's dispatch re-asks the LIVE predicate
-        // (render_player_button_enabled, whose declaration holds the arms
-        // and the reader inventory). Every other owner's builder leaves it
-        // true — a prompt's, a picker's and an editor's buttons are always
-        // live while their dialog stands.
+        // as the rects are, from render_player_button_enabled (whose
+        // declaration holds the arms and the reader inventory). THE CLAIM
+        // READS THIS BIT (architect 2026-09-24, strictly as-painted): the
+        // press claim's consume, the ring walk's skip, the ring's Enter/Space
+        // arm and the painter's disabled rung all read it, and the dispatch
+        // re-asks no live predicate — a face painted live dispatches and its
+        // act answers for itself. The per-tick comparator (main.cpp) holds
+        // it against the live predicate and repaints the row on drift. Every
+        // other owner's builder leaves it true — a prompt's, a picker's and
+        // an editor's buttons are always live while their dialog stands.
         bool        enabled      = true;
         std::string tooltip;            // "<word> (<key>)"; never empty
         // THE MODIFIER LINE, empty on every button that admits no modified
@@ -6464,7 +6476,8 @@ struct AppState {
     //   PER FIRE the tick re-asks four things and they answer differently on
     //   purpose: the pointer being ON the armed button's published rect PAUSES
     //   the schedule while it is off and resumes on return (the scrollbar-button
-    //   rule); a dead `redesign_button_enabled` PAUSES too (the disabled-press
+    //   rule); a dead PAINTED enabled bit (RedesignButtonFace::enabled, the
+    //   claim's own since 2026-09-24) PAUSES too (the disabled-press
     //   consume's mirror); an advertised rate of 0 PAUSES (the desktop's key
     //   repeat is off, and repeat_info can re-arrive); and repeat_eligible
     //   going false DISARMS — a context that revoked the burst's eligibility
@@ -6504,51 +6517,6 @@ struct AppState {
         bool    repeat_fired  = false;
     };
     ChromePress chrome_press;
-
-    // THE RENDER BUTTON IS CANCEL WHILE AN EXPLICIT RENDER ACT IS LIVE
-    // (architect 2026-08-11: "change the render button into a cancel button
-    // when there's something rendering... it doesn't need to exist while
-    // nothing's rendering"; NARROWED the same day at his live look): the face
-    // covers THE ACTS THAT WRITE FILES — the single Ctrl+Alt+R render, the
-    // iteration sweep, the archival queue — and deliberately NOT the automatic
-    // target-view preview updates ("Updating..."). HIS RATIONALE, recorded: a
-    // preview needs no cancel surface because it overrides nothing and any
-    // map-mutating interaction already cancels-and-redispatches it as the
-    // user's own intent; Cancel exists to call off the explicit acts.
-    // THE PREDICATE IS queue_running ALONE — re-derived from ownership, not
-    // from the progress hint: queue_running's own writers are exactly the two
-    // explicit dispatchers (dispatch_single_archival_render and
-    // start_render_batch, cleared by finalize_render_run), and the preview
-    // path (GuiTargetRender) never touches it, so the bit IS "an explicit
-    // archival act is in flight" — the same scoping its declaration already
-    // records the Esc handler using. This field mirrors it per tick
-    // (tick_render_cancel_face, input_render_dispatch.cpp) for ONE remaining
-    // reason: the TRANSITION DAMAGE — finalize_render_run flips queue_running
-    // from an async completion with no top-strip damage of its own, and the
-    // mirror's edge is what repaints the face (the drift-comparator pattern
-    // for an input that vector cannot see).
-    // FACE-MIRRORS-THE-ACT HONESTY, both halves at the click
-    // (finish_chrome_press_release's Render arm — the lift, since the chrome
-    // act moved to the release): a lift on a painted Cancel
-    // never dispatches a render (the arm claims on THIS bit), and the ACT is
-    // gated on the LIVE queue_running — so on the stale edge (the explicit
-    // render finished, the click landed before the next tick) the lift is a
-    // consumed no-op, and it can NEVER reach a preview session through
-    // cancel_archival_session's wider is_busy branch: a preview that happens
-    // to be the busy session when queue_running is false is exactly what the
-    // face never advertised. Keyboard Esc's render-cancel binding is untouched
-    // and keeps its own wider reach.
-    // READERS, re-greped 2026-08-15: redesign_button_glyph_swapped (which is
-    // where the GLYPH's condition lives now — redesign_button_icon reads that
-    // predicate rather than this bit, so the swap and the face STASH the drift
-    // comparator walks cannot disagree), the stateful tooltip overload, and
-    // finish_chrome_press_release's Render
-    // arm — the roster's ONE ruled exception to THE BUTTON IS ITS CHORD (the
-    // divergence is recorded at that arm). The LABEL override left this
-    // list with row 2's labeled faces at the 2026-08-12 relayout — no label is
-    // painted for Render in any state, the words living on the tooltip alone —
-    // and is itself deleted producer-less on 2026-08-18.
-    bool render_cancel_face = false;
 
     // THE HOVER TOOLTIP'S TIMING STATE — the whole of it. `hover_ms` is the
     // CLOCK_MONOTONIC stamp of the moment a tooltip-bearing button became
@@ -6738,7 +6706,12 @@ struct AppState {
         // checkpoint landing, a load ending — repaints within one tick with no
         // writer spelling the damage. AS-PAINTED, NOT AS-COMPUTED: paint_dropdown
         // republishes it only when the current clip covers the whole box,
-        // publish_button_face's rule for the roster's own bits.
+        // publish_button_face's rule for the roster's own bits. IT IS ALSO
+        // THE CLAIM (architect 2026-09-24, strictly as-painted): the hover
+        // walk, the item press and the release read these bits and never the
+        // live verdict, so a row acts exactly as it is painted; they open cold
+        // (all false, the reset close_dropdown leaves), so nothing is
+        // clickable before paint_dropdown's first pass.
         std::array<bool, kDropdownMaxItemCount> item_enabled{};
 
         bool open() const { return menu != DropdownMenu::None; }
@@ -9090,22 +9063,30 @@ int render_player_highlight_act_row(const AppState& a);
 //   cards is a lie the face tells). It was deliberately NOT a term from
 //   2026-08-30 until then, on the ground that a render is transient state
 //   the user is watching finish; the grey is the button's message now and
-//   the key keeps its card, the roster's shape. The bit's writers all
-//   repaint the row through the standing per-frame plan rebuild.
+//   the key keeps its card, the roster's shape. The render run's edges
+//   damage nothing on the row, so the per-tick comparator (main.cpp) is
+//   what repaints the face on them.
 //   REPEAT ONE and CLOSE never grey (the lamp always toggles; Close is the
 //   escape sentinel).
-// FOUR READER CLASSES: the plan builder (paint_modal_dialog, publishing the
-// bit per frame beside the rects), the press claim and the ring walk (which
-// read the PUBLISHED bit — selection only), and the release road's dispatch
-// (dispatch_modal_dialog_button), which re-asks THIS live predicate. THE
-// KEYS DO NOT READ IT: every act's own refusal cards (or keeps its ruled
+// TWO READER CLASSES: the plan builder (paint_modal_dialog, publishing the
+// bit per frame beside the rects) and main.cpp's per-tick comparator, which
+// holds the published bit against this live predicate and damages the
+// bottom row on drift. THE CLAIM READS THE PUBLISHED BIT (architect
+// 2026-09-24, strictly as-painted): the press claim, the ring walk and the
+// ring's Enter/Space arm read ModalDialogButton::enabled, and the dispatch
+// (dispatch_modal_dialog_button) re-asks nothing — a face painted live
+// dispatches and its act answers for itself, carding where its key cards and
+// silent where its silence is ruled. THE KEYS DO NOT READ IT: every act's own refusal cards (or keeps its ruled
 // silence), and NEITHER DOES THE CAR — on_media_command runs this cluster's
 // bodies DIRECT (the car is its own interface, architect 2026-09-12), so it
 // reaches neither the buttons nor this face, and each of its acts carries its
 // own silent refusals. IT
 // BINDS TO ACTS (PlayerButtonAct), never to chords, so a re-binding of the
 // player's keys cannot touch it.
-// EVERY FACE EDGE REACHES A REPAINT through the row's one damage owner
+// EVERY FACE EDGE REACHES A REPAINT through the per-tick comparator, which
+// covers the edges no writer damages (the device coming up or going absent,
+// a render run starting or finishing under the Load face, a lock flipping),
+// and, for the player's own writers, through the row's one damage owner
 // (GuiRenderPlayer::damage_row): the transport writers all damage the row
 // (play_wav, toggle_pause's both arms, seek_to,
 // on_natural_end through the stop body's player fork; open and close
@@ -9235,6 +9216,13 @@ inline bool load_in_place_render_blocked(const AppState& a) {
 // is at load_in_place_render_blocked above.
 inline constexpr const char* kRenderPlayerWhileRenderingCard =
     "Render player is unavailable while rendering";
+
+// THE PAINTED CANCEL'S STALE EDGE (architect 2026-09-24, strictly
+// as-painted): the Render button's lift on a face painted as Cancel after the
+// explicit render has already finished, before the comparator's repaint caught
+// up (finish_chrome_press_release's Render arm). The face advertised an act, so
+// the lift answers with a card rather than a silent consume.
+inline constexpr const char* kNoRenderRunningCard = "No render is running";
 
 // THE PLAYER'S ITEM POSITION — the engine's cursor while the transport is
 // live (the bound item's own domain, offset 0), the resume point otherwise;
@@ -13357,11 +13345,14 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
                            DropdownMenu menu, int item);
 
 // THE MENU ANCHOR'S ONE VERDICT — row 1's File, Edit and Settings — read by
-// the anchor's face (redesign_button_enabled's head), by the OPEN
-// (toggle_dropdown's guard, the one body every open route converges on: the
-// press, the armed hover open, the hover switch) and by the veils' live-anchor
-// exemption (press_on_live_menu_anchor, input_pointer.cpp). A button that is
-// not an anchor answers false; no caller asks one. TWO CLAUSES:
+// the anchor's face (redesign_button_enabled's head, which publish_button_face
+// stamps and main.cpp's per-tick comparator replays) and by nothing on the
+// input side: THE CLAIMS READ THE PAINTED FACE (architect 2026-09-24, strictly
+// as-painted), RedesignButtonFace::enabled, at the OPEN (toggle_dropdown's
+// guard, the one body every open route converges on: the press, the armed
+// hover open, the hover switch) and at the veils' live-anchor exemption
+// (press_on_live_menu_anchor, input_pointer.cpp). A button that is not an
+// anchor answers false; no caller asks one. TWO CLAUSES:
 //
 //   * THE MODE PARTITION (the `h` history view and the folder overlay's three
 //     contents — the render player, the Open project picker, the AV Sync
@@ -15170,7 +15161,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // render has no such term — a single render always renders.
         case RedesignButton::Render:
             return !a.source_audio_path.empty() &&
-                   (!a.iteration_mode_enabled || a.render_cancel_face ||
+                   (!a.iteration_mode_enabled || a.queue_running ||
                     iteration_sweep_actionable(a));
         // THE TWO SKIPS (2026-08-30; the reasoning is at their case in the
         // first switch): lit iff the bare trim-bound jump would change
@@ -15483,9 +15474,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // damaged the whole lane — which is EXACTLY the bug this arc opened with
 // (publish_button_face's clip-coverage record, paint_handler.cpp). Stashing
 // this bit closes it by the same one mechanism, and closes a LATENT case with
-// it: RENDER's mid-render Cancel glyph rides render_cancel_face, which moves
-// neither of the other two bits, so its repaint had rested on the render
-// routes' own damage alone.
+// it: RENDER's mid-render Cancel glyph rides queue_running, which moves
+// neither of the other two bits and is cleared by an async completion with no
+// top-strip damage, so this term is the one repaint of that edge.
 //
 // EVERY SUBJECT IS BINARY — two glyphs, one bit — which is what lets a single
 // bool serve all four. A future button with THREE glyphs needs a wider stash,
@@ -15502,9 +15493,36 @@ inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
         // checkpoint act) and while a checkpoint publishes.
         case RedesignButton::Save:
             return a.history_checkpoint_in_flight || a.history_mode.active;
-        // RENDER wears the cancel glyph while an explicit render act is live.
+        // RENDER WEARS THE CANCEL GLYPH WHILE AN EXPLICIT RENDER ACT IS LIVE
+        // (architect 2026-08-11: "change the render button into a cancel
+        // button when there's something rendering... it doesn't need to exist
+        // while nothing's rendering"; NARROWED the same day at his live
+        // look): the face covers THE ACTS THAT WRITE FILES — the single
+        // Ctrl+Alt+R render, the iteration sweep, the archival queue — and
+        // deliberately NOT the automatic target-view preview updates
+        // ("Updating..."). HIS RATIONALE, recorded: a preview needs no cancel
+        // surface because it overrides nothing and any map-mutating
+        // interaction already cancels-and-redispatches it as the user's own
+        // intent; Cancel exists to call off the explicit acts.
+        // THE CONDITION IS queue_running ALONE, read live — re-derived from
+        // ownership, not from the progress hint: its writers are exactly the
+        // two explicit dispatchers (dispatch_single_archival_render and
+        // start_render_batch, cleared by finalize_render_run), and the preview
+        // path (GuiTargetRender) never touches it, so the bit IS "an explicit
+        // archival act is in flight". finalize_render_run flips it from an
+        // async completion with no top-strip damage of its own; the per-tick
+        // comparator's glyph term (main.cpp) is what repaints the face on that
+        // edge. THE PRESS CLAIMS ON THE PAINTED GLYPH (architect 2026-09-24,
+        // strictly as-painted): finish_chrome_press_release's Render arm runs
+        // the cancel act on a face painted Cancel — the roster's one ruled
+        // exception to THE BUTTON IS ITS CHORD — gating the act on the live
+        // bit so it never reaches a preview session, and carding the stale
+        // edge (kNoRenderRunningCard). Keyboard Esc's render-cancel binding is
+        // untouched and keeps its own wider reach. Readers of this condition:
+        // this arm (the painter's glyph and the comparator), the Render arm of
+        // redesign_button_enabled and the stateful tooltip overload.
         case RedesignButton::Render:
-            return a.render_cancel_face;
+            return a.queue_running;
         // THE READ-ONLY TOGGLE's table glyph is the CLOSED padlock, so the
         // swap is the OPEN one — true on a writable tab. The inversion is the
         // table's choice and not a statement about which state is ordinary.
@@ -16365,7 +16383,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   one-line "Cancel" hint,
 //   and THE ROSTER'S ONE CHORD DIVERGENCE: its click runs the cancel act
 //   itself (architect 2026-08-11 — the ruling, the rank over the iteration
-//   hint and the bit are at AppState::render_cancel_face and the divergence
+//   hint and the condition are at redesign_button_glyph_swapped's Render
+//   arm and the divergence
 //   record at finish_chrome_press_release's Render arm; Ctrl+Alt+R on the keyboard
 //   keeps its own kill-and-redispatch semantics unchanged).
 //
@@ -16501,7 +16520,7 @@ inline RedesignTooltipText redesign_button_tooltip(
     // exists only where shift does something DIFFERENT (the static_assert's
     // rule, met here by the stateful form exactly as iteration mode's already
     // does).
-    if (b == RedesignButton::Render && a.render_cancel_face) {
+    if (b == RedesignButton::Render && a.queue_running) {
         return {"Cancel", nullptr};
     }
     // RENDER WITH THE MODE ON NAMES THE SWEEP, in every state. (IT FORKED ON
@@ -16907,7 +16926,13 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // it.
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
     if (a.dropdown.open()) return false;
-    if (redesign_button_is_tab(b)) return !redesign_button_selected(a, b);
+    // THE TAB TERM READS THE PAINTED SELECTED BIT (architect 2026-09-24,
+    // strictly as-painted): the zone is a face question, and the tab's press
+    // already claims on RedesignButtonFace::selected, so the pill, the hint and
+    // the press all follow the lit tab the screen shows.
+    if (redesign_button_is_tab(b))
+        return !a.redesign_buttons[static_cast<size_t>(
+                    redesign_button_index(b))].selected;
     return true;
 }
 

@@ -6324,7 +6324,9 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
         // 2026-08-30) — the roster's rule on this surface: no arm, no
         // pressed face, no card (the grey is the message). Reachable only
         // when the face changed under a parked focus — the walk below skips
-        // greyed stops — and the dispatch's live re-ask is the second wall.
+        // greyed stops. The bit is the painted one, the claim (architect
+        // 2026-09-24, strictly as-painted); a face painted live dispatches
+        // at the release and its act answers for itself.
         if (!dlg.buttons[static_cast<size_t>(at)].enabled) return true;
         // A SYNTHESIZED REPEAT IS CONSUMED AND CHANGES NOTHING — the act
         // happens once, at the physical release. repeat_eligible refuses to
@@ -6355,7 +6357,7 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     // and Close never greys, so the walk terminates; the guard bounds it
     // against the impossible all-disabled ring anyway. The bit read is the
     // STASH'S — the walk only SELECTS a focus, and the press it leads to
-    // re-asks the live predicate at dispatch. Left / Right are not gated:
+    // claims on the same painted bit. Left / Right are not gated:
     // they walk the prompt ring alone, whose buttons carry no enabled
     // split.
     if (tab_shape != ModalRingTab::None) {
@@ -8780,11 +8782,14 @@ void GuiInputHandler::render_player_load_in_place() {
     // it kept until then): a load in place writes the marker stores and the
     // engine block, exactly what the read-only tab protects. SINCE THE SAME
     // DAY THE BUTTON GREYS on this refusal and on a recipe-less highlight
-    // (render_player_button_enabled — its lift is consumed, the grey being
-    // the message), so this card and the highlight one below are the
+    // (render_player_button_enabled — a greyed face never arms, the grey
+    // being the message), so this card and the highlight one below are the
     // KEYBOARD's, bare `'`'s own — and so is the running-render card since
     // 2026-09-01, when that refusal became a face term too (the roster's
-    // shape: the grey is the button's message, the key keeps its card). It is
+    // shape: the grey is the button's message, the key keeps its card). A
+    // button still PAINTED live when one of these refusals lands reaches this
+    // body too and takes the same card (architect 2026-09-24, strictly
+    // as-painted: the act answers for itself). It is
     // one of the readers of kTabReadOnlyCard (notifications.h) — the
     // sites that KNOW THEIR ACT and so need no chord in the sentence. The
     // keyboard gate is not among them: it drops an unbound chord and a bound

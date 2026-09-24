@@ -300,22 +300,6 @@ void GuiInputHandler::park_render_status(std::string text) {
     pending_status_text_ = std::move(text);
 }
 
-// THE RENDER BUTTON'S CANCEL FACE, maintained per tick (architect 2026-08-11;
-// the contract, the narrowing rationale and the honesty argument live at
-// AppState::render_cancel_face). A TRANSITION WRITER on the drift-comparator
-// pattern: the live fact is queue_running — the EXPLICIT acts' own bit, whose
-// writers are exactly the two archival dispatchers, so the automatic preview
-// updates never raise this face — and each flip pays one
-// invalidate_top_strip, which is what repaints Render's label, icon and hint
-// on the edges no other damage covers (a render finishing is an async event
-// with no top-strip damage of its own).
-void GuiInputHandler::tick_render_cancel_face() {
-    const bool now = app.queue_running;
-    if (now == app.render_cancel_face) return;
-    app.render_cancel_face = now;
-    viewport.invalidate_top_strip();
-}
-
 void GuiInputHandler::tick_promote_render_status() {
     // THE SINGLE ARCHIVAL RENDER'S MESSAGE, and nobody else's, since the sweeps
     // stopped parking (dispatch_next_batch_entry): a batch cell's line is state

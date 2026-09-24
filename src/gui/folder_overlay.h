@@ -47,8 +47,8 @@
 // band on every content — its press exempted from the three veils at
 // press_on_live_menu_anchor, its menu opening onto Quit and Synchronize (Open
 // Project and Revert grey there since 2026-09-24, the overlay's routers
-// consuming their chords) — while Edit and Settings grey and refuse at
-// menu_anchor_live, the
+// consuming their chords) — while Edit and Settings grey through
+// menu_anchor_live and refuse on that painted face, the
 // view bar's three grey through redesign_button_enabled's first arm — shown
 // by the bar's own inactive ground (view_bar_focused) and, since 2026-09-10,
 // by the row's disabled face, the two dead UNSELECTED labels dimmed while the
