@@ -2782,13 +2782,15 @@ struct WaveformBasis {
 // passage's onsets readable.
 //
 // THE UPWARD COMPRESSION follows the clamp on the same tips, per column:
-// t' = sign(t) * |t|^(1 / r), r the curve's `upward_ratio` (the device
-// config's waveform_gain_upward_ratio, [1, 10], 1 = off and skipped). The lane
-// edge is its threshold: a tip on the edge never moves and every dB below it
-// is divided by r (-20 dB rises to -10 dB at r = 2). It rides the curve, so it
-// applies exactly where the gain does (null: raw). The map is monotone, so it
-// commutes with the peaks pyramid's min/max reduction: the pyramid stays raw
-// and the mapping of a column's reduced extremes is exact.
+// upward_compressed_tip (waveform_gain.h owns the curve), a static upward
+// compressor on the display envelope with the device config's threshold,
+// ratio, knee and range (waveform_gain_upward_*; ratio 1 = off and skipped).
+// Everything above the knee stays where it is — a tip on the edge never
+// moves — and everything under it is lifted, the lift capped at the range so
+// the troughs rise as a whole and keep their own texture. It rides the curve,
+// so it applies exactly where the gain does (null: raw). The map is monotone,
+// so it commutes with the peaks pyramid's min/max reduction: the pyramid
+// stays raw and the mapping of a column's reduced extremes is exact.
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).

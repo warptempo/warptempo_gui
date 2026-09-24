@@ -36,15 +36,37 @@
 //   (the RULED-OUT list below names what it deliberately is not). Between
 //   hops the gain is linear IN GAIN.
 //
-//   THE UPWARD COMPRESSION, the picture's second stage, applied in the plate
-//   painter (render_waveform) per column AFTER the window gain, on the gained
-//   tip t clamped to [-1, 1]: t' = sign(t) * |t|^(1 / `upward_ratio`). Its
-//   threshold is the lane edge and every dB below it is divided by the ratio,
-//   so a peak on the edge never moves and a tip at -20 dB under ratio 2 rises
-//   to -10 dB. Ratio 1 is the identity exactly (the painter skips the pow). It
-//   applies exactly where the gain applies (waveform_magnified) and nowhere
-//   else. The map is monotone, so it commutes with the pyramid's min/max: the
-//   peaks stay raw and the mapping of a column's reduced extremes is exact.
+//   THE UPWARD COMPRESSION, the picture's second stage (architect
+//   2026-09-24, FabFilter's vocabulary: threshold, ratio, knee, range): a
+//   STATIC upward compressor on the DISPLAY ENVELOPE — each plate column's
+//   gained tip t, clamped to [-1, 1] — applied in the plate painter
+//   (render_waveform) per column AFTER the window gain, through
+//   upward_compressed_tip below. Attack and release are instant: it is a
+//   picture, and smoothing would hide the onsets; the 3 s window is the
+//   leveler's detector, not the compressor's. With x = 20 log10 |t| <= 0, the
+//   level under the lane edge (the local ceiling, since the leveler put the
+//   window's peak there), T the threshold, K the knee width, R the ratio and
+//   D the range, all but R in dB, and hi = T + K/2, lo = T - K/2:
+//       x >= hi        y = x                          (above the knee nothing moves)
+//       lo <= x < hi   y = x + (1 - 1/R)(hi - x)^2 / (2K)
+//                          (the quadratic soft knee: the slope ramps from 1 at
+//                          hi to 1/R at lo; skipped when K = 0)
+//       x < lo         y = y_lo - (lo - x)/R,  y_lo = lo + (1 - 1/R) K/2
+//       y - x > D      y = x + D                      (the range: the floor's
+//                          maximum rise; below that point the slope is 1
+//                          again, offset by D, so the troughs keep their own
+//                          texture)
+//       y = min(y, 0);  |t'| = 10^(y/20), the sign kept.
+//   R = 1 is the identity exactly (the painter skips everything), and a tip
+//   under 1e-6 (-120 dB) is left as it is — it lifts to nothing visible, and
+//   0 stays 0. With T = 0, K = 0 and a range never reached the curve is
+//   t' = sign(t) |t|^(1/R) exactly, the stage's first form (2026-09-23). The
+//   troughs therefore come up as a whole while the peaks stay where the
+//   leveler put them. It applies exactly where the gain applies
+//   (waveform_magnified) and nowhere else. The map is monotone, so it
+//   commutes with the pyramid's min/max: the peaks stay raw and the mapping
+//   of a column's reduced extremes is exact. The four values and the
+//   criterion any setting answers to are at waveform_gain.cpp's defaults.
 //
 // RULED OUT, never to be re-proposed (architect 2026-09-23): classification,
 // absorption, boundary placement, forward look-ahead, smoothing, hysteresis,
@@ -57,7 +79,10 @@
 // paints the tuttis as flat blocks while the quiet passages keep their
 // texture (at -3 dBFS / 1.18 it would have dropped the corpus's tutti from
 // x2.2 to x1.7 and raised the quiet-over-loud contrast from 4.1..4.7 to
-// 5.3..6.2).
+// 5.3..6.2). And, for the upward compression (2026-09-24): a detector with
+// attack and release (smoothing the envelope hides the onsets), and a
+// loudness-relative threshold (a fixed offset from the ceiling does its job,
+// measured: waveform_gain.cpp).
 //
 // A centred window's maximum reports loud as soon as ONE column of it is
 // loud, so the quiet before a loud entry fades
@@ -71,7 +96,7 @@
 // defects: the dip before a tutti is musically right (the reason at the
 // window's default, waveform_gain.cpp).
 //
-// THE FIVE TUNABLES ARE THE DEVICE CONFIG'S (architect 2026-09-23, a tuning
+// THE EIGHT TUNABLES ARE THE DEVICE CONFIG'S (architect 2026-09-23, a tuning
 // phase; they may be hard-coded again later): `WaveformGainParams` below,
 // read once at startup from `waveform_gain_*` keys (device_config.h owns their
 // grammar and brackets) and handed to every derivation — so a retune is a
@@ -85,7 +110,7 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
-// THE RULE'S FIVE TUNABLES, in the device config's writer order. The member
+// THE RULE'S EIGHT TUNABLES, in the device config's writer order. The member
 // initializers ARE the defaults both backends' first-run templates stamp
 // (kDefaultWaveformGainParams; each default's reason is at waveform_gain.cpp)
 // — construction state, never a load fallback: every key is required. The
@@ -96,18 +121,24 @@ struct WaveformGainParams {
     double gate_db      = -50.0;  // the audibility gate, dBFS
     double min_fraction = 0.25;   // the gated window's minimum audible share
     double gain_max     = 16.0;   // the cap
-    double upward_ratio = 1.0;    // the painter's upward compression; 1 = off
+    double upward_ratio        = 1.0;   // the painter's upward compression; 1 = off
+    double upward_threshold_db = -9.0;  // its threshold, dB under the lane edge
+    double upward_knee_db      = 6.0;   // its knee's width, dB; 0 = hard
+    double upward_range_db     = 6.0;   // its range, the floor's maximum rise, dB
 };
 inline constexpr WaveformGainParams kDefaultWaveformGainParams{};
 
 // The picture's continuous magnification, derived from the source at load.
-// It carries the upward compression's ratio beside the gain because the curve
-// IS the picture's magnification and the painter already holds it; the ratio
-// is a param copied through, read by render_waveform alone.
+// It carries the upward compression's four values beside the gain because the
+// curve IS the picture's magnification and the painter already holds it; they
+// are params copied through, read by upward_compressed_tip alone.
 struct WaveformGainCurve {
     int64_t             hop_frames = 0;     // source frames between consecutive gains; gain[k] sits at frame k * hop_frames
     std::vector<double> gain;               // 2^d per hop, each in [kGainMin, gain_max]; empty for a zero-frame source
-    double              upward_ratio = 1.0; // params.upward_ratio; 1 = no compression
+    double              upward_ratio        = 1.0;  // params.upward_ratio; 1 = no compression
+    double              upward_threshold_db = -9.0; // params.upward_threshold_db
+    double              upward_knee_db      = 6.0;  // params.upward_knee_db
+    double              upward_range_db     = 6.0;  // params.upward_range_db
 };
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
@@ -121,12 +152,19 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
 // first and last hop's gain held beyond the ends. 1.0 for an empty curve.
 double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 
+// THE UPWARD COMPRESSION's one owner: the curve at the header, applied to one
+// gained tip `t` already clamped to [-1, 1], with the curve's four values.
+// The identity when upward_ratio is 1 or |t| < 1e-6; the sign is kept and the
+// result stays in [-1, 1]. Monotone in t. Read by render_waveform alone.
+double upward_compressed_tip(double t, const WaveformGainCurve& curve);
+
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (4 since the percentile was fixed at the maximum and the
-// upward compression joined, 2026-09-23; 3 was the restored leveler, 2 the
-// expander's). The five tunables — the upward ratio among them — are
+// the rule above (5 since the upward compression grew a threshold, a knee and
+// a range, 2026-09-24; 4 was the fixed percentile and the ratio alone,
+// 2026-09-23; 3 the restored leveler, 2 the expander's). The eight tunables —
+// the upward compression's four among them — are
 // NOT in the fingerprint and need not be: they are read once per process and
 // never change under it, and nothing derived from the gain outlives the
 // process — the curve is derived at every load (the `.peaks` sidecar carries
 // no curve) and the plates live in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 4;
+inline constexpr uint64_t kWaveformGainVersion = 5;

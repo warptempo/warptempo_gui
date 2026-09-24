@@ -49,7 +49,7 @@ constexpr double kLevelDb = 6.02;  // one doubling of the picture, in dB
 constexpr double kStepSeconds = 0.1;
 
 // --- the defaults' reasons ---------------------------------------------------
-// The five tunables are the device config's (WaveformGainParams,
+// The eight tunables are the device config's (WaveformGainParams,
 // waveform_gain.h; the grammar and brackets at device_config.h). These are the
 // reasons for the DEFAULTS both first-run templates stamp.
 //
@@ -90,9 +90,36 @@ constexpr double kStepSeconds = 0.1;
 //
 // `waveform_gain_max` 16, the cap: four doublings, the old level ladder's top.
 //
-// `waveform_gain_upward_ratio` 1.00, off: the upward compression (the
-// painter's stage after this gain, waveform_gain.h) is a knob the architect
-// turns on by eye; the default leaves the leveler's picture as it stood.
+// THE UPWARD COMPRESSION'S FOUR (the curve at waveform_gain.h; architect
+// 2026-09-24). Measured 2026-09-24 on the corpus's four movements — the
+// 40th's three and the Jupiter's first — each working-zoom column's level
+// against its own 3 s ceiling: the columns sit at the same places on every
+// movement — the top quarter within about 6.4 dB of the ceiling, the median
+// column at about -9 dB, the bottom quarter below about -12.5 dB, the bottom
+// tenth below about -17 dB. A window's RMS sits about 8 dB under its peak with
+// a 4 to 5 dB spread, so a threshold fixed against the ceiling does an RMS
+// threshold's job without a second measure (a loudness-relative threshold is
+// ruled out, waveform_gain.h). THE CRITERION any setting is measured against:
+// the floor (the 5th..25th percentile columns) lifts 4 to 6 dB, keeps at
+// least 6 of its 7.8 dB of detail, and the top quarter moves 0.0 dB.
+//
+// `waveform_gain_upward_ratio` 1.00, off: the stage is a knob the architect
+// turns on by eye; the default leaves the leveler's picture as it stood, and
+// the other three are inert until he does. With a range in the chain the
+// ratio decides only how abrupt the step between the two regions is: the
+// transition band is D * R / (R - 1) dB wide.
+//
+// `waveform_gain_upward_threshold_db` -9: the median column; the picture
+// stays truthful above it.
+//
+// `waveform_gain_upward_knee_db` 6: the interquartile band, -12.5 to -6.4
+// around the -9 threshold, so the top quarter is untouched by construction.
+//
+// `waveform_gain_upward_range_db` 6: the floor's maximum rise. The range is
+// what keeps the troughs' own texture: with the ratio alone the spread
+// between the 5th and 25th percentile columns collapses from 7.8 dB to 3.9 at
+// ratio 2 and to 1.9 at ratio 4, while with range 4 at ratio 3 it keeps
+// 6.0 dB and the floor still rises 4 dB.
 //
 // THE FLOOR IS FIXED, not a key: it forbids attenuation. d = -L / 6.02 >= 0
 // for every window (L <= 0), so the floor is reached only at d = 0 and the
@@ -217,11 +244,14 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     }
 
     // THE GAIN: 2^d, clamped to [kGainMin, gain_max] (gain_max >= 1 by the
-    // config reader's bracket). Nothing else; the upward ratio rides along for
-    // the painter, which alone applies it.
+    // config reader's bracket). Nothing else; the upward compression's four
+    // values ride along for the painter, which alone applies them.
     WaveformGainCurve out;
-    out.hop_frames   = st * col;
-    out.upward_ratio = params.upward_ratio;
+    out.hop_frames          = st * col;
+    out.upward_ratio        = params.upward_ratio;
+    out.upward_threshold_db = params.upward_threshold_db;
+    out.upward_knee_db      = params.upward_knee_db;
+    out.upward_range_db     = params.upward_range_db;
     out.gain.resize(coarse.size());
     for (size_t k = 0; k < coarse.size(); ++k)
         out.gain[k] = std::clamp(std::exp2(coarse[k]), kGainMin, params.gain_max);
@@ -239,4 +269,31 @@ double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame) {
     const double t = static_cast<double>(frame - k * curve.hop_frames) /
                      static_cast<double>(curve.hop_frames);
     return a + (b - a) * t;
+}
+
+double upward_compressed_tip(double t, const WaveformGainCurve& curve) {
+    const double r = curve.upward_ratio;
+    const double a = std::fabs(t);
+    // Ratio 1 is the identity exactly; a tip under -120 dB lifts to nothing
+    // visible and 0 stays 0 (the guard before the log).
+    if (r == 1.0 || a < 1e-6) return t;
+    const double x    = 20.0 * std::log10(a);
+    const double k    = curve.upward_knee_db;
+    const double hi   = curve.upward_threshold_db + k / 2;
+    const double lo   = curve.upward_threshold_db - k / 2;
+    const double over = 1.0 - 1.0 / r;
+    double y;
+    if (x >= hi) {
+        return t;  // above the knee nothing moves
+    } else if (x >= lo) {
+        // The quadratic soft knee (reached only when k > 0: at k = 0,
+        // lo = hi and every x under hi falls to the branch below).
+        y = x + over * (hi - x) * (hi - x) / (2 * k);
+    } else {
+        y = (lo + over * k / 2) - (lo - x) / r;
+    }
+    y = std::min(y, x + curve.upward_range_db);  // the range
+    y = std::min(y, 0.0);
+    const double m = std::pow(10.0, y / 20.0);
+    return t < 0.0 ? -m : m;
 }
