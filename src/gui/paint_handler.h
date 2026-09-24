@@ -728,6 +728,7 @@ private:
         double x0    = 0.0;   // left screen x, clipped to the area
         double x1    = 0.0;   // right screen x, exclusive, clipped
         bool   red   = false; // the reset is in the column's red set (the ring's colour)
+        bool   selected = false; // its stem wears the bright fill (the ring's colour)
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 

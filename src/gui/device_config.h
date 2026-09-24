@@ -241,7 +241,10 @@ inline constexpr const char* kMaxWaveformHeightGrammarReason =
 // adversarial class, fatal at startup like every other violation here. The
 // brackets are the architect's (2026-09-23): the walls a hand edit meets, not
 // a tuning criterion. The derivation reads them as preconditions — the cap's
-// floor of 1 is what keeps its clamp ordered (derive_waveform_gain).
+// floor of 1 is what keeps its clamp ordered (derive_waveform_gain). The
+// percentile's upper wall is 1.00 (architect 2026-09-23): the window's loudest
+// column brought to the edge, nothing clipping — a legal order statistic
+// (top_level, waveform_gain.cpp).
 //
 // The order is the writer's (it is kDeviceConfigKeys' tail, device_config.cpp,
 // which checks the pairing at compile time) and the rule's own.
@@ -253,7 +256,7 @@ struct WaveformGainKey {
 };
 inline constexpr WaveformGainKey kWaveformGainKeys[] = {
     {"waveform_gain_window_s",     0.5,  10.0, &WaveformGainParams::window_s},
-    {"waveform_gain_percentile",   0.50, 0.99, &WaveformGainParams::percentile},
+    {"waveform_gain_percentile",   0.50, 1.0,  &WaveformGainParams::percentile},
     {"waveform_gain_gate_db",      -90.0, -20.0, &WaveformGainParams::gate_db},
     {"waveform_gain_min_fraction", 0.05, 1.0,  &WaveformGainParams::min_fraction},
     {"waveform_gain_threshold_db", -24.0, 0.0, &WaveformGainParams::threshold_db},

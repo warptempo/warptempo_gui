@@ -1266,14 +1266,14 @@ FlagFace resolve_flag_face(bool disabled, bool red, bool selected,
 } // namespace
 
 // The phase-reset lead-in ring's colour (declaration in render.h): the ladder
-// above asked for a LIVE, UNSELECTED reset's stem, so the ring can never pick
-// a colour the resting stem would not — the class alone. It asks for the
-// unselected face deliberately: the ring is not a selection cue, so it keeps
-// the rest colour while a selected reset's stem brightens. It
+// above asked for a LIVE reset's stem on the same class and selection bits the
+// flag pass hands it, so the ring can never pick a colour its stem would not —
+// the rest colour at rest, the bright fill when selected (architect
+// 2026-09-23: the ring and the stem are one object and brighten together). It
 // stands outside the file's anonymous namespace so paint_handler.cpp reaches
 // it; the ladder it calls stays file-local.
-GuiColor phase_reset_stem_color(bool red) {
-    return resolve_flag_face(/*disabled=*/false, red, /*selected=*/false,
+GuiColor phase_reset_stem_color(bool red, bool selected) {
+    return resolve_flag_face(/*disabled=*/false, red, selected,
                              FlagColumnFace::PhaseReset).stem;
 }
 

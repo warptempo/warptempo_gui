@@ -5464,6 +5464,21 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // this reset's stem — at rest and through a drag alike, the drag writing
     // only its proposal, so the ring and the stem share one class throughout.
     bool red_class = false;
+    // THE RESET'S SELECTION BIT, for the ring's colour (architect 2026-09-23:
+    // the ring and the stem are one object and brighten together). It is the
+    // bit the flag pass hands this reset's PAYLOAD face, whose stem the ring
+    // mirrors (render_flag_boxes_impl, render.cpp), re-spelled across the
+    // pass's parameter boundary from the same state its fingerprint carries
+    // (the selection hash, the addressed cell, the mode verdict): selected iff
+    // the reset is a member (app.selected_markers, the pass's own membership
+    // set) and its bright cell is the payload. This reset IS the focus, so its
+    // bright cell is app.addressed_cell — falling back to the payload where
+    // that bound cell is painted nowhere, which is the pass's rule and
+    // marker_paints_iter_cells' question (a bound field stands only on a
+    // painted cell, so the pass's suppression arm adds nothing here). A
+    // selected reset whose addressed cell is a bound cell keeps its rest stem,
+    // so its ring keeps the rest colour too.
+    bool selected_face = false;
     {
         assert(app.active_audio_view == 'T');   // P stands in target alone
 
@@ -5476,6 +5491,10 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // label cascade).
         if (marker.disabled) return out;
         red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
+        selected_face =
+            app.selected_markers.count(idx) > 0 &&
+            (app.addressed_cell == MarkerCell::Payload ||
+             !marker_paints_iter_cells(app, 'P', idx));
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -5576,6 +5595,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.x0    = x0;
     out.x1    = x1;
     out.red   = red_class;
+    out.selected = selected_face;
     return out;
 }
 
@@ -5611,16 +5631,21 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE RING IS THE STEM'S COLOUR (architect 2026-08-01; the class rule
-    // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
-    // annotates. It wears what that stem wears AT REST, the CLASS alone and
-    // never the selection: the stem red when the reset is in the column's red
-    // set (band.red), the column's calm fill kPhaseResetFlagFill otherwise.
-    // RECORDED ASYMMETRY (architect 2026-09-23): a selected reset's stem
-    // brightens with its flag while the ring keeps the rest colour — the ring
-    // is not a selection cue. phase_reset_stem_color asks the one class ladder
-    // for the unselected face rather than restating it, so ring and resting
-    // stem cannot drift.
-    const GuiColor ring = phase_reset_stem_color(band.red);
+    // 2026-09-17; the selection 2026-09-23) — "they're one unit", the ring and
+    // the stem of the reset it annotates. It wears what that stem wears: the
+    // stem red when the reset is in the column's red set (band.red), the
+    // column's calm fill kPhaseResetFlagFill otherwise, and the bright fill of
+    // either (the Sel face's stem) when the stem brightens with a selected
+    // flag (band.selected). The ring once kept the rest colour as "not a
+    // selection cue"; the architect reversed that 2026-09-23 — the ring and the
+    // stem are one object and brighten together. phase_reset_stem_color asks
+    // the one class ladder rather than restating it, so ring and stem cannot
+    // drift. DAMAGE: this pass paints live in on_redraw from app state, never
+    // from a cached surface, and every change to its colour's inputs (the
+    // selection, the focus, the addressed cell, the mode) misses the flag
+    // cache's fingerprint, whose rebuild damages the waveform with the strip
+    // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own repaint.
+    const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
     cairo_set_source_rgb(cr, ring.r, ring.g, ring.b);
     // THE FULL AREA, not the content band: the top run lands on row area.y (the
     // top border's first row) and the bottom on row area.y + area.h - 1 (the

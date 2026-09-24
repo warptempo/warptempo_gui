@@ -126,6 +126,10 @@ public:
         const int64_t need = std::max<int64_t>(
             1, static_cast<int64_t>(static_cast<double>(hi - lo) * min_fraction_));
         if (static_cast<int64_t>(scratch_.size()) < need) return std::nullopt;
+        // p = 1.00 (the bracket's upper wall) is exact: 1.0 * (n - 1) is
+        // n - 1 with no rounding, so idx names the last element and
+        // nth_element seats the window's maximum there; n >= 1 here (need is
+        // at least 1), so n - 1 never underflows.
         const size_t idx = static_cast<size_t>(
             percentile_ * static_cast<double>(scratch_.size() - 1));
         std::nth_element(scratch_.begin(), scratch_.begin() + static_cast<std::ptrdiff_t>(idx),

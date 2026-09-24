@@ -779,10 +779,11 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // column), and the phase-reset STEM mirrors the warp rule — it wears its
 // flag's fill, this calm fill at rest and the Sel fill when selected
 // (architect 2026-09-23). THE PHASE-RESET LEAD-IN RING on the waveform wears
-// the colour its reset's RESTING stem wears (paint_phase_reset_overlay_ring,
+// the colour its reset's stem wears (paint_phase_reset_overlay_ring,
 // paint_handler.cpp, through phase_reset_stem_color — architect 2026-09-17):
-// this calm fill, or the stem red for a reset in the column's red set; the
-// ring is not a selection cue, so it does not brighten with the stem. THE BOUND (hop) CELLS ON
+// this calm fill, or the stem red for a reset in the column's red set, and the
+// Sel fill of either when the reset is selected — the ring and the stem are
+// one object and brighten together (architect 2026-09-23). THE BOUND (hop) CELLS ON
 // THIS COLUMN WEAR THIS PAIR TOO (architect 2026-09-21: the cells wear their
 // own column's hue — superseding his 2026-09-15 "fine for now", which had
 // kept them on the warp column's purple): every bound-cell call site into
@@ -3576,11 +3577,14 @@ void render_phase_reset_flags(cairo_t* cr,
 // architect 2026-09-17). It asks the one class ladder (resolve_flag_face,
 // render.cpp) rather than restating it: kMarkerStemRed when `red` (the
 // column's red set, phase_reset_red_flag_set_cached), the column's calm fill
-// kPhaseResetFlagFill otherwise — the RESTING stem's colour: it asks for the
-// unselected face, because the ring is not a selection cue and does not
-// brighten when a selected reset's stem does (architect 2026-09-23). No
-// disabled arm, a disabled reset painting neither stem nor ring.
-GuiColor phase_reset_stem_color(bool red);
+// kPhaseResetFlagFill otherwise, and when `selected` the Sel face's stem —
+// which IS the bright fill (kMarkerFlagFillRedSel, kPhaseResetFlagFillSel) —
+// so the ring brightens with its stem: they are one object (architect
+// 2026-09-23, reversing the same day's "the ring is not a selection cue").
+// `selected` is the bit the flag pass hands the reset's payload face, which is
+// what its stem reads. No disabled arm, a disabled reset painting neither stem
+// nor ring.
+GuiColor phase_reset_stem_color(bool red, bool selected);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
