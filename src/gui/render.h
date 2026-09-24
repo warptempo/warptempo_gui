@@ -141,8 +141,8 @@ struct TrimRange {
 inline constexpr GuiColor kBackground      = hex(0x202326);
 
 // THE MOVING PLAYBACK LINE, drawn by paint_scanner while the scanner runs (its
-// own pass since 2026-08-01: it paints OVER the marker stems, where the resting
-// cursor paints under them).
+// own pass since 2026-08-01: it paints OVER the marker stems, and over the
+// resting cursor, which since 2026-09-23 paints over the stems as well).
 //
 // THE VALUE reads WHITE against the canvas — the Ableton play-head cue, and also
 // Breeze's text/icon foreground, so it is the scheme's brightest ink. The

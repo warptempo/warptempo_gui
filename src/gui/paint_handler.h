@@ -890,7 +890,10 @@ private:
     // never. A selected marker's stem takes its flag's BRIGHT fill (architect
     // 2026-09-23, reversing the calm-stem rule), so at a coarse zoom the
     // selected stems stand out among many; the colour is resolved in the
-    // painter (resolve_flag_face) and published in the stash.
+    // painter (resolve_flag_face) and published in the stash. The stems paint
+    // UNDER the playhead's stem and the flags (architect 2026-09-23); a marker
+    // on the playhead's own frame keeps its stem through the playhead's
+    // suppression (playhead_stem_suppressed).
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its flag box's LEFT EDGE, and
@@ -914,7 +917,9 @@ private:
     // (2026-08-02).
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
     // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
-    // reinstated under row 5's always-on-stem regime. True when a MARKER'S OWN
+    // reinstated under row 5's always-on-stem regime, and since 2026-09-23 the
+    // stated half of the playhead-over-stems ruling ("where the playhead's
+    // column is a marker's, the marker stem wins"). True when a MARKER'S OWN
     // STEM is standing where the cursor playhead's stem would stand, in which
     // case the playhead's stem (its waveform segment and its marker-lane run
     // alike) does not paint and the marker's stem IS the display.
@@ -923,15 +928,16 @@ private:
     // one.
     bool playhead_stem_suppressed() const;
     // THE RESTING CURSOR's waveform stem (the head and the marker-lane run
-    // belong to paint_ruler_row). Paints UNDER the marker stems and the flags —
-    // the z-order flip — which is the hidden-by-marker model for a cursor
-    // sitting ON a marker.
+    // belong to paint_ruler_row). Paints OVER the marker stems (architect
+    // 2026-09-23, invoked after paint_marker_stems; a coincident marker's stem
+    // wins through playhead_stem_suppressed) and UNDER the flags — the z-order
+    // flip, the hidden-by-marker model for a cursor sitting ON a marker.
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
-    // paint_marker_stems: the scanner draws OVER the stems (and over the cursor
-    // where they meet) instead of being erased by every marker it sweeps past.
-    // Waveform-only, gated on playhead_scanner_active — see the definition for
-    // the ruling and for why the cursor did NOT move with it.
+    // paint_marker_stems and paint_playheads: the scanner draws OVER the stems
+    // (and over the cursor where they meet) instead of being erased by every
+    // marker it sweeps past. Waveform-only, gated on playhead_scanner_active —
+    // see the definition for the ruling.
     void paint_scanner(cairo_t* cr, const GuiRect& area);
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
