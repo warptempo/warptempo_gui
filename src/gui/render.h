@@ -1707,7 +1707,7 @@ inline int tab_row_h_px() {
 // the evening of 2026-09-23, when Follow came back after its hours' deletion
 // that day, twenty-three from 2026-09-22, when Zoom
 // In and Zoom Out came back to the zoom group's head hours after the Show trim
-// region button left it, the same day the IGNORE WAVEFORM MAGNIFICATION lamp
+// region button left it, the same day the WAVEFORM MAGNIFICATION lamp
 // joined it — the
 // kIconRowButtons table is the count's one authority, and ALL of them paint on
 // every frame, the mode-collapsing rule of 2026-08-12..13 being deleted;
@@ -2820,8 +2820,11 @@ struct WaveformBasis {
 // zoom that is the column's own reduction; coarser, it is the one choice
 // under which a bar is never shorter than any member's own expanded bar, so
 // an onset is never dimmed by the dip before it at any zoom. It applies
-// exactly where the gain does: NULL (target view, the lit lamp) is raw, and
-// an empty array is the identity.
+// exactly where the gain does: NULL (the dark lamp, in either audio view) is
+// raw, and an empty array is the identity. In target view [s0, s1) is the
+// plate column's MAPPED source span, so a tempo-compressed column covering
+// several working columns takes the largest multiplier among them, as a
+// coarse source-view column does.
 //
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate is pixels, playback

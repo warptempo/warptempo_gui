@@ -1360,7 +1360,7 @@ struct GuiInputHandler {
     // writer serving the WHOLE roster — row 1's three menu anchors and
     // the view bar's three, row 3's two tabs, row 4's twenty-three (the
     // toolbar four included since the 2026-08-12 relayout, the zoom four
-    // whole again since 2026-09-22, the IGNORE
+    // whole again since 2026-09-22, the
     // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
     // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
     // 2026-09-19, the history group's
@@ -3792,21 +3792,21 @@ private:
     // changes nothing already on screen.
     void set_restrict_undo_to_current_view(bool desired);
 
-    // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect
-    // 2026-09-22) — the restrict-undo lamp's shape with ONE road: the bare
-    // backtick, which the icon row's button reaches by synthesizing that press,
-    // and whose arm reaches here only in SOURCE VIEW (target view refuses at
-    // the arm, carding). The bit (AppState::ignore_waveform_magnification) is a
-    // per-project session posture, dark at every project open (source view
-    // magnified), never serialized and never in the
-    // undo domain. DARK, the source-view picture carries the continuous gain
-    // derived from the source (GuiAudio::gain_curve); LIT, it is flat — the
-    // one exceptions road to the derived gain. Writes the field, then kicks
-    // the synchronous rebuild iff the plate's gain field changed across the
-    // write (Viewport::kick_waveform_sync_if_gain_changed), so the picture
-    // lands in the press's own frame. The lamp's face rides the per-tick
-    // comparator. History-less; display-only.
-    void set_ignore_waveform_magnification(bool desired);
+    // THE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect 2026-09-22,
+    // reversed and universal 2026-09-24) — the restrict-undo lamp's shape
+    // with ONE road: the bare backtick, which the icon row's button reaches
+    // by synthesizing that press, in either audio view. The bit
+    // (AppState::show_waveform_magnification) is a per-project session
+    // posture, dark at every project open (the raw picture), never
+    // serialized and never in the undo domain. LIT, the waveform picture
+    // carries the continuous gain derived from the source
+    // (GuiAudio::gain_curve) in both audio views; DARK, it is the raw
+    // picture. Writes the field, then kicks the synchronous rebuild iff the
+    // plate's gain field changed across the write
+    // (Viewport::kick_waveform_sync_if_gain_changed), so the picture lands
+    // in the press's own frame. The lamp's face rides the per-tick
+    // comparator. History-less; display-only; silent.
+    void set_show_waveform_magnification(bool desired);
 
     // THE LANE MODEL (architect 2026-07-28, KEPT and re-justified 2026-07-30):
     // true when the arrows currently address the MARKER lane. The bare

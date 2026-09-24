@@ -390,12 +390,11 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
-    // IGNORE WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22;
+    // WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22;
     // on the backtick since 2026-09-23): a display
     // posture about the picture, authoring nothing the lock protects, so it
     // is admitted on a locked tab — and under the grid-iterations lock, whose
-    // gate falls through to this list and which stands in target view alone,
-    // so there the press reaches the arm's own target-view card.
+    // gate falls through to this list, where it toggles as anywhere else.
     const bool is_waveform_magnification =
         is_waveform_magnification_key(key, mods);
     // THE CENTRE KEY, bare `c`: navigation, writing no store — a camera and
@@ -9131,24 +9130,18 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         set_restrict_undo_to_current_view(!app.restrict_undo_to_current_view);
         break;
     case GuiKeys::Grave:
-        // Toggle the Ignore Waveform Magnification lamp (architect
-        // 2026-09-22; the bare backtick since 2026-09-23, bare `[` before
-        // that and unbound now): dark shows the continuous gain derived from
-        // the source in source view (GuiAudio::gain_curve), lit flattens it.
+        // Toggle the Waveform Magnification lamp (architect 2026-09-22,
+        // reversed and universal 2026-09-24; the bare backtick since
+        // 2026-09-23): lit shows the continuous gain derived from the source
+        // (GuiAudio::gain_curve) in both audio views, dark the raw picture.
         // The one bare form reaches here (is_waveform_magnification_key, the
-        // caller having gated on no modifiers). In TARGET VIEW the lamp has no
-        // effect, so the press refuses on its card and the bit keeps its state
-        // (waveform_magnification_toggle_actionable, the face's own verdict).
-        // The setter is GuiInputHandler::set_ignore_waveform_magnification,
-        // shared with the icon-row button's synthesized chord and with nothing
-        // else. History-less, one-shot, legal on a locked tab and under the
+        // caller having gated on no modifiers). Silent: the lamp's face shows
+        // the new state. The setter is
+        // GuiInputHandler::set_show_waveform_magnification, shared with the
+        // icon-row button's synthesized chord and with nothing else.
+        // History-less, one-shot, legal on a locked tab and under the
         // read-only lock; refused in the `h` view at that mode's allowlist.
-        if (!waveform_magnification_toggle_actionable(app)) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kMagnificationSourceViewOnlyCard);
-            break;
-        }
-        set_ignore_waveform_magnification(!app.ignore_waveform_magnification);
+        set_show_waveform_magnification(!app.show_waveform_magnification);
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

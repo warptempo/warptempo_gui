@@ -164,13 +164,10 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 }
 
 bool waveform_magnified(const AppState& app) {
-    // TARGET VIEW IS FLAT whatever the lamp says (the rule and its reason are
-    // at the declaration): the phase resets it authors move on the hop
-    // lattice, which no magnified picture helps.
-    if (app.active_audio_view == 'T') return false;
-    // SOURCE VIEW: THE LAMP ALONE DECIDES, on every column and at every zoom —
-    // Ignore Waveform Magnification lit is flat, dark (the default) magnified.
-    return !app.ignore_waveform_magnification;
+    // THE LAMP ALONE DECIDES, in both audio views, on every column and at
+    // every zoom: Waveform Magnification lit is magnified, dark (the default
+    // at every open) flat. The rule is at the declaration.
+    return app.show_waveform_magnification;
 }
 
 uint64_t waveform_gain_fingerprint(const AppState& app) {

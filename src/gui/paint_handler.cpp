@@ -1000,14 +1000,13 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
-    // lamp, after Center in the same group: Breeze's zoom-out-y, the magnifier
-    // with a ruler on its dial — the picture's vertical scale. It joins the
-    // group rather than opening one, so it adds one box and one 2px gap to the
-    // walk and no separator. (The same glyph, seat and name carried the lamp
-    // on 2026-09-14 and on 2026-09-17; each left that evening under a rule
-    // that made magnification automatic.)
-    {RedesignButton::IconIgnoreWaveformMagnification, icons::Icon::ZoomOutY},
+    // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
+    // lamp, after Center in the same group: Breeze's zoom-in-y (since the
+    // lamp's reversal 2026-09-24; zoom-out-y before), the magnifier with a
+    // ruler on its dial beside a plus — the picture's vertical scale grown.
+    // It joins the group rather than opening one, so it adds one box and one
+    // 2px gap to the walk and no separator.
+    {RedesignButton::IconWaveformMagnification, icons::Icon::ZoomInY},
     // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
     // to 2026-09-14 — magnify wearing zoom-in-y and reduce wearing
     // zoom-out-y — and left with the setting it stepped (architect
@@ -2690,7 +2689,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: the zoom four (2026-08-12; the stepping
     // pair out 2026-09-14 and back 2026-09-22) leading since the Show trim
-    // region button that led it was deleted on 2026-09-22, THE IGNORE
+    // region button that led it was deleted on 2026-09-22, THE
     // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW (in from
     // the dissolved mass-marker group on 2026-08-27; out for the hours of
     // 2026-09-23) and THE RESTRICT UNDO TO CURRENT VIEW LAMP closing the group
@@ -8965,8 +8964,8 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // live in clamp_viewport_start now; the resize keeps only its TRIGGER role
     // and delegates. When the level actually moved the reflow changed spp under
     // the playback predictor, so re-anchor it. (A level move here cannot
-    // change the magnification — the gain gate reads the audio view and the
-    // magnification lamp and no zoom term, waveform_magnified — so the
+    // change the magnification — the gain gate reads the magnification lamp
+    // alone and no zoom term, waveform_magnified — so the
     // resize owes the gain nothing; its picture re-renders because a resize
     // moves the area dimensions, fields of the one plate fingerprint, and the
     // tick's enqueue carries that.)

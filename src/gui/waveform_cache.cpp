@@ -171,7 +171,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     // The waveform PICTURE's gain field — the gate's whole answer off the
-    // audio view and the magnification lamp (waveform_gain_fingerprint,
+    // magnification lamp (waveform_gain_fingerprint,
     // which owns the rule; the `h` view's plate included, it being the live
     // plate) — captured here with the geometry, so the worker reads no live
     // state. It is the fingerprint field, which is what keeps a plate from
@@ -595,9 +595,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      A synchronous render at full zoom-out therefore scales with the
 //      source's duration divided by the plate width, not with area_width
 //      alone — modest for this corpus (the figure above) and recorded
-//      rather than bounded (architect 2026-09-24). Flat plates (target view
-//      and the lit magnification-ignore lamp, gain_or_null null) are
-//      unchanged: O(area_width) at any zoom level, as before.
+//      rather than bounded (architect 2026-09-24). Flat plates (the
+//      magnification lamp dark, gain_or_null null) are unchanged:
+//      O(area_width) at any zoom level, as before.
 //
 //      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton

@@ -134,11 +134,11 @@ enum class Icon {
     ZoomOut,             // Zoom out (bare `-`)
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
-    // ZOOM-OUT-Y, the vertical magnifier (the ruler on its dial beside a
-    // minus): worn by the Ignore Waveform Magnification lamp between Center
-    // and Follow (architect 2026-09-22), restored with its def and asset for the
-    // third time — the lamp's stands of 2026-09-14 and 2026-09-17 wore it too.
-    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `)
+    // ZOOM-IN-Y, the vertical magnifier (the ruler on its dial beside a
+    // plus): worn by the Waveform Magnification lamp between Center and
+    // Follow since the lamp's reversal (architect 2026-09-24), in place of
+    // its twin zoom-out-y.
+    ZoomInY,             // Toggle Waveform Magnification (bare `)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's
@@ -468,7 +468,7 @@ enum class Icon {
 // button that wore it. It was 51 from that day's walk-group change:
 // bboxprev left with the Previous marker button and go-previous-context
 // / go-next-context joined with the two hold-column nudges. It was 50 earlier
-// that day, re-counted rather than adjusted: zoom-out-y came back with the Ignore Waveform Magnification lamp
+// that day, re-counted rather than adjusted: zoom-out-y came back with the Waveform Magnification lamp
 // that wears it (architect 2026-09-22), and merge had joined on 2026-09-19
 // with the Flatten button without this number moving, so the count was 49
 // against a stated 48 until the recount. It was 48 from 2026-09-17 evening,
@@ -483,7 +483,9 @@ enum class Icon {
 // two view lamps' deletion, when document-import and chronometer-start left
 // with the two lamp buttons that wore them, the edit-cut precedent. The
 // count's succession is in git history; a glyph joining or
-// leaving restates this number.
+// leaving restates this number. It held at 50 through 2026-09-24's swap,
+// when zoom-in-y replaced zoom-out-y on the Waveform Magnification lamp at
+// its reversal, one glyph out and one in.
 inline constexpr int kIconCount = 50;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),

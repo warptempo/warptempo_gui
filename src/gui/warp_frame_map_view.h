@@ -179,22 +179,20 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
     const AppState& app);
 
 // WHETHER THE WAVEFORM PICTURE IS MAGNIFIED, AND THE ONE GAIN GATE. The gain
-// itself is the continuous curve derived from the source at load
-// (GuiAudio::gain_curve, derive_waveform_gain in waveform_gain.h, which owns
-// the rule); this answers only whether a plate applies it (architect
-// 2026-09-22, retold for the continuous gain 2026-09-23), two terms:
+// itself is the continuous curve derived from the source at load — the
+// short-term loudness leveler, then the downward expander (GuiAudio::gain_curve,
+// derive_waveform_gain in waveform_gain.h, which owns the rule); this answers
+// only whether a plate applies it, one term (architect 2026-09-24):
 //
-//   TARGET view ('T') — flat, whatever the lamp says.
-//   SOURCE view ('S') — magnified UNLESS the Ignore Waveform Magnification
-//                       lamp (AppState::ignore_waveform_magnification, the
-//                       bare backtick, dark at every project open) is lit,
-//                       then flat —
-//                       on every column and at every zoom.
+//   the Waveform Magnification lamp (AppState::show_waveform_magnification,
+//   the bare backtick, DARK AT EVERY PROJECT OPEN) — lit, magnified; dark,
+//   the raw (flat) picture — in BOTH audio views, on every column and at
+//   every zoom.
 //
-// WHY: magnification serves FINE HORIZONTAL PLACEMENT against the audio, and
-// the SOURCE views are what author against it, while the target view's own
-// column, the phase resets, moves on the HOP LATTICE in quantized steps that no
-// superfine picture helps — so target view never shows it.
+// The raw picture is the default; magnification is asked for. It is
+// universal: the painter reads the curve at each column's mapped SOURCE
+// frames through the warp map (render_waveform), so a target-view column
+// shows the gain and the expander of the source audio it draws.
 //
 // THE MAGNIFICATION LAMP IS THE ONLY EXCEPTIONS ROAD (architect 2026-09-23): no
 // per-passage override, no third state and no drawing of the gain. A passage
@@ -202,9 +200,10 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // the audio and the A/B tabs carry — both tabs always show the same picture,
 // the curve being a function of the one source.
 //
-// NO MODE TERM — the `h` view follows the audio view it stands in (the lamp
-// is dead there by its allowlist), its plate being the live plate. DISPLAY-
-// ONLY: no sample, no render input and no render fingerprint field reads it.
+// NO MODE TERM — the `h` view follows the lamp as it stood when the view was
+// entered (the lamp is dead there by its allowlist), its plate being the live
+// plate. DISPLAY-ONLY: no sample, no render input and no render fingerprint
+// field reads it.
 bool waveform_magnified(const AppState& app);
 
 // THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
@@ -213,9 +212,11 @@ bool waveform_magnified(const AppState& app);
 // rule's hard-coded constants (waveform_gain.cpp), the version alone names it (nothing derived from the gain is
 // persisted across launches; the record is at kWaveformGainVersion). ONE PLACE, so the picture caches' existing hash keys
 // re-render on every flip with no per-caller code: the plate fingerprint
-// carries it beside the viewport geometry, the S/T switch ends in its own
-// kick_waveform_sync and the lamp's one setter kicks when it moved. TWO
-// READERS, re-grepped 2026-09-23: the plate's render inputs, which is also
+// carries it beside the viewport geometry, and the lamp's one setter kicks
+// when it moved. Its one live input is the lamp: an S/T switch leaves it as
+// it stands, the plate re-rendering on the switch through the fingerprint's
+// own target bit and warp-map hash and the switch's closing
+// kick_waveform_sync. TWO READERS, re-grepped 2026-09-24: the plate's render inputs, which is also
 // where the fingerprint's gain field is captured
 // (compute_waveform_render_inputs, waveform_cache.cpp); and the gain kick's
 // hash (Viewport::waveform_gain_hash).

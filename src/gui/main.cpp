@@ -760,7 +760,7 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // on the evening of 2026-09-23, twenty-two for the hours of that day it was
 // deleted, twenty-three from Zoom In and Zoom
 // Out's restoration later on 2026-09-22, twenty-one from the Show trim region
-// button's deletion that day, twenty-two from the IGNORE WAVEFORM
+// button's deletion that day, twenty-two from the WAVEFORM
 // MAGNIFICATION lamp's arrival that day — twenty-one from the FLATTEN
 // button's arrival from the bottom row 2026-09-19, twenty from the two view
 // lamps' whole-category deletion 2026-09-15, twenty-two before that — the deleted toolbar

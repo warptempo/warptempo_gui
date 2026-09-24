@@ -2201,7 +2201,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // on Shift+[ beside the trim region toggle on bare `[` until the architect
     // deleted that toggle the same day (the tablet's pen reaches the trim bar,
     // so the waveform overlay stands only while a sweep draws it) and gave the
-    // bracket to the Ignore Waveform Magnification lamp; `0` already means
+    // bracket to the Waveform Magnification lamp; `0` already means
     // "the whole song" to the camera, so its shifted form says it to the
     // trim. The one predicate is is_trim_maximize_key (gui_input.h). It
     // arrives as the `0` key plus the shift bit, never as a `)` keysym:
@@ -4260,12 +4260,12 @@ void GuiInputHandler::set_restrict_undo_to_current_view(bool desired) {
     app.restrict_undo_to_current_view = desired;
 }
 
-void GuiInputHandler::set_ignore_waveform_magnification(bool desired) {
+void GuiInputHandler::set_show_waveform_magnification(bool desired) {
     // The contract — sole writer, per-project, history-less, the gain kick —
     // is at the declaration (input_handler.h). The ONE caller is the
     // bare-backtick arm, which the icon row's button reaches by synthesizing
     // that press.
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
-    app.ignore_waveform_magnification = desired;
+    app.show_waveform_magnification = desired;
     viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
 }

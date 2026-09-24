@@ -141,8 +141,8 @@
 //   onset inside a coarse column is never dimmed by the dip before it and
 //   the rule holds at every zoom — erring, where it errs, toward the
 //   leveler's plain picture, never toward a hole. It applies exactly
-//   where the gain applies (render_waveform's `gain_or_null`): target view
-//   and the lit lamp stay raw.
+//   where the gain applies (render_waveform's `gain_or_null`): the dark
+//   lamp stays raw, in both audio views.
 //
 //   THE CRITERION, the architect's: the SWELL before an onset — the dip in
 //   the 300 ms before a local envelope maximum — roughly DOUBLES from the
@@ -158,7 +158,7 @@
 // left, and a retune is a recompile, by design. THE PRINCIPLE FOR ANY RETUNE:
 // every number is FORCED by a criterion and never tuned to one spot — a free
 // constant carries its reason, a derived one its derivation — and a passage
-// the rule gets wrong is answered by the magnification lamp (the flat
+// the rule gets wrong is answered by the magnification lamp (dark, the raw
 // picture) or the A/B tabs, not by a new number.
 //
 // Pure: no application state, no audio object, no allocation that outlives

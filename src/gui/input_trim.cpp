@@ -482,7 +482,7 @@ void GuiInputHandler::handle_trim_maximize() {
 // row's Show trim region button — showed and hid the waveform overlay at rest
 // from 2026-08-16 until the architect deleted it whole on 2026-09-22: he uses
 // the tablet's pen, which reaches the trim bar, so the overlay built for
-// fingers stands only while a sweep draws it. The bracket carries the Ignore
+// fingers stands only while a sweep draws it. The bracket carries the
 // Waveform Magnification lamp since, and the maximizer above moved to
 // Shift+0.)
 

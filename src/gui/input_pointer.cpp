@@ -266,14 +266,13 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Minus,  false, false, false, false, true},                            // bare -
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
+    // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
     // backtick since 2026-09-23 (bare `]` for its first hours, then bare
     // `[`), a TOGGLE with
-    // a lamp, right after `c`. Live on a locked tab and
-    // under the read-only lock (a display posture on that allowlist), greyed
-    // in target view where the key cards, and DEAD in the `h` view, whose
-    // allowlist does not name it.
-    {RedesignButton::IconIgnoreWaveformMagnification,
+    // a lamp, right after `c`. Live in both audio views, on a locked tab and
+    // under the read-only lock (a display posture on that allowlist), and
+    // DEAD in the `h` view, whose allowlist does not name it.
+    {RedesignButton::IconWaveformMagnification,
      GuiKeys::Grave, false, false, false, false, true},                            // bare `
     // (THE WAVEFORM MAGNIFICATION PAIR'S ROWS ARE DELETED — 2026-09-14, with
     // their buttons and the setting they stepped, architect approval
@@ -7103,7 +7102,7 @@ void GuiInputHandler::finalize_active_drags() {
 // (row 1's three menu anchors and the view bar's three, row 3's two
 // tabs, row 4's twenty-three — the toolbar four included since the 2026-08-12
 // relayout, the history group's seven since 2026-08-18, the FLATTEN button in
-// the iteration group since 2026-09-19, the IGNORE WAVEFORM MAGNIFICATION lamp in the
+// the iteration group since 2026-09-19, the WAVEFORM MAGNIFICATION lamp in the
 // zoom group since 2026-09-22 and the ZOOM IN / ZOOM OUT pair back at its head
 // the same day — and the bottom row's
 // seventeen: the enum's

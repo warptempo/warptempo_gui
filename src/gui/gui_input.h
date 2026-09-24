@@ -771,11 +771,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 
         // The settings editor, and the load in place / render player.
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
-        // Toggle Ignore Waveform Magnification (architect 2026-09-22), on the
+        // Toggle Waveform Magnification (architect 2026-09-22), on the
         // bare BACKTICK since 2026-09-23 (architect: the bracket sits on the
         // far side of the keyboard and belongs to trim by feel), bound in
-        // both modes as `f` and `z` are: outside source view (target view, and
-        // the `h` view's allowlist) it refuses on a card rather than falling
+        // both modes as `f` and `z` are: it toggles in both audio views, and
+        // the `h` view's allowlist refuses it on a card rather than falling
         // silent. Every modified backtick, and the whole of `[` and `]`, are
         // unbound. (The backtick was the S+M view selector from 2026-09-19
         // until the magnification level markers column's deletion 2026-09-23;
@@ -1159,7 +1159,7 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::S && !mods.ctrl && mods.shift && !mods.alt;
 }
 
-// True for the chord that toggles THE IGNORE WAVEFORM MAGNIFICATION LAMP
+// True for the chord that toggles THE WAVEFORM MAGNIFICATION LAMP
 // (architect 2026-09-22): the BARE BACKTICK exactly — no ctrl, no shift, no
 // alt. It was bare `]` for the lamp's first hours, bare `[` from the trim
 // region toggle's deletion that same day, and the backtick since 2026-09-23
@@ -1169,11 +1169,9 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // the shift bit and this predicate refuses it. A display posture that
 // authors nothing. One-shot
 // (repeat-ineligible: a held toggle
-// would flicker). The lamp governs SOURCE VIEW alone — target view is always
-// flat — so in target view the chord is a bound key that REFUSES on a card,
-// the lamp keeping its state (the arm is Grave's case in
-// handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
-// reaches). ITS ONE READER is the read-only allowlist (read_only_key_blocked,
+// would flicker). The lamp governs both audio views (the arm is Grave's case
+// in handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road
+// alone reaches). ITS ONE READER is the read-only allowlist (read_only_key_blocked,
 // which ADMITS it — a view posture — and which the
 // grid-iterations lock's gate falls through to). The `h` view's allowlist
 // (history_mode_key_blocked) deliberately does NOT name it: Restrict Undo to
