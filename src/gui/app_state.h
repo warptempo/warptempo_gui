@@ -508,8 +508,10 @@ struct DragState {
     // lead-in workflow (parking
     // the playhead upstream to audition the approach) that the decoupling
     // served is supplied by the audition scrub instead. Only the RESTING
-    // cursor playhead moves — move_playhead_to writes the cursor field only, so
-    // a live scanner is left untouched; it stays the audio thread's to own.
+    // cursor playhead moves — the tow (Viewport::translate_playhead_to, no
+    // scroll, architect 2026-09-24) and the commit's move_playhead_to write
+    // the cursor field only, so a live scanner is left untouched; it stays
+    // the audio thread's to own.
     // (No `moved` latch and no `hit_marker`: both were group-era state with no
     // reader left and were deleted 2026-07-29. The drag's
     // net-change test compares the COMMITTED frame against original_times[0], which
@@ -17346,6 +17348,13 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // drag's own road out, unchanged. (Its own PENDING press is already a member
 // above: the same pending arms both drags, so the freeze covers this gesture
 // from the press through the crossing and on to the release with no gap.)
+//
+// NO GESTURE PATH REACHES A SYNCHRONOUS PLATE REBUILD WHILE THIS HOLDS
+// (architect 2026-09-24): force_synchronous_waveform_rebuild carries no freeze
+// check of its own, and the grep that it has no in-freeze caller is at its
+// definition (waveform_cache.cpp). The marker drag's playhead tow, which
+// scrolled through the reseat's edge-align and was that caller, writes
+// through Viewport::translate_playhead_to and scrolls nothing.
 inline bool displayed_basis_frozen(const AppState& app) {
     return app.drag.active ||
            app.trim_drag.active ||

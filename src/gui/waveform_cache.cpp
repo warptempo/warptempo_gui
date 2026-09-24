@@ -635,20 +635,25 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //
 // IT CARRIES NO FREEZE CHECK (displayed_basis_frozen, app_state.h), and it
 // publishes a plate the worker's two freeze gates never see. By grep
-// (2026-09-24) its callers are unreachable inside the freeze with ONE
-// exception: keys are swallowed under any pointer gesture (Ctrl+Q force-ends
-// the gesture first), wheels are gesture-gated, a resize force-ends before
-// it catches up, the tick's live-total repair stands down for the value drag,
-// the value drag clears itself before its commit's kick, the marker drag
-// clears itself before its commit's land, and the marker press's acts — the
-// select and the land, a direct cursor write that scrolls nothing — run before
-// its pending arms. THE EXCEPTION is the marker drag's playhead tow
-// (apply_drag_motion → Viewport::move_playhead_to → reseat_playhead_to): the
-// viewport clamp admits a grab whose stem stands LEFT of the viewport (its box
-// reaching in; the clamp widens to zero rather than jump it), so a proposal
-// still left of the viewport start scrolls the viewport to it and kicks this
-// render mid-drag. That render publishes the new plate and restages the item
-// basis, whose promote the freeze defers to the gesture's end.
+// (2026-09-24) NO caller is reachable inside the freeze: keys are swallowed
+// under any pointer gesture and its pending presses (Ctrl+Q force-ends the
+// gesture first, and finalize_active_drags clears the drags before the nav
+// drag's zoom kick, which no freeze member can stand beside — a press arms
+// one gesture), wheels are gesture-gated, a resize force-ends before it
+// catches up, the tick's live-total repair finds no total change under a
+// marker or trim drag (neither writes the live map) and stands down for the
+// value drag, the value drag clears itself before its commit's kick, the
+// marker drag clears itself before its commit's land, a touch pinch upgrade
+// ends the translation (and so disarms a pending press) before its first
+// zoom, and the marker press's acts — the select and the land, a direct
+// cursor write that scrolls nothing — run before its pending arms. THE
+// MARKER DRAG'S PLAYHEAD TOW WAS THE ONE EXCEPTION and is closed (architect
+// 2026-09-24): it rode move_playhead_to → reseat_playhead_to, whose
+// keep-visible edge-align scrolled the viewport on a grab whose stem stood
+// left of it and kicked this render mid-drag; it writes through
+// Viewport::translate_playhead_to now, which scrolls nothing, so the playhead
+// rides offscreen until the release and the displayed basis holds. A new
+// caller that can run inside the freeze answers at its own site, not here.
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;

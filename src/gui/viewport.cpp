@@ -341,12 +341,27 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
 // write moves neither the camera nor the audition (no audition end, the
 // reseat's own exemption).
 //
-// ONE CALLER, the restore's map-change re-land (undo.cpp). The live-domain
-// clamp is the shared ruling (clamp_playhead_to_live_domain); the viewport's
-// own domain wall is re-derived through clamp_viewport_start because the swap
-// may have shortened the domain under a standing viewport — a wall, not a
-// scroll toward the cursor. NO RENDER: the caller's tail renders the plate
-// synchronously once for the finished state, so this owes only the damage.
+// TWO CALLERS (re-derived by grep 2026-09-24):
+//   * THE RESTORE'S MAP-CHANGE RE-LAND (undo.cpp), the reason above.
+//   * THE MARKER DRAG'S PLAYHEAD TOW (MarkerDragOps::apply_drag_motion,
+//     marker_drag.cpp; architect 2026-09-24). The cursor rides the dragged
+//     flag, and a keep-visible edge-align there scrolled the viewport under
+//     the held hand on a grab whose stem stood left of the viewport — a
+//     synchronous plate render inside the displayed-basis freeze, the basis
+//     the gesture reads moving mid-drag. Here the playhead may ride offscreen
+//     for the drag's life and catches up at the release (commit_drag's land,
+//     after the freeze lifts). The tow is the ride of a movement already
+//     taken, not a movement of its own: the press's click act landed the
+//     playhead (land_playhead_on_marker, the audition's end and the hold's)
+//     and nothing can re-arm either under the drag-modal gate (the argument
+//     is at the site).
+// The live-domain clamp is the shared ruling (clamp_playhead_to_live_domain);
+// the viewport's own domain wall is re-derived through clamp_viewport_start
+// because the restore's swap may have shortened the domain under a standing
+// viewport — a wall, not a scroll toward the cursor, and a no-op under the
+// drag, which moves neither the domain nor the camera. NO RENDER: the
+// restore's tail renders the plate synchronously once for the finished state,
+// and the drag's plate does not move, so this owes only the damage.
 void Viewport::translate_playhead_to(int64_t new_sample) {
     if (audio.total_frames() <= 0) return;
     app.playhead_cursor_sample =
@@ -356,9 +371,10 @@ void Viewport::translate_playhead_to(int64_t new_sample) {
     // cursor's pixels are plate-registered; rule at playhead_pixel_x).
     invalidate_waveform_area();
     invalidate_clock_area();
-    // NO PREDICTOR RESYNC, unlike the reseat: the one caller has stopped
-    // playback before it reaches this write (restore_history_entry's head),
-    // so there is no play in flight to re-anchor.
+    // NO PREDICTOR RESYNC, unlike the reseat: both callers run with playback
+    // stopped (restore_history_entry's head; the drag's arming press, with
+    // every launch swallowed until the release), so there is no play in
+    // flight to re-anchor.
 }
 
 // Repair the LIVE display-state fields after a total-changing map edit. The

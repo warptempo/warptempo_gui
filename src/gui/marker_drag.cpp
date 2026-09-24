@@ -331,18 +331,31 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // because the THRESHOLD CROSSING forks T+W into the value drag
     // (value_drag_posture) before it begins this one; the gate lives there,
     // not at the arming press, which is unconditional.
-    // A marker drag can never run under live playback — the THRESHOLD
-    // CROSSING stops playback (the click act's own stop, run there since
-    // 2026-08-15) — so the scanner is always
-    // inactive here; move_playhead_to only ever writes the cursor
-    // field regardless, so this call could not disturb a running
-    // scanner even if one existed. The motion-clamped proposal stays
-    // inside the visible strip — EXCEPT on a grab whose stem stood LEFT of the
-    // viewport (the clamp's widen-to-zero admits it, begin_drag): until the
-    // proposal crosses the viewport start this land scrolls the viewport to
-    // it and kicks a synchronous plate render inside the displayed-basis
-    // freeze (the record is at force_synchronous_waveform_rebuild,
-    // waveform_cache.cpp).
+    // A marker drag can never run under live playback — the ARMING PRESS's
+    // click act stops playback (run_marker_plain_select) and the drag-modal
+    // gate swallows every launch until the release — so the scanner is always
+    // inactive here, and the writer below only ever writes the resting cursor.
+    // THE TOW SCROLLS NOTHING (architect 2026-09-24): the writer is
+    // Viewport::translate_playhead_to — the cursor write, its full-area and
+    // clock damage and no keep-visible edge-align — never move_playhead_to,
+    // whose reseat scrolled the viewport to an offscreen cursor. The
+    // motion-clamped proposal stays inside the visible strip EXCEPT on a grab
+    // whose stem stood LEFT of the viewport (the clamp's widen-to-zero admits
+    // it, begin_drag): until the proposal crosses the viewport start the
+    // playhead now rides offscreen with it, and the viewport holds, so the
+    // displayed basis cannot move under the held hand and no synchronous
+    // plate render runs inside the freeze (displayed_basis_frozen). The
+    // playhead's picture catches up at the release, where commit_drag's land
+    // may scroll: the freeze has lifted by then. It takes the ACTIVE-domain
+    // sample the lockstep above computed on the displayed map, which is why
+    // it is not the marker land's source-frame seat (that maps through the
+    // LIVE map, and a map job in flight at the press would put the cursor a
+    // column off the flag it rides). THE MOVEMENT'S TWO CLEARS — the A/B
+    // audition's end and the hold's — ran at the press, on the click act's
+    // land_playhead_on_marker (only a plain press arms the drag), and nothing
+    // can re-arm either under the drag-modal gate, so the translation's
+    // want of them changes nothing; no predictor resync is owed with no play
+    // in flight.
     const bool source_domain = active_display_context(app, audio).domain ==
         GuiDisplayDomain::Source;
     int64_t sample;
@@ -352,7 +365,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     } else {
         sample = static_cast<int64_t>(std::nearbyint(new_t));
     }
-    viewport.move_playhead_to(sample);
+    viewport.translate_playhead_to(sample);
     // NO REGION WORK OWED HERE: the trim overlay stands only while a sweep
     // draws it, and no sweep runs beside a marker drag. The group live-track
     // that used to re-derive an extent span per

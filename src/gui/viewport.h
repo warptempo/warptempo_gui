@@ -306,9 +306,10 @@ struct Viewport {
     // either (architect 2026-09-22): the cursor follows its own musical
     // instant into a rebuilt domain and the camera stays where it stands,
     // however far off screen the cursor lands. Named rather than a flag on the
-    // reseat, the movement owners' convention. ONE CALLER, the undo/redo
-    // restore's map-change re-land (undo.cpp); the contract is at the
-    // definition (viewport.cpp).
+    // reseat, the movement owners' convention. TWO CALLERS, the undo/redo
+    // restore's map-change re-land (undo.cpp) and the marker drag's playhead
+    // tow (marker_drag.cpp, architect 2026-09-24: no scroll under a held
+    // hand); the contract is at the definition (viewport.cpp).
     void translate_playhead_to(int64_t new_sample);
     // The waveform lane's Left / Right step, in the step's own unit
     // (playhead_arrow_step_landing, app_state.h): one painted column, or on
@@ -541,7 +542,8 @@ struct Viewport {
     //     chokepoint's write half — move_playhead_to is that same write with
     //     the audition's end in front of it, so both spellings damage this
     //     cell through the one body), translate_playhead_to (the undo/redo
-    //     restore's no-scroll re-land, 2026-09-22) and
+    //     restore's no-scroll re-land, 2026-09-22, and the marker drag's
+    //     no-scroll tow, 2026-09-24) and
     //     clamp_display_state_to_live_domain's playhead repair.
     //   * Viewport's three ZOOM APPLIERS (apply_zoom_change,
     //     apply_strip_drag_zoom, apply_zoom_to_start): HARMLESS OVER-DAMAGE,
