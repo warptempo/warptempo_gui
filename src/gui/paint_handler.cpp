@@ -4894,7 +4894,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE LABEL IS A LINE, not a box: the lane gives it one authored pad and
     // then the face's own band, so the seat is line_baseline's ascent off that
     // pad. (The band itself is no longer computed here — nothing else in this
-    // painter reads the face's extents.)
+    // painter reads the face's extents.) THE SEAT IS ANCHORED TO THE LANE'S
+    // TOP, never centred in it or hung from its bottom: the lane's height below
+    // the labels is the head's clearance (kRulerLaneHeightPx, render.h, where
+    // the one-pixel gap's arithmetic lives), and growing it moves no digit.
     const double baseline =
         line_baseline(font, static_cast<double>(lane.y) +
                                 std::nearbyint(kRulerLabelPadTopPx *
@@ -5005,16 +5008,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // TIP-DOWN ON THE RULER LANE'S BOTTOM ROWS, its tip row the ruler's last
     // row, so the head's last pixel touches the marker lane's first and head
-    // and flags never share a pixel: both stay whole at all times, and no lane
-    // grows for it (architect 2026-09-23; it sat on the marker lane's bottom
-    // rows from 2026-08-01, under the flags).
+    // and flags never share a pixel: both stay whole at all times (architect
+    // 2026-09-23; it sat on the marker lane's bottom rows from 2026-08-01,
+    // under the flags). THE HEAD CLEARS THE TIMESTAMPS TOO: the same day's
+    // eyeball found it three rows into the digits' ink, and the ruler lane
+    // grew four authored rows beneath the top-anchored labels (28 -> 32) so
+    // one pixel of ground stands between a digit's lowest ink and the head's
+    // top row at 100% (the arithmetic at kRulerLaneHeightPx, render.h).
     //
     // SLIGHTLY TRANSLUCENT, THE ONE RULED EXCEPTION TO THE OPAQUE PALETTE
     // (architect 2026-09-23: "the timestamps are just a rough ballpark; the
     // exact time is at the bottom left"). The head composites at
     // kPlayheadHeadAlpha over whatever this painter already laid down in its
-    // band — the lane ground, the labels, a major tick's rise — so the digits
-    // read through it. That compositing is also what a tick crossing the head
+    // band. With the one-pixel gap under the labels (above), the alpha now
+    // shows through a major tick's rise alone. That compositing is also what
+    // a tick crossing the head
     // needs, so the crossing has no constant of its own any more: the tick
     // simply shows through the alpha. The alpha never accumulates, because
     // every repaint of this band first refills the lane ground above.
@@ -5031,8 +5039,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // it always has in that case.
     //
     // IT STAYS IN THIS PAINTER for its band: the ruler's bottom rows are this
-    // painter's lane, and the head must composite over the labels and ticks
-    // the walk above just painted, which a later pass could only do by
+    // painter's lane, and the head must composite over the ticks the walk
+    // above just painted, which a later pass could only do by
     // re-painting them.
     //
     // The whole object is the RESTING CURSOR'S: the `h` view, the render
@@ -5052,7 +5060,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                     kPlayheadHeadHeightPx * s));
             // THE BAND IS THE RULER LANE'S BOTTOM `rows`, its bottom edge the
             // marker lane's top (the two lanes abut, strip_row_rect): at 100%
-            // the ruler's last 12 of its 28 rows. The ruler is always taller
+            // the ruler's last 12 of its 32 rows. The ruler is always taller
             // than the head at every scale, so the band never leaves the lane.
             const int    head_bottom = marker.y;
             const int    head_top    = head_bottom - rows;
@@ -8641,8 +8649,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   7. the MARKER STEMS (waveform).
         //   8. the SCANNER (waveform).
         //   9. the RULER lane — ticks and labels — AND, in the same pass, the
-        //      cursor's HEAD on the ruler's bottom rows (translucent over the
-        //      labels and ticks just painted) and the cursor's column through
+        //      cursor's HEAD on the ruler's bottom rows (translucent, clear of
+        //      the labels, over a major tick's rise) and the cursor's column through
         //      the marker lane, under the flags (the reasoning is at that
         //      block in paint_ruler_row).
         //  10. the FLAG BLIT.

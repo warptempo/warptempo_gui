@@ -651,8 +651,11 @@ inline constexpr GuiColor kRulerTick  = hex(0x737373);
 // THE HEAD IS THE OPAQUE PALETTE'S ONE RULED EXCEPTION (architect 2026-09-23,
 // when the head moved up onto the ruler lane's bottom rows): it composites at
 // kPlayheadHeadAlpha over the ruler's timestamps and ticks, "slightly
-// translucent" in his words, so the digits read through it. The value is his
-// to tune by eye; no other colour in the tree carries an alpha. (Until that
+// translucent" in his words, so the digits read through it. The same day the
+// ruler lane grew beneath its labels (kRulerLaneHeightPx) and the head no
+// longer reaches the digits, so the alpha now shows through a major tick's
+// rise alone. The value is his to tune by eye; no other colour in the tree
+// carries an alpha. (Until that
 // day a tick crossing the head painted the pre-blended #b7b7b7 measured off
 // row_5_lane_3_playhead_tick.png; with real compositing the tick shows through
 // the alpha instead and that constant is deleted.)
@@ -1901,7 +1904,21 @@ inline constexpr int kTrimBarScalePercent = 100;
 // alone — so the border row is part of the lane for the pointer exactly as it
 // is for paint, and no second, shorter rect had to be invented for it.
 inline constexpr int kTrimLaneHeightPx   = 10;
-inline constexpr int kRulerLaneHeightPx  = 28;
+// 32 SINCE 2026-09-23 (was 28, the crop's own): FOUR AUTHORED ROWS OF GROUND
+// UNDER THE TIMESTAMPS, so the playhead head on the lane's bottom rows clears
+// them (architect 2026-09-23, his eyeball of the head's first variant, which
+// overlapped the digits by three rows). The labels are anchored to the lane's
+// TOP (paint_ruler_row: line_baseline off lane.y + kRulerLabelPadTopPx), so the
+// growth lands entirely beneath them and they do not move. THE ARITHMETIC AT
+// 100%, measured through cairo on the product's sans at 16px (ascent 15, the
+// digits' and colon's ink the 12-row cap band, no descenders): baseline =
+// 4 + 15 = row 19, so the labels' lowest ink row is 18; the head's top row is
+// 32 - 12 = 20; ROW 19 IS THE ONE PIXEL OF EMPTY GROUND between them, the
+// ruling's gap (at 28 the head's top row was 16, three rows into the digits).
+// At 225% the same measure gives ink to row 41 and a head from 72 - 27 = 45
+// (three rows of ground); at 50%, ink to 9 and a head from 16 - 6 = 10 (none,
+// touching). The major ticks' rise above the marker lane is unchanged.
+inline constexpr int kRulerLaneHeightPx  = 32;
 inline constexpr int kMarkerLaneHeightPx = 20;
 inline int trim_lane_h_px() {
     return scaled_px(
@@ -1940,18 +1957,17 @@ inline int marker_lane_h_px() {
 // standing bracket: "bigger than the height on the Pi, smaller than the
 // waveform height on my external monitor"; his own scaling example at the
 // revision was 4K at 200% gui_scale = 1000px of waveform, which this accessor
-// produces by construction. At 100% scale, with the top lanes summing 171
-// (menu 30 + icon 47 + tab 36 + trim 10 + ruler 28 + marker 20)
+// produces by construction. At 100% scale, with the top lanes summing 175
+// (menu 30 + icon 47 + tab 36 + trim 10 + ruler 32 + marker 20)
 // and the bottom row 47 (the icon row's height since 2026-08-14): the
-// 1920x1080 monitor's leftover is 862, so the
-// waveform CLAMPS at the default 500 and the two gaps take 119 (top) + 243
+// 1920x1080 monitor's leftover is 858, so the
+// waveform CLAMPS at the default 500 and the two gaps take 115 (top) + 243
 // (bottom); a
-// 1024x600 SHORT WINDOW's leftover is 382, UNCLAMPED, and the centering is
+// 1024x600 SHORT WINDOW's leftover is 378, UNCLAMPED, and the centering is
 // infeasible there so both gaps floor at 0 and the waveform keeps the whole
-// 382. The full stacks and their derivation are main.cpp's vertical block,
-// the one owner; these figures are its, re-derived 2026-09-16 twice the same
-// day — the overview lane's deletion first, then the trim lane's flip to
-// kdenlive's own orientation adding its 1px bottom border.
+// 378. The full stacks and their derivation are main.cpp's vertical block,
+// the one owner; these figures are its, re-derived 2026-09-23 when the ruler
+// lane grew 28 -> 32 (kRulerLaneHeightPx).
 // A SCALED length riding
 // gui_scale like every authored height, so the clamp keeps pace with the
 // lanes it is measured against. The ONE application point is the
