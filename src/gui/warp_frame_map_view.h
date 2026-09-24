@@ -270,10 +270,10 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
 // on-screen column grid: the visible span nearbyint-quantized to whole samples
 // (matching the vp_end the waveform cache carries, vp_start +
 // nearbyint(spp * area.w)) divided back over the strip width. The viewport
-// snap in clamp_viewport_start (main.cpp), the click placement and the plate's
-// dispatch all take their `q` from here, and the pixel-anchoring pair below
-// takes the item basis's spp, which is this same quantization of the span the
-// flags were built against, so the viewport grid and the marker grid are one
+// snap in clamp_viewport_start (main.cpp) and the plate's dispatch take their
+// `q` from here, and the pixel-anchoring pair below and the click placement
+// (architect 2026-09-24) take the item basis's spp, which is this same
+// quantization of the span the flags were built against, so the viewport grid and the marker grid are one
 // grid at any window width (not just multiples of 8). Returns 0.0 on
 // degenerate geometry (no strip width / no zoom).
 struct GuiRect;
@@ -423,11 +423,13 @@ inline int strip_anchor_stem_column(double displayed, double vp_start,
 // position_nudge.h) — are the whole caller list of the pair apart from the
 // flag editor's unrolled box (render.cpp), which rides the same item basis on
 // the paint side. THE LIVE-VIEWPORT FORMS ARE DELETED (2026-09-24): with the
-// gesture class moved no caller was left on them. The families that stay on
-// the live viewport by ruling never reached them — the click-placement family
-// (the nav click, the drops at the playhead, the sweep's PLAYHEAD half, the
-// empty-lane double-click create) lands through playhead_frame_at_click_column
-// (input_pointer.cpp), and the playhead's damage columns come from
+// gesture class moved no caller was left on them. Two families never reached
+// this pair: the click-placement family (the nav click, the scrub click, the
+// sweep's PLAYHEAD half, the empty-lane double-click create) lands
+// active-domain playhead frames through playhead_frame_at_click_column
+// (input_pointer.cpp), on the same item basis since 2026-09-24 (architect,
+// strictly as painted — the drops at the playhead author at the playhead's
+// frame and convert no column); and the playhead's damage columns come from
 // playhead_pixel_x (main.cpp) on the basis of the pixels they erase.
 //
 // painted_column_of_source_frame_on_basis: the pixel column (offset from

@@ -453,8 +453,8 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // same lattice the click placement and the marker commits land on, so a step
     // means the same sample whatever pan or zoom preceded it (finer adjustment
     // is a deeper zoom's job). The spp is the PAINTER-quantized q rather than
-    // the logical one for the same reason the click placement takes it: it is
-    // the grid actually drawn (under the multiple-of-16 width contract the two
+    // the logical one for the same reason the click placement's item basis
+    // carries that quantization: it is the grid actually drawn (under the multiple-of-16 width contract the two
     // agree, but the painted grid is the principled input).
     // The recovery nearbyint is the column direction and is this walk's own; the
     // landing is the shared owner's. move_playhead_to still owns the walls, and
@@ -837,10 +837,12 @@ void Viewport::invalidate_all() {
 // THE PRIOR PLACE IS A PARAMETER because the landing has already run: the
 // movement owner's keep-visible edge-align (reseat_playhead_to) may have
 // scrolled the viewport before this body is reached, so the column is taken
-// against the viewport the subject painted on before the nudge. It arrives in
-// the caller's own form, one per caller, and both reduce to a SAMPLE OFFSET
-// the shared body holds: offset clamped into [0, floor((w − 1)·q)] with q the
-// painter-quantized spp (painter_samples_per_pixel) — the painted column is
+// against the viewport the subject painted on before the nudge. It arrives as
+// THE PAINTED COLUMN, each caller deriving it on the basis its subject's
+// pixels were painted with (architect 2026-09-24, strictly as painted), and
+// reduces to a SAMPLE OFFSET on the live grid: the column clamped into
+// [0, w − 1], times q the painter-quantized spp (painter_samples_per_pixel),
+// that offset clamped into [0, floor((w − 1)·q)] — the painted column is
 // nearbyint(offset / q) (displayed_column_at, the playhead's and the stems'
 // placement), so offset 0 paints column 0 and the upper bound paints column
 // w − 1, never one past it. The new start is new subject − offset through
@@ -852,8 +854,8 @@ void Viewport::invalidate_all() {
 // places is the one the next frame paints.
 //
 // Both nudges have stopped playback before their write, so the cursor is the
-// subject. TWO CALLERS, each on its NudgeCamera::HoldColumn arm, one per
-// form:
+// subject. TWO CALLERS, re-derived by grep 2026-09-24, each on its
+// NudgeCamera::HoldColumn arm:
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
 //     position_nudge.cpp) passes the PAINTED COLUMN — the focused marker's
 //     pre-write frame through painted_column_of_source_frame_on_basis over
@@ -861,12 +863,14 @@ void Viewport::invalidate_all() {
 //     step anchored on (stepped_anchor_frame), so the column held is the one
 //     the marker visibly occupied even while a viewport job (a resize
 //     re-clamp, a target-map publish) has moved the live viewport ahead of
-//     the pixels (architect 2026-09-24, strictly as painted). The column is
-//     clamped into [0, w − 1] and taken to the live grid as column × q.
+//     the pixels (architect 2026-09-24, strictly as painted).
 //   * THE WAVEFORM-LANE PLAYHEAD STEP (GuiInputHandler::
-//     run_waveform_lane_playhead_step) passes the cursor before the step and
-//     the live viewport start it stood against, held as their sample
-//     difference; the playhead's own basis is the live viewport's. A held arrow's repeats and a held arrow button's fires
+//     run_waveform_lane_playhead_step) passes the cursor's column before the
+//     step on the PLATE basis the cursor pass paints it with
+//     (GuiPaintHandler::plate_viewport_basis; cold, the item basis, then the
+//     live viewport by its own contract), so a viewport job in flight
+//     cannot move the column held ahead of the pixels (architect 2026-09-24,
+//     strictly as painted). A held arrow's repeats and a held arrow button's fires
 // reach both through the same act bodies, so the hold runs at every step. The
 // write below changes the camera, so the chokepoint puts the posture out; the
 // nudge keeps it across its whole act at its dispatch (AppState::camera_hold's
@@ -876,32 +880,20 @@ void Viewport::invalidate_all() {
 // in target view on the warp column the marker nudge is refused upstream
 // (active_column_authoring_allowed) and never arrives, while the playhead step
 // holds there as anywhere. THE ZOOM IS NEVER CHANGED HERE.
-void Viewport::hold_subject_column_after_nudge(int64_t prior_subject_sample,
-                                               int64_t prior_viewport_start) {
-    hold_subject_offset_after_nudge(prior_subject_sample -
-                                    prior_viewport_start);
-}
-
 void Viewport::hold_subject_column_after_nudge(int prior_column) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const double q = painter_samples_per_pixel(app, audio, area);
     if (q <= 0.0 || area.w <= 0) return;
     // The painted column's own offset on the live grid: nearbyint(offset / q)
-    // recovers the column (displayed_column_at), and the shared body's clamp
-    // keeps the last column's offset inside the window.
-    hold_subject_offset_after_nudge(static_cast<int64_t>(std::nearbyint(
-        static_cast<double>(std::clamp(prior_column, 0, area.w - 1)) * q)));
-}
-
-void Viewport::hold_subject_offset_after_nudge(int64_t prior_offset) {
-    if (audio.total_frames() <= 0) return;
-    const GuiRect area = waveform_area(app);
-    const double q = painter_samples_per_pixel(app, audio, area);
-    if (q <= 0.0 || area.w <= 0) return;
+    // recovers the column (displayed_column_at), and the clamp keeps the last
+    // column's offset inside the window.
     const int64_t last_offset = static_cast<int64_t>(
         std::floor(static_cast<double>(area.w - 1) * q));
-    const int64_t offset = std::clamp<int64_t>(prior_offset, 0, last_offset);
+    const int64_t offset = std::clamp<int64_t>(
+        static_cast<int64_t>(std::nearbyint(
+            static_cast<double>(std::clamp(prior_column, 0, area.w - 1)) * q)),
+        0, last_offset);
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample = app.playhead_cursor_sample - offset;
     clamp_viewport_start(app, audio);

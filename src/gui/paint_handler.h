@@ -605,7 +605,11 @@ struct GuiPaintHandler {
     // phase_reset_overlay_band), the playhead head and the cursor's
     // marker-lane run (both painted in the ruler pass), the cursor
     // playhead, the scanner — plus its two per-frame narrow damage sites in
-    // main.cpp — and the strip-drag anchor. Other sites state only their own
+    // main.cpp — and the strip-drag anchor; and ONE INPUT READER (architect
+    // 2026-09-24, strictly as painted), the waveform-lane playhead step's
+    // hold, which takes the cursor's prior column as the cursor pass painted
+    // it (GuiInputHandler::run_waveform_lane_playhead_step, re-derived by
+    // grep 2026-09-24). Other sites state only their own
     // class plus a pointer here. The MARKER STEMS are deliberately not among
     // them: they paint from the flag painter's own stash, on the basis those
     // boxes were laid out against, so a stem cannot leave its flag.

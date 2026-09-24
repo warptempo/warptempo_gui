@@ -17389,9 +17389,11 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // release snap (commit_trim_drag); the sweep's TRIM half
 // (sweep_trim_frame_at_column); the trim bar's bound-set click
 // (trim_bound_click_frame); and both nudges' column step
-// (stepped_anchor_frame). The click-placement family stays on the live
-// viewport by ruling (playhead_frame_at_click_column), and so does the
-// navigation that writes the viewport itself.
+// (stepped_anchor_frame). The CLICK-PLACEMENT family joined it (architect
+// 2026-09-24, "reality to the face" reads the same for a click as for a
+// drag): its one conversion, playhead_frame_at_click_column — the nav click,
+// the scrub click, the sweep's PLAYHEAD half and the empty-lane double-click
+// create. The navigation that writes the viewport itself stays live.
 // (Five former consumers left the list for a PAINTER'S STASH, the stronger
 // form of the same guarantee: the marker-text lane's run resolver,
 // marker_hit_at and lane_text_left_x in row 5, when hit_test_flag and the

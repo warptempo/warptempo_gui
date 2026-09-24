@@ -9087,22 +9087,51 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // so the camera holds while the cursor stays on screen and walks with it
     // at the edge once it would leave. Standing, the step HOLDS THE COLUMN
     // (the rule at Viewport::hold_subject_column_after_nudge):
-    // the subject's place is captured BEFORE the step — the cursor and the
-    // viewport it painted on, the landing's edge-align being free to scroll
-    // that viewport — and a step that moved the cursor then places the
+    // the subject's place is captured BEFORE the step — the cursor's COLUMN
+    // AS PAINTED, the landing's edge-align being free to scroll the live
+    // viewport — and a step that moved the cursor then places the
     // viewport so the cursor paints in that same column, clamped to the
     // waveform's edge columns (never changing the zoom), in every view,
     // target view on the warp column included; a walled step moved nothing
     // and moves no camera. Every press and every held repeat — the keys' and
     // the arrow buttons' — runs through this body, so the posture is kept
     // and read again at each step.
+    //
+    // THE PRIOR COLUMN IS THE PAINTED ONE (architect 2026-09-24, strictly as
+    // painted): the column the playhead's pixels stand in, on the basis they
+    // were painted with — the PLATE basis (GuiPaintHandler::
+    // plate_viewport_basis, the one paint_playheads draws the cursor through,
+    // playhead_pixel_x's contract), rounded once through displayed_column_at
+    // as the stem's own placement — never the live viewport, which a viewport
+    // job in flight has moved ahead of the pixels. The plate rather than the
+    // item basis because this site reaches the paint handler and the plate is
+    // the playhead's own registration: every user-driven camera write
+    // (this hold's own included) rebuilds the plate synchronously, so a held
+    // key's next repeat reads the column the last step's write placed even
+    // before a frame promotes the item mirror. Cold (no plate built yet —
+    // nothing painted, so no painted column), the item basis, which is then
+    // the live viewport by its own contract. The camera write itself stays a
+    // live clamp_viewport_start write (hold_subject_column_after_nudge, the
+    // marker nudge's shape).
     const int64_t cursor_before = app.playhead_cursor_sample;
-    const int64_t viewport_start_before = app.viewport_start_sample;
+    double painted_vp_start = 0.0;
+    double painted_spp      = 0.0;
+    if (paint_handler.wf_cache.fp_area_w > 0) {
+        const GuiPaintHandler::PlateViewportBasis plate =
+            paint_handler.plate_viewport_basis();
+        painted_vp_start = plate.vp_start;
+        painted_spp      = plate.spp;
+    } else {
+        const ItemViewportBasis basis = item_viewport_basis(app, audio);
+        painted_vp_start = basis.vp_start;
+        painted_spp      = basis.spp;
+    }
     viewport.move_playhead_by_arrow_step(step);
-    if (camera == NudgeCamera::HoldColumn &&
+    if (camera == NudgeCamera::HoldColumn && painted_spp > 0.0 &&
         app.playhead_cursor_sample != cursor_before)
-        viewport.hold_subject_column_after_nudge(cursor_before,
-                                                 viewport_start_before);
+        viewport.hold_subject_column_after_nudge(displayed_column_at(
+            static_cast<double>(cursor_before), painted_vp_start,
+            painted_spp));
     app.camera_hold = hold_before;
 }
 

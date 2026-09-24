@@ -444,13 +444,13 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // coordinates — hence two values per column. In source view the two agree
 // frame for frame (the same rounding under the same grid) at rest; in target
 // view this is the inverse image the cursor's value only names. THE TWO HALVES
-// SIT ON TWO VIEWPORTS BY RULING (architect 2026-09-24): the TRIM half is an
-// authoring gesture and reads the ITEM viewport basis — the viewport the trim
-// bar is painted on, the displayed map's twin, so a worker job in flight at
-// the press cannot move the grid the trim lands on ahead of the pixels (cold,
-// the basis is the live viewport by its own contract) — while the PLAYHEAD
-// half is the click-placement family and stays on the live viewport, so the
-// two part by the in-flight job's shift for as long as it is in flight.
+// SIT ON ONE PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
+// TRIM half here and the PLAYHEAD half (playhead_frame_at_click_column, the
+// click-placement family's one conversion) both read the ITEM viewport basis
+// — the viewport the trim bar and the lane are painted on, the displayed
+// map's twin — so a worker job in flight at the press moves the grid neither
+// half lands on ahead of the pixels, and the two halves stand on one grid
+// throughout (cold, the basis is the live viewport by its own contract).
 // Returns 0 on degenerate geometry (unloaded audio, no strip width), which no
 // caller reaches: every arm refuses unloaded audio and the gutter, and the
 // motion path returns on an empty strip.

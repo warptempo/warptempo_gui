@@ -958,19 +958,32 @@ bool point_on_nav_surface(const AppState& app, const GuiAudio& audio,
 // phase-reset drop commits the playhead's sample, and
 // authored_frame_at_column_on_basis's target arm rides this same grid), and an
 // unanchored landing relabels by a frame across a pan or a zoom round trip.
-// THE VIEWPORT IS THE LIVE ONE, BY RULING: this is the click-placement family,
-// which stayed live when the gesture mechanics moved to the item viewport basis
-// (architect 2026-09-24); the two are one grid whenever no viewport-dispatched
-// worker job is in flight.
+// THE VIEWPORT IS THE ITEM BASIS (architect 2026-09-24, strictly as painted —
+// "reality to the face" reads the same for a click as for a drag):
+// item_viewport_basis's integer vp_start_frame and its spp, the span the
+// displayed items were painted on, so a click converts its column against the
+// picture ON SCREEN and never against the live viewport a viewport-dispatched
+// worker job in flight at the press (a wheel pan or a zoom step, then a quick
+// click) has already moved ahead of the pixels. The integer start is the
+// grid's own input, the shape trim_mouse_x_to_active_frame takes on the same
+// basis. Cold, the basis is the live viewport by its own contract. This is
+// the whole click-placement family's one conversion — the nav click act
+// (place_playhead_at_click_column, run_nav_click_act), the sweep's PLAYHEAD
+// half at the press and in motion (and so the touch region hold), the
+// scrub click (scrub_press_at) and the empty-lane double-click create — so
+// every one of them lands on the painted grid the gesture family's
+// conversions ride; the 2026-07-25 live-viewport ruling for this family is
+// repealed.
 // The fallback covers degenerate geometry only (no strip width / no zoom), where
 // there is no painted grid to land on.
 int64_t playhead_frame_at_click_column(const AppState& app,
                                        const GuiAudio& audio, int col) {
-    const double q = painter_samples_per_pixel(app, audio, waveform_area(app));
-    if (q > 0.0)
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    if (basis.spp > 0.0)
         return static_cast<int64_t>(std::llrint(
-            displayed_grid_position_at_column(app.viewport_start_sample, col, q)));
-    return app.viewport_start_sample;
+            displayed_grid_position_at_column(basis.vp_start_frame, col,
+                                              basis.spp)));
+    return basis.vp_start_frame;
 }
 
 // The active editor's resolved text geometry, valid only while exactly one
@@ -1784,6 +1797,10 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
     const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
     if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    // The clicked column converts on the PAINTED viewport, the item basis
+    // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
+    // painted), so the scrub launches at the frame the pixels under the
+    // pointer showed; cold, the live viewport by the basis's own contract.
     const int64_t frame = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     scrub_act_at(frame);
@@ -6533,7 +6550,12 @@ int64_t GuiInputHandler::place_playhead_at_click_column(
     // current_samples_per_pixel, so the last visible column's frame can compute
     // to domain_total — one past [0, domain_total-1], which the display-state
     // validator would clear wholesale. The clamp also
-    // makes -1 a sentinel no seated frame can collide with.
+    // makes -1 a sentinel no seated frame can collide with. THE COLUMN
+    // CONVERTS ON THE PAINTED VIEWPORT, the item basis
+    // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
+    // painted): the playhead seats at the frame the clicked pixels showed even
+    // while a viewport job in flight has moved the live viewport ahead of
+    // them; cold, the live viewport by the basis's own contract.
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
@@ -6606,6 +6628,12 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
     // its answer.
     if (authoring_locked(app)) return;
     if (!active_column_authoring_allowed(app)) return;
+    // The placement converts on the PAINTED viewport, the item basis
+    // (playhead_frame_at_click_column; architect 2026-09-24, strictly as
+    // painted), so the drop below authors at the column the double-click
+    // pressed on screen; cold, the live viewport by the basis's own contract.
+    // The drops themselves convert no column: they author at the playhead's
+    // frame.
     const int64_t sample = clamp_playhead_to_live_domain(
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
@@ -9321,7 +9349,11 @@ void GuiInputHandler::apply_region_drag_motion(int mouse_x, int mouse_y) {
     // wall differs from the click conversion, so the last visible column's
     // frame can land at domain_total — one past [0, domain_total-1] — which
     // the display-state validator would clear wholesale (same rule as the
-    // press seat, place_playhead_at_click_column).
+    // press seat, place_playhead_at_click_column). BOTH VALUES RIDE ONE
+    // PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
+    // playhead's through playhead_frame_at_click_column and the trim's through
+    // sweep_trim_frame_at_column both convert on the item basis (cold, the
+    // live viewport by its own contract), so a job in flight parts neither.
     int rel = mouse_x - area.x;
     if (rel < 0) rel = 0;
     if (rel >= area.w) rel = area.w - 1;
