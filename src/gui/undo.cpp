@@ -1014,42 +1014,38 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
-    // language; THE CAMERA RULED 2026-09-22 and re-ruled 2026-09-23): the
+    // language; THE CAMERA RULED 2026-09-24): the
     // restore re-selects the touched set (done above) and LANDS the playhead
     // on its FOCUS — the touched marker for a singleton, the EARLIEST touched
     // member for a group (the focus rule at apply_post_restore_rules_impl) —
     // the members' own brightened flags and the always-visible cursor on the
     // focus being the whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS
-    // AND NEVER TO THE PLAYHEAD, THROUGH THE LANDING OWNER (architect
-    // 2026-09-23; Viewport::land_subject, the Tab walk's own camera, whose
-    // four answers are at its definition):
+    // AND NEVER TO THE PLAYHEAD, THROUGH THE LANDING OWNER'S RESTORE
+    // (Viewport::land_subject, LandingKind::Restore, whose answers and
+    // ruled-out cameras are at its definition). A restore is a non-linear
+    // jump, and centring is the least prejudicial way of framing one:
     //   * ONE MARKER lands the cursor the land just seated (lo == hi):
-    //     onscreen nothing moves; offscreen it is centred at the working zoom
-    //     or finer and paged in the edge margin from the left edge when
-    //     coarser, the zoom untouched;
+    //     wholly on screen nothing moves; off screen it is centred, at every
+    //     zoom, the zoom untouched;
     //   * SEVERAL MARKERS land their range the same way — nothing when it is
-    //     already wholly on screen, its midpoint centred or its start paged in
-    //     when it fits — and when the range plus the edge margin on each side
-    //     cannot fit the window at the current zoom, the owner writes nothing
-    //     and the span framer ZOOMS OUT until it does and centres it
-    //     (frame_span_into_view with margin, input_handler.cpp), never in;
+    //     already wholly on screen, its midpoint centred when it fits — and
+    //     when the range plus the edge margin on each side cannot fit the
+    //     window at the current zoom, the owner writes nothing and the span
+    //     framer ZOOMS OUT until it does and centres it (frame_span_into_view
+    //     with margin, input_handler.cpp), never in;
     //   * NO MARKER (a removal, or an entry that touched nothing in this
     //     column) moves NO CAMERA: the only cursor write such a restore makes
     //     is the map-change re-land's translation above, which scrolls
     //     nothing.
-    // (From 2026-09-22 one marker was centred always and a group's range
-    // middle was centred always, zooming out only when it could not fit —
-    // center_span_in_view; later on 2026-09-23 both took a least-movement
-    // landing, until the landing owner replaced it the same day.)
     //
     // THE HOLD POSTURE (AppState::camera_hold) SURVIVES A RESTORE THAT MOVES
     // NO CAMERA: undo and redo are ordinary viewport writes, clearing the
-    // posture only through the chokepoint when their camera moves, and the
-    // landing owner mostly does not. So the restore's land keeps the bit
+    // posture only through the chokepoint when their camera moves, and an
+    // on-screen subject moves none. So the restore's land keeps the bit
     // across itself — the land is the subject coming back to where the entry
     // left it, not the user turning elsewhere — and the camera write after it
-    // decides alone: its centre answer arms the posture, its page-in and the
-    // framer's zoom-out put it out.
+    // decides alone: the singleton's centring arms the posture, while a
+    // group's centring and the framer's zoom-out put it out.
     //
     // Runs AFTER sanitize_selection_after_restore so the land sees the final
     // membership, after the tab / data / column / audio-view restores so it
@@ -1087,11 +1083,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 const bool hold_before = app.camera_hold;
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
                 app.camera_hold = hold_before;
-                // THE LANDING OWNER at the current zoom (architect
-                // 2026-09-23). A single marker always fits, so the verdict
-                // is dropped.
+                // THE LANDING OWNER'S RESTORE at the current zoom. A single
+                // marker always fits, so the verdict is dropped.
                 (void)viewport.land_subject(app.playhead_cursor_sample,
-                                            app.playhead_cursor_sample);
+                                            app.playhead_cursor_sample,
+                                            LandingKind::Restore);
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
                 // full-waveform invalidates below repaint it. Stems do not
@@ -1117,7 +1113,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());
             app.camera_hold = hold_before;
-            // THE CAMERA IS THE LANDING OWNER'S OVER THE RANGE, zooming out
+            // THE CAMERA IS THE LANDING OWNER'S RESTORE OVER THE RANGE, zooming out
             // only when the range plus the edge margin cannot fit (the fit
             // test and the answers at Viewport::land_subject, viewport.cpp;
             // THIS IS ITS ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
@@ -1153,7 +1149,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 }
             }
             if (have &&
-                !viewport.land_subject(lo, hi)) {
+                !viewport.land_subject(lo, hi, LandingKind::Restore)) {
                 frame_span_into_view(app, viewport.audio, viewport, lo, hi,
                                      /*margin=*/true);
             }

@@ -2020,10 +2020,11 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // and THE LIVE FAMILY'S LANDING IS MIRRORED ARM FOR ARM (architect
     // 2026-09-16; "navigation commands that can be symmetric in the history
     // view should be", 2026-09-22): the mode's Tab arm and both steps of its
-    // march state Land, the landing owner (Viewport::land_subject, architect
-    // 2026-09-23) over the cursor just seated — onscreen nothing moves,
-    // offscreen it centres at the working zoom or finer (arming the hold
-    // posture) and pages in when coarser, the zoom never written. A single
+    // march state Land, the landing owner's walk (Viewport::land_subject,
+    // LandingKind::Walk, architect 2026-09-24) over the cursor just seated —
+    // at the working zoom or finer it centres the flag, on screen or not
+    // (arming the hold posture); coarser, an on-screen flag moves nothing and
+    // an off-screen one is paged in; the zoom is never written. A single
     // flag always fits, so the owner's cannot-fit verdict is dropped. The
     // Center arm has no caller in the view (its `c` is run_center_command's
     // mode arm) and centres at the standing zoom, as the live jump's does.
@@ -2033,7 +2034,8 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
             break;
         case MarkerLandingFrame::Land:
             (void)viewport.land_subject(app.playhead_cursor_sample,
-                                        app.playhead_cursor_sample);
+                                        app.playhead_cursor_sample,
+                                        LandingKind::Walk);
             break;
     }
     // A DISCRETE COMMAND and the focus ALWAYS moved to get here (every branch
@@ -2352,8 +2354,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // is just short for 'tab, ctrl+tab, tab'", so it is built as exactly
         // that composition over the view's own vocabulary — the mode's Tab act,
         // the A/B switch, the mode's Tab act again — EACH STEP LANDING THROUGH
-        // THE LANDING OWNER exactly as the live march's does (architect
-        // 2026-09-23; MarkerLandingFrame::Land, Viewport::land_subject), and
+        // THE LANDING OWNER'S WALK exactly as the live march's does
+        // (MarkerLandingFrame::Land, Viewport::land_subject, LandingKind::Walk), and
         // writing no zoom. (From 2026-09-14 to 2026-09-23 each step stated
         // NoFrame and ran plain `c` behind it.)
         //
@@ -2378,7 +2380,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // THE STEP'S CAMERA IS THE LIVE WALK'S OWN ANSWER (architect 2026-09-16,
     // the sibling's rule; "navigation commands that can be symmetric in the
     // history view should be", 2026-09-22): MarkerLandingFrame::Land, the
-    // landing owner (Viewport::land_subject, architect 2026-09-23), so the
+    // landing owner's walk (Viewport::land_subject, LandingKind::Walk), so the
     // walks frame alike at every level in both worlds. No alt term here:
     // history_mode_owns_key refuses every alt shape ahead of this body; the
     // march above ranks first.
@@ -8881,11 +8883,12 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
     // march paired tabs forward in lockstep with one chord.
     //
-    // EACH STEP LANDS THROUGH THE LANDING OWNER (architect 2026-09-23): the
-    // walk step states MarkerLandingFrame::Land exactly as bare Tab does, so
-    // an onscreen landing moves nothing, an offscreen one centres at the
-    // working zoom or finer — arming the hold posture — and pages in when
-    // coarser (Viewport::land_subject). THE MARCH WRITES NO ZOOM: it is bare
+    // EACH STEP LANDS THROUGH THE LANDING OWNER'S WALK (architect
+    // 2026-09-24): the walk step states MarkerLandingFrame::Land exactly as
+    // bare Tab does, so at the working zoom or finer the landing is centred,
+    // on screen or not — arming the hold posture — and coarser an on-screen
+    // landing moves nothing and an off-screen one is paged in
+    // (Viewport::land_subject, LandingKind::Walk). THE MARCH WRITES NO ZOOM: it is bare
     // Tab and Ctrl+Tab composed, and the Tab walk changes no zoom at any
     // level. (From 2026-09-14 to 2026-09-23 each step stated NoFrame and ran
     // plain `c` behind it, snapping both tabs to the working zoom.) The `h`
@@ -8926,11 +8929,11 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 
     // Bare Tab / Shift+Tab / IsoLeftTab: cycle focus onto the next/prev
     // marker, moving the playhead to it through THE LANDING OWNER
-    // (MarkerLandingFrame::Land — Viewport::land_subject, architect
-    // 2026-09-23), in both audio views alike: an onscreen landing moves
-    // nothing; an offscreen one is centred at the working zoom or finer,
-    // arming the hold posture, and paged in the edge margin from the left
-    // edge when coarser. The zoom is never written. Under a lit grid
+    // (MarkerLandingFrame::Land — Viewport::land_subject's walk, architect
+    // 2026-09-24), in both audio views alike: at the working zoom or finer
+    // the landing is centred, on screen or not, arming the hold posture;
+    // coarser, an on-screen landing moves nothing and an off-screen one is
+    // paged in the edge margin from the left edge. The zoom is never written. Under a lit grid
     // iterations the walk steps the cells (marker_walk_step's same-marker arm
     // writes no camera).
     //

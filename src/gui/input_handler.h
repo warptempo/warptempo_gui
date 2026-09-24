@@ -2449,9 +2449,9 @@ private:
     // about the camera beyond what `frame` states and reads no preference of
     // its own — follow never gated it. The three Tab arms and the two steps
     // of the Ctrl+Shift+Tab paired march pass MarkerLandingFrame::Land, the
-    // landing owner (Viewport::land_subject, architect 2026-09-23): onscreen
-    // nothing moves, offscreen it centres at the working zoom or finer and
-    // pages in when coarser, the zoom never written.
+    // landing owner's walk (Viewport::land_subject, LandingKind::Walk):
+    // centred at the working zoom or finer, on screen or not; coarser,
+    // nothing on screen and paged in off screen; the zoom never written.
     // The parameter carries no default precisely so a future caller
     // cannot inherit any answer by saying nothing.
     // The WHOLE Tab family comes through here: the three bare chords and the
@@ -4426,7 +4426,7 @@ private:
     // (MarkerLandingFrame, app_state.h — the live walk's own type). Two
     // callers, both in handle_history_mode_key: its Tab arm and its
     // Ctrl+Shift+Tab march, each stating MarkerLandingFrame::Land, the landing
-    // owner (Viewport::land_subject, architect 2026-09-23), exactly as the live
+    // owner's walk (Viewport::land_subject, LandingKind::Walk), exactly as the live
     // walk and march do. Every walk rule it obeys is stated at those arms.
     void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);
     void open_history_mode_fresh();

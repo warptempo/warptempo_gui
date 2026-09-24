@@ -758,7 +758,7 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
 //     answer (land_subject);
 //   * paged_in_viewport_start — `target` the edge margin in from the LEFT
 //     edge: follow's page-in (follow_scroll_if_needed) and the landing
-//     owner's page-in answer (land_subject).
+//     owner's coarse walk page-in (land_subject).
 namespace {
 int64_t centred_viewport_start(int64_t target, int64_t visible) {
     return target - visible / 2;
@@ -938,77 +938,108 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
-// THE LANDING OWNER (architect 2026-09-23): ONE camera for every act that
+// THE LANDING OWNER (architect 2026-09-24): ONE camera for every act that
 // walks or restores a subject onto the screen, over an ACTIVE-DOMAIN range
-// [lo, hi] (lo == hi for a single marker). It reads the zoom, and that read is
-// legal because it happens at a discrete act — a keystroke does not pop the
-// picture the way a zoom-derived picture did during a zoom gesture, and his
-// hand expects the landing to answer the level he is working at (the rule at
-// nudge_camera's neighbour, app_state.h). THE ZOOM IS NEVER WRITTEN HERE.
-// FOUR ANSWERS, in order:
-//   a. WHOLLY ON SCREEN (lo ≥ start and hi < start + visible, in painted
-//      samples): NOTHING MOVES and the hold posture is not touched;
-//   b. CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
-//      visible window at the live zoom — the room the span framer's margin
-//      arm (frame_span_into_view, input_handler.cpp) leaves a span, taken in
-//      the framer's own unrounded domain (spp × W at the live level, its
-//      `visible_t`), which guarantees a range refused here solves to a level
-//      no finer than the current one there, so the caller's zoom-out never
-//      zooms in. RETURNS FALSE HAVING WRITTEN NOTHING: the zoom-out fit is
-//      the caller's;
-//   c. A FITTING RANGE AT THE WORKING ZOOM OR FINER (app.zoom_level <=
-//      kWorkingZoomLevel; 2.0 exactly is "at working", anything above is
-//      coarse) is CENTRED on its midpoint at the standing zoom, the centring
-//      body's own placement, and ARMS THE HOLD POSTURE (AppState::camera_hold)
-//      after the chokepoint — the landing is an explicit centring on its
-//      subject, and it arms even where a wall keeps it off the centre;
-//   d. A FITTING RANGE COARSER THAN WORKING is PAGED IN: lo lands the edge
-//      margin in from the LEFT edge, in both directions — a leftward subject
-//      too, the same viewport a page-in gives a leftward target — follow's
-//      own placement (paged_in_viewport_start). The hold stays out, as at
-//      any page (the chokepoint put it out).
-// Degenerate geometry (no strip width, no sample rate, nothing visible) writes
-// nothing and answers true. clamp_viewport_start owns the song's two ends and
-// the grid; the changed path takes the discrete move's tail.
+// [lo, hi] (lo == hi for a single marker), its answers chosen by the caller's
+// LandingKind. It reads the zoom, and that read is legal because it happens at
+// a discrete act — a keystroke does not pop the picture the way a
+// zoom-derived picture did during a zoom gesture (the rule at nudge_camera's
+// neighbour, app_state.h). THE ZOOM IS NEVER WRITTEN HERE.
 //
-// ITS READERS, grepped at the ruling:
-//   * the Tab walk, bare Tab / Shift+Tab / IsoLeftTab in both audio views —
-//     live through jump_playhead_to_focused_marker's MarkerLandingFrame::Land
-//     arm (cycle_marker_focus), and in the `h` view through
-//     cycle_history_diff_flag_focus's Land arm; each lands the cursor it has
-//     just seated (lo == hi);
-//   * the Ctrl+Shift+Tab paired march, live and `h`, whose two steps are
-//     those same two walk bodies stating Land;
-//   * the undo/redo restore (restore_history_entry, undo.cpp): its singleton
-//     on the cursor just landed, its group on the restored markers'
-//     [earliest, latest] extent. THE GROUP ARM IS THE ONE CALLER THAT CAN
-//     MEET THE FALSE VERDICT, and runs the span framer's margin arm on it; a
-//     single subject always fits, so every other caller drops the verdict.
+// WALK — the Tab walk and the march's steps, always a single frame:
+//   * AT THE WORKING ZOOM OR FINER (app.zoom_level <= kWorkingZoomLevel; 2.0
+//     exactly is "at working", anything above is coarse) the subject is
+//     CENTRED, ON SCREEN OR NOT, the centring body's own placement: the walk
+//     always moves one way and every landing frames alike, so no half of the
+//     screen is skipped;
+//   * COARSER, an on-screen subject moves NOTHING and an off-screen one is
+//     PAGED IN, lo landing the edge margin in from the LEFT edge in both
+//     directions — follow's own placement (paged_in_viewport_start).
+// RESTORE — undo / redo, a singleton (lo == hi) or a group's [earliest,
+// latest]; a restore is a non-linear jump, and centring is the least
+// prejudicial way of framing one:
+//   * WHOLLY ON SCREEN (lo ≥ start and hi < start + visible, in painted
+//     samples): NOTHING MOVES, at every zoom;
+//   * CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
+//     visible window at the live zoom — the room the span framer's margin arm
+//     (frame_span_into_view, input_handler.cpp) leaves a span, taken in the
+//     framer's own unrounded domain (spp × W at the live level, its
+//     `visible_t`), which guarantees a range refused here solves to a level
+//     no finer than the current one there, so the caller's zoom-out never
+//     zooms in. RETURNS FALSE HAVING WRITTEN NOTHING: the zoom-out fit is the
+//     caller's;
+//   * OFF SCREEN AND FITS: CENTRED on its midpoint AT EVERY ZOOM, coarse
+//     included; never a page-in.
+// THE HOLD POSTURE (AppState::camera_hold) IS ARMED BY EVERY CENTRING OF A
+// SINGLE MARKER (lo == hi), the walk's and the restore's alike, after the
+// chokepoint — a centred marker is expected to hold its column, and it arms
+// even where a wall keeps it off the centre. A GROUP'S CENTRING (lo < hi) ARMS
+// NOTHING: a multi-marker selection is for toggling or deleting, not nudging,
+// and the nudge collapses to the focus anyway. A page-in passes the
+// chokepoint, which puts the hold out as at any page; a no-move answer leaves
+// the posture as it stands. Degenerate geometry (no strip width, no sample
+// rate, nothing visible) writes nothing and answers true. clamp_viewport_start
+// owns the song's two ends and the grid; the changed path takes the discrete
+// move's tail.
+//
+// RULED OUT, never to be re-proposed (architect 2026-09-24):
+//   * LEAST MOVEMENT as a camera (2026-09-22 to 2026-09-24): it "sounds good
+//     but it actually doesn't feel good in practice";
+//   * CENTRE-ONLY-IF-OFF-SCREEN for the walk (dc8b13a8, one day): with three
+//     markers on screen it centred the first, left the next two and centred
+//     the fourth — "we've ignored the left half of the screen";
+//   * PAGE-IN for undo / redo: a restore is a non-linear jump, and paging it
+//     "feels odd even at coarse zooms";
+//   * THE AUDIO-VIEW FORK of the walk's camera (2026-09-23, one day): the walk
+//     frames alike in both audio views.
+//
+// ITS READERS, re-grepped 2026-09-24:
+//   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
+//     (input_handler.cpp — bare Tab / Shift+Tab / IsoLeftTab through
+//     cycle_marker_focus, and both steps of the live Ctrl+Shift+Tab march),
+//     and cycle_history_diff_flag_focus's Land arm (input_key_dispatch.cpp —
+//     the `h` view's Tab and both steps of its march); each lands the cursor
+//     it has just seated (lo == hi), so the verdict is dropped;
+//   * RESTORE: restore_history_entry's singleton arm (undo.cpp) on the cursor
+//     just landed, and its group arm on the restored markers' [earliest,
+//     latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
+//     runs the span framer's margin arm on it.
 // NOT READERS, by ruling: bare `c`, Shift+J and the A/B audition, which
 // centre unconditionally (center_viewport_on_playhead after the working
 // zoom); follow's page-in during playback (follow_scroll_if_needed, which
 // reads the scanner and keeps follow's suspension its own); the nudge's
 // cameras.
-bool Viewport::land_subject(int64_t lo, int64_t hi) {
+bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     if (hi < lo) std::swap(lo, hi);   // defensive; the callers pass in order
     const int     W  = waveform_area(app).w;
     const int     sr = audio.sample_rate();
     const int64_t visible = samples_visible(app, audio);
     if (W <= 0 || sr <= 0 || visible <= 0) return true;
     const int64_t vp_end = app.viewport_start_sample + visible;
-    if (lo >= app.viewport_start_sample && hi < vp_end) return true;
+    const bool on_screen = lo >= app.viewport_start_sample && hi < vp_end;
+    // The working-zoom read, inline by ruling: the walk's one zoom term.
+    const bool fine = app.zoom_level <= kWorkingZoomLevel;
+    bool centre = false;
+    switch (kind) {
+        case LandingKind::Walk:
+            if (!fine && on_screen) return true;
+            centre = fine;
+            break;
+        case LandingKind::Restore:
+            if (on_screen) return true;
+            centre = true;
+            break;
+    }
     const double visible_t = samples_per_pixel_at(app.zoom_level, sr) *
                              static_cast<double>(W);
     const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) * visible_t;
     if (static_cast<double>(hi - lo) > room) return false;
     const int64_t old_vp = app.viewport_start_sample;
-    // The working-zoom read, inline by ruling: the landing's one zoom term.
-    const bool centre = app.zoom_level <= kWorkingZoomLevel;
     app.viewport_start_sample = centre
         ? centred_viewport_start(lo + (hi - lo) / 2, visible)
         : paged_in_viewport_start(lo, visible);
     clamp_viewport_start(app, audio);
-    if (centre) app.camera_hold = true;
+    if (centre && lo == hi) app.camera_hold = true;
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
     return true;
 }

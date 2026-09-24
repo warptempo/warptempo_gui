@@ -2137,8 +2137,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs;
     // Tab / Shift+Tab / IsoLeftTab cycle marker focus. The walk and each march
-    // step land through the landing owner (Viewport::land_subject, architect
-    // 2026-09-23), which reads the zoom and never writes it.
+    // step land through the landing owner's walk (Viewport::land_subject,
+    // LandingKind::Walk), which reads the zoom and never writes it.
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
@@ -2795,8 +2795,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // (architect 2026-09-04). The walk moves focus and lands the playhead; the
     // camera is its caller's statement, forwarded untouched: the three Tab
     // arms and both steps of the Ctrl+Shift+Tab paired march state
-    // MarkerLandingFrame::Land, the landing owner (Viewport::land_subject,
-    // architect 2026-09-23), which reads the zoom and never writes it.
+    // MarkerLandingFrame::Land, the landing owner's walk
+    // (Viewport::land_subject, LandingKind::Walk, architect 2026-09-24),
+    // which reads the zoom and never writes it.
     // Putting a policy read in here is what once made the march inherit
     // one, which is the shape the required parameter exists to prevent:
     // framing cannot be acquired by saying nothing. `c` remains the direct
@@ -2813,8 +2814,8 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // (A FRAMING STEP FROM A FINER ZOOM RETURNED TO WORKING here from
     // 2026-09-15 to 2026-09-22, on a Center the zoom-derived walk stated; it
     // went with that derivation.)
-    // THE HOLD POSTURE is the landing owner's to arm, on its centre answer
-    // alone (AppState::camera_hold); nothing here arms it.
+    // THE HOLD POSTURE is the landing owner's to arm, on its centring of the
+    // single landing (AppState::camera_hold); nothing here arms it.
     jump_playhead_to_focused_marker(frame);
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because
@@ -2890,14 +2891,15 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // the land above already happened, so a Land that moves no camera still
     // moves the focus and the playhead — the camera simply stays where the
     // user left it while the landing is on screen.
-    // THE Land ARM IS THE LANDING OWNER (Viewport::land_subject, architect
-    // 2026-09-23) over the cursor just seated (lo == hi; playback is stopped
-    // above): onscreen nothing moves, offscreen it centres at the working
-    // zoom or finer — arming the hold posture — and pages in the edge margin
-    // from the left edge when coarser. A single marker always fits, so the
-    // owner's cannot-fit verdict is dropped.
+    // THE Land ARM IS THE LANDING OWNER'S WALK (Viewport::land_subject,
+    // LandingKind::Walk, architect 2026-09-24) over the cursor just seated
+    // (lo == hi; playback is stopped above): at the working zoom or finer it
+    // centres the landing, on screen or not, arming the hold posture;
+    // coarser, an on-screen landing moves nothing and an off-screen one is
+    // paged in the edge margin from the left edge. A single marker always
+    // fits, so the owner's cannot-fit verdict is dropped.
     //
-    // WHO PASSES WHAT, re-grepped 2026-09-23: `c` (run_center_command) states
+    // WHO PASSES WHAT, re-grepped 2026-09-24: `c` (run_center_command) states
     // Center; cycle_marker_focus forwards Land from the three live Tab arms
     // and the two steps of the Ctrl+Shift+Tab paired march. Shift+`j` and the
     // A/B audition reach the camera through run_center_command by name and
@@ -2908,7 +2910,8 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
             break;
         case MarkerLandingFrame::Land:
             (void)viewport.land_subject(app.playhead_cursor_sample,
-                                        app.playhead_cursor_sample);
+                                        app.playhead_cursor_sample,
+                                        LandingKind::Walk);
             break;
     }
     return true;

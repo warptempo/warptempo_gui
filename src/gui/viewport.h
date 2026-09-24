@@ -10,6 +10,20 @@ class GuiAudio;
 class GuiPlatform;
 class GuiPlayback;
 
+// WHICH ACT ASKS THE LANDING OWNER (Viewport::land_subject) TO LAND ITS
+// SUBJECT (architect 2026-09-24). A REQUIRED argument with no default, the
+// same discipline as MarkerLandingFrame (app_state.h), so a new caller cannot
+// compile without saying which answers it means:
+//   * `Walk` — the Tab walk in both audio views, live and `h`, and each step
+//     of the paired march: centred at the working zoom or finer whether on
+//     screen or not; coarser, nothing on screen and paged in off screen;
+//   * `Restore` — the undo / redo restore: nothing wholly on screen, and an
+//     off-screen subject that fits centred at every zoom.
+// The full answers, the hold rule and the ruled-out cameras are at the
+// definition (viewport.cpp). No `Gui` prefix: a small policy enum like its
+// neighbours.
+enum class LandingKind { Walk, Restore };
+
 // Viewport mutators and invalidation helpers. The struct holds references
 // to the long-lived state the methods read and write.
 struct Viewport {
@@ -357,18 +371,21 @@ struct Viewport {
     // edge. It suspends no follow with its own write
     // (AppState::follow_suspended).
     void follow_scroll_if_needed();
-    // THE LANDING OWNER (architect 2026-09-23): the one camera that brings a
+    // THE LANDING OWNER (architect 2026-09-24): the one camera that brings a
     // walked or restored subject — the active-domain range [lo, hi], lo == hi
-    // for a single marker — on screen, READING THE ZOOM at the discrete act.
-    // Four answers, in order: WHOLLY ON SCREEN, nothing moves; a range that
-    // CANNOT FIT (wider than 1 − 2 × the edge margin of the window) returns
-    // FALSE having written nothing; a fitting range at the working zoom or
-    // finer is CENTRED on its midpoint and ARMS THE HOLD POSTURE; a fitting
-    // range coarser than working is PAGED IN, lo landing the edge margin in
-    // from the LEFT edge, follow's own arithmetic. The zoom is never written.
-    // Its readers and the one caller of the false verdict are at the
+    // for a single marker — on screen, READING THE ZOOM at the discrete act,
+    // its answers chosen by `kind`. WALK: at the working zoom or finer the
+    // subject is CENTRED, on screen or not; coarser, an on-screen subject
+    // moves nothing and an off-screen one is PAGED IN, lo landing the edge
+    // margin in from the LEFT edge. RESTORE: a subject WHOLLY ON SCREEN moves
+    // nothing at every zoom; an off-screen one that fits is CENTRED on its
+    // midpoint at every zoom; a range that CANNOT FIT (wider than 1 − 2 × the
+    // edge margin of the window) returns FALSE having written nothing. Every
+    // centring of a single marker (lo == hi) ARMS THE HOLD POSTURE; a group's
+    // centring arms nothing. The zoom is never written. Its readers, the one
+    // caller of the false verdict and the ruled-out cameras are at the
     // definition (viewport.cpp).
-    [[nodiscard]] bool land_subject(int64_t lo, int64_t hi);
+    [[nodiscard]] bool land_subject(int64_t lo, int64_t hi, LandingKind kind);
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo cent step, the settings
