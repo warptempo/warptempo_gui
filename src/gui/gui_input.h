@@ -764,21 +764,23 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // camera, and its shifted form says it to the trim).
         case GuiKeys::Digit0: return bare || sh;
         // The three absolute view selectors: bare 1 is S+W, bare 2 T+P, bare 3
-        // T+W, and the backtick and 4..9 bind nothing (the backtick was the
-        // S+M selector from 2026-09-19 until the magnification level markers
-        // column's deletion 2026-09-23).
+        // T+W, and 4..9 bind nothing.
         case GuiKeys::Digit1:
         case GuiKeys::Digit2: case GuiKeys::Digit3:
             return bare;
 
         // The settings editor, and the load in place / render player.
         case GuiKeys::Semicolon: case GuiKeys::Apostrophe: return bare;
-        // Toggle Ignore Waveform Magnification (architect 2026-09-22, on bare
-        // `[` since the trim region toggle's deletion the same day), bound in
+        // Toggle Ignore Waveform Magnification (architect 2026-09-22), on the
+        // bare BACKTICK since 2026-09-23 (architect: the bracket sits on the
+        // far side of the keyboard and belongs to trim by feel), bound in
         // both modes as `f` and `z` are: outside source view (target view, and
         // the `h` view's allowlist) it refuses on a card rather than falling
-        // silent. Every modified `[` and the whole of `]` are unbound.
-        case GuiKeys::BracketLeft: return bare;
+        // silent. Every modified backtick, and the whole of `[` and `]`, are
+        // unbound. (The backtick was the S+M view selector from 2026-09-19
+        // until the magnification level markers column's deletion 2026-09-23;
+        // the lamp was on bare `]` for its first hours, then on bare `[`.)
+        case GuiKeys::Grave: return bare;
         // The zoom step, bare alone (deleted 2026-09-14, restored 2026-09-22
         // — the tablet's pen has no pinch). The ctrl and shift forms bind
         // nothing.
@@ -843,13 +845,12 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
-static_assert(!chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
+static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 1 is the S+W view selector and bare 3 the T+W one; the "
-              "backtick and digits 4..9 are unbound");
+              "bare 1 is the S+W view selector and bare 3 the T+W one; "
+              "digits 4..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the nine-place contract's own "
               "arms (the notification stack's clear), and its top-level "
@@ -874,16 +875,18 @@ static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Space,
                                   GuiInputState{true, false, false}, false),
               "Space binds bare and shifted only — strict modifier validation");
-static_assert(chord_is_bound(GuiKeys::BracketLeft, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::BracketLeft, GuiInputState{}, true) &&
-                  !chord_is_bound(GuiKeys::BracketLeft,
+static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Grave, GuiInputState{}, true) &&
+                  !chord_is_bound(GuiKeys::Grave,
                                   GuiInputState{false, true, false}, false) &&
-                  !chord_is_bound(GuiKeys::BracketLeft,
+                  !chord_is_bound(GuiKeys::Grave,
                                   GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::BracketLeft, GuiInputState{},
+                                  false) &&
                   !chord_is_bound(GuiKeys::BracketRight, GuiInputState{},
                                   false),
-              "Toggle Ignore Waveform Magnification is bare `[` in both modes "
-              "and no decoration of it; `]` binds nothing");
+              "the backtick is the magnification lamp, bare in both modes and "
+              "no decoration of it; `[` and `]` are unbound");
 static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit0,
                                  GuiInputState{false, true, false}, false) &&
@@ -1147,15 +1150,18 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chord that toggles THE IGNORE WAVEFORM MAGNIFICATION LAMP
-// (architect 2026-09-22): BARE `[` exactly — no ctrl, no shift, no alt. It
-// was bare `]` for the lamp's first hours and moved onto `[` when the trim
-// region toggle that held that key was deleted the same day (the pen reaches
-// the trim bar, so the overlay stands only while a sweep draws it); `]` is
-// unbound since. A display posture that authors nothing. One-shot
+// (architect 2026-09-22): the BARE BACKTICK exactly — no ctrl, no shift, no
+// alt. It was bare `]` for the lamp's first hours, bare `[` from the trim
+// region toggle's deletion that same day, and the backtick since 2026-09-23
+// (architect: the bracket sits on the far side of the keyboard and belongs
+// to trim by feel); `[` and `]` are unbound. The backtick arrives as its
+// level-0 keysym (GuiKeys::Grave), so a shifted press is the backtick plus
+// the shift bit and this predicate refuses it. A display posture that
+// authors nothing. One-shot
 // (repeat-ineligible: a held toggle
 // would flicker). The lamp governs SOURCE VIEW alone — target view is always
 // flat — so in target view the chord is a bound key that REFUSES on a card,
-// the lamp keeping its state (the arm is BracketLeft's case in
+// the lamp keeping its state (the arm is Grave's case in
 // handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road alone
 // reaches). ITS ONE READER is the read-only allowlist (read_only_key_blocked,
 // which ADMITS it — a view posture — and which the
@@ -1164,8 +1170,7 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 // Current View, its group's other lamp, is refused there too, so the view
 // cards it like every chord it does not name.
 inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
-    return key == GuiKeys::BracketLeft && !mods.ctrl && !mods.shift &&
-           !mods.alt;
+    return key == GuiKeys::Grave && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
 // True for the chord that RESETS THE TRIM to the whole song

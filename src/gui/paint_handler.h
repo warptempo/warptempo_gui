@@ -171,11 +171,11 @@ struct WaveformCache {
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
     // rule). A FINGERPRINT FIELD in its own right, keyed directly like the
     // inset: the gain is an input to the tip mapping alone, so nothing else
-    // about the plate would move if it changed by itself (the `[` lamp moves
-    // no map), and without it a plate rendered at one gain could go on being
-    // blitted after the gain changed. The field alone is enough to re-render —
-    // no basis freeze and no map term rides with it. PIXELS ONLY — this cache
-    // holds a picture, and the gain reaches no sample anywhere.
+    // about the plate would move if it changed by itself (the magnification
+    // lamp moves no map), and without it a plate rendered at one gain could go
+    // on being blitted after the gain changed. The field alone is enough to
+    // re-render — no basis freeze and no map term rides with it. PIXELS ONLY —
+    // this cache holds a picture, and the gain reaches no sample anywhere.
     uint64_t  fp_gain_hash = 0;
     // false until the first worker completion (or synchronous rebuild) has
     // published live pixels. The flag cache gates on it — it holds no

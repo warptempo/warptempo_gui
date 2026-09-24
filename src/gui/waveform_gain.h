@@ -47,8 +47,8 @@
 // The constants are the architect's. THE PRINCIPLE FOR ANY RETUNE: every
 // number is FORCED by a criterion and never tuned to one spot — a free
 // constant carries its reason, a derived one its derivation — and a passage
-// the rule gets wrong is answered by the `[` lamp (the flat picture) or the
-// A/B tabs, not by a new number.
+// the rule gets wrong is answered by the magnification lamp (the flat
+// picture) or the A/B tabs, not by a new number.
 //
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.

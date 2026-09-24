@@ -138,7 +138,7 @@ enum class Icon {
     // minus): worn by the Ignore Waveform Magnification lamp between Center
     // and Follow (architect 2026-09-22), restored with its def and asset for the
     // third time — the lamp's stands of 2026-09-14 and 2026-09-17 wore it too.
-    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `[`)
+    ZoomOutY,            // Toggle Ignore Waveform Magnification (bare `)
     // THE SINGLE-MARKER VERBS' FOUR (architect-picked 2026-08-12, the same
     // sheets): list-add for the drop (bare `s`), Breeze's RED list-remove for
     // the delete (`Delete` — the resolved-color entry, like media-record's

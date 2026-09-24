@@ -1000,8 +1000,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22), the `[` lamp, after
-    // Center in the same group: Breeze's zoom-out-y, the magnifier
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
+    // lamp, after Center in the same group: Breeze's zoom-out-y, the magnifier
     // with a ruler on its dial — the picture's vertical scale. It joins the
     // group rather than opening one, so it adds one box and one 2px gap to the
     // walk and no separator. (The same glyph, seat and name carried the lamp
@@ -8897,7 +8897,7 @@ void GuiPaintHandler::on_resize(int w, int h) {
     // and delegates. When the level actually moved the reflow changed spp under
     // the playback predictor, so re-anchor it. (A level move here cannot
     // change the magnification — the gain gate reads the audio view and the
-    // `[` lamp and no zoom term, waveform_magnified — so the
+    // magnification lamp and no zoom term, waveform_magnified — so the
     // resize owes the gain nothing; its picture re-renders because a resize
     // moves the area dimensions, fields of the one plate fingerprint, and the
     // tick's enqueue carries that.)

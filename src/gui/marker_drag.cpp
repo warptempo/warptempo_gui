@@ -531,11 +531,11 @@ void MarkerDragOps::commit_drag() {
     //   NO PLATE RENDERS: neither marker kind a drag can move (warp, phase
     //   reset) moves the waveform's gain curve or its fingerprint — the
     //   picture's gain is the curve derived from the source, gated by the
-    //   audio view and the `[` lamp alone — and the lamp is gesture-gated
-    //   with a synchronous kick of its own, so the release has no gain change
-    //   to publish (the staleness branch that once rendered here lost its last
-    //   producer with the magnification level markers column, Astra review
-    //   2026-09-23).
+    //   audio view and the magnification lamp alone — and the lamp is
+    //   gesture-gated with a synchronous kick of its own, so the release has no
+    //   gain change to publish (the staleness branch that once rendered here
+    //   lost its last producer with the magnification level markers column,
+    //   Astra review 2026-09-23).
     //   THE FLAGS ARE REFRESHED ON EVERY RELEASE: a drag-time rebuild keyed
     //   the flag bitmap to the drag overlay, and the reorder/remap and the
     //   DragState reset above change what it must show, so a Wayland frame

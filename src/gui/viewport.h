@@ -130,13 +130,13 @@ struct Viewport {
     //  - THE PLATE'S OWN GAIN. The gain is the continuous curve derived from
     //    the source at load (GuiAudio::gain_curve), and the plate's gain
     //    field (waveform_gain_fingerprint, warp_frame_map_view.h) has TWO
-    //    LIVE INPUTS, re-grepped 2026-09-23: the `[` LAMP, whose one setter
-    //    (GuiInputHandler::set_ignore_waveform_magnification, the one caller
-    //    of kick_waveform_sync_if_gain_changed) takes the before/after kick
-    //    below, and the S/T FLIP, which owes no gain kick of its own, running
-    //    an unconditional kick_waveform_sync. The markers and the zoom are no
-    //    inputs: no marker store moves the curve or its fingerprint, so a
-    //    marker gesture owes the plate nothing on the gain's account.
+    //    LIVE INPUTS, re-grepped 2026-09-23: the MAGNIFICATION LAMP, whose one
+    //    setter (GuiInputHandler::set_ignore_waveform_magnification, the one
+    //    caller of kick_waveform_sync_if_gain_changed) takes the before/after
+    //    kick below, and the S/T FLIP, which owes no gain kick of its own,
+    //    running an unconditional kick_waveform_sync. The markers and the zoom
+    //    are no inputs: no marker store moves the curve or its fingerprint, so
+    //    a marker gesture owes the plate nothing on the gain's account.
     //    A gain change dirties the plate fingerprint
     //    BY FIELD — the tick's async backstop would repaint it a frame
     //    late with no kick of its own, and the lamp takes the kick so the

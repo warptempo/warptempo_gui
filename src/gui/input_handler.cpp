@@ -4304,8 +4304,9 @@ void GuiInputHandler::set_restrict_undo_to_current_view(bool desired) {
 
 void GuiInputHandler::set_ignore_waveform_magnification(bool desired) {
     // The contract — sole writer, per-project, history-less, the gain kick —
-    // is at the declaration (input_handler.h). The ONE caller is the bare-`[`
-    // arm, which the icon row's button reaches by synthesizing that press.
+    // is at the declaration (input_handler.h). The ONE caller is the
+    // bare-backtick arm, which the icon row's button reaches by synthesizing
+    // that press.
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     app.ignore_waveform_magnification = desired;
     viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);

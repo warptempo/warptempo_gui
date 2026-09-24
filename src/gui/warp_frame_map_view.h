@@ -186,8 +186,9 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 //
 //   TARGET view ('T') — flat, whatever the lamp says.
 //   SOURCE view ('S') — magnified UNLESS the Ignore Waveform Magnification
-//                       lamp (AppState::ignore_waveform_magnification, bare
-//                       `[`, dark at every project open) is lit, then flat —
+//                       lamp (AppState::ignore_waveform_magnification, the
+//                       bare backtick, dark at every project open) is lit,
+//                       then flat —
 //                       on every column and at every zoom.
 //
 // WHY: magnification serves FINE HORIZONTAL PLACEMENT against the audio, and
@@ -195,7 +196,7 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // column, the phase resets, moves on the HOP LATTICE in quantized steps that no
 // superfine picture helps — so target view never shows it.
 //
-// THE `[` LAMP IS THE ONLY EXCEPTIONS ROAD (architect 2026-09-23): no
+// THE MAGNIFICATION LAMP IS THE ONLY EXCEPTIONS ROAD (architect 2026-09-23): no
 // per-passage override, no third state and no drawing of the gain. A passage
 // the derived gain serves badly is looked at flat, and the dynamics are what
 // the audio and the A/B tabs carry — both tabs always show the same picture,

@@ -2054,21 +2054,22 @@ enum class RedesignButton {
     // home (the Navigation dropdown that once duplicated them was deleted
     // 2026-08-15).
     IconZoomIn, IconZoomOut, IconZoomFitBest, IconZoomOriginal,
-    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the `[` lamp,
-    // after Center, THE ONLY EXCEPTIONS ROAD (architect 2026-09-23). A DISPLAY
-    // POSTURE and nothing else: dark (the default), the SOURCE-VIEW waveform
-    // picture carries the continuous gain derived from the source
+    // IGNORE WAVEFORM MAGNIFICATION (architect 2026-09-22) — the backtick's
+    // lamp, after Center, THE ONLY EXCEPTIONS ROAD (architect 2026-09-23). A
+    // DISPLAY POSTURE and nothing else: dark (the default), the SOURCE-VIEW
+    // waveform picture carries the continuous gain derived from the source
     // (GuiAudio::gain_curve, gated by waveform_magnified); lit, it is flat;
     // target view is flat whatever it says. The render, undo and every
     // sidecar are untouched. The bit is
     // AppState::ignore_waveform_magnification, DARK AT EVERY PROJECT OPEN like
     // the rest of this group's lamps. IT GREYS IN TARGET VIEW, where the lamp
-    // has no effect and bare `[` cards (waveform_magnification_toggle_actionable,
-    // the face and the key's one verdict); LIVE on a locked tab and under the
-    // read-only lock; DEAD in the `h` view, whose allowlist does not name `[`
-    // (Restrict Undo to Current View's answer there), through the
-    // derived partition. (It revives the 2026-09-14 / 2026-09-17 lamp's name
-    // and sense, now scoped to source view with no zoom term.)
+    // has no effect and the bare backtick cards
+    // (waveform_magnification_toggle_actionable, the face and the key's one
+    // verdict); LIVE on a locked tab and under the read-only lock; DEAD in the
+    // `h` view, whose allowlist does not name the backtick (Restrict Undo to
+    // Current View's answer there), through the derived partition. (It revives
+    // the 2026-09-14 / 2026-09-17 lamp's name and sense, now scoped to source
+    // view with no zoom term.)
     IconIgnoreWaveformMagnification,
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
     // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
@@ -4766,21 +4767,21 @@ struct AppState {
     // other act — it only decides whether one step runs at all.
     bool    restrict_undo_to_current_view = false;
 
-    // IGNORE WAVEFORM MAGNIFICATION — the lamp on bare `[` (architect
-    // 2026-09-22), the only exceptions road to the derived gain. A
-    // session posture in this family: per-project, DARK AT EVERY PROJECT OPEN
-    // (run_project builds this AppState fresh, so the default IS the reset),
-    // in no settings vocabulary, never serialized, never in the undo domain,
-    // not carried by `'`, and touched by no restore, view switch or lock. DARK,
-    // the SOURCE-VIEW waveform picture carries the continuous gain derived
-    // from the source (GuiAudio::gain_curve); lit, it is flat. TARGET VIEW IS FLAT
-    // WHATEVER IT SAYS, and the bit keeps its state there untouched — the key
-    // refuses and the button greys in target view, so nothing can write it
-    // where it has no effect. THE BIT IS THE ANSWER in source view, read by
-    // waveform_magnified (warp_frame_map_view.h) and by the
-    // lamp's face, and by nothing else — it reaches no authoring, no red cue,
-    // no render and no sidecar. Its one writer is
-    // GuiInputHandler::set_ignore_waveform_magnification.
+    // IGNORE WAVEFORM MAGNIFICATION — the lamp on the bare backtick
+    // (architect 2026-09-22; the backtick since 2026-09-23), the only
+    // exceptions road to the derived gain. A session posture in this family:
+    // per-project, DARK AT EVERY PROJECT OPEN (run_project builds this AppState
+    // fresh, so the default IS the reset), in no settings vocabulary, never
+    // serialized, never in the undo domain, not carried by `'`, and touched by
+    // no restore, view switch or lock. DARK, the SOURCE-VIEW waveform picture
+    // carries the continuous gain derived from the source
+    // (GuiAudio::gain_curve); lit, it is flat. TARGET VIEW IS FLAT WHATEVER IT
+    // SAYS, and the bit keeps its state there untouched — the key refuses and
+    // the button greys in target view, so nothing can write it where it has no
+    // effect. THE BIT IS THE ANSWER in source view, read by waveform_magnified
+    // (warp_frame_map_view.h) and by the lamp's face, and by nothing else — it
+    // reaches no authoring, no red cue, no render and no sidecar. Its one
+    // writer is GuiInputHandler::set_ignore_waveform_magnification.
     bool    ignore_waveform_magnification = false;
 
     // Split-playhead state. The cursor (above, mirrored from the active
@@ -12944,7 +12945,7 @@ inline constexpr const char* kRedoSwitchesViewCard =
 // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE VERDICT (architect 2026-09-22):
 // the lamp governs SOURCE VIEW alone — target view is flat whatever it says
 // (waveform_magnified, warp_frame_map_view.h) — so the toggle is
-// actionable exactly in source view. TWO READERS: bare `[`'s arm
+// actionable exactly in source view. TWO READERS: the bare backtick's arm
 // (handle_plain_bare_keys, input_key_dispatch.cpp), which cards
 // kMagnificationSourceViewOnlyCard on a false answer and leaves the bit as it
 // stands, and the lamp's face (redesign_button_enabled's
@@ -14164,12 +14165,13 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::IconZoomOut:
             return zoom_out_step_actionable(a, audio);
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP GREYS IN TARGET VIEW (architect
-        // 2026-09-22): the lamp governs source view alone, so there bare `[`
-        // refuses on its card and the bit keeps its state — this face reads
-        // the verdict that refusal reads, waveform_magnification_toggle_actionable.
-        // The lock admits the chord (a display posture authors nothing), and
-        // the `h` view greys it through the derived partition above, bare `[`
-        // being off that mode's allowlist as `f` and `z` are.
+        // 2026-09-22): the lamp governs source view alone, so there the bare
+        // backtick refuses on its card and the bit keeps its state — this face
+        // reads the verdict that refusal reads,
+        // waveform_magnification_toggle_actionable. The lock admits the chord
+        // (a display posture authors nothing), and the `h` view greys it
+        // through the derived partition above, the backtick being off that
+        // mode's allowlist as `f` and `z` are.
         case RedesignButton::IconIgnoreWaveformMagnification:
             return waveform_magnification_toggle_actionable(a);
         // FOLLOW MIRRORS NOTHING (architect 2026-09-23): bare `f` flips the
@@ -15345,8 +15347,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconRestrictUndo:
             return a.restrict_undo_to_current_view;
         // The Ignore Waveform Magnification lamp (architect 2026-09-22): the
-        // same toggle pattern, reading the live bit bare `[` flips — lit is
-        // ignoring, the picture flat in source view. In target view
+        // same toggle pattern, reading the live bit the bare backtick flips —
+        // lit is ignoring, the picture flat in source view. In target view
         // the face is greyed and still reads the bit, which keeps its state
         // there untouched.
         case RedesignButton::IconIgnoreWaveformMagnification:
@@ -15917,7 +15919,7 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
 // its spelled-out modifiers in the fixed order ("(Ctrl+S)", "(Ctrl+Alt+R)",
 // "(Ctrl+Shift+Z)"), a NAMED KEY by Qt's own English name ("(Esc)", "(Del)",
 // "(Return)", "(Home)", "(Space)", "(Tab)"), and punctuation naming the CAP
-// rather than the stamped symbol ("(,)", "(.)", "(')", "([)").
+// rather than the stamped symbol ("(,)", "(.)", "(')", "(`)").
 // This table writes literals rather than calling the speller — it advertises a
 // BOUND chord in advance where the speller names a press that just happened —
 // but it writes the same spelling, and the shift ambiguity a capital carries is
@@ -16006,10 +16008,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::IconZoomOriginal:
             return {"Center on Focus (C)", nullptr};
         // THE IGNORE WAVEFORM MAGNIFICATION LAMP (architect 2026-09-22), one
-        // line: bare `[` toggles and has no shifted twin; the name is the
-        // toggle's.
+        // line: the bare backtick toggles (since 2026-09-23) and has no
+        // shifted twin; the name is the toggle's.
         case RedesignButton::IconIgnoreWaveformMagnification:
-            return {"Toggle Ignore Waveform Magnification ([)", nullptr};
+            return {"Toggle Ignore Waveform Magnification (`)", nullptr};
         // THE FOLLOW LAMP (architect 2026-09-23), one line: bare `f` toggles
         // and has no shifted twin; the name is the toggle's.
         case RedesignButton::IconFollow:

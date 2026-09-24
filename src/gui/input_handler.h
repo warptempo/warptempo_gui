@@ -3807,10 +3807,10 @@ private:
     void set_restrict_undo_to_current_view(bool desired);
 
     // THE IGNORE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect
-    // 2026-09-22) — the restrict-undo lamp's shape with ONE road: bare `[`,
-    // which the icon row's button reaches by synthesizing that press, and
-    // whose arm reaches here only in SOURCE VIEW (target view refuses at the
-    // arm, carding). The bit (AppState::ignore_waveform_magnification) is a
+    // 2026-09-22) — the restrict-undo lamp's shape with ONE road: the bare
+    // backtick, which the icon row's button reaches by synthesizing that press,
+    // and whose arm reaches here only in SOURCE VIEW (target view refuses at
+    // the arm, carding). The bit (AppState::ignore_waveform_magnification) is a
     // per-project session posture, dark at every project open (source view
     // magnified), never serialized and never in the
     // undo domain. DARK, the source-view picture carries the continuous gain

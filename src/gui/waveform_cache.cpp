@@ -171,13 +171,13 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.area_h        = area.h;
     in.inset_px      = waveform_inset_px();
     // The waveform PICTURE's gain field — the gate's whole answer off the
-    // audio view and the `[` lamp (waveform_gain_fingerprint, which owns the
-    // rule; the `h` view's plate included, it being the live plate) —
-    // captured here with the geometry, so the worker reads no live state. It
-    // is the fingerprint field, which is what keeps a plate from being shown
-    // at a gain that is no longer live, and it sits beside the viewport
-    // geometry in that same fingerprint, so every rebuild re-renders under one
-    // set of inputs.
+    // audio view and the magnification lamp (waveform_gain_fingerprint,
+    // which owns the rule; the `h` view's plate included, it being the live
+    // plate) — captured here with the geometry, so the worker reads no live
+    // state. It is the fingerprint field, which is what keeps a plate from
+    // being shown at a gain that is no longer live, and it sits beside the
+    // viewport geometry in that same fingerprint, so every rebuild re-renders
+    // under one set of inputs.
     in.gain_hash     = waveform_gain_fingerprint(app);
     in.is_target     = is_target;
     in.warp_frame_map_hash  = target_warp_frame_map_hash;

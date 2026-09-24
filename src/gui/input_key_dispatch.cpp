@@ -392,7 +392,8 @@ bool GuiInputHandler::read_only_key_blocked(GuiKey key, GuiInputState mods) {
     // refuses.
     const bool is_restrict_undo =
         (key == GuiKeys::Z && !ctrl && !shift && !alt);
-    // IGNORE WAVEFORM MAGNIFICATION, bare `[` (architect 2026-09-22): a display
+    // IGNORE WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22;
+    // on the backtick since 2026-09-23): a display
     // posture about the picture, authoring nothing the lock protects, so it
     // is admitted on a locked tab — and under the grid-iterations lock, whose
     // gate falls through to this list and which stands in target view alone,
@@ -9176,11 +9177,12 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // undo_step_permitted_by_current_view_lamp, and by nothing else.
         set_restrict_undo_to_current_view(!app.restrict_undo_to_current_view);
         break;
-    case GuiKeys::BracketLeft:
+    case GuiKeys::Grave:
         // Toggle the Ignore Waveform Magnification lamp (architect
-        // 2026-09-22): dark shows the continuous gain derived from the source
-        // in source view (GuiAudio::gain_curve), lit flattens it. The
-        // one bare form reaches here (is_waveform_magnification_key, the
+        // 2026-09-22; the bare backtick since 2026-09-23, bare `[` before
+        // that and unbound now): dark shows the continuous gain derived from
+        // the source in source view (GuiAudio::gain_curve), lit flattens it.
+        // The one bare form reaches here (is_waveform_magnification_key, the
         // caller having gated on no modifiers). In TARGET VIEW the lamp has no
         // effect, so the press refuses on its card and the bit keeps its state
         // (waveform_magnification_toggle_actionable, the face's own verdict).
