@@ -14517,8 +14517,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // where the keyboard gate drops the chord (the two deltas are stated
         // once at iteration_lock_key_blocked, input_key_dispatch.cpp). THE
         // AXIS FORK IS THE MEMBERSHIP PREDICATE'S (iteration_lock_greys,
-        // above), which the button's HINT reads too, so the grey and the
-        // sentence it wears are one decision.
+        // above) alone now: the refusal-reason tooltip it once fed died with
+        // the whole class 2026-09-12 ("disabled IS the message"), so this
+        // face is its only reader here.
         case RedesignButton::IconMarkerEditFlag:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
@@ -14931,9 +14932,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // base allowlist drops it under a lit lamp exactly as it does on a
         // locked tab — one lane term, two locks. The two halves are spelled
         // as two lines rather than composed into authoring_locked because the
-        // iteration half is the membership predicate's (iteration_lock_greys,
-        // which the pair's HINT reads too) and only the read-only half is the
-        // tab's bare bit.
+        // iteration half is the membership predicate's alone (iteration_lock_greys,
+        // read here for the face; the refusal-reason tooltip it once also fed
+        // died with the whole class 2026-09-12) and only the read-only half is
+        // the tab's bare bit.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
             if (active_view_state(a).read_only &&
@@ -14955,10 +14957,12 @@ inline bool redesign_button_enabled(const AppState& a,
             // TEMPO step, which lands in history, so the lock greys it here
             // and the keyboard gate drops the chord (the deltas are stated
             // once at iteration_lock_key_blocked, input_key_dispatch.cpp). The
-            // axis fork is the membership predicate's (iteration_lock_greys),
-            // which the pair's HINT reads too — and it RANKS ABOVE every
-            // step's own refusal below for the reason the key does: under a
-            // lit lamp the gate eats the chord before the step is ever asked.
+            // axis fork is the membership predicate's alone
+            // (iteration_lock_greys — the refusal-reason tooltip it once also
+            // fed died with the whole class 2026-09-12) — and it RANKS ABOVE
+            // every step's own refusal below for the reason the key does:
+            // under a lit lamp the gate eats the chord before the step is
+            // ever asked.
             if (iteration_lock_greys(a, b)) return false;
             // THE ADDRESSED CELL PICKS THE PAIR (architect 2026-09-04): with
             // a bound cell addressed the pair reads the bound step's own
@@ -15339,8 +15343,11 @@ inline bool redesign_button_enabled(const AppState& a,
             // walk, the four arrows, COPY VALUE and ADD TO
             // SELECTION. All seven
             // refuse ahead of that break on their own predicate since the
-            // truthful-buttons ruling — Add to selection on the iteration
-            // lock's membership; the ruling, the 2026-08-15 reversal it
+            // truthful-buttons ruling, save ADD TO SELECTION: it left
+            // iteration_lock_greys's membership 2026-09-19 (above) and its
+            // case breaks unconditionally, carrying no predicate of its own
+            // and reaching this default return true (subject only to the
+            // guard above it); the ruling, the 2026-08-15 reversal it
             // supersedes and the
             // per-pair successions are at that block. The row's remaining
             // members are the four SINGLE-MARKER VERBS and the EDIT FLAG

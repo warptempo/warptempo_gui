@@ -184,9 +184,12 @@ void GuiPrompt::activate_response(char k) {
                 // ("Save unsaved changes?", "Load '…' in place?") — and now
                 // asks what its buttons answer. The response set is untouched.
                 // IT CARRIES NO REASON AND RAISES NO CARD (2026-09-02): the
-                // save owner cards WHICH file it could not write at the arm
-                // that met the fault (save_ops.cpp), so this rung inherits
-                // that sentence and asks the one thing only it knows to ask.
+                // save owner cards the fault at the arm that met it
+                // (save_ops.cpp) — WHICH file it could not write for a write
+                // failure, or, since 2026-09-24, that a checkpoint is still
+                // publishing and no file was even attempted
+                // (kCheckpointPublishing) — so this rung inherits whichever
+                // sentence and asks the one thing only it knows to ask.
                 app.prompt.present("Retry the failed save?",
                                    {'r', '\x7f', '\x1b'},
                                    {"Retry", "Discard", "Cancel"},

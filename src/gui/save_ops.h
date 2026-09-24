@@ -25,16 +25,25 @@
 // ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright
 // while a Save-and-Commit checkpoint is publishing, because that background act
 // writes these same three paths in the coincident projects/<id>/ workflow. The
-// term lives at the top of save() — one place, every caller — and the Save
-// button's "Committing..." face is its mirror.
+// term lives at the top of save() — one place, every caller — and since
+// 2026-09-24 that arm cards kCheckpointPublishing (notifications.h) itself,
+// ahead of the three write arms below: the retired "Committing..." button
+// label (dead at the 2026-08-12 relayout) and its 2026-09-12 tooltip
+// successor both answered with a face alone, and the architect ruled a card
+// preferred over a no-op that falsely advertises an action. All seven
+// callers — main Ctrl+S, the close prompt's Save answer, the history-entry
+// prelude, the two modal-editor Ctrl+S arms, the picker's and the stats
+// panel's — reach this one arm and inherit its card without composing their
+// own.
 //
-// A FAILED SAVE SAYS SO HERE, AT THE OWNER (architect 2026-09-02): the three
-// write arms and the numeric-locale refusal raise their own normal card, so
-// every caller inherits the sentence and none of them composes a second one
-// (the two callers that READ the bool decide with it — the quit prompt's Retry
-// rung and the checkpoint prelude — and neither cards). That is why the struct
-// takes a GuiNotifications, the arrangement every other ops struct here uses:
-// the sentence is composed where the fact is.
+// A FAILED WRITE SAYS SO HERE TOO, AT THE OWNER (architect 2026-09-02): past
+// the checkpoint guard above, the three write arms and the numeric-locale
+// refusal each raise their own normal card, so every caller inherits the
+// sentence and none of them composes a second one (the two callers that READ
+// the bool decide with it — the quit prompt's Retry rung and the checkpoint
+// prelude — and neither cards). That is why the struct takes a
+// GuiNotifications, the arrangement every other ops struct here uses: the
+// sentence is composed where the fact is.
 struct GuiSaveOps {
     AppState&         app;
     Undo&             undo;
