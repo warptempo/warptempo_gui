@@ -2065,34 +2065,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         warpops.toggle_disabled();
         return;
     }
-    // CTRL+HOME / CTRL+END: the WHOLE-PIECE jump (architect 2026-08-24 —
-    // "ctrl+home/end should force 0/eof playhead move even if trim does not
-    // include the frame"). Frame 0 and the ACTIVE DOMAIN's last frame, whatever
-    // the trim window is, where the bare pair lands on the trim bounds. Same
-    // body, same unconditional acts (run_playhead_end_jump,
-    // input_key_dispatch.cpp), through the movement owner as always.
-    //
-    // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
-    // arms live in a switch this function reaches only with no modifier held —
-    // a chord has no road into handle_plain_bare_keys by construction. Ctrl is
-    // the only modifier they take: Ctrl+Shift and Ctrl+Alt forms bind nothing
-    // and are consumed no-ops under strict modifier validation, as Shift+Home
-    // and Shift+End already were.
-    //
-    // A TEXT EDITOR NEVER REACHES THIS ARM: Ctrl+Home / Ctrl+End are the
-    // editors' own caret motion (text_editor::classify_key's MotionEditKey arm
-    // admits ctrl and shift on Home / End), and the editor blocks sit at the
-    // top of on_key, far above this dispatch — so an open editor consumes the
-    // chord before the jump can see it.
-    //
-    // The `h` history view claims them too, one arm above this whole dispatch:
-    // in there a jump ALREADY means the piece's ends, so the chord means the
-    // same thing in every state (history_mode_owns_key).
-    if ((key == GuiKeys::Home || key == GuiKeys::End) &&
-        ctrl && !shift && !alt) {
-        run_playhead_end_jump(key == GuiKeys::End, /*whole_piece=*/true);
-        return;
-    }
     if (key == GuiKeys::Delete && !ctrl && !alt && !shift) {
         // Delete acts on the active marker store. No read-only check here:
         // Delete drops at the read-only gate above, which is the keyboard

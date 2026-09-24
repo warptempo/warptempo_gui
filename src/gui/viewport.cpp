@@ -75,30 +75,24 @@ int64_t Viewport::trim_begin_sample() const { return trim_range().first; }
 int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 
 // WHERE A Home / End JUMP WOULD LAND THE CURSOR — the contract, the two arms and
-// the clamp's purpose are all at the declaration (app_state.h). TWO READERS:
+// the clamp's purpose are all at the declaration (app_state.h). THREE READERS:
 // the shared jump body run_playhead_end_jump (input_key_dispatch.cpp) plus the
-// history view's own pair, so the live bare Home / End, their ctrl forms and
-// the mode's absolute jumps spell one bound once instead of once per route
-// (the bottom row's two SKIP buttons dispatch bare Home / End like any other
-// chrome button and reach it that way); and, since 2026-08-30,
-// playhead_end_jump_actionable just below, the jump acts' "would this form
-// change anything" owner, through which the SKIPS' FACE and the acts' own
-// no-op refusals read this landing (the succession — the one-revision face
-// of 2026-08-15, its reversal over the jump's side acts, the
-// truthful-buttons return and the twin rule folding those side acts into
-// the owner — is at the skips' case in redesign_button_enabled,
-// app_state.h).
+// history view's own pair, so the live Home / End and the mode's absolute
+// jumps spell one bound once instead of once per route (the bottom row's two
+// SKIP buttons dispatch bare Home / End like any other chrome button and
+// reach it that way); and playhead_end_jump_actionable just below, the jump
+// acts' "would this jump change anything" owner, through which the SKIPS'
+// FACE and the acts' own no-op refusals read this landing (the skips' case in
+// redesign_button_enabled, app_state.h, states the face).
 int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
-                                    bool forward, bool whole_piece) {
-    if (whole_piece || app.history_mode.active) {
-        // THE WHOLE-PIECE ARM, ONE ARM WITH TWO ENTRANTS. The `h` history view
-        // takes it for every jump (architect 2026-08-05: the view reviews the
-        // WHOLE piece, so an End stopping at a trim bound would hide the flags
-        // past it), and the CTRL forms take it anywhere (architect 2026-08-24:
-        // "ctrl+home/end should force 0/eof playhead move even if trim does not
-        // include the frame"). The ends are the ACTIVE
-        // DOMAIN's own: live_total_frames is what the displayed timeline runs to
-        // in either audio view. With a full trim window the two arms coincide.
+                                    bool forward) {
+    if (app.history_mode.active) {
+        // THE PIECE'S-ENDS ARM. The `h` history view takes it for every jump
+        // (architect 2026-08-05: the view reviews the WHOLE piece, so an End
+        // stopping at a trim bound would hide the flags past it). The ends
+        // are the ACTIVE DOMAIN's own: live_total_frames is what the
+        // displayed timeline runs to in either audio view. With a full trim
+        // window the two arms coincide.
         return clamp_playhead_to_live_domain(
             forward ? live_total_frames(app, audio) - 1 : 0, app, audio);
     }
@@ -108,7 +102,7 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
         forward ? range.second - 1 : range.first, app, audio);
 }
 
-// WOULD THIS FORM OF THE JUMP CHANGE ANYTHING — the contract and the reader
+// WOULD THIS JUMP CHANGE ANYTHING — the contract and the reader
 // inventory are at the declaration (app_state.h). Each term is an act write
 // read from that write's own owner: the stop's (transport_session_live), the
 // selection clear's (the live arms' selection-or-focus pair, or the mode
@@ -118,14 +112,14 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
 // 2026-09-22, when the movement owner stopped hiding it: the overlay stands
 // only while a sweep draws it.)
 bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
-                                  bool forward, bool whole_piece) {
+                                  bool forward) {
     if (transport_session_live(app)) return true;
     const bool clear_would_act =
         app.history_mode.active
             ? history_mode_revert_subject_standing(app.history_mode)
             : (marker_selection_standing(app) || marker_focus_standing(app));
     if (clear_would_act) return true;
-    return playhead_skip_landing_frame(app, audio, forward, whole_piece) !=
+    return playhead_skip_landing_frame(app, audio, forward) !=
            app.playhead_cursor_sample;
 }
 

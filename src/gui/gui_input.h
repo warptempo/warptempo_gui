@@ -829,8 +829,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // and the camera is the hold posture's now (NudgeCamera above).
         case GuiKeys::Left: case GuiKeys::Right:
             return bare;
-        // The trim bounds, and the whole-piece ends under ctrl.
-        case GuiKeys::Home: case GuiKeys::End: return bare || cl;
+        // The trim bounds, BARE ONLY (architect 2026-09-24: a ctrl twin with
+        // no button of its own is unreachable on the tablet, so Ctrl+Home /
+        // Ctrl+End spell nothing).
+        case GuiKeys::Home: case GuiKeys::End: return bare;
         // The viewport's stepped scroll.
         case GuiKeys::PageUp: case GuiKeys::PageDown: return bare;
 
@@ -869,6 +871,14 @@ static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::F, GuiInputState{}, false),
               "bare `c` centres and Shift+C binds nothing (the chase posture "
               "it armed was deleted 2026-09-23); bare `f` is the follow lamp");
+static_assert(chord_is_bound(GuiKeys::Home, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::End, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Home,
+                                  GuiInputState{true, false, false}, false) &&
+                  !chord_is_bound(GuiKeys::End,
+                                  GuiInputState{true, false, false}, false),
+              "Home / End bind bare alone: the trim-bound jump; Ctrl+Home / "
+              "Ctrl+End bind nothing");
 static_assert(chord_is_bound(GuiKeys::Space, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Space,
                                  GuiInputState{false, true, false}, false) &&

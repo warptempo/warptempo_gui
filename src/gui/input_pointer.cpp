@@ -83,8 +83,8 @@ struct ToolbarChord {
     bool           shift;
     bool           alt;
     // (WHICH BUTTONS ADMIT A MODIFIER is NOT a column here: it is
-    // redesign_button_shift_admits and, since 2026-08-24,
-    // redesign_button_ctrl_admits, both in app_state.h, because the TOOLTIP's
+    // redesign_button_shift_admits and redesign_button_ctrl_admits, both in
+    // app_state.h, because the TOOLTIP's
     // MODIFIER LINE must appear exactly where a modified press does something —
     // a static_assert beside that table enforces it. One fact, two readers.)
     //
@@ -525,13 +525,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
     // throughout, repeat_eligible included — the arm SHARES that predicate
     // rather than mirroring it.
-    // THE TWO SKIPS ADMIT CTRL (architect 2026-08-24), the roster's first
-    // ctrl-click: a CTRL-CLICK dispatches Ctrl+Home / Ctrl+End, the WHOLE-PIECE
-    // jump, through redesign_button_ctrl_admits (app_state.h). They admit no
-    // shift, which is what keeps the LONG PRESS — glass's held shift — off the
-    // act by construction. The rows below carry the PLAIN chord, as every row
-    // does; the admission and its modifier are the roster's, never a column
-    // here.
+    // THE TWO SKIPS ADMIT NO MODIFIER: each dispatches bare Home / End, the
+    // trim-bound jump, and a held skip gives that same jump as a tap does.
     {RedesignButton::TransportSkipBack,
      GuiKeys::Home,   false, false, false, false, true},                             // bare Home
     {RedesignButton::TransportPlayStop,
@@ -830,8 +825,7 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // can spell (conventions.md).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
-// two SKIPS since 2026-08-24, whose ctrl-click is Ctrl+Home / Ctrl+End — which
-// is why the gate asks the BUTTON under the pointer rather than the band: the
+// Up / Down step ladder's Ctrl rung — which is why the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row, or on one of the four dropdown anchors (which carry no chord row
 // at all) is refused exactly as it always was. The walk is kToolbarChords in the
@@ -839,7 +833,7 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // arm.
 //
 // CTRL+SHIFT TOGETHER SPELL NO ROSTER CHORD on any button — strict modifier
-// validation, and Ctrl+Shift+Home is unbound on the keyboard too — so the pair
+// validation, and Ctrl+Shift+Up is unbound on the keyboard too — so the pair
 // dies here and the lift's chord build never sees it.
 //
 // A SHIFT press is deliberately NOT judged here: its admission is a press-time
@@ -7808,12 +7802,10 @@ void GuiInputHandler::finish_chrome_press_release(
         // stamp, so the two read the same clock and the hint cannot lag the
         // beat by more than the tick the due check runs on.
         //
-        // AND IT REACHES NO CTRL-ADMITTING BUTTON, by construction rather than
-        // by an exclusion (architect 2026-08-24): the two SKIPS admit CTRL for
-        // the whole-piece jump and admit no shift at all, so this term's own
-        // predicate answers false for them. The architect wants that jump off
-        // glass, and a held skip gives the ordinary trim-bound jump exactly as
-        // a tap does.
+        // IT REACHES NO BUTTON THAT ADMITS NO SHIFT, by construction: the two
+        // SKIPS admit no modifier, so this term's own predicate answers false
+        // for them and a held skip gives the trim-bound jump exactly as a tap
+        // does.
         //
         // AND IT REACHES NO HOLD-REPEATING BUTTON EITHER: A HELD REPEAT
         // OUTRANKS THE LONG-PRESS SHIFT, the principle stated at
