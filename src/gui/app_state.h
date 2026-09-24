@@ -13936,6 +13936,17 @@ bool ab_audition_preflight_ok(const AppState& a, const GuiAudio& audio,
                               const GuiPlayback& playback,
                               const GuiTargetRender& target_render);
 
+// DOES BARE `h` REFUSE TO OPEN THE HISTORY VIEW BECAUSE A CHECKPOINT IS
+// PUBLISHING — outside the view, while the checkpoint worker is in flight
+// (history_checkpoint_in_flight). Inside the view the press CLOSES it, and a
+// close is never gated, so the term is false there. TWO READERS: the key's
+// entry refusal (handle_history_mode_key, input_key_dispatch.cpp, which
+// cards kCheckpointPublishing) and the Toggle History View button's face
+// (redesign_button_enabled), which greys on it.
+inline bool history_view_open_refused_by_publishing(const AppState& a) {
+    return !a.history_mode.active && a.history_checkpoint_in_flight;
+}
+
 // (transport_session_live — the one owner of "a transport session is live" —
 // sits above with the arrow-step predicates since round B of the strictness
 // arc, where the horizontal arrows' waveform-lane wall term needed it too.)
@@ -14105,9 +14116,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // (architect 2026-09-24): the lock admits the chord (a display
         // posture authors nothing), and the `h` view greys it through the
         // derived partition above, the backtick being off that mode's
-        // allowlist as `f` and `z` are.
+        // allowlist as `f` and `z` are. IT MIRRORS ONE REFUSAL, THE CURVE'S
+        // READINESS (architect 2026-09-24): the gain curve is derived on its
+        // own thread after the load, the backtick refuses on a card until it
+        // stands, and this face greys on the same predicate
+        // (waveform_magnification_toggle_actionable, warp_frame_map_view.h —
+        // one owner for the key and the face). No site repaints it when the
+        // derivation finishes: the per-tick roster comparator (main.cpp)
+        // sees the verdict flip and invalidates the strip.
         case RedesignButton::IconWaveformMagnification:
-            return true;
+            return waveform_magnification_toggle_actionable(audio);
         // FOLLOW MIRRORS NOTHING (architect 2026-09-23): bare `f` flips the
         // lamp on any loaded piece, at rest and during a play alike, and both
         // locks admit it (navigation, not authored content). Its one refusal
@@ -14172,31 +14190,33 @@ inline bool redesign_button_enabled(const AppState& a,
         // (any_tab_read_only, above) — and this face needs no tab term of its
         // own for that reason: under a lit lamp no tab is locked at all.
         case RedesignButton::IconReadOnly:
-        // THE HISTORY BUTTON MIRRORS ONE REFUSAL AND NOT THE OTHERS, and both
-        // halves are worth naming because the temptation to mirror the rest is
-        // real: `h` refuses while audio is loading or absent (on_key's own
-        // blank-state return, above every dispatch) and the mode refuses to
-        // open while a checkpoint is publishing — and it USED TO refuse when
-        // the git walk found no history, which was NOT KNOWABLE PER FRAME (it
-        // costs subprocesses to ask and the row repaints on every hover; that
-        // refusal is the local walk's fallback since 2026-09-04 and no longer
-        // exists). So the button stayed on the row's own always-true arm.
+        // THE HISTORY BUTTON MIRRORS TWO REFUSALS, BOTH OF THE ENTRY: the
+        // iteration lock and the publishing flight. The view's own acts push
+        // history — the revert, the two loads, the checkpoint's save — and two
+        // modal views are not composed, so the ENTRY refuses while the Grid
+        // Iterations lamp stands (architect 2026-09-10); and the entry refuses
+        // while a checkpoint is publishing, the worker being mid-mutation on
+        // the repository the view would measure (architect 2026-09-24:
+        // history_view_open_refused_by_publishing, the one predicate the key's
+        // refusal reads too). Both refusals are handle_history_mode_key's
+        // (input_key_dispatch.cpp), both are free to ask per frame, and the
+        // face greys on each. INSIDE THE VIEW THE BUTTON STAYS LIVE: the press
+        // closes the view, which is never gated (the publishing term is false
+        // there, and the Grid Iterations lamp cannot be lit there).
         //
-        // THE ITERATION LOCK IS THE ONE IT DOES MIRROR (architect 2026-09-10):
-        // the view's own acts push history — the revert, the two loads, the
-        // checkpoint's save — and two modal views are not composed, so the
-        // ENTRY refuses while the lamp stands (handle_history_mode_key,
-        // input_key_dispatch.cpp) and this face says so, wearing that card on
-        // its hint. It is stable state a glance cannot see and costs nothing
-        // to ask, which is what separates it from the three above.
+        // WHAT IT DOES NOT MIRROR is the blank / loading state: `h` drops
+        // there at on_key's own head return (above every dispatch), yet the
+        // roster paints on every frame class and this face stays lit through
+        // it — the whole roster's standing answer for that transient window,
+        // not this button's.
         //
         // IT HAS NO READ-ONLY TERM, the Toggle Marker Column lamp's shape one
         // button over: bare `h` is not on read_only_key_blocked's allowlist
         // and never needed to be — the mode is claimed a dispatch ABOVE that
-        // gate, and a locked tab reads history exactly as a writable one does
-        // — so this face mirrors the ITERATION half alone.
+        // gate, and a locked tab reads history exactly as a writable one does.
         case RedesignButton::IconHistory:
-            return !iteration_lock_greys(a, b);
+            return !iteration_lock_greys(a, b) &&
+                   !history_view_open_refused_by_publishing(a);
         // THE READ-ONLY MODE STATEMENT (architect 2026-08-15) — the roster's
         // one grey that is not the `h` view's: EVERY ARM BELOW IS A CHORD
         // read_only_key_blocked (input_key_dispatch.cpp) drops on a locked tab,

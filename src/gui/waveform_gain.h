@@ -4,9 +4,11 @@
 #include <vector>
 
 // THE WAVEFORM GAIN: the picture's continuous magnification, derived from the
-// source at load (architect 2026-09-23, "the sausage"). Every quiet passage is
-// squashed graphically up to the lane edge so its transient onsets show as
-// plainly as a tutti's; the loud body clipping flat at the edge is accepted.
+// source once per load, on a thread of its own that the load starts and does
+// not wait for (GuiAudio::gain_curve; architect 2026-09-23, "the sausage").
+// Every quiet passage is squashed graphically up to the lane edge so its
+// transient onsets show as plainly as a tutti's; the loud body clipping flat
+// at the edge is accepted.
 // It is a PICTURE gain and nothing else: no sample, no render input and no
 // render fingerprint field ever reads it.
 //
@@ -108,7 +110,7 @@
 // THE EXPANDER (architect 2026-09-24): a DOWNWARD EXPANDER after the
 // leveler, in FabFilter Pro-G's vocabulary, TWO NUMBERS — the Threshold and
 // the Ratio (kExpanderThresholdDb -8 dB, kExpanderRatio 2, waveform_gain.cpp)
-// — a STATIC CURVE computed ONCE at load beside the gain curve, one reduction
+// — a STATIC CURVE computed ONCE per load beside the gain curve, one reduction
 // per working-zoom column (`expander_multiplier`). Its purpose is the relief
 // before an onset: the dip in the quiet just before a note deepens, while
 // nothing inside a note is expanded.
@@ -164,7 +166,8 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
-// The picture's continuous magnification, derived from the source at load.
+// The picture's continuous magnification, derived from the source once per
+// load (off the load path — GuiAudio::gain_curve).
 struct WaveformGainCurve {
     int64_t             hop_frames = 0;  // source frames between consecutive gains; gain[k] sits at frame k * hop_frames
     std::vector<double> gain;            // per hop, each in [kGainMin, kGainMax]; empty for a zero-frame source

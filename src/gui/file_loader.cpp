@@ -756,12 +756,14 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
 
     const double load_ms =
         std::chrono::duration<double, std::milli>(t1 - t0).count();
+    // The gain curve's derivation is not part of the load (it runs on its
+    // own thread and prints its own `gain_derive=` line, GuiAudio::load).
     std::fprintf(stderr,
                  "warptempo_gui: Loaded %s: sr=%d, channels=%d, frames=%lld, "
-                 "pyramid_levels=%d, gain_derive=%.1f ms, load_time=%.1f ms\n",
+                 "pyramid_levels=%d, load_time=%.1f ms\n",
                  path.c_str(), audio.sample_rate(), audio.channels(),
                  static_cast<long long>(audio.total_frames()),
-                 audio.num_levels(), audio.gain_derive_ms(), load_ms);
+                 audio.num_levels(), load_ms);
 
     // Source-view load ends with an empty status; a target-view load lets
     // ensure_ready() -> trigger() replace it with "updating..." for the

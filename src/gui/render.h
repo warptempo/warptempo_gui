@@ -2833,7 +2833,8 @@ struct WaveformBasis {
 //
 // It is a PARAMETER rather than a read of app state so this primitive stays
 // free of it (the worker thread renders from a job snapshot; the curve itself
-// is immutable after load, so the job carries only whether to apply it).
+// is immutable once its derivation is ready — GuiAudio::gain_curve — so the job
+// carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
 void render_waveform(cairo_surface_t* dest,
                      GuiRect area,

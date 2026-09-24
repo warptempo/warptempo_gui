@@ -1,9 +1,11 @@
 #pragma once
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -11,8 +13,10 @@
 
 // Owns an audio file's sample buffer, a fixed-stride min/max peak pyramid
 // (int16 cache levels on a powers-of-4 stride ladder) and the waveform
-// picture's continuous gain curve. No knowledge of X11, Cairo, or progress UI. Synchronous loader with a progress callback that the
-// caller wires up to its UI.
+// picture's continuous gain curve. No knowledge of X11, Cairo, or progress UI.
+// Synchronous loader with a progress callback that the caller wires up to its
+// UI; the gain curve alone is derived after the load on a thread of its own
+// (gain_curve_ready below).
 class GuiAudio {
 public:
     using ProgressCallback = std::function<void(float)>;
@@ -38,8 +42,9 @@ public:
     // Returns true on success. On failure, writes a diagnostic to stderr and
     // returns false. `on_progress` is invoked with a value in [0.0, 1.0]
     // periodically during pyramid construction; it may be empty.
-    // The picture's gain curve (gain_curve below) is derived inside load()
-    // from the decoded samples exactly as the pyramid is.
+    // The picture's gain curve (gain_curve below) is NOT part of the load:
+    // load() starts its derivation on a thread of its own once the samples are
+    // published and returns without waiting for it (gain_curve_ready below).
     bool load(const std::string& path, const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }
@@ -113,15 +118,29 @@ public:
                                           int64_t end_sample) const;
 
     // THE PICTURE'S CONTINUOUS GAIN over source frames (derive_waveform_gain,
-    // waveform_gain.h, which owns the rule), derived inside load() from the
-    // decoded samples exactly as the pyramid is built from them, and
-    // immutable after load like the pyramid — so the waveform worker reads it
-    // through its job's audio pointer with no owned snapshot. Whether a plate
-    // applies it is the gate's (waveform_magnified, warp_frame_map_view.h).
-    // Pixels only: no sample and no render input reads it.
-    const WaveformGainCurve& gain_curve() const { return gain_curve_; }
-    // The derivation's wall time in load(), for the loader's load-stats line.
-    double gain_derive_ms() const { return gain_derive_ms_; }
+    // waveform_gain.h, which owns the rule), DERIVED OFF THE LOAD PATH
+    // (architect 2026-09-24): load() publishes the samples and then starts
+    // ONE PLAIN std::thread that holds its own reference to them, derives the
+    // curve, prints its own stderr line (`gain_derive=... ms`, which the
+    // tablet routes to logcat with every other stderr line) and sets the
+    // ready flag. Nothing needs the curve at load — the magnification lamp is
+    // dark at every open — so the load does not wait out the ~115 ms the
+    // derivation costs on the tablet.
+    //
+    // THE READY FLAG's one reader outside this class is
+    // waveform_magnification_toggle_actionable (warp_frame_map_view.h): the
+    // backtick and the lamp's face refuse and
+    // grey until it stands, so the lamp cannot be lit before the curve exists.
+    // gain_curve() is readable only once gain_curve_ready() has returned true
+    // (asserted). Immutable from then on, like the pyramid — so the waveform
+    // worker reads it through its job's audio pointer with no owned snapshot.
+    // Whether a plate applies it is the gate's (waveform_magnified,
+    // warp_frame_map_view.h). Pixels only: no sample and no render input
+    // reads it.
+    bool gain_curve_ready() const {
+        return gain_ && gain_->ready.load(std::memory_order_acquire);
+    }
+    const WaveformGainCurve& gain_curve() const;
 
 private:
     std::shared_ptr<const std::vector<float>> samples_;
@@ -154,6 +173,38 @@ private:
     // or by streaming over the freshly built sample buffer on cache miss.
     std::array<PyramidLevel, kCacheLevels> levels_;
 
-    WaveformGainCurve gain_curve_;
-    double            gain_derive_ms_ = 0.0;
+    // THE DERIVATION'S STATE, on the heap so that its address is stable
+    // across GuiAudio's moves (the loader builds a GuiAudio and move-assigns
+    // it into run_project's, file_loader.cpp): the thread writes `curve` and
+    // then `ready`, and touches nothing else but its own copy of the samples'
+    // shared_ptr. No cancel, no completion signal, no platform hook, by
+    // ruling. THE DESTRUCTOR JOINS the thread before `curve` dies, and it is
+    // the only join: it runs when the owning GuiAudio is destroyed (the end of
+    // run_project), when a move-assignment replaces the owner's pointer, and
+    // when a later load() on the same object replaces it at publish (none
+    // does: the loader loads a fresh GuiAudio and moves it in) — so a
+    // close waits out at most the rest of the derivation, by design, and
+    // nothing the thread touches can die under it.
+    //
+    // THE HAPPENS-BEFORE CHAIN to every reader of `curve`: the thread writes
+    // `curve`, then ready.store(release); a reader's gain_curve_ready()
+    // (acquire) that sees true sees the whole curve. The GUI thread's one such
+    // read is the lamp's refusal (waveform_magnification_toggle_actionable),
+    // which must pass before show_waveform_magnification can be lit; every
+    // plate that applies the curve does so only while that lamp is lit
+    // (waveform_magnified), on the GUI thread after it, or on the waveform
+    // worker through a job the GUI thread submitted after it — the job
+    // hand-off being the worker's own synchronization.
+    struct GainDerivation {
+        WaveformGainCurve curve;
+        std::atomic<bool> ready{false};
+        std::thread       thread;
+        GainDerivation() = default;
+        GainDerivation(const GainDerivation&) = delete;
+        GainDerivation& operator=(const GainDerivation&) = delete;
+        ~GainDerivation() {
+            if (thread.joinable()) thread.join();
+        }
+    };
+    std::unique_ptr<GainDerivation> gain_;
 };

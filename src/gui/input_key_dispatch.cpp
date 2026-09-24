@@ -2085,8 +2085,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // for the seconds the worker takes. ONE COMPOSER FEEDS BOTH — the
         // stderr line stays, and the words are the picker's own
         // (kCheckpointPublishing, the head of this file), the same fact met
-        // one act over.
-        if (app.history_checkpoint_in_flight) {
+        // one act over. THE FACE FOLLOWS THE KEY here too (architect
+        // 2026-09-24): the Toggle History View button greys outside the view
+        // on the same predicate (history_view_open_refused_by_publishing,
+        // app_state.h).
+        if (history_view_open_refused_by_publishing(app)) {
             std::fprintf(stderr, "warptempo_gui: history: %s\n",
                          kCheckpointPublishing);
             notifications.notify(AppState::NotificationClass::Normal,
@@ -9141,6 +9144,20 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // icon-row button's synthesized chord and with nothing else.
         // History-less, one-shot, legal on a locked tab and under the
         // read-only lock; refused in the `h` view at that mode's allowlist.
+        //
+        // NOT BEFORE THE CURVE IS READY (architect 2026-09-24): the gain curve
+        // is derived on its own thread after the load (GuiAudio::gain_curve),
+        // and a press that early is effectively adversarial, so it refuses
+        // on one Normal card and lights nothing. The predicate is the one the
+        // button's face greys on (waveform_magnification_toggle_actionable,
+        // warp_frame_map_view.h), so the greyed button's lift never reaches here; this
+        // guard is also what keeps the lamp from being lit before the curve
+        // exists, which is why waveform_magnified needs no term of its own.
+        if (!waveform_magnification_toggle_actionable(audio)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Magnification is not ready");
+            break;
+        }
         set_show_waveform_magnification(!app.show_waveform_magnification);
         break;
     case GuiKeys::C:

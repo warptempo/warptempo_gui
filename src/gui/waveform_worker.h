@@ -60,9 +60,11 @@ struct WaveformJob {
     // warp_frame_map_view.h, which owns the gate): the derivation's version
     // while the picture is magnified, 0 while it is flat. It is the job's
     // WHOLE gain input — the curve itself lives on the audio object beside the
-    // peaks pyramid (GuiAudio::gain_curve), immutable after load, so the
-    // worker reads it through `audio` below with no owned snapshot; nonzero
-    // means apply it. It is also the FINGERPRINT field
+    // peaks pyramid (GuiAudio::gain_curve), immutable once its derivation is
+    // ready, so the worker reads it through `audio` below with no owned
+    // snapshot; nonzero means apply it, which only a lit lamp does, and the
+    // lamp cannot be lit before the curve is ready (the chain is at
+    // GuiAudio::GainDerivation). It is also the FINGERPRINT field
     // (WaveformCache::fp_gain_hash), which is what keeps a plate from being
     // shown at a gain that is not the live one. PIXELS ONLY: this job
     // produces a picture, and the gain reaches no sample anywhere.

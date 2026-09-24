@@ -109,8 +109,9 @@ void render_waveform_to_cache_surface(
     // one global.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
-    // state. The curve it names is the audio object's own, immutable after
-    // load (GuiAudio::gain_curve). Both channels take the one curve, as they
+    // state. The curve it names is the audio object's own, immutable once
+    // ready (GuiAudio::gain_curve; a magnified job exists only after the lamp
+    // was lit, which requires the curve to be ready). Both channels take the one curve, as they
     // take the one ink. It scales the PICTURE only — this whole function
     // writes pixels.
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;

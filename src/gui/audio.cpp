@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <cerrno>
 #include <cmath>
@@ -597,16 +598,6 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
     std::array<PyramidLevel, kCacheLevels> next_levels;
     reset_levels(next_levels);
 
-    // THE PICTURE'S GAIN CURVE, a pure function of the decoded samples like
-    // the pyramid, derived on both of the pyramid's roads (the cache hit
-    // included: the .peaks sidecar carries no curve). Sources are stereo
-    // here by the loader's refusal, which is the layout the derivation reads.
-    const auto g0 = std::chrono::steady_clock::now();
-    WaveformGainCurve next_gain_curve =
-        derive_waveform_gain(next_samples.data(), next_total_frames, next_sample_rate);
-    const double next_gain_derive_ms = std::chrono::duration<double, std::milli>(
-        std::chrono::steady_clock::now() - g0).count();
-
     auto publish = [&]() {
         samples_         = make_immutable_samples(std::move(next_samples));
         total_frames_    = next_total_frames;
@@ -616,8 +607,29 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         load_identity_size_ = next_load_identity.size;
         load_identity_mtime_ = next_load_identity.mtime;
         levels_          = std::move(next_levels);
-        gain_curve_      = std::move(next_gain_curve);
-        gain_derive_ms_  = next_gain_derive_ms;
+
+        // THE PICTURE'S GAIN CURVE, a pure function of the decoded samples
+        // like the pyramid, derived on both of the pyramid's roads (the cache
+        // hit included: the .peaks sidecar carries no curve) — but OFF THE
+        // LOAD PATH, on one plain thread started here, once the samples are
+        // published (the rules, the join and the happens-before chain are at
+        // GuiAudio::GainDerivation, audio.h). Replacing gain_ joins any
+        // earlier derivation first. The thread holds its own reference to the
+        // immutable samples and writes the new state's curve and flag alone.
+        // Sources are stereo here by the loader's refusal, which is the layout
+        // the derivation reads.
+        gain_ = std::make_unique<GainDerivation>();
+        GainDerivation* const state = gain_.get();
+        state->thread = std::thread(
+            [state, samples = samples_, frames = next_total_frames,
+             rate = next_sample_rate]() {
+                const auto g0 = std::chrono::steady_clock::now();
+                state->curve = derive_waveform_gain(samples->data(), frames, rate);
+                const double ms = std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - g0).count();
+                std::fprintf(stderr, "warptempo_gui: gain_derive=%.1f ms\n", ms);
+                state->ready.store(true, std::memory_order_release);
+            });
     };
 
     // Try the on-disk peaks cache first. Cache hit skips the build entirely
@@ -642,6 +654,11 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
                         next_sample_rate, next_levels);
     publish();
     return true;
+}
+
+const WaveformGainCurve& GuiAudio::gain_curve() const {
+    assert(gain_curve_ready());
+    return gain_->curve;
 }
 
 std::shared_ptr<const std::vector<float>> GuiAudio::samples_shared() const {

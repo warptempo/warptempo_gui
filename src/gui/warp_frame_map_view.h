@@ -39,6 +39,7 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     std::string* error_out = nullptr);
 
 struct AppState;
+class GuiAudio;
 
 // Memoized target-view warp_frame_map. One entry, keyed on the inputs that
 // determine the map: the warp-marker store generation, the scale
@@ -204,7 +205,23 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // entered (the lamp is dead there by its allowlist), its plate being the live
 // plate. DISPLAY-ONLY: no sample, no render input and no render fingerprint
 // field reads it.
+//
+// THE LAMP ALONE SUFFICES because it cannot be lit before the curve exists:
+// the curve is derived on its own thread after the load (GuiAudio::gain_curve),
+// and the lamp's one setter is reached only through the backtick's arm, which
+// refuses until waveform_magnification_toggle_actionable (below) passes.
 bool waveform_magnified(const AppState& app);
+
+// CAN THE MAGNIFICATION LAMP BE TOGGLED — whether the gain curve is ready
+// (GuiAudio::gain_curve_ready; the derivation runs on its own thread after the
+// load, architect 2026-09-24). ONE OWNER, TWO READERS: the bare backtick's arm
+// (input_key_dispatch.cpp), which refuses on a Normal card while it is false,
+// and the Toggle Waveform Magnification button's face
+// (redesign_button_enabled), which greys on the same answer — the per-tick
+// roster comparator (main.cpp) repaints the face on the frame the verdict
+// flips. Once true it stays true for the life of the audio object, so a lit
+// lamp can always be put out.
+bool waveform_magnification_toggle_actionable(const GuiAudio& audio);
 
 // THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
 // (kWaveformGainVersion) while the picture is magnified, 0 while it is flat —
@@ -221,8 +238,6 @@ bool waveform_magnified(const AppState& app);
 // (compute_waveform_render_inputs, waveform_cache.cpp); and the gain kick's
 // hash (Viewport::waveform_gain_hash).
 uint64_t waveform_gain_fingerprint(const AppState& app);
-
-class GuiAudio;
 
 // Convenience wrappers that own the domain-check and the map selection for the
 // common case: translating a single coordinate between the stores' domain and

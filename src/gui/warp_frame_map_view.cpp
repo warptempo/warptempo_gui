@@ -166,8 +166,14 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 bool waveform_magnified(const AppState& app) {
     // THE LAMP ALONE DECIDES, in both audio views, on every column and at
     // every zoom: Waveform Magnification lit is magnified, dark (the default
-    // at every open) flat. The rule is at the declaration.
+    // at every open) flat. The rule, and why the lamp needs no readiness term
+    // of its own, are at the declaration.
     return app.show_waveform_magnification;
+}
+
+bool waveform_magnification_toggle_actionable(const GuiAudio& audio) {
+    // The rule is at the declaration.
+    return audio.gain_curve_ready();
 }
 
 uint64_t waveform_gain_fingerprint(const AppState& app) {
