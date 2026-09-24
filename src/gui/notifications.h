@@ -263,10 +263,10 @@
 // is two sentences the moment one of them is edited. Everything else stays a
 // literal where it fires (a sentence with ONE producer has nothing to agree
 // with), and a family whose several sites share ONE translation unit keeps its
-// constant there (kKeysDuringDrag, kCheckpointPublishing and, since
-// 2026-09-02, kSyncRunning, which the Open project picker's act began raising
-// beside the mirror's own single-in-flight refusal and which the close road's
-// gate joined on 2026-09-04, all three still in that one file; the two mode
+// constant there (kKeysDuringDrag and, since 2026-09-02, kSyncRunning, which
+// the Open project picker's act began raising beside the mirror's own
+// single-in-flight refusal and which the close road's gate joined on
+// 2026-09-04, both still in that one file; the two mode
 // routers' catch-all tails were a third until their catch-alls went silent
 // with the unbound-keys ruling). A THIRD HOME EXISTS for a sentence that
 // belongs beside the VERDICT it spells rather than beside its one raiser: the
@@ -355,6 +355,22 @@ inline const char* authoring_lock_card(const AppState& a) {
     return active_view_state(a).read_only ? kTabReadOnlyCard
                                           : kIterationLockCard;
 }
+
+// THE CHECKPOINT-PUBLISHING SENTENCE, ONE LITERAL (2026-08-30), homed here
+// since 2026-09-24, when the save owner became a raiser from its own
+// translation unit. ONE FACT, ONE WORDING, and its readers are: the SAVE
+// OWNER's in-flight refusal (GuiSaveOps::save, save_ops.cpp), which every
+// plain Ctrl+S road reaches — on_key, the editors' modal contract, the
+// picker's and the stats panel's routers, the render player's fall-through —
+// and the close prompt's Save answer; bare `h`'s entry refusal (which also
+// prints it on stderr); the Open project picker's open act and File > Revert;
+// and the commit act's own opener (open_history_commit_editor), the `h`
+// view's Ctrl+S. All of them meet AppState::history_checkpoint_in_flight.
+// ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
+// shape): the sentence is the instruction. It read "A checkpoint is still
+// publishing; try again when it finishes" until that day.
+inline constexpr const char* kCheckpointPublishing =
+    "Wait for the checkpoint to finish publishing";
 
 // THE PROJECTS PATH COMMIT'S SENTENCE (2026-09-02, the four-tier review's
 // R-22): a `projects_path=` commit from the settings editor rewrites the

@@ -11740,6 +11740,12 @@ inline bool any_tab_read_only(const AppState& a) {
 // here rather than at each arm is still what keeps it from becoming two lists
 // of the same buttons.
 //
+// THE MEMBERS FALL IN THREE GROUPS, as the keyboard gate's own admissions do:
+// the marker verbs, History, the padlock, BPM iterations and the view bar's
+// three GREY OUTRIGHT under a lit lamp; Edit flag and Up/Down grey UNLESS A
+// BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's bound-axis admission;
+// Left/Right follow the lane (horizontal_arrow_step_lock_admits).
+//
 // IT IS THE ITERATION HALF ALONE, deliberately, and every reader composes its
 // own read-only half:
 //   * most of the members' read-only half is the tab's bare bit (the marker
@@ -11881,6 +11887,12 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // shifted lift reaches the key's own refusal and its card.)
         // The walk button is NOT a member: bare Tab and Shift+Tab step the
         // cells, which is the mode's own surface.
+        // EVERY MEMBER ABOVE GREYS OUTRIGHT, whatever cell is addressed: the
+        // gate refuses their chords ahead of its bound-axis admission
+        // (iteration_lock_key_blocked), so a Lower or Upper cell buys them
+        // nothing and the face must not advertise what the key cards
+        // (architect 2026-09-24).
+            return true;
         // (THE TWO TAB BUTTONS WERE MEMBERS FOR ONE AFTERNOON, 2026-09-10,
         // when the lock refused Ctrl+Tab INTO A LOCKED TAB and each button
         // greyed on its own tab's bit. The piece-wide exclusion ruled that
@@ -12199,6 +12211,65 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
 inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
                                    bool forward) {
     return marker_walk_step(a, audio, forward).marker >= 0;
+}
+
+// THE `h` VIEW'S DIFF-FLAG CYCLE, ITS STOP — the index a bare Tab (forward)
+// or Shift+Tab (back) would focus in history_mode.flags, or -1 where the press
+// is a silent consumed no-op. ONE OWNER, TWO READERS (architect 2026-09-24):
+// the act (GuiInputHandler::cycle_history_diff_flag_focus, input_key_
+// dispatch.cpp), which lands on the answer, and the Walk button's face inside
+// the view (redesign_button_enabled), which asks it in both directions, so the
+// face reads the cycle the key walks there and not the live store.
+//
+// AN EMPTY LIST AND THE NO-WRAP WALLS answer -1: forward from the last flag,
+// back from the first.
+//
+// THE SEED IS THE PLAYHEAD ANCHOR (architect 2026-08-22), not the list's
+// first index: with no focus standing, a Tab lands the nearest flag STRICTLY
+// PAST the playhead and a Shift+Tab the nearest strictly before it — the live
+// cycle's own rule verbatim ("the playhead frame is the sole cycle anchor",
+// stated at Selection::cycle_selection), so a reader who has just opened the
+// view continues from where the playhead sits. NO CANDIDATE is the same wall
+// reached from an unseated cursor: nothing ahead of the playhead is nothing
+// ahead.
+//
+// THE COMPARE IS IN THE ACTIVE DISPLAY DOMAIN, both sides: the flags carry
+// SOURCE frames (the act lands them through land_playhead_on_source_frame)
+// and playhead_cursor_sample is a domain frame, so each candidate
+// forward-translates. The mode switches no audio view, so it stands in
+// whichever of source (identity) or target (the live map) the tab was in.
+//
+// FIRST/LAST HIT IS THE NEAREST HIT: rebuild_history_diff_flags leaves the
+// list sorted ASCENDING BY time_frame and the source->domain translation is
+// monotone, so the scan needs no minimum-search. Where several flags share one
+// frame (a changed/removed/added coincidence, which the stable sort keeps
+// grouped) the group's first member forward and its last backward is the
+// stop, and the index step then walks the rest of the group — every flag
+// stays Tab-reachable. STRICT INEQUALITY is the live family's own: a playhead
+// parked exactly on an unfocused flag steps PAST it.
+inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
+                                     bool forward) {
+    const auto& flags = a.history_mode.flags;
+    const int n = static_cast<int>(flags.size());
+    if (n == 0) return -1;
+    const int here = a.history_mode.focus;
+    if (here >= 0 && here < n) {
+        if (forward) return here + 1 < n ? here + 1 : -1;
+        return here > 0 ? here - 1 : -1;
+    }
+    const int64_t ph_f = a.playhead_cursor_sample;
+    auto frame_of = [&](int i) -> int64_t {
+        return source_frame_to_active_domain(
+            a, audio, flags[static_cast<std::size_t>(i)].time_frame);
+    };
+    if (forward) {
+        for (int i = 0; i < n; ++i)
+            if (frame_of(i) > ph_f) return i;
+    } else {
+        for (int i = n - 1; i >= 0; --i)
+            if (frame_of(i) < ph_f) return i;
+    }
+    return -1;
 }
 
 // How a marker landing treats the camera, stated by the caller that asks for
@@ -14162,6 +14233,10 @@ inline bool redesign_button_enabled(const AppState& a,
         // (row 3 is the A/B tabs in every state).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
+            // Their own return: falling into the zoom group's first arm handed
+            // them Full Zoom Out's fork, and row 3 paints no disabled face, so
+            // a live-looking tab dropped its click (architect 2026-09-24).
+            return true;
         // THE ZOOM GROUP. CENTER MIRRORS NOTHING (2026-08-12): `c` always
         // frames on a loaded file. FULL ZOOM OUT MIRRORS ITS FORK UNDER THE
         // TWIN RULE (architect 2026-09-23 — "zero should just lose its
@@ -14271,7 +14346,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // is the Grid Iterations lamp, which greys while EITHER tab is locked
         // (any_tab_read_only, above) — and this face needs no tab term of its
         // own for that reason: under a lit lamp no tab is locked at all.
+        // IT HAS ITS OWN RETURN and not the History button's below: bare `o`
+        // toggles whatever a checkpoint is doing, so the publishing flight
+        // that greys History is no refusal of this key (architect 2026-09-24).
         case RedesignButton::IconReadOnly:
+            return !iteration_lock_greys(a, b);
         // THE HISTORY BUTTON MIRRORS TWO REFUSALS, BOTH OF THE ENTRY: the
         // iteration lock and the publishing flight. The view's own acts push
         // history — the revert, the two loads, the checkpoint's save — and two
@@ -14909,9 +14988,14 @@ inline bool redesign_button_enabled(const AppState& a,
             break;
         }
         // THE WALK (2026-08-15's always-on policy until 2026-08-30): the `h`
-        // view's derived partition leaves it lit, both of its chords being
-        // the mode's OWN vocabulary in there (the diff-flag cycle on bare Tab
-        // / Shift+Tab). OUTSIDE THE VIEW IT GREYS on the cycle's own landing
+        // view's derived partition admits it, both of its chords being the
+        // mode's OWN vocabulary in there, and IN THE VIEW IT GREYS ON THE
+        // DIFF-FLAG CYCLE the chords run (architect 2026-09-24:
+        // history_diff_cycle_target, the act's own stop, in both directions —
+        // an empty diff, or a focus or playhead with nothing on either side).
+        // It read the live store there until then, so the face could grey
+        // over a Tab that walked the diff flags, or stay lit over one at the
+        // cycle's end. OUTSIDE THE VIEW IT GREYS on the cycle's own landing
         // (marker_walk_actionable over marker_walk_landing, planner decision
         // 59 — an empty store, an all-disabled store, no enabled marker past
         // the playhead this way; the morning's count-only face was the
@@ -14925,6 +15009,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // never-grey arm; the least-movement walk, which shared this arm from
         // 2026-09-22, was deleted 2026-09-23.)
         case RedesignButton::TransportWalk:
+            if (a.history_mode.active)
+                return history_diff_cycle_target(a, audio, true) >= 0 ||
+                       history_diff_cycle_target(a, audio, false) >= 0;
             if (!marker_walk_actionable(a, audio, /*forward=*/true) &&
                 !marker_walk_actionable(a, audio, /*forward=*/false))
                 return false;
@@ -16427,8 +16514,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   card the bootstrap's reason (bare `g` at the walk's one switch owner,
 //   Ctrl+S at run_history_commit, each appending the clone-specific clause a
 //   constant line could never carry), and while a checkpoint publishes
-//   Ctrl+S in the `h` view cards kCheckpointPublishing while the ordinary
-//   save returns silently on the face — GuiSaveOps::save's own standing arm.)
+//   Ctrl+S cards kCheckpointPublishing in both of its forms — the `h` view's
+//   at open_history_commit_editor, the ordinary save at GuiSaveOps::save's own
+//   arm since 2026-09-24.)
 //
 //   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
 //   the queue — never the automatic preview) → the dialog-cancel glyph, the

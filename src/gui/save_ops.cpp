@@ -55,9 +55,9 @@ bool GuiSaveOps::save() {
     // act is already refused, single-in-flight).
     //
     // ONE TERM, EVERY CALLER: the Ctrl+S dispatch, the editors' own Ctrl+S
-    // admission (route_modal_editor_key), the picker router's Ctrl+S and the
-    // close prompt's Save answer all funnel through here, so the lockout needs
-    // no second spelling.
+    // admission (route_modal_editor_key), the picker's and the stats panel's
+    // routers' Ctrl+S and the close prompt's Save answer all funnel through
+    // here, so the lockout needs no second spelling.
     //
     // THE CLOSE PROMPT'S Save answer IS REACHABLE HERE, and it answers with the arm
     // it already has: the act saves before it dispatches, so the session is
@@ -76,19 +76,24 @@ bool GuiSaveOps::save() {
     // cpp — save, capture, close, dispatch, in that order), so the save that is
     // part of the act runs while nothing is in flight.
     //
-    // SILENT, and the face is the message — THIS ARM ALONE (architect
-    // 2026-09-02, ruling the write arms and the locale arm below onto cards):
-    // the Save button is DISABLED off this same bit (redesign_button_enabled,
-    // app_state.h), so a refusal here is a consumed nothing the user was
-    // already told about. The grey is the whole cue since 2026-09-12, the
-    // button having also worn the words — the "Committing..." label until
-    // 2026-08-12 and the "Committing the checkpoint (Ctrl+S)" hint after it,
-    // both gone with their classes. The two states that read the roster as
-    // unreadable say it themselves: the picker's Ctrl+S arm asks this bit
-    // ahead of the call and raises the picker's own sentence (route_picker_key,
-    // input_key_dispatch.cpp), and the `h` view's Ctrl+S cards
-    // kCheckpointPublishing at run_history_commit.
-    if (app.history_checkpoint_in_flight) return false;
+    // A CARD, raised here for every caller (architect 2026-09-24: "cards
+    // being preferred over no-ops on a face that falsely advertises an
+    // action"). It was silent from 2026-09-02, the Save button's grey on this
+    // same bit standing as the message, but that grey is not what a reader
+    // sees on every road the key reaches: under the render player, whose
+    // router passes Ctrl+S through, the roster is greyed by the overlay and
+    // says nothing about the checkpoint, and under the picker and the stats
+    // panel likewise — those two routers carded the bit themselves ahead of
+    // the call, and defer to this arm now. The close prompt's Save answer
+    // inherits it as it inherits the write arms' cards: the refusal takes the
+    // prompt's "Retry the failed save?" rung and the card is its reason. The
+    // commit act's prelude save never meets it (ordering, above), and the
+    // `h` view's Ctrl+S cards the same sentence at open_history_commit_editor.
+    if (app.history_checkpoint_in_flight) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kCheckpointPublishing);
+        return false;
+    }
 
     // Startup's locale_check.h tripwire covers launch; this catches a
     // dynamically loaded module changing numeric locale mid-session so refusal

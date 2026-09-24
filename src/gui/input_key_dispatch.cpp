@@ -61,22 +61,9 @@ namespace {
 // refusal became a card that day, which put a fourth reporter of the fact in
 // this file and a producer of it in another translation unit.)
 
-// THE CHECKPOINT-PUBLISHING SENTENCE, ONE LITERAL (2026-08-30). ONE MODE, ONE
-// FACT, ONE WORDING, and it now has FOUR readers in this file: bare `h`'s
-// entry refusal (which also prints it on stderr — one composer, two
-// surfaces), the Open project picker's own open act, that picker's
-// router's Ctrl+S arm, which meets the identical bit at the identical moment,
-// and — since 2026-09-01 — THE COMMIT ACT'S OWN OPENER
-// (open_history_commit_editor), which met the bit as an allowlist admission
-// term until the architect ruled a gate's membership the chord's alone and the
-// refusal became the act's to say.
-// ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
-// shape): the sentence is the instruction, the shape its sibling
-// kTargetPreviewNotReadyCard already wore (that card retired 2026-09-04, both
-// of its gates going silent). It read "A checkpoint is still publishing; try
-// again when it finishes" until that day.
-constexpr const char* kCheckpointPublishing =
-    "Wait for the checkpoint to finish publishing";
+// (THE CHECKPOINT-PUBLISHING SENTENCE moved to notifications.h on 2026-09-24,
+// when the save owner began raising it from save_ops.cpp: the account of its
+// readers is there.)
 
 // THE SYNCHRONIZATION-RUNNING SENTENCE, ONE LITERAL (2026-09-02, the
 // four-tier review's R-14). THREE READERS in this file — the act's own
@@ -1954,69 +1941,12 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // need the stack's duplicate-text rule to answer once.)
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
                                                     MarkerLandingFrame frame) {
-    const int n = static_cast<int>(app.history_mode.flags.size());
-    if (n == 0) return;
-    const int here = app.history_mode.focus;
-    int there = -1;
-    if (here < 0 || here >= n) {
-        // THE SEED IS THE PLAYHEAD ANCHOR (architect 2026-08-22), not the list's
-        // first index: with no focus standing, a Tab lands the nearest flag
-        // STRICTLY PAST the playhead and a Shift+Tab the nearest strictly before
-        // it. That is the live cycle's own rule verbatim ("the playhead frame is
-        // the sole cycle anchor", stated at Selection::cycle_selection), and the
-        // index seed it replaces was this body's one deviation from the mirror
-        // its landing comment below claims — it teleported a reader who had just
-        // opened the view to the piece's first delta instead of continuing from
-        // where the playhead sits.
-        //
-        // THE COMPARE IS IN THE ACTIVE DISPLAY DOMAIN, both sides: the flags
-        // carry SOURCE frames (they land through land_playhead_on_source_frame),
-        // and playhead_cursor_sample is a domain frame, so each candidate
-        // forward-translates exactly as the live cycle's frame_of does. The mode
-        // switches no audio view, so it stands in whichever of source (identity)
-        // or target (the live map) the tab was in, and this handles both.
-        //
-        // FIRST/LAST HIT IS THE NEAREST HIT: rebuild_history_diff_flags leaves
-        // the list sorted ASCENDING BY time_frame and the source->domain
-        // translation is monotone, so the scan needs no minimum-search. Where
-        // several flags share one frame (a changed/removed/added coincidence,
-        // which the stable sort keeps grouped) the group's first member forward
-        // and its last backward is the stop, and the index step below then walks
-        // the rest of the group — every flag stays Tab-reachable.
-        //
-        // STRICT INEQUALITY IS THE LIVE FAMILY'S OWN, and it means a playhead
-        // parked exactly on an unfocused flag steps PAST it rather than
-        // re-landing where it already stands.
-        const int64_t ph_f = app.playhead_cursor_sample;
-        auto frame_of = [&](int i) -> int64_t {
-            return source_frame_to_active_domain(
-                app, audio,
-                app.history_mode.flags[static_cast<std::size_t>(i)].time_frame);
-        };
-        if (forward) {
-            for (int i = 0; i < n; ++i) {
-                if (frame_of(i) > ph_f) { there = i; break; }
-            }
-        } else {
-            for (int i = n - 1; i >= 0; --i) {
-                if (frame_of(i) < ph_f) { there = i; break; }
-            }
-        }
-        // NO CANDIDATE IS THE CONSUMED NO-OP the whole family already is — the
-        // live cycle's "nothing ahead" return and the no-wrap walls two lines
-        // below in one shape. Forward with the playhead at or past the last
-        // flag, backward at or before the first, and the view rests untouched.
-        // It is silent for the SAME reason the seated walls below are,
-        // because it is the same wall reached from an unseated cursor:
-        // nothing ahead of the playhead is nothing ahead.
-        if (there < 0) return;
-    } else if (forward) {
-        if (here + 1 >= n) return;   // last already
-        there = here + 1;
-    } else {
-        if (here == 0) return;       // first already
-        there = here - 1;
-    }
+    // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), read
+    // by the Walk button's face in the view too, so the greyed face and the
+    // dead key agree (architect 2026-09-24). The seed, the walls and the
+    // empty arm are stated there; each is a silent consumed no-op here.
+    const int there = history_diff_cycle_target(app, audio, forward);
+    if (there < 0) return;
     playback_lifecycle.stop_playback_if_playing();
     // THE CYCLE REPLACES THE SELECTION WITH ITS STOP, the live cycle's own
     // shape: the set clears and the focus alone stands, which is the plain
@@ -2109,7 +2039,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // the last of the ruled silences and left `h` reading as a dead key
         // for the seconds the worker takes. ONE COMPOSER FEEDS BOTH — the
         // stderr line stays, and the words are the picker's own
-        // (kCheckpointPublishing, the head of this file), the same fact met
+        // (kCheckpointPublishing, notifications.h), the same fact met
         // one act over. THE FACE FOLLOWS THE KEY here too (architect
         // 2026-09-24): the Toggle History View button greys outside the view
         // on the same predicate (history_view_open_refused_by_publishing,
@@ -3116,8 +3046,8 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
 // history view"). They were the allowlist's admission terms from 2026-08-05
 // and 2026-08-07, which dropped the press ABOVE the `s` arm and so never let it
 // reach here at all:
-//   - A CHECKPOINT ALREADY IN FLIGHT says the publishing sentence its three
-//     other sites say (kCheckpointPublishing, the head of this file) — single
+//   - A CHECKPOINT ALREADY IN FLIGHT says the publishing sentence its
+//     other sites say (kCheckpointPublishing, notifications.h) — single
 //     in flight, and the wait is seconds. It is a card rather than a silence
 //     because the fact is a BACKGROUND act's, not a state the view is showing.
 //   - AN EMPTY HEAD DELTA IS SILENT, the benign one-dimensional refusal already
@@ -6790,8 +6720,8 @@ void GuiInputHandler::build_project_picker_rows() {
 // refusal a notification card with the picker still open; the project already
 // open is a consumed no-op that closes it; and a project that passes reaches
 // the reopen through the one close request, REOPEN-targeted.
-// (THE CHECKPOINT SENTENCE lives at the head of this file since 2026-08-30 —
-// bare `h`'s own entry refusal became its third reader that day.)
+// (THE CHECKPOINT SENTENCE is kCheckpointPublishing, notifications.h, where
+// its readers are listed.)
 
 void GuiInputHandler::open_project_commit(int index) {
     if (!app.picker.active) return;
@@ -7062,26 +6992,14 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 
     // CTRL+S SAVES WITH THE PICKER STANDING, through the one save owner — the
     // contract the typed prompt this picker replaced carried
-    // (route_modal_editor_key's Ctrl+S arm). THE ONE REFUSAL THE SAVE OWNER
-    // CAN MEET HERE SAYS SO (architect 2026-08-30, the strictness ruling): a
-    // checkpoint in flight, asked ahead of the call so the sentence can be
-    // raised — and it is the PICKER'S OWN sentence, the literal it shares
-    // with open_project_commit's identical refusal. Elsewhere that same
-    // refusal is silent because the Save button reads "Committing..." and is
-    // the message; under the picker the whole roster is greyed and unreadable
-    // as state, so nothing else answers the press. THE SAVE OWNER'S OTHER
-    // REFUSALS SAY THEMSELVES since 2026-09-02: the three write arms and the
-    // numeric-locale arm raise their own card from inside save() (save_ops.cpp
-    // — one composer, every caller inheriting it), so this arm asks about
-    // nothing but the bit it can answer better than the owner can, and the
-    // picker composes no second sentence for a failure. The empty-sidecar-path
-    // belt keeps its silence, having no producer.
+    // (route_modal_editor_key's Ctrl+S arm). EVERY REFUSAL THE OWNER CAN MEET
+    // SAYS ITSELF from inside save() (save_ops.cpp — one composer, every
+    // caller inheriting it): the three write arms and the numeric-locale arm
+    // since 2026-09-02, and the checkpoint-in-flight arm since 2026-09-24,
+    // which this arm asked ahead of the call until the owner carded it
+    // itself. The empty-sidecar-path belt keeps its silence, having no
+    // producer.
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
-        if (app.history_checkpoint_in_flight) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kCheckpointPublishing);
-            return true;
-        }
         save_ops.save();
         return true;
     }
@@ -7380,17 +7298,10 @@ bool GuiInputHandler::route_stats_panel_key(GuiKey key, GuiInputState mods) {
     const bool bare  = !ctrl && !shift && !alt;
 
     // CTRL+S SAVES WITH THE PANEL STANDING, through the one save owner — the
-    // picker's arm verbatim, including the ONE REFUSAL THE OWNER CAN MEET here
-    // that the screen cannot show: a checkpoint in flight, whose sentence is
-    // raised because the whole roster is greyed and unreadable as state under
-    // the band. The save owner's other refusals raise their own cards from
-    // inside save() (save_ops.cpp), so this arm asks about nothing else.
+    // picker's arm verbatim: every refusal the owner can meet, the checkpoint
+    // in flight among them, raises its own card from inside save()
+    // (save_ops.cpp), so this arm asks about nothing.
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
-        if (app.history_checkpoint_in_flight) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kCheckpointPublishing);
-            return true;
-        }
         save_ops.save();
         return true;
     }

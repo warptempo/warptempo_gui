@@ -2929,7 +2929,7 @@ private:
     //     tick while the panel stands; a no-op otherwise.
     //   route_stats_panel_key:    THE WHOLE PLASTIC VOCABULARY while it
     //     stands, in route_picker_key's shape and at its rank in on_key:
-    //     Ctrl+S saves (with the checkpoint-in-flight card the picker raises);
+    //     Ctrl+S saves (the save owner cards a checkpoint in flight);
     //     Ctrl+C copies the whole report (copy_stats_panel_report, the button's
     //     key twin); Ctrl+Q is THE ONE FALL-THROUGH; Tab / Shift+Tab walk the
     //     ring [band, Copy to Clipboard, Close]; Esc closes; Up / Down SCROLL
