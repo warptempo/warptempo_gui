@@ -1,7 +1,7 @@
 #pragma once
 
 #include "failure.h"
-#include "waveform_gain.h"   // WaveformGainParams, the gain rule's eight tunables
+#include "waveform_gain.h"   // WaveformGainParams, the gain rule's five tunables
 
 #include <cstdint>
 #include <expected>
@@ -10,7 +10,7 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fourteen keys live here and nowhere else:
+// piece (architect 2026-08-27). Eleven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -24,11 +24,10 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
-//   waveform_gain_window_s=<s>, waveform_gain_gate_db=<dB>,
-//   waveform_gain_min_fraction=<f>, waveform_gain_max=<g>,
-//   waveform_gain_upward_ratio=<r>, waveform_gain_upward_threshold_db=<dB>,
-//   waveform_gain_upward_knee_db=<dB>, waveform_gain_upward_range_db=<dB>
-//                            the waveform gain rule's eight tunables
+//   waveform_gain_window_s=<s>, waveform_gain_target_db=<dB>,
+//   waveform_gain_gate_db=<dB>, waveform_gain_min_fraction=<f>,
+//   waveform_gain_max=<g>
+//                            the waveform gain rule's five tunables
 //                            (waveform_gain.h), bracketed doubles — the
 //                            grammar at kWaveformGainKeys below
 //
@@ -37,8 +36,10 @@
 // the gain tunables, 2026-09-23, appended in the rule's own order — seven
 // that day, five since the expander's two left the same day; the percentile
 // left and `waveform_gain_upward_ratio` was appended last, also 2026-09-23;
-// the upward compression's threshold, knee and range were appended after it,
-// in that order, 2026-09-24);
+// the upward compression's threshold, knee and range were appended after it
+// 2026-09-24 and all four upward keys left the same day, when
+// `waveform_gain_target_db` took the second gain place with the loudness
+// measure);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -81,10 +82,13 @@
 // (seven arrived; `waveform_gain_threshold_db` and `waveform_gain_ratio` left
 // the same day with the expander they tuned, ruled out at waveform_gain.h, and
 // `waveform_gain_percentile` left when the percentile was fixed at the
-// window's maximum, `waveform_gain_upward_ratio` taking the fifth place; a
-// file still carrying any of the three is unknown-key fatal, no migration;
+// window's maximum, `waveform_gain_upward_ratio` taking the fifth place;
 // the upward compression's threshold, knee and range made them eight
-// 2026-09-24, a file lacking any of them missing-key fatal, no migration).
+// 2026-09-24, and the same day the four upward keys left with the deleted
+// compressor and `waveform_gain_target_db` arrived SECOND with the loudness
+// measure, making them five; a file still carrying any struck key is
+// unknown-key fatal and one lacking the target missing-key fatal, no
+// migration).
 // They are NOT exposed in the settings editor — this file is their surface —
 // and they are read ONCE, at startup: nothing re-reads them at a reopen or a
 // Revert, so a retune is a relaunch (the reader is load_file's hand-off to
@@ -104,7 +108,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the fourteen keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -117,7 +121,7 @@
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
 // max_waveform_height, projects_repo, projects_path, last_project, sync_path,
-// then the eight waveform_gain_* keys) and it is what
+// then the five waveform_gain_* keys) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -143,13 +147,13 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor — it is the
-// program's own — and the eight waveform_gain_* keys have none either: the
+// program's own — and the five waveform_gain_* keys have none either: the
 // file is their surface (hand-edited with the app quit), and every in-app
 // commit carries them through verbatim from the live struct.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// fourteen.
+// eleven.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -166,7 +170,7 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
-    WaveformGainParams waveform_gain;   // the eight waveform_gain_* keys
+    WaveformGainParams waveform_gain;   // the five waveform_gain_* keys
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -240,13 +244,13 @@ inline constexpr const char* kGuiScaleGrammarReason =
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
 
-// THE waveform_gain_* GRAMMAR — the ONE owner of the eight tunables' names and
-// walls (architect 2026-09-23; the upward threshold, knee and range
-// 2026-09-24), a table because the eight share one shape:
+// THE waveform_gain_* GRAMMAR — the ONE owner of the five tunables' names and
+// walls (architect 2026-09-23; the target 2026-09-24), a table because the
+// five share one shape:
 // a bracketed double in ONE canonical spelling, the spelling value_format.h
 // already owns for authored doubles — format_value_double at min 2 decimals,
 // the shortest round-trip text padded to at least two fraction digits
-// (`3.00`, `-50.00`, `0.25`, `16.00`, `1.00`; a value that needs a third
+// (`3.00`, `-14.00`, `-50.00`, `0.25`, `16.00`; a value that needs a third
 // digit keeps it, `1.185`), with a leading `-` for the dB keys' negative
 // values and NO `-0.00` (zero has one spelling, `0.00`). The
 // reader's one parser is parse_waveform_gain_value, the writer's one
@@ -255,10 +259,8 @@ inline constexpr const char* kMaxWaveformHeightGrammarReason =
 // brackets are the architect's (2026-09-23, 2026-09-24): the walls a hand edit meets, not
 // a tuning criterion. The derivation reads them as preconditions — the cap's
 // floor of 1 is what keeps its clamp ordered (derive_waveform_gain), and the
-// upward ratio's floor of 1 is its identity (off): a ratio under 1 would be
-// downward expansion, which the rule does not have (render_waveform); the
-// upward threshold's ceiling of 0 is the lane edge, the knee's floor of 0 a
-// hard knee and the range's floor of 0 no lift at all (upward_compressed_tip).
+// target's ceiling of 0 is the lane edge's own level (a target over it would
+// only raise every window past the edge).
 //
 // The order is the writer's (it is kDeviceConfigKeys' tail, device_config.cpp,
 // which checks the pairing at compile time) and the rule's own.
@@ -269,14 +271,11 @@ struct WaveformGainKey {
     double WaveformGainParams::* member;
 };
 inline constexpr WaveformGainKey kWaveformGainKeys[] = {
-    {"waveform_gain_window_s",            0.5,   10.0,  &WaveformGainParams::window_s},
-    {"waveform_gain_gate_db",             -90.0, -20.0, &WaveformGainParams::gate_db},
-    {"waveform_gain_min_fraction",        0.05,  1.0,   &WaveformGainParams::min_fraction},
-    {"waveform_gain_max",                 1.0,   64.0,  &WaveformGainParams::gain_max},
-    {"waveform_gain_upward_ratio",        1.0,   10.0,  &WaveformGainParams::upward_ratio},
-    {"waveform_gain_upward_threshold_db", -30.0, 0.0,   &WaveformGainParams::upward_threshold_db},
-    {"waveform_gain_upward_knee_db",      0.0,   24.0,  &WaveformGainParams::upward_knee_db},
-    {"waveform_gain_upward_range_db",     0.0,   60.0,  &WaveformGainParams::upward_range_db},
+    {"waveform_gain_window_s",     0.5,   10.0,  &WaveformGainParams::window_s},
+    {"waveform_gain_target_db",    -40.0, 0.0,   &WaveformGainParams::target_db},
+    {"waveform_gain_gate_db",      -90.0, -20.0, &WaveformGainParams::gate_db},
+    {"waveform_gain_min_fraction", 0.05,  1.0,   &WaveformGainParams::min_fraction},
+    {"waveform_gain_max",          1.0,   64.0,  &WaveformGainParams::gain_max},
 };
 
 // The bracket, inclusive at both walls.
@@ -515,7 +514,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // struct they were handed rather than composing one from AppState's fields.
 //
 // THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
-// (re-greped 2026-09-13 with the sixth key; the eight waveform_gain_* keys of
+// (re-greped 2026-09-13 with the sixth key; the five waveform_gain_* keys of
 // 2026-09-23 and 2026-09-24 have no commit — each write carries them verbatim from the
 // struct):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);

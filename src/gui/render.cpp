@@ -265,18 +265,13 @@ void render_waveform(cairo_surface_t* dest,
     // is the derived curve at the column's centre source frame (null: 1.0).
     // The contract (and the coarse-zoom centre rule) is at this function's
     // declaration; the arithmetic is one multiply and a clamp at the tip
-    // mapping below, then THE UPWARD COMPRESSION on the clamped tip
-    // (upward_compressed_tip, waveform_gain.h, which owns the curve: threshold,
-    // ratio, knee and range, all carried on the gain curve). Ratio 1 skips it,
-    // so it is the identity exactly, and |t| = 0 stays 0. IT SCALES PIXELS
-    // ONLY — nothing this function touches is audio.
-    const bool upward_compressed = gain_or_null && gain_or_null->upward_ratio != 1.0;
-    const auto magnified_tip = [gain_or_null, upward_compressed](double raw, double gain) {
+    // mapping below. IT SCALES PIXELS ONLY — nothing this function touches is
+    // audio.
+    const auto magnified_tip = [](double raw, double gain) {
         double v = raw * gain;
         if (v < -1.0) v = -1.0;
         if (v >  1.0) v =  1.0;
-        if (!upward_compressed) return v;
-        return upward_compressed_tip(v, *gain_or_null);
+        return v;
     };
 
     // Each column is written straight into the plate's pixel words, and a
@@ -404,10 +399,8 @@ void render_waveform(cairo_surface_t* dest,
         // sample domain [-1, 1] BEFORE they become rows. The clamp is what
         // makes a magnified forte clip flat against the lane's edges instead
         // of running off into row arithmetic, and it is a no-op at gain 1
-        // (raw peaks already rest in range). The upward compression follows
-        // inside magnified_tip; being monotone it commutes with the pyramid's
-        // min/max, so mapping the reduced extremes is exact. A PICTURE gain:
-        // the samples themselves are untouched, here and everywhere.
+        // (raw peaks already rest in range). A PICTURE gain: the samples
+        // themselves are untouched, here and everywhere.
         const double gain    = gain_or_null
                                    ? waveform_gain_at(*gain_or_null, (s0 + s1) / 2)
                                    : 1.0;

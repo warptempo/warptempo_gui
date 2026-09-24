@@ -19,11 +19,13 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (FOURTEEN keys since the
-// upward compression's threshold, knee and range were appended 2026-09-24;
-// eleven since the waveform_gain_* tunables arrived 2026-09-23, appended in
-// the rule's own order — seven arrived, and the expander's two left the same
-// day, then the percentile, with the upward ratio appended last;
+// set the shared scanner enforces after the loop (ELEVEN keys since the
+// waveform_gain_* tunables arrived 2026-09-23 in the rule's own order — seven
+// arrived, and the expander's two left the same day, then the percentile, with
+// the upward ratio appended last; fourteen for a day when the upward
+// compression's threshold, knee and range were appended 2026-09-24, and
+// eleven again the same day when the four upward keys left and
+// `waveform_gain_target_db` took the second gain place;
 // kWaveformGainKeys, device_config.h, owns their names and walls, and the
 // pairing below is checked at compile time; six since
 // `max_waveform_height` arrived 2026-09-13 with the waveform cap leaving
@@ -48,19 +50,16 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "sync_path",
     "waveform_gain_window_s",
+    "waveform_gain_target_db",
     "waveform_gain_gate_db",
     "waveform_gain_min_fraction",
     "waveform_gain_max",
-    "waveform_gain_upward_ratio",
-    "waveform_gain_upward_threshold_db",
-    "waveform_gain_upward_knee_db",
-    "waveform_gain_upward_range_db",
 };
 
 constexpr size_t kGainKeyCount = std::size(kWaveformGainKeys);
 constexpr size_t kGainKeysFirst = std::size(kDeviceConfigKeys) - kGainKeyCount;
 
-// The eight names are spelled twice — here as the emitted list, in the header
+// The five names are spelled twice — here as the emitted list, in the header
 // as the grammar table — and this is what keeps the two one list: the tail of
 // kDeviceConfigKeys IS kWaveformGainKeys, name for name and in order.
 consteval bool gain_keys_are_the_tail() {
@@ -167,7 +166,7 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // in the program rewrites it.
             s += cfg.sync_path;
         } else {
-            // The eight waveform_gain_* tunables, through their one
+            // The five waveform_gain_* tunables, through their one
             // serializer; the static_assert above makes this arm total.
             s += format_waveform_gain_value(
                 cfg.waveform_gain.*(find_waveform_gain_key(k)->member));
