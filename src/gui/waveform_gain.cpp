@@ -1,8 +1,8 @@
 #include "waveform_gain.h"
 
 // app_state.h is included here and not in the header for ONE reason: it owns
-// the zoom map's two constants, and the column width and the reference screen
-// below are derived from them rather than restated. Nothing else is read from
+// the zoom map's two constants, and the column width below is derived from
+// them rather than restated. Nothing else is read from
 // it; the derivation touches no application state.
 #include "app_state.h"
 
@@ -39,16 +39,6 @@ constexpr int64_t working_zoom_column_frames(int sample_rate) {
 static_assert(working_zoom_column_frames(44100) == 55, "55 source frames per column at 44.1 kHz");
 static_assert(working_zoom_column_frames(48000) == 60, "60 source frames per column at 48 kHz");
 
-// --- the reference screen: derived, not chosen -----------------------------
-// The authoring laptop's width, the reference every crop-authored pixel
-// ruling reads against.
-constexpr int kReferenceScreenColumns = 1920;
-// The screen at working zoom, where all fine horizontal placement happens:
-// 1.25 ms * 1920 = 2.4 s. A time constant of this rule is stated as a share
-// of it — a derived multiple of the working screen, not a free second.
-constexpr double kReferenceScreenSeconds =
-    working_zoom_ms_per_px() * kReferenceScreenColumns / 1000.0;
-
 // --- the fixed constants -----------------------------------------------------
 constexpr double kLevelDb = 6.02;  // one doubling of the picture, in dB
 // THE ANALYSIS HOP is resolution only. Measured against a 10 ms hop at working
@@ -58,50 +48,70 @@ constexpr double kLevelDb = 6.02;  // one doubling of the picture, in dB
 // so the coarser hop stands (architect 2026-09-23).
 constexpr double kStepSeconds = 0.1;
 
-// --- the free constants, each with its reason -------------------------------
-// The typical top: the loudest 10% may clip (convention; the architect's own
-// hand-set levels clipped 7 to 12 % on every section that could reach the
-// edge).
-constexpr double kTopPercentile = 0.9;
-// Columns under this are silence or tape hiss (the architect's old gates ran
-// -40..-50).
-constexpr double kGateDb = -50.0;
-// A window with less audible material than this fraction is silence. Ruled
-// LEAVE AS IS (architect 2026-09-23), together with the gate above and the x8
-// all-silent fallback below: the architect never works on a short excerpt or
-// on a file under -50 dBFS, and his oldest usable recordings (1970s tape
-// remastered in the 2020s) pass the hiss gate. No further criterion.
-constexpr double kGatedMinFraction = 0.25;
-// Section scale: the finest window whose exposition and repeat still agree
-// (1 s splits them; 3 s, R128's, misses lead-ins) — five eighths of the
-// working-zoom screen. The consequence the architect accepted with it: a
-// centred window's p90 reports loud once a tenth of it is loud, so the quiet
-// before a loud entry fades over roughly the last quarter of a screen
-// (~0.6 s) and the first quarter after it — symmetric in time, no forward
-// look-ahead (literally so only up to the hop lattice, whose hops sit at
-// multiples of the hop from frame 0, and the silent hop's earlier-on-a-tie
-// choice) — and a lone accent halos its neighbours for about half a window
-// on each side. Both are the rule's shape, not defects.
-constexpr double kWindowSeconds = kReferenceScreenSeconds * 5.0 / 8.0;
-static_assert(kWindowSeconds == 1.5, "the exposition/repeat criterion's 1.5 s");
-// THE CLAMP'S TWO CONSTANTS. The floor forbids attenuation: g = 2^d with
-// d >= 0 for every window whose typical top sits under or at the edge, so the
-// floor is reached only at d = 0 and the picture is NEVER pushed below its own
-// level — a window whose typical top already sits at the edge takes x1, and
-// one below the edge is raised to it (x2 at -6 dB), not left alone.
+// --- the defaults' reasons ---------------------------------------------------
+// The seven tunables are the device config's (WaveformGainParams,
+// waveform_gain.h; the grammar and brackets at device_config.h). These are the
+// reasons for the DEFAULTS both first-run templates stamp.
+//
+// `waveform_gain_percentile` 0.90, the typical top: the loudest 10% may clip
+// (convention; the architect's own hand-set levels clipped 7 to 12 % on every
+// section that could reach the edge).
+//
+// `waveform_gain_gate_db` -50: columns under it are silence or tape hiss (the
+// architect's old gates ran -40..-50).
+//
+// `waveform_gain_min_fraction` 0.25: a window with less audible material than
+// this share is silence. Ruled LEAVE AS IS (architect 2026-09-23), together
+// with the gate above and the x8 all-silent fallback below: the architect
+// never works on a short excerpt or on a file under -50 dBFS, and his oldest
+// usable recordings (1970s tape remastered in the 2020s) pass the hiss gate.
+// No further criterion.
+//
+// `waveform_gain_window_s` 1.5, section scale: the finest window whose
+// exposition and repeat still agree (1 s splits them; 3 s, R128's, misses
+// lead-ins) — five eighths of the working-zoom screen: the reference screen,
+// the authoring laptop's 1920 columns that every crop-authored pixel ruling
+// reads against, at working zoom is 1.25 ms * 1920 = 2.4 s, and a time
+// constant of this rule is stated as a derived multiple of it, not a free
+// second. The consequence the architect accepted with it: a centred
+// window's p90 reports loud once a tenth of it is loud, so the quiet before a
+// loud entry fades over roughly the last quarter of a screen (~0.6 s) and the
+// first quarter after it — symmetric in time, no forward look-ahead (literally
+// so only up to the hop lattice, whose hops sit at multiples of the hop from
+// frame 0, and the silent hop's earlier-on-a-tie choice) — and a lone accent
+// halos its neighbours for about half a window on each side. Both are the
+// rule's shape, not defects.
+//
+// `waveform_gain_threshold_db` -3 and `waveform_gain_ratio` 1.18, THE
+// EXPANDER (architect 2026-09-23). Measured over the four-piece corpus
+// 2026-09-23: the loud windows' tops sit at -7..-8 dBFS and the quiet ones'
+// at -19..-21 on every piece. At -3 / 1.18 the tutti drops from x2.2 to x1.7,
+// the quiet passages keep their gain, and the quiet-over-loud contrast rises
+// from 4.1..4.7 to 5.3..6.2 — the loud body sits a little under the edge and
+// the quiet passages stand further from it. Ratio 1 would be the same leveler
+// aimed at -3 with the contrast unchanged; threshold 0 and ratio 1 are the
+// plain leveler exactly (d = -L / 6.02).
+//
+// `waveform_gain_max` 16, the cap: four doublings, the old level ladder's top.
+//
+// THE FLOOR IS FIXED, not a key: it forbids attenuation. d >= 0 for every
+// window by the expander's max(0, .), so the floor is reached only at d = 0
+// and the picture is NEVER pushed below its own level — a window whose
+// typical top already sits at or over the threshold takes x1, and one below
+// it is raised (by ratio x 6 dB of gain per 6 dB under), not left alone.
 constexpr double kGainMin = 1.0;
-// The cap: four doublings, the old level ladder's top.
-constexpr double kGainMax = 16.0;
 
 double db(double x) { return 20 * std::log10(std::max(x, 1e-6)); }
 
 class Analysis {
 public:
-    Analysis(std::vector<double> columns, double gate)
-        : c_(std::move(columns)), n_(static_cast<int64_t>(c_.size())), gate_(gate) {}
+    Analysis(std::vector<double> columns, double gate, double percentile,
+             double min_fraction)
+        : c_(std::move(columns)), n_(static_cast<int64_t>(c_.size())), gate_(gate),
+          percentile_(percentile), min_fraction_(min_fraction) {}
 
-    // The number of doublings the typical top of columns [lo, hi) has under
-    // 0 dBFS, or nothing when too little of the window is audible. The slice
+    // The typical top of columns [lo, hi) in dBFS (L), or nothing when too
+    // little of the window is audible. The slice
     // clamps to the song; the audibility threshold reads the UNCLAMPED width,
     // so a window hanging off either end needs as much audible material as a
     // whole one.
@@ -114,26 +124,28 @@ public:
             if (x > gate_) scratch_.push_back(x);
         }
         const int64_t need = std::max<int64_t>(
-            1, static_cast<int64_t>(static_cast<double>(hi - lo) * kGatedMinFraction));
+            1, static_cast<int64_t>(static_cast<double>(hi - lo) * min_fraction_));
         if (static_cast<int64_t>(scratch_.size()) < need) return std::nullopt;
         const size_t idx = static_cast<size_t>(
-            kTopPercentile * static_cast<double>(scratch_.size() - 1));
+            percentile_ * static_cast<double>(scratch_.size() - 1));
         std::nth_element(scratch_.begin(), scratch_.begin() + static_cast<std::ptrdiff_t>(idx),
                          scratch_.end());
-        return -db(scratch_[idx]) / kLevelDb;
+        return db(scratch_[idx]);
     }
 
 private:
     std::vector<double> c_;
     int64_t             n_;
     double              gate_;
+    double              percentile_;
+    double              min_fraction_;
     std::vector<double> scratch_;
 };
 
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate) {
+                                       int sample_rate, const WaveformGainParams& params) {
     if (total_frames <= 0) return {};
 
     const int64_t col = working_zoom_column_frames(sample_rate);
@@ -157,24 +169,33 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     const double cps = static_cast<double>(sample_rate) / static_cast<double>(col);
     const int64_t st = static_cast<int64_t>(std::nearbyint(cps * kStepSeconds));
     assert(st >= 1);
-    const double gate = std::pow(10.0, kGateDb / 20);
+    const double gate = std::pow(10.0, params.gate_db / 20);
 
-    Analysis an(std::move(columns), gate);
+    Analysis an(std::move(columns), gate, params.percentile, params.min_fraction);
 
-    // THE MEASURE at the analysis hop.
+    // THE MEASURE at the analysis hop, then THE EXPANDER per hop: the
+    // doublings d = max(0, ratio * (threshold - L)) / kLevelDb. With
+    // threshold 0 and ratio 1 this is -L / kLevelDb exactly (0 - L is -L and
+    // 1 * x is x in IEEE arithmetic, and L <= 0 for a decoded PCM peak), the
+    // leveler the rule was until 2026-09-23.
+    auto doublings = [&params](double level_db) {
+        return std::max(0.0, params.ratio * (params.threshold_db - level_db)) / kLevelDb;
+    };
     std::vector<double> coarse;
     {
-        const int64_t hw = static_cast<int64_t>(kWindowSeconds * cps / 2);
+        const int64_t hw = static_cast<int64_t>(params.window_s * cps / 2);
         std::vector<std::optional<double>> raw;
         std::vector<int64_t> known;
         for (int64_t i = 0; i < n; i += st) {
-            raw.push_back(an.top_level(i - hw, i + hw));
+            const std::optional<double> level = an.top_level(i - hw, i + hw);
+            raw.push_back(level ? std::optional<double>(doublings(*level)) : std::nullopt);
             if (raw.back()) known.push_back(static_cast<int64_t>(raw.size()) - 1);
         }
         coarse.resize(raw.size());
         if (known.empty()) {
-            // No window is audible anywhere: x8 flat (kGatedMinFraction's
-            // ruling).
+            // No window is audible anywhere: x8 flat (the min_fraction
+            // default's LEAVE AS IS ruling), clamped by the cap below like any
+            // other d.
             std::fill(coarse.begin(), coarse.end(), 3.0);
         } else {
             // A silent point takes the NEARER known point, the earlier on a tie
@@ -202,12 +223,13 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         }
     }
 
-    // THE GAIN: 2^d, clamped to [kGainMin, kGainMax]. Nothing else.
+    // THE GAIN: 2^d, clamped to [kGainMin, gain_max] (gain_max >= 1 by the
+    // config reader's bracket). Nothing else.
     WaveformGainCurve out;
     out.hop_frames = st * col;
     out.gain.resize(coarse.size());
     for (size_t k = 0; k < coarse.size(); ++k)
-        out.gain[k] = std::clamp(std::exp2(coarse[k]), kGainMin, kGainMax);
+        out.gain[k] = std::clamp(std::exp2(coarse[k]), kGainMin, params.gain_max);
     return out;
 }
 

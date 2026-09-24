@@ -714,6 +714,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // The waveform gain rule's seven tunables (a tuning phase, 2026-09-23):
+    // the same defaults on both templates, their one owner waveform_gain.h.
+    cfg.waveform_gain = kDefaultWaveformGainParams;
     return cfg;
 }
 

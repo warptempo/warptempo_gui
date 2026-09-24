@@ -209,8 +209,10 @@ bool waveform_magnified(const AppState& app);
 
 // THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
 // (kWaveformGainVersion) while the picture is magnified, 0 while it is flat —
-// the curve being a pure function of the one immutable source, the version
-// alone names it. ONE PLACE, so the picture caches' existing hash keys
+// the curve being a pure function of the one immutable source and the device
+// config's gain tunables, which are read once per process and never change
+// under it, the version alone names it (nothing derived from the gain is
+// persisted across launches; the record is at kWaveformGainVersion). ONE PLACE, so the picture caches' existing hash keys
 // re-render on every flip with no per-caller code: the plate fingerprint
 // carries it beside the viewport geometry, the S/T switch ends in its own
 // kick_waveform_sync and the lamp's one setter kicks when it moved. TWO
