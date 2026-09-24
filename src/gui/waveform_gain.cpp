@@ -49,13 +49,33 @@ constexpr double kLevelDb = 6.02;  // one doubling of the picture, in dB
 constexpr double kStepSeconds = 0.1;
 
 // --- the defaults' reasons ---------------------------------------------------
-// The seven tunables are the device config's (WaveformGainParams,
+// The five tunables are the device config's (WaveformGainParams,
 // waveform_gain.h; the grammar and brackets at device_config.h). These are the
 // reasons for the DEFAULTS both first-run templates stamp.
 //
-// `waveform_gain_percentile` 0.90, the typical top: the loudest 10% may clip
-// (convention; the architect's own hand-set levels clipped 7 to 12 % on every
-// section that could reach the edge).
+// `waveform_gain_window_s` 3.0: the LUFS short-term length, chosen by eye
+// (architect 2026-09-23) for the contrast it gives and for the earlier dip
+// before a forte. The 1.5 s that stood before it was the marker regime's
+// "finest window whose exposition and repeat still agree", a criterion that
+// died with the quantizer. Measured 2026-09-23 on the 40th's first movement:
+// 3 s halves the curve's reversal rate against 1.5 s (8 against 16 per minute
+// over a quarter doubling) and moves the first tutti's drop about half a
+// second earlier, with the section medians unchanged. The earlier dip is
+// musically right: the composer naturally writes a dip before a tutti,
+// mastering engineers drop about half a dB before a loud section, and the
+// material just before a tutti carries less meaning. The window's shape — the
+// half-window fade on each side of a loud entry, the lone accent's halo — is
+// at the header.
+//
+// `waveform_gain_percentile` 1.00, the window's maximum brought to the edge
+// with nothing clipping. The 0.90 that stood before it was the marker
+// regime's "the loudest tenth may clip" convention; at 1.00 the rule is pure
+// peak normalization per window — in dynamics terms +24 dB of make-up into a
+// brickwall limiter with 1.5 s look-ahead and 1.5 s hold — chosen by eye
+// (architect 2026-09-23) because the second theme's shape between its onsets
+// survives and the tutti/quiet difference reads at a glance. Measured on the
+// corpus, the 100th lowers every gain about a quarter against the 99th and
+// leaves the contrast unchanged.
 //
 // `waveform_gain_gate_db` -50: columns under it are silence or tape hiss (the
 // architect's old gates ran -40..-50).
@@ -67,38 +87,12 @@ constexpr double kStepSeconds = 0.1;
 // usable recordings (1970s tape remastered in the 2020s) pass the hiss gate.
 // No further criterion.
 //
-// `waveform_gain_window_s` 1.5, section scale: the finest window whose
-// exposition and repeat still agree (1 s splits them; 3 s, R128's, misses
-// lead-ins) — five eighths of the working-zoom screen: the reference screen,
-// the authoring laptop's 1920 columns that every crop-authored pixel ruling
-// reads against, at working zoom is 1.25 ms * 1920 = 2.4 s, and a time
-// constant of this rule is stated as a derived multiple of it, not a free
-// second. The consequence the architect accepted with it: a centred
-// window's p90 reports loud once a tenth of it is loud, so the quiet before a
-// loud entry fades over roughly the last quarter of a screen (~0.6 s) and the
-// first quarter after it — symmetric in time, no forward look-ahead (literally
-// so only up to the hop lattice, whose hops sit at multiples of the hop from
-// frame 0, and the silent hop's earlier-on-a-tie choice) — and a lone accent
-// halos its neighbours for about half a window on each side. Both are the
-// rule's shape, not defects.
-//
-// `waveform_gain_threshold_db` -3 and `waveform_gain_ratio` 1.18, THE
-// EXPANDER (architect 2026-09-23). Measured over the four-piece corpus
-// 2026-09-23: the loud windows' tops sit at -7..-8 dBFS and the quiet ones'
-// at -19..-21 on every piece. At -3 / 1.18 the tutti drops from x2.2 to x1.7,
-// the quiet passages keep their gain, and the quiet-over-loud contrast rises
-// from 4.1..4.7 to 5.3..6.2 — the loud body sits a little under the edge and
-// the quiet passages stand further from it. Ratio 1 would be the same leveler
-// aimed at -3 with the contrast unchanged; threshold 0 and ratio 1 are the
-// plain leveler exactly (d = -L / 6.02).
-//
 // `waveform_gain_max` 16, the cap: four doublings, the old level ladder's top.
 //
-// THE FLOOR IS FIXED, not a key: it forbids attenuation. d >= 0 for every
-// window by the expander's max(0, .), so the floor is reached only at d = 0
-// and the picture is NEVER pushed below its own level — a window whose
-// typical top already sits at or over the threshold takes x1, and one below
-// it is raised (by ratio x 6 dB of gain per 6 dB under), not left alone.
+// THE FLOOR IS FIXED, not a key: it forbids attenuation. d = -L / 6.02 >= 0
+// for every window (L <= 0), so the floor is reached only at d = 0 and the
+// picture is NEVER pushed below its own level — a window whose typical top
+// already sits on the edge takes x1, and every other window is raised to it.
 constexpr double kGainMin = 1.0;
 
 double db(double x) { return 20 * std::log10(std::max(x, 1e-6)); }
@@ -177,14 +171,10 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
 
     Analysis an(std::move(columns), gate, params.percentile, params.min_fraction);
 
-    // THE MEASURE at the analysis hop, then THE EXPANDER per hop: the
-    // doublings d = max(0, ratio * (threshold - L)) / kLevelDb. With
-    // threshold 0 and ratio 1 this is -L / kLevelDb exactly (0 - L is -L and
-    // 1 * x is x in IEEE arithmetic, and L <= 0 for a decoded PCM peak), the
-    // leveler the rule was until 2026-09-23.
-    auto doublings = [&params](double level_db) {
-        return std::max(0.0, params.ratio * (params.threshold_db - level_db)) / kLevelDb;
-    };
+    // THE MEASURE at the analysis hop, then the doublings per hop,
+    // d = -L / kLevelDb: the leveler, every window's typical top on the edge.
+    // No max(0, .): L <= 0 for a decoded PCM peak (|x| <= 1), so d >= 0.
+    auto doublings = [](double level_db) { return -level_db / kLevelDb; };
     std::vector<double> coarse;
     {
         const int64_t hw = static_cast<int64_t>(params.window_s * cps / 2);

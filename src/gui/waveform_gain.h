@@ -27,32 +27,39 @@
 //   to the hop lattice and the earlier-on-a-tie choice, below). An
 //   all-silent song takes d = 3 everywhere.
 //
-//   THE EXPANDER. d, the doublings of picture gain: each dB of L under
-//   `threshold_db` earns `ratio` dB of gain,
-//       d = max(0, ratio * (threshold_db - L)) / 6.02
-//   (architect 2026-09-23). Threshold 0 and ratio 1 are the plain leveler,
-//   d = -L / 6.02, which puts every window's typical top exactly on the lane
-//   edge; the defaults aim a little below the edge and stretch the quiet
-//   passages away from the loud ones (their reasons at waveform_gain.cpp).
+//   THE GAIN. d, the doublings of picture gain, puts every window's typical
+//   top exactly on the lane edge,
+//       d = -L / 6.02
+//   (no max(0, .) is needed: L <= 0 for a decoded PCM peak, so d >= 0), and
+//   g = 2^d, clamped to [kGainMin, `gain_max`]. That is the whole derivation
+//   (the RULED-OUT list below names what it deliberately is not). Between
+//   hops the gain is linear IN GAIN.
 //
-//   THE GAIN. g = 2^d, clamped to [kGainMin, `gain_max`]. That is the whole
-//   derivation — no classification, no absorption, no boundary placement, no
-//   look-ahead, no smoothing and no hysteresis (each ruled out by the
-//   architect, 2026-09-23). Between hops the gain is linear IN GAIN.
+// RULED OUT, never to be re-proposed (architect 2026-09-23): classification,
+// absorption, boundary placement, forward look-ahead, smoothing, hysteresis,
+// a dead zone, a second window — and an expander (a threshold and a ratio,
+// each dB of L under the threshold earning ratio dB of gain), tried and
+// rejected 2026-09-23 after the architect eyeballed it against the plain
+// leveler: the contrast he wanted came from the window alone at 3 s, which
+// paints the tuttis as flat blocks while the quiet passages keep their
+// texture (at -3 dBFS / 1.18 it would have dropped the corpus's tutti from
+// x2.2 to x1.7 and raised the quiet-over-loud contrast from 4.1..4.7 to
+// 5.3..6.2).
 //
-// A centred window's percentile top reports loud once a tenth of it is loud
-// (at the default 0.90),
-// so the quiet before a loud entry fades down over roughly the last quarter
-// of a working-zoom screen (~0.6 s) and stays down over the first quarter
-// after it — symmetric in time, with no forward look-ahead (literally so only
-// up to the hop lattice, whose hops sit at multiples of the hop from frame 0,
-// and the nearer-known rule's earlier-on-a-tie choice for a silent hop) — and
-// a lone
+// A centred window's order-statistic top reports loud as soon as the loud
+// share of it reaches the percentile's complement — at the default 1.00, as
+// soon as ONE column of it is loud — so the quiet before a loud entry fades
+// down over roughly the last half-window before it and stays down over the
+// first half-window after it (1.5 s each side at the default 3 s window) —
+// symmetric in time, with no forward look-ahead (literally so only up to the
+// hop lattice, whose hops sit at multiples of the hop from frame 0, and the
+// nearer-known rule's earlier-on-a-tie choice for a silent hop) — and a lone
 // accent inside a quiet passage halos its neighbours for about half a window
 // on each side. Both are the rule's shape, accepted by the architect, not
-// defects.
+// defects: the dip before a tutti is musically right (the reason at the
+// window's default, waveform_gain.cpp).
 //
-// THE SEVEN TUNABLES ARE THE DEVICE CONFIG'S (architect 2026-09-23, a tuning
+// THE FIVE TUNABLES ARE THE DEVICE CONFIG'S (architect 2026-09-23, a tuning
 // phase; they may be hard-coded again later): `WaveformGainParams` below,
 // read once at startup from `waveform_gain_*` keys (device_config.h owns their
 // grammar and brackets) and handed to every derivation — so a retune is a
@@ -66,19 +73,17 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
-// THE RULE'S SEVEN TUNABLES, in the device config's writer order. The member
+// THE RULE'S FIVE TUNABLES, in the device config's writer order. The member
 // initializers ARE the defaults both backends' first-run templates stamp
 // (kDefaultWaveformGainParams; each default's reason is at waveform_gain.cpp)
 // — construction state, never a load fallback: every key is required. The
 // derivation takes the values as given; their brackets are the config
 // reader's (device_config.h), the one producer.
 struct WaveformGainParams {
-    double window_s     = 1.5;    // the centred window, seconds
-    double percentile   = 0.90;   // the typical top's order statistic
+    double window_s     = 3.0;    // the centred window, seconds
+    double percentile   = 1.0;    // the typical top's order statistic
     double gate_db      = -50.0;  // the audibility gate, dBFS
     double min_fraction = 0.25;   // the gated window's minimum audible share
-    double threshold_db = -3.0;   // the expander's threshold, dBFS
-    double ratio        = 1.18;   // the expander's ratio, dB of gain per dB under
     double gain_max     = 16.0;   // the cap
 };
 inline constexpr WaveformGainParams kDefaultWaveformGainParams{};
@@ -101,9 +106,10 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
 double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (2 since the expander, 2026-09-23). The seven tunables are
+// the rule above (3 since the expander was deleted and the leveler restored,
+// 2026-09-23; 2 was the expander's). The five tunables are
 // NOT in the fingerprint and need not be: they are read once per process and
 // never change under it, and nothing derived from the gain outlives the
 // process — the curve is derived at every load (the `.peaks` sidecar carries
 // no curve) and the plates live in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 2;
+inline constexpr uint64_t kWaveformGainVersion = 3;
