@@ -21,7 +21,8 @@ namespace {
 // The file's key set, in on-disk order — the writer's order AND the required
 // set the shared scanner enforces after the loop (ELEVEN keys since the
 // five waveform_gain_* tunables arrived 2026-09-23, appended in the rule's
-// own order — seven arrived, and the expander's two left the same day;
+// own order — seven arrived, and the expander's two left the same day, then
+// the percentile, with the upward ratio appended last;
 // kWaveformGainKeys, device_config.h, owns their names and walls, and the
 // pairing below is checked at compile time; six since
 // `max_waveform_height` arrived 2026-09-13 with the waveform cap leaving
@@ -46,10 +47,10 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "sync_path",
     "waveform_gain_window_s",
-    "waveform_gain_percentile",
     "waveform_gain_gate_db",
     "waveform_gain_min_fraction",
     "waveform_gain_max",
+    "waveform_gain_upward_ratio",
 };
 
 constexpr size_t kGainKeyCount = std::size(kWaveformGainKeys);

@@ -18,26 +18,39 @@
 //
 // THE RULE, whole:
 //
-//   THE MEASURE. At every analysis hop, L: the window's typical column top in
-//   dBFS — 20 log10 of the `percentile` order statistic of the gated column
-//   heights in a centred window of `window_s` seconds. Columns under
+//   THE MEASURE. At every analysis hop, L: the window's column top in dBFS —
+//   20 log10 of the MAXIMUM of the gated column heights in a centred window
+//   of `window_s` seconds (pure peak normalization per window: the window's
+//   loudest column brought to the edge, nothing clipping). Columns under
 //   `gate_db` are silence or tape hiss and are gated out; a window with less
 //   than `min_fraction` of its columns audible takes the L of the NEARER
 //   audible hop, so the curve is the same whichever way the audio runs (up
 //   to the hop lattice and the earlier-on-a-tie choice, below). An
 //   all-silent song takes d = 3 everywhere.
 //
-//   THE GAIN. d, the doublings of picture gain, puts every window's typical
-//   top exactly on the lane edge,
+//   THE GAIN. d, the doublings of picture gain, puts every window's top
+//   exactly on the lane edge,
 //       d = -L / 6.02
 //   (no max(0, .) is needed: L <= 0 for a decoded PCM peak, so d >= 0), and
 //   g = 2^d, clamped to [kGainMin, `gain_max`]. That is the whole derivation
 //   (the RULED-OUT list below names what it deliberately is not). Between
 //   hops the gain is linear IN GAIN.
 //
+//   THE UPWARD COMPRESSION, the picture's second stage, applied in the plate
+//   painter (render_waveform) per column AFTER the window gain, on the gained
+//   tip t clamped to [-1, 1]: t' = sign(t) * |t|^(1 / `upward_ratio`). Its
+//   threshold is the lane edge and every dB below it is divided by the ratio,
+//   so a peak on the edge never moves and a tip at -20 dB under ratio 2 rises
+//   to -10 dB. Ratio 1 is the identity exactly (the painter skips the pow). It
+//   applies exactly where the gain applies (waveform_magnified) and nowhere
+//   else. The map is monotone, so it commutes with the pyramid's min/max: the
+//   peaks stay raw and the mapping of a column's reduced extremes is exact.
+//
 // RULED OUT, never to be re-proposed (architect 2026-09-23): classification,
 // absorption, boundary placement, forward look-ahead, smoothing, hysteresis,
-// a dead zone, a second window — and an expander (a threshold and a ratio,
+// a dead zone, a second window, a percentile under the maximum (the order
+// statistic was a key for one day, 2026-09-23; 0.90 was the marker regime's)
+// — and an expander (a threshold and a ratio,
 // each dB of L under the threshold earning ratio dB of gain), tried and
 // rejected 2026-09-23 after the architect eyeballed it against the plain
 // leveler: the contrast he wanted came from the window alone at 3 s, which
@@ -46,9 +59,8 @@
 // x2.2 to x1.7 and raised the quiet-over-loud contrast from 4.1..4.7 to
 // 5.3..6.2).
 //
-// A centred window's order-statistic top reports loud as soon as the loud
-// share of it reaches the percentile's complement — at the default 1.00, as
-// soon as ONE column of it is loud — so the quiet before a loud entry fades
+// A centred window's maximum reports loud as soon as ONE column of it is
+// loud, so the quiet before a loud entry fades
 // down over roughly the last half-window before it and stays down over the
 // first half-window after it (1.5 s each side at the default 3 s window) —
 // symmetric in time, with no forward look-ahead (literally so only up to the
@@ -63,8 +75,8 @@
 // phase; they may be hard-coded again later): `WaveformGainParams` below,
 // read once at startup from `waveform_gain_*` keys (device_config.h owns their
 // grammar and brackets) and handed to every derivation — so a retune is a
-// file edit and a relaunch, not a recompile. The hop, the gain floor and the
-// column stay fixed in waveform_gain.cpp. THE
+// file edit and a relaunch, not a recompile. The hop, the gain floor, the
+// column and the percentile (the maximum) stay fixed in waveform_gain.cpp. THE
 // PRINCIPLE FOR ANY RETUNE: every number is FORCED by a criterion and never
 // tuned to one spot — a free constant carries its reason, a derived one its
 // derivation — and a passage the rule gets wrong is answered by the
@@ -81,17 +93,21 @@
 // reader's (device_config.h), the one producer.
 struct WaveformGainParams {
     double window_s     = 3.0;    // the centred window, seconds
-    double percentile   = 1.0;    // the typical top's order statistic
     double gate_db      = -50.0;  // the audibility gate, dBFS
     double min_fraction = 0.25;   // the gated window's minimum audible share
     double gain_max     = 16.0;   // the cap
+    double upward_ratio = 1.0;    // the painter's upward compression; 1 = off
 };
 inline constexpr WaveformGainParams kDefaultWaveformGainParams{};
 
 // The picture's continuous magnification, derived from the source at load.
+// It carries the upward compression's ratio beside the gain because the curve
+// IS the picture's magnification and the painter already holds it; the ratio
+// is a param copied through, read by render_waveform alone.
 struct WaveformGainCurve {
-    int64_t             hop_frames = 0;   // source frames between consecutive gains; gain[k] sits at frame k * hop_frames
-    std::vector<double> gain;             // 2^d per hop, each in [kGainMin, gain_max]; empty for a zero-frame source
+    int64_t             hop_frames = 0;     // source frames between consecutive gains; gain[k] sits at frame k * hop_frames
+    std::vector<double> gain;               // 2^d per hop, each in [kGainMin, gain_max]; empty for a zero-frame source
+    double              upward_ratio = 1.0; // params.upward_ratio; 1 = no compression
 };
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
@@ -106,10 +122,11 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
 double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (3 since the expander was deleted and the leveler restored,
-// 2026-09-23; 2 was the expander's). The five tunables are
+// the rule above (4 since the percentile was fixed at the maximum and the
+// upward compression joined, 2026-09-23; 3 was the restored leveler, 2 the
+// expander's). The five tunables — the upward ratio among them — are
 // NOT in the fingerprint and need not be: they are read once per process and
 // never change under it, and nothing derived from the gain outlives the
 // process — the curve is derived at every load (the `.peaks` sidecar carries
 // no curve) and the plates live in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 3;
+inline constexpr uint64_t kWaveformGainVersion = 4;

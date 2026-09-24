@@ -265,13 +265,22 @@ void render_waveform(cairo_surface_t* dest,
     // is the derived curve at the column's centre source frame (null: 1.0).
     // The contract (and the coarse-zoom centre rule) is at this function's
     // declaration; the arithmetic is one multiply and a clamp at the tip
-    // mapping below. IT SCALES PIXELS ONLY — nothing this function touches is
-    // audio.
-    const auto magnified_tip = [](double raw, double gain) {
-        const double v = raw * gain;
-        if (v < -1.0) return -1.0;
-        if (v >  1.0) return  1.0;
-        return v;
+    // mapping below, then THE UPWARD COMPRESSION on the clamped tip t:
+    // t' = sign(t) * |t|^(1 / ratio), the lane edge its threshold and every dB
+    // under it divided by the ratio (the curve carries the ratio; the rule is
+    // at waveform_gain.h). Ratio 1 skips the pow, so it is the identity
+    // exactly, and |t| = 0 stays 0. IT SCALES PIXELS ONLY — nothing this
+    // function touches is audio.
+    const double upward_exponent =
+        gain_or_null ? 1.0 / gain_or_null->upward_ratio : 1.0;
+    const bool upward_compressed = gain_or_null && gain_or_null->upward_ratio != 1.0;
+    const auto magnified_tip = [upward_exponent, upward_compressed](double raw, double gain) {
+        double v = raw * gain;
+        if (v < -1.0) v = -1.0;
+        if (v >  1.0) v =  1.0;
+        if (!upward_compressed || v == 0.0) return v;
+        const double m = std::pow(std::fabs(v), upward_exponent);
+        return v < 0.0 ? -m : m;
     };
 
     // Each column is written straight into the plate's pixel words, and a
@@ -399,8 +408,10 @@ void render_waveform(cairo_surface_t* dest,
         // sample domain [-1, 1] BEFORE they become rows. The clamp is what
         // makes a magnified forte clip flat against the lane's edges instead
         // of running off into row arithmetic, and it is a no-op at gain 1
-        // (raw peaks already rest in range). A PICTURE gain: the samples
-        // themselves are untouched, here and everywhere.
+        // (raw peaks already rest in range). The upward compression follows
+        // inside magnified_tip; being monotone it commutes with the pyramid's
+        // min/max, so mapping the reduced extremes is exact. A PICTURE gain:
+        // the samples themselves are untouched, here and everywhere.
         const double gain    = gain_or_null
                                    ? waveform_gain_at(*gain_or_null, (s0 + s1) / 2)
                                    : 1.0;

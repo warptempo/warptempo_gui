@@ -2759,12 +2759,21 @@ struct WaveformBasis {
 // alpha inside the region's column span, leaving the plate itself untouched.
 // THE VISUAL MAGNIFICATION is `gain_or_null`: a column's gain multiplies the
 // column's raw min/max, and the product is CLAMPED to [-1, 1] before they
-// become rows, which is the whole of it — one multiply at the tip mapping,
-// and nothing else in this painter moves (the column grid, the >=1px floor,
+// become rows — one multiply at the tip mapping (and the upward compression
+// below on the same tip), and nothing else in this painter moves (the column grid, the >=1px floor,
 // the carried-endpoint chain and the aliased-only writer are all untouched).
 // A loud passage therefore clips FLAT at the lane's edges while its troughs
 // still dip, which is the intended look: the picture exists to make a quiet
 // passage's onsets readable.
+//
+// THE UPWARD COMPRESSION follows the clamp on the same tips, per column:
+// t' = sign(t) * |t|^(1 / r), r the curve's `upward_ratio` (the device
+// config's waveform_gain_upward_ratio, [1, 10], 1 = off and skipped). The lane
+// edge is its threshold: a tip on the edge never moves and every dB below it
+// is divided by r (-20 dB rises to -10 dB at r = 2). It rides the curve, so it
+// applies exactly where the gain does (null: raw). The map is monotone, so it
+// commutes with the peaks pyramid's min/max reduction: the pyramid stays raw
+// and the mapping of a column's reduced extremes is exact.
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).
@@ -2780,7 +2789,7 @@ struct WaveformBasis {
 // column covers many working-zoom columns whose gains differ; it takes the
 // curve's gain at its centre source frame and applies it to the min/max
 // reduced from RAW peaks, so where the gain changes inside the column (the
-// curve can step sharply where its order statistic changes) the bar's height
+// curve can step sharply where its window maximum changes) the bar's height
 // differs from the height a per-working-column gain applied before the
 // reduction would give. The error is not small: on the 40th at whole-piece
 // zoom (1920 columns, ~0.30 s per column) a column at 122.3 s paints 0.53 by

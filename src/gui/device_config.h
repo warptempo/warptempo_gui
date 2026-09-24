@@ -24,16 +24,18 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
-//   waveform_gain_window_s=<s>, waveform_gain_percentile=<p>,
-//   waveform_gain_gate_db=<dB>, waveform_gain_min_fraction=<f>,
-//   waveform_gain_max=<g>    the waveform gain rule's five tunables
+//   waveform_gain_window_s=<s>, waveform_gain_gate_db=<dB>,
+//   waveform_gain_min_fraction=<f>, waveform_gain_max=<g>,
+//   waveform_gain_upward_ratio=<r>
+//                            the waveform gain rule's five tunables
 //                            (waveform_gain.h), bracketed doubles — the
 //                            grammar at kWaveformGainKeys below
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the gain tunables, 2026-09-23, appended in the rule's own order — seven
-// that day, five since the expander's two left the same day);
+// that day, five since the expander's two left the same day; the percentile
+// left and `waveform_gain_upward_ratio` was appended last, also 2026-09-23);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -74,7 +76,10 @@
 // the values may be hard-coded again later): the gain rule's free constants
 // left the binary so a retune is a file edit and a relaunch, not a recompile
 // (seven arrived; `waveform_gain_threshold_db` and `waveform_gain_ratio` left
-// the same day with the expander they tuned, ruled out at waveform_gain.h).
+// the same day with the expander they tuned, ruled out at waveform_gain.h, and
+// `waveform_gain_percentile` left when the percentile was fixed at the
+// window's maximum, `waveform_gain_upward_ratio` taking the fifth place; a
+// file still carrying any of the three is unknown-key fatal, no migration).
 // They are NOT exposed in the settings editor — this file is their surface —
 // and they are read ONCE, at startup: nothing re-reads them at a reopen or a
 // Revert, so a retune is a relaunch (the reader is load_file's hand-off to
@@ -235,7 +240,7 @@ inline constexpr const char* kMaxWaveformHeightGrammarReason =
 // a bracketed double in ONE canonical spelling, the spelling value_format.h
 // already owns for authored doubles — format_value_double at min 2 decimals,
 // the shortest round-trip text padded to at least two fraction digits
-// (`3.00`, `1.00`, `-50.00`, `0.25`, `16.00`; a value that needs a third
+// (`3.00`, `-50.00`, `0.25`, `16.00`, `1.00`; a value that needs a third
 // digit keeps it, `1.185`), with a leading `-` for the dB key's negative
 // values and NO `-0.00` (zero has one spelling, `0.00`). The
 // reader's one parser is parse_waveform_gain_value, the writer's one
@@ -243,10 +248,9 @@ inline constexpr const char* kMaxWaveformHeightGrammarReason =
 // adversarial class, fatal at startup like every other violation here. The
 // brackets are the architect's (2026-09-23): the walls a hand edit meets, not
 // a tuning criterion. The derivation reads them as preconditions — the cap's
-// floor of 1 is what keeps its clamp ordered (derive_waveform_gain). The
-// percentile's upper wall is 1.00 (architect 2026-09-23): the window's loudest
-// column brought to the edge, nothing clipping — a legal order statistic
-// (top_level, waveform_gain.cpp).
+// floor of 1 is what keeps its clamp ordered (derive_waveform_gain), and the
+// upward ratio's floor of 1 is its identity (off): a ratio under 1 would be
+// downward expansion, which the rule does not have (render_waveform).
 //
 // The order is the writer's (it is kDeviceConfigKeys' tail, device_config.cpp,
 // which checks the pairing at compile time) and the rule's own.
@@ -257,11 +261,11 @@ struct WaveformGainKey {
     double WaveformGainParams::* member;
 };
 inline constexpr WaveformGainKey kWaveformGainKeys[] = {
-    {"waveform_gain_window_s",     0.5,  10.0, &WaveformGainParams::window_s},
-    {"waveform_gain_percentile",   0.50, 1.0,  &WaveformGainParams::percentile},
+    {"waveform_gain_window_s",     0.5,   10.0,  &WaveformGainParams::window_s},
     {"waveform_gain_gate_db",      -90.0, -20.0, &WaveformGainParams::gate_db},
-    {"waveform_gain_min_fraction", 0.05, 1.0,  &WaveformGainParams::min_fraction},
-    {"waveform_gain_max",          1.0,  64.0, &WaveformGainParams::gain_max},
+    {"waveform_gain_min_fraction", 0.05,  1.0,   &WaveformGainParams::min_fraction},
+    {"waveform_gain_max",          1.0,   64.0,  &WaveformGainParams::gain_max},
+    {"waveform_gain_upward_ratio", 1.0,   10.0,  &WaveformGainParams::upward_ratio},
 };
 
 // The bracket, inclusive at both walls.

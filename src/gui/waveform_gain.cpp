@@ -67,15 +67,16 @@ constexpr double kStepSeconds = 0.1;
 // half-window fade on each side of a loud entry, the lone accent's halo — is
 // at the header.
 //
-// `waveform_gain_percentile` 1.00, the window's maximum brought to the edge
-// with nothing clipping. The 0.90 that stood before it was the marker
-// regime's "the loudest tenth may clip" convention; at 1.00 the rule is pure
-// peak normalization per window — in dynamics terms +24 dB of make-up into a
-// brickwall limiter with 1.5 s look-ahead and 1.5 s hold — chosen by eye
-// (architect 2026-09-23) because the second theme's shape between its onsets
-// survives and the tutti/quiet difference reads at a glance. Measured on the
-// corpus, the 100th lowers every gain about a quarter against the 99th and
-// leaves the contrast unchanged.
+// THE PERCENTILE IS FIXED AT THE MAXIMUM, not a key (the 100th settled by eye,
+// architect 2026-09-23; `waveform_gain_percentile` was a key for that one
+// day): the window's maximum is brought to the edge with nothing clipping,
+// pure peak normalization per window — in dynamics terms +24 dB of make-up
+// into a brickwall limiter with 1.5 s look-ahead and 1.5 s hold — because the
+// second theme's shape between its onsets survives and the tutti/quiet
+// difference reads at a glance. The 0.90 that stood before it was the marker
+// regime's "the loudest tenth may clip" convention. Measured on the corpus,
+// the 100th lowers every gain about a quarter against the 99th and leaves the
+// contrast unchanged.
 //
 // `waveform_gain_gate_db` -50: columns under it are silence or tape hiss (the
 // architect's old gates ran -40..-50).
@@ -89,9 +90,13 @@ constexpr double kStepSeconds = 0.1;
 //
 // `waveform_gain_max` 16, the cap: four doublings, the old level ladder's top.
 //
+// `waveform_gain_upward_ratio` 1.00, off: the upward compression (the
+// painter's stage after this gain, waveform_gain.h) is a knob the architect
+// turns on by eye; the default leaves the leveler's picture as it stood.
+//
 // THE FLOOR IS FIXED, not a key: it forbids attenuation. d = -L / 6.02 >= 0
 // for every window (L <= 0), so the floor is reached only at d = 0 and the
-// picture is NEVER pushed below its own level — a window whose typical top
+// picture is NEVER pushed below its own level — a window whose top
 // already sits on the edge takes x1, and every other window is raised to it.
 constexpr double kGainMin = 1.0;
 
@@ -99,45 +104,39 @@ double db(double x) { return 20 * std::log10(std::max(x, 1e-6)); }
 
 class Analysis {
 public:
-    Analysis(std::vector<double> columns, double gate, double percentile,
-             double min_fraction)
+    Analysis(std::vector<double> columns, double gate, double min_fraction)
         : c_(std::move(columns)), n_(static_cast<int64_t>(c_.size())), gate_(gate),
-          percentile_(percentile), min_fraction_(min_fraction) {}
+          min_fraction_(min_fraction) {}
 
-    // The typical top of columns [lo, hi) in dBFS (L), or nothing when too
-    // little of the window is audible. The slice
-    // clamps to the song; the audibility threshold reads the UNCLAMPED width,
-    // so a window hanging off either end needs as much audible material as a
-    // whole one.
-    std::optional<double> top_level(int64_t lo, int64_t hi) {
-        scratch_.clear();
+    // The top of columns [lo, hi) in dBFS (L) — the gated slice's MAXIMUM, in
+    // one pass (the percentile is fixed at the maximum, the reason at the
+    // defaults above) — or nothing when too little of the window is audible.
+    // The slice clamps to the song; the audibility threshold reads the
+    // UNCLAMPED width, so a window hanging off either end needs as much
+    // audible material as a whole one.
+    std::optional<double> top_level(int64_t lo, int64_t hi) const {
         const int64_t b = std::max<int64_t>(0, lo);
         const int64_t e = std::min<int64_t>(n_, hi);
+        int64_t audible = 0;
+        double  peak    = 0.0;
         for (int64_t i = b; i < e; ++i) {
             const double x = c_[static_cast<size_t>(i)];
-            if (x > gate_) scratch_.push_back(x);
+            if (x > gate_) {
+                ++audible;
+                if (x > peak) peak = x;
+            }
         }
         const int64_t need = std::max<int64_t>(
             1, static_cast<int64_t>(static_cast<double>(hi - lo) * min_fraction_));
-        if (static_cast<int64_t>(scratch_.size()) < need) return std::nullopt;
-        // p = 1.00 (the bracket's upper wall) is exact: 1.0 * (n - 1) is
-        // n - 1 with no rounding, so idx names the last element and
-        // nth_element seats the window's maximum there; n >= 1 here (need is
-        // at least 1), so n - 1 never underflows.
-        const size_t idx = static_cast<size_t>(
-            percentile_ * static_cast<double>(scratch_.size() - 1));
-        std::nth_element(scratch_.begin(), scratch_.begin() + static_cast<std::ptrdiff_t>(idx),
-                         scratch_.end());
-        return db(scratch_[idx]);
+        if (audible < need) return std::nullopt;
+        return db(peak);
     }
 
 private:
     std::vector<double> c_;
     int64_t             n_;
     double              gate_;
-    double              percentile_;
     double              min_fraction_;
-    std::vector<double> scratch_;
 };
 
 }  // namespace
@@ -169,10 +168,10 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     assert(st >= 1);
     const double gate = std::pow(10.0, params.gate_db / 20);
 
-    Analysis an(std::move(columns), gate, params.percentile, params.min_fraction);
+    const Analysis an(std::move(columns), gate, params.min_fraction);
 
     // THE MEASURE at the analysis hop, then the doublings per hop,
-    // d = -L / kLevelDb: the leveler, every window's typical top on the edge.
+    // d = -L / kLevelDb: the leveler, every window's top on the edge.
     // No max(0, .): L <= 0 for a decoded PCM peak (|x| <= 1), so d >= 0.
     auto doublings = [](double level_db) { return -level_db / kLevelDb; };
     std::vector<double> coarse;
@@ -218,9 +217,11 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     }
 
     // THE GAIN: 2^d, clamped to [kGainMin, gain_max] (gain_max >= 1 by the
-    // config reader's bracket). Nothing else.
+    // config reader's bracket). Nothing else; the upward ratio rides along for
+    // the painter, which alone applies it.
     WaveformGainCurve out;
-    out.hop_frames = st * col;
+    out.hop_frames   = st * col;
+    out.upward_ratio = params.upward_ratio;
     out.gain.resize(coarse.size());
     for (size_t k = 0; k < coarse.size(); ++k)
         out.gain[k] = std::clamp(std::exp2(coarse[k]), kGainMin, params.gain_max);
