@@ -5387,10 +5387,9 @@ struct AppState {
     // area_w the LAST COMMITTED frame's flag cache was built against, promoted
     // in LOCKSTEP with displayed_target_warp_frame_map at the frame that blits
     // that cache, so the flag editor's box placement (see item_viewport_basis
-    // in this header) and the LIVE TRIM pass (GuiPaintHandler::paint_trim — its bar/endcaps paint on
-    // this basis so hit_test_trim_endcap / route_trim_bar_press land on the drawn
-    // pixels) ride the
-    // same basis the flags do. (The selected-stem DAMAGE was listed here until
+    // in this header) and the LIVE TRIM pass (GuiPaintHandler::paint_trim —
+    // its bar/endcaps paint on this basis and it publishes them for the trim
+    // hits, AppState::trim_bar_hit) ride the same basis the flags do. (The selected-stem DAMAGE was listed here until
     // 2026-07-30 and never belonged: that stem painted on the PLATE basis, so
     // its item-basis narrow damage was the wrong epoch. Both the damage and the
     // stem it served are gone — row 5's stems key on no selection at all.)
@@ -5425,8 +5424,8 @@ struct AppState {
     // plate pairs that same span with its OLD fp_area_w until the in-flight
     // worker render publishes — so this promoted mirror's spp and the plate-fp
     // accessor's spp diverge for that window. Item-registered geometry
-    // (paint_trim, the hit tests, the lane) rides THIS mirror through it —
-    // paint == hit holds because both read the same owner — see the consumer-
+    // (paint_trim, the lane) rides THIS mirror through it, and the hits read
+    // what those painters published on it — see the consumer-
     // side statement at GuiPaintHandler::paint_trim's basis comment. So the two
     // owners must NOT be collapsed on the strength of the plate-writer
     // equality; any future unification has to resolve the resize window first.
@@ -5468,10 +5467,11 @@ struct AppState {
     // release / lost button, by the force-end finalizer, and on file load.
     PendingMarkerPress pending_marker_press;
 
-    // Pending trim endcap/bridge drag, armed by a plain trim-bar press OR by a
-    // plain press on the waveform overlay's bounds and interior (the trim-drag
-    // machinery begins only past the threshold; the second surface joined
-    // 2026-08-18, when the region became the trim). Cleared on the threshold
+    // Pending trim endcap/bridge drag, armed by a plain trim-bar press or by
+    // the bound-set click's crossing (the trim-drag machinery begins only past
+    // the threshold; the waveform overlay's bounds and interior were a second
+    // arming surface from 2026-08-18 until their deletion on 2026-09-22).
+    // Cleared on the threshold
     // crossing, on button release / lost button, by the force-end finalizer, and
     // on file load.
     PendingTrimDrag pending_trim_drag;
@@ -5622,13 +5622,31 @@ struct AppState {
     // roster had. A row-5 marker flag's WIDTH is derived from its shaped label,
     // so no consumer can re-derive the box without repeating a HarfBuzz pass;
     // the pixels' own painter is the only honest owner of the geometry. Both
-    // vectors are written by ONE producer PER FRAME — the flag-cache rebuild,
-    // whose THREE mutually exclusive lane painters (re-derived by grep
-    // 2026-08-05: render_flags, render_phase_reset_flags and, while the `h`
-    // history mode stands, render_history_diff_flags, one call site each) each
-    // clear both stashes first — against the DISPLAYED basis those pixels were
-    // painted with, so a click during an async publish window tests the flag it
-    // can see rather than the one the live viewport would put there.
+    // vectors are written by ONE producer — the flag-cache rebuild, whose THREE
+    // mutually exclusive lane painters (re-derived by grep 2026-08-05:
+    // render_flags, render_phase_reset_flags and, while the `h` history mode
+    // stands, render_history_diff_flags, one call site each) each clear their
+    // output first — against the DISPLAYED basis those pixels were painted
+    // with, so a click during an async publish window tests the flag it can see
+    // rather than the one the live viewport would put there.
+    //
+    // STAGED BY THE REBUILD, PROMOTED BY THE FRAME THAT BLITS IT (architect
+    // 2026-09-24, strictly as-painted). The rebuild draws into the OFFSCREEN
+    // flag surface, which reaches the screen only at the next frame's blit, so
+    // it writes the staged pair below and raises flag_stash_staged; the top of
+    // the first GuiPaintHandler::on_redraw after it swaps the pair into these
+    // two, before anything paints. So the stash and the pixels advance at the
+    // SAME frame, one frame behind the rebuild, and hit decisions flip at the
+    // blit: a press landing between a rebuild and its frame resolves against
+    // the flags still on screen. THE PROMOTE IS NOT BEHIND THE DISPLAYED-BASIS
+    // FREEZE, unlike the basis pair's: the flag SURFACE blits unconditionally
+    // (a marker or value drag rebuilds it every tick and the dragged flag must
+    // move on screen), so the stash that describes it promotes with it. The
+    // rebuild's own damage is the full strip+waveform rect, so the promoting
+    // frame repaints the whole lane and every stem. Every reader — the hit
+    // walk (topmost_flag_rect, app_state.cpp), the stem painter and the
+    // playhead's stem suppression — reads THESE promoted copies; nothing
+    // reads the staged pair but the promote.
     //
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
@@ -5647,7 +5665,8 @@ struct AppState {
     // THE INDEX DOMAIN FOLLOWS THE PAINTER: `marker_index` is a store index on
     // the live columns and an index into history_mode.flags in the mode. The
     // mode EDGES are what that costs — drop_lane_stash_across_history_edge
-    // (input_key_dispatch.cpp) carries the argument and empties both.
+    // (input_key_dispatch.cpp) carries the argument and empties both, staged
+    // halves included.
     //
     // Cold (before the first rebuild) both are empty, so no flag is clickable
     // and no stem paints — the same "visible iff hit-testable" property the
@@ -5655,6 +5674,32 @@ struct AppState {
     // painted has no box to click.
     std::vector<FlagHitRect> flag_hit_rects;
     std::vector<MarkerStem>  marker_stems;
+    // The staging half (the contract above): written by the rebuild's lane
+    // painter, swapped into the pair above at the next frame's top.
+    // flag_stash_staged is what tells a staged EMPTY lane (a rebuild that
+    // painted no flag) from no stage at all.
+    std::vector<FlagHitRect> staged_flag_hit_rects;
+    std::vector<MarkerStem>  staged_marker_stems;
+    bool                     flag_stash_staged = false;
+
+    // THE TRIM BAR'S PAINTER STASH (architect 2026-09-24, strictly
+    // as-painted) — the flag stash's doctrine carried to the lane under it.
+    // GuiPaintHandler::paint_trim publishes, through render_trim_flags, the
+    // two endcaps and the bridge interval it last DREW (the shape and its
+    // fields are TrimBarHit's, render.h), and hit_test_trim_endcap and
+    // point_in_trim_bridge_span read this and nothing else for geometry, so
+    // the router and the cursor map answer what is on screen: after a trim
+    // write a press before the repaint grabs the caps it can see, never the
+    // bounds the store already holds. The painter still derives the caps
+    // through the shared owner chain (displayed_trim_ms → trim_bound_column →
+    // trim_endcap_rect / trim_bridge_gap) on the item basis; what the hit
+    // gave up is running that chain a second time. Written only by a paint
+    // whose damage clip covers the whole lane (the gate at paint_trim), so it
+    // never describes pixels that were not redrawn. It needs no stage of its
+    // own: the trim pass paints live in the frame, so the publication and the
+    // pixels commit together. Cold (nothing painted yet) nothing on the bar
+    // is grabbable — the honest answer, as for a flag with no pixels.
+    TrimBarHit               trim_bar_hit;
 
     // THE OPEN FLAG EDITOR'S BOX, published by the same painter-owns-derived-
     // geometry rule the two stashes above follow, and for the same reason: the
@@ -17033,24 +17078,24 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
 enum class TrimHit { None, Begin, End };
 
 // hit_test_trim_endcap: return which trim bound's painted ENDCAP contains the
-// press, or None. Both bounds are always meaningful (the trim window is always
-// set since 2026-07-30), so it reads the pair directly.
-// AUTHORING views — the active tab's live pair, project-level in both 'W' and
-// 'P' views. Each bound's mark is one of row 5's trim-bar ENDCAPS (the square
-// b/e chips of the old chip row are gone, 2026-08-01): a trim_endcap_w_px()
-// column run spanning the trim bar lane's full height, EDGE-ANCHORED on the
-// bound's painted column — the begin cap's LEFT edge on it, the end cap's RIGHT
-// edge on it — from trim_endcap_rect, the ONE rect owner render_trim_flags fills
-// through, so paint and hit cannot drift. THE HIT RECT IS THAT CAP INFLATED by
-// kTrimEndcapGrabPx per side (a 2px cap is under any pointing tolerance); it is
-// the one place in this lane where the drawn and the grabbable rect differ, and
-// it is why two caps at nearby columns can overlap as targets at all (the
-// arbitration is at the sort). Tests both mouse_x and mouse_y. Walks the
-// display warp_frame_map in target view so the hit lands on the drawn cap.
-// The endcaps and the bar's inter-cap bridge span are the ONLY trim grab
-// handles (the waveform stem grab retired).
-TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
-                           int mouse_x, int mouse_y);
+// press, or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
+// architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
+// last DREW, never the store's pair, so a press between a trim write and its
+// repaint grabs the cap on screen. Each bound's mark is one of row 5's
+// trim-bar ENDCAPS (the square b/e chips of the old chip row are gone,
+// 2026-08-01): a trim_endcap_w_px() column run spanning the trim bar lane's
+// full height, EDGE-ANCHORED on the bound's painted column — the begin cap's
+// LEFT edge on it, the end cap's RIGHT edge on it — from trim_endcap_rect, the
+// ONE rect owner render_trim_flags fills through and publishes from. THE HIT
+// RECT IS THAT CAP INFLATED by kTrimEndcapGrabPx per side (a 2px cap is under
+// any pointing tolerance); it is the one place in this lane where the drawn
+// and the grabbable rect differ, and it is why two caps at nearby columns can
+// overlap as targets at all (LEFTMOST WINS — the arbitration is at the
+// body). Tests both mouse_x and mouse_y, the y against the lane the caps were
+// painted in. A culled bound painted no cap and answers nothing; cold
+// (nothing painted) answers None. The endcaps and the bar's inter-cap bridge
+// span are the ONLY trim grab handles (the waveform stem grab retired).
+TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 
 // point_in_trim_bridge_span: is (mouse_x, mouse_y) on the trim bar's INTER-CAP
 // BRIDGE — the painted bar's stretch between the two endcaps, the pair drag's
@@ -17062,28 +17107,28 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
 // the cursor needed the same verdict; hoisting it whole was the alternative to a
 // second copy of the column math.
 //
-// The y-gate is top_trim_row_area, the same lane band hit_test_trim_endcap
-// gates on. The interval is trim_bridge_gap (render.h — the one owner the
-// painter's midpoint mark also fits against) over the two bounds'
-// TrimBoundColumns on the DISPLAYED basis (item_viewport_basis +
-// displayed_trim_ms through displayed_or_live_target_map), which is the exact
-// owner chain the live trim pass paints the bar with, so the grabbable bridge is
-// the drawn one. The [0, area_w) click gate is the PAINTER's own effective-width
-// clip: the inert non-multiple-of-16 right gutter neither paints the bar nor
-// answers true here.
+// IT READS THE PAINTER'S STASH, like the endcap test (AppState::trim_bar_hit,
+// architect 2026-09-24): the y-gate is the lane the bar was painted in, the
+// same band hit_test_trim_endcap gates on, and the interval is the bridge the
+// live trim pass last DREW — trim_bridge_gap (render.h, the one owner the
+// painter's midpoint mark also fits against) over the painted bound columns,
+// clipped by the painter to its own effective width, so the grabbable bridge
+// is the drawn one and the inert non-multiple-of-16 right gutter neither
+// paints the bar nor answers true here. Nothing is re-derived on the store's
+// pair.
 //
 // THE ENDCAPS ARE NOT IN IT: trim_bridge_gap insets each end by a painted cap's
 // width, so the cap rects sit outside the interval and this needs no reliance on
 // a caller testing the caps first. Both bounds are always set (the trim window
 // always rests), so there is no pair gate.
-bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
-                               int mouse_x, int mouse_y);
+bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 
-// displayed_or_live_target_map: the warp_frame_map the item hit tests decide
-// against — the map the aimed-at item pixels (flags from the committed cache;
-// the live trim lane's bar and endcaps, which read it directly per frame)
-// were painted with, so a grab lands on what is
-// drawn (WYSIWYG grabs). In target view with a non-empty displayed map
+// displayed_or_live_target_map: the warp_frame_map the item PAINTERS and the
+// gesture mechanics decide against — the map the aimed-at item pixels (flags
+// from the committed cache; the live trim lane's bar and endcaps, which read it
+// directly per frame) were painted with, so a grab lands on what is drawn
+// (WYSIWYG grabs). The flag and trim HITS read their painters' stashes, which
+// carry this map by construction. In target view with a non-empty displayed map
 // (app.displayed_target_warp_frame_map, promoted at the frame commit that blits
 // the flag cache — see the two-phase stage/promote at that member) it returns
 // that map; otherwise the live display context's map (source view = the live
@@ -17134,36 +17179,43 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio);
 // holds. The promote is the one consumer with a SECOND condition beside this
 // predicate — deferred_basis_repaint_due, the repair the deferral owes — so it
 // publishes not at the first unfrozen frame but at the first unfrozen frame
-// that carries the repaired damage (both conditions at that block). A state
-// belongs iff it is
-// an ABSOLUTE drag on a PAINTED
-// subject — the marker drag and the trim drags — or the PENDING PRESS that
-// AIMS one (pending_marker_press, pending_trim_drag), OR — the value drag,
-// argued in full at the bottom of this block — a drag that writes the LIVE
-// STORE per motion event, where the freeze runs the other way and protects
-// the screen from the store. THE FREEZE STARTS AT
-// THE AIMED PRESS, not at the 8px crossing: the crossing CONVERTS the press's
-// STORED press_x through the then-current displayed basis (the marker path's
+// that carries the repaired damage (both conditions at that block).
+// MEMBERSHIP IS DERIVED, NOT LISTED: a state belongs iff it is an ABSOLUTE
+// drag on a PAINTED subject — the marker drag and the trim drags — or ANY
+// PENDING PRESS WHOSE STORED POINT A LATER STEP CONVERTS THROUGH THE DISPLAYED
+// BASIS, i.e. a press that AIMS one (pending_marker_press, pending_trim_drag,
+// and — since 2026-09-24 — pending_click, the trim bar's bound-set click), OR
+// — the value drag, argued in full at the bottom of this block — a drag that
+// writes the LIVE STORE per motion event, where the freeze runs the other way
+// and protects the screen from the store. THE FREEZE STARTS AT THE AIMED
+// PRESS, not at the 8px crossing: the crossing CONVERTS the press's STORED
+// press_x through the then-current displayed basis (the marker path's
 // begin_drag, the trim path's begin_trim_drag conversion), so the epoch the
 // press was aimed in must survive until the crossing — a worker job already
 // in flight at the press would otherwise publish a new map/viewport under the
 // motionless hand, and the first motion would compute its delta from a press
 // column of the OLD painted epoch against the NEW epoch's geometry (until
 // 2026-08-22 the two gates tested only the active drags, so exactly that
-// pending-window rebase was reachable). THE DELIBERATE NON-MEMBERS: the
+// pending-window rebase was reachable). THE BOUND-SET CLICK IS THE SAME
+// ARGUMENT (architect 2026-09-24, strictly as-painted): both of its ends
+// convert its stored press_x — the lift's set and the crossing's set through
+// trim_bound_click_frame on the displayed map, and the crossing then arms
+// pending_trim_drag at that same press_x — so the epoch it was aimed in must
+// survive to either end exactly as a pending drag's must. Its GATES are still
+// re-asked LIVE at the lift (the strictly-inside partner test above all, a
+// state question the lift decides); what the freeze holds is the GEOMETRY of
+// its aim, which is every aimed press's. THE DELIBERATE NON-MEMBERS: the
 // nav/grab-pan and sweep families stay OUT — live-basis by ruling
 // (pointer-hit-testing.md owns the derivation; the pan renders synchronously,
-// the sweep holds no grabbed
-// subject) — and so does pending_click, the trim bar's deferred bound-set
-// click, whose act deliberately re-asks its gates LIVE at the lift. This is a
+// the sweep holds no grabbed subject). This is a
 // SUBSET of any_pointer_gesture_active under its own derivation, not a
 // consumer of it: that predicate answers "some pointer gesture is live", this
 // one "the displayed paint basis may not move".
 //
-// THE VALUE DRAG IS THE FIFTH MEMBER (2026-09-10) AND IT IS HERE FOR THE
-// OPPOSITE REASON TO THE OTHER FOUR. They are absolute drags on a painted
-// subject and the freeze protects the GESTURE from a basis that moves under
-// it. This one writes THE LIVE STORE per motion — the marker drag's proposal
+// THE VALUE DRAG IS HERE FOR THE OPPOSITE REASON TO EVERY OTHER MEMBER
+// (2026-09-10). They are absolute drags on a painted subject, or the presses
+// that aim them, and the freeze protects the GESTURE from a basis that moves
+// under it. This one writes THE LIVE STORE per motion — the marker drag's proposal
 // is an overlay, this drag's cents land in the warp store as the hand moves —
 // so in target view every motion changes the target map's hash, and without
 // the freeze the tick's dirty-detect would dispatch a full waveform render per
@@ -17183,14 +17235,17 @@ inline bool displayed_basis_frozen(const AppState& app) {
            app.trim_drag.active ||
            app.value_drag.active ||
            app.pending_marker_press.active ||
-           app.pending_trim_drag.active;
+           app.pending_trim_drag.active ||
+           app.pending_click.active();
 }
 
 // item_viewport_basis: the VIEWPORT twin of displayed_or_live_target_map —
-// the viewport span the item PAINTERS and the trim hit test decide against, so
-// an endcap is grabbed and the flag editor's box is centered on the column those
-// pixels were painted at. (The flag HIT no longer reads it — hit_test_flag
-// takes the painter's published rects, which are that basis by construction.) In target OR source view with
+// the viewport span the item PAINTERS decide against, so an endcap is drawn and
+// the flag editor's box is centered on the column the flag pixels were painted
+// at. (NO HIT reads it: hit_test_flag takes the flag painter's published
+// rects and, since 2026-09-24, hit_test_trim_endcap and
+// point_in_trim_bridge_span take the trim painter's — both that basis by
+// construction.) In target OR source view with
 // a warm promoted mirror (app.displayed_area_w > 0) it returns the vp_start/
 // vp_end/area_w triple the LAST COMMITTED frame's flag cache was built
 // against — vp_start/vp_end from wf_cache.fp_* and area_w the LIVE effective
@@ -17200,19 +17255,20 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // rest. Cold (nothing promoted yet — first paint / view flip / just-after-load)
 // it falls back to the LIVE viewport {viewport_start_sample, viewport_end_sample
 // at current_samples_per_pixel, effective width}, matching the live-map cold
-// fallback of displayed_or_live_target_map (and the pre-mirror hit_test_flag /
-// hit_test_trim_endcap live basis, so cold behavior is unchanged).
+// fallback of displayed_or_live_target_map (and the pre-mirror live basis the
+// flag and trim hits read before either had a stash).
 //
 // This is the free-function owner homed beside displayed_or_live_target_map so
-// render_flag_editor_box (the unrolled editor box's column), the app_state.cpp
-// trim hit test (hit_test_trim_endcap), and the LIVE TRIM paint pass
-// (GuiPaintHandler::paint_trim — paint and hit share the one basis by
-// construction) share ONE basis. (Three former consumers left the list in row 5:
-// the marker-text lane's run resolver, marker_hit_at, and lane_text_left_x —
-// hit_test_flag and the editor's click-to-caret both read a PAINTER'S STASH now
-// instead of re-deriving on this basis, which is the stronger form of the same
-// guarantee. The selected-stem DAMAGE was listed here until 2026-07-30 and was
-// never a consumer at all.) It
+// its TWO consumers, re-derived by grep 2026-09-24 — render_flag_editor_box
+// (the unrolled editor box's column) and the LIVE TRIM paint pass
+// (GuiPaintHandler::paint_trim) — share ONE basis, both on the PAINT side.
+// (Five former consumers left the list for a PAINTER'S STASH, the stronger
+// form of the same guarantee: the marker-text lane's run resolver,
+// marker_hit_at and lane_text_left_x in row 5, when hit_test_flag and the
+// editor's click-to-caret took stashes, and the trim hit tests
+// hit_test_trim_endcap and point_in_trim_bridge_span on 2026-09-24, when the
+// trim pass began publishing what it paints. The selected-stem DAMAGE was
+// listed here until 2026-07-30 and was never a consumer at all.) It
 // is DELIBERATELY DISTINCT from
 // GuiPaintHandler::plate_viewport_basis, which reads the LIVE wf_cache.fp_*
 // (the plate's current fingerprint): the paint-handler method registers the
@@ -17234,10 +17290,10 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // stages the OLD fp_vp span over the NEW effective width while the
 // still-displayed plate pairs that span with its OLD fp_area_w until the
 // in-flight worker render publishes — this owner and the plate-fp method
-// diverge for that window, and item-registered consumers (the hit tests, the
-// lane, the live trim pass) must ride THIS owner so paint == hit holds through
-// it (the consumer-side statement lives at GuiPaintHandler::paint_trim's basis
-// comment). The two
+// diverge for that window, and item-registered painters (the lane, the live
+// trim pass) must ride THIS owner so the stashes the hits read describe the
+// pixels through it (the consumer-side statement lives at
+// GuiPaintHandler::paint_trim's basis comment). The two
 // owners PERSIST as a mechanism/lifecycle split — direct fp read for
 // plate-registered overlays vs the staged/promoted mirror for item-registered
 // geometry; do not collapse them on the strength of the plate-writer equality —
@@ -17245,10 +17301,10 @@ inline bool displayed_basis_frozen(const AppState& app) {
 //
 // The double vp_start/spp serve the editor-box column math
 // (painted_column_of_source_frame_on_basis); the int64
-// vp_start_frame/vp_end_frame/area_w serve the trim hit test, which passes the
+// vp_start_frame/vp_end_frame/area_w serve the trim painter, which passes the
 // integer span + width to trim_bound_column verbatim. (compute_flag_hit_rects
-// was the other verbatim consumer until row 5 replaced it with the painter's
-// stash.)
+// and the trim hit test were the other verbatim consumers until each was
+// replaced with its painter's stash — row 5 and 2026-09-24.)
 struct ItemViewportBasis {
     double  vp_start       = 0.0;
     double  spp            = 0.0;

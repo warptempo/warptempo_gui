@@ -1175,16 +1175,19 @@ void GuiInputHandler::close_history_mode() {
 // the playhead's stem-suppression decider reads it) and the diff-flag LIST
 // their indices name.
 //
-// The stashes (app.flag_hit_rects, app.marker_stems) are produced ONCE PER TICK
-// by the flag cache's rebuild, so they legitimately run one frame behind a
-// press; the product accepts that lag deliberately and documents it at the
-// producer. What it cannot accept is what a MODE EDGE would otherwise do to it:
-// across this one edge the entries change DOMAIN, `marker_index` meaning a store
+// The stashes (app.flag_hit_rects, app.marker_stems) are STAGED by the flag
+// cache's rebuild and promoted at the frame that blits its surface (architect
+// 2026-09-24, the contract at the field), so they describe exactly the flags
+// on screen and legitimately run one frame behind the rebuild. What the
+// product cannot accept is what a MODE EDGE would otherwise do to them: across
+// this one edge the entries change DOMAIN, `marker_index` meaning a store
 // index on one side and an index into app.history_mode.flags on the other. A
-// press landing in the frame between the edge and the next tick would read the
+// press landing in the frame between the edge and the promote would read the
 // old side's indices under the new side's rules — after an exit, selecting or
 // landing on whatever store marker happens to share a diff flag's ordinal, or
-// none at all.
+// none at all. So the drop empties the promoted pair AND the staged one (with
+// its bit): a stage left over from before the edge carries the leaving side's
+// indices just as surely, and would otherwise promote at the next frame.
 //
 // THE LIST ITSELF IS THE SAME ARGUMENT WIDENED (2026-08-05): app.history_mode.-
 // flags is paint-cache OUTPUT, rebuilt only by that same once-per-tick pass, so
@@ -1221,9 +1224,12 @@ void GuiInputHandler::close_history_mode() {
 // where the mode is already down and the rebuild publishes the LIVE lane the
 // editor is coming back to (that fourth call landed hours after the first three,
 // closing the one window this comment recorded as the fix's remainder). So the
-// lane's old content is replaced only once the new one is ready, atomically
-// inside the press, with no stale-hit window on either side of the swap, and the
-// ENTER and LEAVE edges are symmetric.
+// lane's new content is drawn and staged inside the press and lands at the
+// very next frame, surface and stash together, with no blank frame between the
+// two contents, and the ENTER and LEAVE edges are symmetric. The one sub-frame
+// between the press and that frame answers every lane hit with "nothing" (the
+// drop has emptied the promoted pair and the promote has not run): the cold
+// answer below, never a stale one, over pixels the frame is about to replace.
 //
 // THE DROP STAYS — as that rebuild's own pre-step, and as the COLD ANSWER for the
 // frames the rebuild cannot serve: maybe_rebuild_flag_cache refuses while the
@@ -1260,6 +1266,9 @@ void GuiInputHandler::close_history_mode() {
 void GuiInputHandler::drop_lane_stash_across_history_edge() {
     app.flag_hit_rects.clear();
     app.marker_stems.clear();
+    app.staged_flag_hit_rects.clear();
+    app.staged_marker_stems.clear();
+    app.flag_stash_staged = false;
     app.history_mode.flags.clear();
 }
 

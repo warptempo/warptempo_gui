@@ -3552,7 +3552,8 @@ private:
     //   BOXES left this list 2026-08-13 for the TrimResize arm above.
     // THE TRIM BAR'S THREE ZONES READ THE ROUTER'S OWN OWNERS and re-derive
     // nothing: hit_test_trim_endcap and point_in_trim_bridge_span for the plain
-    // hover (exactly what route_trim_bar_press calls, in its order), and
+    // hover (exactly what route_trim_bar_press calls, in its order — both
+    // reading the painter's stash, AppState::trim_bar_hit), and
     // trim_bound_click_frame for the two ctrl clicks (exactly what
     // set_trim_bound_at_click decides on). So a point on the band that would arm
     // NOTHING — the bar's outside on a trimmed-in window, or a ctrl click the

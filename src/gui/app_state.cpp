@@ -72,11 +72,14 @@ void remap_marker_indices_after_reorder(AppState& app,
 // references are now explicit arguments. The one surviving grab tolerance is
 // the trim endcaps' (kTrimEndcapGrabPx, render.h) — there is no shared hit
 // half-width any more, and the marker surfaces (the flag boxes) hit on their
-// painted rects with no halo.
+// painted rects with no halo. Both families read a PAINTER'S STASH: the flag
+// lane's (AppState::flag_hit_rects) and, since 2026-09-24, the trim lane's
+// (AppState::trim_bar_hit).
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
-// target view with a warm displayed map, the item hit tests decide against the
-// map the LAST COMMITTED frame's flag pixels were painted with (promoted
+// target view with a warm displayed map, the item painters and the gesture
+// mechanics decide against the map the LAST COMMITTED frame's flag pixels
+// were painted with (promoted
 // at that frame commit, not the offscreen rebuild or the plate publish);
 // otherwise the live display context's map (source view = its identity/empty
 // map, target-view cold = the live map until the first committed target frame).
@@ -92,8 +95,8 @@ displayed_or_live_target_map(const AppState& app, const GuiAudio& audio) {
 
 // The viewport twin of displayed_or_live_target_map (full rationale at the
 // declaration): the vp_start/vp_end/area_w the flag item cache was painted
-// with on the last committed frame, so the marker/endcap/lane geometry rides the
-// same basis the flag/endcap pixels do. The warm spp is (vp_end - vp_start) /
+// with on the last committed frame, so the endcap and editor-box pixels ride
+// the same basis the flag pixels do. The warm spp is (vp_end - vp_start) /
 // area_w — the flags' OWN samples-per-pixel (span over the effective waveform
 // width the item render used), exact on the committing frame. Cold (area_w == 0,
 // nothing promoted yet) falls back to the live viewport span at the effective
@@ -120,65 +123,27 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
     return b;
 }
 
-TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
-                           int mouse_x, int mouse_y) {
-    // Trim bounds hit-test in the AUTHORING views against the active A/B tab's
-    // live bounds. Both bounds are always meaningful (the unset state died
-    // 2026-07-30 — a full ordered pair always rests), so this reads them
-    // directly; the pair gate that used to stand here is gone with the state it
-    // tested.
-    const int64_t begin_frame = app.trim.begin_frame;
-    const int64_t end_frame   = app.trim.end_frame;
+TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
+    // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
+    // as-painted; the contract is at AppState::trim_bar_hit). The caps are the
+    // ones GuiPaintHandler::paint_trim last DREW — on the displayed item basis
+    // and the displayed map, through trim_endcap_rect — so a press between a
+    // trim write and its repaint grabs the cap still on screen, and a bound
+    // the viewport culled, having painted no cap, answers nothing. Nothing
+    // here reads app.trim or re-runs the owner chain. Cold (nothing painted)
+    // nothing is grabbable.
+    const TrimBarHit& h = app.trim_bar_hit;
+    if (!h.published) return TrimHit::None;
 
-    // The bounds are marked by the trim bar's two ENDCAPS (row 5, 2026-08-01 —
-    // the square b/e chips and their strip-crossing stems are gone): a narrow
-    // full-lane-height column run per bound, edge-anchored on its own column,
-    // inside the trim bar lane (top_trim_row_area). A press outside that
-    // vertical band is not on an endcap. (The y-gate spanned the merged
-    // trim-bar + ruler band for the trim surface arc's one day, 2026-08-11..12,
-    // and came back to the lane with the arc's revert; the ruler is the REGION
-    // FORMER's band since 2026-08-12. The lane's height is
-    // kTrimBarScalePercent-scaled — resting at 100 since the seventh glass
-    // ruling, render.h — and this gate follows whatever it reads through the
-    // one accessor.)
-    const GuiRect row = top_trim_row_area(app);
-    if (mouse_y < row.y || mouse_y >= row.y + row.h) return TrimHit::None;
+    // The caps span the trim bar LANE the painter drew them in (row 5's
+    // endcaps, 2026-08-01 — the square b/e chips and their strip-crossing
+    // stems are gone), so a press outside that band is not on an endcap. (The
+    // y-gate spanned the merged trim-bar + ruler band for the trim surface
+    // arc's one day, 2026-08-11..12, and came back to the lane with the arc's
+    // revert; the ruler is the REGION FORMER's band since 2026-08-12.)
+    if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h)
+        return TrimHit::None;
 
-    const GuiRect top = top_strip_area(app);
-    // Event-synchronized hit geometry, the VIEWPORT half: the endcap pixels
-    // are painted live by the trim pass (GuiPaintHandler::paint_trim ->
-    // render_trim_flags) on the DISPLAYED basis, NOT the live viewport. So the
-    // cap columns must resolve on the SAME basis (item_viewport_basis)
-    // — the same reason hit_test_flag does — else during an async publish window an
-    // endcap painted at the OLD column would be grabbed at the NEW/live column.
-    // The visibility
-    // cull matches the painter's viewport extent (the painter maps against
-    // this same {span, width}), so a gutter column at a non-multiple-of-16 window
-    // is culled the same in paint and hit-test. Cold falls back to the live
-    // basis, matching the painter's cold fallback.
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    if (basis.spp <= 0.0) return TrimHit::None;
-    const int     wave_w   = basis.area_w;
-    const int64_t vp_start = basis.vp_start_frame;
-    const int64_t vp_end   = basis.vp_end_frame;
-    const int sr = audio.sample_rate();
-    if (sr <= 0) return TrimHit::None;
-
-    // Column translation so the cap column lands
-    // where the cap is painted in the mapped views: the map is
-    // the item pixels' own via displayed_or_live_target_map (event-synchronized
-    // hit geometry — the ruling at that selector), empty (identity) in source
-    // view and the map the flag item cache baked when warm in target view
-    // (the live trim pass paints its endcaps through the same selector).
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* target_warp_frame_map =
-        dmap.empty() ? nullptr : &dmap;
-
-    // Build the same visible candidate list render_trim_flags paints — the same
-    // cull (a bound whose column leaves the viewport gets no cap) through the
-    // same column owners — and sort it left to right.
-    //
     // OVERLAP ARBITRATION IS THIS HIT TEST'S OWN POLICY, not a mirror of
     // painter z-order: render_trim_flags lays the begin cap down and then the
     // end cap, with no sort and no reverse pass, so there is no
@@ -191,103 +156,64 @@ TrimHit hit_test_trim_endcap(const AppState& app, const GuiAudio& audio,
     // came from, while the drawn caps themselves can share at most a cap width
     // (see the tie-break).
     struct TrimEndcapHit {
-        double  center_x;
+        int     col_x;
         GuiRect rect;
         TrimHit which;
     };
-    std::vector<TrimEndcapHit> endcaps;
-    auto add_endcap = [&](int64_t frame, TrimHit which) {
-        // Map the authored source frame to the displayed domain and resolve its
-        // column through the SAME owners the painter uses (render.h): the mapping
-        // via displayed_trim_ms, the column via trim_bound_column against the
-        // displayed-basis vp span (the painters' quantized-span denominator), the
-        // cap rect via trim_endcap_rect. So a hit lands on exactly the drawn cap.
-        const double ms = displayed_trim_ms(frame, target_warp_frame_map);
-        const TrimBoundColumn c =
-            trim_bound_column(ms, vp_start, vp_end, wave_w);
-        if (!c.in_viewport) return;
-        // THE DRAWN CAP, INFLATED BY THE GRAB TOLERANCE. The rect comes from
-        // the one owner so the target is centred on exactly what is painted; the
-        // widening is the hit side's own term, because a 2px endcap is below any
-        // usable pointing tolerance (the rationale is at trim_endcap_rect).
-        GuiRect cr_rect =
-            trim_endcap_rect(which == TrimHit::Begin, top.x, c.col, row);
+    TrimEndcapHit endcaps[2];
+    int n = 0;
+    auto add_endcap = [&](const TrimBarHitCap& cap, TrimHit which) {
+        if (!cap.painted) return;
+        // THE DRAWN CAP, INFLATED BY THE GRAB TOLERANCE. The stash carries the
+        // rect exactly as painted so the target is centred on it; the widening
+        // is the hit side's own term, because a 2px endcap is below any usable
+        // pointing tolerance (the rationale is at trim_endcap_rect).
+        GuiRect r = cap.rect;
         const int grab = trim_endcap_grab_px();
-        cr_rect.x -= grab;
-        cr_rect.w += 2 * grab;
-        const double center_x = static_cast<double>(top.x + c.col);
-        endcaps.push_back({center_x, cr_rect, which});
+        r.x -= grab;
+        r.w += 2 * grab;
+        endcaps[n++] = {cap.col_x, r, which};
     };
-
-    add_endcap(begin_frame, TrimHit::Begin);
-    add_endcap(end_frame,   TrimHit::End);
-    std::sort(endcaps.begin(), endcaps.end(),
-              [](const TrimEndcapHit& a, const TrimEndcapHit& b) {
-                  if (a.center_x != b.center_x)
-                      return a.center_x < b.center_x;
-                  // Deterministic tie-break at an equal column: Begin first, so
-                  // the forward walk below returns it. The two DRAWN caps are
-                  // NOT the same rect there — trim_endcap_rect anchors them in
-                  // opposite directions (begin's left edge on the column, end's
-                  // right edge on it), so they mirror about the column and share
-                  // only it — but they are the same colour, so nothing painted
-                  // distinguishes them. This fixes which bound a click in the
-                  // inflated overlap grabs, and nothing else.
-                  return a.which == TrimHit::Begin && b.which == TrimHit::End;
-              });
+    add_endcap(h.begin, TrimHit::Begin);
+    add_endcap(h.end,   TrimHit::End);
+    // At most two candidates, so the order is one compare and one swap.
+    // Ascending column; at an equal column Begin first, so the forward walk
+    // below returns it (Begin is added first, so an equal pair is already in
+    // order). The two DRAWN caps are NOT the same rect there —
+    // trim_endcap_rect anchors them in opposite directions (begin's left edge
+    // on the column, end's right edge on it), so they mirror about the column
+    // and share only it — but they are the same colour, so nothing painted
+    // distinguishes them. The tie-break fixes which bound a click in the
+    // inflated overlap grabs, and nothing else.
+    if (n == 2 && endcaps[1].col_x < endcaps[0].col_x)
+        std::swap(endcaps[0], endcaps[1]);
 
     // Forward walk = ascending-x = LEFTMOST FIRST, the policy stated above. The
     // first cap whose inflated [rect.x, rect.x + w) contains mouse_x wins.
-    for (const TrimEndcapHit& endcap : endcaps) {
-        if (mouse_x >= endcap.rect.x &&
-            mouse_x < endcap.rect.x + endcap.rect.w) {
-            return endcap.which;
+    for (int i = 0; i < n; ++i) {
+        if (mouse_x >= endcaps[i].rect.x &&
+            mouse_x < endcaps[i].rect.x + endcaps[i].rect.w) {
+            return endcaps[i].which;
         }
     }
     return TrimHit::None;
 }
 
-bool point_in_trim_bridge_span(const AppState& app, const GuiAudio& audio,
-                               int mouse_x, int mouse_y) {
-    if (audio.total_frames() <= 0) return false;
-    // The TRIM BAR LANE ONLY — the band the bar and its endcaps paint in, and
-    // the exact band hit_test_trim_endcap gates on. A top-strip point BELOW it
-    // (the ruler, then the marker lane) is not the bridge handle.
-    const GuiRect row = top_trim_row_area(app);
-    if (mouse_y < row.y || mouse_y >= row.y + row.h) return false;
-
-    // Event-synchronized geometry, the VIEWPORT half: the bar's pixels are
-    // painted live (paint_trim) on the DISPLAYED basis, so the columns resolve on
-    // that same basis and never on the live viewport — else during an async
-    // publish window a point on the visible bridge could answer false (or a blank
-    // point true). Cold falls back to the live basis, matching the painter's.
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    if (basis.spp <= 0.0) return false;
-
-    // click_rel_x is waveform-relative from the layout origin area.x (a stable
-    // layout constant, not viewport-driven); the gap interval is 0-based columns
-    // in the SAME committed-width column space, so the test compares like against
-    // like.
-    const GuiRect area = waveform_area(app);
-    const int click_rel_x = mouse_x - area.x;
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    const std::vector<WarpFrameMapSegment>* map = dmap.empty() ? nullptr : &dmap;
-    auto bound_column = [&](int64_t frame) -> TrimBoundColumn {
-        const double ms = displayed_trim_ms(frame, map);
-        return trim_bound_column(ms, basis.vp_start_frame, basis.vp_end_frame,
-                                 basis.area_w);
-    };
-    const TrimBoundColumn bc = bound_column(app.trim.begin_frame);
-    const TrimBoundColumn ec = bound_column(app.trim.end_frame);
-    // The owner already handles the offscreen-flush edges (no endcap-width inset
-    // for an unpainted bound), so this needs no min/max of its own.
-    const TrimBridgeGap gap =
-        trim_bridge_gap(bc, ec, trim_endcap_w_px(), basis.area_w);
-    // The [0, area_w) gate — the SAME effective-width clip the PAINTER applies,
-    // so paint and hit agree exactly in the inert right gutter.
-    return click_rel_x >= 0 && click_rel_x < basis.area_w &&
-           click_rel_x >= gap.lo && click_rel_x < gap.hi;
+bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
+    // THE PAINTER'S STASH, the endcap test's twin (AppState::trim_bar_hit):
+    // the interval is the bar's stretch between the two caps' inner edges as
+    // render_trim_flags last DREW it — trim_bridge_gap over the painted
+    // columns, already clipped to the lane's painted width, so the inert
+    // non-multiple-of-16 right gutter answers false exactly as it paints no
+    // bar. Nothing here reads app.trim. Cold answers false — which is also
+    // the no-audio answer, the trim pass painting only over loaded audio.
+    const TrimBarHit& h = app.trim_bar_hit;
+    if (!h.published) return false;
+    // The TRIM BAR LANE ONLY — the band the bar and its endcaps were painted
+    // in, and the exact band hit_test_trim_endcap gates on. A top-strip point
+    // BELOW it (the ruler, then the marker lane) is not the bridge handle.
+    if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h) return false;
+    return mouse_x >= h.bridge_lo && mouse_x < h.bridge_hi;
 }
 
 // The topmost published flag rect under the point, or nullptr — the ONE walk
@@ -362,11 +288,12 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // is as wide as its SHAPED label, so there is no formula to re-derive it
     // from — recomputing here would mean a second HarfBuzz pass that could
     // disagree with the pixels. The flag-cache rebuild publishes
-    // app.flag_hit_rects as it paints (contract at the field), which also
-    // settles the event-synchronised-hit-geometry question outright: the rects
-    // ARE the painted rects, on the displayed basis those pixels were laid out
-    // against, for free and at every moment rather than by two derivations
-    // agreeing. The old live rebuild — item_viewport_basis + the displayed map +
+    // app.flag_hit_rects as it paints — staged, and promoted at the frame that
+    // blits the surface it drew (architect 2026-09-24; contract at the field)
+    // — which also settles the event-synchronised-hit-geometry question
+    // outright: the rects ARE the rects on screen, on the displayed basis
+    // those pixels were laid out against, flipping at the blit rather than by
+    // two derivations agreeing. The old live rebuild — item_viewport_basis + the displayed map +
     // the drag overlay, threaded into compute_flag_hit_rects — is gone with the
     // functions it called.
     //

@@ -807,9 +807,7 @@ bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
 // comparator keeping it true — so the exemption cannot part from the FACE or
 // from toggle_dropdown's guard, which reads the same bit: what is lit is
 // pressable and what is grey is veiled, one enumeration behind all three.
-bool press_on_live_menu_anchor(const AppState& app, const GuiAudio& audio,
-                               const GuiExternalSyncWorker& sync,
-                               int x, int y) {
+bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
     for (const DropdownMenu m : kDropdownMenus) {
         const RedesignButton b = dropdown_anchor_button(m);
         if (!app.redesign_buttons[static_cast<size_t>(
@@ -2132,7 +2130,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // the plain press arms only on an ENDCAP or inside the inter-cap BRIDGE,
         // so the cue asks exactly hit_test_trim_endcap and
         // point_in_trim_bridge_span — the same predicates route_trim_bar_press
-        // calls, in the same order — and a point on the band that arms nothing
+        // calls, in the same order, both reading the trim painter's stash
+        // (AppState::trim_bar_hit) — and a point on the band that arms nothing
         // (outside a trimmed-in window, either side of the bar) shows the Arrow.
         // Cue and gesture therefore agree BY CONSTRUCTION rather than by
         // proximity, which is the whole rule this map is written to.
@@ -2153,12 +2152,12 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // one live gesture is a DOUBLE-click, which no cue in the product
             // names. The Arrow, over the whole band.
             if (app.history_mode.active) return GuiCursorKind::Arrow;
-            switch (hit_test_trim_endcap(app, audio, x, y)) {
+            switch (hit_test_trim_endcap(app, x, y)) {
                 case TrimHit::Begin: return GuiCursorKind::TrimBoundBegin;
                 case TrimHit::End:   return GuiCursorKind::TrimBoundEnd;
                 case TrimHit::None:  break;
             }
-            if (point_in_trim_bridge_span(app, audio, x, y))
+            if (point_in_trim_bridge_span(app, x, y))
                 return GuiCursorKind::TrimResize;
             return GuiCursorKind::Arrow;
         }
@@ -4118,6 +4117,12 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
 // act and is therefore re-asked LIVE at the lift, which is the chrome lift's
 // own rule: a gate may change under a held button and the LIFT decides.
 // Nothing is carried but the press POINT and which bound the click writes.
+// THE POINT'S BASIS DOES NOT MOVE UNDER IT: the armed record is a member of
+// the displayed-basis freeze (displayed_basis_frozen, app_state.h —
+// architect 2026-09-24), because the lift and the crossing both convert the
+// stored press_x through the displayed map, the crossing arming the trim drag
+// at it too — so the gates are live and the aim's geometry is the epoch the
+// user pressed in, like every other aimed press.
 void GuiInputHandler::arm_pending_click_act(int x, int y, bool is_begin) {
     app.pending_click = PendingClickAct{};
     app.pending_click.kind     = PendingClickKind::TrimBoundSet;
@@ -5053,7 +5058,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // press on the overlay's modal row armed a button under a popup that
     // should have swallowed the press whole.
     const bool menu_row_press_admitted =
-        press_on_live_menu_anchor(app, audio, external_sync_worker, x, y);
+        press_on_live_menu_anchor(app, x, y);
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything

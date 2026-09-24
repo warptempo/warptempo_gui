@@ -2904,21 +2904,23 @@ void render_strip_anchor_stem(cairo_t* cr,
 // had no stem since render_trim_stems died, and no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner. Every consumer of a
-// trim bound's pixel column funnels here: the ONE paint site (render_trim_flags'
-// endcaps and bar gap — the waveform stem site left with render_trim_stems) and the two
-// hit sites (hit_test_trim_endcap's endcap rects, route_trim_bar_press' bridge
-// test). It replaced five hand-copied `nearbyint` + `clamp(0, W-1)` formulas
-// maintained "byte-identical" by comment discipline.
+// trim bound's pixel column funnels here, and there is ONE: the paint site
+// (render_trim_flags' endcaps, bar and bridge gap — the waveform stem site left
+// with render_trim_stems). The two hit sites (hit_test_trim_endcap's endcap
+// rects, point_in_trim_bridge_span's bridge test) called it too until
+// 2026-09-24, when they began reading what the painter PUBLISHES instead
+// (TrimBarHit, below — strictly as-painted), so the columns they test are
+// this owner's output by construction. It replaced five hand-copied
+// `nearbyint` + `clamp(0, W-1)` formulas maintained "byte-identical" by
+// comment discipline.
 //
-// PURE: all basis inputs are parameters — the collapse unifies the FORMULA. Both
-// the painter AND the hit sites decide against the SAME DISPLAYED basis (the
-// event-synchronized hit-geometry doctrine): the live trim pass
-// (GuiPaintHandler::paint_trim) and the hit sites all call with the DISPLAYED
-// basis from
-// item_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
+// PURE: all basis inputs are parameters — the collapse unifies the FORMULA. The
+// live trim pass (GuiPaintHandler::paint_trim) calls with the DISPLAYED basis
+// from item_viewport_basis (vp_start_frame/vp_end_frame/area_w — the promoted
 // mirror of the committed fp_vp span + effective width) and `displayed_ms`
-// mapped through displayed_or_live_target_map by displayed_trim_ms — the
-// identical owner chain, so paint and hit are one geometry by construction.
+// mapped through displayed_or_live_target_map by displayed_trim_ms (the
+// event-synchronized hit-geometry doctrine), and the hit sites read that
+// pass's publication, so paint and hit are one geometry by construction.
 // (Earlier the
 // hit sites used the LIVE viewport, which split a hit from its painted pixels
 // during an async plate-publish window; the promoted mirror closed that window,
@@ -2928,8 +2930,9 @@ void render_strip_anchor_stem(cairo_t* cr,
 // (vp_end - vp_start)/wave_w, NOT current_samples_per_pixel. The two are
 // identical at integer zoom rungs on multiple-of-16 widths and differ by
 // <~0.02 px at a fractional zoom rest; adopting it at the hit sites too (they
-// formerly divided by spp) is the one deliberate byte change of the collapse and
-// ALIGNS paint and hit exactly — the point of unifying them.
+// formerly divided by spp) was the one deliberate byte change of the collapse
+// and ALIGNED paint and hit exactly — the point of unifying them, and what the
+// published stash now carries for free.
 //
 // EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
 // `col` clamps col_raw into the visible column range [0, wave_w-1]. The
@@ -2961,10 +2964,11 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
                                   int wave_w);
 
 // The BETWEEN-THE-ENDCAPS column interval [lo, hi) (waveform-relative,
-// half-open, EMPTY when hi <= lo), the ONE owner shared by the router
-// (route_trim_bar_press' pair-drag between test) and the painter
-// (render_trim_flags' midpoint-mark fit test), so the bridge's clickable band
-// and the mark's clearance read the same interval. The bar itself no longer
+// half-open, EMPTY when hi <= lo), the ONE owner of the bridge, run by the
+// painter (render_trim_flags) alone: its midpoint-mark fit test reads it, and
+// the same clipped interval is what the painter PUBLISHES as the pair drag's
+// handle (TrimBarHit::bridge_lo / bridge_hi, read by point_in_trim_bridge_span),
+// so the bridge's clickable band and the mark's clearance are one interval. The bar itself no longer
 // comes from here — it spans the WINDOW, bound column to bound column, and the
 // endcaps paint over its ends. Both bounds must be set (callers gate). The
 // offscreen arms key on the bound's SIDE (TrimBoundColumn::side, the unrounded
@@ -2994,10 +2998,9 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // paints no endcap, so the inset is dropped and the bar fills FLUSH. This interval
 // is returned UNCLAMPED (raw sentinels included) — its role is to carry the
 // offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
-// interval. The two consumers clamp it to the visible range identically: the
-// PAINTER intersects it with the effective width [0, wave_w) before asking
-// whether the midpoint tile fits, and the ROUTER applies the same [0, wave_w)
-// click gate. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
+// interval. The painter clamps it to the visible range ONCE: it intersects it
+// with the effective width [0, wave_w) before asking whether the midpoint tile
+// fits, and publishes that same clipped interval as the bridge's hit span. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
 // paints nor hits. The sentinels earn their strictness here: an offscreen edge
 // lands STRICTLY past the visible range (never at col 0 or col wave_w-1), so a
 // window running off the view yields a flush interior rather than a spurious
@@ -3009,24 +3012,26 @@ struct TrimBridgeGap {
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
                               const TrimBoundColumn& end, int endcap_w, int wave_w);
 
-// The source-frame -> displayed-domain mapping the two HIT sites (add_endcap,
-// bound_col) AND the live trim paint pass (GuiPaintHandler::paint_trim)
-// share. Byte-identical to render.cpp's file-local
+// The source-frame -> displayed-domain mapping of the live trim paint pass
+// (GuiPaintHandler::paint_trim), its one caller since the two HIT sites began
+// reading that pass's publication (2026-09-24). Byte-identical to render.cpp's file-local
 // frame_to_paint_sample for every reachable (non-negative) trim bound: in a
 // mapped view the source frame is rounded once through map_source_to_target,
 // then rounded again; the identity (null/empty map) path returns the frame
 // as-is. A negative frame is guarded to 0 (unreachable — past-EOF is load-fatal
 // and bounds are never negative — kept for exactness vs the prior hit code).
-// One mapping owner for paint and hit, so an endcap is grabbed exactly where it
-// is drawn. `map` is null in source view (identity) and the item pixels' own map
-// (displayed_or_live_target_map) in target view.
+// The painter's one mapping owner, so an endcap is drawn — and, through the
+// stash, grabbed — on its bound's image. `map` is null in source view
+// (identity) and the item pixels' own map (displayed_or_live_target_map) in
+// target view.
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
 // The ONE trim ENDCAP screen-rect owner: the begin/end edge-anchoring rule
-// lives here, consumed by both the painter (render_trim_flags) and the hit test
-// (hit_test_trim_endcap), so paint and hit are one owner again — row 5's endcaps
-// replaced the square chips in BOTH at once.
+// lives here, run by the painter (render_trim_flags), which publishes each cap
+// it fills for the hit test (hit_test_trim_endcap reads TrimBarHit, below), so
+// paint and hit are one rect — row 5's endcaps replaced the square chips in
+// BOTH at once.
 //
 // A trim bound is an EDGE, not a point: the begin cap's LEFT edge sits ON the
 // bound column (rect left = strip_x+col), the end cap's RIGHT edge sits on it
@@ -3094,6 +3099,35 @@ inline int trim_endcap_grab_px() {
 // in the same pixels. The `trim_stem` config key it painted from outlived it by
 // a day and died with the whole tunable palette on 2026-08-02.)
 
+// THE TRIM BAR'S HIT STASH (architect 2026-09-24, strictly as-painted): what
+// render_trim_flags last PAINTED as the bar's two grab handles, published by
+// that painter into AppState::trim_bar_hit so the trim hits read the pixels
+// rather than re-running the painter's owner chain on the live trim — the
+// flag lane's stash doctrine (AppState::flag_hit_rects) carried to the trim
+// lane. Everything is in SCREEN pixels. `lane` is the band the bar was painted
+// in, the y-gate of both hits. Each cap is its DRAWN rect (trim_endcap_rect,
+// uninflated — the hit applies trim_endcap_grab_px itself, the one place the
+// drawn and the grabbable rect differ) plus its bound column, which is the
+// leftmost-wins sort key, and `painted` is false for a bound the viewport
+// culled, which paints no cap and so answers no hit. The bridge is the
+// half-open interval [bridge_lo, bridge_hi) between the caps' inner edges,
+// already clipped to the lane's painted width (trim_bridge_gap, the owner the
+// midpoint mark fits against); empty when lo >= hi. `published` false is
+// COLD — nothing painted, nothing grabbable.
+struct TrimBarHitCap {
+    bool    painted = false;
+    int     col_x   = 0;        // the bound's screen column
+    GuiRect rect{0, 0, 0, 0};   // the drawn cap
+};
+struct TrimBarHit {
+    bool          published = false;
+    GuiRect       lane{0, 0, 0, 0};
+    TrimBarHitCap begin;
+    TrimBarHitCap end;
+    int           bridge_lo = 0;   // screen x, inclusive
+    int           bridge_hi = 0;   // screen x, exclusive
+};
+
 // Draws the WHOLE TRIM BAR LANE (row 5's endcap bar, which replaced the square
 // b/e chips and their strip-crossing stems): the lane ground, the window's bar
 // over it, the two endcaps over that, and the midpoint mark last. Every run
@@ -3101,10 +3135,10 @@ inline int trim_endcap_grab_px() {
 // pixel-bound integer fills, no stroke and no antialiasing anywhere in this
 // lane — so a surface is named by its four constants and nothing else.
 // The lane band is the `trim_bar` PARAMETER — the caller passes
-// top_trim_row_area(app) (top-strip lane 3), the same accessor
-// hit_test_trim_endcap's y-gate and route_trim_bar_press' bridge y-gate read, so
-// paint and hit take the band from ONE owner and cannot drift; nothing in here
-// re-derives the lane's y from the row heights above it. `trim_bar` gives the
+// top_trim_row_area(app) (top-strip lane 3), and the band painted in is
+// published as TrimBarHit::lane, the y-gate both trim hits read, so paint and
+// hit take the band as one value and cannot drift; nothing in here re-derives
+// the lane's y from the row heights above it. `trim_bar` gives the
 // lane's x/y/h; `waveform_area` is read for its `.w` ALONE — both the
 // column-mapping denominator and the lane's effective width, so the inert
 // non-multiple-of-16 gutter is outside the clip and never paints.
@@ -3128,9 +3162,9 @@ inline int trim_endcap_grab_px() {
 // shows its cap fully onscreen. A culled bound paints no cap at all: it has no
 // column on screen to stand on, and the bar's flush edge is what says the
 // window continues past the view.
-// Both caps come from the ONE rect owner the hit test reads
-// (trim_endcap_rect), so the painted cap and the grabbable cap describe the same
-// edge; the hit side adds only its stated grab tolerance. Column placement is
+// Both caps come from the ONE rect owner (trim_endcap_rect) and are published
+// as filled, so the painted cap and the grabbable cap describe the same edge;
+// the hit side adds only its stated grab tolerance. Column placement is
 // on the displayed viewport basis — `trim.begin` / `trim.end` are already in
 // the displayed domain, so no further translation happens here. A cap has NO
 // editable payload; it is a plain-press grab target only (trim is outside the
@@ -3150,13 +3184,21 @@ inline int trim_endcap_grab_px() {
 // lane's own
 // endcap + bar surfaces; the pixel-by-pixel derivation from the crop is at the
 // paint site (render.cpp).
+// PUBLISHES WHAT IT PAINTS into `out_hit` when non-null (TrimBarHit above):
+// the lane, both caps and the bridge interval, from the very columns this
+// pass fills — and a cold record on every early return, since a lane that
+// painted no bar has nothing to grab. The CALLER decides whether this frame
+// may publish at all (GuiPaintHandler::paint_trim passes null unless the
+// damage clip covers the whole lane), so a narrow repaint cannot stamp the
+// stash over pixels it did not redraw.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect trim_bar,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       const TrimRange& trim);
+                       const TrimRange& trim,
+                       TrimBarHit* out_hit);
 
 // The top-strip lane a flag box occupies, exactly as the lane accessor reports
 // it: `marker_lane` = top_marker_row_area, whose bottom edge is flush with the

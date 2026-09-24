@@ -524,10 +524,10 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
 
 // -- Trim bound geometry owners -------------------------------------------
 // One column formula, one mapping helper, one endcap rect, one bridge-gap owner.
-// See render.h for the full rationale (the UNIFIED displayed basis — both
-// painters and hit sites decide against the same committed viewport, the
-// event-sync ruling; the quantized-span denominator; the EOF-wall clamp; and the
-// side-aware bridge sentinels).
+// See render.h for the full rationale (the UNIFIED displayed basis — the
+// painter decides against the committed viewport and the hit sites read what
+// it publishes, the event-sync ruling; the quantized-span denominator; the
+// EOF-wall clamp; and the side-aware bridge sentinels).
 
 TrimBoundColumn trim_bound_column(double displayed_ms,
                                   long long vp_start, long long vp_end,
@@ -544,7 +544,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
              : (at_or_past_left ? TrimBoundSide::OffRight
                                 : TrimBoundSide::OffLeft);
     // The painters' quantized-span denominator: (vp_end - vp_start)/wave_w,
-    // where the hit sites' vp_end itself was derived via nearbyint(spp*wave_w).
+    // where vp_end itself was derived via nearbyint(spp*wave_w).
     const double span = static_cast<double>(vp_end - vp_start);
     const double samples_per_pixel = span / static_cast<double>(wave_w);
     // The one rounding, on the caller's UNIFIED displayed basis (this file's
@@ -620,7 +620,11 @@ void render_trim_flags(cairo_t* cr,
                        GuiRect waveform_area,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
-                       const TrimRange& trim) {
+                       const TrimRange& trim,
+                       TrimBarHit* out_hit) {
+    // COLD FIRST, so every early return below publishes "nothing grabbable"
+    // over a lane that painted no bar (the contract at the declaration).
+    if (out_hit) *out_hit = TrimBarHit{};
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (trim_bar.w <= 0 || trim_bar.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
@@ -707,16 +711,21 @@ void render_trim_flags(cairo_t* cr,
     // the column the bound actually occupies. A culled bound paints no cap: it
     // has no column on screen to stand on, and the bar's flush edge is what says
     // the window continues past the view.
-    // Both caps come from the ONE rect owner the hit test reads
-    // (trim_endcap_rect), so the painted cap and the grabbable cap describe the
-    // same edge — the hit side adds only its stated grab tolerance.
+    // Both caps come from the ONE rect owner (trim_endcap_rect), and THE
+    // PUBLICATION RIDES THE FILLS (TrimBarHit, render.h): each cap is stashed
+    // from the rect it was just painted with, so the painted cap and the
+    // grabbable cap describe the same edge — the hit side adds only its stated
+    // grab tolerance — and the hit reads the pixels rather than a second
+    // derivation of them.
     if (bc.in_viewport) {
         const GuiRect r = trim_endcap_rect(true, lane_x, bc.col, trim_bar);
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
+        if (out_hit) out_hit->begin = {true, lane_x + bc.col, r};
     }
     if (ec.in_viewport) {
         const GuiRect r = trim_endcap_rect(false, lane_x, ec.col, trim_bar);
         surface(r.x, r.w, kTrimLaneEndcap, kTrimCapBevelHi, kTrimCapBevelLo);
+        if (out_hit) out_hit->end = {true, lane_x + ec.col, r};
     }
 
     // THE MIDPOINT MARK IS THE CROP, BLITTED VERBATIM (architect 2026-08-01, who
@@ -796,6 +805,16 @@ void render_trim_flags(cairo_t* cr,
             trim_bridge_gap(bc, ec, trim_endcap_w_px(), lane_w);
         const int vis_lo = std::max(gap.lo, 0);
         const int vis_hi = std::min(gap.hi, lane_w);
+        // THE BRIDGE'S PUBLICATION is this same visible interior — the bar's
+        // stretch between the caps' inner edges, clipped to the lane's painted
+        // width — so the pair drag's handle and the midpoint mark's room are
+        // one interval, and the caps sit outside it by the gap's own inset.
+        if (out_hit) {
+            out_hit->published = true;
+            out_hit->lane      = GuiRect{lane_x, lane_y, lane_w, lane_h};
+            out_hit->bridge_lo = lane_x + vis_lo;
+            out_hit->bridge_hi = lane_x + vis_hi;
+        }
         const TrimBoundColumn mc = trim_bound_column(
             (static_cast<double>(trim.begin) + static_cast<double>(trim.end)) *
                 0.5,

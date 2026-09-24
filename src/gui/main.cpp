@@ -688,13 +688,14 @@ GuiRect waveform_area(const AppState& a) {
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 3 (the ruler is lane
 // 4 and the marker lane lane 5), and hit_test_trim_endcap / the pair-drag y-gate
-// read top_trim_row_area(app) — the exact band render_trim_flags paints the
-// lane ground, the window's bar and its two endcaps in, because the PAINTER is
-// handed that band as a parameter (GuiPaintHandler::paint_trim passes
-// top_trim_row_area(app) as render_trim_flags' `trim_bar`) instead of
-// re-deriving a lane y from the row heights above it. Both sides therefore
-// reach the band through this one helper, so paint and hit cannot drift when a
-// lane above the trim bar changes height, is removed, or gains a gap.
+// read the band render_trim_flags painted the lane ground, the window's bar and
+// its two endcaps in (published as AppState::trim_bar_hit's `lane`), because
+// the PAINTER is handed top_trim_row_area(app) as a parameter
+// (GuiPaintHandler::paint_trim passes it as render_trim_flags' `trim_bar`)
+// instead of re-deriving a lane y from the row heights above it. Both sides
+// therefore reach the band through this one helper, so paint and hit cannot
+// drift when a lane above the trim bar changes height, is removed, or gains a
+// gap.
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge) {
     int w = a.width, h = a.height;

@@ -736,7 +736,8 @@ void GuiInputHandler::update_trim_drag(int mouse_x) {
     // is already viewport-bound, but a grab a few pixels off the endcap can
     // trail the bound past the edge; this makes the bound itself exact. The
     // grab can only begin on a visible bound (hit_test_trim_endcap tests the
-    // endcap painted at a visible column), so this is a live tracking clamp, not a
+    // endcaps the painter published, and a culled bound publishes none), so
+    // this is a live tracking clamp, not a
     // correction for an offscreen grab. The bounds are active-domain while
     // src_frame is source, so inverse-translate the edges through the DISPLAYED
     // paint basis (the same map the tracked bound rode above; monotonic, so the
@@ -1216,8 +1217,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 //   CAP HIT: an endcap-rect hit (hit_test_trim_endcap, itself y-gated to the trim
 //     bar lane) arms that bound's single drag.
 //   BRIDGE: else, a press on the bar's inter-cap span (point_in_trim_bridge_span,
-//     app_state.h — the shared owner, which carries the trim-lane y-gate, the
-//     trim_bridge_gap interval and the painter's [0, area_w) clip) arms the pair
+//     app_state.h — the shared owner, which reads the painted lane's y-gate and
+//     the painted bridge interval, already clipped to the painter's
+//     [0, area_w)) arms the pair
 //     drag. The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
 //     strip height: a top-strip press below that lane — the ruler (the region
 //     former's band), then the marker lane — is not claimed here at all; each
@@ -1236,25 +1238,21 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(bool is_begin,
 // PLAYHEAD is what they never
 // touch, and the deselect RESTS — the gesture has no cancel to restore it from.
 //
-// BOTH ARMS DECIDE ON THE DISPLAYED BASIS — the displayed MAP
-// (displayed_or_live_target_map) AND the displayed VIEWPORT
-// (item_viewport_basis), the EXACT basis and owner chain the live trim
-// pass (GuiPaintHandler::paint_trim) paints the bar and its endcaps from every frame
-// (displayed_trim_ms -> trim_bound_column -> trim_bridge_gap), so a hit lands
-// on what is drawn BY SHARED OWNERS: paint and hit read the same functions on
-// the same basis (the
-// event-sync ruling at that selector). Each predicate carries that basis itself,
-// which is why nothing is derived here. The remaining seams are all
-// ACCEPTED:
-// commit-to-scanout plus human reaction (irreducible — input responds to the
-// previously presented frame), the COLD-STATE fallback (first paint, a view
-// toggle, or just after load, live map until the first committed target frame),
-// and the playhead-placement clicks (column-based, out of scope by ruling — a
-// far subtler seam).
+// BOTH ARMS READ WHAT IS PAINTED (architect 2026-09-24, strictly as-painted):
+// the two predicates test the trim painter's own stash (AppState::trim_bar_hit)
+// — the caps and bridge the live trim pass (GuiPaintHandler::paint_trim) last
+// DREW on the displayed map and viewport through its owner chain
+// (displayed_trim_ms -> trim_bound_column -> trim_endcap_rect /
+// trim_bridge_gap) — so a hit lands on what is drawn BY PUBLICATION, even in
+// the frame between a trim write and its repaint. Nothing is derived here.
+// The remaining seams are all ACCEPTED: commit-to-scanout plus human reaction
+// (irreducible — input responds to the previously presented frame), the COLD
+// state (nothing painted yet, nothing grabbable), and the playhead-placement
+// clicks (column-based, out of scope by ruling — a far subtler seam).
 bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     if (audio.total_frames() <= 0) return false;
     // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
-    const TrimHit single = hit_test_trim_endcap(app, audio, mouse_x, mouse_y);
+    const TrimHit single = hit_test_trim_endcap(app, mouse_x, mouse_y);
     if (single != TrimHit::None) {
         arm_pending_trim_drag(single == TrimHit::Begin, /*both=*/false,
                               mouse_x, mouse_y);
@@ -1264,7 +1262,7 @@ bool GuiInputHandler::route_trim_bar_press(int mouse_x, int mouse_y) {
     // the subject, so it always arms as Begin structurally (there is no
     // nearer-bound pick, and the gesture moves the playhead only at its
     // release, through the commit tail's park).
-    if (point_in_trim_bridge_span(app, audio, mouse_x, mouse_y)) {
+    if (point_in_trim_bridge_span(app, mouse_x, mouse_y)) {
         arm_pending_trim_drag(/*is_begin=*/true, /*both=*/true,
                               mouse_x, mouse_y);
         return true;

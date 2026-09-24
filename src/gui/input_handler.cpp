@@ -688,7 +688,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // its act re-asks its gates LIVE at the lift — the strictly-inside partner
     // test above all — so a chord that moved a trim bound between press and
     // release would have the lift decide against a state the user never
-    // pressed on.
+    // pressed on. (The GEOMETRY of its aim is frozen with every other aimed
+    // press's since 2026-09-24 — displayed_basis_frozen, app_state.h; the
+    // gates stay the lift's.)
     // scroll_drag belongs on the list too: a live
     // pan must swallow authoring keys rather than letting one run over a latched
     // pan — and its PENDING phase must, because the deferred click act reads

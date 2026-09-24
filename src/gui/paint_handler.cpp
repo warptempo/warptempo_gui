@@ -5731,16 +5731,20 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // BASIS: the FREE item-geometry owners — item_viewport_basis(app, audio)
 // and displayed_or_live_target_map(app, audio) — feeding the shared geometry
 // owners displayed_trim_ms / trim_bound_column / trim_bridge_gap /
-// trim_endcap_rect inside the two renderers, so paint stays column-coherent with
-// hit_test_trim_endcap / route_trim_bar_press, which read exactly that basis
-// (paint == hit by shared owners) — IN EVERY STATE since 2026-08-18, the `h`
-// history view's display-only diff-span substitution having been deleted with
-// the architect's "trim should not change going into history".
+// trim_endcap_rect inside the renderer — the chain's ONE run: the trim hits
+// (hit_test_trim_endcap / point_in_trim_bridge_span, both reached through
+// route_trim_bar_press and the cursor map) read what this pass PUBLISHES
+// (AppState::trim_bar_hit, below) rather than deriving it a second time, so
+// paint == hit by publication (architect 2026-09-24) — IN EVERY STATE since
+// 2026-08-18, the `h` history view's display-only diff-span substitution
+// having been deleted with the architect's "trim should not change going into
+// history".
 // Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, and the two differ inside the accepted
-// resize item-only-promotion window — trim must ride the ITEM basis the
-// endcaps' hit rects resolve on. The renderers' column math therefore divides the
+// resize item-only-promotion window — trim must ride the ITEM basis the flag
+// pixels ride, which is the basis its published hit rects therefore carry. The
+// renderer's column math therefore divides the
 // basis span by basis.area_w (the width the committed items were mapped
 // against), which is why the waveform rect handed to them carries that width.
 //
@@ -5760,17 +5764,40 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // No trim gate: the window is ALWAYS set (2026-07-30), so the bar and its
     // endcaps simply always paint — at the full window the caps rest on the
     // song edges and the bar spans the whole lane between them.
-    if (area.w <= 0 || area.h <= 0) return;
-    if (top_strip.w <= 0 || top_strip.h <= 0) return;
-
+    //
+    // THIS PASS PUBLISHES THE TRIM BAR'S HIT GEOMETRY (AppState::trim_bar_hit,
+    // architect 2026-09-24 — strictly as-painted): hit_test_trim_endcap and
+    // point_in_trim_bridge_span read what was drawn here rather than re-running
+    // this owner chain on the live trim, so after any trim write a press
+    // before the repaint grabs the caps still on screen. It republishes ONLY
+    // WHEN THE DAMAGE CLIP COVERS THE WHOLE LANE, publish_button_face's gate
+    // and for its reason: on_redraw runs once per damage rect and this pass
+    // runs whole under each, so a narrow rect (the playhead's) would otherwise
+    // stamp the stash with bounds whose pixels it never redrew. Every trim
+    // write damages at least the window top through the waveform's bottom
+    // (commit_trim_mutation, the sweep's and the drag's per-motion writes, the
+    // maximizer, and the tab, load and load-in-place roads), so the frame that
+    // shows a moved bound is always a publishing one. The early returns below
+    // publish COLD when they may publish at all: a lane with no bar has
+    // nothing to grab.
+    const GuiRect trim_row = top_trim_row_area(app);
     // The ITEM basis (free owner; the member plate_viewport_basis is the other
-    // epoch — see the header comment above).
+    // epoch — see the header comment above), read ahead of the gate below
+    // because the covering test measures the lane at its painted width.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    if (basis.area_w <= 0 || basis.spp <= 0.0) return;
+    TrimBarHit* const out_hit =
+        clip_covers_drawable(cr, app,
+                             GuiRect{trim_row.x, trim_row.y,
+                                     std::max(basis.area_w, 0), trim_row.h})
+            ? &app.trim_bar_hit : nullptr;
+    if (area.w <= 0 || area.h <= 0 || top_strip.w <= 0 || top_strip.h <= 0 ||
+        basis.area_w <= 0 || basis.spp <= 0.0) {
+        if (out_hit) *out_hit = TrimBarHit{};
+        return;
+    }
 
     // The item pixels' map: empty (identity) in source view, the committed
-    // displayed map (live fallback cold) in target view — exactly
-    // hit_test_trim_endcap's selection.
+    // displayed map (live fallback cold) in target view.
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     const std::vector<WarpFrameMapSegment>* map_arg =
@@ -5791,8 +5818,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
     // Per-bound displayed-domain positions through the shared mapping owner
     // (displayed_trim_ms returns an integral-valued double; the int64 round
-    // trip through TrimRange is exact, so trim_bound_column sees the same
-    // value the hit sites pass). Both bounds are always meaningful.
+    // trip through TrimRange is exact, so trim_bound_column sees the value the
+    // mapping produced). Both bounds are always meaningful.
     TrimRange trim{
         static_cast<int64_t>(displayed_trim_ms(bar_begin_frame, map_arg)),
         static_cast<int64_t>(displayed_trim_ms(bar_end_frame, map_arg))};
@@ -5808,17 +5835,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // sentinels and the effective-width clip inside render_trim_flags).
     //
     // The trim bar lane's y-band is THREADED IN as top_trim_row_area(app)
-    // rather than re-derived inside the painter: this is the same accessor
-    // hit_test_trim_endcap's y-gate and route_trim_bar_press' bridge y-gate
-    // read, so the painted band and the clickable band have ONE owner and
-    // cannot drift if the lanes above the trim bar ever change.
+    // rather than re-derived inside the painter, and the painter publishes the
+    // band it painted in as the stash's `lane` — the y-gate both trim hits
+    // read — so the painted band and the clickable band are one value.
     // NO WAVEFORM STEMS (architect 2026-08-01): the bar and its two endcaps are
     // the trim window's WHOLE display. render_trim_stems drew a 1px grey
     // vertical down the waveform at each bound; the redesigned lane says the
     // window where the window is, and a pair of full-height lines competing with
     // the marker stems said it a second time in the same pixels.
-    render_trim_flags(cr, top_strip, top_trim_row_area(app), wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame, trim);
+    render_trim_flags(cr, top_strip, trim_row, wave_rect,
+                      basis.vp_start_frame, basis.vp_end_frame, trim, out_hit);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -8492,6 +8518,24 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // — row 7. Nothing in the product measures text outside a shaping pass now,
     // and every such pass owns its own font selection.)
 
+    // THE FLAG STASH PROMOTES WITH THE FLAG SURFACE (architect 2026-09-24,
+    // strictly as-painted; the contract is at AppState::flag_hit_rects). The
+    // rebuild staged the pair when it drew the offscreen surface; this frame
+    // is the one that blits that surface, so the pair the hit walk and the
+    // stem painter read becomes the one the rebuild published HERE, at the top
+    // of the frame, before the stems below paint from it. Once per stage —
+    // the bit clears on the frame's first damage rect, so the frame's later
+    // rects are no-ops. UNCONDITIONAL, deliberately unlike the basis promote
+    // that follows: the surface blits whatever the freeze holds, so its stash
+    // does too. A swap keeps both vectors' capacity; the staged side's stale
+    // contents are cleared by the lane painter's own first act at the next
+    // rebuild and read by nobody until then.
+    if (app.flag_stash_staged) {
+        std::swap(app.flag_hit_rects, app.staged_flag_hit_rects);
+        std::swap(app.marker_stems, app.staged_marker_stems);
+        app.flag_stash_staged = false;
+    }
+
     // Event-synchronized hit geometry, PROMOTE phase (ruling at the selector):
     // done at the TOP of the frame, BEFORE any painting, so the flag cache this
     // frame blits (blit-only below) AND the overlays this
@@ -8553,7 +8597,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // published (the plate blit and the flag cache's own surface are the
     // rebuild's, not this block's), so through the deferral window those two
     // layers show the newer epoch while the basis-derived surfaces — the live
-    // trim pass, the flag editor's box — and every hit test keep the older one.
+    // trim pass, the flag editor's box — keep the older one. Every hit test
+    // still answers what is on screen: the flag stash promoted above with its
+    // surface, the trim bar's stash (AppState::trim_bar_hit) is what the trim
+    // pass painted on the older basis, and the editor box is its own
+    // painter's publication.
     // The window is at most the ONE stage that beat the press to the frame
     // callback, it can only open on an UNDRIVEN basis change (a worker publish
     // or a sync rebuild landing in that sub-frame gap), and it closes at the
@@ -8582,7 +8630,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // trim bar and the flag editor's box would still show the old epoch while
     // item_viewport_basis and displayed_or_live_target_map answer on the new
     // one, so a pointer event later in the SAME Wayland batch aims at a painted
-    // endcap and routes on geometry that is not under it — the epoch split this
+    // endcap (its hit reads the trim pass's own stash, so the aim itself
+    // lands) and the drag it arms converts on geometry that is not under it
+    // — the epoch split this
     // family exists to prevent, seeding the next trim drag with the wrong
     // subject or delta. Deferring instead costs one more frame of the old epoch,
     // whole and self-consistent, and the stage owner's honor (waveform_cache.cpp,

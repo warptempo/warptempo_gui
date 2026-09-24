@@ -191,31 +191,21 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
 void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // Full dispatch freeze while the displayed basis is frozen — the DISPATCH
     // HALF of the two-gate freeze whose MEMBERSHIP has ONE owner,
-    // displayed_basis_frozen (app_state.h, beside the basis owners): the
-    // absolute painted-subject drags — marker and trim — PLUS, since
-    // 2026-08-22, the two PENDING presses that aim them, because the freeze
+    // displayed_basis_frozen (app_state.h, beside the basis owners), which
+    // DERIVES it and is not restated here: in short, an absolute drag on a
+    // painted subject, every pending press that aims one (the freeze
     // contract's "the one job in flight at the grab" means the AIMED PRESS,
-    // not the 8px crossing (the crossing converts the press's stored press_x,
-    // so the epoch it was aimed in must survive until then — the derivation
-    // is the predicate's) — PLUS, since 2026-09-10, THE VALUE DRAG, whose
-    // membership runs the other way: it writes the LIVE STORE per motion, so
-    // in target view the desired fingerprint's map hash changes every four
+    // not the 8px crossing), and the value drag, whose own motion would
+    // otherwise DRIVE the publication (it writes the live store per motion,
+    // so in target view the desired fingerprint's map hash changes every few
     // pixels and this gate is what keeps a full render off the worker until
-    // the commit (the argument is the predicate's, in full). A gesture belongs
-    // iff it is an ABSOLUTE drag on a PAINTED subject, reading the displayed
-    // basis per motion event, so that publishing a new one mid-gesture would
-    // move that subject out from under a stationary hand — or, the value
-    // drag's clause, a drag whose own motion would otherwise DRIVE the
-    // publication; the trim membership spans the endcaps, the bar AND —
-    // since the region became the trim — the waveform overlay's own move and
-    // bound drags, which hit the span on the plate basis through the
-    // painter's region_columns and convert every motion column back on that
-    // same basis. (Membership history, kept because each step was a ruling:
-    // TWO active drags from 2026-08-18, THREE from 2026-08-15 while the
-    // standing region's own editor `region_edit_drag` was a member in its own
-    // right — its drags ARE the trim drags now; the target-view tempo drag
-    // was a member for its own opposite reason until its 2026-07-29
-    // deletion, see marker_drag.h.) The actives
+    // the commit). (Membership history, kept because each step was a ruling:
+    // the standing region's own editor `region_edit_drag` was a member in its
+    // own right from 2026-08-15 until its drags became the trim drags on
+    // 2026-08-18, and those overlay drags were deleted with the resting
+    // overlay on 2026-09-22 — the trim bar is trim's one pointer surface; the
+    // target-view tempo drag was a member for its own opposite reason until
+    // its 2026-07-29 deletion, see marker_drag.h.) The actives
     // freeze the displayed paint basis for the whole gesture (the
     // DragState "no per-drag map copy" contract), so no waveform job may be
     // DISPATCHED or PUBLISHED from the aimed press to the release:
@@ -239,10 +229,10 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // completion drop fires AT MOST ONCE (the one job in flight at the aimed
     // press).
     // THE DELIBERATE NON-MEMBERS are the predicate's to enumerate; the short
-    // form: the strip drag and the
-    // grab-pan drive their own SYNCHRONOUS per-frame renders (kick_waveform_sync,
-    // which drains this worker rather than queuing behind it) and must keep
-    // rendering; and THE SWEEP (region_drag) writes the trim from a
+    // form: the grab-pan (the one nav drag, zoom phase included) drives its
+    // own SYNCHRONOUS per-frame renders (kick_waveform_sync, which drains this
+    // worker rather than queuing behind it) and must keep rendering; and THE
+    // SWEEP (region_drag) writes the trim from a
     // FIXED anchor to the live pointer, so there is no grabbed subject for a
     // basis swap to slide, only the ordinary one-epoch lag every painted
     // overlay carries.
@@ -367,16 +357,15 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // dispatched (or
     // parked in the supersede slot) BEFORE the aimed press would still publish
     // its map HERE — the displayed basis would jump under a stationary pointer.
-    // For an ACTIVE drag every motion event re-reads it (apply_drag_motion, the
-    // trim drags, the
-    // nudges, and the trim drags' own column conversions — the waveform
-    // overlay's move drag is the plainest case: nothing moves, and the span
-    // slides); for a PENDING press (2026-08-22, the freeze's press-time start)
-    // the crossing that converts the stored press_x would interpret a press
-    // aimed in the OLD painted epoch through the NEWLY published one, and the
-    // first motion's delta would be wrong by the two epochs' difference —
-    // dropping here is what makes the press-time aim survive to the
-    // crossing. So drop the
+    // For an ACTIVE drag every motion event re-reads it (apply_drag_motion and
+    // the trim drags' own column conversions — a trim bridge drag is the
+    // plainest case: nothing moves under the hand, and the span slides); for
+    // a PENDING press (2026-08-22, the freeze's press-time start) the step that
+    // converts the stored press_x — the crossing, or the bound-set click's
+    // lift — would interpret a press aimed in the OLD painted epoch through
+    // the NEWLY published one, and the first motion's delta (or the set
+    // column) would be wrong by the two epochs' difference — dropping here is
+    // what makes the press-time aim survive to that step. So drop the
     // completed job WHOLESALE: no surface swap, no fp_*
     // publish, no item-cache stage, and CLEAR (never dispatch) the supersede
     // slot. Renders are repeatable — rewind pending_fp_* to the still-displayed
@@ -643,6 +632,23 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // What is synchronous is everything the user is actively driving, pan included;
 // the rule is that a user-driven change must not paint its overlays against a
 // stale plate.
+//
+// IT CARRIES NO FREEZE CHECK (displayed_basis_frozen, app_state.h), and it
+// publishes a plate the worker's two freeze gates never see. By grep
+// (2026-09-24) its callers are unreachable inside the freeze with ONE
+// exception: keys are swallowed under any pointer gesture (Ctrl+Q force-ends
+// the gesture first), wheels are gesture-gated, a resize force-ends before
+// it catches up, the tick's live-total repair stands down for the value drag,
+// the value drag clears itself before its commit's kick, the marker drag
+// clears itself before its commit's land, and the marker press's acts — the
+// select and the land, a direct cursor write that scrolls nothing — run before
+// its pending arms. THE EXCEPTION is the marker drag's playhead tow
+// (apply_drag_motion → Viewport::move_playhead_to → reseat_playhead_to): the
+// viewport clamp admits a grab whose stem stands LEFT of the viewport (its box
+// reaching in; the clamp widens to zero rather than jump it), so a proposal
+// still left of the viewport start scrolls the viewport to it and kicks this
+// render mid-drag. That render publishes the new plate and restages the item
+// basis, whose promote the freeze defers to the gesture's end.
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
@@ -1241,9 +1247,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THIS IS THE SOLE PRODUCER of the marker painter's stash (app.flag_hit_rects
     // / app.marker_stems, contract at their declaration): the boxes' widths are
     // derived from shaped labels, so the pass that draws them is the only one
-    // that can report them. The active view supplies its own column's stash and
-    // the other column's is not retained — hit tests and the stem pass are both
-    // active-column-only.
+    // that can report them. It writes the STAGED pair, because what it draws
+    // is an offscreen surface; on_redraw promotes the pair at the frame that
+    // blits that surface (the stage bit is raised at the tail below). The
+    // active view supplies its own column's stash and the other column's is
+    // not retained — hit tests and the stem pass are both active-column-only.
     if (history_active) {
         // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
         // marker paints. (The lane is not the whole of that suppression — the
@@ -1261,8 +1269,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             vp_start, vp_end,
             history_focus,
             app.history_mode.selection,
-            &app.flag_hit_rects,
-            &app.marker_stems,
+            &app.staged_flag_hit_rects,
+            &app.staged_marker_stems,
             // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
             // is an authored SOURCE frame exactly as a marker's is, in both
             // stores, so target view translates it through the same segments and
@@ -1287,8 +1295,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             // (render_flags' declaration).
             app.last_selected_marker,
             app.addressed_cell,
-            &app.flag_hit_rects,
-            &app.marker_stems,
+            &app.staged_flag_hit_rects,
+            &app.staged_marker_stems,
             tmap_arg,
             drag_overlay,
             suppressed);
@@ -1310,14 +1318,21 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      // (render_flags' declaration).
                      app.last_selected_marker,
                      app.addressed_cell,
-                     &app.flag_hit_rects,
-                     &app.marker_stems,
+                     &app.staged_flag_hit_rects,
+                     &app.staged_marker_stems,
                      tmap_arg,
                      drag_overlay,
                      suppressed);
     }
 
     cairo_destroy(ccr);
+
+    // The lane painter above filled the STAGED stash; this bit hands it to the
+    // next frame's promote (GuiPaintHandler::on_redraw), the frame that blits
+    // the surface just drawn. Unconditional like that blit — the contract, and
+    // why it does not wait behind the displayed-basis freeze, is at
+    // AppState::flag_hit_rects.
+    app.flag_stash_staged = true;
 
     flag_cache.fp_vp_start                = vp_start;
     flag_cache.fp_vp_end                  = vp_end;
@@ -1402,14 +1417,17 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // WHY THE DAMAGE AND NOT A SYNCHRONOUS REBUILD AT EVERY MUTATION: this shape
     // is what DELAY-AND-SYNC asks for. The stash is BOTH the stem paint source
     // and the hit geometry (flag_hit_rects + marker_stems, one producer — this
-    // function), and it is staged into the item basis three lines above, so
-    // stash, basis and pixels now all advance at the SAME frame — one frame
-    // behind the press, consistently, with the display never showing a column
-    // the hit test disagrees with. Making every marker mutation rebuild
-    // synchronously would also land them together, but it moves a HarfBuzz
-    // shaping pass over every visible label onto each press at key-repeat
-    // cadence, and it would need a mutation-site inventory that can rot; this is
-    // one rect at the one producer.
+    // function), and like the item basis above it is STAGED here and promoted
+    // at the top of the frame this rect schedules — the frame that blits the
+    // surface — so stash and pixels advance at the SAME frame, one frame
+    // behind the rebuild, consistently, with the display never showing a flag
+    // the hit test disagrees with. (The basis pair joins them at that frame
+    // unless the displayed-basis freeze defers it; the stash never waits,
+    // because the surface it describes never does.) Making every marker
+    // mutation rebuild synchronously would also land them together, but it
+    // moves a HarfBuzz shaping pass over every visible label onto each press
+    // at key-repeat cadence, and it would need a mutation-site inventory that
+    // can rot; this is one rect at the one producer.
     //
     // The rect is the top strip PLUS the waveform — Viewport::invalidate_-
     // waveform_area's waveform rect, re-spelled because this struct holds no

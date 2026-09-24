@@ -324,7 +324,12 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // inactive here; move_playhead_to only ever writes the cursor
     // field regardless, so this call could not disturb a running
     // scanner even if one existed. The motion-clamped proposal stays
-    // inside the visible strip, so no viewport scroll occurs.
+    // inside the visible strip — EXCEPT on a grab whose stem stood LEFT of the
+    // viewport (the clamp's widen-to-zero admits it, begin_drag): until the
+    // proposal crosses the viewport start this land scrolls the viewport to
+    // it and kicks a synchronous plate render inside the displayed-basis
+    // freeze (the record is at force_synchronous_waveform_rebuild,
+    // waveform_cache.cpp).
     const bool source_domain = active_display_context(app, audio).domain ==
         GuiDisplayDomain::Source;
     int64_t sample;
