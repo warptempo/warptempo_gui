@@ -261,14 +261,15 @@ void render_waveform(cairo_surface_t* dest,
     const double y_center = area.y + area.h * 0.5;
     const double half_h   = area.h * 0.5;
 
-    // THE VISUAL MAGNIFICATION, a function of source time: each column's gain
-    // is the derived curve at the column's centre source frame (null: 1.0).
-    // The contract (and the coarse-zoom centre rule) is at this function's
-    // declaration; the arithmetic is one multiply and a clamp at the tip
-    // mapping below. IT SCALES PIXELS ONLY — nothing this function touches is
-    // audio.
-    const auto magnified_tip = [](double raw, double gain) {
-        double v = raw * gain;
+    // THE VISUAL MAGNIFICATION, a function of source time: each column's
+    // scale is the derived curve's gain at the column's centre source frame
+    // times the expander's multiplier over the column's working columns
+    // (null: 1.0). The contract (the coarse-zoom centre rule and the
+    // expander's smallest-reduction rule) is at this function's declaration;
+    // the arithmetic is one multiply and ONE clamp at the tip mapping below.
+    // IT SCALES PIXELS ONLY — nothing this function touches is audio.
+    const auto magnified_tip = [](double raw, double scale) {
+        double v = raw * scale;
         if (v < -1.0) v = -1.0;
         if (v >  1.0) v =  1.0;
         return v;
@@ -395,17 +396,20 @@ void render_waveform(cairo_surface_t* dest,
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
         // THE GAIN AT THE TIP MAPPING: the column's raw extremes times the
-        // curve's gain at the column's centre source frame, clamped to the
-        // sample domain [-1, 1] BEFORE they become rows. The clamp is what
-        // makes a magnified forte clip flat against the lane's edges instead
-        // of running off into row arithmetic, and it is a no-op at gain 1
-        // (raw peaks already rest in range). A PICTURE gain: the samples
-        // themselves are untouched, here and everywhere.
-        const double gain    = gain_or_null
-                                   ? waveform_gain_at(*gain_or_null, (s0 + s1) / 2)
+        // curve's gain at the column's centre source frame and the expander's
+        // largest multiplier over the working columns [s0, s1) spans, clamped
+        // to the sample domain [-1, 1] BEFORE they become rows. The clamp is
+        // what makes a magnified forte clip flat against the lane's edges
+        // instead of running off into row arithmetic, and it is a no-op at
+        // scale 1 (raw peaks already rest in range). A PICTURE gain: the
+        // samples themselves are untouched, here and everywhere.
+        const double scale   = gain_or_null
+                                   ? waveform_gain_at(*gain_or_null, (s0 + s1) / 2) *
+                                         static_cast<double>(waveform_expander_multiplier_over(
+                                             *gain_or_null, s0, s1))
                                    : 1.0;
-        const double raw_min = magnified_tip(mm.first, gain);
-        const double raw_max = magnified_tip(mm.second, gain);
+        const double raw_min = magnified_tip(mm.first, scale);
+        const double raw_max = magnified_tip(mm.second, scale);
 
         const int x = area.x + i;
 

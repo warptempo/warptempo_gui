@@ -2811,6 +2811,18 @@ struct WaveformBasis {
 // approximation there costs nothing the plate is used for. At working zoom (55 frames per column against a 4400-frame
 // hop) the two agree.
 //
+// THE EXPANDER'S MULTIPLIER rides the same pointer (the curve's
+// `expander_multiplier`, one per working-zoom column, waveform_gain.h owns
+// the stage): a plate column spanning source frames [s0, s1) takes the
+// LARGEST multiplier — the smallest reduction — over the working columns the
+// span covers (waveform_expander_multiplier_over, a plain loop, no pow), and
+// both tips take raw x gain x multiplier before the one clamp. At working
+// zoom that is the column's own reduction; coarser, it is the one choice
+// under which a bar is never shorter than any member's own expanded bar, so
+// an onset is never dimmed by the dip before it at any zoom. It applies
+// exactly where the gain does: NULL (target view, the lit lamp) is raw, and
+// an empty array is the identity.
+//
 // IT IS A PICTURE GAIN AND NOT AN AUDIO ONE. Nothing downstream of this
 // function is audio: the plate is pixels, playback
 // reads the sample buffer at its own level, and no render input is derived from

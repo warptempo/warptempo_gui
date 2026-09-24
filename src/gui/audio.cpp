@@ -559,6 +559,7 @@ bool write_cache_to_disk(const std::string& source_path,
 } // namespace
 
 bool GuiAudio::load(const std::string& path, const WaveformGainParams& gain_params,
+                    const WaveformExpanderParams& expander_params,
                     const ProgressCallback& on_progress) {
     auto info = audio_probe(path);
     if (!info) {
@@ -605,7 +606,7 @@ bool GuiAudio::load(const std::string& path, const WaveformGainParams& gain_para
     const auto g0 = std::chrono::steady_clock::now();
     WaveformGainCurve next_gain_curve =
         derive_waveform_gain(next_samples.data(), next_total_frames, next_sample_rate,
-                             gain_params);
+                             gain_params, expander_params);
     const double next_gain_derive_ms = std::chrono::duration<double, std::milli>(
         std::chrono::steady_clock::now() - g0).count();
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "failure.h"
-#include "waveform_gain.h"   // WaveformGainParams, the gain rule's five tunables
+#include "waveform_gain.h"   // WaveformGainParams / WaveformExpanderParams, the picture's eleven tunables
 
 #include <cstdint>
 #include <expected>
@@ -10,7 +10,7 @@
 #include <string>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eleven keys live here and nowhere else:
+// piece (architect 2026-08-27). Seventeen keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -30,16 +30,23 @@
 //                            the waveform gain rule's five tunables
 //                            (waveform_gain.h), bracketed doubles — the
 //                            grammar at kWaveformGainKeys below
+//   waveform_expander_threshold_db=<dB>, waveform_expander_ratio=<r>,
+//   waveform_expander_range_db=<dB>, waveform_expander_knee_db=<dB>,
+//   waveform_expander_hold_ms=<ms>, waveform_expander_release_ms=<ms>
+//                            the waveform expander's six tunables
+//                            (waveform_gain.h), bracketed doubles under the
+//                            same grammar — kWaveformExpanderKeys below
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the gain tunables, 2026-09-23, appended in the rule's own order — seven
-// that day, five since the expander's two left the same day; the percentile
+// that day, five since the expander on L's two left the same day; the percentile
 // left and `waveform_gain_upward_ratio` was appended last, also 2026-09-23;
 // the upward compression's threshold, knee and range were appended after it
 // 2026-09-24 and all four upward keys left the same day, when
 // `waveform_gain_target_db` took the second gain place with the loudness
-// measure);
+// measure; the expander's six were appended after the gain keys 2026-09-24,
+// in the stage's own order);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -88,13 +95,17 @@
 // compressor and `waveform_gain_target_db` arrived SECOND with the loudness
 // measure, making them five; a file still carrying any struck key is
 // unknown-key fatal and one lacking the target missing-key fatal, no
-// migration).
-// They are NOT exposed in the settings editor — this file is their surface —
-// and they are read ONCE, at startup: nothing re-reads them at a reopen or a
+// migration). THE waveform_expander_* KEYS JOINED 2026-09-24 (architect)
+// on the same terms, six of them after the five gain keys, with the downward
+// expander after the leveler; a file lacking any of them is missing-key
+// fatal, no migration.
+// Neither family is exposed in the settings editor — this file is their
+// surface — and both are read ONCE, at startup: nothing re-reads them at a reopen or a
 // Revert, so a retune is a relaunch (the reader is load_file's hand-off to
 // GuiAudio::load, file_loader.cpp). They are machine facts only in the sense
 // that the tuning happens on one machine at a time; both templates stamp the
-// same defaults (kDefaultWaveformGainParams, waveform_gain.h).
+// same defaults (kDefaultWaveformGainParams and
+// kDefaultWaveformExpanderParams, waveform_gain.h).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -108,7 +119,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seventeen keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -121,7 +132,8 @@
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
 // max_waveform_height, projects_repo, projects_path, last_project, sync_path,
-// then the five waveform_gain_* keys) and it is what
+// then the five waveform_gain_* keys, then the six waveform_expander_*
+// keys) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -147,13 +159,14 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor — it is the
-// program's own — and the five waveform_gain_* keys have none either: the
+// program's own — and the eleven waveform_gain_* and waveform_expander_*
+// keys have none either: the
 // file is their surface (hand-edited with the app quit), and every in-app
 // commit carries them through verbatim from the live struct.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// eleven.
+// seventeen.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -171,6 +184,7 @@ struct DeviceConfig {
     std::string last_project;
     std::string sync_path;
     WaveformGainParams waveform_gain;   // the five waveform_gain_* keys
+    WaveformExpanderParams waveform_expander;   // the six waveform_expander_* keys
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -262,14 +276,25 @@ inline constexpr const char* kMaxWaveformHeightGrammarReason =
 // target's ceiling of 0 is the lane edge's own level (a target over it would
 // only raise every window past the edge).
 //
-// The order is the writer's (it is kDeviceConfigKeys' tail, device_config.cpp,
-// which checks the pairing at compile time) and the rule's own.
-struct WaveformGainKey {
-    const char*                  key;
-    double                       lo;
-    double                       hi;
-    double WaveformGainParams::* member;
+// ONE GRAMMAR, TWO TABLES (2026-09-24): the expander's six keys
+// (kWaveformExpanderKeys below) are the same shape and take this grammar
+// whole — the one parser, formatter, bracket predicate and reason serve both
+// tables, the row type differing only in which params struct its member
+// points into.
+//
+// The order is the writer's (the two tables, gain then expander, are
+// kDeviceConfigKeys' tail, device_config.cpp, which checks the pairing at
+// compile time) and each rule's own.
+template <class Params>
+struct WaveformTunableKey {
+    const char*      key;
+    double           lo;
+    double           hi;
+    double Params::* member;
 };
+using WaveformGainKey     = WaveformTunableKey<WaveformGainParams>;
+using WaveformExpanderKey = WaveformTunableKey<WaveformExpanderParams>;
+
 inline constexpr WaveformGainKey kWaveformGainKeys[] = {
     {"waveform_gain_window_s",     0.5,   10.0,  &WaveformGainParams::window_s},
     {"waveform_gain_target_db",    -40.0, 0.0,   &WaveformGainParams::target_db},
@@ -278,8 +303,27 @@ inline constexpr WaveformGainKey kWaveformGainKeys[] = {
     {"waveform_gain_max",          1.0,   64.0,  &WaveformGainParams::gain_max},
 };
 
-// The bracket, inclusive at both walls.
-inline constexpr bool is_waveform_gain_value(const WaveformGainKey& k, double v) {
+// THE waveform_expander_* WALLS (architect 2026-09-24), the stage's own
+// order: Threshold, Ratio, Range, Knee, Hold, Release (waveform_gain.h, THE
+// EXPANDER). The brackets are the architect's: the walls a hand edit meets,
+// not a tuning criterion. The derivation reads them as preconditions — the
+// ratio's floor of 1 is the identity (the expander off; under it the stage
+// would boost), the threshold's ceiling of 0 is the lane edge, and the
+// range, knee, hold and release floor at 0 (no reduction, a hard knee, no
+// hold, the target at once). The hold's ceiling of 250 is the Pro-G
+// manual's own.
+inline constexpr WaveformExpanderKey kWaveformExpanderKeys[] = {
+    {"waveform_expander_threshold_db", -40.0, 0.0,    &WaveformExpanderParams::threshold_db},
+    {"waveform_expander_ratio",        1.0,   8.0,    &WaveformExpanderParams::ratio},
+    {"waveform_expander_range_db",     0.0,   60.0,   &WaveformExpanderParams::range_db},
+    {"waveform_expander_knee_db",      0.0,   12.0,   &WaveformExpanderParams::knee_db},
+    {"waveform_expander_hold_ms",      0.0,   250.0,  &WaveformExpanderParams::hold_ms},
+    {"waveform_expander_release_ms",   0.0,   1000.0, &WaveformExpanderParams::release_ms},
+};
+
+// The bracket, inclusive at both walls — either table's row.
+template <class Params>
+inline constexpr bool is_waveform_gain_value(const WaveformTunableKey<Params>& k, double v) {
     return v >= k.lo && v <= k.hi;
 }
 
@@ -291,8 +335,12 @@ std::string format_waveform_gain_value(double v);
 // Returns true and sets `out` on success; false leaves `out` untouched.
 bool parse_waveform_gain_value(const std::string& s, double& out);
 
-// The refusal's reason, naming the key's bracket in the canonical spelling.
-std::string waveform_gain_grammar_reason(const WaveformGainKey& k);
+// The refusal's reason, naming a bracket in the canonical spelling.
+std::string waveform_gain_grammar_reason(double lo, double hi);
+template <class Params>
+std::string waveform_gain_grammar_reason(const WaveformTunableKey<Params>& k) {
+    return waveform_gain_grammar_reason(k.lo, k.hi);
+}
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -515,7 +563,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
 //
 // THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
 // (re-greped 2026-09-13 with the sixth key; the five waveform_gain_* keys of
-// 2026-09-23 and 2026-09-24 have no commit — each write carries them verbatim from the
+// 2026-09-23 and 2026-09-24 and the six waveform_expander_* keys of
+// 2026-09-24 have no commit — each write carries them verbatim from the
 // struct):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves four keys —
@@ -536,7 +585,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path, a blank last_project and kDefaultWaveformGainParams), so a first
+// sync_path, a blank last_project, kDefaultWaveformGainParams and
+// kDefaultWaveformExpanderParams), so a first
 // run on
 // either device lands a file that is already right for it and the user edits
 // from there rather than from a wrong guess. A missing parent directory is
