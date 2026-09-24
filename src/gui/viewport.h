@@ -88,8 +88,7 @@ struct Viewport {
     //    apply_zoom_change,
     //    apply_zoom_to_start, center_viewport_on_playhead, the discrete move's
     //    other three callers (hold_subject_column_after_nudge,
-    //    follow_scroll_if_needed, least_movement_span_scroll_if_needed and
-    //    its playhead form least_movement_scroll_if_needed),
+    //    follow_scroll_if_needed and land_subject),
     //    apply_strip_drag_zoom,
     //    scroll_viewport — every pan/scroll class, which joined this route
     //    2026-07-26 when the incremental shift-and-strip path was retired),
@@ -358,23 +357,18 @@ struct Viewport {
     // edge. It suspends no follow with its own write
     // (AppState::follow_suspended).
     void follow_scroll_if_needed();
-    // THE LEAST-MOVEMENT LANDING (architect 2026-09-22), the Tab walk's camera
-    // in target view (marker_walk_landing_frame, app_state.h) and the
-    // undo/redo restore's for one restored marker: an onscreen subject moves
-    // nothing, an offscreen one lands the edge margin in from the edge it was
-    // beyond, the zoom untouched. The playhead form (the scanner or the
-    // resting cursor) of the span body below, the degenerate span.
-    void least_movement_scroll_if_needed();
-    // THE ONE LEAST-MOVEMENT BODY over an active-domain range [lo, hi]
-    // (architect 2026-09-23 for the span, the undo/redo restore's group
-    // camera): FALSE, writing nothing, when the range plus the edge margin on
-    // each side cannot fit the window at the current zoom (the caller's
-    // zoom-out arm is the span framer); else TRUE, the viewport having
-    // translated the least distance that brings the whole range in with the
-    // margin — nothing when it is already wholly on screen. The fit test and
-    // the three answers are at the definition.
-    [[nodiscard]] bool least_movement_span_scroll_if_needed(int64_t lo,
-                                                            int64_t hi);
+    // THE LANDING OWNER (architect 2026-09-23): the one camera that brings a
+    // walked or restored subject — the active-domain range [lo, hi], lo == hi
+    // for a single marker — on screen, READING THE ZOOM at the discrete act.
+    // Four answers, in order: WHOLLY ON SCREEN, nothing moves; a range that
+    // CANNOT FIT (wider than 1 − 2 × the edge margin of the window) returns
+    // FALSE having written nothing; a fitting range at the working zoom or
+    // finer is CENTRED on its midpoint and ARMS THE HOLD POSTURE; a fitting
+    // range coarser than working is PAGED IN, lo landing the edge margin in
+    // from the LEFT edge, follow's own arithmetic. The zoom is never written.
+    // Its readers and the one caller of the false verdict are at the
+    // definition (viewport.cpp).
+    [[nodiscard]] bool land_subject(int64_t lo, int64_t hi);
 
     // Repair the LIVE display-state fields after a map edit that changed the
     // active-domain total (a target-view tempo cent step, the settings

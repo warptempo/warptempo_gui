@@ -689,10 +689,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // nothing hand-listed — history_mode_owns_key claims bare Tab and
     // Shift+Tab as the diff-flag cycle forward and back.
     //
-    // ITS CAMERA IS THE AUDIO VIEW'S (marker_walk_landing_frame, app_state.h):
-    // the landing centres in source view and moves least in target view, so
-    // one row reaches both on glass. (The least-movement walk's own row, an
-    // Alt Tab row from 2026-09-22, was deleted 2026-09-23 with that ruling.)
+    // ITS CAMERA IS THE LANDING OWNER'S (Viewport::land_subject), the same in
+    // both audio views, so one row reaches the walk on glass. (The
+    // least-movement walk's own row, an Alt Tab row from 2026-09-22, was
+    // deleted 2026-09-23.)
     {RedesignButton::TransportWalk,
      GuiKeys::Tab,    false, false, false, false, true},                             // bare Tab
     // (THE HOLD-COLUMN NUDGES' ROWS — Ctrl+Left and Ctrl+Right, 2026-09-22 —

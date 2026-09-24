@@ -911,8 +911,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              switch_active_audio_view_to with the column
     //                              entry GuiActiveViews::select_active_markers_view
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus, the landing's camera
-    //                              the audio view's (centring in source view,
-    //                              least movement in target view)
+    //                              the landing owner's (Viewport::land_subject)
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
     //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
     //   - Esc                    → the render/batch cancel (and the editor /
@@ -2136,11 +2135,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs,
-    // framing each step through plain `c`; Tab / Shift+Tab / IsoLeftTab cycle
-    // marker focus with the audio view's camera — the landing centred at the
-    // standing zoom in source view, the least-movement landing in target view
-    // (marker_walk_landing_frame, architect 2026-09-23).
+    // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs;
+    // Tab / Shift+Tab / IsoLeftTab cycle marker focus. The walk and each march
+    // step land through the landing owner (Viewport::land_subject, architect
+    // 2026-09-23), which reads the zoom and never writes it.
     if (handle_tab_switch_keys(key, mods)) return;
 
     // Tempo nudge, Up / Down (architect 2026-07-28). No view or selection
@@ -2796,14 +2794,11 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
     // (architect 2026-09-04). The walk moves focus and lands the playhead; the
     // camera is its caller's statement, forwarded untouched: the three Tab
-    // arms state marker_walk_landing_frame — Center in source view,
-    // LeastMovement in target view (architect 2026-09-23) — at every zoom (no
-    // camera is derived from the zoom, and the walk never changes the zoom),
-    // while the Ctrl+Shift+Tab paired march — a different act, which
-    // runs plain `c` behind each step (architect 2026-09-14) — states
-    // MarkerLandingFrame::NoFrame, the `c` behind it being the step's one
-    // framing. Putting a policy read in here is what made the march inherit
-    // it, which is the shape the required parameter exists to prevent:
+    // arms and both steps of the Ctrl+Shift+Tab paired march state
+    // MarkerLandingFrame::Land, the landing owner (Viewport::land_subject,
+    // architect 2026-09-23), which reads the zoom and never writes it.
+    // Putting a policy read in here is what once made the march inherit
+    // one, which is the shape the required parameter exists to prevent:
     // framing cannot be acquired by saying nothing. `c` remains the direct
     // route to the working zoom (`0` reached it too, at a full zoom out it
     // did not produce, until 2026-09-23; that press is a silent no-op now).
@@ -2818,13 +2813,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // (A FRAMING STEP FROM A FINER ZOOM RETURNED TO WORKING here from
     // 2026-09-15 to 2026-09-22, on a Center the zoom-derived walk stated; it
     // went with that derivation.)
+    // THE HOLD POSTURE is the landing owner's to arm, on its centre answer
+    // alone (AppState::camera_hold); nothing here arms it.
     jump_playhead_to_focused_marker(frame);
-    // A SOURCE-VIEW WALK LANDING IS AN EXPLICIT CENTRING (architect
-    // 2026-09-23): the Center arm arms the HOLD posture here, at the walk,
-    // rather than in the jump's shared switch, whose Center arm `c` and the
-    // A/B audition reach too (AppState::camera_hold). The least-movement and
-    // NoFrame landings arm nothing.
-    if (frame == MarkerLandingFrame::Center) app.camera_hold = true;
 
     // AND THE CELL THE STEP CAME TO REST ON, written AFTER the seat because
     // every Selection mutator resets the axis to the payload as it seats the
@@ -2896,31 +2887,29 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // unmoved path (EOF-clamped no-op) needs none.
     //
     // `frame` IS THE CALLER'S TOO (architect 2026-09-04), and it selects among the switch's arms and nothing else:
-    // the land above already happened, so a LeastMovement landing still moves
-    // the focus and the playhead — the camera simply stays where the user left
-    // it while the landing is on screen.
-    // THE LeastMovement ARM IS ITS ONE VIEWPORT OWNER
-    // (Viewport::least_movement_scroll_if_needed): an offscreen landing lands
-    // the edge margin in from the edge it was beyond, and playback is stopped
-    // above so it reads the resting cursor. A landing already on screen leaves
-    // it a no-op. THE NoFrame ARM WRITES NO CAMERA AT ALL (2026-09-14), an
-    // offscreen landing included: its caller frames behind it.
+    // the land above already happened, so a Land that moves no camera still
+    // moves the focus and the playhead — the camera simply stays where the
+    // user left it while the landing is on screen.
+    // THE Land ARM IS THE LANDING OWNER (Viewport::land_subject, architect
+    // 2026-09-23) over the cursor just seated (lo == hi; playback is stopped
+    // above): onscreen nothing moves, offscreen it centres at the working
+    // zoom or finer — arming the hold posture — and pages in the edge margin
+    // from the left edge when coarser. A single marker always fits, so the
+    // owner's cannot-fit verdict is dropped.
     //
     // WHO PASSES WHAT, re-grepped 2026-09-23: `c` (run_center_command) states
-    // Center; the FOUR Tab arms state marker_walk_landing_frame, Center in
-    // source view and LeastMovement in target view (architect 2026-09-23) —
-    // the live walk's three and the `h` view's one over its diff-flag cycle;
-    // the Ctrl+Shift+Tab paired march states NoFrame at each walk step and
-    // then runs run_center_command, so every landing, on screen or off, is
-    // framed once, by `c`, and no framing lands for `c` to supersede at once.
-    // Shift+`j`, the A/B audition and the march reach the camera through
-    // run_center_command by name and so take its Center with it.
+    // Center; cycle_marker_focus forwards Land from the three live Tab arms
+    // and the two steps of the Ctrl+Shift+Tab paired march. Shift+`j` and the
+    // A/B audition reach the camera through run_center_command by name and
+    // so take its Center with it.
     switch (frame) {
         case MarkerLandingFrame::Center:
-            viewport.center_viewport_on_playhead();      break;
-        case MarkerLandingFrame::LeastMovement:
-            viewport.least_movement_scroll_if_needed();  break;
-        case MarkerLandingFrame::NoFrame:                break;
+            viewport.center_viewport_on_playhead();
+            break;
+        case MarkerLandingFrame::Land:
+            (void)viewport.land_subject(app.playhead_cursor_sample,
+                                        app.playhead_cursor_sample);
+            break;
     }
     return true;
 }
@@ -2928,7 +2917,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 void GuiInputHandler::run_center_command() {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
-    // FORK LIVES. FIVE CALLERS, re-grepped 2026-09-23: the centre keys' act
+    // FORK LIVES. THREE CALLERS, re-grepped 2026-09-23: the centre keys' act
     // run_center_key_command (since 2026-09-23 the one road of the live `c`
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
     // handle_history_mode_key — which must claim the key to keep it off the
@@ -2943,15 +2932,13 @@ void GuiInputHandler::run_center_command() {
     // CURRENT tab before it leaves (the audition's own shape, so the origin
     // tab is framed on the reference it was read from) and once as its last
     // act, after the single-select, so the focused arm below centers on
-    // exactly the marker the jump named — and, since 2026-09-14, the
-    // Ctrl+Shift+Tab PAIRED MARCH (input_key_dispatch.cpp), ONE caller that
-    // also calls this TWICE, behind each tab's walk step, so both tabs end at
-    // the working zoom centred on their new focus (architect 2026-09-14), and
-    // the same day the `h` VIEW'S PAIRED MARCH (handle_history_mode_key), the
-    // same composition over the diff-flag cycle — TWICE, one caller — which
-    // reaches this body's mode arm below.
+    // exactly the marker the jump named.
     //
-    // (`0` WAS A SIXTH CALLER until 2026-09-23: at a full zoom out it had not
+    // (THE Ctrl+Shift+Tab PAIRED MARCH, live and `h`, called this twice, behind
+    // each step, from 2026-09-14 until 2026-09-23, when its steps took the
+    // landing owner and the march stopped writing the zoom.)
+    //
+    // (`0` WAS A CALLER too until 2026-09-23: at a full zoom out it had not
     // produced it ran this command. That arm was deleted the same day — such
     // a `0` is a silent no-op, run_overview_command.)
     //
@@ -2962,12 +2949,8 @@ void GuiInputHandler::run_center_command() {
     //
     // THE FORK IS HERE RATHER THAN AT THE CALLERS because that makes it ONE
     // decision for all of them: the audition and Shift+`j` are refused inside
-    // the mode, the live march never runs there because the mode claims
-    // Ctrl+Shift+Tab for its own, and the mode's march is that claim — while
-    // the centre keys' act is reached from both, the live `c` arm and the
-    // mode's own `c` claim. Putting the question at that act alone would
-    // leave the marches answering it a second time in another spelling. One
-    // owner, one answer.
+    // the mode, while the centre keys' act is reached from both, the live `c`
+    // arm and the mode's own `c` claim. One owner, one answer.
     if (app.history_mode.active) {
         // THE MODE'S RE-EXPRESSION: the live recipe read against the mode's own
         // data. With a focus standing the playhead re-lands on that diff flag

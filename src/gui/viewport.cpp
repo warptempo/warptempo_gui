@@ -750,6 +750,24 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
     }
 }
 
+// THE TWO LANDING PLACEMENTS, spelled once each for the cameras that share
+// them. The start each returns is unclamped: the caller writes it and passes
+// clamp_viewport_start, which owns the song's two ends and the grid.
+//   * centred_viewport_start — `target` at the window's centre: the centring
+//     body (center_viewport_on_playhead) and the landing owner's centre
+//     answer (land_subject);
+//   * paged_in_viewport_start — `target` the edge margin in from the LEFT
+//     edge: follow's page-in (follow_scroll_if_needed) and the landing
+//     owner's page-in answer (land_subject).
+namespace {
+int64_t centred_viewport_start(int64_t target, int64_t visible) {
+    return target - visible / 2;
+}
+int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
+    return std::max<int64_t>(0, target - viewport_edge_margin_samples(visible));
+}
+}  // namespace
+
 void Viewport::center_viewport_on_playhead() {
     if (audio.total_frames() <= 0) return;
     // Split-playhead: during playback center on the scanner (audio
@@ -760,7 +778,7 @@ void Viewport::center_viewport_on_playhead() {
         : app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
-    app.viewport_start_sample = target - visible / 2;
+    app.viewport_start_sample = centred_viewport_start(target, visible);
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
 }
@@ -768,8 +786,7 @@ void Viewport::center_viewport_on_playhead() {
 // THE DISCRETE MOVE'S TAIL, shared by the four one-shot camera moves that land
 // the viewport on a playhead or a span — center_viewport_on_playhead,
 // hold_subject_column_after_nudge, follow_scroll_if_needed and
-// least_movement_span_scroll_if_needed (with its playhead form
-// least_movement_scroll_if_needed): waveform and top-strip damage (the flags
+// land_subject: waveform and top-strip damage (the flags
 // move with the viewport), the predictor re-anchored if playing, and the
 // synchronous rebuild so the playhead overlay does not lead the waveform by a
 // frame. Callers invoke it on their changed path alone.
@@ -899,8 +916,7 @@ void Viewport::follow_scroll_if_needed() {
     const int64_t vp_end = app.viewport_start_sample + visible;
     if (target < app.viewport_start_sample || target >= vp_end) {
         const int64_t old_vp = app.viewport_start_sample;
-        app.viewport_start_sample = std::max<int64_t>(
-            0, target - viewport_edge_margin_samples(visible));
+        app.viewport_start_sample = paged_in_viewport_start(target, visible);
         const bool suspended_before = app.follow_suspended;
         clamp_viewport_start(app, audio);
         app.follow_suspended = suspended_before;
@@ -922,78 +938,77 @@ void Viewport::follow_scroll_if_needed() {
     }
 }
 
-// THE LEAST-MOVEMENT LANDING (architect 2026-09-22), a PLAYHEAD camera: the
-// Tab walk's in target view (MarkerLandingFrame::LeastMovement, chosen by
-// marker_walk_landing_frame since 2026-09-23) and, since 2026-09-23, the
-// undo/redo restore's for ONE restored marker. THE SUBJECT IS THE ONE THE
-// OTHER PLAYHEAD CAMERAS TAKE — the scanner while it runs, the resting cursor
-// otherwise (center_viewport_on_playhead's and follow_scroll_if_needed's own
-// ternary) — so the owner means the same thing whoever calls it; its callers
-// today (the two landing switches, jump_playhead_to_focused_marker,
-// cycle_history_diff_flag_focus and the restore's singleton arm) have stopped
-// playback first and so hand it the cursor they just landed. It is the
-// DEGENERATE SPAN of least_movement_span_scroll_if_needed below, the one
-// least-movement body, whose three answers it takes: on screen nothing moves,
-// left of the window the margin in from the left edge, right of it the
-// margin in from the right edge. A single frame always fits, so the verdict
-// is dropped.
-void Viewport::least_movement_scroll_if_needed() {
-    const int64_t target = app.playhead_scanner_active
-        ? app.playhead_scanner_sample
-        : app.playhead_cursor_sample;
-    (void)least_movement_span_scroll_if_needed(target, target);
-}
-
-// THE ONE LEAST-MOVEMENT BODY (architect 2026-09-22 for a subject, 2026-09-23
-// for a span — "undo centring is too aggressive"): the viewport moves as
-// little as it can while the active-domain range [lo, hi] ends on screen, the
-// zoom untouched. Its callers: the playhead form above (lo == hi) and the
-// undo/redo restore's GROUP arm (undo.cpp), which hands it the restored
-// markers' [earliest, latest] extent.
+// THE LANDING OWNER (architect 2026-09-23): ONE camera for every act that
+// walks or restores a subject onto the screen, over an ACTIVE-DOMAIN range
+// [lo, hi] (lo == hi for a single marker). It reads the zoom, and that read is
+// legal because it happens at a discrete act — a keystroke does not pop the
+// picture the way a zoom-derived picture did during a zoom gesture, and his
+// hand expects the landing to answer the level he is working at (the rule at
+// nudge_camera's neighbour, app_state.h). THE ZOOM IS NEVER WRITTEN HERE.
+// FOUR ANSWERS, in order:
+//   a. WHOLLY ON SCREEN (lo ≥ start and hi < start + visible, in painted
+//      samples): NOTHING MOVES and the hold posture is not touched;
+//   b. CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
+//      visible window at the live zoom — the room the span framer's margin
+//      arm (frame_span_into_view, input_handler.cpp) leaves a span, taken in
+//      the framer's own unrounded domain (spp × W at the live level, its
+//      `visible_t`), which guarantees a range refused here solves to a level
+//      no finer than the current one there, so the caller's zoom-out never
+//      zooms in. RETURNS FALSE HAVING WRITTEN NOTHING: the zoom-out fit is
+//      the caller's;
+//   c. A FITTING RANGE AT THE WORKING ZOOM OR FINER (app.zoom_level <=
+//      kWorkingZoomLevel; 2.0 exactly is "at working", anything above is
+//      coarse) is CENTRED on its midpoint at the standing zoom, the centring
+//      body's own placement, and ARMS THE HOLD POSTURE (AppState::camera_hold)
+//      after the chokepoint — the landing is an explicit centring on its
+//      subject, and it arms even where a wall keeps it off the centre;
+//   d. A FITTING RANGE COARSER THAN WORKING is PAGED IN: lo lands the edge
+//      margin in from the LEFT edge, in both directions — a leftward subject
+//      too, the same viewport a page-in gives a leftward target — follow's
+//      own placement (paged_in_viewport_start). The hold stays out, as at
+//      any page (the chokepoint put it out).
+// Degenerate geometry (no strip width, no sample rate, nothing visible) writes
+// nothing and answers true. clamp_viewport_start owns the song's two ends and
+// the grid; the changed path takes the discrete move's tail.
 //
-// THE FIT TEST FIRST: the range fits when its width is at most 1 − 2 × the
-// edge margin of the visible window at the current zoom — the room the span
-// framer's margin arm (frame_span_into_view, input_handler.cpp) leaves a
-// span, so the two agree on the boundary. It is taken in the framer's own
-// unrounded domain (spp × W at the live level, the framer's `visible_t`),
-// which is what guarantees that a range this body refuses solves to a level
-// no finer than the current one in the framer: the caller's zoom-out arm
-// never zooms in. A range that does not fit RETURNS FALSE HAVING WRITTEN
-// NOTHING — there is no least movement that shows it all, and the zoom-out is
-// the caller's (the restore's, through the framer). Degenerate geometry (no
-// strip width, no sample rate, nothing visible) writes nothing and answers
-// true, the viewport standing where it is.
-//
-// A FITTING RANGE takes three answers, in painted samples:
-//   * WHOLLY ON SCREEN (lo ≥ start and hi < start + visible): NOTHING MOVES;
-//   * lo LEFT OF THE WINDOW: lo lands the edge margin in from the LEFT edge;
-//   * else hi RIGHT OF THE WINDOW: hi lands the edge margin in from the
-//     RIGHT edge.
-// So the viewport travels toward the range and stops the margin past its far
-// side — a range straddling one edge moves the minimum that clears it — and
-// never through the window to centre it; since the range fits, the landing on
-// one end keeps the other on screen. The margin is kViewportEdgeMarginFraction's
-// (the class's inventory is at that declaration). clamp_viewport_start owns
-// the song's two ends and the grid, so at an end the range may sit nearer the
-// edge than the margin. The changed path takes the discrete move's tail.
-bool Viewport::least_movement_span_scroll_if_needed(int64_t lo, int64_t hi) {
+// ITS READERS, grepped at the ruling:
+//   * the Tab walk, bare Tab / Shift+Tab / IsoLeftTab in both audio views —
+//     live through jump_playhead_to_focused_marker's MarkerLandingFrame::Land
+//     arm (cycle_marker_focus), and in the `h` view through
+//     cycle_history_diff_flag_focus's Land arm; each lands the cursor it has
+//     just seated (lo == hi);
+//   * the Ctrl+Shift+Tab paired march, live and `h`, whose two steps are
+//     those same two walk bodies stating Land;
+//   * the undo/redo restore (restore_history_entry, undo.cpp): its singleton
+//     on the cursor just landed, its group on the restored markers'
+//     [earliest, latest] extent. THE GROUP ARM IS THE ONE CALLER THAT CAN
+//     MEET THE FALSE VERDICT, and runs the span framer's margin arm on it; a
+//     single subject always fits, so every other caller drops the verdict.
+// NOT READERS, by ruling: bare `c`, Shift+J and the A/B audition, which
+// centre unconditionally (center_viewport_on_playhead after the working
+// zoom); follow's page-in during playback (follow_scroll_if_needed, which
+// reads the scanner and keeps follow's suspension its own); the nudge's
+// cameras.
+bool Viewport::land_subject(int64_t lo, int64_t hi) {
     if (hi < lo) std::swap(lo, hi);   // defensive; the callers pass in order
     const int     W  = waveform_area(app).w;
     const int     sr = audio.sample_rate();
     const int64_t visible = samples_visible(app, audio);
     if (W <= 0 || sr <= 0 || visible <= 0) return true;
+    const int64_t vp_end = app.viewport_start_sample + visible;
+    if (lo >= app.viewport_start_sample && hi < vp_end) return true;
     const double visible_t = samples_per_pixel_at(app.zoom_level, sr) *
                              static_cast<double>(W);
     const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) * visible_t;
     if (static_cast<double>(hi - lo) > room) return false;
-    const int64_t vp_end = app.viewport_start_sample + visible;
-    if (lo >= app.viewport_start_sample && hi < vp_end) return true;
-    const int64_t margin = viewport_edge_margin_samples(visible);
     const int64_t old_vp = app.viewport_start_sample;
-    app.viewport_start_sample = lo < app.viewport_start_sample
-        ? lo - margin
-        : hi + margin - visible;
+    // The working-zoom read, inline by ruling: the landing's one zoom term.
+    const bool centre = app.zoom_level <= kWorkingZoomLevel;
+    app.viewport_start_sample = centre
+        ? centred_viewport_start(lo + (hi - lo) / 2, visible)
+        : paged_in_viewport_start(lo, visible);
     clamp_viewport_start(app, audio);
+    if (centre) app.camera_hold = true;
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
     return true;
 }

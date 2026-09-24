@@ -297,8 +297,8 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
 }
 
 // THE HORIZONTAL ARROW'S CAMERA IS THE HOLD POSTURE'S (architect 2026-09-23:
-// camera behaviour follows from what the user already did; no camera is
-// derived from the zoom level, 2026-09-22). Two answers, at every zoom, on
+// camera behaviour follows from what the user already did; the nudge reads
+// no zoom level, 2026-09-22). Two answers, at every zoom, on
 // every column and for the playhead alike:
 //   * FollowEdge — the posture dark: the camera holds while the subject is
 //     on screen, and a step that would carry it off the window scrolls the
@@ -807,9 +807,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Return: case GuiKeys::KpEnter: return bare;
         case GuiKeys::Delete: return bare;
         // The marker walk (bare forward, shift back; its landing camera is
-        // the audio view's, marker_walk_landing_frame), the A/B tab switch
+        // the landing owner's, Viewport::land_subject), the A/B tab switch
         // and the paired march. No Alt spelling of Tab binds (the Alt walk
-        // was deleted 2026-09-23 when the camera became the audio view's).
+        // was deleted 2026-09-23).
         case GuiKeys::Tab: return bare || sh || cl || cs;
         // The shifted Tab's own keysym, admitted shift-agnostically as the
         // live walk admits it.

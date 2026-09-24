@@ -395,7 +395,7 @@ void Selection::cycle_selection(bool forward) {
 
     // Selection only. Viewport positioning is owned entirely by the sole
     // caller (cycle_marker_focus), which frames the focused stop in one write
-    // as ITS caller asked — a centre or the least-movement landing, decided there and never
+    // as ITS caller asked — the landing owner (Viewport::land_subject), decided there and never
     // here. A scroll-into-view here would be a redundant intermediate viewport
     // write — overridden by that one write in the same keypress — and the
     // resulting damage, accumulated against a non-final viewport, is what

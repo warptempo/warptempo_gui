@@ -93,16 +93,13 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //   * Viewport::follow_scroll_if_needed — follow's page-in, during playback
 //     and at a PageIn launch: an offscreen target lands the margin in from
 //     the LEFT edge;
-//   * Viewport::least_movement_span_scroll_if_needed — THE ONE
-//     LEAST-MOVEMENT BODY, over a subject (its playhead form
-//     least_movement_scroll_if_needed: the Tab walk's target-view landing,
-//     MarkerLandingFrame::LeastMovement chosen by marker_walk_landing_frame,
-//     and the undo/redo restore's singleton camera) or a range (the
-//     restore's group camera, since 2026-09-23): its fit test asks whether
-//     the range is at most 1 − 2 × margin of the window at the current zoom
-//     (else the restore zooms out through the framer's margin arm below), and
-//     a fitting range already wholly on screen moves nothing, while one
-//     beyond an edge lands the margin in from that edge;
+//   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
+//     audio views, the paired march, the undo/redo restore): its fit test
+//     asks whether the range is at most 1 − 2 × margin of the window at the
+//     live zoom (else its one caller that can meet the verdict, the group
+//     restore, zooms out through the framer's margin arm below), and its
+//     page-in answer, coarser than the working zoom, lands the range's start
+//     the margin in from the LEFT edge exactly as follow's does;
 //   * frame_span_into_view's `margin` arm (input_handler.cpp) — the span
 //     framer pads each side by this fraction OF THE WINDOW, so the framed
 //     span occupies 1 − 2 × margin of it.
@@ -113,10 +110,11 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 // (Viewport::hold_subject_column_after_nudge), which brings an offscreen
 // subject to the window's own edge column, and the movement owners'
 // keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
-// minimum. viewport_edge_margin_samples below is the two viewport readers'
-// one conversion to samples; the span framer and the least-movement body's
-// fit test work in the unrounded double domain and read the fraction
-// themselves.
+// minimum. viewport_edge_margin_samples below is the two page-ins' one
+// conversion to samples (paged_in_viewport_start, viewport.cpp); the span
+// framer and the landing owner's fit test work in the unrounded double domain
+// and read the fraction themselves. (The least-movement landing of 2026-09-22
+// was a reader until the landing owner replaced it, 2026-09-23.)
 constexpr double kViewportEdgeMarginFraction = 0.05;
 
 // The edge margin in whole samples of a window `visible` samples wide,
@@ -2091,10 +2089,9 @@ enum class RedesignButton {
     IconFollow,
     // (The Center on next marker lamp on bare `n` stood here from 2026-09-04
     // to 2026-09-13, when the Tab walk's framing became a function of the zoom
-    // at the landing, and the lamp, its chord and this box were deleted; since
-    // 2026-09-23 the walk's camera is the audio view's — centring in source
-    // view, least movement in target view (marker_walk_landing_frame) — at
-    // every zoom, no lamp deciding it.)
+    // at the landing, and the lamp, its chord and this box were deleted; the
+    // walk's camera is the landing owner's (Viewport::land_subject), no lamp
+    // deciding it.)
     //
     // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04 as Restrict Undo to
     // Viewport; renamed and re-scoped 2026-09-22) — the `z` lamp, closing the
@@ -2764,9 +2761,9 @@ enum class RedesignButton {
     // OWN BUTTON, IT RIDES THE PLAIN ONE (redesign_button_shift_admits, whose
     // static_assert binds the tooltip's second line to the admission). It
     // greys only where neither direction would act, the twin rule. Its
-    // landing's camera is the audio view's (marker_walk_landing_frame):
-    // centred at the standing zoom in source view, least movement in target
-    // view.
+    // landing's camera is the landing owner's (Viewport::land_subject):
+    // onscreen nothing moves, offscreen it centres at the working zoom or
+    // finer and pages in when coarser.
     //
     // (THE LEAST-MOVEMENT WALK, a second button seated here on the Alt
     // forms of the walk, stood from 2026-09-22 until it was deleted
@@ -4604,8 +4601,8 @@ struct AppState {
     // apply_zoom_change, apply_strip_drag_zoom, apply_zoom_to_start,
     // scroll_viewport, center_viewport_on_playhead,
     // hold_subject_column_after_nudge, follow_scroll_if_needed and
-    // least_movement_span_scroll_if_needed (the undo restore's camera
-    // reaching it and frame_span_into_view, undo.cpp); the S/T flip's
+    // land_subject (the walk's, the march's and the undo restore's camera,
+    // the restore also reaching frame_span_into_view, undo.cpp); the S/T flip's
     // viewport translation (input_handler.cpp); the settings editor's viewport commit
     // (settings_editor.cpp); the tab / view switch's band restore
     // (active_views.cpp); the load paths (file_loader.cpp); and the level
@@ -4617,7 +4614,8 @@ struct AppState {
     // they go live.
     //
     // THE EXEMPT WRITERS KEEP OR RE-ARM THEIR BIT AFTER THE CHOKEPOINT, each
-    // at its own site: the centring acts re-arm HOLD after their centring;
+    // at its own site: the centring acts re-arm HOLD after their centring
+    // (the landing owner on its centre answer, inside Viewport::land_subject);
     // the stepped zoom keeps HOLD across its write; the nudge keeps HOLD
     // across its whole act; follow's own page-in, bare `c` and the reseat's
     // keep-visible edge-align keep FOLLOW_SUSPENDED as it stood; and the A/B
@@ -4638,18 +4636,16 @@ struct AppState {
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
     //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
-    //     and in the `h` view), the SOURCE-VIEW Tab walk's landing
-    //     (cycle_marker_focus / cycle_history_diff_flag_focus on their
-    //     MarkerLandingFrame::Center arm — the target-view walk lands with
-    //     least movement and arms nothing), the paired march Ctrl+Shift+Tab
-    //     (live and `h`; each step's `c`) and Shift+J. A centring act that
+    //     and in the `h` view), THE LANDING OWNER'S CENTRE ANSWER
+    //     (Viewport::land_subject — an offscreen subject at the working zoom
+    //     or finer, whichever of its readers asked: the Tab walk in both
+    //     audio views, each step of the paired march Ctrl+Shift+Tab, live and
+    //     `h`, and the undo / redo restore) and Shift+J. A centring act that
     //     cannot centre (a wall) still arms: the bit means "hold the column
     //     the subject is in", not "the subject is at the centre".
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     a drop, a click), by the undo / redo restore (whose camera is the
-    //     least-movement landing since 2026-09-23 and centres nothing; it
-    //     centred until then, and was no reliable centre even so, a group
-    //     restore centring a RANGE), by the A/B audition's internal `c` (which neither sets nor
+    //     a drop, a click), by the landing owner's onscreen and page-in
+    //     answers, by the A/B audition's internal `c` (which neither sets nor
     //     clears it), by a launch's own camera, or by `0` in either press
     //     (neither is a centring since 2026-09-23: the second press restores
     //     the stamped view).
@@ -4662,17 +4658,16 @@ struct AppState {
     //     leaves it standing after (the two nudge dispatch sites); and by
     //     THE UNDO / REDO RESTORE THAT MOVES NO CAMERA (architect 2026-09-23),
     //     the second exemption: undo and redo are ordinary viewport writes,
-    //     clearing the bit only when their camera moves, and the least-movement
-    //     landing mostly does not — so the hold survives an undo of a tempo
+    //     clearing the bit only when their camera moves, and the landing
+    //     owner mostly does not — so the hold survives an undo of a tempo
     //     step or a nudge. The restore's land on the restored focus is a
     //     movement owner, so the restore's visual tail (undo.cpp) keeps the bit
     //     across that land and lets its camera write decide.
     //   * CLEARED by every other camera change (the chokepoint above: the
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), follow's
-    //     page-in — a camera move not on the subject — the least-movement
-    //     landing when it scrolls, the span framer, the undo restore's camera
-    //     when it scrolls or zooms, the tab and
+    //     page-in — a camera move not on the subject — the landing owner's
+    //     page-in, the span framer, the tab and
     //     view switches), and by the three playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
     //     land_playhead_on_source_frame) — play-then-stop leaves the hold
@@ -12136,33 +12131,20 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 }
 
 // How a marker landing treats the camera, stated by the caller that asks for
-// the landing (architect 2026-09-04). THREE KINDS:
+// the landing (architect 2026-09-04). TWO KINDS:
 //   * `Center` recenters the viewport on the landing AT THE STANDING ZOOM
-//     (Viewport::center_viewport_on_playhead — never `c`'s snap to the
-//     working zoom, which `c` itself writes after its own Center landing) —
-//     THE TAB WALK'S IN SOURCE VIEW, live and in the `h` view
-//     (marker_walk_landing_frame below);
-//   * `LeastMovement` (architect 2026-09-22) moves the viewport as little as
-//     it can: an onscreen landing moves nothing, an offscreen one lands the
-//     edge margin in from the edge it was beyond
-//     (Viewport::least_movement_scroll_if_needed) — THE TAB WALK'S IN TARGET
-//     VIEW, live and in the `h` view (marker_walk_landing_frame below);
-//   * `NoFrame` (2026-09-14) moves no camera at all — the focus and the
-//     playhead land and nothing scrolls, even for an offscreen landing.
-//     NoFrame exists for exactly ONE composition, the Ctrl+Shift+Tab PAIRED
-//     MARCH in both of its forms (the live march over cycle_marker_focus and
-//     the `h` view's over cycle_history_diff_flag_focus), each of whose steps
-//     runs run_center_command behind it: `c` is then the SOLE framing owner,
-//     so a framing of an offscreen landing that `c` would immediately
-//     supersede never happens.
-// (`FollowPage` — the camera held and an offscreen landing paged in through
-// Viewport::follow_scroll_if_needed — was the bare walk's for the day of
-// 2026-09-22 and before that its coarser-zoom arm; it left with its last
-// caller when the bare walk went back to Center, the least-movement landing
-// being the walk's camera that holds. From 2026-09-22 to 2026-09-23 the two
-// cameras were two chords, bare Tab centring and its Alt form moving least;
-// the Alt forms were deleted 2026-09-23 when the camera became the audio
-// view's.)
+//     (Viewport::center_viewport_on_playhead) — bare `c`'s own jump, which
+//     then writes the working zoom and centres again behind it;
+//   * `Land` hands the landing to THE LANDING OWNER (Viewport::land_subject,
+//     architect 2026-09-23): onscreen nothing moves, offscreen it is centred
+//     at the working zoom or finer (arming the hold posture) and paged in the
+//     edge margin from the left edge when coarser, the zoom never written —
+//     THE TAB WALK'S IN BOTH AUDIO VIEWS AND EACH STEP OF THE PAIRED MARCH,
+//     live and in the `h` view.
+// (`NoFrame`, which wrote no camera so the march's `c` behind each step could
+// frame alone, and `LeastMovement`, the target-view walk's camera from
+// 2026-09-22, went 2026-09-23 with the landing owner, as did the audio-view
+// fork marker_walk_landing_frame that chose between Center and LeastMovement.)
 //
 // The type exists so that framing cannot be inherited. It is a REQUIRED
 // argument of GuiInputHandler::cycle_marker_focus,
@@ -12174,26 +12156,7 @@ inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
 // (GuiWarpMarker, GuiPhaseResetMarker), while the small policy and verdict
 // enums beside this one — MarkerCell, TrimHit, PayloadEligibility — carry
 // none.
-enum class MarkerLandingFrame { Center, LeastMovement, NoFrame };
-
-// THE TAB WALK'S CAMERA IS THE AUDIO VIEW'S (architect 2026-09-23), exactly as
-// waveform magnification is: in SOURCE view (S+W) the landing CENTRES at
-// the standing zoom — horizontal precision matters there, the user is placing
-// markers — and in TARGET view (T+W, T+P) it is the LEAST-MOVEMENT landing —
-// T+W moves nothing horizontally and T+P's phase resets sit on the hop
-// lattice, mostly derived from source markers by Shift+S, so the view is read
-// more than authored and the camera holds. THE ONE OWNER of the walk's
-// camera. ITS READERS, grepped at the ruling: the three live Tab arms
-// (handle_tab_switch_keys) and the `h` view's Tab arm over its diff-flag
-// cycle (handle_history_mode_key), which forks on the same live audio view.
-// Nothing else reads it: the paired march states NoFrame and runs `c`, and
-// undo's restore camera, follow's page-in, `c`, Shift+J and the audition are their
-// own rulings. THE CENTRE ARM ARMS THE HOLD POSTURE (AppState::camera_hold) at
-// the two walk bodies; the least-movement arm arms nothing.
-inline MarkerLandingFrame marker_walk_landing_frame(const AppState& a) {
-    return a.active_audio_view == 'T' ? MarkerLandingFrame::LeastMovement
-                                      : MarkerLandingFrame::Center;
-}
+enum class MarkerLandingFrame { Center, Land };
 
 // THE NUDGE'S CAMERA, ONE OWNER (architect 2026-09-23): the hold posture
 // read — HoldColumn while AppState::camera_hold stands (an explicit centring
@@ -12207,15 +12170,17 @@ inline NudgeCamera nudge_camera(const AppState& a) {
     return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
 }
 
-// NO CAMERA IS DERIVED FROM THE ZOOM (architect 2026-09-22): the camera is the
-// audio view's choice (architect 2026-09-23), never the zoom's. The Tab walk
-// states marker_walk_landing_frame at every level (its arms say so by name),
-// and the Left/Right nudge follows the edge or holds its column on the hold
-// posture (nudge_camera above). So the at-or-finer
-// predicate `zoom_level_at_or_finer_than_working` and the walk's zoom-derived
-// `marker_walk_frame` (Center at working or finer, FollowPage coarser,
-// 2026-09-13 to 2026-09-22) are DELETED with the placement-instrument
-// principle they served (zoom-viewport-strip.md keeps its record).
+// NO PICTURE DERIVES FROM THE ZOOM LEVEL (architect 2026-09-22, narrowed
+// 2026-09-23): nothing painted may change with the level beyond the scale
+// itself — the old zoom-derived magnification popped during zoom gestures. A
+// LANDING MAY READ THE ZOOM AT A DISCRETE ACT (architect 2026-09-23): a zoom
+// read at a keystroke does not pop, and his hand expected the walk to answer
+// the level he works at, so the landing owner (Viewport::land_subject)
+// centres at the working zoom or finer and pages in when coarser. The nudge
+// reads no zoom (nudge_camera above). (The first zoom-derived walk, a
+// predicate and a frame chooser of 2026-09-13 to 2026-09-22, was deleted with
+// the placement-instrument principle; zoom-viewport-strip.md keeps its
+// record.)
 
 // THE SELECTION HAS BEEN SPENT (architect 2026-09-12, the lamps resolved by use
 // case, superseding "cards, never swaps" for this pair: "most of the conflicts
