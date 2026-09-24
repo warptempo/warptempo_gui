@@ -5260,6 +5260,33 @@ struct AppState {
     };
     mutable ValueSourceMarkerCache value_source_marker_cache;
 
+    // MEMOIZED COPY CAPTURE — the answer phase_reset_copy_captures last gave
+    // (architect 2026-09-24, Sol's round over the truthful menus): the Edit
+    // anchor's verdict (menu_anchor_live) asks every Edit row on every tick,
+    // menu open or not, and the Copy row's last rung walks the selection
+    // through warp_marker_propagates, whose effective_disabled scans the
+    // store per label reference — O(n²) at worst, a cost ruled for discrete
+    // commands and not for a tick. The key is the function's OWN inputs: the
+    // warp store's one generation (the ValueSourceMarkerCache's argument
+    // above: the A/B tabs share this store, so no view or tab axis can change
+    // the answer without it) and the selection, keyed as its FIRST and LAST
+    // members — which identify a CONTIGUOUS set exactly, and only a
+    // contiguous set is memoized (the copy ladder asks this only past its
+    // NotOneRun rung; any other set is answered directly, unmemoized). The
+    // selection carries no change stamp of its own, and its writers are too
+    // many to thread one through; two ints are the cheapest exact key.
+    // Mutable and written by phase_reset_copy_captures alone; invalidated by
+    // the key compare, so no mutator calls anything. Session-only, never
+    // serialized.
+    struct CopyCapturesCache {
+        bool      valid       = false;
+        long long markers_gen = -1;
+        int       first       = -1;
+        int       last        = -1;
+        bool      captures    = false;
+    };
+    mutable CopyCapturesCache copy_captures_cache;
+
     // The warp_frame_map the LAST COMMITTED frame's target-view item pixels
     // (flags; the live trim/selected-stem passes read it directly per frame)
     // were painted with — the geometry the

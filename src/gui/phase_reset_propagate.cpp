@@ -197,11 +197,31 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app) {
     return PhaseResetCopyRefusal::None;
 }
 
+// MEMOIZED AT THE OWNER, so the face, the Edit anchor's per-tick verdict and
+// the act read one answer and the walk runs once per store or selection change
+// (the key and why it is exact are at AppState::CopyCapturesCache).
 bool phase_reset_copy_captures(const AppState& app) {
     const auto& mv = app.warpmarkers.markers();
-    for (int i : app.selected_markers)
-        if (warp_marker_propagates(mv, i)) return true;
-    return false;
+    const std::set<int>& sel = app.selected_markers;
+    const auto walk = [&] {
+        for (int i : sel)
+            if (warp_marker_propagates(mv, i)) return true;
+        return false;
+    };
+    if (sel.empty()) return false;
+    const int first = *sel.begin();
+    const int last  = *sel.rbegin();
+    if (last - first + 1 != static_cast<int>(sel.size())) return walk();
+    AppState::CopyCapturesCache& c = app.copy_captures_cache;
+    const long long gen = app.warpmarkers.generation();
+    if (c.valid && c.markers_gen == gen && c.first == first && c.last == last)
+        return c.captures;
+    c.captures    = walk();
+    c.valid       = true;
+    c.markers_gen = gen;
+    c.first       = first;
+    c.last        = last;
+    return c.captures;
 }
 
 PhaseResetPasteRefusal phase_reset_paste_refusal(const AppState& app) {

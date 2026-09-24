@@ -772,6 +772,33 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
     }
 }
 
+// THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
+// publisher of an as-painted stash that a per-tick comparator replays — the
+// roster's faces (publish_button_face) and the open dropdown's item verdicts
+// (paint_dropdown). A stash may be refreshed only on a frame whose clip
+// repaints every pixel the stash describes, and THOSE PIXELS ARE THE RECT'S
+// DRAWABLE PART, the rect intersected with the surface — never the logical
+// rect whole: cairo bounds every clip by the surface, so a rect running past
+// the window's edge (a dropdown taller than a short window at a large
+// gui_scale, the icon row's rightmost buttons cropping past the tablet's fit
+// ceiling) could never be covered, its stash would never publish, and the
+// comparator would invalidate it on every tick for as long as it stood. A
+// rect with NO drawable part — empty, or wholly off the surface — refreshes
+// unconditionally: it has no pixel that can be stale, and refreshing is what
+// keeps the comparator from thrashing on it.
+static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
+                                 const GuiRect& rect) {
+    const int x1 = std::max(rect.x, 0);
+    const int y1 = std::max(rect.y, 0);
+    const int x2 = std::min(rect.x + rect.w, app.width);
+    const int y2 = std::min(rect.y + rect.h, app.height);
+    if (x2 <= x1 || y2 <= y1) return true;
+    double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
+    cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
+    return static_cast<double>(x1) >= cx1 && static_cast<double>(y1) >= cy1 &&
+           static_cast<double>(x2) <= cx2 && static_cast<double>(y2) <= cy2;
+}
+
 // THE BUTTON-FACE PUBLICATION, one writer so a row cannot forget a field: the
 // painter stashes the rect it painted plus the three face bits it is painting
 // (redesign_button_enabled / redesign_button_selected /
@@ -797,12 +824,13 @@ void redesign_face_box(cairo_t* cr, int x, int y, int w, int h,
 // whose own edge damaged a sliver of the lane (a click act's stop damaging the
 // clock cell) was masked forever: stash equal to live, pixels stale, repaired
 // only by an unrelated full-lane damage such as a hover. The gate below
-// restores the premise at the one writer: a face whose rect is not fully
-// inside the current clip keeps its as-painted bits, the comparator sees the
+// restores the premise at the one writer: a face whose DRAWABLE rect (the
+// part on the surface, clip_covers_drawable above) is not fully inside the
+// current clip keeps its as-painted bits, the comparator sees the
 // drift on the next tick, and its own full-strip damage is what repaints and
 // republishes — the repair mechanism the comparator was always documented to
-// be. An EMPTY rect refreshes unconditionally: it publishes "not painted at
-// all", no pixel can be stale for it, and refreshing is what keeps the
+// be. An EMPTY rect refreshes unconditionally (as does one wholly off the
+// surface): it publishes "not painted at all", no pixel can be stale for it, and refreshing is what keeps the
 // comparator from thrashing under a standing modal. THE MODAL YIELD IS THE ONE
 // PRODUCER of an empty rect since 2026-08-18 — every row paints every member
 // otherwise, the bottom row's cluster swap having gone with the history
@@ -845,17 +873,7 @@ AppState::RedesignButtonFace& publish_button_face(
     AppState::RedesignButtonFace& face =
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
-    bool pixels_covered = rect.w <= 0 || rect.h <= 0;
-    if (!pixels_covered) {
-        double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
-        cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
-        pixels_covered =
-            static_cast<double>(rect.x) >= cx1 &&
-            static_cast<double>(rect.y) >= cy1 &&
-            static_cast<double>(rect.x + rect.w) <= cx2 &&
-            static_cast<double>(rect.y + rect.h) <= cy2;
-    }
-    if (pixels_covered) {
+    if (clip_covers_drawable(cr, app, rect)) {
         face.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
                                                 playback, target_render,
                                                 external_sync_worker, id);
@@ -4640,24 +4658,18 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // THE ITEMS' ENABLED VERDICTS (architect 2026-09-24, the truthful menus),
     // asked once per paint of the one owner the input side asks
     // (dropdown_item_enabled). The as-painted stash is republished only when
-    // the clip covers the whole box — publish_button_face's rule — so a
-    // narrow damage in the frame a verdict flips cannot record a face these
-    // pixels never took, and the per-tick comparator (main.cpp) repairs it.
+    // the clip covers the box's DRAWABLE part — publish_button_face's rule,
+    // one owner (clip_covers_drawable) — so a narrow damage in the frame a
+    // verdict flips cannot record a face these pixels never took, the
+    // per-tick comparator (main.cpp) repairs it, and a box running past the
+    // window's foot still publishes on the repair's own frame.
     bool enabled[kDropdownMaxItemCount] = {};
     for (int i = 0; i < count; ++i)
         enabled[i] = dropdown_item_enabled(app, audio, external_sync_worker,
                                            menu, i);
-    {
-        double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
-        cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
-        const GuiRect& r = app.dropdown.rect;
-        if (static_cast<double>(r.x) >= cx1 &&
-            static_cast<double>(r.y) >= cy1 &&
-            static_cast<double>(r.x + r.w) <= cx2 &&
-            static_cast<double>(r.y + r.h) <= cy2) {
-            for (int i = 0; i < count; ++i)
-                app.dropdown.item_enabled[static_cast<size_t>(i)] = enabled[i];
-        }
+    if (clip_covers_drawable(cr, app, app.dropdown.rect)) {
+        for (int i = 0; i < count; ++i)
+            app.dropdown.item_enabled[static_cast<size_t>(i)] = enabled[i];
     }
 
     // The item block opens BELOW the border by its own margin, and closes with

@@ -59,7 +59,9 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app);
 // reset falls inside its section (a block with no placements is a real
 // capture: its paste clears the matched destination block), so "captures
 // anything" is "the clipboard would come out non-empty", exactly the test the
-// arm used to make after the fact.
+// arm used to make after the fact. Memoized on the warp store's generation
+// and the run's extent (AppState::CopyCapturesCache), because the Edit
+// anchor asks it every tick.
 bool phase_reset_copy_captures(const AppState& app);
 
 // The two pastes share one ladder, term for term (their arms say why).
