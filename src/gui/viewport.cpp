@@ -531,10 +531,11 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // the no-op case), so the waveform fingerprint differs. Zoom is a one-shot
     // discrete jump: render the plate synchronously and publish the displayed
     // fingerprint now so the top-strip flags and the playhead column do not
-    // jump a frame ahead of the waveform. The pyramid bounds per-column cost at
-    // every level — unconditionally, in both views (the bound and its proof
-    // live at GuiAudio::level_for_span) — so a full render is O(area_width) at
-    // any zoom, so this is one sync render per discrete zoom.
+    // jump a frame ahead of the waveform — one sync render per discrete zoom.
+    // The render's cost bound is stated once, at waveform_cache.cpp's
+    // synchronous-render paragraph (the pyramid's per-column bound, and the
+    // magnified plate's expander loop that scales with the source seconds
+    // per column).
     kick_waveform_sync();
 }
 
