@@ -637,13 +637,11 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // FULL waveform-area damage, NOT a narrow launch-column recompute (the
     // "for a rare cleanup, full-area damage beats a clever narrow recompute" shape).
     // A playback launch is a rare, DISCRETE command, and the scanner PAINTS against
-    // the plate owner (wf_cache.fp_*), which any narrow-damage basis reachable from
+    // the plate owner (wf_cache.fp_*), which a narrow-damage basis reachable from
     // here can transiently DIVERGE from: during an async publish window (plate old,
-    // live viewport new) and — after a resize — the item-only promote (the tick
-    // rebuilds the flag item mirror against the new live width while the
-    // scanner keeps painting the old plate until the still-in-flight worker
-    // publishes), where a narrow item-basis column would miss the plate-basis
-    // scanner and the line would stay invisible until the publish. Full-area
+    // live viewport new — a resize's included), a narrow live-basis column would
+    // miss the plate-basis scanner and the line would stay invisible until the
+    // publish. Full-area
     // damage is ownership-window-proof by construction, at one full repaint per
     // launch keystroke — bounded for a rare command. It also subsumes any column
     // a just-ended session's scanner still had painted (a launch inside the

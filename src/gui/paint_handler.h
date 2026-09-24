@@ -621,9 +621,9 @@ struct GuiPaintHandler {
     // inside the class scope and the free owner needed a ::-qualification
     // workaround to be reachable at all — two coordinate epochs indistinguishable
     // by grep, which is how three authoritative comments came to disagree about
-    // which basis the selected stem's damage rode. The two epochs stay distinct
-    // (the resize item-only-promotion window is real; the do-not-collapse ruling
-    // is at item_viewport_basis); only the names changed.
+    // which basis the selected stem's damage rode. The two owners stay
+    // distinct (the mechanism/lifecycle split is stated at
+    // item_viewport_basis); only the names changed.
     //
     // PUBLIC because the playheads' narrow DAMAGE sites need it: damage follows
     // the basis of the pixels it erases, and the sites that can see a

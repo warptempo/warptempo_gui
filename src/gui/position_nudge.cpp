@@ -226,16 +226,21 @@ void finish_position_nudge(
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
     // (e) playhead follows the nudged marker's committed frame through the
-    // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f): the
-    // focused marker's pre-write frame in the active domain (the identity in
-    // source view; a target-view nudge exists only on the P column, which is
-    // no map input, so the map translating it is the one it painted under) and
-    // the viewport it painted on — (e)'s keep-visible edge-align may scroll
-    // that viewport, and nothing between the twin's capture of the frame and
-    // here moves it.
-    const int64_t prior_subject_sample =
-        source_frame_to_active_domain(app, audio, prior_focused_frame);
-    const int64_t prior_viewport_start = app.viewport_start_sample;
+    // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f):
+    // THE COLUMN THE FOCUSED MARKER PAINTED IN before the write, on the SAME
+    // painted basis its step anchored on (stepped_anchor_frame, above) — the
+    // displayed map and its twin item_viewport_basis (architect 2026-09-24,
+    // strictly as painted) — so the hold answers the pixels the user saw even
+    // while a viewport job (a resize re-clamp, a target-map publish) has moved
+    // the live viewport or map ahead of them. (A target-view nudge exists only
+    // on the P column, which is no map input, so the mutation leaves the map
+    // it painted under standing.) Captured before (e), whose keep-visible
+    // edge-align writes the live viewport; the item basis moves only with a
+    // painted frame, so nothing between the step and here moves it.
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    const int prior_subject_column = painted_column_of_source_frame_on_basis(
+        app, audio, static_cast<double>(prior_focused_frame),
+        displayed_or_live_target_map(app, audio), basis.vp_start, basis.spp);
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
     // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — at every zoom
@@ -253,8 +258,7 @@ void finish_position_nudge(
     // collapse keeps the collapse and the land, and nothing more. The hold's
     // rule and body are at Viewport::hold_subject_column_after_nudge.
     if (camera == NudgeCamera::HoldColumn)
-        viewport.hold_subject_column_after_nudge(prior_subject_sample,
-                                                 prior_viewport_start);
+        viewport.hold_subject_column_after_nudge(prior_subject_column);
     // (g) A POSITION NUDGE ENDS AN A/B AUDITION, needing no call of its own:
     // the follow at (e) and the prologue's collapse land both go through a
     // movement owner (the rule at Viewport::move_playhead_to, viewport.cpp).

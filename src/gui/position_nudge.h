@@ -368,10 +368,11 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     armed) runs
 //     Viewport::hold_subject_column_after_nudge, which places the viewport so
 //     the playhead (e) just landed paints in the column the marker painted in
-//     before the nudge (prior_focused_frame, the twin's pre-write frame, taken
-//     into the active domain against the viewport as it stood ahead of (e)'s
-//     edge-align), clamped to the waveform's edge columns (the rule at its
-//     declaration, viewport.h). Every press that reaches this tail moved its
+//     before the nudge (prior_focused_frame, the twin's pre-write frame,
+//     taken to its painted column on the displayed map and item_viewport_basis
+//     — the basis the step anchored on — ahead of (e)'s edge-align; architect
+//     2026-09-24, strictly as painted), clamped to the waveform's edge columns
+//     (the rule at its definition, viewport.cpp). Every press that reaches this tail moved its
 //     marker — the twins return on the post-clamp identity no-op first — so a
 //     walled press moves no camera, and a held key's or button's repeats each
 //     run the tail with the camera their chord carries.

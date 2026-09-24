@@ -374,13 +374,20 @@ struct Viewport {
     // (architect 2026-09-17; chosen by AppState::camera_hold, which an
     // explicit centring arms, since 2026-09-23 — the Ctrl modifier's choice
     // for the day before): a step that moved something places the viewport so the playhead it just
-    // landed paints in the column the subject painted in before the step
-    // (prior subject sample against the prior viewport start), clamped into
-    // the waveform's first and last columns, never changing the zoom. No
-    // centring, no lamp, no view term. The clamp derivation and the two
-    // callers are at the definition.
+    // landed paints in the column the subject painted in before the step,
+    // clamped into the waveform's first and last columns, never changing the
+    // zoom. No centring, no lamp, no view term. Two forms of the prior place,
+    // one per caller: the playhead step's (prior subject sample against the
+    // prior live viewport start) and the marker nudge's PAINTED COLUMN (on
+    // the item basis its step anchored on — architect 2026-09-24, strictly as
+    // painted); both reduce to the one held sample offset. The clamp
+    // derivation and the two callers are at the definition.
     void hold_subject_column_after_nudge(int64_t prior_subject_sample,
                                          int64_t prior_viewport_start);
+    void hold_subject_column_after_nudge(int prior_column);
+    // The two forms' shared body: the held sample offset, clamped and
+    // written through clamp_viewport_start. Called by those two alone.
+    void hold_subject_offset_after_nudge(int64_t prior_offset);
     // The changed-path tail the one-shot playhead camera moves share (the two
     // above and the two below).
     void finish_discrete_viewport_move();

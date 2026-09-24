@@ -2604,6 +2604,40 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             if (drift_top) invalidate_top_strip();
             if (drift_transport)
                 viewport.invalidate_rect(bottom_row_area(app));
+            // A STANDING HINT IS A FACE TOO (architect 2026-09-24, strictly
+            // as-painted): Render's tooltip reads the painted glyph
+            // (redesign_button_tooltip's stateful overload), and it hangs
+            // OUTSIDE the strip the walk above damages, so a glyph drift
+            // under a standing Render hint also damages the hint's published
+            // rect — erasing the old box — and the band the new one can hang
+            // into (the show edge's own band, above), since the new words may
+            // measure larger. The frame that repaints the button as its new
+            // glyph republishes the bit before the tooltip paints and so
+            // repaints the hint from it (viewport.h's floating-surface damage
+            // rule). Asked outside the walk, which stops once both strips
+            // have drifted.
+            const int render_i = static_cast<int>(RedesignButton::Render);
+            if (app.redesign_tooltip.visible &&
+                app.redesign_tooltip.owner.surface ==
+                    AppState::RedesignTooltip::Surface::Roster &&
+                app.redesign_tooltip.owner.index == render_i &&
+                app.redesign_buttons[static_cast<size_t>(render_i)]
+                        .glyph_swapped !=
+                    redesign_button_glyph_swapped(app,
+                                                  RedesignButton::Render)) {
+                viewport.invalidate_rect(app.redesign_tooltip.rect);
+                const GuiRect band =
+                    redesign_button_in_transport_row(RedesignButton::Render)
+                        ? GuiRect{0,
+                                  bottom_row_area(app).y -
+                                      tooltip_damage_h_px(),
+                                  app.width, tooltip_damage_h_px()}
+                        : GuiRect{0,
+                                  top_strip_area(app).y +
+                                      top_strip_area(app).h,
+                                  app.width, tooltip_damage_h_px()};
+                viewport.invalidate_rect(band);
+            }
         }
 
         // THE OPEN DROPDOWN'S ITEMS, the same comparator for one more stash

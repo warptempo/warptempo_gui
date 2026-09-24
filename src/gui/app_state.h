@@ -5418,19 +5418,17 @@ struct AppState {
     // frame; closure dates to the
     // worker publish joining the synchronous writer's inline shape), so those
     // frames commit new plate + new items together and the mirror promote at the
-    // top of the committing paint agrees with the plate fp by construction. The
-    // equality is NOT unconditional, though — the accepted RESIZE
-    // ITEM-ONLY-PROMOTION window is the live exception: a resize changes the
-    // top-strip dims, so maybe_rebuild_flag_cache fires from on_tick and stages
-    // the OLD fp_vp span over the NEW effective width while the still-displayed
-    // plate pairs that same span with its OLD fp_area_w until the in-flight
-    // worker render publishes — so this promoted mirror's spp and the plate-fp
-    // accessor's spp diverge for that window. Item-registered geometry
-    // (paint_trim, the lane) rides THIS mirror through it, and the hits read
-    // what those painters published on it — see the consumer-
-    // side statement at GuiPaintHandler::paint_trim's basis comment. So the two
-    // owners must NOT be collapsed on the strength of the plate-writer
-    // equality; any future unification has to resolve the resize window first.
+    // top of the committing paint agrees with the plate fp by construction. A
+    // RESIZE is no exception: the flag rebuild it triggers stages the plate's
+    // own {fp_vp span, fp_area_w} pair (waveform_cache.cpp's wave_w, the
+    // plate's width since 2026-08-01), never the live width, so the mirror and
+    // the plate fingerprint are one {span, width} pair at every rebuild.
+    // Item-registered geometry (paint_trim, the lane) rides THIS mirror
+    // because it is the pair the items were laid out on and is promoted with
+    // them, and the hits read what those painters published on it — see the
+    // consumer-side statement at GuiPaintHandler::paint_trim's basis comment.
+    // The two owners stay a mechanism/lifecycle split (the paragraph at
+    // item_viewport_basis).
     int64_t displayed_vp_start = 0;
     int64_t displayed_vp_end   = 0;
     int     displayed_area_w   = 0;
@@ -15571,8 +15569,10 @@ inline bool redesign_button_glyph_swapped(const AppState& a, RedesignButton b) {
         // bit so it never reaches a preview session, and carding the stale
         // edge (kNoRenderRunningCard). Keyboard Esc's render-cancel binding is
         // untouched and keeps its own wider reach. Readers of this condition:
-        // this arm (the painter's glyph and the comparator), the Render arm of
-        // redesign_button_enabled and the stateful tooltip overload.
+        // this arm (the painter's glyph and the comparator) and the Render arm
+        // of redesign_button_enabled, both face SOURCES; the stateful tooltip
+        // overload reads the PAINTED glyph this arm produces, not the bit, so
+        // the hint is a face that follows the button (architect 2026-09-24).
         case RedesignButton::Render:
             return a.queue_running;
         // THE READ-ONLY TOGGLE's table glyph is the CLOSED padlock, so the
@@ -16572,7 +16572,18 @@ inline RedesignTooltipText redesign_button_tooltip(
     // exists only where shift does something DIFFERENT (the static_assert's
     // rule, met here by the stateful form exactly as iteration mode's already
     // does).
-    if (b == RedesignButton::Render && a.queue_running) {
+    // THE HINT IS A FACE AND FOLLOWS THE PAINTED GLYPH (architect 2026-09-24,
+    // strictly as-painted): the fork reads the button's stashed glyph_swapped
+    // bit, not queue_running, so the words say what the button shows — a
+    // Cancel hint never stands over a painted Render, nor the reverse, across
+    // the async edge finalize_render_run flips. queue_running stays the
+    // glyph's SOURCE (redesign_button_glyph_swapped's Render arm) and the
+    // act's gate; the per-tick comparator (main.cpp) damages a standing
+    // Render hint on the glyph's drift, so the frame that repaints the button
+    // repaints this hint from the new painted bit.
+    if (b == RedesignButton::Render &&
+        a.redesign_buttons[static_cast<size_t>(RedesignButton::Render)]
+            .glyph_swapped) {
         return {"Cancel", nullptr};
     }
     // RENDER WITH THE MODE ON NAMES THE SWEEP, in every state. (IT FORKED ON
@@ -17259,11 +17270,10 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // construction.) In target OR source view with
 // a warm promoted mirror (app.displayed_area_w > 0) it returns the vp_start/
 // vp_end/area_w triple the LAST COMMITTED frame's flag cache was built
-// against — vp_start/vp_end from wf_cache.fp_* and area_w the LIVE effective
-// waveform width the item render used (staged at rebuild, not fp_area_w which is
-// the possibly-stale PLATE width) — so `spp` == (vp_end - vp_start) / area_w is
-// the flags' OWN samples-per-pixel, exact on the committing frame, not just at
-// rest. Cold (nothing promoted yet — first paint / view flip / just-after-load)
+// against — the {fp_vp span, fp_area_w} pair the rebuild staged, the plate's
+// own span over the plate's own width (waveform_cache.cpp's wave_w) — so
+// `spp` == (vp_end - vp_start) / area_w is the flags' OWN samples-per-pixel,
+// exact on the committing frame, not just at rest. Cold (nothing promoted yet — first paint / view flip / just-after-load)
 // it falls back to the LIVE viewport {viewport_start_sample, viewport_end_sample
 // at current_samples_per_pixel, effective width}, matching the live-map cold
 // fallback of displayed_or_live_target_map (and the pre-mirror live basis the
@@ -17309,20 +17319,18 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // invalidation first — but invalidate_region only queues, so the rebuild and
 // stage always land ahead of the frame) and this
 // mirror promotes at the top of that frame's paint (closure dates to the
-// worker-publish inline rebuild) — but the equality is NOT unconditional: the
-// accepted RESIZE ITEM-ONLY-PROMOTION window is the live exception. A resize
-// changes the top-strip dims, so the flag rebuild fires from on_tick and
-// stages the OLD fp_vp span over the NEW effective width while the
-// still-displayed plate pairs that span with its OLD fp_area_w until the
-// in-flight worker render publishes — this owner and the plate-fp method
-// diverge for that window, and item-registered painters (the lane, the live
-// trim pass) must ride THIS owner so the stashes the hits read describe the
-// pixels through it (the consumer-side statement lives at
-// GuiPaintHandler::paint_trim's basis comment). The two
-// owners PERSIST as a mechanism/lifecycle split — direct fp read for
-// plate-registered overlays vs the staged/promoted mirror for item-registered
-// geometry; do not collapse them on the strength of the plate-writer equality —
-// any future unification has to resolve the resize window first.
+// worker-publish inline rebuild). A RESIZE is no exception: the flag rebuild
+// its new strip dims trigger column-maps against and stages the plate's own
+// width (waveform_cache.cpp's wave_w == fp_area_w since 2026-08-01), so the
+// staged pair is {fp_vp span, fp_area_w} and this owner and the plate-fp
+// method are one {span, width} pair at every rebuild. Item-registered
+// painters (the lane, the live trim pass) and the gesture mechanics ride
+// THIS owner because it is the pair the items were laid out on and is
+// promoted with them, so the stashes the hits read describe the pixels (the
+// consumer-side statement lives at GuiPaintHandler::paint_trim's basis
+// comment). The two owners PERSIST as a mechanism/lifecycle split — direct fp
+// read for plate-registered overlays vs the staged/promoted mirror for
+// item-registered geometry.
 //
 // The double vp_start/spp serve the column math
 // (painted_column_of_source_frame_on_basis, the pointer-to-frame anchors); the

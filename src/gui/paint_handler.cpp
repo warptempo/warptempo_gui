@@ -5741,9 +5741,11 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 // history".
 // Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
-// basis for plate-registered overlays, and the two differ inside the accepted
-// resize item-only-promotion window — trim must ride the ITEM basis the flag
-// pixels ride, which is the basis its published hit rects therefore carry. The
+// basis for plate-registered overlays, a different owner with a different
+// lifecycle though one {span, width} pair at every rebuild (the split is
+// stated at item_viewport_basis, app_state.h) — trim rides the ITEM basis the
+// flag pixels ride, the pair they were laid out on and promoted with, which
+// is the basis its published hit rects therefore carry. The
 // renderer's column math therefore divides the
 // basis span by basis.area_w (the width the committed items were mapped
 // against), which is why the waveform rect handed to them carries that width.
