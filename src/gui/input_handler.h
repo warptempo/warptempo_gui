@@ -1187,18 +1187,18 @@ struct GuiInputHandler {
     // clear_touch_zoom_seat(app, viewport), declared beside
     // show_trim_region_overlay near the top of this header.)
     // THE PAN-ZONE QUERY (the phone model, second glass session 2026-08-11;
-    // GROWN to the navigation surface by pan-primary's touch half, the
-    // eighth glass ruling 2026-08-12, and to the WHOLE WAVEFORM by the
-    // two-halves ruling of 2026-08-13): the platform asks whether a
-    // touch-DOWN point lies on the one-finger PAN SURFACE — answered here as
-    // THE NAVIGATION SURFACE through its one geometry owner
+    // to the WHOLE WAVEFORM by the two-halves ruling of 2026-08-13, and to
+    // THE WAVEFORM ALONE since 2026-09-25, when the ruler and the marker lane
+    // left the navigation surface on both devices): the platform asks
+    // whether a touch-DOWN point lies on the one-finger PAN SURFACE —
+    // answered here as THE NAVIGATION SURFACE through its one geometry owner
     // (point_on_nav_surface, input_pointer.cpp), which is literally the
     // predicate the press router reads: the WHOLE waveform, both halves and
-    // every view, + the RULER + the MARKER lane MINUS its flag boxes (the
-    // painter's published rects through hit_test_flag — a finger landing on
-    // a flag resolves to the POINTER, so a quick flag drag is the immediate
-    // marker drag, the mouse's own carve-out; in the `h` view the same
-    // carve-out serves the diff flags). THE LOWER HALF JOINED THE ZONE with
+    // every view. A finger landing anywhere in the top strip — a flag, the
+    // ruler, the marker lane's empty stretch — resolves to the POINTER, so a
+    // quick flag drag is the immediate marker drag and a lane tap places
+    // while a lane drag does nothing (the placement pending, the mouse's own
+    // lanes). THE LOWER HALF JOINED THE ZONE with
     // the scrub's move to the lift: it is no longer a different surface, so
     // a one-finger drag pans there and the region hold reaches it, and a
     // motionless tap's press-release burst runs the deferred scrub — the
@@ -1210,12 +1210,11 @@ struct GuiInputHandler {
     // deleted with its resting form — the tablet's pen reaches the trim bar.)
     // THE BODY IS THE
     // CARVE-OUT'S ONE INVENTORY: the notification cards, the
-    // on-screen keyboard's band, the folder overlay's band, and since
-    // 2026-09-05 the OPEN MARKER-LANE EDITOR'S BOX — the edited flag publishes
-    // no hit rect while its editor stands, so the flag-box carve-out could not
-    // reach it and a finger dragging in the field panned the view; the clause
-    // takes the box off the zone so the platform's editor-field query (below)
-    // can route it to the caret drag instead. SURFACE GEOMETRY ONLY:
+    // on-screen keyboard's band and the folder overlay's band. (The OPEN
+    // MARKER-LANE EDITOR'S BOX had a clause from 2026-09-05 until the marker
+    // lane left the zone on 2026-09-25; it paints in that lane, so it is off
+    // the zone by the owner and the platform's editor-field query (below)
+    // routes a drag there to the caret drag.) SURFACE GEOMETRY ONLY:
     // every refusal (modal, prompt, dropdown, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
     // apply_touch_nav_update's per-frame
@@ -2057,6 +2056,14 @@ struct GuiInputHandler {
     // instead of the placement, which is the halves' one remaining difference.
     void arm_nav_press(int x, int y, bool history, bool seed_empty_lane,
                        bool scrub_release);
+
+    // THE PLACEMENT LANES' PRESS (architect 2026-09-25: the ruler and the
+    // marker lane left the navigation surface on both devices): arm_nav_press
+    // with placement_only set, so the motionless release runs the click act
+    // (and the empty-lane seed when `seed_empty_lane`) and a drag does
+    // nothing — no pan, no zoom phase (contract at
+    // ScrollDragState::placement_only, app_state.h).
+    void arm_placement_press(int x, int y, bool history, bool seed_empty_lane);
 
     // THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
     // contract at ScrollDragState, app_state.h): arms the ordinary nav press
@@ -3499,9 +3506,10 @@ private:
     // new swallow over the waveform, this grows the same one.
     //
     // THE ZONES, each with the press branch it is taken from (re-derived
-    // 2026-08-13 under THE TWO-HALVES RULING — the NAVIGATION SURFACE is the
-    // WHOLE waveform + the ruler + the marker lane's empty stretches, in every
-    // view, read from its one geometry owner point_on_nav_surface):
+    // 2026-08-13 under THE TWO-HALVES RULING and 2026-09-25 when the ruler and
+    // the marker lane left the surface on both devices — the NAVIGATION
+    // SURFACE is the WHOLE waveform and nothing else, in every view, read from
+    // its one geometry owner point_on_nav_surface):
     // - Pan: the NAVIGATION SURFACE, plain — the cue promises the drag, which
     //   is the grab-pan there now; the motionless click needs no cue, no click
     //   anywhere carrying one, and BOTH halves' click acts (the placement and
@@ -3513,10 +3521,10 @@ private:
     //   act now, and the drag the cue must promise is the pan.)
     // - Zoom: the NAVIGATION SURFACE, CTRL-exact — since 2026-08-14 the ONE
     //   NAV DRAG'S ZOOM MODIFIER (the same drag the Pan row promises, ctrl
-    //   live mid-gesture; the surface always covered both halves, the lanes
-    //   joined it with the eighth glass ruling, so plain and ctrl name the
-    //   same rect and the hover pair reads as the drag's two phases; a ctrl
-    //   press on a FLAG is the membership toggle, no cue).
+    //   live mid-gesture; the surface always covered both halves, so plain
+    //   and ctrl name the same rect and the hover pair reads as the drag's
+    //   two phases; a ctrl press on a FLAG is the membership toggle, no cue,
+    //   and on the lanes' empty stretches arms nothing since 2026-09-25).
     //   Live in the `h` view too — the zoom is its admitted navigation.
     //   IT IS THE KIND'S ONE SURFACE (no wheel zooms anywhere since the
     //   2026-09-14 retirement — every modified wheel is a swallowed no-op,
@@ -3547,7 +3555,10 @@ private:
     //   cue is that claim's own shape. The field's arm is THE VEIL'S ONE
     //   EXCEPTION, stated at the gate below; the flag editor's sits ABOVE the
     //   modifier arms because its press claim does.
-    // - Arrow: everything else — the button rows, the gap band, and every
+    // - Arrow: everything else — the button rows, the gap band, the RULER and
+    //   the MARKER lane's empty stretches (PLACEMENT SURFACES since
+    //   2026-09-25: a motionless click places and no drag arms, and a click
+    //   carries no cue), and every
     //   modified press with no claim (SHIFT deliberately unnamed: it is the
     //   region former, which carries no cue — the deferred placement's own
     //   model; ALT unnamed because its one pointer binding is the WHEEL's

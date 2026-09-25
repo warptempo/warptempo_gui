@@ -1180,9 +1180,14 @@ struct TrimDragState {
 // the most common gesture, so it takes the primary drag; the alt+drag that
 // carried this machinery is DELETED, alt's pointer vocabulary now empty). The
 // NAVIGATION SURFACE is the WHOLE waveform — BOTH HALVES since 2026-08-13, in
-// every view — plus the RULER lane plus the MARKER lane's empty stretches (the
-// lanes are "essentially an extension of the upper half" — his words — since
-// the waveform-height clamp put them in easy reach). THE LOWER HALF JOINED
+// every view — AND NOTHING ELSE since 2026-09-25 (architect: the RULER and the
+// MARKER lane's empty stretches, the surface's lane members since 2026-08-12,
+// LEFT IT ON BOTH DEVICES — "out of both — we want symmetry as much as
+// possible; the horizontal zoom ... was designed to unify the motions for zoom
+// on both devices"). The two lanes are PLACEMENT SURFACES now: a press there
+// arms this same pending with `placement_only` set, so a motionless release
+// runs the placement click act and a drag does nothing at all (the field's
+// own contract below). THE LOWER HALF JOINED
 // when the press-time audition scrub moved to the lift (architect 2026-08-13:
 // "the playhead scrub is an outlier. We do everything on lift the finger or on
 // mouse up, but the playhead scrub, we do right on mouse down. We should remove
@@ -1391,6 +1396,18 @@ struct ScrollDragState {
     // exclusive with the two flags above by geometry, and false in the `h`
     // view, which has no scrub half.
     bool   scrub_release = false;
+    // The press landed on a PLACEMENT LANE — the ruler or the marker lane's
+    // empty stretch (architect 2026-09-25, the lanes leaving the navigation
+    // surface on both devices). The pending is the same one, so the click act,
+    // the empty-lane seed and the gesture's ownership of the held button are
+    // unchanged, but NO DRAG EVER BEGINS: the crossing marks `moved` (a drag
+    // that crossed the slop is not a click, so the release runs no act) and
+    // begins no capture, no motion pans, no ctrl edge seats a pivot or opens
+    // the zoom phase (sync_nav_drag_mode refuses it), and every end — the
+    // release, a lost button, the force-end — owes nothing but the disarm.
+    // Mutually exclusive with scrub_release (a lane is not the waveform) and
+    // never set with ctrl_entry (a ctrl press on a lane arms nothing).
+    bool   placement_only = false;
     // THE LIVE MODE (the one-model ruling above): true while the drag is in
     // its ZOOM phase — seeded from the press's own ctrl at the arm, then
     // synced from mods.ctrl at every MODIFIER EDGE and every motion event
@@ -1681,7 +1698,7 @@ enum class DoubleClickSurface {
 //       PendingMarkerPress arm, the editor opened or refused (the refused
 //       consume fell through to that arm until this ruling);
 //   (4) EmptyLane (on_button_press's empty marker-lane arm) — creates and
-//       returns ahead of arm_nav_press, as it always did;
+//       returns ahead of arm_placement_press, as it always did;
 //   (5) EditorText (the editor field's press arm, over
 //       editor_double_press_at, which the touch layer's DoublePress query
 //       also reads) — the exception above.
@@ -7301,8 +7318,9 @@ struct AppState {
         //   - bare HOME / END (2026-08-05), the mode's SHIFT FORMER's press,
         //     and the DEFERRED CLICK ACT at a motionless navigation-surface
         //     release (2026-08-12, the eighth glass ruling: the mode's plain
-        //     press is the pending click / grab-pan over the whole waveform +
-        //     ruler + empty lane stretches, and its motionless release runs
+        //     press is the pending click / grab-pan over the whole waveform,
+        //     the placement pending on the ruler and the empty lane stretches
+        //     since 2026-09-25, and its motionless release runs
         //     the mode's land — run_nav_click_act's history arm — where the
         //     press-time placement used to; the PAN, a crossed plain drag,
         //     deliberately clears nothing), and these are

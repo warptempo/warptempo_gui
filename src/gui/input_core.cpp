@@ -1415,8 +1415,9 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
             // THE EDITOR-FIELD ANSWER rides beside them (2026-09-05), the
             // same shape once more: asked once here, captured, cleared with
             // them. It forks the window's SLOP CROSSING toward the caret
-            // drag (at the motion site) — the field is off the pan zone by
-            // the GUI's carve-out, so the two bits cannot both be true — it
+            // drag (at the motion site) — the field is off the pan zone, the
+            // waveform alone on the GUI's answer, so the two bits cannot
+            // both be true — it
             // takes the window's DEADLINE AWAY ALTOGETHER just below, and
             // its DoublePress answer resolves the window at the bottom of
             // this arm, on this very down.

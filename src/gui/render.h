@@ -3841,8 +3841,9 @@ void render_flags(cairo_t* cr,
 // caret, which is why the text VIEWPORT (the clip band inside the pads) is not
 // published — clicking a field's padding should put the caret at the nearest
 // end, and the nearest-boundary search gives exactly that with no extra term.
-// The touch pan zone yields inside this same rect (touch_point_in_pan_zone,
-// 2026-09-05) and the platform's editor-field query reads it too
+// The box sits in the marker lane, off the touch pan zone since 2026-09-25
+// (the lanes left the navigation surface; it had its own yield clause from
+// 2026-09-05), and the platform's editor-field query reads this same rect
 // (touch_point_in_editor_field), so a finger landing in the field reaches
 // the caret drag — a tap its press — rather than the phone-model pan.
 struct FlagEditorBox {

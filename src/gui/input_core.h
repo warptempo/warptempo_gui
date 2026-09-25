@@ -650,8 +650,10 @@ public:
     //     and the GUI's own double-click seed, so the platform keeps no
     //     memory of taps and no second spelling of the field. It forks THREE
     //     things. (1) The window's SLOP CROSSING resolves to the CARET DRAG
-    //     (below) — the field is off the pan zone by the GUI's own carve-out,
-    //     so no pan and no region hold can be meant there. (2) A Field answer
+    //     (below) — the field is off the pan zone, which is the waveform
+    //     alone on the GUI's answer (the marker lane's box and the bottom
+    //     row's field both lie outside it), so no pan and no region hold can
+    //     be meant there. (2) A Field answer
     //     TAKES THE WINDOW'S DEADLINE AWAY (kTouchWindowNoExpiry,
     //     input_core.cpp's constants block): the architect's field
     //     vocabulary is tap / drag / double tap and carries NO hold meaning,

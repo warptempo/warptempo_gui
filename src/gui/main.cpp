@@ -1621,8 +1621,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // set_keyboard_intent_cancel_hook wiring precedent, one narrow
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
-    // the NAVIGATION SURFACE — upper waveform half (whole in the `h` view) +
-    // ruler + the marker lane minus its flag boxes — surface geometry only
+    // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
+    // and the marker lane left it on both devices 2026-09-25) — surface geometry only
     // (refusals stay per-frame in the update body and in the region begin).
     // THE THIN-LANE QUERY is its twin, asked at the same down: the GUI answers
     // whether the point lies on the trim bar — a lane too
