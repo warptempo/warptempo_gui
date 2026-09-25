@@ -334,7 +334,7 @@ drag coordinates floor instead of truncating.
   shape `ensure_device_available_for_play` already set.)
 - **The device config's first-run template**: `GuiPlatform::device_config_defaults()`,
   ONE static accessor each backend answers, and the seam's third
-  both-sides member. The SIX keys it stamps are per-DEVICE preferences
+  both-sides member. The EIGHT keys it stamps are per-DEVICE preferences
   (settings.md owns the file and its schema), and the values a
   fresh device should start from are the one thing only the platform knows:
   the laptop answers 100 % and the clone's own `projects/`, Android 225 %
@@ -343,7 +343,10 @@ drag coordinates floor instead of truncating.
   `kDefaultProjectsRepo` and a
   blank `last_project` AND a blank `sync_path` — neither template guesses a
   destination for the mirror, a wrong guess aiming its creates, copies and
-  removals at a folder the user never named. (A key the template no longer stamps, `audio_player`, stood here until
+  removals at a folder the user never named — and the lit plate's two levels,
+  `waveform_magnification_foreground_db=2.00` and
+  `waveform_magnification_background_db=-2.00` (the architect's closing
+  values of 2026-09-25, `kWaveformMagnification*DbDefault`). (A key the template no longer stamps, `audio_player`, stood here until
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
   spawnable player existing there — and retired whole with the in-app render
   player, which plays a render through the product's own engine on both
