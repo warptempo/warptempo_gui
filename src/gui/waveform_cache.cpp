@@ -103,7 +103,7 @@ void render_waveform_to_cache_surface(
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk), and the
-    // magnification's ghost is kWaveformGhostInk #1f8b4c (architect
+    // magnification's ghost is kWaveformGhostInk #135647 (architect
     // 2026-09-24; both rulings at the row-6 palette block, render.h). With the
     // lamp lit each column paints its ghost bar first and its raw bar in the
     // ink over it; dark, the raw bar alone and the ghost ink is unread (the

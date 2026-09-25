@@ -14185,13 +14185,13 @@ inline bool redesign_button_enabled(const AppState& a,
     }
     switch (b) {
         // Rows 1, 3 and 4 have NO DISABLED FACE OF THEIR OWN — row 4 by the
-        // architect's design (he provided five states and no disabled one), rows
-        // 1 and 3 by their face scope. (ROW 2's ICON MARKER COLUMN LEFT THIS
-        // GROUP ON 2026-09-10 with the iteration lock's W/P delta, and both
-        // VIEW LAMPS were deleted whole on 2026-09-15 with the bare `t` / `p`
-        // keys. ROW 2's
-        // TOGGLE HISTORY VIEW left the group on 2026-09-10 and for the same
-        // lock, at its own arm below.)
+        // architect's design (the architect provided five states and no
+        // disabled one), rows 1 and 3 by their face scope. (ROW 2's ICON
+        // MARKER COLUMN LEFT THIS GROUP ON 2026-09-10 with the iteration
+        // lock's W/P delta, and both VIEW LAMPS were deleted whole on
+        // 2026-09-15 with the bare `t` / `p` keys. ROW 2's TOGGLE HISTORY
+        // VIEW left the group on 2026-09-10 and for the same lock, at its own
+        // arm below.)
         //
         // (THE VIEW BAR'S SELECTORS LEFT THIS ARM ON 2026-09-10 with the
         // iteration lock — they answer at their own arm below, where the

@@ -314,7 +314,7 @@ Double-click on the trim bar frames the trim window when it is narrower than the
 
 ### Waveform magnification
 
-The backtick (`` ` ``), or the **Toggle Waveform Magnification** button after Center, lights a lamp that draws the waveform magnified as a green ghost behind the plain one — every quiet passage brought up to the edge of the lane so its onsets show as plainly as a loud one's, loud passages simply clipping flat at the edge — in source and target view alike; dark, the waveform is its plain self, and the lamp starts dark each time a project opens. The amount is worked out from the recording itself just after the project opens, and the button stays grey until it is: there is nothing to set, draw or save, both tabs always show the same picture, and it only changes what the waveform looks like, never a render.
+The backtick (`` ` ``), or the **Toggle Waveform Magnification** button after Center, lights a lamp that draws the waveform magnified as a faint ghost behind the plain one — every quiet passage brought up to the edge of the lane so its onsets show as plainly as a loud one's, loud passages simply clipping flat at the edge — in source and target view alike; dark, the waveform is its plain self, and the lamp starts dark each time a project opens. The amount is worked out from the recording itself just after the project opens, and the button stays grey until it is: there is nothing to set, draw or save, both tabs always show the same picture, and it only changes what the waveform looks like, never a render.
 
 ### View toggles
 

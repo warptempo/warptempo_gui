@@ -1050,13 +1050,20 @@ inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 // THE MAGNIFICATION'S GHOST INK (architect 2026-09-24): the lit magnification
 // lamp paints each column's leveled-and-expanded bar in this colour BEHIND the
 // raw bar, which keeps kWaveformInk (the rule is at render_waveform's
-// declaration). SAMPLED from the architect's kdenlive screenshot of 2026-09-24
-// (tmp/Screenshot_2026-09-24_21-12-39.png, not committed): the current kdenlive
-// paints its two channels in different inks — upper #1c816b, our kWaveformInk,
-// lower #1f8b4c — over a canvas #135647. The ghost takes the lower channel's
-// ink; the canvas STAYS kWaveformCanvas #12312b (the architect observed the new
-// canvas and did not rule it in).
-inline constexpr GuiColor kWaveformGhostInk = hex(0x1F8B4C);  // (31, 139, 76)
+// declaration). A FAINT GHOST: the magnified shape is large enough to carry
+// itself with little contrast, so the raw picture stands over it and the ghost
+// does not read as a second figure beside it. SAMPLED from the architect's
+// kdenlive screenshot of 2026-09-24 (tmp/Screenshot_2026-09-24_21-12-39.png,
+// not committed): the current kdenlive paints its two channels in different
+// inks — upper #1c816b, our kWaveformInk, lower #1f8b4c — over a canvas
+// #135647, and the ghost takes that NEW CANVAS as its ink (the lower channel's
+// #1f8b4c, chosen first the same day, read as a second figure and is
+// superseded). #135647 sits within a few units of the kWaveformCanvas :
+// kWaveformInk 1:1 mix, (23, 89, 75); the architect weighed that derived value
+// and set it aside for the sampled constant, as the palette rule prefers a
+// sampled kdenlive crop. The canvas STAYS kWaveformCanvas #12312b (the
+// architect observed the new canvas and did not rule it in as the ground).
+inline constexpr GuiColor kWaveformGhostInk = hex(0x135647);  // (19, 86, 71)
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1114,10 +1121,10 @@ inline constexpr GuiColor kWaveformRegionInk = hex(0x2E937F);  // (46, 147, 127)
 // magnification's ghost by the same construction it lifts the ink, so a lit
 // region over a lit lamp still reads as one lit region carrying both inks —
 // Breeze's View -> ViewAlternate lift of +9/+9/+10 per channel, taken TWICE:
-//     kWaveformGhostInk (31, 139, 76) + 2*(9, 9, 10) = (49, 157, 96) = #319d60
+//     kWaveformGhostInk (19, 86, 71) + 2*(9, 9, 10) = (37, 104, 91) = #25685b
 // Opaque like its sibling: paint_region_ink writes it over every ghost pixel
 // inside the span, keyed by the plate's ghost word.
-inline constexpr GuiColor kWaveformRegionGhostInk = hex(0x319D60);  // (49, 157, 96)
+inline constexpr GuiColor kWaveformRegionGhostInk = hex(0x25685B);  // (37, 104, 91)
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
