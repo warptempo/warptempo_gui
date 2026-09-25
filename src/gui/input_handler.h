@@ -439,8 +439,9 @@ void show_trim_region_overlay(AppState& app, Viewport& viewport);
 //
 // A live pinch simply re-seats on its next frame, which is the same fresh grip
 // an upgrade takes.
-// Its two non-writer callers are unchanged: the touch nav body's top (any frame
-// that is not two-finger) and end_touch_nav (every end of the gesture). THE
+// Its two non-writer callers are unchanged: the touch nav body's top (any
+// frame whose meaning is not the seat's — a pan frame, or a zoom of the other
+// kind) and end_touch_nav (every end of the gesture). THE
 // FIRST OF THOSE IS REACHED AT THE DOWNGRADE ITSELF, and by construction rather
 // than by luck: the core delivers ONE single-finger frame at the two-to-one
 // transition even when both of its deltas are no-ops (the no-op exemption at

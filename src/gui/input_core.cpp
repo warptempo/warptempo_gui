@@ -127,6 +127,12 @@ void GuiInputCore::forget_keyboard_state() {
     // reads held. A no-op with nothing staged, which is every case but a live
     // capture.
     if (mod_ctrl_ || mod_shift_ || mod_alt_) flush_deferred_motion();
+    // UNLIKE set_modifiers' OWN CTRL EDGE, THIS DROP SENDS NO EXEMPT TOUCH-NAV
+    // FRAME (the flush above is the keyboard-only one): a one-finger touch
+    // zoom's seat and stem stand under a motionless finger until the next
+    // motion frame delivers under the new bit. Cosmetic, and unreachable on
+    // both deployed devices — the laptop has no touchscreen and Android has
+    // no keyboard modifier producer.
     mod_ctrl_ = mod_shift_ = mod_alt_ = mod_super_ = false;
     repeat_key_   = 0;
     scroll_accum_ = 0.0;
@@ -1592,7 +1598,8 @@ void GuiInputCore::touch_up(int32_t id) {
         case TouchPhase::Idle:
             break;
         case TouchPhase::Pending:
-            if (id != touch_owner_id_) break;  // only the owner exists here
+            if (id != touch_owner_id_) break;  // an ignored contact's own up;
+                                                // the owner's falls through
             // A TAP: the finger lifted inside the window, so the whole burst
             // delivers now — the resolution's enter-motion + press (+ any
             // queued sub-slop motion), then the Pointer arm below adds the

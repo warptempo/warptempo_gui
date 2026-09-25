@@ -1544,8 +1544,10 @@ struct ScrollDragState {
     double anchor_sample = 0.0;
 };
 
-// THE TWO-FINGER PINCH'S SEATED PIVOT — the touch nav gesture's FIRST and only
-// GUI-side record (architect 2026-08-14, from the rig, carrying the mouse's own
+// THE TOUCH ZOOM'S SEATED PIVOT — the touch nav gesture's FIRST and only
+// GUI-side record, shared since 2026-09-25 by the two-finger pinch and the
+// one-finger ctrl zoom (the paragraph below carries the second producer)
+// (architect 2026-08-14, from the rig, carrying the mouse's own
 // song-anchored pivot onto glass: "when the two-finger touch is first
 // registered, it picks the point on the waveform, and the zoom pivot stays
 // there no matter where the two fingers move on the screen"). Until this the

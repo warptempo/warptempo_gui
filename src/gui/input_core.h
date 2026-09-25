@@ -21,7 +21,7 @@
 //
 // WHAT IT EMITS: the consumer hooks the GUI installs — the key, button, wheel
 // and motion callbacks, the pointer-leave hook, the keyboard-intent
-// cancellation hook and the eleven touch hooks (the seven navigation ones,
+// cancellation hook and the ten touch hooks (the six navigation ones,
 // the editor-field query and the caret-drag trio) — plus the three
 // probes it asks the GUI (wheel context, text-editor-active, repeat-eligible)
 // and the ONE probe it asks the backend (the codepoint refill, at
@@ -1381,8 +1381,12 @@ private:
     //     there is still a tap and still seeds the double-tap candidate the
     //     release owes): resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
-    //     translation end on the release's own edge; -> Idle (a lone finger
-    //     cannot leave a survivor). This window opens ONLY on the pan zone
+    //     translation end on the release's own edge; -> the Pointer arm's own
+    //     end, Drain if an ignored contact is still down or Idle if not (a
+    //     Pending window can hold one since 2026-09-25 — a finger beside a
+    //     pen's zone window, a pen beside a finger's, a second finger in the
+    //     field's window; that contact's own up is the id-mismatch break
+    //     above, not this clause). This window opens ONLY on the pan zone
     //     and in the field since 2026-09-25 (the placement lanes below never
     //     reach it), so ON THE PAN ZONE the burst's motionless press-release
     //     runs the GUI's DEFERRED CLICK ACT at its release — the placement at

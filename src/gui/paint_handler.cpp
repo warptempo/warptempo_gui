@@ -6032,12 +6032,15 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 //   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
 //     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
 //     the ctrl-up edge; the mode's contract is at ScrollDragState);
-//   * THE TOUCH TWO-FINGER PINCH (touch_nav_zoom.seated — the contract is at
+//   * THE TOUCH ZOOM (touch_nav_zoom.seated — the contract is at
 //     TouchNavZoomState, app_state.h), added so THE TWO SURFACES SHOW THE SAME
 //     AFFORDANCE (architect 2026-08-14, from the rig, asking to SEE the glass
 //     gesture: "add a zoom stem to the zoom on the touchpad just so I can see
 //     exactly what's going on, because at the edges there are some
-//     strangeness, it seems like").
+//     strangeness, it seems like") — the record it reads is one seat shared
+//     by the TWO-FINGER PINCH and, since 2026-09-25, the ONE-FINGER CTRL ZOOM
+//     (`TouchNavZoomState::one_finger`), so the stem has a third producer
+//     riding the second's record.
 // The gate is the gesture record and nothing else since 2026-08-05
 // (architect), so THE PRESS ITSELF SHOWS THE PIVOT — the headless zoom stem —
 // rather than the stem appearing only once the drag crosses the slack. The
