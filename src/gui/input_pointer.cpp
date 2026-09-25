@@ -7374,26 +7374,48 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // face: it is a second surface, it hangs past the strip, and the chord it
     // names is exactly what the modal gate is swallowing. Forcing "no owner" here
     // rather than gating the tick keeps the stamp and the hide in one place — the
-    // resolution below then also hides whatever was already up, so the modal's
-    // OPEN edge needs nothing beyond its own hide (on_key's, for the case where
-    // no motion and no tick follow).
+    // resolution below then also hides whatever roster hint was already up, so
+    // the modal's OPEN edge needs nothing beyond its own hide (on_key's, for
+    // the case where no motion and no tick follow).
     // THE DROPDOWN NEEDS NO TERM OF ITS OWN: redesign_button_hover_zone refuses
     // the whole roster while a popup is up, so the walk finds no owner by itself
     // — the two floating surfaces cannot coexist by construction.
     //
     // A STANDING DIALOG'S DWELL IS THE DIALOG'S (2026-08-13, when the modal's
     // buttons took tooltips): this walk answers for the ROSTER's index space
-    // only, so under a dialog it neither stamps (`hovered_tip` is forced -1 by
-    // the veil and the no-dwell rule above) nor hides — the modal's own walk
-    // owns that surface's dwell. It DOES hide a ROSTER dwell caught by the
-    // dialog's open, which is a backstop rather than the mechanism (the open
-    // edge is a key press or a pointer press, and both hide already). The test
-    // reads the LIVE surfaces, not the painted stash, so the frame a dialog
-    // closes on is the frame this walk takes the dwell back — a stash-based
-    // test would leave the last hint floating for one more paint.
-    if (modal_veil) {
+    // only, IN EVERY STATE, so with no roster button to stamp it hides a
+    // standing ROSTER owner, hides a DIALOG owner whose surface is gone, and
+    // leaves a DIALOG owner whose surface stands — the modal's own walk
+    // (update_modal_dialog_hover) owns that surface's dwell, arming it and
+    // hiding it when the pointer leaves every dialog button. The roster hide
+    // is a backstop for a dwell caught by a dialog's open rather than the
+    // mechanism (the open edge is a key press or a pointer press, and both
+    // hide already). A DIALOG SURFACE IS LIVE exactly where on_motion runs
+    // that walk, re-derived by grep 2026-09-25: the prompt and the editor
+    // dialogs (the veil's two terms) and the folder overlay's three owners
+    // (the player, the picker, the stats panel — folder_overlay_stands). The
+    // test reads the LIVE surfaces, never the painted stash, so the frame a
+    // dialog closes on is the frame this walk takes its dwell back, whatever
+    // road closed it — the two that carry no input event of their own to hide
+    // with (a modal button dispatched by a KEY RELEASE after the pointer
+    // re-armed the dwell mid-hold, and the history prefetch's failure
+    // cancelling the load-in-place prompt from a worker) included; a
+    // stash-based test would leave the last hint floating for one more paint.
+    // Under the veil `hovered_tip` is -1 by construction (the veil and the
+    // no-dwell rule above), so the veil needs no branch of its own: it was
+    // this same rule written twice until 2026-09-25. Under the FOLDER
+    // OVERLAY, whose three owners are not veil terms, `hovered_tip` is -1
+    // through the no-dwell rule alone, and the "surface stands" arm is what
+    // keeps the player's, the picker's and the stats panel's button hints
+    // alive — the tail used to arm "no owner" there, which hid the dialog's
+    // dwell on the motion that armed it and on every tick. The default
+    // Owner{} is {Roster, -1}, so hiding it is the helper's existing no-op.
+    if (hovered_tip < 0) {
+        const bool dialog_surface_live =
+            modal_veil || folder_overlay_stands(app);
         if (app.redesign_tooltip.owner.surface ==
-            AppState::RedesignTooltip::Surface::Roster) {
+                AppState::RedesignTooltip::Surface::Roster ||
+            !dialog_surface_live) {
             hide_shift_tooltip();
         }
         return;

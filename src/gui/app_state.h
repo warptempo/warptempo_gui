@@ -8681,18 +8681,33 @@ struct AppState {
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
 // Every site that asks reads this one answer, and THIS IS THE INVENTORY —
-// THIRTEEN READERS, re-grepped 2026-09-03 (the count read TWELVE from
-// 2026-08-29 and had gone stale by one); no other file states a count of its
-// own. Through folder_overlay::stands (the panel's own name for it, forwarding
-// to this): the waveform's paint gate (waveform_paint_area,
-// onscreen_keyboard.h), the slot's paint dispatch and the panel's painter
-// (paint_handler.cpp), the row press claim, the hover walk, the HOVER CLEAR's
-// damage, the press clear's damage (input_pointer.cpp), the window-activation
-// damage and the run loop's slot reconcile (main.cpp). Directly: the wheel
-// context (input_handler.cpp), the touch pan zone's carve-out, the two-finger
-// navigation body's refusal (apply_touch_nav_update — the band takes no pan
-// and no pinch under any content, both input_pointer.cpp) and the roster's
-// greying arm (redesign_button_enabled, below). (The on-screen keyboard's standing predicate carried
+// EIGHTEEN READERS, re-derived by grep 2026-09-25 (it read THIRTEEN from
+// 2026-09-03 and had gone stale by four, the fifth arriving that day); no
+// other file states a count of its own. `::` marks a read through
+// folder_overlay::stands (the panel's own name for it, forwarding to this),
+// the rest read this directly:
+//   waveform_paint_area — the waveform's paint gate (::, onscreen_keyboard.h)
+//   paint_keyboard_slot — the slot's paint dispatch (::, paint_handler.cpp)
+//   paint_folder_overlay — the panel's painter (::, paint_handler.cpp)
+//   claim_folder_overlay_press — the row press claim (::, input_pointer.cpp)
+//   update_folder_overlay_hover — the hover walk (::, input_pointer.cpp)
+//   clear_folder_overlay_hover — the hover clear's damage (::, input_pointer.cpp)
+//   clear_folder_overlay_press — the press clear's damage (::, input_pointer.cpp)
+//   touch_point_in_pan_zone — the touch pan zone's carve-out (::, input_pointer.cpp)
+//   run_project's activation hook — the window-activation damage (::, main.cpp)
+//   run_project's run loop — the keyboard slot's reconcile (::, main.cpp)
+//   apply_touch_nav_update — the two-finger navigation body's refusal: the
+//     band takes no pan and no pinch under any content (input_pointer.cpp)
+//   recompute_redesign_button_hover — the roster walk's tail: a DIALOG
+//     tooltip owner survives while a dialog surface is live (input_pointer.cpp)
+//   wheel_context — the wheel context (input_handler.cpp)
+//   dropdown_item_enabled — every item greys but Synchronize and Quit
+//     (input_key_dispatch.cpp)
+//   GuiCarTransport::admits — the car transport refuses (car_transport.cpp)
+//   view_bar_focused — the view bar's focus answer (below)
+//   menu_anchor_live — the mode partition: Edit and Settings dead (below)
+//   redesign_button_enabled — the roster's greying arm (below)
+// (The on-screen keyboard's standing predicate carried
 // its negation as a third term until 2026-08-28, when the picker stopped
 // being an editor and the term lost its producer — the record is at
 // onscreen_keyboard::stands.) (It
