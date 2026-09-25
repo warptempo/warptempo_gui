@@ -381,9 +381,11 @@ struct Viewport {
     // subject's PAINTED COLUMN (architect 2026-09-24, strictly as painted),
     // each caller deriving it on its subject's painted basis — the marker
     // nudge on the item basis its step anchored on, the playhead step on the
-    // plate basis the cursor is drawn with — reduced to one held sample
+    // plate basis the cursor is drawn with, the undo / redo singleton
+    // restore under the hold (a nudge for the camera's purposes, 2026-09-25)
+    // on the item basis before the restore — reduced to one held sample
     // offset and written through clamp_viewport_start. The clamp derivation
-    // and the two callers are at the definition.
+    // and the three callers are at the definition.
     void hold_subject_column_after_nudge(int prior_column);
     // The changed-path tail the one-shot playhead camera moves share (the two
     // above and the two below).
@@ -404,7 +406,9 @@ struct Viewport {
     // midpoint at every zoom; a range that CANNOT FIT (wider than 1 − 2 × the
     // edge margin of the window) returns FALSE having written nothing. The
     // WALK's centring ARMS THE HOLD POSTURE; a restore's centring never arms
-    // it (architect 2026-09-24). The zoom is never written. Its readers, the one
+    // it (architect 2026-09-24), and a singleton restore reaches it only with
+    // the hold dark (under it the restore holds the column instead,
+    // 2026-09-25). The zoom is never written. Its readers, the one
     // caller of the false verdict and the ruled-out cameras are at the
     // definition (viewport.cpp).
     [[nodiscard]] bool land_subject(int64_t lo, int64_t hi, LandingKind kind);

@@ -4594,7 +4594,8 @@ struct AppState {
     // scroll_viewport, center_viewport_on_playhead,
     // hold_subject_column_after_nudge, follow_scroll_if_needed and
     // land_subject (the walk's, the march's and the undo restore's camera,
-    // the restore also reaching frame_span_into_view, undo.cpp); the S/T flip's
+    // the restore also reaching frame_span_into_view, undo.cpp, and its
+    // singleton under the hold hold_subject_column_after_nudge in its place); the S/T flip's
     // viewport translation (input_handler.cpp); the settings editor's viewport commit
     // (settings_editor.cpp); the tab / view switch's band restore
     // (active_views.cpp); the load paths (file_loader.cpp); and the level
@@ -4610,7 +4611,8 @@ struct AppState {
     // (bare `c` and Shift+J at run_center_key_command; the landing owner on
     // the WALK's centring, inside Viewport::land_subject);
     // the stepped zoom keeps HOLD across its write; the nudge keeps HOLD
-    // across its whole act; follow's own page-in, bare `c` and the reseat's
+    // across its whole act; the undo / redo singleton restore under the hold
+    // re-arms HOLD after its held column; follow's own page-in, bare `c` and the reseat's
     // keep-visible edge-align keep FOLLOW_SUSPENDED as it stood; and the A/B
     // AUDITION keeps HOLD across its own camera writes (its `c`s and tab
     // switches, GuiAbAudition::start and advance_after_natural_end), the act
@@ -4624,7 +4626,8 @@ struct AppState {
     // SUBJECT'S COLUMN (Viewport::hold_subject_column_after_nudge) in
     // whichever column the subject is; dark, the nudge follows the edge
     // through the movement owner's own keep-visible edge-align. ITS ONE READER
-    // is nudge_camera (below), asked by the two nudge dispatch sites.
+    // is nudge_camera (below), asked by the two nudge dispatch sites and by
+    // the undo / redo singleton restore (restore_history_entry, undo.cpp).
     // WHY: an explicit centring means "I want to stay right here", so the
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
@@ -4643,13 +4646,16 @@ struct AppState {
     //     means "I want the working zoom but my own viewport" and the pan
     //     clears it. The head's lamp tells the two postures apart.
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     a drop, a click), by THE UNDO / REDO RESTORE in any arm (its
-    //     singleton centring of an off-screen marker included: the landing
-    //     owner's LandingKind::Restore never arms), by the walk's no-move and
+    //     a drop, a click), by THE UNDO / REDO RESTORE from a dark bit in any
+    //     arm (its singleton centring of an off-screen marker included: the
+    //     landing owner's LandingKind::Restore never arms), by the walk's
+    //     no-move and
     //     page-in answers, by the A/B audition's internal `c` (which neither
     //     sets nor clears it), by a launch's own camera, or by `0` in either
     //     press (neither is a centring since 2026-09-23: the second press
-    //     restores the stamped view).
+    //     restores the stamped view). The undo / redo singleton's re-arm
+    //     under the hold (below) keeps a bit that already stood; it never
+    //     arms one from dark.
     //   * KEPT by the two stepped zooms (`=` / `-`, Zoom In / Zoom Out — they
     //     pivot on the viewport's centre; Viewport::apply_zoom_step), by every
     //     play and every stop that moves no camera (a stop moves no
@@ -4657,20 +4663,25 @@ struct AppState {
     //     movement-owner clear: it lands the playhead through a movement
     //     owner and holds the column, so it reads the bit before its act and
     //     leaves it standing after (the two nudge dispatch sites); and by
-    //     THE UNDO / REDO RESTORE THAT MOVES NO CAMERA (architect 2026-09-23),
-    //     the second exemption: undo and redo are ordinary viewport writes,
-    //     clearing the bit only when their camera moves, and the landing
-    //     owner does not for a subject already on screen — so the hold survives an undo of a tempo
-    //     step or a nudge. The restore's land on the restored focus is a
-    //     movement owner, so the restore's visual tail (undo.cpp) keeps the bit
-    //     across that land and lets its camera write decide.
+    //     THE UNDO / REDO SINGLETON RESTORE UNDER THE HOLD (architect
+    //     2026-09-25), the second exemption, which is a nudge for the
+    //     camera's purposes: its land on the restored marker is a movement
+    //     owner, and it then HOLDS THE COLUMN the cursor painted in before the
+    //     restore (Viewport::hold_subject_column_after_nudge) in place of the
+    //     landing owner, and RE-ARMS the bit after both have put it out
+    //     (restore_history_entry's visual tail, undo.cpp) — so the hold
+    //     survives an undo of a tempo step or a nudge with the cursor on its
+    //     column. A restore that moved no cursor moves no camera and keeps
+    //     the bit. (2026-09-23 to 2026-09-25: the restore kept the bit across
+    //     its land and let the landing owner decide.)
     //   * CLEARED by every other camera change (the chokepoint above: the
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), follow's
     //     page-in — a camera move not on the subject — the landing owner's
-    //     page-in, the undo / redo restore's centring of an off-screen
-    //     subject, the span framer, the tab and
-    //     view switches), and by the three playhead MOVEMENT OWNERS
+    //     page-in, the span framer, the tab and view switches), by THE UNDO /
+    //     REDO GROUP RESTORE, explicitly at its arm whether or not its camera
+    //     moves (a group framing is not a hold; undo.cpp), and by the three
+    //     playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
     //     land_playhead_on_source_frame) — play-then-stop leaves the hold
     //     standing, a moved playhead does not. The reseat and translate
@@ -12329,9 +12340,11 @@ enum class MarkerLandingFrame { Center, Land };
 // armed it: bare `c`, Shift+J or the walk's centring; the playhead head's
 // white is its lamp), FollowEdge otherwise. Asked by the two nudge dispatch sites (the
 // marker lane's arm, input_handler.cpp, and the waveform lane's step,
-// run_waveform_lane_playhead_step), each reading it BEFORE its act, since the
-// act's own movement would put the posture out and the nudge keeps it (the
-// posture's first exemption, at its declaration). The two answers are at
+// run_waveform_lane_playhead_step) and by the undo / redo singleton restore
+// (restore_history_entry's visual tail, undo.cpp, where FollowEdge means the
+// landing owner's Restore; architect 2026-09-25), each reading it BEFORE its
+// act, since the act's own movement would put the posture out and each keeps
+// it (the posture's two exemptions, at its declaration). The two answers are at
 // NudgeCamera (gui_input.h).
 inline NudgeCamera nudge_camera(const AppState& a) {
     return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;

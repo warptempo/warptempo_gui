@@ -7,9 +7,11 @@
                                   // tail's group camera's cannot-fit arm
 #include "target_render.h"
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain, for the
-                                  // group camera's range, and
+                                  // group camera's range,
                                   // active_domain_to_source_frame for the
-                                  // restore's map-change re-land
+                                  // restore's map-change re-land, and
+                                  // displayed_column_at for the singleton's
+                                  // held column
 
 #include <algorithm>
 #include <cassert>
@@ -726,6 +728,17 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                                  std::vector<UndoEntry>& to,
                                  int saved_distance_delta) {
     playback_lifecycle.stop_playback_if_playing();
+    // THE PLAYHEAD AS PAINTED BEFORE THE RESTORE, for the singleton's held
+    // column (the visual tail below): the cursor's pre-restore frame and the
+    // ITEM basis the last committed frame was painted on (item_viewport_basis,
+    // app_state.h — the marker nudge's own road; this body does not reach the
+    // paint handler's plate basis, which the waveform-lane playhead step
+    // reads). Both are read here, ahead of every write this restore makes, so
+    // the pair describes one painted frame. Read-only, and read on every
+    // restore; only a singleton under the hold consumes it.
+    const int64_t cursor_before_restore = app.playhead_cursor_sample;
+    const ItemViewportBasis painted_before_restore =
+        item_viewport_basis(app, viewport.audio);
     UndoEntry entry = std::move(from.back());
     from.pop_back();
     // A restore rewrites BOTH stack tops, so it invalidates the coalesce stamp for
@@ -1019,14 +1032,15 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // on its FOCUS — the touched marker for a singleton, the EARLIEST touched
     // member for a group (the focus rule at apply_post_restore_rules_impl) —
     // the members' own brightened flags and the always-visible cursor on the
-    // focus being the whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS
-    // AND NEVER TO THE PLAYHEAD, THROUGH THE LANDING OWNER'S RESTORE
-    // (Viewport::land_subject, LandingKind::Restore, whose answers and
-    // ruled-out cameras are at its definition). A restore is a non-linear
-    // jump, and centring is the least prejudicial way of framing one:
+    // focus being the whole cue. THE CAMERA ANSWERS TO THE RESTORED MARKERS,
+    // THROUGH THE LANDING OWNER'S RESTORE (Viewport::land_subject,
+    // LandingKind::Restore, whose answers and ruled-out cameras are at its
+    // definition), EXCEPT THAT A SINGLETON UNDER THE HOLD POSTURE HOLDS THE
+    // PLAYHEAD'S COLUMN (below). A restore is a non-linear jump, and centring
+    // is the least prejudicial way of framing one:
     //   * ONE MARKER lands the cursor the land just seated (lo == hi):
     //     wholly on screen nothing moves; off screen it is centred, at every
-    //     zoom, the zoom untouched;
+    //     zoom, the zoom untouched — while the hold is dark;
     //   * SEVERAL MARKERS land their range the same way — nothing when it is
     //     already wholly on screen, its midpoint centred when it fits — and
     //     when the range plus the edge margin on each side cannot fit the
@@ -1038,17 +1052,37 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     is the map-change re-land's translation above, which scrolls
     //     nothing.
     //
-    // THE HOLD POSTURE (AppState::camera_hold) SURVIVES A RESTORE THAT MOVES
-    // NO CAMERA: undo and redo are ordinary viewport writes, clearing the
-    // posture only through the chokepoint when their camera moves, and an
-    // on-screen subject moves none. So the restore's land keeps the bit
-    // across itself — the land is the subject coming back to where the entry
-    // left it, not the user turning elsewhere — and the camera write after it
-    // decides alone: any centring of an off-screen subject (singleton or
-    // group) and the framer's zoom-out put it out at the chokepoint. THE
-    // RESTORE NEVER ARMS THE POSTURE (architect 2026-09-24): only the walk's
-    // centring, bare `c` and Shift+J do, and the playhead head's lamp shows
-    // which posture stands.
+    // THE HOLD POSTURE (AppState::camera_hold) GOVERNS THE RESTORE'S CAMERA
+    // (architect 2026-09-25):
+    //   * A SINGLETON RESTORE WITH THE HOLD STANDING IS A NUDGE FOR THE
+    //     CAMERA'S PURPOSES: the land runs as with the hold dark, and then, if
+    //     the restore moved the cursor, the viewport is placed so the cursor
+    //     paints in THE COLUMN IT PAINTED IN BEFORE THE RESTORE
+    //     (Viewport::hold_subject_column_after_nudge — the nudge's own body,
+    //     clamped to the waveform's edge columns, the zoom never written) IN
+    //     PLACE OF the landing owner, and the bit is RE-ARMED after it, as the
+    //     nudge's dispatch keeps it: the land (a movement owner) and the
+    //     hold's own camera write (the chokepoint) each put it out. The column
+    //     is the one AS PAINTED (strictly as painted, architect 2026-09-24):
+    //     the cursor's pre-restore frame on the item basis, both read at this
+    //     body's head. A restore that moved no cursor moves no camera and
+    //     keeps the bit. Since the tab switch and the S/T flip are always a
+    //     changed camera at the chokepoint, a restore that crossed either
+    //     reaches this arm with the bit already out, so the held column is
+    //     always the same view's.
+    //   * A SINGLETON RESTORE WITH THE HOLD DARK takes the landing owner's
+    //     Restore (above), whose off-screen centring cannot arm it.
+    //   * A GROUP RESTORE DROPS THE HOLD, explicitly at its arm: a group
+    //     framing is not a hold, and a group already wholly on screen moves
+    //     nothing at the landing owner, so the chokepoint alone would not put
+    //     it out. Its camera is the landing owner's Restore and the framer.
+    // THE RESTORE NEVER ARMS THE POSTURE FROM DARK (architect 2026-09-24):
+    // only the walk's centring, bare `c` and Shift+J do; the singleton's
+    // re-arm keeps a bit that already stood. The playhead head's lamp shows
+    // which posture stands. (From 2026-09-23 to 2026-09-25 the restore kept
+    // the bit across its land and let the landing owner decide, so an
+    // on-screen singleton left the cursor off the held column with the lamp
+    // still white.)
     //
     // Runs AFTER sanitize_selection_after_restore so the land sees the final
     // membership, after the tab / data / column / audio-view restores so it
@@ -1079,18 +1113,33 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             const bool in_range = (t >= 0 && t < active_marker_count(app));
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
-                // move, through the movement owner, keeping the hold posture
-                // across it (the rule above). Playback is already stopped
-                // above, so land's scanner-inactive premise holds and the
-                // landing owner's subject is the cursor it seats.
-                const bool hold_before = app.camera_hold;
+                // move, through the movement owner, which puts the hold out;
+                // the camera is read before it through the nudge's one owner
+                // of the fork (nudge_camera, app_state.h — the rule above).
+                // Playback is already stopped above, so land's
+                // scanner-inactive premise holds and the camera's subject is
+                // the cursor it seats.
+                const NudgeCamera camera = nudge_camera(app);
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
-                app.camera_hold = hold_before;
-                // THE LANDING OWNER'S RESTORE at the current zoom. A single
-                // marker always fits, so the verdict is dropped.
-                (void)viewport.land_subject(app.playhead_cursor_sample,
-                                            app.playhead_cursor_sample,
-                                            LandingKind::Restore);
+                if (camera == NudgeCamera::HoldColumn) {
+                    // THE HOLD STANDS: the nudge's camera on the column the
+                    // cursor painted in before the restore, then the re-arm.
+                    if (painted_before_restore.spp > 0.0 &&
+                        app.playhead_cursor_sample != cursor_before_restore)
+                        viewport.hold_subject_column_after_nudge(
+                            displayed_column_at(
+                                static_cast<double>(cursor_before_restore),
+                                painted_before_restore.vp_start,
+                                painted_before_restore.spp));
+                    app.camera_hold = true;
+                } else {
+                    // THE HOLD IS DARK: the landing owner's Restore at the
+                    // current zoom. A single marker always fits, so the
+                    // verdict is dropped.
+                    (void)viewport.land_subject(app.playhead_cursor_sample,
+                                                app.playhead_cursor_sample,
+                                                LandingKind::Restore);
+                }
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
                 // full-waveform invalidates below repaint it. Stems do not
@@ -1111,11 +1160,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // impossible out-of-range index no-ops the land) and writes NO
             // viewport, so the camera below is its own; playback is already
             // stopped above (land's scanner-inactive premise).
-            // The hold posture is kept across the land (the rule above).
-            const bool hold_before = app.camera_hold;
+            // THE HOLD IS DROPPED here, explicitly (the rule above): a group
+            // framing is not a hold, and an on-screen range moves no camera,
+            // so the chokepoint would not put it out.
+            app.camera_hold = false;
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());
-            app.camera_hold = hold_before;
             // THE CAMERA IS THE LANDING OWNER'S RESTORE OVER THE RANGE, zooming out
             // only when the range plus the edge margin cannot fit (the fit
             // test and the answers at Viewport::land_subject, viewport.cpp;
@@ -1175,7 +1225,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // settings, changing the displayed plate (the target-view warp_frame_map).
     // The visual tail above may have LANDED the playhead (on the restored focus
     // in either arm) and brought the restored markers on screen through the
-    // landing owner, zooming out for a group that cannot fit; these invalidations
+    // landing owner (or, a singleton under the hold, held the cursor's column),
+    // zooming out for a group that cannot fit; these invalidations
     // and the
     // sync kick cover all of that as well as the marker change. Render it
     // synchronously so the restored markers and the waveform land together. A

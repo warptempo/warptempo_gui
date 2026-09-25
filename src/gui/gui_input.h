@@ -314,7 +314,9 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
 // beside AppState::camera_hold, the bit it reads), asked by the two nudge
 // dispatch sites — the marker lane's arm (input_handler.cpp) and the
 // waveform lane's step (run_waveform_lane_playhead_step,
-// input_key_dispatch.cpp). It was the Ctrl modifier's choice from 2026-09-22
+// input_key_dispatch.cpp) — and by the undo / redo singleton restore
+// (restore_history_entry, undo.cpp; architect 2026-09-25), whose FollowEdge
+// answer is the landing owner's Restore rather than the edge. It was the Ctrl modifier's choice from 2026-09-22
 // to 2026-09-23; Ctrl+Left / Ctrl+Right bind nothing now.
 enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
 

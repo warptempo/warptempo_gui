@@ -213,8 +213,9 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // the column an explicit centring asked to keep belonged to the subject where
 // it stood, so a movement is one of the posture's three movement-owner clears,
 // the two lands being the others. The two exemptions are the nudge, which
-// keeps the bit across its whole act, and the undo/redo restore, which keeps
-// it across its land; the rule is at AppState::camera_hold.
+// keeps the bit across its whole act, and the undo/redo singleton restore
+// under the hold, which holds the column after its land and re-arms the bit;
+// the rule is at AppState::camera_hold.
 void Viewport::move_playhead_to(int64_t new_sample) {
     clear_audition_sequence(app);
     app.camera_hold = false;
@@ -869,8 +870,8 @@ void Viewport::invalidate_all() {
 // nothing. THE WRITE IS A LIVE NAVIGATION WRITE either way: the viewport it
 // places is the one the next frame paints.
 //
-// Both nudges have stopped playback before their write, so the cursor is the
-// subject. TWO CALLERS, re-derived by grep 2026-09-24, each on its
+// Every caller has stopped playback before its write, so the cursor is the
+// subject. THREE CALLERS, re-derived by grep 2026-09-25, each on its
 // NudgeCamera::HoldColumn arm:
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
 //     position_nudge.cpp) passes the PAINTED COLUMN — the focused marker's
@@ -886,11 +887,21 @@ void Viewport::invalidate_all() {
 //     (GuiPaintHandler::plate_viewport_basis; cold, the item basis, then the
 //     live viewport by its own contract), so a viewport job in flight
 //     cannot move the column held ahead of the pixels (architect 2026-09-24,
-//     strictly as painted). A held arrow's repeats and a held arrow button's fires
-// reach both through the same act bodies, so the hold runs at every step. The
-// write below changes the camera, so the chokepoint puts the posture out; the
-// nudge keeps it across its whole act at its dispatch (AppState::camera_hold's
-// first exemption), which is what makes the next step hold too. The P column's
+//     strictly as painted).
+//   * THE UNDO / REDO SINGLETON RESTORE UNDER THE HOLD
+//     (Undo::restore_history_entry's visual tail, undo.cpp; architect
+//     2026-09-25), a nudge for the camera's purposes, passes the cursor's
+//     PRE-RESTORE frame through displayed_column_at on the ITEM basis
+//     (item_viewport_basis, the marker nudge's road — that body does not
+//     reach the paint handler's plate basis), both read at the restore's head
+//     before any of its writes; it calls this only when the restore moved
+//     the cursor, in place of the landing owner's Restore.
+// A held arrow's repeats and a held arrow button's fires reach the first two
+// through the same act bodies, so the hold runs at every step. The write
+// below changes the camera, so the chokepoint puts the posture out; the nudge
+// keeps it across its whole act at its dispatch (AppState::camera_hold's
+// first exemption), which is what makes the next step hold too, and the
+// restore re-arms it after (the second). The P column's
 // unit is a HOP, so there the held subject slides
 // the waveform a hop's width per step. NO VIEW TERM:
 // in target view on the warp column the marker nudge is refused upstream
@@ -1007,7 +1018,12 @@ void Viewport::follow_scroll_if_needed() {
 // wall keeps it off the centre. THE RESTORE NEVER ARMS (its singleton centring
 // included) and never clears on its own: its centring of an off-screen
 // subject clears the bit at the chokepoint like any camera move, and its
-// no-move answer leaves it as it stands. WHY: an automatic arm on arrival at
+// no-move answer leaves it as it stands. (The singleton restore reaches this
+// owner only with the hold dark; under the hold it takes the nudge's
+// hold_subject_column_after_nudge instead and re-arms the bit itself after
+// that body, as the nudge's dispatch keeps it — the restore's own act, not
+// this owner's. The group restore puts the bit out at its own arm before it
+// asks. Both at undo.cpp, architect 2026-09-25.) WHY: an automatic arm on arrival at
 // the centre would freeze the viewport under a run of nudges that happened to
 // reach the middle; `c` then nudging means "I'm looking for a place to drop a
 // marker" and wants the hold, `c` then panning means "I want the working zoom
@@ -1033,7 +1049,7 @@ void Viewport::follow_scroll_if_needed() {
 //     2026-09-24): a lamp now shows the posture, so only the walk and `c`
 //     arm it.
 //
-// ITS READERS, re-grepped 2026-09-24:
+// ITS READERS, re-grepped 2026-09-25:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
 //     (input_handler.cpp — bare Tab / Shift+Tab / IsoLeftTab through
 //     cycle_marker_focus, and both steps of the live Ctrl+Shift+Tab march),
@@ -1041,8 +1057,9 @@ void Viewport::follow_scroll_if_needed() {
 //     the `h` view's Tab and both steps of its march); each lands the cursor
 //     it has just seated (lo == hi), so the verdict is dropped;
 //   * RESTORE: restore_history_entry's singleton arm (undo.cpp) on the cursor
-//     just landed, and its group arm on the restored markers' [earliest,
-//     latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
+//     just landed, WITH THE HOLD DARK only (under it the arm holds the
+//     column instead, 2026-09-25), and its group arm on the restored
+//     markers' [earliest, latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
 //     runs the span framer's margin arm on it.
 // NOT READERS, by ruling: bare `c`, Shift+J and the A/B audition, which
 // centre unconditionally (center_viewport_on_playhead after the working
