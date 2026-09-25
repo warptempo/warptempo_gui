@@ -1615,21 +1615,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // the two-finger PINCH ZOOM (zoom only since 2026-08-14: two fingers
     // never pan, the nav body discarding their centroid delta), and the
     // phone model's
-    // single-finger pan frames born of a drag starting on the pan surface —
-    // drive the input handler's ONE touch-nav body, which runs the
+    // single-finger frames born of a drag starting on the pan surface — the
+    // pan, or under the ctrl bit (the S Pen's button on the tablet,
+    // 2026-09-25) the one-finger zoom — drive the input handler's ONE
+    // touch-nav body, which runs the
     // strip-drag family's own viewport chokepoint — the
     // set_keyboard_intent_cancel_hook wiring precedent, one narrow
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
     // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
     // and the marker lane left it on both devices 2026-09-25) — surface geometry only
-    // (refusals stay per-frame in the update body and in the region begin).
-    // THE THIN-LANE QUERY is its twin, asked at the same down: the GUI answers
-    // whether the point lies on the trim bar — a lane too
-    // small and too precise to hold a nav gesture — and the bit refuses at TWO
-    // doors, the platform's own second-finger fork and the GUI's per-frame
-    // refusal, so once one finger is down on that lane the second is
-    // completely ignored and no nav gesture ever runs there (2026-08-15).
+    // (refusals stay per-frame in the update body and in the region begin);
+    // off it the platform opens no window at all, the down being the pointer
+    // on contact, so no nav gesture can begin anywhere else (2026-09-25).
     // The REGION TRIO is the eighth ruling's half: the zone's stretched
     // window (the region-hold beat) expires into the region former —
     // begin at the down point, one update per frame, an end that always
@@ -1644,7 +1642,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // expiry, so its lift is a tap; the GUI bodies at
     // begin_touch_caret_drag's declaration).
     // A one-finger gesture off the zone and the field needs no wiring: it
-    // is translated into the ordinary pointer deliveries above, and nothing
+    // is translated into the ordinary pointer deliveries above, at contact, and nothing
     // on this side can tell which device produced them. Contracts at
     // GuiPlatform::set_touch_nav_hooks (the platform half) and at
     // apply_touch_nav_update's declaration (the GUI half, including why the
@@ -1656,9 +1654,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         [&]() { input_handler.end_touch_nav(); },
         [&](int x, int y) {
             return input_handler.touch_point_in_pan_zone(x, y);
-        },
-        [&](int x, int y) {
-            return input_handler.touch_point_on_thin_lane(x, y);
         },
         [&](int x, int y) { input_handler.begin_touch_region(x, y); },
         [&](int x, int y) { input_handler.update_touch_region(x, y); },
@@ -2056,7 +2051,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
         // THE THREE RELEASE-TIME ARMS. This hook is no longer their only end
         // (codex round 20): they also die at the BUTTON-LOST edge, an unheld
-        // motion while one of them stands — which is what the touch upgrade's
+        // motion while one of them stands — which is what the touch layer's
         // abnormal end delivers, and what a lost physical button delivers too
         // (clear_release_time_press_arms). The calls stay spelled out here
         // rather than routed through that owner because THIS edge asks a

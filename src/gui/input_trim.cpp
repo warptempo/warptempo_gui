@@ -1339,7 +1339,7 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 // hold-a-beat gesture, three bodies driving this machinery from the
 // platform's trim-move hooks. Deleted whole at the timer-free ruling and NOT
 // revived when the disambiguation window returned the same day (the sixth
-// glass ruling): on glass the trim bar is an ordinary pointer surface —
-// holding past the window then dragging, or a quick drag that crosses the
-// slop inside it, reaches the endcap/bridge machinery through the ordinary
-// press path like every other pointer gesture; touch.md carries the record.)
+// glass ruling): on glass the trim bar is an ordinary pointer surface — a
+// finger or the pen landing there is the pointer on contact (2026-09-25) and
+// reaches the endcap/bridge machinery through the ordinary press path like
+// every other pointer gesture; touch.md carries the record.)

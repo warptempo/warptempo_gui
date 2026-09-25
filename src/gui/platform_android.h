@@ -256,7 +256,6 @@ public:
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
         std::function<bool(int x, int y)> pan_zone,
-        std::function<bool(int x, int y)> thin_lane,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end,
@@ -521,6 +520,14 @@ private:
     bool has_initial_configure_ = false;
     // Latest focus reading; see window_activated().
     bool window_activated_ = false;
+    // THE S PEN IS HOVERING AS THE POINTER (2026-09-25): true between the
+    // pen's translated HOVER_ENTER (the core's pointer_enter) and the edge
+    // that ends it — HOVER_EXIT, the pen's own tip-down, or focus loss, each
+    // delivering the core's pointer_leave. What makes the doors sequence
+    // sanely is that one owner: a hover never overlaps a touch the core is
+    // translating (on_motion_event's hover arm), so the tip-down's
+    // synthesized entry motion never meets a pointer already "in".
+    bool pen_hovering_ = false;
 
     // THE FIRST on_resize_ FIRE IS OWED RATHER THAN MADE. init() adopts a
     // window that already exists (android_main waits for it), which is BEFORE
@@ -693,4 +700,12 @@ private:
     // Returns 1 when the event was consumed, 0 to let the system have it.
     int32_t on_input_event(struct AInputEvent* event);
     void on_motion_event(struct AInputEvent* event);
+    // THE PEN'S SIDE BUTTON THROUGH THE MODIFIER DOOR — the ctrl bit set to
+    // `held`, shift and alt carried through unchanged, super false (this
+    // backend's constant); a no-op when the bit already stands. The door's
+    // second producer (the contract at GuiInputCore::set_modifiers).
+    void set_pen_ctrl(bool held);
+    // END A PEN HOVER — the core's pointer_leave and its frame, iff one
+    // stands (pen_hovering_ above).
+    void end_pen_hover();
 };

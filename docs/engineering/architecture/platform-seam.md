@@ -62,8 +62,9 @@ contract. The port split them:
   selects the header; every consumer includes it and changes nothing (NINE translation units and headers today, re-grepped 2026-08-29 — the number is a consequence of the seam, not a fact about it, so nothing here keeps a list).
 - **B — `GuiInputCore` (`input_core.{h,cpp}`)**, the product's platform-neutral
   input policy, existing ONCE: the touch translation state machine (the
-  disambiguation window, the region hold, the two-finger nav frames, the
-  thin-lane answers, the hard-end contract), key-repeat synthesis and the
+  pan zone's window and the pointer on contact everywhere else, the region
+  hold, the nav frames and their ctrl fork, the pen's tool tag, the hard-end
+  contract), key-repeat synthesis and the
   bare-`e` left-click emulation, modifier and logical-pointer state, the
   notional-x / capture bookkeeping, the pointer-frame and deferred-motion
   scratch, and every consumer hook those bodies fire. A backend hands it
@@ -491,6 +492,25 @@ drag coordinates floor instead of truncating.
   a number the convention sentence did not support, corrected under the
   four-tier review's R-18(a). Hardware keyboards are out of scope; the owned
   painted keyboard reaches the core through `synthesize_key`.
+- **The S Pen on Android** (architect 2026-09-25; the ruling is `touch.md`'s
+  pen section). The source gate admits a touchscreen source and a stylus
+  source (a mouse or touchpad stays consumed), and `on_motion_event` reads
+  THREE pen facts per event, each through a door of the portable core so no
+  Android type crosses the seam: the TOOL TYPE (STYLUS or ERASER) rides
+  `GuiInputCore::touch_down`'s `GuiTouchTool` argument (Finger is the default
+  the Wayland backend never overrides); the BARREL BUTTON
+  (`AMOTION_EVENT_BUTTON_STYLUS_PRIMARY`, `BUTTON_SECONDARY` accepted beside
+  it) is the CTRL BIT through `set_modifiers` — this backend its second
+  producer, set before the event's delivery, dropped at the pen's lift, a
+  cancel, a hover exit and focus loss, the `BUTTON_PRESS` / `BUTTON_RELEASE`
+  actions carrying the mid-stroke edges; and the HOVER actions translate to
+  `pointer_enter` / `pointer_motion` / `pointer_leave` with a `pointer_frame`
+  each (`pen_hovering_` the one owner; hovers are dropped while any touch
+  contact is down and a pen tip-down ends a standing hover, so the doors never
+  overlap), which is what runs the hover walk and the tooltip dwell under a
+  hovering pen. A probe line rides the milestone build — one stderr line per
+  non-finger motion event, `pen: action= source= tool= buttons= x= y=`, read
+  through logcat — and is struck once the architect has verified the pen.
 
 ## The on-screen keyboard
 

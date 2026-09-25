@@ -2566,53 +2566,16 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
     const double spp = current_samples_per_pixel(app, audio);
     const GuiRect wf_area = waveform_area(app);
     const double W = static_cast<double>(wf_area.w);
-    const int64_t total = live_total_frames(app, audio);
     if (W <= 0.0 || spp <= 0.0) return;
 
-    // Incremental off the live level, pre-clamped into the chokepoint's own
-    // window exactly as every apply_strip_drag_zoom caller pre-clamps. The
-    // divisor is the RESOLVED rate — device px per level at the live gui_scale
-    // — and never the authored constant; why the rate scales is at
-    // nav_zoom_px_per_level(), app_state.h.
-    double new_level = app.zoom_level - dx / nav_zoom_px_per_level();
-    const double max_l = effective_max_zoom_level(wf_area.w, total,
-                                                  audio.sample_rate());
-    if (new_level < kMinZoom) new_level = kMinZoom;
-    if (new_level > max_l)    new_level = max_l;
+    // The level: the rule's one owner (nav_drag_zoom_level, below), which
+    // the one-finger touch zoom reads too.
+    const double new_level = nav_drag_zoom_level(dx);
 
     // THE PIVOT'S COLUMN UNDER THE LIVE VIEWPORT, with the Ableton EDGE TRICK
-    // — the deleted strip drag's own step, minus its pan term: this
-    // phase never moves the viewport, so the resting `viewport_start_sample`
-    // IS the viewport the zoom will pivot against and there is no local `vp`
-    // to clamp first. The pivot is a SONG FRAME (ScrollDragState), so its
-    // column is derived fresh every event; clamping it into [0, W-1] and
-    // REBINDING the anchor to that edge pixel's frame is what keeps the focus
-    // on screen once a wall has pushed it past an edge.
-    // WHAT THE REVERSIBILITY PROPERTY IS, stated exactly: THE ANCHORED FRAME
-    // IS INVARIANT FOR THE PHASE, so zooming out and back in by the same dx
-    // pivots about the SAME song position both ways and the drag reverses into
-    // the section it came from. AWAY FROM THE WALLS that is the strict
-    // identity — the column re-derives to the value it was placed at, so the
-    // return event reproduces the earlier viewport. AT A SATURATED WALL the
-    // viewport cannot come back the same way (while `vp` is pinned the view is
-    // determined by the level alone), and what survives is the FOCUS: the
-    // stem's column slides left/right with the content and the frame under it
-    // never changes. That is the case the screen column got wrong — it held
-    // the COLUMN and let the song walk out from under it, so the way back
-    // zoomed into a later section entirely (the architect's own scenario,
-    // worked at ScrollDragState). WHERE THE PROPERTY STOPS: the edge REBIND,
-    // the one lasting mutation here — once the anchored frame has been pushed
-    // off the visible span the anchor becomes the edge pixel's content, and
-    // the return trip pivots about that instead.
-    double anchor_col =
-        (sd.anchor_sample - static_cast<double>(app.viewport_start_sample)) /
-        spp;
-    const double clamped_col = clamp_col_into_waveform(wf_area, anchor_col);
-    if (clamped_col != anchor_col) {
-        sd.anchor_sample =
-            static_cast<double>(app.viewport_start_sample) + clamped_col * spp;
-        anchor_col = clamped_col;
-    }
+    // — the one owner, rebind_zoom_pivot_into_waveform below, whose record
+    // (the reversibility property and where it stops) is at its definition.
+    const double anchor_col = rebind_zoom_pivot_into_waveform(sd.anchor_sample);
 
     // Drive the capture's release-restore x to the stem, the strip drag's own
     // rule; a later pan phase clears it back to the notional x at its switch —
@@ -2630,6 +2593,68 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
                                    final_event);
 }
 
+// THE NAV DRAG'S LEVEL RULE — one owner, two readers: the pointer nav drag's
+// zoom phase (apply_nav_zoom_at) and the one-finger touch zoom
+// (apply_touch_nav_update's ctrl arm, the S Pen's button, 2026-09-25: "port
+// the fork, reuse the applier, no second zoom rule"). dx zooms plain linear
+// off the LIVE level, RIGHT zooming in (`zoom_level - dx/rate` — the sign's
+// derivation from the pinch is at the zoom phase's contract), pre-clamped
+// into the chokepoint's own [kMinZoom, effective ceiling] window exactly as
+// every apply_strip_drag_zoom caller pre-clamps. The divisor is the RESOLVED
+// rate — device px per level at the live gui_scale — and never the authored
+// constant; why the rate scales is at nav_zoom_px_per_level(), app_state.h.
+double GuiInputHandler::nav_drag_zoom_level(double dx) const {
+    const GuiRect wf_area = waveform_area(app);
+    const int64_t total = live_total_frames(app, audio);
+    double new_level = app.zoom_level - dx / nav_zoom_px_per_level();
+    const double max_l = effective_max_zoom_level(wf_area.w, total,
+                                                  audio.sample_rate());
+    if (new_level < kMinZoom) new_level = kMinZoom;
+    if (new_level > max_l)    new_level = max_l;
+    return new_level;
+}
+
+// THE ZOOM PIVOT'S COLUMN UNDER THE LIVE VIEWPORT, with the Ableton EDGE
+// TRICK — one owner, three readers: the nav drag's zoom phase, the pinch and
+// the one-finger touch zoom (apply_touch_nav_update), each holding its own
+// SONG-FRAME pivot (ScrollDragState::anchor_sample, TouchNavZoomState). The
+// deleted strip drag's own step, minus its pan term: a zoom never moves the
+// viewport itself, so the resting `viewport_start_sample` IS the viewport
+// the zoom will pivot against and there is no local `vp` to clamp first. The
+// pivot is a SONG FRAME, so its column is derived fresh every event; clamping
+// it into [0, W-1] and REBINDING the anchor to that edge pixel's frame is
+// what keeps the focus on screen once a wall has pushed it past an edge.
+// WHAT THE REVERSIBILITY PROPERTY IS, stated exactly: THE ANCHORED FRAME IS
+// INVARIANT FOR THE PHASE, so zooming out and back in by the same travel
+// pivots about the SAME song position both ways and the gesture reverses into
+// the section it came from. AWAY FROM THE WALLS that is the strict identity —
+// the column re-derives to the value it was placed at, so the return event
+// reproduces the earlier viewport. AT A SATURATED WALL the viewport cannot
+// come back the same way (while `vp` is pinned the view is determined by the
+// level alone), and what survives is the FOCUS: the stem's column slides
+// left/right with the content and the frame under it never changes. That is
+// the case the screen column got wrong — it held the COLUMN and let the song
+// walk out from under it, so the way back zoomed into a later section
+// entirely (the architect's own scenario, worked at ScrollDragState). WHERE
+// THE PROPERTY STOPS: the edge REBIND, the one lasting mutation here — once
+// the anchored frame has been pushed off the visible span the anchor becomes
+// the edge pixel's content, and the return trip pivots about that instead.
+// Returns the pivot's (clamped) column; the caller guards a live waveform
+// and a positive spp.
+double GuiInputHandler::rebind_zoom_pivot_into_waveform(
+        double& anchor_sample) const {
+    const GuiRect wf_area = waveform_area(app);
+    const double  spp     = current_samples_per_pixel(app, audio);
+    const double  vp      = static_cast<double>(app.viewport_start_sample);
+    double anchor_col = (anchor_sample - vp) / spp;
+    const double clamped_col = clamp_col_into_waveform(wf_area, anchor_col);
+    if (clamped_col != anchor_col) {
+        anchor_sample = vp + clamped_col * spp;
+        anchor_col    = clamped_col;
+    }
+    return anchor_col;
+}
+
 
 // (THE REGION EDITOR'S COLUMN->FRAME CONVERSION AND ITS MOTION BODY STOOD HERE
 // FROM 2026-08-15 TO 2026-08-18 and are DELETED WHOLE, not moved: the overlay's
@@ -2640,19 +2665,29 @@ void GuiInputHandler::apply_nav_zoom_at(int x, int y, bool final_event) {
 // may publish a new basis while a trim drag is held.)
 
 // THE TOUCH NAVIGATION BODY — two-finger frames and the phone model's
-// single-finger pan frames land here alike; contract, the ONE FINGER PANS,
-// TWO FINGERS ZOOM ruling, delivery-shape justification and refusal rationale
-// at the declaration (input_handler.h). One delivered frame = at most one
-// placement through the strip-drag family's own application chokepoint.
+// single-finger frames land here alike; contract, the ONE FINGER PANS,
+// TWO FINGERS ZOOM ruling (and the one-finger zoom under ctrl), delivery-shape
+// justification and refusal rationale at the declaration (input_handler.h).
+// One delivered frame = at most one placement through the strip-drag family's
+// own application chokepoint.
 void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
-    // THE PINCH'S SEATED PIVOT IS CLEARED BY ANY FRAME THAT IS NOT TWO-FINGER,
-    // and that clear LEADS THE BODY — it is the one thing here that happens
-    // above the refusal (contract at TouchNavZoomState, app_state.h). THE TWO
+    // THE FRAME'S MEANING, three and only three: TWO fingers are the PINCH;
+    // ONE finger under the ctrl bit is THE ONE-FINGER ZOOM (2026-09-25, the S
+    // Pen's side button — the nav drag's own live-ctrl fork, ScrollDragState,
+    // carried onto the glass; the frame's ctrl is ignored on two fingers); one
+    // finger without it is the PAN. The fork keys on the bit, never the tool:
+    // a fingertip simply has no ctrl to hold.
+    const bool one_finger_zoom = !f.two_finger && f.ctrl;
+    // THE SEATED PIVOT IS CLEARED BY ANY FRAME WHOSE MEANING IS NOT THE
+    // SEAT'S — a pan frame, or a zoom of the other kind (the seat records its
+    // kind, TouchNavZoomState::one_finger) — and that clear LEADS THE BODY:
+    // it is the one thing here that happens above the refusal (contract at
+    // TouchNavZoomState, app_state.h). THE TWO
     // HALVES SIT ON OPPOSITE SIDES OF THE REFUSAL DELIBERATELY: SEATING is a
     // navigation act and takes the refusal with everything else (the ordering
-    // rule at the seat below), while CLEARING is bookkeeping — a one-finger
-    // frame means the two-finger phase is OVER whether or not this frame gets
-    // to navigate, and holding the anchor through a refused stretch of the
+    // rule at the seat below), while CLEARING is bookkeeping — a frame of
+    // another meaning means the zoom phase is OVER whether or not this frame
+    // gets to navigate, and holding the anchor through a refused stretch of the
     // survivor's pan would let a later upgrade zoom about a song frame the
     // fingers had long since left behind. Refusing to navigate is not refusing
     // to notice that the pinch ended.
@@ -2667,7 +2702,15 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // update contract), so a survivor left standing still cannot keep the dead
     // pinch's pivot seated and its stem painted under one finger — which is
     // what let a later upgrade zoom about the OLD song point.
-    if (!f.two_finger) clear_touch_zoom_seat(app, viewport);
+    // THE ONE-FINGER ZOOM REACHES THIS LINE AT BOTH CTRL EDGES BY
+    // CONSTRUCTION TOO: the platform delivers one exempt frame carrying the
+    // new bit at every ctrl edge under a live single-finger nav (the same
+    // exemption's second clause), so a ctrl-up clears the seat and erases the
+    // stem at the edge rather than at the next motion — the nav drag's own
+    // edge behaviour (sync_nav_drag_mode).
+    if ((!f.two_finger && !one_finger_zoom) ||
+        app.touch_nav_zoom.one_finger != one_finger_zoom)
+        clear_touch_zoom_seat(app, viewport);
 
     // The refusal answer, per frame: the wheel's own routing predicate at the
     // current centroid. <= 0 covers both the modal refusals (-1) and the
@@ -2699,62 +2742,6 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     if (onscreen_keyboard::stands(app, gui) &&
         rect_contains(onscreen_keyboard::surface_rect(app), f.x, f.y))
         return;
-    // AND THE THIN LANE TAKES NO NAV GESTURE AT ALL — the TRIM BAR
-    // (architect 2026-08-15, from the rig: "get rid of all
-    // two-finger gestures on ... the trim bar; once one
-    // finger is down, the second finger is completely ignored, which is what we
-    // do with three-finger gestures on the waveform — which makes sense, because
-    // the waveform is large and ... trim [is] small"). A lane whose
-    // whole vocabulary is precise, thin and absolute has nothing a nav gesture
-    // could mean, so THE WAVEFORM'S OWN THIRD-FINGER RULE APPLIES WHERE THE
-    // SURFACE IS SMALL: on a large surface a second contact carries a distinct
-    // meaning worth admitting, on a 10 px bar it carries nothing the lane's
-    // own motions do not already do better. That is a difference in KIND, not an
-    // exception to the two-finger model.
-    // THE REFUSAL IS WHAT THE BIT IS FOR: without it a gesture begun on the bar
-    // would fall THROUGH to the waveform's pinch below and zoom the view from a
-    // lane the user was touching for another reason — a thin lane's positive
-    // wheel context admits these frames, so nothing above stops them.
-    // THE REFUSAL IS HERE AND NOT IN wheel_context BECAUSE THAT PREDICATE IS
-    // THE WHEEL'S ROUTING OWNER and the wheel stays LIVE on these lanes: all
-    // three of its arms work there and are no part
-    // of this, so refusing in the shared predicate would have taken them with
-    // it.
-    // IT READS THE FIRST FINGER'S DOWN POINT, NOT THE LIVE CENTROID: these
-    // lanes are TWENTY-SIX PIXELS TALL and their drags are X-ONLY, so a finger
-    // that grabbed a bound wanders vertically well off the strip while still
-    // legitimately dragging it, and a second finger landing low would drop the
-    // pair's centroid outside the band — a live geometric test cannot keep
-    // answering this gesture's own geometry. A GESTURE'S SURFACE IS DECIDED
-    // WHERE IT STARTED (the pinch's seat, the press-time act, the mode read at
-    // the 8 px crossing all follow that rule), so the answer travels ON THE
-    // FRAME, captured once at the `Idle` down and CONSTANT for the contact
-    // stream (field contract at GuiTouchNavFrame, gui_input.h) — which is why
-    // the refusal cannot change under a live gesture: no frame of a stream can
-    // disagree with any other about it. THE MIRROR IS WANTED TOO: a pinch that
-    // BEGINS on the waveform keeps the pinch even if its centroid crosses onto a
-    // strip.
-    // IT NEEDS NO clear_touch_zoom_seat: seating happens BELOW this return and
-    // the bit is constant for the stream, so a refused gesture has never seated,
-    // and a pinch begun on the waveform carries the bit FALSE and never reaches
-    // here. THE ONE-FINGER CLEAR AT THE TOP OF THE BODY STAYS ABOVE THIS RETURN
-    // and is deliberately not moved below it: it costs a thin-lane stream
-    // nothing (that stream can never hold a seat, so the clear's own early
-    // return fires) while every OTHER stream still gets the pinch's end noticed
-    // on the frame it actually ends, which is that line's whole contract.
-    // IT READS THE BIT ALONE — no two-finger term, and that is not an
-    // over-reach. A plain single finger on these lanes never produces a nav
-    // frame at all: the touch pan zone is the navigation surface and the lanes
-    // are outside it, so one finger there resolves to the pointer translation
-    // and the lanes' own drags. The only one-finger frames that CAN carry the
-    // bit are DOWNGRADE SURVIVORS — a pair that landed on a lane and then lost a
-    // finger — and those are exactly what must not pan. (The first shape of this
-    // refusal was gated on `two_finger` as well and let precisely that survivor
-    // through: the bit true, the count false, the test asking the wrong
-    // question.) A live phone-model pan whose finger has drifted onto a lane is
-    // untouched, and by the bit rather than by the count — it began in the pan
-    // zone, so it carries the bit FALSE for its whole life.
-    if (f.down_on_thin_lane) return;
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
     double dist_ratio = f.dist_ratio;
@@ -2762,14 +2749,18 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
 
     // ONE FINGER PANS, TWO FINGERS ZOOM — architect 2026-08-14, the whole
     // gesture model on glass (the ruling and its friction argument at the
-    // declaration; touch.md's two-finger section is authoritative). The two
-    // terms are NEVER both live: a two-finger frame's centroid travel is
+    // declaration; touch.md's two-finger section is authoritative). The terms
+    // are NEVER two at once: a two-finger frame's centroid travel is
     // discarded outright, which is what kills the accordion, and a
     // single-finger frame carries no distance to zoom by. The one-finger
     // side's 1.0 RESTATES the model rather than guarding — the platform
-    // already pins the ratio there, one finger having no finger gap.
-    const double eff_dx    = f.two_finger ? 0.0 : f.dx;
+    // already pins the ratio there, one finger having no finger gap. UNDER
+    // CTRL THE ONE FINGER'S TRAVEL IS THE ZOOM'S instead of the pan's
+    // (zoom_dx), the nav drag's own rotation: the same horizontal travel, the
+    // modifier deciding what it MEANS.
+    const double eff_dx    = (f.two_finger || one_finger_zoom) ? 0.0 : f.dx;
     const double eff_ratio = f.two_finger ? dist_ratio : 1.0;
+    const double zoom_dx   = one_finger_zoom ? f.dx : 0.0;
 
     // The geometry the pivot is measured in, HOISTED ABOVE THE NO-OP RETURN
     // for the seat below: cheap reads, and the guard is a validity gate (there
@@ -2801,10 +2792,20 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // drifted to by then rather than at the point the fingers grabbed, and no
     // stem appeared until then either. Nothing about the seat's VALUE changed
     // here — only when it is taken.
-    if (f.two_finger && !app.touch_nav_zoom.seated) {
+    // THE ONE-FINGER ZOOM SEATS ON THE SAME LINE, at the finger's point: the
+    // PREVIOUS centroid column (x - dx), which is the finger's position when
+    // the zoom began — on the ctrl edge's exempt frame (dx 0) the finger
+    // itself, the pointer drag's "the pivot seats where the cursor is at the
+    // ctrl-down"; on a single nav whose FIRST frame already carries the bit
+    // (the button held at the down, then the slop crossed) the DOWN point,
+    // the ctrl-armed press's own seat-at-the-press.
+    if ((f.two_finger || one_finger_zoom) && !app.touch_nav_zoom.seated) {
         TouchNavZoomState& z = app.touch_nav_zoom;
-        z.anchor_sample = vp + static_cast<double>(f.x) * spp_old;
+        const double seat_col =
+            static_cast<double>(f.x) - (one_finger_zoom ? f.dx : 0.0);
+        z.anchor_sample = vp + seat_col * spp_old;
         z.seated        = true;
+        z.one_finger    = one_finger_zoom;
         // THE SEAT OWES ITS FIRST FRAME'S DAMAGE, which is the mouse arm's own
         // rule (arm_nav_zoom_press) reaching the pinch —
         // the seat is the anchor stem's gate since 2026-08-14
@@ -2832,7 +2833,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // and it must apply nothing, seat nothing and consume no double-click
     // candidate on its way to that return. Below the seat, above the
     // double-click clear (the C8 rule covers APPLIED frames).
-    if (eff_dx == 0.0 && eff_ratio == 1.0) return;
+    if (eff_dx == 0.0 && eff_ratio == 1.0 && zoom_dx == 0.0) return;
 
     // An applied navigation frame moves content between two taps, so a
     // pending double-click candidate must not survive it (the C8 rule the
@@ -2847,7 +2848,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // app_state.h).
     double anchor_sample = 0.0;   // active-domain song frame the pivot holds
     double anchor_col    = 0.0;   // its column under the LIVE viewport
-    if (!f.two_finger) {
+    if (!f.two_finger && !one_finger_zoom) {
         // ONE FINGER — the phone model's pan, unchanged and stateless: the
         // content under the PREVIOUS centroid column (x - eff_dx) is what the
         // finger holds, placed at the CURRENT centroid. The anchor column
@@ -2862,28 +2863,21 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         anchor_sample = vp + (static_cast<double>(f.x) - eff_dx) * spp_old;
         anchor_col    = static_cast<double>(f.x);
     } else {
-        // TWO FINGERS — THE PINCH'S PIVOT IS THE POINT ON THE WAVEFORM THE
-        // GESTURE GRABBED, held for the phase's life: seated above (on the
-        // phase's FIRST unrefused frame, whether or not that frame applies
-        // anything), then re-derived as a COLUMN against the live viewport
-        // every frame here. The centroid's own travel is discarded by the fork
-        // above (eff_dx is 0), so moving both fingers together still applies
-        // nothing — it only seats.
+        // A ZOOM — TWO FINGERS, OR ONE UNDER CTRL — PIVOTS ABOUT THE POINT ON
+        // THE WAVEFORM THE GESTURE GRABBED, held for the phase's life: seated
+        // above (on the phase's FIRST unrefused frame, whether or not that
+        // frame applies anything), then re-derived as a COLUMN against the
+        // live viewport every frame here. The centroid's own travel is
+        // discarded by the fork above (eff_dx is 0), so moving both fingers
+        // together still applies nothing — it only seats — while the one
+        // finger's travel is the zoom itself (zoom_dx).
         TouchNavZoomState& z = app.touch_nav_zoom;
-        // THE EDGE TRICK, apply_nav_zoom_at's pivot block mirrored. The
-        // stateless model deliberately did without a clamp because there was no
-        // persistent anchor for an off-area column to corrupt; there is one
-        // now, so that sentence is superseded: a column pushed outside [0, W-1]
-        // pins
-        // at the edge pixel and REBINDS the held frame to that pixel's
-        // content, which is what keeps the zoom's focus on screen exactly as it
-        // does for the mouse.
-        anchor_col = (z.anchor_sample - vp) / spp_old;
-        const double clamped = clamp_col_into_waveform(wf_area, anchor_col);
-        if (clamped != anchor_col) {
-            z.anchor_sample = vp + clamped * spp_old;
-            anchor_col      = clamped;
-        }
+        // THE EDGE TRICK, through its one owner (the nav drag's zoom phase
+        // reads the same body): a column pushed outside [0, W-1] pins at the
+        // edge pixel and REBINDS the held frame to that pixel's content, which
+        // is what keeps the zoom's focus on screen exactly as it does for the
+        // mouse.
+        anchor_col    = rebind_zoom_pivot_into_waveform(z.anchor_sample);
         anchor_sample = z.anchor_sample;
     }
 
@@ -2894,11 +2888,20 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // re-applies, exactly as every other caller pre-clamps — the chokepoint's
     // level_changed compare requires a real request (its contract names the
     // callers).
-    double new_level = app.zoom_level - std::log2(eff_ratio);
-    const double max_l =
-        effective_max_zoom_level(wf_area.w, total, audio.sample_rate());
-    if (new_level < kMinZoom) new_level = kMinZoom;
-    if (new_level > max_l)    new_level = max_l;
+    // THE ONE-FINGER ZOOM TAKES THE NAV DRAG'S OWN LEVEL RULE instead
+    // (nav_drag_zoom_level — linear in travel at the gui_scale-resolved rate,
+    // RIGHT zooming in), so the pen's drag and the mouse's ctrl drag are one
+    // rule, not two.
+    double new_level = 0.0;
+    if (one_finger_zoom) {
+        new_level = nav_drag_zoom_level(zoom_dx);
+    } else {
+        new_level = app.zoom_level - std::log2(eff_ratio);
+        const double max_l =
+            effective_max_zoom_level(wf_area.w, total, audio.sample_rate());
+        if (new_level < kMinZoom) new_level = kMinZoom;
+        if (new_level > max_l)    new_level = max_l;
+    }
 
     // ONE placement carries whichever axis is live, and the fork above decided
     // both of its anchor terms: a ONE-FINGER frame places the content under the
@@ -3023,32 +3026,6 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
         rect_contains(folder_overlay::surface_rect(app), x, y))
         return false;
     return point_on_nav_surface(app, x, y);
-}
-
-// The thin-lane query's body (contract at the declaration): the member lane's
-// own rect and nothing else — the same rectangle its press router,
-// its cursor arms and its wheel context read, so there is one answer to
-// "is this the trim bar", and this
-// query is not a second spelling of it.
-//
-// WHAT MAKES A LANE A MEMBER, so the next one joins on a rule rather than a
-// hunch: it is THIN (a band a fingertip covers whole), and its whole
-// vocabulary is its OWN precise, ABSOLUTE drags — a bound follows the
-// finger to a column, one bound moving while its partner holds. ONE member
-// today: THE TRIM BAR (top_trim_row_area — the two endcaps, the
-// bridge, the framing double-click). On a surface like that a second contact has
-// nothing to mean: everything a nav gesture could offer, the lane's own motions
-// already do better and more precisely. The WAVEFORM is deliberately not a
-// member — it is large, so a second contact there carries a distinct meaning
-// (the pinch) worth admitting, which is the same reasoning read the other way.
-//
-// Surface geometry only; nothing here decides a gesture. The answer is captured
-// once at the first finger's down and carried onto every nav frame, where its
-// two readers refuse — the GUI's own apply_touch_nav_update drops every frame
-// carrying it, and the platform's second-finger fork ignores the second contact
-// outright.
-bool GuiInputHandler::touch_point_on_thin_lane(int x, int y) const {
-    return rect_contains(top_trim_row_area(app), x, y);
 }
 
 // --- The touch region former (the hold on the pan zone) --------------------
@@ -4832,12 +4809,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // this return precedes every arm below, and on_button_release's claims
     // (the keyboard's key-up, the dropdown's, the chrome arm, the modal's,
     // the overlay's) each test their own armed state, none of which a card
-    // press set. ON GLASS the one-finger translation delivers this press only
-    // once the disambiguation window has resolved to the pointer (a tap, or
-    // an off-zone hold or crossing — input_core.cpp), which is what keeps a
-    // two-finger landing off it; the pan zone answers false on a card
+    // press set. ON GLASS the pan zone answers false on a card
     // (touch_point_in_pan_zone), so a finger landing on one resolves to this
-    // press rather than to the phone-model pan. The geometry read here is the
+    // press ON CONTACT (the off-zone down, input_core.cpp) rather than to the
+    // phone-model pan, and a second finger beside it is ignored. The geometry read here is the
     // last paint's publication, and dismiss asks the live stack whether the
     // id still stands — a card that left between paint and press lands
     // nothing.

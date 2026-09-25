@@ -1267,8 +1267,10 @@ enum class GuiMouseButton {
 // bookkeeping (dx / dist_ratio against the previous DELIVERED frame, the
 // latch, the frame coalescing) and applies NO gesture policy of its own; the
 // GUI owns the model on top, which since 2026-08-14 is ONE FINGER PANS, TWO
-// FINGERS ZOOM (touch.md's two-finger section) — hence the finger count
-// below, the one field the GUI forks on. Every field here is read.
+// FINGERS ZOOM (touch.md's two-finger section), and since 2026-09-25 ONE
+// FINGER UNDER CTRL ZOOMS TOO (the S Pen's side button) — hence the finger
+// count and the ctrl bit below, the two fields the GUI forks on. Every field
+// here is read.
 struct GuiTouchNavFrame {
     // Current centroid, window px (single-finger: the finger itself). Also
     // the two-finger gesture's zoom pivot.
@@ -1276,51 +1278,49 @@ struct GuiTouchNavFrame {
     int    y = 0;
     // Centroid horizontal delta since the previous delivered frame
     // (fractional — sub-pixel centroid motion accumulates rather than
-    // truncating away). Read on SINGLE-finger frames only: two fingers never
-    // pan, so the centroid's travel is discarded there.
+    // truncating away). Read on SINGLE-finger frames only — the pan's
+    // travel, or under `ctrl` the one-finger zoom's (the nav drag's own
+    // dx-to-level rule): two fingers never pan, so the centroid's travel is
+    // discarded there.
     double dx = 0.0;
     // Finger-distance ratio current/previous, > 0 always (a degenerate
     // distance under 1 px on either side delivers 1.0; single-finger frames
     // are degenerate by construction, so they always carry 1.0).
     double dist_ratio = 1.0;
     // BOTH DELTAS AT THEIR NO-OP VALUES (dx 0.0, ratio 1.0) IS A DELIVERED
-    // FRAME IN EXACTLY ONE CASE — the platform otherwise suppresses it: the
-    // DOWNGRADE'S TRANSITION FRAME, one single-finger frame delivered at the
-    // two-to-one lift so the GUI hears the pinch end even when the survivor
-    // is standing still (the exemption at set_touch_nav_hooks' update
-    // contract, input_core.h). It carries the survivor's own centroid, and
-    // the model applies nothing for it: its errand is the seated pivot's
-    // clear, which apply_touch_nav_update runs above its no-op return.
+    // FRAME IN EXACTLY TWO CASES — the platform otherwise suppresses it, and
+    // both are single-finger frames announcing a change of MEANING the GUI
+    // could not otherwise hear from a finger that is standing still (the
+    // exemption at set_touch_nav_hooks' update contract, input_core.h):
+    //   * THE DOWNGRADE'S TRANSITION FRAME, delivered at the two-to-one lift
+    //     so the GUI hears the pinch end; its errand is the seated pivot's
+    //     clear, which apply_touch_nav_update runs above its no-op return.
+    //   * THE CTRL EDGE'S FRAME (2026-09-25, the S Pen), delivered when the
+    //     modifier state's ctrl bit changes under a live single-finger nav:
+    //     it carries the NEW bit, so a ctrl-down seats the one-finger zoom's
+    //     pivot and paints its stem at the edge itself and a ctrl-up clears
+    //     them there, exactly as the pointer's own ctrl edge does
+    //     (sync_nav_drag_mode) — not at the next motion.
+    // Each carries the finger's own centroid, and the model applies nothing
+    // for either.
     // TWO fingers vs the phone model's one — the GUI's fork between the
-    // zoom-only gesture and the pan-only one.
+    // zoom-only gesture and the one-finger one.
     bool   two_finger = false;
-    // THE FIRST FINGER'S DOWN POINT LAY ON A THIN LANE (2026-08-15) — the
-    // TRIM BAR, the class the GUI's
-    // touch_point_on_thin_lane answers (its declaration owns what makes a lane a
-    // member). Captured ONCE, at the `Idle` down that opened this contact stream
-    // (the platform's touch_down_on_thin_lane_), and CONSTANT for the stream's
-    // whole life: it is a fact about where the gesture STARTED, never about
-    // where the fingers are now. IT HAS TWO READERS, one per door.
-    //   * apply_touch_nav_update drops EVERY nav frame carrying it — two
-    //     fingers and one alike — because a gesture begun on a thin lane must do
-    //     nothing at all rather than fall through to the waveform's pinch and
-    //     zoom the view from a lane the user was touching for another reason.
-    //   * the PLATFORM's own second-finger fork reads its copy: a second finger
-    //     landing during a live translation on such a lane is ignored outright,
-    //     so the first finger's drag continues instead of being torn down for a
-    //     gesture that would then be refused frame by frame.
-    // It answers the DOWN POINT and not the live centroid because these lanes
-    // are ~26 px tall while their drags are x-only, so a finger that grabbed a
-    // bound wanders far off the strip and a centroid test would change the
-    // answer under the fingers; a gesture's surface is decided where it began
-    // (the seat, the press-time act and the crossing's mode all follow that
-    // rule), so the answer travels on the frame.
-    bool   down_on_thin_lane = false;
+    // THE LIVE CTRL BIT at this frame's delivery (GuiInputCore's modeled
+    // ctrl, the modifier door's state — on the tablet the S Pen's side
+    // button, set_modifiers' second producer). READ ON SINGLE-FINGER FRAMES
+    // ONLY: while it stands the one-finger gesture is THE ZOOM ABOUT THE
+    // FINGER'S POINT rather than the pan, the nav drag's own live-ctrl fork
+    // (ScrollDragState) carried onto the glass (architect 2026-09-25: "the
+    // ctrl-zoom is the only thing I want from pointer"). A two-finger frame
+    // ignores it — the pinch is already the zoom. The platform reads it at
+    // delivery and applies no policy; the fork is the GUI's.
+    bool   ctrl = false;
 };
 
 // THE EDITOR-FIELD QUERY'S ANSWER (2026-09-05) — what the platform asks the
-// GUI once at a first finger's down, beside the pan-zone and thin-lane
-// queries (the contract at GuiInputCore::set_touch_nav_hooks). It names the
+// GUI once at a first finger's down, beside the pan-zone query (the
+// contract at GuiInputCore::set_touch_nav_hooks). It names the
 // one surface whose plain drag diverges by device: inside an OPEN EDITOR'S
 // FIELD a finger that drags moves the caret through the caret-drag hook trio
 // and never becomes a pointer drag (touch.md's caret-drag section), while a
@@ -1347,3 +1347,16 @@ struct GuiTouchNavFrame {
 // double-click seed it already holds, so the platform keeps no memory of taps
 // and no second spelling of the field exists.
 enum class GuiTouchEditorField { Outside, Field, DoublePress };
+
+// THE TOOL THAT TOUCHED (2026-09-25, the S Pen) — the backend's answer at a
+// contact's down, handed through GuiInputCore::touch_down (the door's
+// contract there). THE PEN IS A FINGER WITH THREE AMENDMENTS (architect
+// 2026-09-25, touch.md's pen section): it enters the touch machine exactly as
+// a finger does — the phone-model pan, the region hold, the caret drag and
+// the tap-at-lift all its own — and differs in three places only: its side
+// button is the Ctrl bit (the modifier door, not this enum), it waits for no
+// off-zone window (no touch does since that ruling, so that amendment is not
+// the tool's either), and IT IS NEVER A PINCH MEMBER — the one thing this
+// tag decides inside the core. Finger is every backend's default; only the
+// Android backend reads a tool type (STYLUS and ERASER are Pen there).
+enum class GuiTouchTool { Finger, Pen };

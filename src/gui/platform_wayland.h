@@ -240,7 +240,6 @@ public:
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,
         std::function<bool(int x, int y)> pan_zone,
-        std::function<bool(int x, int y)> thin_lane,
         std::function<void(int x, int y)> region_begin,
         std::function<void(int x, int y)> region_update,
         std::function<void()> region_end,

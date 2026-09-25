@@ -1020,28 +1020,24 @@ struct GuiInputHandler {
     // centroid and dist_ratio pinned at 1.0. The payload is a
     // GuiTouchNavFrame (gui_input.h): the CURRENT centroid, the centroid's
     // horizontal delta and the finger-distance ratio against the previous
-    // delivered frame, the finger count, and the first finger's
-    // thin-lane answer.
+    // delivered frame, the finger count, and the live ctrl bit.
     //
-    // THE THIN LANE TAKES NO NAV GESTURE AT ALL — the trim bar — and the
-    // refusal is the frame's own down_on_thin_lane bit READ
-    // ALONE, with no finger-count term (architect 2026-08-15: "once one finger
-    // is down, the second finger is completely ignored, which is what we do with
-    // three-finger gestures on the waveform"): a gesture BEGUN on such a lane
-    // does nothing at all rather than falling through to the pinch below and
-    // zooming the view from a lane the user was touching for another reason.
-    // The one-finger case is no over-reach — a plain finger on that lane never
-    // reaches this body at all, so the only one-finger frames carrying the bit
-    // are downgrade survivors, which are exactly what must not pan (the argument
-    // is at the refusal). It reads the DOWN POINT and not the live centroid
-    // because a thin lane whose drags are x-only cannot hold one, and the bit
-    // is stream-constant, so the refusal cannot change under a live gesture.
-    // THIS IS THE SECOND DOOR: the platform's own second-finger fork is the
-    // first, ignoring a second contact on that lane rather than upgrading a
-    // live translation into a gesture this body would then refuse frame by
-    // frame. Everything below describes the WAVEFORM's gesture — which keeps
-    // its pinch for its whole life even if the fingers carry the centroid onto
-    // the bar, the same down-point rule read the other way.
+    // ONE FINGER UNDER CTRL ZOOMS (architect 2026-09-25, the S Pen: "the
+    // ctrl-zoom is the only thing I want from pointer"). The pen's side button
+    // is the Ctrl bit on the tablet (GuiInputCore::set_modifiers' second
+    // producer), and a single-finger frame carrying it is THE NAV DRAG'S OWN
+    // ZOOM PHASE ported, not a second rule: its travel runs the drag's level
+    // rule (nav_drag_zoom_level) about a pivot SEATED at the finger's point
+    // when the zoom began and edge-rebound through the drag's own owner
+    // (rebind_zoom_pivot_into_waveform) — the pinch's seat record,
+    // TouchNavZoomState, carrying which zoom took it. The fork is LIVE, both
+    // ways, mid-drag, exactly as the pointer's (ScrollDragState): the
+    // platform announces each ctrl edge with an exempt frame, so the stem
+    // appears at a button-down and vanishes at a button-up, and a button held
+    // from the down makes the slop crossing the zoom from its first frame.
+    // What the pointer's zoom phase does that this does not: the capture's
+    // restore stamps and the notional-x freeze — the glass has no cursor to
+    // restore and no notional position to spend twice.
     //
     // ONE FINGER PANS, TWO FINGERS ZOOM — AND THE TWO-FINGER GESTURE NEVER
     // PANS (architect 2026-08-14, from the rig: "on the touch panel, two
@@ -1221,24 +1217,11 @@ struct GuiInputHandler {
     // wheel_context answer, so a refused pan FREEZES exactly as a refused
     // two-finger frame does rather than falling back to a pointer drag, and
     // in begin_touch_region's gate list for the hold. Asked ONCE at the
-    // first finger's down; the answer also picks the window's DEADLINE (the
-    // region-hold beat on the zone, the 60 ms window off it) and forks the
-    // EXPIRY (the region hold vs the pointer unlock) — the platform state
-    // block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
+    // first finger's down; the answer also decides whether the platform
+    // opens a WINDOW at all (the region-hold beat on the zone; off it, and
+    // outside an editor's field, the down is the pointer on contact,
+    // 2026-09-25) — the platform state block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;
-
-    // THE THIN-LANE QUERY (2026-08-15) — the pan-zone query's twin, asked at
-    // the same down: does this point lie on a THIN LANE? A CLASS, not a lane —
-    // the body states what makes a lane a member and names the one (the TRIM
-    // BAR), so the next one joins on a rule. It names NO
-    // gesture and forks no resolution here; the platform captures its answer and
-    // carries it onto every nav frame (GuiTouchNavFrame::down_on_thin_lane),
-    // where TWO readers refuse with it — apply_touch_nav_update drops every nav
-    // frame carrying it, and the platform's own second-finger fork ignores a
-    // second contact on such a lane outright, so once one finger is down the
-    // second is completely ignored. Surface geometry only, like its twin. Wired
-    // at main.cpp's set_touch_nav_hooks call.
-    bool touch_point_on_thin_lane(int x, int y) const;
 
     // THE TOUCH REGION HOOKS (pan-primary's touch half, the eighth glass
     // ruling 2026-08-12 — "region select to be hold and then drag because
@@ -1850,13 +1833,14 @@ struct GuiInputHandler {
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // (codex round 20). THE FINDING IS WHY THIS EXISTS, and it is worth stating
-    // before the mechanism: the touch upgrade's ABNORMAL END (round 19) ends
+    // before the mechanism: the touch layer's ABNORMAL END (round 19; its
+    // producers are the touch hard ends — a cancel, a capability loss) ends
     // every MOTION-DRIVEN gesture correctly, because those have a button-lost
     // end — on_motion's `!primary_button_held` arms, one per drag state. THESE
     // THREE HAVE NONE. The armed chrome press, the modal dialog's armed button
     // and the dropdown's item claim are not button-lost consumers at all: they
     // are claims on a FUTURE RELEASE, and until now the only thing that dropped
-    // them was the pointer-LEAVE hook. Calling the upgrade's end "the standing
+    // them was the pointer-LEAVE hook. Calling the abnormal end "the standing
     // lost-button shape" was therefore true of one family and FALSE of this
     // one — a concept reused across two families that do not share it, which is
     // exactly how a stale ChromePress came to survive a whole pinch (with a
@@ -1866,7 +1850,7 @@ struct GuiInputHandler {
     //
     // THE FIX GIVES THEM ONE, at the one place the edge is observable: a MOTION
     // that reports the primary button UNHELD while one of these stands. That
-    // motion is the abnormal end's own delivery, so an upgrade now ends every
+    // motion is the abnormal end's own delivery, so that end now ends every
     // arm the vanished press could have committed — motion-driven and
     // release-time alike, because the finger that armed them is not going to
     // lift — and the mouse-focused case is no longer a different path for them.
@@ -1887,8 +1871,8 @@ struct GuiInputHandler {
     // this family's own finding was about.
     // THE ON-SCREEN KEYBOARD'S HELD KEY JOINED 2026-08-27 as the family's
     // fourth member and its first DELIVERING one — the argument is at the
-    // body, and its producer is the second-finger upgrade, which delivers this
-    // motion and no button release.
+    // body, and its producer is the touch layer's abnormal end, which
+    // delivers this motion and no button release.
     void clear_release_time_press_arms();
 
     // AND THE KEYBOARD'S OWN ARM, dropped on the KEYBOARD's equivalent edge —
@@ -2117,6 +2101,18 @@ struct GuiInputHandler {
     // not one. The capture's restore x is driven to the stem each event.
     // Defined in input_pointer.cpp.
     void apply_nav_zoom_at(int x, int y, bool final_event);
+    // THE NAV DRAG'S LEVEL RULE — `zoom_level - dx/rate` at the
+    // gui_scale-resolved rate, pre-clamped into the chokepoint's window — one
+    // owner for its two readers, the zoom phase above and the one-finger
+    // touch zoom (apply_touch_nav_update under ctrl). Defined in
+    // input_pointer.cpp.
+    double nav_drag_zoom_level(double dx) const;
+    // THE ZOOM PIVOT'S EDGE TRICK — a song-frame pivot's column under the
+    // live viewport, clamped into the waveform with the pivot REBOUND to the
+    // edge pixel's content when it clamps; returns the column. One owner for
+    // the zoom phase above, the pinch and the one-finger touch zoom; the
+    // reversibility record is at the definition (input_pointer.cpp).
+    double rebind_zoom_pivot_into_waveform(double& anchor_sample) const;
 
     // THE DEFERRED CLICK ACT — the motionless navigation-surface release's
     // whole body, running THE PRESSED HALF'S OWN ACT: the audition scrub

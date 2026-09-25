@@ -16,26 +16,17 @@ uint64_t gui_monotonic_us() {
 
 namespace {
 
-// THE TOUCH DISAMBIGUATION CONSTANTS, all RULED RETUNABLES (touch phase 1,
+// THE TOUCH WINDOW'S CONSTANTS, RULED RETUNABLES (touch phase 1,
 // 2026-08-11; the WINDOW is back since the sixth glass ruling, 2026-08-12,
-// after the timer-free model's one-session field life, and TWO-DEADLINE
-// since the eighth glass ruling the same day — retune on glass, not
+// after the timer-free model's one-session field life — retune on glass, not
 // on argument).
 //
-// kTouchDisambiguateMs is the window between the FIRST finger's down and the
-// commitment to the one-finger resolution — it exists to tell tap from drag
-// from two fingers, so a second finger landing inside it becomes the
-// navigation gesture with no press ever delivered and nothing to unwind (the
-// jump-free pinch — the field verdict that brought the window back; touch.md
-// carries the record). 60 ms is short enough that a deliberate tap feels
-// immediate and long enough that the two fingers of an intended pinch, which
-// land a frame or two apart, are seen as a pair. Both deadlines are sampled
-// on the timerfd tick (the key-repeat precedent), so expiry lands within one
-// tick (<= ~16 ms) of the mark — the window is a feel bound, not an exact
-// timer. It is the OFF-ZONE deadline: expiry there resolves to the pointer
-// translation — hold unlocks the pointer, which is what keeps the
-// endcap/bridge grabs, the flag drags and every off-zone press-and-hold
-// gesture alive on glass.
+// THE WINDOW OPENS IN TWO PLACES ONLY (architect 2026-09-25: "zoom is not
+// useful outside waveform", and a second finger's only use is the pinch): on
+// the PAN ZONE and in an OPEN EDITOR'S FIELD. Anywhere else a down is the
+// pointer ON CONTACT (touch_down's Idle arm), so the off-zone deadline that
+// told one finger from two there — 60 ms, the eighth ruling's "as before" —
+// has no producer and is gone with its window.
 //
 // kTouchRegionHoldMs is the PAN ZONE's own stretched window — the
 // REGION-HOLD BEAT (the eighth glass ruling, 2026-08-12: pan is the common
@@ -58,10 +49,10 @@ namespace {
 // THE SLOP IS NO LONGER A CONSTANT HERE. It is touch_slop_px_, a settable
 // member whose default is the authored kDefaultTouchSlopPx and whose live
 // value the GUI pushes down scaled (set_touch_slop_px, input_core.h — the
-// contract, the three uses and the twin-gate invariant are all stated there,
+// contract, the two uses and the twin-gate invariant are all stated there,
 // since the value's owner is now the door rather than this block).
 //
-// AND THERE IS A THIRD ANSWER: NO DEADLINE AT ALL. Inside an OPEN EDITOR'S
+// AND THE OTHER ANSWER IS NO DEADLINE AT ALL. Inside an OPEN EDITOR'S
 // FIELD the window never expires (architect's tablet vocabulary for the
 // field, 2026-09-05: a TAP seats the caret and seeds the double tap, a DRAG
 // moves it, a DOUBLE TAP selects the word — there is no hold meaning there,
@@ -72,7 +63,6 @@ namespace {
 // caret drag. That is what keeps a resting finger out of the desk's
 // selection sweep — the field's contact can no longer expire onto the
 // pointer road at all — while a slow tap still opens a double tap.
-constexpr int    kTouchDisambiguateMs = 60;
 constexpr int    kTouchRegionHoldMs   = kHoldBeatMs;
 // The deadline a window that must never expire carries: no monotonic reading
 // can reach it, so maybe_resolve_touch_window's one time compare is the whole
@@ -95,7 +85,7 @@ void GuiInputCore::set_surface_width(int width_px) {
 
 void GuiInputCore::tick() {
     maybe_fire_repeat();
-    // The touch disambiguation window's deadline rides the same tick the
+    // The touch window's deadline rides the same tick the
     // key-repeat deadline does (its lazy twin runs at each touch event's
     // arrival; granularity is recorded at the constants).
     maybe_resolve_touch_window();
@@ -303,6 +293,13 @@ void GuiInputCore::set_modifiers(bool ctrl, bool shift, bool alt, bool super) {
     const bool modeled_edge = next_ctrl  != mod_ctrl_ ||
                               next_shift != mod_shift_ ||
                               next_alt   != mod_alt_;
+    // THE ONE-FINGER NAV'S FORK READS CTRL ALONE (the nav frame's ctrl bit,
+    // gui_input.h), so only a CTRL edge under a live single-finger nav owes
+    // the touch machine anything; shift and alt ride its frames inert, the
+    // pointer nav drag's own rule (sync_nav_drag_mode).
+    const bool single_nav_ctrl_edge = next_ctrl != mod_ctrl_ &&
+                                      touch_phase_ == TouchPhase::Nav &&
+                                      touch_nav_single_;
 
     if (modeled_edge) {
         // STAGED CAPTURED MOTION IS DELIVERED UNDER THE MODIFIER STATE IT
@@ -328,6 +325,17 @@ void GuiInputCore::set_modifiers(bool ctrl, bool shift, bool alt, bool super) {
         // arrival, so a button dispatched later in the frame is unaffected,
         // and the wheel's per-frame accumulators are untouched here).
         flush_deferred_motion();
+        // THE TOUCH TWIN OF THAT FLUSH (2026-09-25, the S Pen's button — the
+        // modifier door's second producer): a single-finger nav frame
+        // STAGED for the touch_frame boundary is motion made under the old
+        // ctrl bit, and the frame reads the bit at delivery, so it is
+        // delivered HERE, while the bit still reads old — a pan leg staged
+        // before the button went down pans, it does not zoom. The nav cadence
+        // owes nothing else: the frame boundary finds the flag clear.
+        if (single_nav_ctrl_edge && touch_nav_frame_dirty_) {
+            touch_nav_frame_dirty_ = false;
+            deliver_touch_nav_frame(/*deliver_even_if_no_op=*/false);
+        }
     }
 
     mod_ctrl_  = next_ctrl;
@@ -373,6 +381,18 @@ void GuiInputCore::set_modifiers(bool ctrl, bool shift, bool alt, bool super) {
         // already staged when this event arrived, and by the tail the bits
         // have moved.
     }
+
+    // THE CTRL EDGE IS ANNOUNCED TO A LIVE SINGLE-FINGER NAV (2026-09-25):
+    // one exempt frame carrying the NEW bit and no delta (the exemption at
+    // set_touch_nav_hooks' update contract), so the GUI seats the one-finger
+    // zoom's pivot and paints its stem at a ctrl-down, and clears both at a
+    // ctrl-up, AT THE EDGE — the pointer drag's own edge behaviour
+    // (sync_nav_drag_mode on the settled hook), which a finger standing
+    // still would otherwise never produce. Gated on the latch: an unlatched
+    // single nav has delivered nothing, and its first frame reads the new
+    // bit anyway.
+    if (single_nav_ctrl_edge && touch_nav_latched_)
+        deliver_touch_nav_frame(/*deliver_even_if_no_op=*/true);
 
     // No on_key synthesis on modifier change — the next non-modifier
     // key event carries the updated state.
@@ -1045,53 +1065,34 @@ void GuiInputCore::pointer_frame() {
 void GuiInputCore::maybe_resolve_touch_window() {
     if (touch_phase_ != TouchPhase::Pending) return;
     if (gui_monotonic_us() < touch_window_deadline_us_) return;
-    // The window EXPIRED with one finger down — the deadline was the zone's
-    // own (the two-deadline fork at the down site) and the expiry FORKS on
-    // the same captured answer (the eighth glass ruling): ON the pan zone
-    // the beat's expiry is THE REGION HOLD — the region former armed at the
-    // down point, so hold-then-drag sweeps a region; OFF it the hold unlocks
-    // the POINTER (hold-then-drag is the old pointer drag — what keeps the
-    // endcap/bridge grabs, the flag drags and every off-zone press-and-hold
-    // gesture alive on glass).
+    // The window EXPIRED with one contact down, and only the ZONE'S window
+    // can: it is THE REGION HOLD — the region former armed at the down point,
+    // so hold-then-drag sweeps a region (the eighth glass ruling).
     //
-    // THE EDITOR FIELD REACHES NEITHER ARM, because its window has no
-    // deadline to expire (kTouchWindowNoExpiry at the down site): a finger
-    // resting in the field is still Pending, and its lift is a TAP. There is
-    // no third arm here for that reason and none is owed — the field's two
-    // resolutions are the slop crossing (the caret drag, at the motion site)
-    // and the lift (the tap, at touch_up), so nothing about it is decided by
-    // a duration.
-    if (touch_down_in_pan_zone_)
-        resolve_touch_window_to_region();
-    else
-        resolve_touch_window_to_pointer();
+    // THE EDITOR FIELD NEVER GETS HERE, because its window has no deadline to
+    // expire (kTouchWindowNoExpiry at the down site): a finger resting in the
+    // field is still Pending, and its lift is a TAP. Its two resolutions are
+    // the slop crossing (the caret drag, at the motion site) and the lift (the
+    // tap, at touch_up), so nothing about it is decided by a duration. And no
+    // other window exists to expire: off the zone and the field the down is
+    // the pointer on contact (touch_down's Idle arm).
+    resolve_touch_window_to_region();
 }
 
 void GuiInputCore::resolve_touch_window_to_pointer() {
     // Pending -> Pointer, delivering what the window withheld: the synthesized
     // entry motion at the ORIGINAL down point (the pointer enter's own shape —
     // the first "the pointer is here" notification), the left press there, and
-    // any queued motion. Shared by all four pointer resolutions (the slop
-    // crossing and the expiry both reach here only OUTSIDE the pan zone and
-    // OUTSIDE the editor's field — the crossing's pan-surface arm resolves
-    // to single-finger nav and its field arm to the caret drag, the forks at
-    // the Pending motion site, while the on-zone expiry goes to the region
-    // hold and the field has no expiry at all, the forks at
-    // maybe_resolve_touch_window; the TAP reaches here from every surface,
-    // the field included, and so does the field's DOUBLE PRESS at its very
-    // down); the tap's
-    // caller delivers the release and the focus-forked translation end itself
-    // (deliver_touch_translation_end), immediately after.
+    // any queued motion. Shared by all three pointer resolutions: the
+    // OFF-ZONE DOWN (on contact, 2026-09-25 — off the pan zone and outside
+    // an editor's field no window opens), the field's DOUBLE PRESS (on
+    // contact at its very down), and the TAP, which reaches here from the
+    // two surfaces that do open a window — the zone and the field — while
+    // their other resolutions go elsewhere (the crossing to single-finger
+    // nav or the caret drag, the zone's expiry to the region hold). The
+    // tap's caller delivers the release and the focus-forked translation end
+    // itself (deliver_touch_translation_end), immediately after.
     touch_phase_ = TouchPhase::Pointer;
-    // THE MOVED LATCH SEEDS FROM THE WINDOW'S OWN TRAVEL (the sixth glass
-    // ruling's second-down fork, 2026-08-12): a slop-crossing resolution
-    // enters Pointer already MOVED — its condition is the latch's own
-    // definition, Chebyshev >= touch_slop_px_ from the down point — while the
-    // expiry and tap resolutions enter motionless (their drift is sub-slop
-    // by construction). The Pointer motion arm latches it afterward.
-    touch_translation_moved_ =
-        std::max(std::abs(touch_last_x_ - touch_down_x_),
-                 std::abs(touch_last_y_ - touch_down_y_)) >= touch_slop_px_;
     // THE HOLD BIT GOES UP BEFORE THE ENTRY MOTION (codex round 2): the finger
     // has factually been down since the window opened, so EVERY delivery in
     // this burst — the entry motion included — reads primary_button_held
@@ -1122,10 +1123,10 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
         flush_deferred_motion();
         on_button_press_(GuiMouseButton::Left, down_x, down_y, current_mods());
     }
-    // The queued motion: sub-slop drift for the expiry and tap resolutions,
-    // the slop-crossing position itself for the motion one — either way the
-    // finger's latest position, delivered after the press so a drag armed by
-    // the press sees its first motion in the same burst.
+    // The queued motion: the tap's sub-slop drift (the two on-contact
+    // resolutions have none — the contact has not moved yet), the finger's
+    // latest position, delivered after the press so it reaches the lift's
+    // release where the finger actually was.
     if (touch_window_moved_ &&
         (touch_last_x_ != touch_down_x_ || touch_last_y_ != touch_down_y_)) {
         deliver_motion(containing_pixel(touch_last_x_),
@@ -1256,9 +1257,9 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //   * CLEAN (the finger's own lift, and nothing else since 2026-08-29) —
     //     the left RELEASE: the press was a click, and every act-at-lift
     //     surface runs.
-    //   * ABNORMAL (the second-finger upgrade, and THE HARD ENDS since
-    //     2026-08-29 — a touch the system takes away is not a click unless it
-    //     moved; the arm is at hard_end_touch_stream) — the product's own LOST-BUTTON
+    //   * ABNORMAL (THE HARD ENDS since 2026-08-29 — a touch the system
+    //     takes away is not a click unless it moved; the arm is at
+    //     hard_end_touch_stream) — the product's own LOST-BUTTON
     //     edge instead: the hold bit drops here exactly as it does on a clean
     //     end, so nothing sticks, and the GUI is told through a MOTION at the
     //     finger's last position carrying `primary_button_held` false. That is
@@ -1276,7 +1277,7 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     the recorded accepted cost of press-time acting, undo the mitigation;
     //     the surfaces that still commit nothing at an unmoved press are the
     //     ones whose act was never owed until the lift, the nav surface's
-    //     deferred click among them. touch.md's upgrade bullet is the ruling.
+    //     deferred click among them. touch.md's hard-end bullet is the ruling.
     //     AND THE ARMS THE CHROME / MODAL / MENU SURFACES HOLD ARE
     //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below
     //     (codex round 20): the GUI ends its release-time claims — the chrome
@@ -1326,7 +1327,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // finger last was — the accepted-glitch class, self-healing on the next
     // pointer event.
     // clean_release is passed straight through and decides only WHAT that edge
-    // delivers — the left release, or the lost-button motion the upgrade needs
+    // delivers — the left release, or the lost-button motion a hard end needs
     // (the fork and its whole rationale are at end_touch_left_hold). Everything
     // below is shared verbatim: whichever end it was, the finger is no longer
     // the pointer, and the fork below answers where the pointer now IS.
@@ -1337,7 +1338,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // finger zone's kind to the REAL pointer — so before this fork a mouse
     // resting in the window kept the finger's cue (Arrow/resize over a
     // Pan zone, say) until its own next motion. The finger ceasing to BE the
-    // pointer — its lift, or the upgrade's handover to the nav gesture — means
+    // pointer — its lift, or a hard end taking it away — means
     // the unified pointer is now wherever the MOUSE is:
     //   * physical pointer FOCUSED (pointer_enter / pointer_leave, which touch
     //     never writes) — synthesize an ordinary MOTION at its last
@@ -1376,111 +1377,127 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
         pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
 }
 
-void GuiInputCore::touch_down(int32_t id, double x, double y) {
-    // An event past the deadline sees the resolved phase (Pointer).
+void GuiInputCore::touch_down(int32_t id, double x, double y,
+                              GuiTouchTool tool) {
+    // An event past the deadline sees the resolved phase (Region).
     maybe_resolve_touch_window();
     ++touch_point_count_;
     switch (touch_phase_) {
         case TouchPhase::Idle:
-            // The FIRST finger opens the disambiguation window: remember
-            // {id, position, deadline} and deliver NOTHING — the window exists
-            // only to tell one finger from two (the constants above own the
-            // tuning rationale).
-            touch_phase_    = TouchPhase::Pending;
-            touch_owner_id_ = id;
+            // The FIRST contact: remember {id, tool, position} and ask the
+            // surface questions once. Whether a WINDOW opens at all is their
+            // answer (the constants above own the rationale): on the pan zone
+            // and in an open editor's field it does and NOTHING is delivered
+            // yet; anywhere else the down resolves to the pointer here, on
+            // contact.
+            touch_phase_     = TouchPhase::Pending;
+            touch_owner_id_  = id;
+            touch_owner_tool_ = tool;
             touch_down_x_ = touch_last_x_ = x;
             touch_down_y_ = touch_last_y_ = y;
             touch_window_moved_ = false;
             // The PAN-ZONE answer is captured ONCE, here at the down (the
-            // phone model): the window's slop-crossing resolution AND its
-            // expiry fork on it. Surface geometry only, by the query's
-            // contract. Null hook = no pan surface.
+            // phone model): it decides whether the window opens, and the
+            // window's slop crossing, expiry and second-down arm all fork on
+            // it. Surface geometry only, by the query's contract. Null hook =
+            // no pan surface.
             touch_down_in_pan_zone_ =
                 touch_pan_zone_hook_ &&
                 touch_pan_zone_hook_(containing_pixel(x),
                                      containing_pixel(y));
-            // THE THIN-LANE ANSWER rides beside it, same query shape, same one
-            // asking, same lifecycle (both cleared in forget_touch_state). It
-            // forks NO deadline and NO resolution here, so a finger landing on
-            // the trim bar resolves exactly as it would
-            // otherwise (the lane is not pan surface, so that is the plain
-            // pointer translation); what it decides comes later, at the two
-            // doors that refuse with it — the second-finger fork in the Pointer
-            // arm below, and the GUI's own refusal on every nav frame it is
-            // carried onto.
-            touch_down_on_thin_lane_ =
-                touch_thin_lane_hook_ &&
-                touch_thin_lane_hook_(containing_pixel(x),
-                                      containing_pixel(y));
-            // THE EDITOR-FIELD ANSWER rides beside them (2026-09-05), the
+            // THE EDITOR-FIELD ANSWER rides beside it (2026-09-05), the
             // same shape once more: asked once here, captured, cleared with
-            // them. It forks the window's SLOP CROSSING toward the caret
+            // it. It forks the window's SLOP CROSSING toward the caret
             // drag (at the motion site) — the field is off the pan zone, the
             // waveform alone on the GUI's answer, so the two bits cannot
-            // both be true — it
-            // takes the window's DEADLINE AWAY ALTOGETHER just below, and
-            // its DoublePress answer resolves the window at the bottom of
-            // this arm, on this very down.
+            // both be true — it takes the window's DEADLINE AWAY ALTOGETHER
+            // just below, and its DoublePress answer resolves the window at
+            // the bottom of this arm, on this very down.
             touch_down_in_editor_field_ =
                 touch_editor_field_hook_
                     ? touch_editor_field_hook_(containing_pixel(x),
                                                containing_pixel(y))
                     : GuiTouchEditorField::Outside;
-            // THE TWO-DEADLINE FORK (the eighth glass ruling, 2026-08-12 —
-            // the dead trim-band beat's pattern reborn), AND SINCE
-            // 2026-09-05 A THIRD ANSWER, NO DEADLINE: ON the zone the
-            // window runs to the REGION-HOLD beat (kTouchRegionHoldMs, the
-            // product's one hold beat); IN AN OPEN EDITOR'S FIELD it runs to
-            // NOTHING (kTouchWindowNoExpiry — the field has no hold meaning,
-            // so a motionless finger stays Pending and its lift is the tap
-            // that seeds the double tap; the constants block carries the
-            // ruling); OFF both the 60 ms disambiguation window as before.
-            // The arithmetic at this site:
-            // on the zone a tap still lifts long before that beat and delivers
-            // whole at the lift, a drag still crosses the 8 px slop into the
-            // pan within the first frames, so the stretch costs neither —
-            // only the deliberate motionless hold ever reaches the beat.
-            // Monotonic, not the event
-            // timestamp (whose base this program never compares against).
-            // The DoublePress answer takes the off-zone deadline and never
-            // uses it: the resolution below leaves Pending on this very call.
+            // THE DEADLINE: ON the zone the window runs to the REGION-HOLD
+            // beat (kTouchRegionHoldMs, the product's one hold beat); IN AN
+            // OPEN EDITOR'S FIELD it runs to NOTHING (kTouchWindowNoExpiry —
+            // the field has no hold meaning, so a motionless finger stays
+            // Pending and its lift is the tap that seeds the double tap; the
+            // constants block carries the ruling). The arithmetic on the zone:
+            // a tap still lifts long before that beat and delivers whole at
+            // the lift, a drag still crosses the 8 px slop into the pan within
+            // the first frames, so the stretch costs neither — only the
+            // deliberate motionless hold ever reaches the beat. Monotonic,
+            // not the event timestamp (whose base this program never compares
+            // against). A contact that resolves on this very call takes the
+            // zone's arithmetic and never reads it.
             touch_window_deadline_us_ =
                 touch_down_in_editor_field_ == GuiTouchEditorField::Field
                     ? kTouchWindowNoExpiry
                     : gui_monotonic_us() +
-                          static_cast<uint64_t>(touch_down_in_pan_zone_
-                                                    ? kTouchRegionHoldMs
-                                                    : kTouchDisambiguateMs) *
-                              1000ull;
-            // THE DOUBLE PRESS RESOLVES ON CONTACT (2026-09-05, the third
-            // clause: content acts the moment its identity is certain). A
-            // down inside the editor's field within the double-click window
-            // and slack of a seed the GUI holds can only be the SECOND PRESS
-            // — a tap would have been one already, and a drag from it is the
-            // double-click-drag, which the pointer road carries — so the
-            // window is opened and resolved in one call: the entry motion
-            // and the press land at this down point, the GUI's consumed
-            // second press selects the word and arms its word-wise drag, and
-            // every motion from here is Pointer motion driving that arm.
-            // Nothing is queued (the finger has not moved yet). A lift
-            // without motion is then the release, exactly the double-tap the
-            // lift-time burst used to deliver, only earlier.
+                          static_cast<uint64_t>(kTouchRegionHoldMs) * 1000ull;
+            // THE ON-CONTACT RESOLUTIONS — the third clause (content acts the
+            // moment its identity is certain), twice:
+            //   * THE DOUBLE PRESS (2026-09-05). A down inside the editor's
+            //     field within the double-click window and slack of a seed
+            //     the GUI holds can only be the SECOND PRESS — a tap would
+            //     have been one already, and a drag from it is the
+            //     double-click-drag, which the pointer road carries — so the
+            //     entry motion and the press land at this down point, the
+            //     GUI's consumed second press selects the word and arms its
+            //     word-wise drag, and every motion from here is Pointer motion
+            //     driving that arm. A lift without motion is then the release,
+            //     exactly the double tap.
+            //   * EVERY DOWN OFF THE PAN ZONE AND OUTSIDE AN OPEN EDITOR'S
+            //     FIELD (architect 2026-09-25, for the pen and the finger
+            //     alike: "zoom is not useful outside waveform", and the second
+            //     finger's only use is the pinch). Nothing a window could
+            //     decide is meant there — no pan, no region hold, no pinch —
+            //     so the press is the pointer's at the down: a flag selects
+            //     and lands, a trim endcap or the bridge grabs, a chrome
+            //     button arms, all with no wait, and the finger's motion from
+            //     here is the pointer's own drag (the GUI's press-becomes-drag
+            //     gate, the slop's twin, decides it). THE CHROME'S RULES ARE
+            //     THE POINTER ROAD'S, UNTOUCHED: an icon still acts at the
+            //     lift and its shift twin is still the long press timed from
+            //     the press's own clock, exactly as a mouse press feeds them.
+            //     A second contact landing from here is ignored (the Pointer
+            //     arm below).
+            // Nothing is queued in either case (the contact has not moved).
             if (touch_down_in_editor_field_ ==
-                GuiTouchEditorField::DoublePress)
+                    GuiTouchEditorField::DoublePress ||
+                (!touch_down_in_pan_zone_ &&
+                 touch_down_in_editor_field_ == GuiTouchEditorField::Outside))
                 resolve_touch_window_to_pointer();
             break;
         case TouchPhase::Pending: {
             if (id == touch_owner_id_) break;  // protocol nonsense; ignore
-            // A SECOND finger inside the window: the two-finger navigation
-            // gesture, and no press was ever delivered — nothing to unwind,
-            // which is the window's whole purpose (the jump-free pinch).
+            // A SECOND contact inside the window. ON THE ZONE it is the
+            // two-finger navigation gesture, and no press was ever delivered
+            // — nothing to unwind, which is the window's whole purpose there
+            // (the jump-free pinch). ANYWHERE ELSE — the editor field, the
+            // one other place a window opens — it is IGNORED, recorded (the
+            // count above) and not routed: a pinch is admitted only from the
+            // zone's window (architect 2026-09-25, "zoom is not useful
+            // outside waveform"). AND THE PEN IS NEVER A PINCH MEMBER (the
+            // same ruling's third amendment), in either order: a finger
+            // landing beside a pen's window, or a pen beside a finger's, is
+            // ignored the same way, so a hand resting on the glass while the
+            // pen draws changes nothing. The owner's window runs on either
+            // way. (A pinch whose FIRST finger lands on the waveform and
+            // whose second lands off it still zooms: the first contact's
+            // zone answer governs.)
+            if (!touch_down_in_pan_zone_ ||
+                touch_owner_tool_ == GuiTouchTool::Pen ||
+                tool == GuiTouchTool::Pen)
+                break;
             // The pair is seeded from the
             // owner's latest position and the new point; the latch reference
             // and the per-frame delta basis both start here. touch_nav_single_
             // is set EXPLICITLY at every Nav entry (here, the single-finger
-            // resolve, and both upgrades): a normal nav end does not run the
-            // one forget, so a stale flag from a finished single-finger pan
-            // would otherwise leak into the next gesture.
+            // resolve, and the single-finger upgrade): a normal nav end does
+            // not run the one forget, so a stale flag from a finished
+            // single-finger pan would otherwise leak into the next gesture.
             touch_phase_      = TouchPhase::Nav;
             touch_nav_single_ = false;
             touch_nav_id2_    = id;
@@ -1500,100 +1517,23 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
             touch_nav_frame_dirty_ = false;
             break;
         }
-        case TouchPhase::Pointer: {
-            if (id == touch_owner_id_) break;  // protocol nonsense; ignore
-            // A SECOND finger during a live translation FORKS ON THE MOVED
-            // LATCH (the sixth glass ruling, 2026-08-12 — the one piece of
-            // the timer-free model kept when the window returned):
-            //   * MOVED (a live drag — marker, region, trim): IGNORED whole —
-            //     recorded (the
-            //     count above), not routed: mid-gesture finger-count changes do
-            //     not mutate a committed gesture (the any-end-commits family;
-            //     the architect's explicit mid-drag ruling).
-            //   * ON A THIN LANE (the trim bar,
-            //     touch_down_on_thin_lane_): IGNORED WHETHER THE FIRST FINGER
-            //     HAS MOVED OR NOT, so the first finger's drag simply continues
-            //     — architect 2026-08-15: "get rid of all two-finger gestures on
-            //     ... the trim bar; once one finger is
-            //     down, the second finger is completely ignored, which is what
-            //     we do with three-finger gestures on the waveform — which makes
-            //     sense, because the waveform is large and ... trim [is]
-            //     small". THIS IS THE FIRST DOOR AND THE REASON IT EXISTS:
-            //     without it a MOTIONLESS finger on such a lane would take the
-            //     upgrade below, tearing down a live and perfectly correct
-            //     pointer translation to start a gesture the GUI's own refusal
-            //     then drops frame by frame.
-            //     WHAT THE WINDOW PATH DOES IS DIFFERENT AND IS NOT FIXED HERE:
-            //     two fingers landing within the disambiguation window never
-            //     reach the Pointer phase at all — the Pending arm above sends
-            //     them straight to Nav — so a FAST two-finger landing on a thin
-            //     lane does nothing whatever, not even the first finger's drag,
-            //     because the GUI refuses every frame of it. "Two fingers do
-            //     nothing there" is the intent either way; it is simply reached
-            //     through the other door, and a reader should not have to
-            //     discover that.
-            //   * MOTIONLESS (a hold, off these lanes): THE UPGRADE — the
-            //     translation ends by the ABNORMAL end, the finger-up path's
-            //     own shape through the one owner MINUS its click (staged
-            //     motion flushed, the hold bit dropped on the logical left's
-            //     1->0 edge, the focus-forked translation end; the
-            //     sibling-suppression rule applies identically),
-            //     and the two-finger gesture SEEDS AT THE JOIN: both
-            //     fingers' current positions are the gesture start, the
-            //     latch measured from there. The hold's press already landed
-            //     at the window's expiry, so the upgrade adds NO further
-            //     jump — it only keeps a slow pinch (fingers landing further
-            //     apart than the window) alive instead of dead; a sub-latch
-            //     release of that pair delivers nothing more.
-            //     AN UPGRADE IS A CHANGE OF GESTURE, NOT A LIFT (codex round
-            //     19), and that is why the end is the ABNORMAL one: the user
-            //     did not raise a finger, they added one, and speaking for the
-            //     finger they did NOT lift is what produced the defect. The
-            //     clean release this used to deliver was read as a completed
-            //     CLICK by every act-at-lift surface the hold could be sitting
-            //     on — off the pan zone, which is where a Pointer-phase hold
-            //     lives by construction:
-            //       - THE CLASS, not the case. Every CHROME BUTTON has acted at
-            //         the lift since 2026-08-13, so a finger held on Render,
-            //         Save, a transport button, a menu ITEM or a modal's OK
-            //         fired it the moment the second finger touched down — a
-            //         pinch that ran a command. This is the worse half.
-            //       - The one codex found: a finger held inside a STANDING
-            //         REGION (the region editor's carve-out puts it off the
-            //         zone) ran the motionless release's click act — the upper
-            //         half placing the playhead and hiding the overlay, the
-            //         lower half firing the scrub and its playback edge.
-            //     The abnormal end is the RIGHT spelling rather than a new
-            //     suppression because it is the product's existing ruled answer
-            //     to "this press ended without being a click", and it already
-            //     carries the split this needs: a MOVED drag finalizes exactly
-            //     as a lost button does (unreachable from here today — the
-            //     latch above refuses a moved translation — and correct by
-            //     construction if it ever is), an UNMOVED press commits
-            //     nothing.
-            if (touch_translation_moved_ || touch_down_on_thin_lane_) break;
-            deliver_touch_translation_end(/*clean_release=*/false);
-            touch_phase_      = TouchPhase::Nav;
-            touch_nav_single_ = false;
-            touch_nav_id2_    = id;
-            touch_nav_x1_  = touch_last_x_;
-            touch_nav_y1_  = touch_last_y_;
-            touch_nav_x2_  = x;
-            touch_nav_y2_  = y;
-            const double cx = 0.5 * (touch_nav_x1_ + touch_nav_x2_);
-            const double cy = 0.5 * (touch_nav_y1_ + touch_nav_y2_);
-            const double d  = std::hypot(touch_nav_x2_ - touch_nav_x1_,
-                                         touch_nav_y2_ - touch_nav_y1_);
-            touch_nav_start_cx_   = touch_nav_last_cx_   = cx;
-            touch_nav_start_cy_   = cy;
-            touch_nav_start_dist_ = touch_nav_last_dist_ = d;
-            touch_nav_latched_     = false;
-            touch_nav_delivered_   = false;
-            touch_nav_frame_dirty_ = false;
+        case TouchPhase::Pointer:
+            // A SECOND contact during a live translation is IGNORED whole —
+            // recorded (the count above), not routed, whether the first has
+            // moved or not (architect 2026-09-25: a pinch is admitted only
+            // from the pan zone's window, and a live translation lies off
+            // the zone by construction — the zone's one road here is the tap,
+            // which ends in the same call). The first contact's press, drag
+            // or hold simply continues.
             break;
-        }
         case TouchPhase::Nav:
-            if (touch_nav_single_ && id != touch_owner_id_) {
+            // THE PEN IS NEVER A PINCH MEMBER here either (2026-09-25): a
+            // finger landing while the pen pans or zooms, or a pen landing
+            // beside a panning finger, is ignored like a third finger and the
+            // single-finger gesture runs on.
+            if (touch_nav_single_ && id != touch_owner_id_ &&
+                touch_owner_tool_ != GuiTouchTool::Pen &&
+                tool != GuiTouchTool::Pen) {
                 // THE UPGRADE (the phone model): a second finger landing
                 // during single-finger nav upgrades it to the two-finger
                 // gesture IN PLACE — a transform, not an end (the end hook is
@@ -1624,9 +1564,10 @@ void GuiInputCore::touch_down(int32_t id, double x, double y) {
                 touch_nav_start_dist_ = touch_nav_last_dist_ = d;
                 touch_nav_frame_dirty_ = false;
             }
-            // Otherwise a third finger is ignored — recorded (the count
-            // above), not routed: mid-gesture finger-count changes do not
-            // mutate a committed gesture (the any-end-commits family).
+            // Otherwise a third finger (or a pen-side second contact) is
+            // ignored — recorded (the count above), not routed: mid-gesture
+            // finger-count changes do not mutate a committed gesture (the
+            // any-end-commits family).
             break;
         case TouchPhase::Region:
             // A second finger during the region gesture is IGNORED whole —
@@ -1671,12 +1612,11 @@ void GuiInputCore::touch_up(int32_t id) {
             // lifted, so the unified pointer is where the mouse is). The
             // fork, the sibling-suppression rule (a still-held mouse press
             // suppresses release, leave and restore alike) and the rationale
-            // live at deliver_touch_translation_end, the one owner this site,
-            // the hard end and the second-finger upgrade all call. THE LIFT IS
-            // A CLEAN END, AND SINCE 2026-08-29 IT IS THE ONLY ONE — the
-            // finger really did leave, so its press was a click and every
-            // act-at-lift surface is owed its act, while the two ends where no
-            // finger left (the upgrade and the hard end) both pass false; the
+            // live at deliver_touch_translation_end, the one owner this site
+            // and the hard end call. THE LIFT IS A CLEAN END, AND SINCE
+            // 2026-08-29 IT IS THE ONLY ONE — the finger really did leave, so
+            // its press was a click and every act-at-lift surface is owed its
+            // act, while the hard end, where no finger left, passes false; the
             // fork is at end_touch_left_hold.
             deliver_touch_translation_end(/*clean_release=*/true);
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
@@ -1798,9 +1738,7 @@ void GuiInputCore::touch_up(int32_t id) {
             // The finger's own lift DELIVERS the staged dirty frame first (the
             // end split's finger-up clause, at end_touch_nav_gesture). No
             // release and no translation end: a nav gesture never held the
-            // logical button (a nav born of the motionless-hold upgrade had
-            // its translation ENDED at the join — the hold bit dropped there,
-            // by the abnormal end).
+            // logical button (no nav entry delivers a press).
             end_touch_nav_gesture(/*deliver_final_frame=*/true);
             touch_phase_ = touch_point_count_ > 0 ? TouchPhase::Drain
                                                   : TouchPhase::Idle;
@@ -1845,42 +1783,26 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             touch_window_moved_ = true;
             // Motion beyond the slop resolves the window EARLY — a finger
             // already dragging should not wait the window out — and FORKS on
-            // the down point's captured pan-zone answer (the phone model):
-            // on the pan surface the drag IS the pan (single-finger nav, no
-            // press ever delivered); elsewhere the crossing
-            // position is the queued motion the resolution replays, and at
-            // touch_slop_px_ IS the GUI's own drag gate — the one number pushed
-            // down scaled — it crosses that gate in the same burst as the press
-            // (the invariant at set_touch_slop_px, input_core.h).
-            // IN AN OPEN EDITOR'S FIELD the crossing is the CARET DRAG
-            // (2026-09-05): the field is off the pan zone, and its quick
-            // drag moves the caret rather than reaching the pointer's press
-            // (the editor_field query's contract).
+            // the down point's captured answers, the only two a window opens
+            // on (touch_down's Idle arm): on the pan surface the drag IS the
+            // single-finger nav (the phone model — the pan, or under the ctrl
+            // bit the one-finger zoom; no press ever delivered); IN AN OPEN
+            // EDITOR'S FIELD it is the CARET DRAG (2026-09-05): the field is
+            // off the pan zone, and its quick drag moves the caret rather
+            // than reaching the pointer's press (the editor_field query's
+            // contract).
             if (std::max(std::abs(x - touch_down_x_),
                          std::abs(y - touch_down_y_)) >= touch_slop_px_) {
                 if (touch_down_in_pan_zone_)
                     resolve_touch_window_to_single_nav();
-                else if (touch_down_in_editor_field_ !=
-                         GuiTouchEditorField::Outside)
-                    resolve_touch_window_to_caret();
                 else
-                    resolve_touch_window_to_pointer();
+                    resolve_touch_window_to_caret();
             }
             break;
         case TouchPhase::Pointer:
             if (id != touch_owner_id_) break;   // ignored fingers stay ignored
             touch_last_x_ = x;
             touch_last_y_ = y;
-            // THE MOVED LATCH (the sixth glass ruling's second-down fork):
-            // once the finger has travelled the slop from its down point the
-            // translation is a DRAG for the rest of its life — Chebyshev, the
-            // resolver's own metric, latched once and never re-derived from a
-            // later position (a drag wandering back near its down point is
-            // still a drag).
-            if (!touch_translation_moved_ &&
-                std::max(std::abs(x - touch_down_x_),
-                         std::abs(y - touch_down_y_)) >= touch_slop_px_)
-                touch_translation_moved_ = true;
             // Coalesced to the touch_frame boundary — the pointer-frame
             // precedent: a panel can report at sensor rate, and the strip
             // drag's synchronous per-event repaint wants one delivery per
@@ -1969,7 +1891,7 @@ void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
         // slop (Chebyshev, the drag gate's own metric) or the finger distance
         // has changed by it — so a two-finger tap navigates nothing (a
         // single-finger nav crosses on its first frame by construction: it
-        // exists only by crossing the disambiguation slop, the same distance
+        // exists only by crossing the window's slop, the same distance
         // in the same metric from the same down point). The
         // crossing folds the whole accumulated delta (the strip drag's own
         // crossing model): last_cx/last_dist still hold the gesture start.
@@ -1991,12 +1913,15 @@ void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
     const double dx = cx - touch_nav_last_cx_;
     touch_nav_last_cx_   = cx;
     touch_nav_last_dist_ = dist;
-    // A no-op frame delivers nothing — with ONE exemption, passed in by the
-    // DOWNGRADE alone (the site's own record): the two-to-one transition must
-    // reach the GUI even when the survivor is standing still, because a
-    // delivered not-two-finger frame is the only thing that tells it the
-    // pinch is over. Nothing else may set the flag: a stream of zero-delta
-    // frames is noise the GUI would have to filter again.
+    // A no-op frame delivers nothing — with TWO exemptions, passed in by
+    // their sites alone (each site's own record): the DOWNGRADE, whose
+    // two-to-one transition must reach the GUI even when the survivor is
+    // standing still, because a delivered not-two-finger frame is the only
+    // thing that tells it the pinch is over; and the CTRL EDGE under a live
+    // single-finger nav (set_modifiers), whose frame carries the new bit so
+    // the one-finger zoom's pivot seats or clears at the edge. Nothing else
+    // may set the flag: a stream of zero-delta frames is noise the GUI would
+    // have to filter again.
     if (dx == 0.0 && ratio == 1.0 && !deliver_even_if_no_op) return;
     touch_nav_delivered_ = true;
     if (touch_nav_update_hook_) {
@@ -2010,14 +1935,14 @@ void GuiInputCore::deliver_touch_nav_frame(bool deliver_even_if_no_op) {
         // frame — two fingers zoom and never pan — so this layer still
         // measures and delivers both deltas and applies no policy of its own.
         frame.two_finger = !touch_nav_single_;
-        // THE DOWN POINT'S SURFACE ANSWER, carried on every frame of the
-        // stream (field contract at GuiTouchNavFrame, gui_input.h): the FIRST
-        // finger's thin-lane bit, captured once at the `Idle` down and never
-        // re-measured, so the GUI's refusal reads where the gesture BEGAN
-        // instead of a centroid that moves. Delivering it is not policy — it is
-        // the same surface geometry the pan-zone answer already is, asked once
-        // and handed over.
-        frame.down_on_thin_lane = touch_down_on_thin_lane_;
+        // THE LIVE CTRL BIT, read at delivery (field contract at
+        // GuiTouchNavFrame): on a single-finger frame it is the GUI's
+        // pan-or-zoom fork (the S Pen's button on the tablet, 2026-09-25).
+        // Delivering it is not policy — the modifier door's state, handed
+        // over; a ctrl edge between frames is delivered by set_modifiers
+        // itself, the staged frame under the old bit and an exempt one under
+        // the new.
+        frame.ctrl = mod_ctrl_;
         touch_nav_update_hook_(frame);
     }
 }
@@ -2119,7 +2044,7 @@ void GuiInputCore::touch_capability_lost() {
     // ordinary leave, or a restore motion
     // at a focused mouse) — a live nav gesture (single- or two-finger) ends
     // through its end path with its staged final frame dropped, an unresolved
-    // disambiguation window drops silently, and all touch state is forgotten.
+    // window drops silently, and all touch state is forgotten.
     // The pointer- and keyboard-capability edges deliberately do not reach in
     // here: each input source dies on its own stream's edges.
     hard_end_touch_stream();
@@ -2145,8 +2070,7 @@ void GuiInputCore::hard_end_touch_stream() {
             // passed a CLEAN release from the contract's landing until then.
             // A HARD END IS NOT A LIFT: the window system took the contacts —
             // its own gesture recognition, an edge back-swipe, a shade pull, a
-            // task switch — and the user never raised the finger, which is the
-            // second-finger upgrade's own reasoning arriving by another road.
+            // task switch — and the user never raised the finger.
             // A clean release SPOKE FOR A LIFT THAT DID NOT HAPPEN: it re-hit
             // the box at the last position and every act-at-lift surface ran,
             // so a back-swipe that started on a bottom-row button toggled
@@ -2171,9 +2095,8 @@ void GuiInputCore::hard_end_touch_stream() {
             // through its end path (commits iff anything was applied),
             // DROPPING its staged dirty frame — the end split's hard-end
             // clause, at end_touch_nav_gesture. No release, no leave: a nav
-            // gesture never holds the logical button (a nav born of the
-            // motionless-hold upgrade had its translation released at the
-            // join; every other entry never delivered a press).
+            // gesture never holds the logical button (no nav entry delivers a
+            // press).
             end_touch_nav_gesture(/*deliver_final_frame=*/false);
             break;
         case TouchPhase::Region:
@@ -2216,11 +2139,10 @@ void GuiInputCore::forget_touch_state() {
     // still reach here with it clear.
     touch_frame_motion_pending_ = false;
     touch_down_in_pan_zone_     = false;
-    touch_down_on_thin_lane_    = false;
     touch_down_in_editor_field_ = GuiTouchEditorField::Outside;
+    touch_owner_tool_           = GuiTouchTool::Finger;
     touch_region_frame_dirty_   = false;
     touch_caret_frame_dirty_    = false;
-    touch_translation_moved_    = false;
     touch_nav_single_ = false;
     touch_nav_id2_ = 0;
     touch_nav_x1_ = touch_nav_y1_ = 0.0;
@@ -2518,7 +2440,6 @@ void GuiInputCore::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
     std::function<bool(int x, int y)> pan_zone,
-    std::function<bool(int x, int y)> thin_lane,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
     std::function<void()> region_end,
@@ -2529,7 +2450,6 @@ void GuiInputCore::set_touch_nav_hooks(
     touch_nav_update_hook_    = std::move(update);
     touch_nav_end_hook_       = std::move(end);
     touch_pan_zone_hook_      = std::move(pan_zone);
-    touch_thin_lane_hook_     = std::move(thin_lane);
     touch_region_begin_hook_  = std::move(region_begin);
     touch_region_update_hook_ = std::move(region_update);
     touch_region_end_hook_    = std::move(region_end);

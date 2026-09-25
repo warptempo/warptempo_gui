@@ -948,7 +948,7 @@ struct EditorTextDragState {
 // generic 8px gate shared by every press-becomes-drag surface) begins the
 // reposition drag — the click's acts already stand from the press, so the
 // crossing runs no act. A lost button, the force-end finalizer and the touch
-// layer's ABNORMAL end (the motionless-hold upgrade) disarm and seed nothing —
+// layer's ABNORMAL end (a touch hard end) disarm and seed nothing —
 // none of them is a clean click sequence, and the click itself is not theirs
 // to take back: it committed at the press, and undo is the mitigation.
 //
@@ -1563,6 +1563,20 @@ struct ScrollDragState {
 // reaches for the control key and implicitly does the opposite... I'm keeping
 // the same mental model on the laptop as I would like to have on the touchpad."
 //
+// AND THE ONE-FINGER ZOOM SEATS HERE TOO (2026-09-25, the S Pen's side
+// button as the Ctrl bit — the nav drag's live-ctrl fork carried onto the
+// glass): a single-finger frame carrying ctrl is a zoom about a held song
+// frame exactly as the pinch is, seated at the finger's point when the zoom
+// began (the previous centroid column; apply_touch_nav_update carries the
+// seat rule), re-derived and edge-rebound through the same owner, and it is
+// the stem's gate the same way. THE SEAT RECORDS WHICH ZOOM TOOK IT
+// (`one_finger`), so a frame of the other meaning clears it: a pan frame, a
+// pinch frame over a one-finger seat, or the reverse. Every lifecycle clause
+// below reads "a zoom phase" for "a two-finger phase" and "a frame of another
+// meaning" for "a not-two-finger frame"; the CTRL EDGE is announced by an
+// exempt platform frame exactly as the downgrade is, so the seat takes and
+// drops at the edge.
+//
 // LIFECYCLE (the body is apply_touch_nav_update, input_pointer.cpp):
 //   * MEANINGFUL ONLY while a two-finger phase is live.
 //   * SEATED AT THE FIRST TWO-FINGER FRAME THAT SURVIVES THE wheel_context
@@ -1625,6 +1639,7 @@ struct ScrollDragState {
 struct TouchNavZoomState {
     bool   seated        = false;
     double anchor_sample = 0.0;   // the held SONG frame (active domain)
+    bool   one_finger    = false; // seated by the one-finger (ctrl) zoom
 };
 
 // (The SCRUB has no drag state OF ITS OWN: since 2026-08-13 it rides
@@ -3793,7 +3808,7 @@ constexpr int64_t kChromeShiftHoldMs  = kHoldBeatMs;
 // crosses it commits the sliver it drew, nothing dissolving it and — since the
 // minimum width floor's retirement, 2026-08-19 — nothing widening it either.)
 // THE TOUCH SLOP IS THIS SAME NUMBER, PUSHED DOWN (2026-08-27, when the gate
-// learned the scale). The core's disambiguation-window travel gate sits BELOW
+// learned the scale). The core's touch-window travel gate sits BELOW
 // this header and must never learn gui_scale, so it cannot resolve the value
 // itself: it keeps a settable slop whose default is the authored 8 and takes
 // drag_moved_threshold_px() through GuiPlatform::set_touch_slop_px at both

@@ -1562,6 +1562,12 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 // switch), and no further event on them can arrive. The
                 // contract is the core's, shared whole with touch_cancel.
                 input_.touch_capability_lost();
+                // AND A HOVERING PEN LEAVES WITH IT: no HOVER_EXIT is owed to
+                // a window that lost focus, so the pointer's leave (the
+                // tooltip hide, the hover faces) is delivered here, and the
+                // pen's Ctrl bit drops.
+                end_pen_hover();
+                set_pen_ctrl(false);
             }
             break;
         }
@@ -1643,20 +1649,54 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     // than returning it is deliberate: a mouse click that fell through to the
     // system would act on whatever is behind the activity.
     //
-    // THE S PEN IS IN THAT CLASS AND IS DROPPED DELIBERATELY (recorded
-    // 2026-08-29, the recorded-asymmetry rule). The Tab S10 FE ships one, and
-    // it delivers on AINPUT_SOURCE_STYLUS, which shares the POINTER class bit
-    // with the touchscreen but not the touchscreen's own source bit — so the
-    // whole-source test below fails for it exactly as it fails for a mouse,
-    // and the pen reaches nothing today. It is not routed as a finger: every
-    // touch judgment in the arc was taken on a FINGERTIP — the slop, the
-    // disambiguation window, the region-hold beat, the flag-box carve-out —
-    // and a stylus is a precise instrument those numbers were not measured
-    // for, so admitting it would mean re-taking them on glass rather than
-    // widening a source test. Unverified on the device; it needs an architect
-    // ruling, not a bit.
+    // THE S PEN IS NOT IN THAT CLASS: IT IS A FINGER WITH THREE AMENDMENTS
+    // (architect 2026-09-25, touch.md's pen section). The architect uses the
+    // Tab S10 FE's pen daily, and Samsung reports it as a touchscreen source
+    // with the stylus bits beside (TOUCHSCREEN|STYLUS), so its contacts ride
+    // the finger road — the phone-model pan, the region hold, the caret drag,
+    // the tap-at-lift and every fingertip-tuned number, which he ruled it
+    // keeps. What this backend adds for it is read per event in
+    // on_motion_event: the TOOL TYPE (STYLUS or ERASER is the pen, handed to
+    // the core's touch_down), the SIDE BUTTON (the Ctrl bit, through the
+    // modifier door), the mid-stroke BUTTON_PRESS / BUTTON_RELEASE edges and
+    // the HOVER actions (the pointer's enter / motion / leave, so the roster's
+    // hover walk and the tooltip dwell run under a hovering pen). A source
+    // carrying the STYLUS bits WITHOUT the touchscreen's is admitted too, so
+    // a pen reported that way is not silently eaten; a mouse or touchpad is
+    // neither and stays consumed above.
+    //
+    // THE PEN PROBE LINE (2026-09-25, for the architect's verification on
+    // glass — adb cannot inject a stylus tool type or a button state): one
+    // stderr line per motion event that carries any non-finger pointer,
+    // BEFORE the gate, so a pen event this backend consumed still shows.
+    // stderr reaches logcat through the redirect at the top of this file
+    // (adb logcat -s warptempo:I). The fields are the raw AMotionEvent
+    // reading of the first non-finger pointer: tool 2 is STYLUS and 4 is
+    // ERASER, buttons 0x20 is STYLUS_PRIMARY (0x02 SECONDARY). A probe for
+    // one build: it is struck once he has read it.
     const int32_t source = AInputEvent_getSource(event);
-    if ((source & AINPUT_SOURCE_TOUCHSCREEN) != AINPUT_SOURCE_TOUCHSCREEN) {
+    {
+        const size_t n = AMotionEvent_getPointerCount(event);
+        for (size_t i = 0; i < n; ++i) {
+            const int32_t tool = AMotionEvent_getToolType(event, i);
+            if (tool == AMOTION_EVENT_TOOL_TYPE_FINGER) continue;
+            std::fprintf(stderr,
+                         "pen: action=0x%x source=0x%x tool=%d buttons=0x%x "
+                         "x=%.1f y=%.1f\n",
+                         static_cast<unsigned>(AMotionEvent_getAction(event)),
+                         static_cast<unsigned>(source), tool,
+                         static_cast<unsigned>(
+                             AMotionEvent_getButtonState(event)),
+                         static_cast<double>(AMotionEvent_getX(event, i)),
+                         static_cast<double>(AMotionEvent_getY(event, i)));
+            break;
+        }
+    }
+    const bool touchscreen =
+        (source & AINPUT_SOURCE_TOUCHSCREEN) == AINPUT_SOURCE_TOUCHSCREEN;
+    const bool stylus =
+        (source & AINPUT_SOURCE_STYLUS) == AINPUT_SOURCE_STYLUS;
+    if (!touchscreen && !stylus) {
         return 1;
     }
 
@@ -1679,9 +1719,10 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // is the content rect inside the system bars. THE ORIGIN IS SUBTRACTED
     // HERE AND NOWHERE ELSE ON THE WAY IN: these two lambdas are every
     // coordinate this backend hands the core (the key path carries none, the
-    // hover/scroll actions are dropped below, and the capture doors take GUI
-    // coordinates that never reach the window at all), which is what keeps
-    // GuiInputCore identical to the Wayland build's.
+    // pen's hover actions below take the same two, scrolls are dropped, and
+    // the capture doors take GUI coordinates that never reach the window at
+    // all), which is what keeps GuiInputCore identical to the Wayland
+    // build's.
     //
     // A TOUCH IN A BAND IS DELIVERED, NOT CLAMPED AND NOT DROPPED: translated,
     // it is simply outside the window — a negative y above the rect, y >=
@@ -1704,9 +1745,96 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                static_cast<double>(origin_y_);
     };
 
+    // THE PEN, read per event (the three amendments' platform half; the
+    // ruling is at the source gate above). A pointer whose tool type is
+    // STYLUS or ERASER is the pen — the eraser end is the same instrument
+    // turned over, so it is the pen too — and anything else is a finger.
+    auto is_pen = [&](size_t i) {
+        const int32_t tool = AMotionEvent_getToolType(event, i);
+        return tool == AMOTION_EVENT_TOOL_TYPE_STYLUS ||
+               tool == AMOTION_EVENT_TOOL_TYPE_ERASER;
+    };
+    auto tool_of = [&](size_t i) {
+        return is_pen(i) ? GuiTouchTool::Pen : GuiTouchTool::Finger;
+    };
+    bool   pen_present = false;
+    size_t pen_index   = 0;   // the first pen pointer, where one is present
+    for (size_t i = 0; i < count && !pen_present; ++i) {
+        if (is_pen(i)) {
+            pen_present = true;
+            pen_index   = i;
+        }
+    }
+
+    // THE SIDE BUTTON IS THE CTRL BIT, set BEFORE this event's delivery so
+    // the press, the motions and the settled hook's sync_nav_drag_mode all
+    // read the state this event reported (the door's contract,
+    // GuiInputCore::set_modifiers). STYLUS_PRIMARY is the platform's name for
+    // the barrel button since API 23; SECONDARY is accepted beside it because
+    // pens of the S Pen's lineage reported the barrel button that way before
+    // STYLUS_PRIMARY existed and a one-build probe should not bet on which
+    // this firmware sends (the probe line shows which one arrives). Read only
+    // on events that carry the pen, so a finger's event never speaks for it;
+    // the bit is dropped at the pen's lift, a cancel and a hover exit below.
+    if (pen_present) {
+        const int32_t buttons = AMotionEvent_getButtonState(event);
+        set_pen_ctrl((buttons & (AMOTION_EVENT_BUTTON_STYLUS_PRIMARY |
+                                 AMOTION_EVENT_BUTTON_SECONDARY)) != 0);
+    }
+
     switch (masked) {
+        case AMOTION_EVENT_ACTION_HOVER_ENTER:
+        case AMOTION_EVENT_ACTION_HOVER_MOVE:
+        case AMOTION_EVENT_ACTION_HOVER_EXIT:
+            // THE HOVERING PEN IS THE POINTER'S MOTION (architect 2026-09-25:
+            // hover tooltips are wanted — Samsung's own apps light items
+            // under a hovering pen, so hovers reach apps on this tablet), so
+            // the roster's hover walk and the tooltip dwell run under it
+            // through the core's own pointer doors — enter, motion, leave,
+            // each closed by the pointer frame as a Wayland pointer's are.
+            // ONLY THE PEN HOVERS (a finger never does, and a mouse never
+            // reaches here), and A HOVER NEVER OVERLAPS A TOUCH THE CORE IS
+            // TRANSLATING: while any contact is down a hover motion would
+            // carry the touch translation's held button to the hover's
+            // position and drag whatever that contact holds, so hovers are
+            // dropped then. THE SEQUENCE WITH THE TIP is therefore always
+            // enter .. leave, then the touch: the platform sends HOVER_EXIT
+            // before the tip's DOWN, and the DOWN below ends a hover that
+            // somehow still stands, so the touch translation's synthesized
+            // entry motion never meets a pointer already in and its lift's
+            // translation end takes the leave arm (no mouse is resting); the
+            // pen's lift back into hover is a fresh HOVER_ENTER. The EXIT
+            // drops the Ctrl bit — the pen has left the glass's reach.
+            if (!pen_present) return;
+            if (masked == AMOTION_EVENT_ACTION_HOVER_EXIT) {
+                end_pen_hover();
+                set_pen_ctrl(false);
+                return;
+            }
+            if (input_.touch_contact_active()) return;
+            if (!pen_hovering_) {
+                pen_hovering_ = true;
+                input_.pointer_enter(px(pen_index), py(pen_index));
+            } else {
+                input_.pointer_motion(px(pen_index), py(pen_index));
+            }
+            input_.pointer_frame();
+            return;
+
+        case AMOTION_EVENT_ACTION_BUTTON_PRESS:
+        case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
+            // A MID-STROKE BUTTON EDGE. The bit itself was set above; that
+            // is the whole of it — the door delivers the staged motion under
+            // the old bit and announces the edge to a live single-finger nav
+            // itself, so there is no position to hand over and no frame owed.
+            return;
+
         case AMOTION_EVENT_ACTION_DOWN:
         case AMOTION_EVENT_ACTION_POINTER_DOWN:
+            // A PEN'S TIP-DOWN ENDS ITS HOVER FIRST (the hover arm's
+            // sequencing), so the touch below is the only pointer the core
+            // is translating.
+            if (index < count && is_pen(index)) end_pen_hover();
             if (index < count) {
                 // EVERY AMotionEvent CARRIES EVERY LIVE POINTER'S CURRENT
                 // POSITION, not only the one its action names, and the fingers
@@ -1723,7 +1851,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                                         px(i), py(i));
                 }
                 input_.touch_down(AMotionEvent_getPointerId(event, index),
-                                  px(index), py(index));
+                                  px(index), py(index), tool_of(index));
             }
             break;
 
@@ -1766,17 +1894,27 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                                         px(i), py(i));
                 }
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
+                // THE PEN'S LIFT DROPS THE CTRL BIT, after the lift's own
+                // delivery (the release read the bit its press did). A hover
+                // that follows reports the button afresh.
+                if (is_pen(index)) {
+                    input_.touch_frame();
+                    set_pen_ctrl(false);
+                    return;
+                }
             }
             break;
 
         case AMOTION_EVENT_ACTION_CANCEL:
             // The window system claims the touches. One contract with
-            // capability loss, and the core owns it whole.
+            // capability loss, and the core owns it whole; the pen's Ctrl
+            // bit goes with them.
             input_.touch_cancel();
+            if (pen_present) set_pen_ctrl(false);
             return;   // a cancel closes its own batch; no frame is owed
 
         default:
-            return;   // hovers, scrolls and the rest: nothing to translate
+            return;   // scrolls and the rest: nothing to translate
     }
 
     // THE BATCH BOUNDARY. One AMotionEvent is one logical touch frame, exactly
@@ -1785,6 +1923,19 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // off it. It follows every translated action, not just MOVE: a down and an
     // up each close their own batch too.
     input_.touch_frame();
+}
+
+void GuiPlatform::set_pen_ctrl(bool held) {
+    const GuiInputState mods = input_.current_mods();
+    if (mods.ctrl == held) return;
+    input_.set_modifiers(held, mods.shift, mods.alt, /*super=*/false);
+}
+
+void GuiPlatform::end_pen_hover() {
+    if (!pen_hovering_) return;
+    pen_hovering_ = false;
+    input_.pointer_leave();
+    input_.pointer_frame();
 }
 
 // THE ON-SCREEN KEYBOARD'S OTHER SEAM MEMBER (contract at the declarations;
@@ -2089,7 +2240,6 @@ void GuiPlatform::set_touch_nav_hooks(
     std::function<void(const GuiTouchNavFrame&)> update,
     std::function<void()> end,
     std::function<bool(int x, int y)> pan_zone,
-    std::function<bool(int x, int y)> thin_lane,
     std::function<void(int x, int y)> region_begin,
     std::function<void(int x, int y)> region_update,
     std::function<void()> region_end,
@@ -2098,7 +2248,7 @@ void GuiPlatform::set_touch_nav_hooks(
     std::function<void(int x, int y)> caret_update,
     std::function<void()> caret_end) {
     input_.set_touch_nav_hooks(std::move(update), std::move(end),
-                               std::move(pan_zone), std::move(thin_lane),
+                               std::move(pan_zone),
                                std::move(region_begin), std::move(region_update),
                                std::move(region_end), std::move(editor_field),
                                std::move(caret_begin), std::move(caret_update),
