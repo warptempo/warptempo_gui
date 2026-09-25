@@ -1382,13 +1382,11 @@ private:
     //     release owes): resolve (enter-motion + press at
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> Idle (a lone finger
-    //     cannot leave a survivor). On the navigation surface the burst's
-    //     motionless press-release runs the GUI's DEFERRED CLICK ACT at its
-    //     release — the placement at the tap point — and on the marker
-    //     lane's empty stretch that release also seeds the EmptyLane
-    //     double-click candidate, so TWO TAPS there reach the marker CREATE
-    //     (the second tap's press consumes the candidate; nothing
-    //     touch-side special-cases any of it).
+    //     cannot leave a survivor). This window opens ONLY on the pan zone
+    //     and in the field since 2026-09-25 (the placement lanes below never
+    //     reach it), so ON THE PAN ZONE the burst's motionless press-release
+    //     runs the GUI's DEFERRED CLICK ACT at its release — the placement at
+    //     the tap point.
     //   * first DOWN with a DoublePress editor-field answer (2026-09-05) —
     //     Idle -> Pointer AT ONCE: the seed makes the press's identity
     //     certain, so the window is opened and resolved in the same call
@@ -1405,7 +1403,13 @@ private:
     //     nothing waits: a flag selects, a trim endcap grabs and a chrome
     //     button arms at the contact (the chrome's act and its shift long
     //     press stay the pointer road's own, at the lift and on the press's
-    //     clock).
+    //     clock). THE PLACEMENT LANES (the ruler, the marker lane's empty
+    //     stretches) are this same road with no window and no touch-side
+    //     machinery of their own: a tap's ordinary press+release burst
+    //     places exactly as a mouse click does, and on the marker lane's
+    //     empty stretch that release also seeds the EmptyLane double-click
+    //     candidate, so TWO TAPS there reach the marker CREATE (the second
+    //     tap's press consumes the candidate).
     //   * window EXPIRY (sampled on the timerfd tick beside the key-repeat
     //     deadline, and lazily at every touch event's arrival) — the ZONE'S
     //     window only -> Region (the region hold at the kTouchRegionHoldMs

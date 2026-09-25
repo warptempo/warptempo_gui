@@ -4770,9 +4770,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // The consume checks below read this snapshot; each surface then re-seeds
     // its own fresh candidate — ALL FOUR at a motionless RELEASE now (TrimBar /
     // EditorText / EmptyLane, the empty lane joining that class 2026-08-12 with
-    // its press becoming the navigation surface's pending click, so only the
-    // release knows it stayed a click and a pan that crossed the threshold seeds
-    // nothing; MARKER joined 2026-08-15 — and KEPT the release-time seed when
+    // its press becoming the placement lane's pending click (the navigation
+    // surface's until 2026-09-25, when the empty lane left it — placement
+    // lanes above), so only the release knows it stayed a click and a drag
+    // that crossed the threshold seeds nothing; MARKER joined 2026-08-15 — and
+    // KEPT the release-time seed when
     // its click went back to the press, 2026-08-17: only the release knows the
     // press stayed still, whatever the click's own timing).
     // THE MARKER SEED IS DELIBERATELY SPLIT ACROSS THE TWO EDGES, which is

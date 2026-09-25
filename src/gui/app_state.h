@@ -5149,7 +5149,7 @@ struct AppState {
     // (select_history_diff_flags_modified with extend=false) — the same fold
     // in the same words, over the mode's ordinals instead of the store's
     // markers. The FLAG-HITS-ONLY scope is the mode's too: an empty lane
-    // stretch in there is the navigation surface's pending click, untouched.
+    // stretch in there is the placement lane's pending click, untouched.
     // Until that day the view consumed the chord and greyed the button,
     // honestly, because the lamp produced nothing in it.
     // THE VIEW'S REVERT SPENDS IT like every other act that spends a
@@ -7191,13 +7191,14 @@ struct AppState {
     //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
-    // routes that move it (membership re-derived 2026-08-12 — the ruler drag
-    // is the mode's whole navigation surface under pan-primary): zoom, the
+    // routes that move it (membership re-derived 2026-08-12; the ruler drag
+    // left it 2026-09-25 — the ruler is a placement lane now, off the mode's
+    // navigation surface, which is the waveform alone): zoom, the
     // paged
     // scroll, the plain-wheel stepped pan and the overview command move
     // viewport_start_sample or zoom_level,
     // the
-    // pointer's ONE nav drag moves both through its pan and ctrl zoom phases,
+    // waveform's ONE nav drag moves both through its pan and ctrl zoom phases,
     // the mode's OWN
     // cursor-moving
     // acts land the playhead (the diff-flag click, the deferred click act, and

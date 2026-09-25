@@ -166,10 +166,11 @@ namespace {
 // RULER lane
 // (ruler_lane_h_px(), timestamps + tick tops + the PLAYHEAD HEAD on the
 // lane's bottom rows, clear of the top-anchored timestamps by the lane's own
-// height since 2026-09-23 + the navigation surface's lane
-// band — the pending click / grab-pan, the shift former and the ctrl zoom
-// since the eighth glass ruling; its dedicated zoom entry and its one-day
-// region former both died 2026-08-12) and
+// height since 2026-09-23 + a PLACEMENT LANE since 2026-09-25 — a
+// motionless click places the playhead and every drag there does nothing,
+// the navigation surface being the waveform alone
+// (pointer-hit-testing.md's placement-lanes section); its dedicated zoom
+// entry and its one-day region former both died 2026-08-12) and
 // the MARKER lane (marker_lane_h_px(), the flags, their stems and the
 // playhead's column under them — the head sat on this lane's bottom rows from
 // the row-5 live test until 2026-09-23), whose bottom edge is the
