@@ -316,10 +316,17 @@ void render_waveform(cairo_surface_t* dest,
     // contract lives there), from the row-6 constants: the front bar's ink —
     // kWaveformInk dark, kWaveformForegroundInk lit — and the background's
     // (built always, written only when the lamp is lit and its level is
-    // painted). All flat (architect 2026-09-25).
+    // painted). All flat (architect 2026-09-25). THE BACKGROUND WEARS THE
+    // FOREGROUND'S INK WHEN THE FOREGROUND IS NOT PAINTED (architect
+    // 2026-09-25): a foreground level of `-inf` (nullopt) paints the
+    // background alone, in kWaveformForegroundInk; a painted foreground keeps
+    // it in kWaveformBackgroundInk. The choice reads the installed levels,
+    // set once at startup and never mutated (waveform_magnification_levels,
+    // render.h), so it owes the plate fingerprint no term.
     const uint32_t front_word =
         argb32_opaque_word(gain_or_null ? kWaveformForegroundInk : kWaveformInk);
-    const uint32_t background_word = argb32_opaque_word(kWaveformBackgroundInk);
+    const uint32_t background_word = argb32_opaque_word(
+        foreground_scale ? kWaveformBackgroundInk : kWaveformForegroundInk);
     // The front bar: lit, the foreground at its level, or no bar at all when
     // that level is `-inf` (nullopt); dark, the raw bar at the identity, the
     // two levels unread (the declaration's contract).

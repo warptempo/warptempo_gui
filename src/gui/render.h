@@ -1085,6 +1085,11 @@ inline constexpr GuiColor kWaveformForegroundInk = hex(0x1C816B);  // (28, 129, 
 // boosts, a thin rim beside the foreground that read as antialiasing. The
 // canvas STAYS kWaveformCanvas #12312b (the architect observed kdenlive's new
 // canvas and did not rule it in as the ground).
+//
+// WORN ONLY BESIDE A PAINTED FOREGROUND (architect 2026-09-25): with the
+// foreground's level at `-inf` the background is the lit plate's one bar and
+// paints in kWaveformForegroundInk instead (render_waveform, where the
+// background's word is chosen).
 inline constexpr GuiColor kWaveformBackgroundInk = hex(0x17594B);  // (23, 89, 75)
 
 // THE LIT PLATE'S TWO LEVELS (architect 2026-09-25) — the defaults of the
@@ -2978,7 +2983,9 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 //
 // THE INKS ARE THE ROW-6 CONSTANTS, READ HERE rather than passed: the plate
 // paints in kWaveformInk with the lamp dark, and lit in
-// kWaveformForegroundInk over kWaveformBackgroundInk — it is trim-agnostic, and the out-of-trim dim that
+// kWaveformForegroundInk over kWaveformBackgroundInk (the background alone in
+// kWaveformForegroundInk when the foreground's level is `-inf`, below) — it
+// is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
 // is BINARY: opaque bars and transparent gaps, with no fractional edges left.
@@ -3044,6 +3051,14 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // hairline: the foreground at `-inf` shows the background alone, the
 // background at `-inf` the foreground alone, both an empty lit plate. The
 // dark lamp reads neither.
+// THE LONE BACKGROUND WEARS THE FOREGROUND'S INK (architect 2026-09-25):
+// with the foreground at `-inf` the background bar paints in
+// kWaveformForegroundInk, not kWaveformBackgroundInk — the fainter ink is
+// the background's only while a foreground stands over it. Its geometry is
+// unchanged (raw x gain x multiplier x `background_scale`, the one clamp).
+// The ink follows `foreground_scale` alone, the installed levels, set once
+// at startup and never mutated (waveform_magnification_levels, above), so
+// the plate fingerprint owes it no term.
 //
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
 // column's [s0, s1), the pyramid level and the one read. THE BACKGROUND IS A
