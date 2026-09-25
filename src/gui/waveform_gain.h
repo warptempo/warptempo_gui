@@ -45,9 +45,13 @@
 //   names what it deliberately is not).
 //
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
-//   clamps the pair to [-1, 1] (render_waveform); nothing else. The clamp is
-//   a sample-peak clip, which is right for a picture: a transient-rich window
-//   whose peaks overshoot the edge paints them flat.
+//   clamps the pair to [-1, 1] (render_waveform); nothing else. The product
+//   is THE GHOST BAR (architect 2026-09-24): the lit lamp paints it in
+//   kWaveformGhostInk BEHIND the column's raw bar, which keeps kWaveformInk
+//   and is always present, so the magnified picture never replaces the raw
+//   one. The clamp is a sample-peak clip, which is right for a picture: a
+//   transient-rich window whose peaks overshoot the edge paints its ghost
+//   flat.
 //
 // WHY THE MEASURE CHANGED (architect 2026-09-24). THE PEAK LEVELER
 // (2026-09-23 to 2026-09-24, a superseded record): L was the MAXIMUM of the

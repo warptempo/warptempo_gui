@@ -186,6 +186,7 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      GuiColor color,
+                     GuiColor ghost_color,
                      const WaveformGainCurve* gain_or_null,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
@@ -262,9 +263,10 @@ void render_waveform(cairo_surface_t* dest,
     const double half_h   = area.h * 0.5;
 
     // THE VISUAL MAGNIFICATION, a function of source time: each column's
-    // scale is the derived curve's gain at the column's centre source frame
-    // times the expander's multiplier over the column's working columns
-    // (null: 1.0). The contract (the coarse-zoom centre rule and the
+    // GHOST scale is the derived curve's gain at the column's centre source
+    // frame times the expander's multiplier over the column's working columns;
+    // the raw bar drawn over it takes scale 1.0, where this is the identity.
+    // The contract (the ghost's order, the coarse-zoom centre rule and the
     // expander's smallest-reduction rule) is at this function's declaration;
     // the arithmetic is one multiply and ONE clamp at the tip mapping below.
     // IT SCALES PIXELS ONLY — nothing this function touches is audio.
@@ -277,9 +279,12 @@ void render_waveform(cairo_surface_t* dest,
 
     // Each column is written straight into the plate's pixel words, and a
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
-    // filled inclusively with the opaque ink word. There is no interior/edge
-    // split, no fractional coverage, and no inter-column connectivity of any
-    // kind — a spike stands alone, exactly as in a classic min/max renderer.
+    // filled inclusively with the opaque ink word (with the lamp lit, the
+    // magnified ghost bar goes down first in the ghost word and the raw bar
+    // over it — the rule is at this function's declaration). There is no
+    // interior/edge split, no fractional coverage, and no inter-column
+    // connectivity of any kind — a spike stands alone, exactly as in a classic
+    // min/max renderer.
     //
     // THE ANTIALIASED RENDERER IS DELETED (architect 2026-08-01, after the
     // side-by-side against a snapshotted AA binary: "subtle but noticeable — I
@@ -302,19 +307,12 @@ void render_waveform(cairo_surface_t* dest,
     // self-contained and there is nothing for an offscreen neighbour to
     // contribute: pan invariance strengthened rather than weakened here.
     //
-    // THE PREMULTIPLIED WORD: one ink colour per render, so there is exactly one
-    // word to write. cairo ARGB32 is a native-endian 32-bit quantity —
-    // (A<<24)|(R<<16)|(G<<8)|B written as a uint32_t is correct on any byte
-    // order, which indexing bytes would not be. Channels are PREMULTIPLIED, as
-    // ARGB32 requires; at full coverage that is the ink itself. The channel
-    // bytes round with std::nearbyint, the project's rule — vacuous for the
-    // exact n/255 hex inks every caller passes today, decisive only if a
-    // mixed ink ever ties.
-    const uint32_t opaque_word =
-        (UINT32_C(255) << 24) |
-        (static_cast<uint32_t>(std::nearbyint(color.r * 255.0)) << 16) |
-        (static_cast<uint32_t>(std::nearbyint(color.g * 255.0)) <<  8) |
-        (static_cast<uint32_t>(std::nearbyint(color.b * 255.0)));
+    // THE PREMULTIPLIED WORDS: the ink's, and the ghost's (built always, written
+    // only when the lamp is lit), each built once per call through the one
+    // word owner (argb32_opaque_word, render.h — its byte-order and rounding
+    // contract lives there).
+    const uint32_t opaque_word = argb32_opaque_word(color);
+    const uint32_t ghost_word  = argb32_opaque_word(ghost_color);
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -336,8 +334,10 @@ void render_waveform(cairo_surface_t* dest,
     // Write one pixel word, REPLACING what is there. Row/column bounds are
     // established by the bar writer below; this is its single store site.
     // Replace is unambiguously correct now: the caller cleared every column this
-    // call regenerates, and each column is written exactly once by exactly one
-    // bar (the max-compositing the tip segments needed went with them).
+    // call regenerates, and each column is written once by its raw bar — after
+    // its ghost bar when the lamp is lit, which the raw bar overwrites where
+    // they overlap, the order the ghost rule wants (the max-compositing the tip
+    // segments needed went with them).
     const auto put = [&](int x, int y, uint32_t word) {
         auto* px = reinterpret_cast<uint32_t*>(
             surf_data + static_cast<size_t>(y) * surf_stride);
@@ -395,38 +395,22 @@ void render_waveform(cairo_surface_t* dest,
 
         const int level = level_for_column(g1 - g0);
         const auto mm = audio.get_peak_range(channel, level, s0, s1);
-        // THE GAIN AT THE TIP MAPPING: the column's raw extremes times the
-        // curve's gain at the column's centre source frame and the expander's
-        // largest multiplier over the working columns [s0, s1) spans, clamped
-        // to the sample domain [-1, 1] BEFORE they become rows. The clamp is
-        // what makes a magnified forte clip flat against the lane's edges
-        // instead of running off into row arithmetic, and it is a no-op at
-        // scale 1 (raw peaks already rest in range). A PICTURE gain: the
-        // samples themselves are untouched, here and everywhere.
-        const double scale   = gain_or_null
-                                   ? waveform_gain_at(*gain_or_null, (s0 + s1) / 2) *
-                                         static_cast<double>(waveform_expander_multiplier_over(
-                                             *gain_or_null, s0, s1))
-                                   : 1.0;
-        const double raw_min = magnified_tip(mm.first, scale);
-        const double raw_max = magnified_tip(mm.second, scale);
-
         const int x = area.x + i;
 
-        // THE COLUMN'S TIPS: raw maximum -> top tip, raw minimum -> bottom
-        // tip, in float rows, never snapped — then floored to rows for the bar.
-        // The regime split (thin vs tall) went with the tip segments: there is
-        // one rendering for every column now, however small its interval.
-        const double cur_top_y = y_center - raw_max * half_h;
-        const double cur_bot_y = y_center - raw_min * half_h;
-
-        // THE BAR. Clamp to this channel's rows BEFORE any row index is derived,
-        // so a clipped interval cannot address outside the band; then floor both
-        // ends and fill inclusively. r0 == r1 for any sub-pixel interval, which
-        // is the >=1px floor stated at the top of this function.
-        if (x >= col_lo && x < col_hi) {
-            double yt = cur_top_y;
-            double yb = cur_bot_y;
+        // THE BAR. The column's tips — its maximum -> top tip, its minimum ->
+        // bottom tip, in float rows, never snapped — are clamped to this
+        // channel's rows BEFORE any row index is derived, so a clipped interval
+        // cannot address outside the band; then both ends are floored and the
+        // bar filled inclusively with `word`. r0 == r1 for any sub-pixel
+        // interval, which is the >=1px floor stated at the top of this
+        // function, and it holds for both bars. The regime split (thin vs tall)
+        // went with the tip segments: there is one rendering for every column
+        // now, however small its interval. One writer for both bars, so the
+        // ghost and the raw bar cannot disagree about the geometry.
+        const auto fill_bar = [&](double tip_min, double tip_max, uint32_t word) {
+            if (x < col_lo || x >= col_hi) return;
+            double yt = y_center - tip_max * half_h;
+            double yb = y_center - tip_min * half_h;
             const double row_lo = static_cast<double>(y_lo);
             const double row_hi = static_cast<double>(y_hi);   // exclusive
             if (yt < row_lo) yt = row_lo;
@@ -437,8 +421,30 @@ void render_waveform(cairo_surface_t* dest,
             int r1 = static_cast<int>(std::floor(yb));
             if (r0 < y_lo)     r0 = y_lo;
             if (r1 > y_hi - 1) r1 = y_hi - 1;
-            for (int y = r0; y <= r1; ++y) put(x, y, opaque_word);
+            for (int y = r0; y <= r1; ++y) put(x, y, word);
+        };
+
+        // THE GHOST FIRST, when the lamp is lit: the column's raw extremes times
+        // the curve's gain at the column's centre source frame and the
+        // expander's largest multiplier over the working columns [s0, s1)
+        // spans, clamped to the sample domain [-1, 1] BEFORE they become rows.
+        // The clamp is what makes a magnified forte clip flat against the
+        // lane's edges instead of running off into row arithmetic. A PICTURE
+        // gain: the samples themselves are untouched, here and everywhere.
+        if (gain_or_null) {
+            const double scale =
+                waveform_gain_at(*gain_or_null, (s0 + s1) / 2) *
+                static_cast<double>(waveform_expander_multiplier_over(
+                    *gain_or_null, s0, s1));
+            fill_bar(magnified_tip(mm.first, scale),
+                     magnified_tip(mm.second, scale), ghost_word);
         }
+        // THE RAW BAR, always, over the ghost: scale 1.0, where the clamp is a
+        // no-op (raw peaks already rest in range), so the dark plate is the
+        // plate this writer always drew. Replace-writes: where the two bars
+        // overlap the raw one wins.
+        fill_bar(magnified_tip(mm.first, 1.0),
+                 magnified_tip(mm.second, 1.0), opaque_word);
 
         g_prev = g1;
     }

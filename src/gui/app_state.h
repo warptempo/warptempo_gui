@@ -4777,9 +4777,11 @@ struct AppState {
     // (run_project builds this AppState fresh, so the default IS the reset),
     // in no settings vocabulary, never serialized, never in the undo domain,
     // not carried by `'`, and touched by no restore, view switch or lock.
-    // LIT, the waveform picture carries the continuous gain derived from the
-    // source (GuiAudio::gain_curve: the leveler, then the expander) in both
-    // audio views; DARK, it is the raw picture. THE BIT IS THE ANSWER, read
+    // LIT, the magnified picture — the continuous gain derived from the
+    // source (GuiAudio::gain_curve: the leveler, then the expander) — is
+    // painted BEHIND the raw one as a ghost in kWaveformGhostInk, in both
+    // audio views (architect 2026-09-24; the rule is at render_waveform's
+    // declaration); DARK, the raw picture alone. THE BIT IS THE ANSWER, read
     // by waveform_magnified (warp_frame_map_view.h) and by the lamp's face,
     // and by nothing else — it reaches no authoring, no red cue, no render
     // and no sidecar. Its one writer is

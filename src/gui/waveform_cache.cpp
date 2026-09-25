@@ -102,24 +102,26 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk). These two
-    // calls were the `waveform_ink` key's only paint sites; the key stays
-    // declared and stays in the grammar (the ruling is at the row-6 palette
-    // block, render.h). Both channels take the one constant, as they took the
-    // one global.
+    // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk), and the
+    // magnification's ghost is kWaveformGhostInk #1f8b4c (architect
+    // 2026-09-24; both rulings at the row-6 palette block, render.h). With the
+    // lamp lit each column paints its ghost bar first and its raw bar in the
+    // ink over it; dark, the raw bar alone and the ghost ink is unread (the
+    // order is at render_waveform's declaration). Both channels take the same
+    // two constants.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
     // state. The curve it names is the audio object's own, immutable once
     // ready (GuiAudio::gain_curve; a magnified job exists only after the lamp
     // was lit, which requires the curve to be ready). Both channels take the one curve, as they
-    // take the one ink. It scales the PICTURE only — this whole function
+    // take the inks. It scales the PICTURE only — this whole function
     // writes pixels.
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, kWaveformInk, gain,
+                    basis, kWaveformInk, kWaveformGhostInk, gain,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, kWaveformInk, gain,
+                    basis, kWaveformInk, kWaveformGhostInk, gain,
                     warp_frame_map_or_null);
 }
 

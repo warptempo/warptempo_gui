@@ -710,8 +710,9 @@ private:
     // recolor model, architect 2026-07-26: TRIM recolors no blitted pixel, the
     // trim bar spanning the window being the whole inside-the-window signal.
     // Neither helper had any other consumer, so both went with the pass. The
-    // dim's second-masked-pass MECHANISM came back for the region's ink half in
-    // 2026-08-18 — paint_region_ink — over the region's span alone.)
+    // dim's second-pass MECHANISM came back for the region's ink half in
+    // 2026-08-18 — paint_region_ink — over the region's span alone, keyed by
+    // each plate pixel's ink since the magnification's ghost, 2026-09-24.)
 
     // (The region-select span's column pair, RegionColumns / region_columns,
     // moved up into the PUBLIC block beside plate_viewport_basis on 2026-08-15,
@@ -863,9 +864,10 @@ private:
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
     // THE REGION HIGHLIGHT, ONE HIGHLIGHT IN TWO OPAQUE HALVES STRADDLING THE
     // PLATE BLIT (the Ableton model, extended to the ink 2026-08-18). The GROUND
-    // half paints after render_canvas and BEFORE the blit; the INK half masks
-    // its own colour through the blitted plate's binary alpha immediately AFTER
-    // it, over the identical span. Neither half is a wash, and the two share the
+    // half paints after render_canvas and BEFORE the blit; the INK half
+    // rewrites each opaque blitted plate pixel in its own ink's lifted colour
+    // (keyed by the plate's word: the ink's, or the magnification ghost's)
+    // immediately AFTER it, over the identical span. Neither half is a wash, and the two share the
     // basis and column owners so they cannot disagree. The region is the only
     // recolor there is: the phase-reset overlay recolors nothing (architect
     // 2026-07-27).

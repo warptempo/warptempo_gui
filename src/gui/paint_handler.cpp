@@ -5191,7 +5191,8 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // over whichever ground — kWaveformCanvas, or a kWaveformRegionCanvas
     // recolor — the pass before this one left. The one later pass that touches
     // those pixels is paint_region_ink, the very next call in on_redraw, which
-    // masks kWaveformRegionInk through the plate's own alpha inside the REGION's
+    // rewrites each opaque plate pixel in its ink's lifted colour
+    // (kWaveformRegionInk, kWaveformRegionGhostInk) inside the REGION's
     // column span alone; outside that span, and on every frame where no region
     // stands, the blitted pixels are final. The plate SURFACE is never rewritten
     // either way — both passes recolor at paint time.
@@ -5270,9 +5271,10 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // It is HALF the highlight, not all of it: paint_region_ink below lifts the INK
 // over the same span after the blit (architect 2026-08-18), so the highlight
 // reads as one lit region rather than as a lit background behind unlit content.
-// That is still no wash — it masks a second OPAQUE colour through the plate's
-// own binary alpha, the mechanism the recolor model admits, where a translucent
-// wash painted over the plate is the form it rejects.
+// That is still no wash — it writes OPAQUE lifted colours over the plate's own
+// binary-alpha pixels, keyed by each pixel's ink, the mechanism the recolor
+// model admits, where a translucent wash painted over the plate is the form it
+// rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
 // per-frame pass, so no cache is involved. AA off, integer edges. The fill is
 // clipped to the CONTENT band so it cannot cover the area's border rows.
@@ -5318,19 +5320,44 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // immediately AFTER paint_waveform_plate — the pair with paint_region_ground
 // above, one highlight in two passes with the blit between them.
 //
-// A SECOND OPAQUE COLOR MASKED THROUGH THE PLATE'S OWN ALPHA, never a
-// translucent wash over the plate — the wash is the retired form the opaque
-// recolor model rejects. Because the aliased renderer's alpha is BINARY (the
-// antialiased plate is deleted; docs/engineering/waveform_antialiasing_retired.md)
-// the mask has no fractional coverage anywhere: every ink pixel in the span
-// becomes exactly kWaveformRegionInk and every gap is left alone, so the
-// kWaveformRegionCanvas ground the previous pass laid down still shows through
-// the gaps unchanged.
+// AN OPAQUE RECOLOUR KEYED BY THE PIXEL'S WORD, never a translucent wash over
+// the plate — the wash is the retired form the opaque recolor model rejects.
+// The plate carries TWO inks since the magnification's ghost (architect
+// 2026-09-24: kWaveformInk, and kWaveformGhostInk behind it while the lamp is
+// lit), so one colour masked through the alpha can no longer lift it; each
+// pixel takes the lift of ITS OWN ink instead. The pass reads the plate's
+// ARGB32 words directly inside (the region's column span) INTERSECT (the
+// content band) INTERSECT (the frame's damage clip), and for each plate pixel
+// carrying the ink's word writes kWaveformRegionInk into the window surface,
+// for each carrying the ghost's word kWaveformRegionGhostInk; a transparent
+// plate pixel is left alone, so the kWaveformRegionCanvas ground the previous
+// pass laid down still shows through the gaps unchanged. The alpha is still
+// BINARY (the antialiased plate is deleted;
+// docs/engineering/waveform_antialiasing_retired.md), so no pixel is ever
+// partly one colour. A plate word that is neither ink would be left as the
+// blit put it; the writer stores no other word today. The words are built by
+// the writer's own owner (argb32_opaque_word, render.h), so the key is bit for
+// bit what render_waveform stored.
+//
+// THE DAMAGE CLIP IS HONOURED EXPLICITLY: a direct pixel pass bypasses cairo's
+// clip, and outside the frame's damage the window buffer holds the previous
+// frame's finished pixels — stems, flags and cards over the waveform — so the
+// pass walks the rectangles of cairo's own clip (cairo_copy_clip_rectangle_list,
+// after pushing the span-and-band rectangle onto it) and writes nothing outside
+// them. The geometry is the blit's: on_redraw draws in window pixels with
+// an identity transform on a context made straight on the window surface, the
+// plate lands at (area.x, area.y) exactly as the blit put it, and the span
+// comes from the same owners paint_region_ground reads.
+//
+// The window surface is an ARGB32 image surface on both backends (the Wayland
+// wl_shm buffers, cairo_image_surface_create_for_data; the Android back
+// buffer, cairo_image_surface_create); the pass guards that as render_waveform
+// guards its own, and returns otherwise.
 //
 // The plate is not rewritten: this recolors at PAINT time and writes nothing
 // into the cache, so a pan or a zoom that reuses the surface reuses the plain
-// ink. Damage is the ground pass's — a subspan of pixels that pass already owns
-// in the same redraw. Session-only, nothing persisted, no cache involved.
+// inks. Damage is the ground pass's — a subspan of pixels that pass already
+// owns in the same redraw. Session-only, nothing persisted, no cache involved.
 //
 // The span comes from plate_viewport_basis() and region_columns(), the very
 // calls paint_region_ground makes, so the ground and the ink cannot disagree
@@ -5339,9 +5366,10 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
     if (!app.region.shown) return;
     if (area.w <= 0 || area.h <= 0) return;
-    // The blit's own guard: with no published plate there is no alpha to mask
-    // through, and the ground pass's fill is the whole highlight for that frame.
-    if (!wf_cache.surface) return;
+    // The blit's own guard: with no published plate there are no ink pixels to
+    // recolour, and the ground pass's fill is the whole highlight for that frame.
+    cairo_surface_t* const plate = wf_cache.surface;
+    if (!plate) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
     if (basis.spp <= 0.0) return;
@@ -5355,18 +5383,78 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
     x1 = std::min(x1, static_cast<double>(area.x + area.w));
     if (x1 <= x0) return;
 
+    // ARGB32 ONLY, on both sides: the pass reads and writes 32-bit premultiplied
+    // words, so any other format would be silently misinterpreted.
+    cairo_surface_t* const target = cairo_get_target(cr);
+    if (cairo_surface_get_type(target) != CAIRO_SURFACE_TYPE_IMAGE) return;
+    if (cairo_image_surface_get_format(target) != CAIRO_FORMAT_ARGB32) return;
+    if (cairo_image_surface_get_format(plate) != CAIRO_FORMAT_ARGB32) return;
+
+    // (the region's column span) INTERSECT (the content band) INTERSECT (the
+    // frame's damage clip), as cairo's own clip rectangles.
     const GuiRect content = waveform_content_rect(area);
     cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // (the region's column span) INTERSECT (the content band)
     cairo_rectangle(cr, x0, static_cast<double>(content.y),
                     x1 - x0, static_cast<double>(content.h));
     cairo_clip(cr);
-    cairo_set_source_rgb(cr, kWaveformRegionInk.r, kWaveformRegionInk.g,
-                         kWaveformRegionInk.b);
-    // The blit's own origin, so the mask lands on the pixels it came from.
-    cairo_mask_surface(cr, wf_cache.surface, area.x, area.y);
+    cairo_rectangle_list_t* const clip = cairo_copy_clip_rectangle_list(cr);
     cairo_restore(cr);
+    if (clip->status != CAIRO_STATUS_SUCCESS) {
+        cairo_rectangle_list_destroy(clip);
+        return;
+    }
+
+    // Flush BEFORE the first CPU access so every pending cairo drawing (the
+    // ground fill, the blit) has landed in the buffers; paired with the
+    // mark-dirty after each rectangle's writes.
+    cairo_surface_flush(target);
+    cairo_surface_flush(plate);
+    unsigned char* const tgt_data  = cairo_image_surface_get_data(target);
+    const unsigned char* const plate_data = cairo_image_surface_get_data(plate);
+    if (!tgt_data || !plate_data) {
+        cairo_rectangle_list_destroy(clip);
+        return;
+    }
+    const int tgt_stride   = cairo_image_surface_get_stride(target);
+    const int tgt_w        = cairo_image_surface_get_width(target);
+    const int tgt_h        = cairo_image_surface_get_height(target);
+    const int plate_stride = cairo_image_surface_get_stride(plate);
+    const int plate_w      = cairo_image_surface_get_width(plate);
+    const int plate_h      = cairo_image_surface_get_height(plate);
+
+    const uint32_t ink_word          = argb32_opaque_word(kWaveformInk);
+    const uint32_t ghost_word        = argb32_opaque_word(kWaveformGhostInk);
+    const uint32_t region_ink_word   = argb32_opaque_word(kWaveformRegionInk);
+    const uint32_t region_ghost_word = argb32_opaque_word(kWaveformRegionGhostInk);
+
+    for (int k = 0; k < clip->num_rectangles; ++k) {
+        const cairo_rectangle_t& r = clip->rectangles[k];
+        // Window-pixel bounds, clamped to the window surface AND to the plate's
+        // own footprint at (area.x, area.y).
+        int wx0 = static_cast<int>(std::floor(r.x));
+        int wy0 = static_cast<int>(std::floor(r.y));
+        int wx1 = static_cast<int>(std::ceil(r.x + r.width));    // exclusive
+        int wy1 = static_cast<int>(std::ceil(r.y + r.height));   // exclusive
+        wx0 = std::max({wx0, 0, area.x});
+        wy0 = std::max({wy0, 0, area.y});
+        wx1 = std::min({wx1, tgt_w, area.x + plate_w});
+        wy1 = std::min({wy1, tgt_h, area.y + plate_h});
+        if (wx1 <= wx0 || wy1 <= wy0) continue;
+        for (int y = wy0; y < wy1; ++y) {
+            const auto* src = reinterpret_cast<const uint32_t*>(
+                plate_data + static_cast<size_t>(y - area.y) * plate_stride);
+            auto* dst = reinterpret_cast<uint32_t*>(
+                tgt_data + static_cast<size_t>(y) * tgt_stride);
+            for (int x = wx0; x < wx1; ++x) {
+                const uint32_t w = src[x - area.x];
+                if (w == ink_word)        dst[x] = region_ink_word;
+                else if (w == ghost_word) dst[x] = region_ghost_word;
+            }
+        }
+        cairo_surface_mark_dirty_rectangle(target, wx0, wy0,
+                                           wx1 - wx0, wy1 - wy0);
+    }
+    cairo_rectangle_list_destroy(clip);
 }
 
 // -- GuiPaintHandler::phase_reset_overlay_band / its ring pass ------------
@@ -8876,8 +8964,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     2026-08-18) — a highlight REPLACES colors, it never washes over
         //     them, and the region's is the ONE highlight that recolors: its
         //     GROUND half paints BEFORE the plate and the ink composites over
-        //     it, then its INK half masks a second opaque color through the
-        //     blitted plate's binary alpha over the same span, so the whole
+        //     it, then its INK half rewrites every opaque plate pixel over
+        //     the same span in its own ink's lifted colour (the ink's and the
+        //     magnification ghost's, keyed by the plate's word), so the whole
         //     span lifts without a single compositing alpha. The phase-reset
         //     overlay contributes no ground at all (architect 2026-07-27): its
         //     1px RING is its whole visual, and a boundary line paints AFTER
@@ -8910,9 +8999,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // the recolored ground rather than the plain one.
             paint_region_ground(cr, area);
             paint_waveform_plate(cr, area);
-            // INK, over the plate and over the identical span: the blitted ink
-            // is remasked in the lifted colour, so the highlight lifts the whole
-            // picture rather than only the ground behind it.
+            // INK, over the plate and over the identical span: each blitted ink
+            // pixel is rewritten in its ink's lifted colour, so the highlight
+            // lifts the whole picture rather than only the ground behind it.
             paint_region_ink(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
