@@ -108,12 +108,14 @@ void render_waveform_to_cache_surface(
     // #1c816b and #17594b — the phase's terms at row 6's palette block,
     // render.h). The lamp dark, the raw bar alone in `ink` and the ghost's
     // colour unread; lit, each column paints its ghost bar first in
-    // `ghost_ink` and its raw bar over it in `magnified_ink`, both flat (the
-    // order is at render_waveform's declaration). Both channels take the same
-    // pair. THE PALETTE IS READ HERE, ON THE WORKER, WITH NO JOB FIELD: it is
+    // `ghost_ink` and its raw bar over it in `magnified_ink`, both flat, the
+    // raw bar scaled by the palette's CORE GAIN `magnified_gain` (the device
+    // config's `waveform_magnified_gain`, default 1.68, architect 2026-09-25;
+    // the order and the gain's rule are at render_waveform's declaration).
+    // Both channels take the same pair and the same core gain. THE PALETTE IS READ HERE, ON THE WORKER, WITH NO JOB FIELD: it is
     // installed once at startup before the first plate job and never mutated
     // (the contract at waveform_palette, render.h), so nothing can tear it and
-    // the plate fingerprint needs no colour term.
+    // the plate fingerprint needs no colour or core-gain term.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
     // state. The curve it names is the audio object's own, immutable once
@@ -125,10 +127,10 @@ void render_waveform_to_cache_surface(
     const WaveformPalette& p = waveform_palette();
     const GuiColor ink = magnified ? p.magnified_ink : p.ink;
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, ink, p.ghost_ink, gain,
+                    basis, ink, p.ghost_ink, gain, p.magnified_gain,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, ink, p.ghost_ink, gain,
+                    basis, ink, p.ghost_ink, gain, p.magnified_gain,
                     warp_frame_map_or_null);
 }
 

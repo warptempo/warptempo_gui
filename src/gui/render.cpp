@@ -188,6 +188,7 @@ void render_waveform(cairo_surface_t* dest,
                      GuiColor color,
                      GuiColor ghost_color,
                      const WaveformGainCurve* gain_or_null,
+                     double core_gain,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -265,7 +266,8 @@ void render_waveform(cairo_surface_t* dest,
     // THE VISUAL MAGNIFICATION, a function of source time: each column's
     // GHOST scale is the derived curve's gain at the column's centre source
     // frame times the expander's multiplier over the column's working columns;
-    // the raw bar drawn over it takes scale 1.0, where this is the identity.
+    // the raw bar drawn over it takes the core gain with the lamp lit and 1.0
+    // with it dark, where this is the identity.
     // The contract (the ghost's order, the coarse-zoom centre rule and the
     // expander's smallest-reduction rule) is at this function's declaration;
     // the arithmetic is one multiply and ONE clamp at the tip mapping below.
@@ -313,6 +315,9 @@ void render_waveform(cairo_surface_t* dest,
     // rounding contract lives there). Both are flat (architect 2026-09-25).
     const uint32_t opaque_word = argb32_opaque_word(color);
     const uint32_t ghost_word  = argb32_opaque_word(ghost_color);
+    // The raw bar's scale: the core gain with the lamp lit, the identity dark
+    // (`core_gain` is unread then, the declaration's contract).
+    const double core = gain_or_null ? core_gain : 1.0;
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -440,12 +445,15 @@ void render_waveform(cairo_surface_t* dest,
             fill_bar(magnified_tip(mm.first, scale),
                      magnified_tip(mm.second, scale), ghost_word);
         }
-        // THE RAW BAR, always, over the ghost: scale 1.0, where the clamp is a
-        // no-op (raw peaks already rest in range), so the dark plate is the
-        // plate this writer always drew. Replace-writes: where the two bars
-        // overlap the raw one wins.
-        fill_bar(magnified_tip(mm.first, 1.0),
-                 magnified_tip(mm.second, 1.0), opaque_word);
+        // THE RAW BAR, always, over the ghost. Lit, it takes the CORE GAIN, one
+        // flat multiplier through the same clamp, so the raw picture keeps its
+        // shape and covers the ghost wherever the leveler's gain is at or under
+        // it (the rule is at this function's declaration). Dark, scale 1.0,
+        // where the clamp is a no-op (raw peaks already rest in range), so the
+        // dark plate is the plate this writer always drew. Replace-writes:
+        // where the two bars overlap the raw one wins.
+        fill_bar(magnified_tip(mm.first, core),
+                 magnified_tip(mm.second, core), opaque_word);
 
         g_prev = g1;
     }

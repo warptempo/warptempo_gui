@@ -50,7 +50,10 @@
 //   the column's raw bar, which is always present, so the magnified picture
 //   never replaces the raw one. Both are flat colours, the WaveformPalette's
 //   ghost ink and lit ink (render.h, tunable for a tuning phase, architect
-//   2026-09-25); the gain decides the ghost's height and never its colour.
+//   2026-09-25); the gain decides the ghost's height and never its colour,
+//   and the lit raw bar takes the palette's flat core gain instead of this
+//   curve (architect 2026-09-25), covering the ghost wherever the gain here
+//   is at or under it.
 //   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints
 //   its ghost flat.

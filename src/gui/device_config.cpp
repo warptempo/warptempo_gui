@@ -3,6 +3,7 @@
 #include "settings_io.h"       // atomic_write_string_to_path
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
+#include "value_format.h"      // format_value_double / parse_value_double
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
 #include <cmath>
@@ -18,9 +19,11 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (NINE keys since the three
-// waveform colour keys arrived 2026-09-25 for a tuning phase, after sync_path
-// where the picture keys had stood; six from when the eleven
+// set the shared scanner enforces after the loop (TEN keys since the core
+// gain `waveform_magnified_gain` joined 2026-09-25 after the colour keys;
+// nine from the three waveform colour keys' arrival earlier that day for a
+// tuning phase, after sync_path where the picture keys had stood; six from
+// when the eleven
 // waveform picture keys — the `waveform_gain_*` tunables appended 2026-09-23,
 // the `waveform_expander_*` ones 2026-09-24, as many as seventeen in all —
 // left 2026-09-24 with the values hard-coded in waveform_gain.cpp; six from
@@ -32,8 +35,9 @@ namespace {
 // fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
 // last_project, sync_path — the sixth placed right after gui_scale
 // (architect 2026-09-13), and the three colour keys after sync_path in the
-// painter's own order: the dark plate's ink, the lit raw bar's, the ghost's
-// (architect 2026-09-25). The scanner takes it as a
+// painter's own order: the dark plate's ink, the lit raw bar's, the ghost's,
+// with the lit raw bar's core gain after them (architect 2026-09-25). The
+// scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -50,6 +54,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform_ink",
     "waveform_magnified_ink",
     "waveform_ghost_ink",
+    "waveform_magnified_gain",
 };
 
 } // namespace
@@ -88,6 +93,22 @@ std::string format_waveform_colour(GuiColor c) {
     std::snprintf(buf, sizeof(buf), "#%02x%02x%02x",
                   byte(c.r), byte(c.g), byte(c.b));
     return std::string(buf);
+}
+
+std::string format_waveform_magnified_gain(double v) {
+    return format_value_double(v, 2);
+}
+
+bool parse_waveform_magnified_gain(std::string_view s, double& out) {
+    // The sidecar `scale` key's shape (validate_engine_setting,
+    // engine_settings_io.cpp) at this key's min 2: the strict parse, the
+    // round trip back to the bytes read, then the range owner.
+    double v = 0.0;
+    if (!parse_value_double(s, v)) return false;
+    if (format_waveform_magnified_gain(v) != s) return false;
+    if (!is_waveform_magnified_gain(v)) return false;
+    out = v;
+    return true;
 }
 
 std::filesystem::path device_config_path() {
@@ -142,6 +163,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_waveform_colour(cfg.waveform_magnified_ink);
         } else if (k == "waveform_ghost_ink") {
             s += format_waveform_colour(cfg.waveform_ghost_ink);
+        } else if (k == "waveform_magnified_gain") {
+            // The core gain through its one serializer, the canonical
+            // min-2-decimal spelling the reader demands back.
+            s += format_waveform_magnified_gain(cfg.waveform_magnified_gain);
         }
         s += '\n';
     }
@@ -249,6 +274,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
             if (key == "waveform_ink")                out.waveform_ink = c;
             else if (key == "waveform_magnified_ink") out.waveform_magnified_ink = c;
             else                                      out.waveform_ghost_ink = c;
+            return {};
+        }
+        if (key == "waveform_magnified_gain") {
+            // One canonical spelling and the range, both through the one
+            // parser in the header (the settings' bracketed-double road, then
+            // is_waveform_magnified_gain).
+            double v = 0.0;
+            if (!parse_waveform_magnified_gain(value, v)) {
+                return bad_value(ln, key, value,
+                                 kWaveformMagnifiedGainGrammarReason);
+            }
+            out.waveform_magnified_gain = v;
             return {};
         }
         return warptempo_parse::prefix_line_error(

@@ -1092,6 +1092,38 @@ inline constexpr GuiColor kWaveformMagnifiedInkDefault = hex(0x1C816B);  // (28,
 // and did not rule it in as the ground).
 inline constexpr GuiColor kWaveformGhostInkDefault = hex(0x17594B);  // (23, 89, 75)
 
+// THE LIT PLATE'S CORE GAIN (architect 2026-09-25) — the tuning phase's
+// fourth value, the device config's `waveform_magnified_gain`, and like the
+// three inks hard-coded again when the phase closes. With the magnification
+// lamp lit the RAW bar takes this one FLAT multiplier before its clamp, so
+// the raw picture keeps its shape while the tuttis grow to cover the ghost:
+// where the leveler's gain is at or under the core gain the ghost is hidden
+// entirely, and beyond it the ghost stands out by the ratio gain / core (the
+// rule is at render_waveform's declaration). The dark plate never reads it.
+//
+// THE DEFAULT 1.68 (4.5 dB, 2^0.75) IS FORCED BY MEASUREMENT: the product's
+// leveler re-derived in numpy on the three K550 movements (tmp/gain_hist.py,
+// 2026-09-25), counting the ghost standing 1-1.5x beside the core as the
+// FRINGE zone —
+//     core gain       ghost hidden (I/II/III)  fringe left       core clips
+//     x1.41 (3 dB)    33 / 9 / 12 %            17 / 10 / 39 %    0.10 / 0.01 / 0.01 %
+//     x1.58 (4 dB)    44 / 13 / 41 %           8.4 / 7.8 / 11 %  0.47 / 0.08 / 0.07 %
+//     x1.68 (4.5 dB)  46 / 14 / 47 %           6.7 / 7.5 / 6.9 % 0.86 / 0.16 / 0.18 %
+//     x1.78 (5 dB)    48 / 15 / 48 %           5.5 / 7.1 / 6.0 % 1.5 / 0.3 / 0.4 %
+//     x2.00 (6 dB)    50 / 18 / 50 %           4.7 / 6.4 / 5.3 % 3.5 / 0.75 / 1.2 %
+// (the clip column in audible columns; at gain 1 nothing is hidden and the
+// fringe is 40 / 12 / 29 %). THE CRITERION: the largest fixed gain that keeps
+// the core's clipping under 1 % of audible columns on every movement while
+// covering the loud mode. The Menuetto's tuttis sit at 3-4 dB, which rules
+// out 3 dB; from 4.5 dB the loud mode is covered in all three and the 5-7 %
+// left are the fades; past it the gain buys under two points of fringe and
+// flattens the 40th's tuttis. Some fringing is accepted — the goal is to
+// cover most of it, not all. A FLAT gain and not min(g, core), and not a
+// reduction of the ghost, both weighed and set aside: the first bends the raw
+// picture's shape, the second halves the fill to reclaim 0.1-0.4 % of
+// clipped columns.
+inline constexpr double kWaveformMagnifiedGainDefault = 1.68;
+
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
 // leave it more greenish").
@@ -2045,30 +2077,33 @@ inline int marker_lane_h_px() {
 void set_max_waveform_height_px(int authored_px);
 int  waveform_max_h_px();
 
-// THE WAVEFORM PALETTE — the plate's three inks for the tuning phase
-// (architect 2026-09-25; the three defaults and the phase's terms are at
-// row 6's palette block): `ink` paints the plate with the magnification lamp
-// dark, `magnified_ink` the raw bar with the lamp lit, and `ghost_ink` the
-// magnified ghost behind that raw bar. The member defaults are the three
-// constants, so a process that never installs one paints the defaults.
+// THE WAVEFORM PALETTE — the plate's three inks and the lit raw bar's core
+// gain for the tuning phase (architect 2026-09-25; the four defaults and the
+// phase's terms are at row 6's palette block): `ink` paints the plate with
+// the magnification lamp dark, `magnified_ink` the raw bar with the lamp lit,
+// `ghost_ink` the magnified ghost behind that raw bar, and `magnified_gain`
+// is the flat multiplier that lit raw bar takes. The member defaults are the
+// four constants, so a process that never installs one paints the defaults.
 // When the phase closes this struct is struck and the chosen values are
 // constexpr again — the palette rule is the destination.
 //
 // INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's three
-// colours through set_waveform_palette at startup, beside
+// colours and the core gain through set_waveform_palette at startup, beside
 // set_gui_scale_percent and before the first project loads — so before the
 // first plate job — and nothing calls it again (the keys have no in-app
 // writer; a retune is a config edit and a relaunch). THAT IS WHY THE WAVEFORM
 // WORKER READS IT DIRECTLY, with no job field, and why the plate fingerprint
 // carries no colour term: a value that cannot change under a running job
-// needs no snapshot and no key. (g_gui_scale_percent is the contrast: the
+// needs no snapshot and no key — the core gain likewise, no job field and no
+// fingerprint term. (g_gui_scale_percent is the contrast: the
 // settings editor mutates it live, so the job snapshots the geometry it
 // derives — waveform_worker.h's note.) waveform_palette() is the one reader,
 // render_waveform_to_cache_surface (waveform_cache.cpp).
 struct WaveformPalette {
-    GuiColor ink           = kWaveformInkDefault;
-    GuiColor magnified_ink = kWaveformMagnifiedInkDefault;
-    GuiColor ghost_ink     = kWaveformGhostInkDefault;
+    GuiColor ink            = kWaveformInkDefault;
+    GuiColor magnified_ink  = kWaveformMagnifiedInkDefault;
+    GuiColor ghost_ink      = kWaveformGhostInkDefault;
+    double   magnified_gain = kWaveformMagnifiedGainDefault;
 };
 void set_waveform_palette(const WaveformPalette& palette);
 const WaveformPalette& waveform_palette();
@@ -2891,10 +2926,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // read and draws TWO bars from it: first the GHOST — the raw min/max times
 // the column's scale (the gain below times the expander's multiplier),
 // CLAMPED to [-1, 1] before they become rows — in `ghost_color`, then the
-// RAW bar (scale 1) in `color` written over it. The writer replace-writes
-// opaque words, so where the two overlap the raw bar wins. NULL (the dark
-// lamp) draws the raw bar alone, byte for byte the plate it always drew, and
-// `ghost_color` is then unread. Nothing else in this painter moves (the
+// RAW bar (scale `core_gain`, below) in `color` written over it. The writer
+// replace-writes opaque words, so where the two overlap the raw bar wins.
+// NULL (the dark lamp) draws the raw bar alone at scale 1, byte for byte the
+// plate it always drew, and `ghost_color` and `core_gain` are then unread. Nothing else in this painter moves (the
 // column grid, the >=1px floor — both bars keep it — the carried-endpoint
 // chain and the aliased-only writer are untouched). A loud passage's ghost
 // clips flat at the lane's edges while the raw bar still shows its true
@@ -2921,17 +2956,29 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // `waveform_magnified_ink` and `waveform_ghost_ink`), the architect preferring
 // to tune two flat colours by eye to reading a shade.
 //
+// THE LIT RAW BAR TAKES A CORE GAIN (architect 2026-09-25): with the lamp lit
+// both raw tips are multiplied by `core_gain` and clamped to [-1, 1] exactly
+// as the ghost's are, then drawn over the ghost as before. The fringe it
+// answers is the ghost standing 1-1.5x beside the raw bar. A FLAT multiplier,
+// so the raw picture keeps its shape — the architect's requirement; neither
+// min(g, core) nor a reduction of the ghost. Where the leveler's gain at the
+// column is at or under the core gain the ghost is covered entirely (a tutti
+// shows the raw picture at the core gain, in the magnified ink); beyond it the
+// ghost stands out by the ratio g / core. The measured default, 1.68, and its
+// table are at kWaveformMagnifiedGainDefault (render.h's row-6 block); the
+// value is the palette's `magnified_gain`, tunable for the phase.
+//
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
 // column's [s0, s1), the pyramid level and the one read. THE GHOST IS A
 // DILATION ABOUT THE CENTRE ROW, NOT AN OUTLINE: a column straddling zero has
 // its ghost containing the raw bar; a column wholly on one side of zero (low
 // material at working zoom) has its ghost pushed outward, with a gap between
 // it and the raw bar. Intended — that is what a true magnification looks
-// like. THE EXPANDER IS UNCAPPED, so where a column's scale falls under 1 (a
-// peak more than 8 dB plus twice the leveler's gain in dB under the edge) the
-// ghost sits inside the raw bar and the raw paints over it: in the overlay
-// the expander's dips never go below the raw picture. Accepted; that is the
-// hairline region. THE COST is one extra row fill per column — the read, the
+// like. THE EXPANDER IS UNCAPPED, so where a column's ghost scale (gain times
+// multiplier) falls under the core gain — the leveler's gain at or under it,
+// or an expander dip — the ghost sits inside the core-gained raw bar and the
+// raw paints over it: in the overlay the expander's dips never go below the
+// core-gained raw picture. Accepted; that is the hairline region. THE COST is one extra row fill per column — the read, the
 // map walk and the gain lookup are shared; no second pyramid, no second
 // plate, no new cache field and no fingerprint change
 // (waveform_gain_fingerprint already flips with the lamp, and the palette
@@ -3001,6 +3048,7 @@ void render_waveform(cairo_surface_t* dest,
                      GuiColor color,
                      GuiColor ghost_color,
                      const WaveformGainCurve* gain_or_null,
+                     double core_gain,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`
