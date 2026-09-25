@@ -47,12 +47,11 @@
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
 //   clamps the pair to [-1, 1] (render_waveform); nothing else. The product
 //   is THE GHOST BAR (architect 2026-09-24): the lit lamp paints it BEHIND
-//   the column's raw bar, which keeps kWaveformInk and is always present, so
-//   the magnified picture never replaces the raw one. Its SHADE reads this
-//   gain alone at the column's centre frame — kWaveformInk up to one
-//   doubling, the faint kWaveformGhostInk from two, linear in doublings
-//   between (render_waveform) — so the ghost tells a loud passage from a
-//   quiet one. The clamp is a sample-peak clip, which is right for a
+//   the column's raw bar, which is always present, so the magnified picture
+//   never replaces the raw one. Both are flat colours, the WaveformPalette's
+//   ghost ink and lit ink (render.h, tunable for a tuning phase, architect
+//   2026-09-25); the gain decides the ghost's height and never its colour.
+//   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints
 //   its ghost flat.
 //

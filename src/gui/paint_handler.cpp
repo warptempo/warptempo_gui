@@ -5322,18 +5322,16 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 //
 // AN OPAQUE RECOLOUR KEYED BY NOTHING BUT THE PIXEL'S ALPHA, lifting each
 // colour by the theme's step — never a translucent wash over the plate, the
-// retired form the opaque recolor model rejects. The plate carries a
-// continuum of colours since the magnification ghost's shade (architect
-// 2026-09-24: kWaveformInk, and behind it while the lamp is lit a per-column
-// shade between the ink and kWaveformGhostInk — render_waveform's
-// declaration), so no key of known words can lift it; each pixel is lifted
-// from ITS OWN colour instead. The pass reads the plate's ARGB32 words
-// directly inside (the region's column span) INTERSECT (the content band)
-// INTERSECT (the frame's damage clip), and writes every OPAQUE plate pixel
-// (alpha byte 0xFF) into the window surface as region_lift of its word
-// (render.h: +18 / +18 / +20 per channel, saturating, the doubled Breeze step
-// documented at kWaveformRegionCanvas) — so the ink lands on
-// kWaveformRegionInk exactly, which a static_assert at region_lift pins. A
+// retired form the opaque recolor model rejects. The plate's inks are the
+// WaveformPalette's (render.h), tunable for a tuning phase (architect
+// 2026-09-25) — the ink, and behind it while the magnification lamp is lit
+// the ghost's — so the pass keys on no known word and pins no lifted
+// constant; each pixel is lifted from ITS OWN colour. The pass reads the
+// plate's ARGB32 words directly inside (the region's column span) INTERSECT
+// (the content band) INTERSECT (the frame's damage clip), and writes every
+// OPAQUE plate pixel (alpha byte 0xFF) into the window surface as region_lift
+// of its word (render.h: +18 / +18 / +20 per channel, saturating, the doubled
+// Breeze step documented at kWaveformRegionCanvas). A
 // transparent plate pixel is left alone, so the kWaveformRegionCanvas ground
 // the previous pass laid down still shows through the gaps unchanged. The
 // alpha is still BINARY (the antialiased plate is deleted;
@@ -8960,8 +8958,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     them, and the region's is the ONE highlight that recolors: its
         //     GROUND half paints BEFORE the plate and the ink composites over
         //     it, then its INK half rewrites every opaque plate pixel over
-        //     the same span in its own ink's lifted colour (the ink's and the
-        //     magnification ghost's, keyed by the plate's word), so the whole
+        //     the same span as its own colour lifted by the region's step
+        //     (region_lift, keyed by the alpha alone), so the whole
         //     span lifts without a single compositing alpha. The phase-reset
         //     overlay contributes no ground at all (architect 2026-07-27): its
         //     1px RING is its whole visual, and a boundary line paints AFTER

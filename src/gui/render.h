@@ -102,7 +102,11 @@ struct TrimRange {
 // constant here and in the redesign blocks below is constexpr, there are no
 // user-settable colors, nothing is read from ~/.config, and a retune is a
 // recompile. Every painted surface in the product takes its value from one of
-// these constants.
+// these constants. ONE STANDING EXCEPTION, TEMPORARY BY RULING: the
+// waveform's three inks are device-config keys for a tuning phase (architect
+// 2026-09-25) and reach the painter through the startup-installed
+// WaveformPalette; the constants at row 6 below are their defaults, and the
+// inks return to this rule when the phase closes.
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -125,9 +129,8 @@ struct TrimRange {
 // rather than washing over them. The region highlight is opaque colors in
 // two passes — kWaveformRegionCanvas for the ground under the ink, then each
 // opaque plate pixel's own colour lifted by the same doubled Breeze step
-// (region_lift; the ink lands on kWaveformRegionInk), keyed by nothing but the
-// plate's BINARY alpha so every pixel ends up fully one color or fully another
-// and nothing blends; a disabled face resolves to a solid color through
+// (region_lift), keyed by nothing but the plate's BINARY alpha so every
+// pixel ends up fully one color or fully another and nothing blends; a disabled face resolves to a solid color through
 // mix_color before it reaches cairo, never a fade.
 
 // THE BASE CHROME ERASE (render_background) — and the surviving half of the
@@ -1045,29 +1048,49 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 // (2026-08-02) — every key above is deleted along with the loader and the config
 // file itself; the record is at the palette header.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
-inline constexpr GuiColor kWaveformInk    = hex(0x1C816B);  // (28, 129, 107)
 
-// THE MAGNIFICATION GHOST'S FAINT END (architect 2026-09-24): the lit
-// magnification lamp paints each column's leveled-and-expanded bar BEHIND the
-// raw bar, which keeps kWaveformInk, in a SHADE that reads the passage's
-// loudness — kWaveformInk up to one doubling of the leveler's gain, this
-// colour from two doublings, linear in doublings between (the rule is at
-// render_waveform's declaration). This is the shade's FAR END, the colour a
-// quiet passage's ghost takes, faint enough that the raw picture stands over
-// it and the ghost does not read as a second figure.
+// THE WAVEFORM'S THREE INKS ARE TUNABLE FOR A TUNING PHASE (architect
+// 2026-09-25): the plate's ink with the magnification lamp dark, the raw bar's
+// ink with the lamp lit, and the ghost's ink behind that raw bar are the
+// device config's `waveform_ink`, `waveform_magnified_ink` and
+// `waveform_ghost_ink` (device_config.h), read once at startup into the
+// process-wide WaveformPalette (beside the gui-scale state, below) — the
+// posture the leveler's constants had 2026-09-23/24. The three constants here
+// are THE TUNING PHASE'S DEFAULTS: the values both first-run templates stamp
+// and the palette carries until gui_main installs the config's. When the phase
+// closes the keys are struck and the chosen values are hard-coded here again —
+// the palette rule (every colour a constexpr, the palette header) stays the
+// destination.
 //
-// DERIVED, NOT SAMPLED: the kWaveformCanvas : kWaveformInk 1:1 blend of the
-// two sampled row-6 constants, each channel rounded with std::nearbyint (the
-// halves are exact here):
+// THE PLATE'S INK, the lamp dark: row 6's crop sample, #1c816b — the tuning
+// phase's default; hard-coded again when it closes.
+inline constexpr GuiColor kWaveformInkDefault = hex(0x1C816B);  // (28, 129, 107)
+
+// THE RAW BAR'S INK WITH THE LAMP LIT, written over the ghost — the tuning
+// phase's default; hard-coded again when it closes. Its default is the
+// plate's ink itself. It is a colour of its own because the raw bar over a
+// ghost may want a different value than the raw bar alone, and the tuning
+// could not find that out with two colours (architect 2026-09-25).
+inline constexpr GuiColor kWaveformMagnifiedInkDefault = hex(0x1C816B);  // (28, 129, 107)
+
+// THE MAGNIFICATION GHOST'S INK (architect 2026-09-24; one flat colour again
+// 2026-09-25) — the tuning phase's default; hard-coded again when it closes.
+// The lit magnification lamp paints each column's leveled-and-expanded bar
+// BEHIND the raw bar in this one colour (the rule is at render_waveform's
+// declaration), faint enough that the raw picture stands over it and the
+// ghost does not read as a second figure.
+//
+// DERIVED, NOT SAMPLED: the kWaveformCanvas : kWaveformInkDefault 1:1 blend of
+// the two sampled row-6 constants, each channel rounded with std::nearbyint
+// (the halves are exact here):
 //     ((18, 49, 43) + (28, 129, 107)) / 2 = (23, 89, 75) = #17594b
-// Two sampled inks were tried first the same day and both are superseded: the
-// lower-channel #1f8b4c of the architect's kdenlive screenshot read as a
+// Two sampled inks were tried first on 2026-09-24 and both are superseded:
+// the lower-channel #1f8b4c of the architect's kdenlive screenshot read as a
 // second figure, and that screenshot's new canvas #135647 fringed at small
-// boosts, a thin rim beside the raw bar that read as antialiasing — the
-// fringe the shade removes. The canvas STAYS kWaveformCanvas #12312b (the
-// architect observed kdenlive's new canvas and did not rule it in as the
-// ground).
-inline constexpr GuiColor kWaveformGhostInk = hex(0x17594B);  // (23, 89, 75)
+// boosts, a thin rim beside the raw bar that read as antialiasing. The canvas
+// STAYS kWaveformCanvas #12312b (the architect observed kdenlive's new canvas
+// and did not rule it in as the ground).
+inline constexpr GuiColor kWaveformGhostInkDefault = hex(0x17594B);  // (23, 89, 75)
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1100,33 +1123,18 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63
 // THE HIGHLIGHT'S OTHER HALF — THE SAME LIFT APPLIED TO THE INK (architect
 // 2026-08-18: "apply overlay alpha to wave along with canvas on region
 // highlight"). The ground recolor alone lit the background behind unlit
-// content; lifting the ink too makes the span read as ONE lit region.
-//
-// DERIVED EXACTLY AS ITS SIBLING WAS, so the pair is one construction rather
-// than a colour and a guess: Breeze's own View -> ViewAlternate lift of
-// +9/+9/+10 per channel, taken TWICE — the theme's own relationship applied
-// twice, not a tint invented for it —
-//     kWaveformInk (28, 129, 107) + 2*(9, 9, 10) = (46, 147, 127) = #2e937f
-//
-// STILL FULLY OPAQUE, NOT A WASH: paint_region_ink, a second pass AFTER the
-// blit, writes every opaque plate pixel inside the span as its own colour
-// lifted by this same doubled step (region_lift, beside argb32_opaque_word
-// below — the rule per pixel since the magnification ghost's shade, architect
-// 2026-09-24), so every ink pixel lands on exactly this colour, every ghost
-// pixel on its own shade's lift, and every gap is left untouched — still
-// showing the kWaveformRegionCanvas ground the first pass laid down. A
-// translucent wash painted over the plate is the retired form the opaque
-// recolor model rejects, and this is not it. The pass no longer reads this
-// constant: it is the documented value the ink lifts to, and a static_assert
-// at region_lift pins the two together so the constant and the rule cannot
-// drift.
+// content; lifting the ink too makes the span read as ONE lit region. It is
+// no constant: paint_region_ink, a second pass AFTER the blit, writes every
+// opaque plate pixel inside the span as its own colour lifted by this same
+// doubled step (region_lift, beside argb32_opaque_word below), so each ink —
+// whatever the palette holds — lands on its own lift and every gap is left
+// untouched, still showing this ground. Still fully opaque, not a wash.
 //
 // THE ARCHITECT'S TUNING KNOB, explicitly — both halves of it: each lift is a
-// derivation and not a measurement, so the step (region_lift's, which this
-// constant must follow) and kWaveformRegionCanvas above are the two to move if
-// the highlight wants to be stronger or weaker, and they are the whole of what
-// the region path has to tune.
-inline constexpr GuiColor kWaveformRegionInk = hex(0x2E937F);  // (46, 147, 127)
+// derivation and not a measurement, so the step (region_lift's) and
+// kWaveformRegionCanvas above are the two to move if the highlight wants to be
+// stronger or weaker, and they are the whole of what the region path has to
+// tune. The ground is not in the palette's tuning phase: only the inks are.
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
@@ -2037,6 +2045,34 @@ inline int marker_lane_h_px() {
 void set_max_waveform_height_px(int authored_px);
 int  waveform_max_h_px();
 
+// THE WAVEFORM PALETTE — the plate's three inks for the tuning phase
+// (architect 2026-09-25; the three defaults and the phase's terms are at
+// row 6's palette block): `ink` paints the plate with the magnification lamp
+// dark, `magnified_ink` the raw bar with the lamp lit, and `ghost_ink` the
+// magnified ghost behind that raw bar. The member defaults are the three
+// constants, so a process that never installs one paints the defaults.
+// When the phase closes this struct is struck and the chosen values are
+// constexpr again — the palette rule is the destination.
+//
+// INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's three
+// colours through set_waveform_palette at startup, beside
+// set_gui_scale_percent and before the first project loads — so before the
+// first plate job — and nothing calls it again (the keys have no in-app
+// writer; a retune is a config edit and a relaunch). THAT IS WHY THE WAVEFORM
+// WORKER READS IT DIRECTLY, with no job field, and why the plate fingerprint
+// carries no colour term: a value that cannot change under a running job
+// needs no snapshot and no key. (g_gui_scale_percent is the contrast: the
+// settings editor mutates it live, so the job snapshots the geometry it
+// derives — waveform_worker.h's note.) waveform_palette() is the one reader,
+// render_waveform_to_cache_surface (waveform_cache.cpp).
+struct WaveformPalette {
+    GuiColor ink           = kWaveformInkDefault;
+    GuiColor magnified_ink = kWaveformMagnifiedInkDefault;
+    GuiColor ghost_ink     = kWaveformGhostInkDefault;
+};
+void set_waveform_palette(const WaveformPalette& palette);
+const WaveformPalette& waveform_palette();
+
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
@@ -2760,13 +2796,16 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
            (static_cast<uint32_t>(std::nearbyint(c.b * 255.0)));
 }
 
-// THE REGION'S LIFT OF ONE PIXEL WORD (architect 2026-09-24): each of the R, G
-// and B bytes of an ARGB32 word (or of a 0xRRGGBB value) raised by
-// +18 / +18 / +20, saturating at 255, the alpha byte kept. That is Breeze's
-// View -> ViewAlternate step taken twice, the construction documented at
-// kWaveformRegionCanvas. paint_region_ink applies it to every opaque plate
-// pixel inside the region; at full alpha the premultiplied word is the colour
-// itself, so lifting the bytes lifts the colour.
+// THE REGION'S LIFT OF ONE PIXEL WORD — THE ONE REGION RULE for the plate's
+// pixels (architect 2026-09-24): each of the R, G and B bytes of an ARGB32
+// word raised by +18 / +18 / +20, saturating at 255, the alpha byte kept.
+// That is Breeze's View -> ViewAlternate step taken twice, the construction
+// documented at kWaveformRegionCanvas. paint_region_ink applies it to every
+// opaque plate pixel inside the region, each from its OWN colour, whatever
+// ink the palette holds — no ink is keyed and no lifted constant is pinned,
+// the inks being tunable (architect 2026-09-25); at full alpha the
+// premultiplied word is the colour itself, so lifting the bytes lifts the
+// colour.
 inline constexpr uint32_t region_lift(uint32_t word) {
     const auto lift = [](uint32_t byte, uint32_t step) {
         return byte + step > 255u ? 255u : byte + step;
@@ -2776,23 +2815,6 @@ inline constexpr uint32_t region_lift(uint32_t word) {
            (lift((word >>  8) & 0xFFu, 18) <<  8) |
             lift( word        & 0xFFu, 20);
 }
-
-// A hex()-built palette colour back to its 0xRRGGBB value, at compile time.
-// Exact for every palette entry: each n/255 channel round-trips through x255
-// without error for all 256 values of n, so the truncating cast is exact
-// where std::nearbyint (not constexpr) cannot be used. For the check below
-// alone.
-inline constexpr uint32_t palette_rgb(GuiColor c) {
-    return (static_cast<uint32_t>(c.r * 255.0) << 16) |
-           (static_cast<uint32_t>(c.g * 255.0) <<  8) |
-            static_cast<uint32_t>(c.b * 255.0);
-}
-
-// THE INK LIFTS ONTO kWaveformRegionInk EXACTLY: the per-pixel rule and the
-// documented constant cannot drift apart.
-static_assert(region_lift(palette_rgb(kWaveformInk)) ==
-                  palette_rgb(kWaveformRegionInk),
-              "region_lift(kWaveformInk) must equal kWaveformRegionInk");
 
 // Draws one channel's waveform into `area`, which holds the `area.w` columns
 // starting at GLOBAL column `col0` — i.e. the column sub-range [col0,
@@ -2845,15 +2867,15 @@ static_assert(region_lift(palette_rgb(kWaveformInk)) ==
 // replacing is correct and idempotent — the max-compositing that the segments needed (they wrote into an
 // already-rendered neighbour) went with them.
 //
-// The words are PREMULTIPLIED ARGB32 (argb32_opaque_word): the ink's is built
-// once per call, and with the lamp lit each column builds its ghost's shade
-// word (THE SHADE, below); at full coverage each is its colour itself, so
-// there is one word per colour rather than a table. The surface is flushed
+// The words are PREMULTIPLIED ARGB32 (argb32_opaque_word): the ink's and the
+// ghost's are each built once per call; at full coverage each is its colour
+// itself, so there is one word per colour rather than a table. The surface is flushed
 // before the first CPU write and marked dirty after the last, so later cairo
 // use sees the pixels.
 //
-// The plate paints in `color`, plus a shade toward `ghost_color` behind it
-// when the lamp is lit — it is trim-agnostic, and the out-of-trim dim that
+// The plate paints in `color`, plus `ghost_color` behind it when the lamp is
+// lit (the caller passes the WaveformPalette's inks, one pair per lamp
+// state) — it is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
 // is BINARY: opaque bars and transparent gaps, with no fractional edges left.
@@ -2861,16 +2883,15 @@ static_assert(region_lift(palette_rgb(kWaveformInk)) ==
 // before the blit) show through, and the SET pixels are what the one
 // remaining after-the-fact recolor reads: paint_region_ink rewrites each
 // opaque plate pixel inside the region's column span as its own colour lifted
-// by the region's step (region_lift; the ink lands on kWaveformRegionInk),
-// leaving the plate itself untouched.
+// by the region's step (region_lift), leaving the plate itself untouched.
 //
 // THE VISUAL MAGNIFICATION is `gain_or_null`, and it is A GHOST BEHIND THE
 // RAW PICTURE (architect 2026-09-24): the lit lamp no longer replaces the raw
 // picture, it paints the magnified one behind it. Every column takes ONE peak
 // read and draws TWO bars from it: first the GHOST — the raw min/max times
 // the column's scale (the gain below times the expander's multiplier),
-// CLAMPED to [-1, 1] before they become rows — in the column's SHADE, then
-// the RAW bar (scale 1) in `color` written over it. The writer replace-writes
+// CLAMPED to [-1, 1] before they become rows — in `ghost_color`, then the
+// RAW bar (scale 1) in `color` written over it. The writer replace-writes
 // opaque words, so where the two overlap the raw bar wins. NULL (the dark
 // lamp) draws the raw bar alone, byte for byte the plate it always drew, and
 // `ghost_color` is then unread. Nothing else in this painter moves (the
@@ -2880,37 +2901,25 @@ static_assert(region_lift(palette_rgb(kWaveformInk)) ==
 // height inside it: the ghost exists to make a quiet passage's onsets
 // readable, and the raw picture is always present.
 //
-// THE SHADE READS THE PASSAGE'S LOUDNESS (architect 2026-09-24): the ghost's
-// colour is not one word per call but one per column, blended from `color`
-// toward `ghost_color` (the faint end, kWaveformGhostInk) by the LEVELER'S
-// GAIN ALONE at the column's centre frame, g = waveform_gain_at(curve,
-// (s0 + s1) / 2) — the value the tips take before the expander's multiplier:
-//     t     = clamp(log2(g) - 1, 0, 1)
-//     shade = color + t * (ghost_color - color), per channel
-// rounded to bytes by argb32_opaque_word. Up to ONE DOUBLING (a loud passage's
-// boost, a tutti's) the ghost IS the ink and there is no second colour to
-// fringe; from TWO DOUBLINGS (a quiet passage) it is the full faint colour;
-// between, linear in doublings. The fixed ghost it replaces (#135647, the
-// same day) fringed where the leveler boosts by only x1.1-x1.5: a thin spiky
-// rim beside the raw bar in a similar colour, read as antialiasing. THE TWO
-// KNEES ARE THE ARCHITECT'S OWN LADDER: x2 was level 1, a tutti's boost ("a
-// tutti with its p90 at -6 dB gets x2"), and x4 was level 2, the first level
-// a quiet passage took (the magnification levels of 2026-09-23). MEASURED on
-// the three K550 movements (the product's leveler re-derived in numpy,
-// tmp/gain_hist.py, not committed), the per-hop gain is BIMODAL in every
-// movement, the hops at 0-6 dB / in the 6-12 dB valley / at 12-24 dB: the
-// 40th's first movement 50 / 13 / 37 %, the Andante 18 / 12 / 70 %, the
-// Menuetto 50 / 13 / 37 %; the valley holds 1-2 % per dB bin everywhere, and
-// the Andante's tuttis sit at 1-4 dB, under one doubling — so the two knees
-// fall at the modes' edges and few columns take a middle shade.
-// THE SHADE READS THE LEVELER'S GAIN, NOT THE SCALE: the expander's
-// multiplier is per working column and would flicker the shade column to
-// column inside a valley, while the passage's loudness is the window's RMS,
-// which is what the leveler measured. It supersedes the "drawing of the gain"
-// exclusion of 2026-09-23 (waveform_magnified, warp_frame_map_view.h): that
-// was a plotted curve or a tint over the picture; this is the ghost's own
-// colour, and it is how loud and quiet passages are told apart with the lamp
-// lit.
+// THE GHOST IS ONE FLAT COLOUR (architect 2026-09-25), and the raw bar over
+// it another. A SUPERSEDED RECORD, 2026-09-24 to 2026-09-25: for one day the
+// ghost wore a per-column SHADE, blended from the ink toward the faint
+// #17594b by the LEVELER'S GAIN alone at the column's centre frame,
+// t = clamp(log2(g) - 1, 0, 1) — the ink up to one doubling, the faint end
+// from two, linear in doublings between. The knees were the old magnification
+// ladder's x2 (a tutti's boost) and x4 (a quiet passage's first level), and
+// the shade read the gain, not the scale, because the expander's per-column
+// multiplier would have flickered it inside a valley. Measured on the three
+// K550 movements (the leveler re-derived in numpy), the per-hop gain is
+// BIMODAL — the hops at 0-6 / 6-12 / 12-24 dB were 50 / 13 / 37 % in the
+// 40th's first movement and the Menuetto and 18 / 12 / 70 % in the Andante —
+// so the knees fell at the modes' edges and few columns took a middle shade.
+// STRUCK 2026-09-25 after the architect's eye on the laptop: the flat pair
+// stands again, and the three colours involved — the dark plate's ink, the
+// lit raw bar's and the ghost's — are TUNABLE for a tuning phase
+// (WaveformPalette; the device config's `waveform_ink`,
+// `waveform_magnified_ink` and `waveform_ghost_ink`), the architect preferring
+// to tune two flat colours by eye to reading a shade.
 //
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
 // column's [s0, s1), the pyramid level and the one read. THE GHOST IS A
@@ -2922,11 +2931,11 @@ static_assert(region_lift(palette_rgb(kWaveformInk)) ==
 // peak more than 8 dB plus twice the leveler's gain in dB under the edge) the
 // ghost sits inside the raw bar and the raw paints over it: in the overlay
 // the expander's dips never go below the raw picture. Accepted; that is the
-// hairline region. THE COST is one extra row fill per column plus the
-// shade's log2 and blend, three multiplies — the read, the map walk and the
-// gain lookup are shared; no second pyramid, no second plate, no new cache
-// field and no fingerprint change (waveform_gain_fingerprint already flips
-// with the lamp).
+// hairline region. THE COST is one extra row fill per column — the read, the
+// map walk and the gain lookup are shared; no second pyramid, no second
+// plate, no new cache field and no fingerprint change
+// (waveform_gain_fingerprint already flips with the lamp, and the palette
+// never moves after startup).
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).

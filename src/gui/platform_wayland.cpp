@@ -714,6 +714,12 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // THE WAVEFORM'S THREE INKS, the tuning phase's defaults (architect
+    // 2026-09-25; the phase's terms at render.h's row-6 palette block), the
+    // same on both templates: #1c816b, #1c816b, #17594b.
+    cfg.waveform_ink           = kWaveformInkDefault;
+    cfg.waveform_magnified_ink = kWaveformMagnifiedInkDefault;
+    cfg.waveform_ghost_ink     = kWaveformGhostInkDefault;
     return cfg;
 }
 

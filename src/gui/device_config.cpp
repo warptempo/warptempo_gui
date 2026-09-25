@@ -5,6 +5,7 @@
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -17,18 +18,22 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SIX keys since the eleven
+// set the shared scanner enforces after the loop (NINE keys since the three
+// waveform colour keys arrived 2026-09-25 for a tuning phase, after sync_path
+// where the picture keys had stood; six from when the eleven
 // waveform picture keys — the `waveform_gain_*` tunables appended 2026-09-23,
 // the `waveform_expander_*` ones 2026-09-24, as many as seventeen in all —
-// left 2026-09-24 with the values hard-coded in waveform_gain.cpp; six since
-// `max_waveform_height` arrived 2026-09-13 with the waveform cap leaving
+// left 2026-09-24 with the values hard-coded in waveform_gain.cpp; six from
+// `max_waveform_height`'s arrival 2026-09-13 with the waveform cap leaving
 // render.h; five from `sync_path`'s arrival 2026-08-30 with the mirror's
 // configured destination; four from
 // `audio_player`'s retirement 2026-08-28; five from the project model
 // 2026-08-27; two before it). THE ORDER IS THE ARCHITECT'S OWN, given with the
 // fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
 // last_project, sync_path — the sixth placed right after gui_scale
-// (architect 2026-09-13). The scanner takes it as a
+// (architect 2026-09-13), and the three colour keys after sync_path in the
+// painter's own order: the dark plate's ink, the lit raw bar's, the ghost's
+// (architect 2026-09-25). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -42,6 +47,9 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
+    "waveform_ink",
+    "waveform_magnified_ink",
+    "waveform_ghost_ink",
 };
 
 } // namespace
@@ -55,6 +63,30 @@ std::string format_gui_scale_percent(int percent) {
 std::string format_max_waveform_height(int authored_px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", authored_px);
+    return std::string(buf);
+}
+
+GuiColor parse_waveform_colour(std::string_view v) {
+    // The grammar has admitted exactly `#` and six lower-case hex digits, so
+    // every digit maps and the value fits 24 bits.
+    uint32_t rgb = 0;
+    for (size_t i = 1; i < v.size(); ++i) {
+        const char c = v[i];
+        const uint32_t d = (c >= '0' && c <= '9')
+                               ? static_cast<uint32_t>(c - '0')
+                               : static_cast<uint32_t>(c - 'a' + 10);
+        rgb = (rgb << 4) | d;
+    }
+    return hex(rgb);
+}
+
+std::string format_waveform_colour(GuiColor c) {
+    const auto byte = [](double ch) {
+        return static_cast<unsigned>(std::nearbyint(ch * 255.0));
+    };
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "#%02x%02x%02x",
+                  byte(c.r), byte(c.g), byte(c.b));
     return std::string(buf);
 }
 
@@ -102,6 +134,14 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
+        } else if (k == "waveform_ink") {
+            // The three colour keys through their one serializer, which
+            // writes the canonical lower-case spelling the reader demands.
+            s += format_waveform_colour(cfg.waveform_ink);
+        } else if (k == "waveform_magnified_ink") {
+            s += format_waveform_colour(cfg.waveform_magnified_ink);
+        } else if (k == "waveform_ghost_ink") {
+            s += format_waveform_colour(cfg.waveform_ghost_ink);
         }
         s += '\n';
     }
@@ -195,6 +235,20 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kSyncPathGrammarReason);
             }
             out.sync_path = value;
+            return {};
+        }
+        if (key == "waveform_ink" || key == "waveform_magnified_ink" ||
+            key == "waveform_ghost_ink") {
+            // `#` and six lower-case hex digits, one canonical spelling,
+            // through the one grammar owner in the header; then the one
+            // parser. The three are one shape and differ only in the member.
+            if (!is_waveform_colour(value)) {
+                return bad_value(ln, key, value, kWaveformColourGrammarReason);
+            }
+            const GuiColor c = parse_waveform_colour(value);
+            if (key == "waveform_ink")                out.waveform_ink = c;
+            else if (key == "waveform_magnified_ink") out.waveform_magnified_ink = c;
+            else                                      out.waveform_ghost_ink = c;
             return {};
         }
         return warptempo_parse::prefix_line_error(

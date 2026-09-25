@@ -280,7 +280,7 @@ void render_waveform(cairo_surface_t* dest,
     // Each column is written straight into the plate's pixel words, and a
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
     // filled inclusively with the opaque ink word (with the lamp lit, the
-    // magnified ghost bar goes down first in its shade word and the raw bar
+    // magnified ghost bar goes down first in the ghost word and the raw bar
     // over it — the rule is at this function's declaration). There is no
     // interior/edge split, no fractional coverage, and no inter-column
     // connectivity of any kind — a spike stands alone, exactly as in a classic
@@ -307,20 +307,12 @@ void render_waveform(cairo_surface_t* dest,
     // self-contained and there is nothing for an offscreen neighbour to
     // contribute: pan invariance strengthened rather than weakened here.
     //
-    // THE PREMULTIPLIED WORDS, through the one word owner (argb32_opaque_word,
-    // render.h — its byte-order and rounding contract lives there): the ink's
-    // once per call; the ghost's is the column's SHADE, built per column below
-    // while the lamp is lit (the rule is at this function's declaration).
+    // THE PREMULTIPLIED WORDS: the ink's, and the ghost's (built always,
+    // written only when the lamp is lit), each built once per call through the
+    // one word owner (argb32_opaque_word, render.h — its byte-order and
+    // rounding contract lives there). Both are flat (architect 2026-09-25).
     const uint32_t opaque_word = argb32_opaque_word(color);
-    // The shade between the ink (t = 0) and `ghost_color`, the faint end
-    // (t = 1), per channel in doubles; argb32_opaque_word rounds each byte.
-    const auto shade_word = [&](double t) {
-        return argb32_opaque_word(GuiColor{
-            color.r + t * (ghost_color.r - color.r),
-            color.g + t * (ghost_color.g - color.g),
-            color.b + t * (ghost_color.b - color.b),
-        });
-    };
+    const uint32_t ghost_word  = argb32_opaque_word(ghost_color);
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -439,18 +431,14 @@ void render_waveform(cairo_surface_t* dest,
         // The clamp is what makes a magnified forte clip flat against the
         // lane's edges instead of running off into row arithmetic. A PICTURE
         // gain: the samples themselves are untouched, here and everywhere.
-        // Its colour is THE SHADE, read from the leveler's gain alone, never
-        // the scale: t = clamp(log2(g) - 1, 0, 1) — the ink up to one doubling,
-        // the faint end from two (g >= 1 always, so the lower clamp only
-        // catches the first doubling).
+        // Its colour is the one flat ghost word.
         if (gain_or_null) {
             const double g = waveform_gain_at(*gain_or_null, (s0 + s1) / 2);
             const double scale =
                 g * static_cast<double>(waveform_expander_multiplier_over(
                         *gain_or_null, s0, s1));
-            const double t = std::clamp(std::log2(g) - 1.0, 0.0, 1.0);
             fill_bar(magnified_tip(mm.first, scale),
-                     magnified_tip(mm.second, scale), shade_word(t));
+                     magnified_tip(mm.second, scale), ghost_word);
         }
         // THE RAW BAR, always, over the ghost: scale 1.0, where the clamp is a
         // no-op (raw peaks already rest in range), so the dark plate is the
@@ -2279,6 +2267,20 @@ int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
+
+namespace {
+    // The waveform's three inks for the tuning phase — the device config's
+    // `waveform_ink`, `waveform_magnified_ink` and `waveform_ghost_ink`,
+    // installed once by gui_main at startup and never mutated after (the
+    // contract, and why the worker reads it with no snapshot, is at the
+    // declaration, render.h). The member defaults are the row-6 defaults.
+    WaveformPalette g_waveform_palette;
+} // namespace
+
+void set_waveform_palette(const WaveformPalette& palette) {
+    g_waveform_palette = palette;
+}
+const WaveformPalette& waveform_palette() { return g_waveform_palette; }
 
 namespace {
     // The waveform's configured maximum height in AUTHORED px — the device

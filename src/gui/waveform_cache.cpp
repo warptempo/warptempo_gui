@@ -102,15 +102,18 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the ink is the CROP's #1c816b, hard-coded (kWaveformInk), and
-    // kWaveformGhostInk #17594b is the magnification ghost's faint end
-    // (architect 2026-09-24; both rulings at the row-6 palette block,
-    // render.h). With the lamp lit each column paints its ghost bar first, in
-    // a shade from the ink up to one doubling of the leveler's gain to the
-    // faint end from two, and its raw bar in the ink over it; dark, the raw
-    // bar alone and the faint end is unread (the order and the shade are at
-    // render_waveform's declaration). Both channels take the same two
-    // constants.
+    // ROW 6: the inks are the WAVEFORM PALETTE's, tunable for a tuning phase
+    // (architect 2026-09-25; the device config's `waveform_ink`,
+    // `waveform_magnified_ink` and `waveform_ghost_ink`, defaults #1c816b,
+    // #1c816b and #17594b — the phase's terms at row 6's palette block,
+    // render.h). The lamp dark, the raw bar alone in `ink` and the ghost's
+    // colour unread; lit, each column paints its ghost bar first in
+    // `ghost_ink` and its raw bar over it in `magnified_ink`, both flat (the
+    // order is at render_waveform's declaration). Both channels take the same
+    // pair. THE PALETTE IS READ HERE, ON THE WORKER, WITH NO JOB FIELD: it is
+    // installed once at startup before the first plate job and never mutated
+    // (the contract at waveform_palette, render.h), so nothing can tear it and
+    // the plate fingerprint needs no colour term.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
     // state. The curve it names is the audio object's own, immutable once
@@ -119,11 +122,13 @@ void render_waveform_to_cache_surface(
     // take the inks. It scales the PICTURE only — this whole function
     // writes pixels.
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
+    const WaveformPalette& p = waveform_palette();
+    const GuiColor ink = magnified ? p.magnified_ink : p.ink;
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, kWaveformInk, kWaveformGhostInk, gain,
+                    basis, ink, p.ghost_ink, gain,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, kWaveformInk, kWaveformGhostInk, gain,
+                    basis, ink, p.ghost_ink, gain,
                     warp_frame_map_or_null);
 }
 

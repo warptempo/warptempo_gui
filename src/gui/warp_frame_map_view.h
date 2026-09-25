@@ -200,11 +200,10 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // the derived gain serves badly is looked at flat, and the dynamics are what
 // the audio and the A/B tabs carry — both tabs always show the same picture,
 // the curve being a function of the one source. The drawing excluded is a
-// plotted curve or a tint over the picture; THE GHOST'S SHADE supersedes it
-// for the ghost's own colour (architect 2026-09-24, render_waveform): the
-// lit ghost's colour reads the leveler's gain, and that is how loud and quiet
-// passages are told apart with the lamp lit. No other drawing of the gain is
-// admitted.
+// plotted curve, a tint over the picture or a colour read from the gain: the
+// ghost's per-column shade, which read the leveler's gain for one day, is
+// struck (architect 2026-09-25, render_waveform) and the ghost is one flat
+// colour again.
 //
 // NO MODE TERM — the `h` view follows the lamp as it stood when the view was
 // entered (the lamp is dead there by its allowlist), its plate being the live
