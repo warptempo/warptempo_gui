@@ -46,18 +46,18 @@
 //
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
 //   clamps the pair to [-1, 1] (render_waveform); nothing else. The product
-//   is THE GHOST BAR (architect 2026-09-24): the lit lamp paints it BEHIND
-//   the column's raw bar, which is always present, so the magnified picture
-//   never replaces the raw one. Both are flat colours, the WaveformPalette's
-//   ghost ink and lit ink (render.h, tunable for a tuning phase, architect
-//   2026-09-25); the gain decides the ghost's height and never its colour,
-//   and the ghost and the raw bar each take the palette's own flat level
-//   on top (architect 2026-09-25, the background's and the foreground's),
-//   so the raw bar covers the ghost wherever the gain here is at or under
-//   the separation between the two levels.
+//   is THE BACKGROUND BAR (architect 2026-09-24): the lit lamp paints it
+//   BEHIND the column's FOREGROUND, the source's own bar, so the magnified
+//   picture never replaces the raw one. Both are flat colours, render.h's
+//   kWaveformBackgroundInk and kWaveformForegroundInk (architect
+//   2026-09-25); the gain decides the background's height and never its
+//   colour, and the background and the foreground each take their own flat
+//   level on top (the device config's two magnification levels, architect
+//   2026-09-25), so the foreground covers the background wherever the gain
+//   here is at or under the separation between the two levels.
 //   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints
-//   its ghost flat.
+//   its background flat.
 //
 // WHY THE MEASURE CHANGED (architect 2026-09-24). THE PEAK LEVELER
 // (2026-09-23 to 2026-09-24, a superseded record): L was the MAXIMUM of the

@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -19,29 +20,18 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (ELEVEN keys since the
-// fourth tuning key became the two level keys 2026-09-25 — the foreground's
-// `waveform_magnified_gain_db` and the background's `waveform_ghost_gain_db`,
-// in decibels; ten from that key's arrival earlier the same day after the
-// colour keys, as the raw bar's core gain `waveform_magnified_gain` and then
-// the ghost's `waveform_ghost_reduction`; nine from the three waveform colour
-// keys' arrival earlier that day for a tuning phase, after sync_path where the picture keys had stood; six from
-// when the eleven
-// waveform picture keys — the `waveform_gain_*` tunables appended 2026-09-23,
-// the `waveform_expander_*` ones 2026-09-24, as many as seventeen in all —
-// left 2026-09-24 with the values hard-coded in waveform_gain.cpp; six from
-// `max_waveform_height`'s arrival 2026-09-13 with the waveform cap leaving
-// render.h; five from `sync_path`'s arrival 2026-08-30 with the mirror's
-// configured destination; four from
-// `audio_player`'s retirement 2026-08-28; five from the project model
-// 2026-08-27; two before it). THE ORDER IS THE ARCHITECT'S OWN, given with the
-// fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
-// last_project, sync_path — the sixth placed right after gui_scale
-// (architect 2026-09-13), and the three colour keys after sync_path in the
-// painter's own order: the dark plate's ink, the lit raw bar's, the ghost's,
-// with the lit plate's two levels after them, the foreground's then the
-// background's (architect 2026-09-25). The
-// scanner takes it as a
+// set the shared scanner enforces after the loop (EIGHT keys since the
+// tuning phase closed 2026-09-25: the three waveform colour keys that
+// arrived that morning were struck, the values constexpr again in render.h,
+// and the two level keys kept under their final names; the fuller count's
+// succession — two, five, four, five, six, as many as seventeen with the
+// waveform picture's tunables of 2026-09-23/24, six, then as many as eleven
+// on 2026-09-25 — is the header's record and git's). THE ORDER IS THE
+// ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
+// projects_repo, projects_path, last_project, sync_path — the sixth placed
+// right after gui_scale (architect 2026-09-13), and the lit plate's two
+// levels after sync_path, the foreground's then the background's (architect
+// 2026-09-25). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). One list, so a key cannot be written and
@@ -55,11 +45,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
-    "waveform_ink",
-    "waveform_magnified_ink",
-    "waveform_ghost_ink",
-    "waveform_magnified_gain_db",
-    "waveform_ghost_gain_db",
+    "waveform_magnification_foreground_db",
+    "waveform_magnification_background_db",
 };
 
 } // namespace
@@ -76,34 +63,13 @@ std::string format_max_waveform_height(int authored_px) {
     return std::string(buf);
 }
 
-GuiColor parse_waveform_colour(std::string_view v) {
-    // The grammar has admitted exactly `#` and six lower-case hex digits, so
-    // every digit maps and the value fits 24 bits.
-    uint32_t rgb = 0;
-    for (size_t i = 1; i < v.size(); ++i) {
-        const char c = v[i];
-        const uint32_t d = (c >= '0' && c <= '9')
-                               ? static_cast<uint32_t>(c - '0')
-                               : static_cast<uint32_t>(c - 'a' + 10);
-        rgb = (rgb << 4) | d;
-    }
-    return hex(rgb);
-}
-
-std::string format_waveform_colour(GuiColor c) {
-    const auto byte = [](double ch) {
-        return static_cast<unsigned>(std::nearbyint(ch * 255.0));
-    };
-    char buf[16];
-    std::snprintf(buf, sizeof(buf), "#%02x%02x%02x",
-                  byte(c.r), byte(c.g), byte(c.b));
-    return std::string(buf);
-}
-
 std::string format_waveform_level_db(double v) {
-    // The magnitude through the value road (which spells no sign), the sign
-    // re-attached below zero. std::fabs, not a negation, so a negative zero
-    // spells `0.00` as the reader demands.
+    // `-inf` first, the one spelling of "that layer not painted" (the value
+    // road has no spelling for an infinity). Then the magnitude through the
+    // value road (which spells no sign), the sign re-attached below zero.
+    // std::fabs, not a negation, so a negative zero spells `0.00` as the
+    // reader demands.
+    if (std::isinf(v) && v < 0.0) return std::string(kWaveformLevelNotPainted);
     const std::string mag = format_value_double(std::fabs(v), 2);
     return v < 0.0 ? "-" + mag : mag;
 }
@@ -114,7 +80,15 @@ bool parse_waveform_level_db(std::string_view s, double& out) {
     // parse_value_double refuses one: strip ONE leading '-', the strict
     // magnitude parse (a second sign refuses there), the round trip back to
     // the bytes read — which refuses `-0.00` (the writer spells zero `0.00`)
-    // and every non-canonical spelling — then the range owner.
+    // and every non-canonical spelling — then the range owner. THE `-inf`
+    // LITERAL IS RECOGNISED FIRST, whole and byte-exact, ahead of the number
+    // road (which refuses letters as it refuses the sign): `inf`, `+inf`,
+    // `-INF`, `-Inf` and `-infinity` all fall through to that road and refuse
+    // there.
+    if (s == kWaveformLevelNotPainted) {
+        out = -std::numeric_limits<double>::infinity();
+        return true;
+    }
     const bool negative = !s.empty() && s.front() == '-';
     double mag = 0.0;
     if (!parse_value_double(negative ? s.substr(1) : s, mag)) return false;
@@ -169,20 +143,15 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
-        } else if (k == "waveform_ink") {
-            // The three colour keys through their one serializer, which
-            // writes the canonical lower-case spelling the reader demands.
-            s += format_waveform_colour(cfg.waveform_ink);
-        } else if (k == "waveform_magnified_ink") {
-            s += format_waveform_colour(cfg.waveform_magnified_ink);
-        } else if (k == "waveform_ghost_ink") {
-            s += format_waveform_colour(cfg.waveform_ghost_ink);
-        } else if (k == "waveform_magnified_gain_db") {
+        } else if (k == "waveform_magnification_foreground_db") {
             // The two levels through their one serializer, the canonical
-            // signed min-2-decimal spelling the reader demands back.
-            s += format_waveform_level_db(cfg.waveform_magnified_gain_db);
-        } else if (k == "waveform_ghost_gain_db") {
-            s += format_waveform_level_db(cfg.waveform_ghost_gain_db);
+            // signed min-2-decimal spelling, or `-inf`, the reader demands
+            // back.
+            s += format_waveform_level_db(
+                cfg.waveform_magnification_foreground_db);
+        } else if (k == "waveform_magnification_background_db") {
+            s += format_waveform_level_db(
+                cfg.waveform_magnification_background_db);
         }
         s += '\n';
     }
@@ -278,33 +247,21 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.sync_path = value;
             return {};
         }
-        if (key == "waveform_ink" || key == "waveform_magnified_ink" ||
-            key == "waveform_ghost_ink") {
-            // `#` and six lower-case hex digits, one canonical spelling,
-            // through the one grammar owner in the header; then the one
-            // parser. The three are one shape and differ only in the member.
-            if (!is_waveform_colour(value)) {
-                return bad_value(ln, key, value, kWaveformColourGrammarReason);
-            }
-            const GuiColor c = parse_waveform_colour(value);
-            if (key == "waveform_ink")                out.waveform_ink = c;
-            else if (key == "waveform_magnified_ink") out.waveform_magnified_ink = c;
-            else                                      out.waveform_ghost_ink = c;
-            return {};
-        }
-        if (key == "waveform_magnified_gain_db" ||
-            key == "waveform_ghost_gain_db") {
-            // One canonical signed spelling and the range, both through the
-            // one parser in the header (the sign stripped, the settings'
-            // bracketed-double road on the magnitude, then
-            // is_waveform_level_db). The two are one shape and differ only in
-            // the member.
+        if (key == "waveform_magnification_foreground_db" ||
+            key == "waveform_magnification_background_db") {
+            // One canonical signed spelling and the range, or the `-inf`
+            // literal, all through the one parser in the header (the literal
+            // first, then the sign stripped, the settings' bracketed-double
+            // road on the magnitude, then is_waveform_level_db). The two are
+            // one shape and differ only in the member.
             double v = 0.0;
             if (!parse_waveform_level_db(value, v)) {
                 return bad_value(ln, key, value, kWaveformLevelDbGrammarReason);
             }
-            if (key == "waveform_magnified_gain_db") out.waveform_magnified_gain_db = v;
-            else                                     out.waveform_ghost_gain_db = v;
+            if (key == "waveform_magnification_foreground_db")
+                out.waveform_magnification_foreground_db = v;
+            else
+                out.waveform_magnification_background_db = v;
             return {};
         }
         return warptempo_parse::prefix_line_error(

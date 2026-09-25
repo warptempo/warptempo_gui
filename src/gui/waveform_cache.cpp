@@ -102,40 +102,36 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the inks are the WAVEFORM PALETTE's, tunable for a tuning phase
-    // (architect 2026-09-25; the device config's `waveform_ink`,
-    // `waveform_magnified_ink` and `waveform_ghost_ink`, defaults #1c816b,
-    // #1c816b and #17594b — the phase's terms at row 6's palette block,
-    // render.h). The lamp dark, the raw bar alone in `ink` and the ghost's
-    // colour unread; lit, each column paints its ghost bar first in
-    // `ghost_ink` and its raw bar over it in `magnified_ink`, both flat, the
-    // raw bar at the palette's FOREGROUND scale `magnified_scale` and the
-    // ghost at its BACKGROUND scale `ghost_scale` (the device config's
-    // `waveform_magnified_gain_db` and `waveform_ghost_gain_db`, defaults
-    // 0.00 and -6.02 dB, converted once at startup, architect 2026-09-25; the
-    // order and the two levels' rule are at render_waveform's declaration).
-    // Both channels take the same pair of inks and the same pair of scales.
-    // THE PALETTE IS READ HERE, ON THE WORKER, WITH NO JOB FIELD: it is
+    // ROW 6: the inks are constexpr (kWaveformInk, kWaveformForegroundInk,
+    // kWaveformBackgroundInk, render.h), read by render_waveform itself. The
+    // lamp dark, the raw bar alone in the plate's ink; lit, each column
+    // paints its BACKGROUND bar first and its FOREGROUND bar over it, both
+    // flat, the foreground at the installed foreground level and the
+    // background at the background level (the device config's
+    // `waveform_magnification_foreground_db` and
+    // `waveform_magnification_background_db`, defaults 2.00 and -2.00 dB,
+    // converted once at startup; a level of `-inf` is nullopt and that bar is
+    // not painted — the order and the two levels' rule are at
+    // render_waveform's declaration). Both channels take the same pair of
+    // levels.
+    // THE LEVELS ARE READ HERE, ON THE WORKER, WITH NO JOB FIELD: they are
     // installed once at startup before the first plate job and never mutated
-    // (the contract at waveform_palette, render.h), so nothing can tear it and
-    // the plate fingerprint needs no colour or level term.
+    // (the contract at waveform_magnification_levels, render.h), so nothing
+    // can tear them and the plate fingerprint needs no level term.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
     // state. The curve it names is the audio object's own, immutable once
     // ready (GuiAudio::gain_curve; a magnified job exists only after the lamp
     // was lit, which requires the curve to be ready). Both channels take the one curve, as they
-    // take the inks. It scales the PICTURE only — this whole function
+    // take the levels. It scales the PICTURE only — this whole function
     // writes pixels.
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
-    const WaveformPalette& p = waveform_palette();
-    const GuiColor ink = magnified ? p.magnified_ink : p.ink;
+    const WaveformMagnificationLevels& levels = waveform_magnification_levels();
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, ink, p.ghost_ink, gain,
-                    p.magnified_scale, p.ghost_scale,
+                    basis, gain, levels.foreground, levels.background,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, ink, p.ghost_ink, gain,
-                    p.magnified_scale, p.ghost_scale,
+                    basis, gain, levels.foreground, levels.background,
                     warp_frame_map_or_null);
 }
 
