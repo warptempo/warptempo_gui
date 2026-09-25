@@ -513,9 +513,9 @@ drag coordinates floor instead of truncating.
   each (`pen_hovering_` the one owner; hovers are dropped while any touch
   contact is down and ANY first down, pen or finger, ends a standing hover, so
   the doors never overlap), which is what runs the hover walk and the tooltip dwell under a
-  hovering pen. A probe line rides the milestone build — one stderr line per
-  non-finger motion event, `pen: action= source= tool= buttons= x= y=`, read
-  through logcat — and is struck once the architect has verified the pen.
+  hovering pen. VERIFIED ON THE TABLET (architect 2026-09-25): every step of
+  the protocol passed, the barrel button arrives and zooms, and hover shows
+  the tooltips.
 
 ## The on-screen keyboard
 

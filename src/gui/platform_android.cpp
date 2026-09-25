@@ -1664,34 +1664,7 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
     // carrying the STYLUS bits WITHOUT the touchscreen's is admitted too, so
     // a pen reported that way is not silently eaten; a mouse or touchpad is
     // neither and stays consumed above.
-    //
-    // THE PEN PROBE LINE (2026-09-25, for the architect's verification on
-    // glass — adb cannot inject a stylus tool type or a button state): one
-    // stderr line per motion event that carries any non-finger pointer,
-    // BEFORE the gate, so a pen event this backend consumed still shows.
-    // stderr reaches logcat through the redirect at the top of this file
-    // (adb logcat -s warptempo:I). The fields are the raw AMotionEvent
-    // reading of the first non-finger pointer: tool 2 is STYLUS and 4 is
-    // ERASER, buttons 0x20 is STYLUS_PRIMARY (0x02 SECONDARY). A probe for
-    // one build: it is struck once he has read it.
     const int32_t source = AInputEvent_getSource(event);
-    {
-        const size_t n = AMotionEvent_getPointerCount(event);
-        for (size_t i = 0; i < n; ++i) {
-            const int32_t tool = AMotionEvent_getToolType(event, i);
-            if (tool == AMOTION_EVENT_TOOL_TYPE_FINGER) continue;
-            std::fprintf(stderr,
-                         "pen: action=0x%x source=0x%x tool=%d buttons=0x%x "
-                         "x=%.1f y=%.1f\n",
-                         static_cast<unsigned>(AMotionEvent_getAction(event)),
-                         static_cast<unsigned>(source), tool,
-                         static_cast<unsigned>(
-                             AMotionEvent_getButtonState(event)),
-                         static_cast<double>(AMotionEvent_getX(event, i)),
-                         static_cast<double>(AMotionEvent_getY(event, i)));
-            break;
-        }
-    }
     const bool touchscreen =
         (source & AINPUT_SOURCE_TOUCHSCREEN) == AINPUT_SOURCE_TOUCHSCREEN;
     const bool stylus =
@@ -1772,9 +1745,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // GuiInputCore::set_modifiers). STYLUS_PRIMARY is the platform's name for
     // the barrel button since API 23; SECONDARY is accepted beside it because
     // pens of the S Pen's lineage reported the barrel button that way before
-    // STYLUS_PRIMARY existed and a one-build probe should not bet on which
-    // this firmware sends (the probe line shows which one arrives). Read only
-    // on events that carry the pen, so a finger's event never speaks for it.
+    // STYLUS_PRIMARY existed. Both bits are accepted, verified working on
+    // this tablet 2026-09-25. Read only on events that carry the pen, so a
+    // finger's event never speaks for it.
     //
     // THE BUTTON STEERS ONLY WHAT THE PEN OWNS: the pen's hover (nothing on
     // the glass) or a gesture whose owning contact is the pen
