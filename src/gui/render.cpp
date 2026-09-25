@@ -188,7 +188,7 @@ void render_waveform(cairo_surface_t* dest,
                      GuiColor color,
                      GuiColor ghost_color,
                      const WaveformGainCurve* gain_or_null,
-                     double core_gain,
+                     double ghost_reduction,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -265,12 +265,13 @@ void render_waveform(cairo_surface_t* dest,
 
     // THE VISUAL MAGNIFICATION, a function of source time: each column's
     // GHOST scale is the derived curve's gain at the column's centre source
-    // frame times the expander's multiplier over the column's working columns;
-    // the raw bar drawn over it takes the core gain with the lamp lit and 1.0
-    // with it dark, where this is the identity.
-    // The contract (the ghost's order, the coarse-zoom centre rule and the
-    // expander's smallest-reduction rule) is at this function's declaration;
-    // the arithmetic is one multiply and ONE clamp at the tip mapping below.
+    // frame times the expander's multiplier over the column's working columns,
+    // divided by the palette's ghost reduction; the raw bar drawn over it
+    // takes scale 1.0 in both lamp states, where this is the identity.
+    // The contract (the ghost's order, the reduction, the coarse-zoom centre
+    // rule and the expander's smallest-reduction rule) is at this function's
+    // declaration; the arithmetic is one multiply and ONE clamp at the tip
+    // mapping below.
     // IT SCALES PIXELS ONLY — nothing this function touches is audio.
     const auto magnified_tip = [](double raw, double scale) {
         double v = raw * scale;
@@ -315,9 +316,6 @@ void render_waveform(cairo_surface_t* dest,
     // rounding contract lives there). Both are flat (architect 2026-09-25).
     const uint32_t opaque_word = argb32_opaque_word(color);
     const uint32_t ghost_word  = argb32_opaque_word(ghost_color);
-    // The raw bar's scale: the core gain with the lamp lit, the identity dark
-    // (`core_gain` is unread then, the declaration's contract).
-    const double core = gain_or_null ? core_gain : 1.0;
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -432,7 +430,10 @@ void render_waveform(cairo_surface_t* dest,
         // THE GHOST FIRST, when the lamp is lit: the column's raw extremes times
         // the curve's gain at the column's centre source frame and the
         // expander's largest multiplier over the working columns [s0, s1)
-        // spans, clamped to the sample domain [-1, 1] BEFORE they become rows.
+        // spans, divided by the GHOST REDUCTION (the palette's flat divisor,
+        // architect 2026-09-25 — the ghost gives way so the raw bar keeps its
+        // true height), clamped to the sample domain [-1, 1] BEFORE they
+        // become rows.
         // The clamp is what makes a magnified forte clip flat against the
         // lane's edges instead of running off into row arithmetic. A PICTURE
         // gain: the samples themselves are untouched, here and everywhere.
@@ -441,19 +442,19 @@ void render_waveform(cairo_surface_t* dest,
             const double g = waveform_gain_at(*gain_or_null, (s0 + s1) / 2);
             const double scale =
                 g * static_cast<double>(waveform_expander_multiplier_over(
-                        *gain_or_null, s0, s1));
+                        *gain_or_null, s0, s1)) / ghost_reduction;
             fill_bar(magnified_tip(mm.first, scale),
                      magnified_tip(mm.second, scale), ghost_word);
         }
-        // THE RAW BAR, always, over the ghost. Lit, it takes the CORE GAIN, one
-        // flat multiplier through the same clamp, so the raw picture keeps its
-        // shape and covers the ghost wherever the leveler's gain is at or under
-        // it (the rule is at this function's declaration). Dark, scale 1.0,
+        // THE RAW BAR, always, over the ghost, in both lamp states: scale 1.0,
         // where the clamp is a no-op (raw peaks already rest in range), so the
-        // dark plate is the plate this writer always drew. Replace-writes:
-        // where the two bars overlap the raw one wins.
-        fill_bar(magnified_tip(mm.first, core),
-                 magnified_tip(mm.second, core), opaque_word);
+        // dark plate is the plate this writer always drew and the lit raw bar
+        // is the raw picture at its true height, covering the ghost wherever
+        // the leveler's gain is at or under the reduction (the rule is at this
+        // function's declaration). Replace-writes: where the two bars overlap
+        // the raw one wins.
+        fill_bar(magnified_tip(mm.first, 1.0),
+                 magnified_tip(mm.second, 1.0), opaque_word);
 
         g_prev = g1;
     }

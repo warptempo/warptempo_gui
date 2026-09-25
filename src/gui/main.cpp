@@ -3417,10 +3417,10 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE WAVEFORM PALETTE, the tuning phase's three inks and the lit raw
-    // bar's core gain (architect 2026-09-25; the device config's
-    // `waveform_ink`, `waveform_magnified_ink`, `waveform_ghost_ink` and
-    // `waveform_magnified_gain`): installed ONCE here, before the first project
+    // THE WAVEFORM PALETTE, the tuning phase's three inks and the lit ghost's
+    // reduction (architect 2026-09-25; the device config's `waveform_ink`,
+    // `waveform_magnified_ink`, `waveform_ghost_ink` and
+    // `waveform_ghost_reduction`): installed ONCE here, before the first project
     // loads and so before the first plate job, and never again — the keys
     // have no in-app writer, a retune is a config edit and a relaunch. That
     // is what lets the waveform worker read it with no job field (the
@@ -3428,7 +3428,7 @@ int gui_main(const char* argument) {
     set_waveform_palette(WaveformPalette{device_config.waveform_ink,
                                          device_config.waveform_magnified_ink,
                                          device_config.waveform_ghost_ink,
-                                         device_config.waveform_magnified_gain});
+                                         device_config.waveform_ghost_reduction});
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

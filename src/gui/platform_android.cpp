@@ -549,14 +549,14 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE WAVEFORM'S THREE INKS AND THE LIT RAW BAR'S CORE GAIN, the tuning
+    // THE WAVEFORM'S THREE INKS AND THE LIT GHOST'S REDUCTION, the tuning
     // phase's defaults (architect 2026-09-25; the phase's terms at render.h's
     // row-6 palette block), the same on both templates: #1c816b, #1c816b,
     // #17594b and 1.68.
-    cfg.waveform_ink            = kWaveformInkDefault;
-    cfg.waveform_magnified_ink  = kWaveformMagnifiedInkDefault;
-    cfg.waveform_ghost_ink      = kWaveformGhostInkDefault;
-    cfg.waveform_magnified_gain = kWaveformMagnifiedGainDefault;
+    cfg.waveform_ink             = kWaveformInkDefault;
+    cfg.waveform_magnified_ink   = kWaveformMagnifiedInkDefault;
+    cfg.waveform_ghost_ink       = kWaveformGhostInkDefault;
+    cfg.waveform_ghost_reduction = kWaveformGhostReductionDefault;
     return cfg;
 }
 
