@@ -3563,11 +3563,14 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // geometry, the left-edge clip and the colour's provenance are at
 // marker_flag_border_px and kMarkerFlagBorder.
 //
-// OVERLAP IS LATER-OVER-EARLIER IN STORE ORDER and there is NO OTHER OCCLUSION
-// MANAGEMENT AT ALL — no elision, no z-lift for selection, no run arbitration.
-// That is the whole model the marker-text lane's resolver used to stand in for,
-// and it is deliberately the simplest thing that can be true: a later marker's
-// box covers an earlier one's tail, and the user pans or zooms to read it.
+// OVERLAP IS SELECTED-OVER-UNSELECTED, THEN LATER-OVER-EARLIER IN STORE ORDER,
+// and there is NO OTHER OCCLUSION MANAGEMENT AT ALL — no elision, no run
+// arbitration. That is the whole model the marker-text lane's resolver used to
+// stand in for, and it is deliberately the simplest thing that can be true: a
+// later marker's box covers an earlier one's tail, and the user pans or zooms
+// to read it. THE SELECTION LIFT (architect 2026-09-25) exists so a selected
+// flag's cue is never covered by an unselected neighbour; the painter's two
+// passes are its one owner (render_flags' declaration).
 //
 // COLOR CLASSES, resolved in priority order. DISABLED WINS, then red, then the
 // default/selected pair:
@@ -3651,7 +3654,11 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted box in PAINT ORDER (so the hit walk reads it backwards to get the
-// topmost box) and `out_stems` one entry per ENABLED painted marker. A derived
+// topmost box) and `out_stems` one entry per ENABLED painted marker, in the
+// same order. THE PAINT ORDER IS TWO PASSES (architect 2026-09-25): every
+// unselected marker, then every marker in `selected_set`, each in store order,
+// so a selected flag paints over every unselected one and later wins among
+// either — the selection's cue must stay visible under dense flags. A derived
 // width cannot be recomputed without shaping, so the pixels' own pass is the
 // single owner of both — the same painter-stash contract the redesigned rows'
 // buttons already use. Either pointer may be null.
@@ -4070,6 +4077,10 @@ struct HistoryDiffFlag {
 // in no commit, so a diff flag carries no bound cells, and the view's focus is
 // its own diff-flag cycle's with nothing for AppState::addressed_cell to
 // address — the focus swap lifts the whole half, as it always has.
+//
+// THE LIVE LANE'S Z-ORDER (architect 2026-09-25): a LIT flag — the focus or a
+// member of `selected` — paints over every unlit one, later over earlier within
+// each, and both stashes publish in that paint order.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,

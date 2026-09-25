@@ -939,13 +939,12 @@ void render_trim_flags(cairo_t* cr,
 namespace {
 
 // Shared flag iteration used by render_flags and its phase-reset analogue.
-// Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — which is
-// also the PAINT order, and therefore the occlusion order: LATER OVER EARLIER,
-// with no other occlusion management of any kind (row 5, 2026-08-01). The
-// ascending-x stable sort that used to run here is GONE with the z-order it
-// served: the old flags lifted selected shapes above unselected and tie-broke by
-// column, and both of those rules retired when selection became a colour swap
-// and the marker-text lane's arbitration was deleted.
+// Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — LATER
+// OVER EARLIER within a pass (row 5, 2026-08-01). The live columns' painter runs
+// it TWICE, unselected markers then selected ones, so a selected flag paints
+// over every unselected one (architect 2026-09-25; the rule is at
+// render_flag_boxes_impl's passes); the history lane does the same with its
+// lit flags. No ascending-x sort runs here: store order is already time order.
 //
 // THE PAINT/HIT INVARIANT. `left_x` — the marker's painted pixel column — is
 // computed ONCE here and is the box's LEFT EDGE (the composite shows the stem
@@ -1467,15 +1466,9 @@ void render_flag_boxes_impl(
     const double baseline = static_cast<double>(lane.y) +
                             static_cast<double>(marker_flag_baseline_px());
 
-    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
-                               viewport_start_sample, viewport_end_sample,
-                               warp_frame_map, drag_overlay,
-                               // `iteration_on` widens the bound by the iter
-                               // bracket's own glyphs, which the payload's
-                               // own worst case does not cover; the reasoning
-                               // is at the bound.
-                               marker_flag_max_width_px(iteration_on),
-        [&](int i, double left_x) {
+    // ONE MARKER'S BOXES, PAINTED AND PUBLISHED — the body the two passes
+    // below share (the z-order rule is at them).
+    const auto paint_flag = [&](int i, double left_x) {
             // THE LABEL LAMBDA COMPOSES THE PAINTED FORM ITSELF — each
             // column's own, and the cut (where there is one) is inside it.
             const std::string text = label_of(i);
@@ -1640,8 +1633,9 @@ void render_flag_boxes_impl(
                 // covers an earlier one's tail from its BORDER, so two flags a
                 // box-width apart butt up as border-against-fill instead of
                 // fill-against-fill — which is the whole point of a border in
-                // this lane and is why later-over-earlier stays the entire
-                // occlusion model.
+                // this lane and is why painting order (selected over
+                // unselected, later over earlier; the two passes below) stays
+                // the entire occlusion model.
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
                 cairo_set_source_rgb(cr, face.border.r, face.border.g,
@@ -1803,7 +1797,35 @@ void render_flag_boxes_impl(
                 out_stems->push_back(
                     MarkerStem{i, static_cast<double>(bx), face.stem});
             }
-        });
+        };
+
+    // THE Z-ORDER: SELECTED OVER UNSELECTED, LATER OVER EARLIER WITHIN EACH
+    // (architect 2026-09-25). Two passes over the one visible walk — every
+    // marker NOT in `selected_set` first, then every marker in it, each in
+    // store order — so a selection's cue (its brightened box and stem) is never
+    // covered by an unselected neighbour's tail under dense flags. The
+    // membership test runs BEFORE paint_flag, so each label is shaped exactly
+    // once; the walk itself is a cheap per-marker map. The hit rects and the
+    // stems publish inside paint_flag, so both stashes come out in PAINT ORDER
+    // and the hit walk's backward read (topmost_flag_rect) finds a selected box
+    // first with no rule of its own. A dragged flag is selected (the drag's
+    // select, marker-ui.md), so it rises with its pass; the edited marker's
+    // suppressed box is still the editor's to paint, above everything here.
+    for (const bool selected_pass : {false, true}) {
+        if (selected_pass && selected_set.empty()) break;
+        iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
+                                   viewport_start_sample, viewport_end_sample,
+                                   warp_frame_map, drag_overlay,
+                                   // `iteration_on` widens the bound by the
+                                   // iter bracket's own glyphs, which the
+                                   // payload's own worst case does not cover;
+                                   // the reasoning is at the bound.
+                                   marker_flag_max_width_px(iteration_on),
+            [&](int i, double left_x) {
+                if ((selected_set.count(i) > 0) != selected_pass) return;
+                paint_flag(i, left_x);
+            });
+    }
 
     cairo_restore(cr);
 }
@@ -1992,24 +2014,21 @@ void render_history_diff_flags(
         // a pair.
         2.0 * static_cast<double>(border_w);
 
-    iterate_visible_flags_impl(
-        top_strip_area, waveform_width, flags,
-        viewport_start_sample, viewport_end_sample,
-        warp_frame_map,
-        // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
-        // marker drag can be in flight while this pass runs — and a diff flag is
-        // not a marker in any store, so nothing could index it anyway.
-        /*drag_overlay=*/nullptr,
-        cull_width_px,
-        [&](int i, double left_x) {
+    // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one: either
+    // lights the flag, and BOTH HALVES of a changed pair take their own class's
+    // selected pair together — a double flag is one item, so it lights as one.
+    // The two are ONE face by ruling (the declaration says why), so this is an
+    // OR rather than a ladder. It is also the z-order's membership (the passes
+    // below).
+    const auto lit = [&](int i) {
+        return (i == focus_index) || (selected.count(i) != 0);
+    };
+
+    // ONE DIFF FLAG, PAINTED AND PUBLISHED — the body the two passes below
+    // share.
+    const auto paint_flag = [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
-            // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
-            // either lights the flag, and BOTH HALVES of a changed pair take
-            // their own class's selected pair together — a double flag is one
-            // item, so it lights as one. The two are ONE face by ruling (the
-            // declaration says why), so this is an OR rather than a ladder.
-            const bool focused =
-                (i == focus_index) || (selected.count(i) != 0);
+            const bool focused = lit(i);
 
             text_shape::ShapedRun run_removed;
             text_shape::ShapedRun run_added;
@@ -2274,7 +2293,30 @@ void render_history_diff_flags(
                                                   : kHistoryAddedFill)});
                 }
             }
-        });
+        };
+
+    // THE LIVE LANE'S Z-ORDER (architect 2026-09-25, render_flag_boxes_impl's
+    // passes): unlit flags first, then the lit ones — the focus and the mode's
+    // selection, the flags `v` reverts — each pass in the sorted frame order
+    // (HistoryDiffFlag's sort, waveform_cache.cpp), so a lit flag paints over
+    // every unlit one and the stash publishes in that paint order. The
+    // membership test runs before paint_flag, so each run is shaped once.
+    for (const bool lit_pass : {false, true}) {
+        iterate_visible_flags_impl(
+            top_strip_area, waveform_width, flags,
+            viewport_start_sample, viewport_end_sample,
+            warp_frame_map,
+            // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
+            // marker drag can be in flight while this pass runs — and a diff
+            // flag is not a marker in any store, so nothing could index it
+            // anyway.
+            /*drag_overlay=*/nullptr,
+            cull_width_px,
+            [&](int i, double left_x) {
+                if (lit(i) != lit_pass) return;
+                paint_flag(i, left_x);
+            });
+    }
 
     cairo_restore(cr);
 }

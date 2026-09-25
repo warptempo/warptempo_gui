@@ -304,13 +304,13 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // — and its slope test through flag_triangle_half_width_at — died with the
     // triangle lane; a marker is one box in one lane now.
     //
-    // Z-ORDER: the painter walks the store FORWARD and later boxes cover
-    // earlier ones, so the topmost box under a point is the LAST containing
-    // rect. Walk backwards and take the first hit (topmost_flag_rect above).
-    // Selection no longer lifts anything (it is a colour swap, not a z-rule),
-    // so this is the whole arbitration — one pass, no class split; a later
-    // flag covering an earlier flag's cells resolves to the later marker
-    // exactly as the pixels say.
+    // Z-ORDER: the painter paints unselected markers then selected ones, each
+    // walk FORWARD in store order (architect 2026-09-25, render_flags'
+    // declaration), and publishes in that paint order, so the topmost box
+    // under a point is the LAST containing rect. Walk backwards and take the
+    // first hit (topmost_flag_rect above). That is the whole arbitration and
+    // it is the painter's: a selected flag over an unselected one, and a later
+    // flag over an earlier flag's cells, resolve exactly as the pixels say.
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     return r ? r->marker_index : -1;
 }

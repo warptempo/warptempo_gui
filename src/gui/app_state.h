@@ -5656,7 +5656,8 @@ struct AppState {
     // playhead's stem suppression — reads THESE promoted copies; nothing
     // reads the staged pair but the promote.
     //
-    // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
+    // `flag_hit_rects` is in PAINT order (unselected then selected, each in
+    // store order, 2026-09-25), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
     // carries one entry per DRAWN stem, which on the two LIVE columns means one
     // per ENABLED marker — a disabled marker has no stem ever, expressed as an
@@ -17161,11 +17162,12 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // the live rect rebuild. THE BOX INCLUDES ITS 1px LEFT BORDER (2026-08-02): the
 // stash carries the painted extent, so the flag's reach grew one column to the
 // LEFT of its frame column and a press on the border resolves the marker.
-// Boxes OVERLAP freely (later over earlier in store
-// order, the whole occlusion model), and the walk runs BACKWARDS so the topmost
-// = last-painted box wins — WYSIWYG for every consumer (selection clicks, the
-// drag grab, the double-click editor). Selection does not lift a box: it is a
-// colour swap now, so there is no second pass. Works in both 'W' and 'P'
+// Boxes OVERLAP freely (selected over unselected, then later over earlier in
+// store order — the painter's two passes, 2026-09-25, the whole occlusion
+// model), and the walk runs BACKWARDS so the topmost = last-painted box wins —
+// WYSIWYG for every consumer (selection clicks, the drag grab, the
+// double-click editor); the lift is the painter's alone, so this walk needs no
+// rule of its own. Works in both 'W' and 'P'
 // authoring views — the stash holds the ACTIVE column's boxes only, because
 // that is the column the painter drew.
 // AND SINCE 2026-09-05 IT ALSO READS THE OPEN EDITOR'S RIDING BOXES
