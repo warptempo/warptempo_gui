@@ -770,7 +770,9 @@ inline constexpr GuiColor kMarkerStemRed         = hex(0xDA4453);
 // marking — purple on purple then, and blue on blue on the phase-reset
 // column since 2026-09-21). The rest of a
 // cell's anatomy is the flag's — a 1px edge over the fill across the whole
-// box, no right border (the flag's own open right edge).
+// box. (Recorded: "no right border, the flag's own open right edge" was the
+// rule until 2026-09-25, when the architect gave every run a closing column —
+// the upper cell carries it when cells paint, marker_flag_border_px.)
 
 // THE PHASE-RESET FLAG BOX'S PAIRS — BREEZE'S SELECTION BLUE, AGAIN SINCE
 // 2026-09-17 (architect): the phase-reset column's flag box — default
@@ -2335,8 +2337,9 @@ inline int marker_flag_pad_right_px() {
     return scaled_px(kMarkerFlagPadRightPx, 1);
 }
 // The 1px TOP EDGE, in the class's edge colour. The crops show no RIGHT and no
-// bottom edge, which is why this is a band and not a ring; the LEFT side is the
-// separate border below, in a colour of its own.
+// bottom edge, which is why this is a band and not a ring; the LEFT side and
+// the run's closing RIGHT column are the separate border below, in a colour of
+// its own.
 inline constexpr int kMarkerFlagEdgePx = 1;
 inline int marker_flag_edge_h_px() {
     return scaled_px(kMarkerFlagEdgePx, 1);
@@ -2357,7 +2360,19 @@ inline int marker_flag_edge_h_px() {
 // it. That is the honest answer rather than a defect: pushing the fill right to
 // make room would move the flag off the frame column it names and off its own
 // stem, and the column alignment is the authored fact where the border is
-// decoration. The right side needs no such rule — the box has no right border.
+// decoration.
+//
+// THE RUN CLOSES WITH ONE MORE SUCH COLUMN ON ITS RIGHT (architect 2026-09-25,
+// reversing "the box has no right border", which stood from 2026-08-02): a
+// short later flag standing over a long earlier one let the earlier tail run
+// on out of the later fill with nothing between them. The column stands just
+// past the fill of the run's RIGHTMOST box — the flag box on a cell-less run,
+// the upper cell where cells paint, the open field or its riding upper cell
+// under a marker-lane editor — in that box's own face.border, and it is inside
+// the published rect. Interior seams stay ONE column: the flag box's right
+// side against the lower cell is that cell's own left seam, never a closing
+// column plus a seam. It needs no right-edge clip rule either: past the
+// window's right edge it falls off like the fill it follows.
 inline constexpr int kMarkerFlagBorderPx = 1;
 inline int marker_flag_border_px() {
     return scaled_px(kMarkerFlagBorderPx, 1);
@@ -2467,7 +2482,9 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // "how far RIGHT of its frame column can a box reach", and that border grows
 // the box the other way — leftward, away from the viewport — so adding it
 // would only over-admit culled markers by one column and never save a visible
-// one. The cells' seam columns ARE in it: they stand to the right.
+// one. The cells' seam columns ARE in it: they stand to the right. So is the
+// run's CLOSING column (2026-09-25), charged ONCE on the flag term, since a
+// run has exactly one whether or not cells follow.
 inline double marker_flag_max_width_px(bool iteration_on) {
     const size_t glyphs = 4 +                                  // `N.NN` base
                           5 * kMaxTempoDeviationTerms +        // `+0.01` each
@@ -2476,7 +2493,8 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     const double pads = static_cast<double>(marker_flag_pad_left_px() +
                                             marker_flag_pad_right_px());
     const double flag = static_cast<double>(glyphs) * redesign_font_size_px() +
-                        pads;
+                        pads +
+                        static_cast<double>(marker_flag_border_px());  // closing
     if (!iteration_on) return flag;
     const double cell = static_cast<double>(kIterCellGlyphs) *
                             redesign_font_size_px() +
@@ -2737,8 +2755,10 @@ inline int playhead_half_px() {
 // Screen-coord rect of one rendered flag, keyed back to its marker index.
 // Emitted in the same order flags appear left-to-right. It is the WHOLE PAINTED
 // BOX — the 1px left border included, so its x sits one column left of the
-// marker's frame column (marker_flag_border_px) — because this stash has always
-// been the painted extent and a click on the border is a click on the flag.
+// marker's frame column (marker_flag_border_px), and the run's closing right
+// column included where the producer painted one (2026-09-25) — because this
+// stash has always been the painted extent and a click on the border is a
+// click on the flag.
 //
 // IT SPANS THE TWO ITERATION BOUND CELLS TOO where they
 // paint: each is the flag continued, so all of it is ordinary flag surface for
@@ -2748,8 +2768,9 @@ inline int playhead_half_px() {
 // where the flag box ends and the LOWER cell's seam begins
 // (`iter_lower_boundary_x`) and where the lower cell ends and the UPPER cell's
 // seam begins (`iter_upper_boundary_x`). They are non-decreasing, and
-// each collapses onto the next when its box did not paint — a cell-less flag
-// publishes both cell boundaries AT the rect's own right edge — so
+// each collapses onto the rect's own right edge when its box did not paint (an
+// absent box is always the run's tail) — a cell-less flag publishes both cell
+// boundaries AT the rect's right edge, past its closing column — so
 // hit_test_flag_cell's walk (Upper first, then Lower, else Payload)
 // can never answer a cell that has no pixels. EVERY PRODUCER SETS BOTH (the flag pass, the editor's riding run and the `h`
 // view's diff flags). ONE READER, hit_test_flag_cell (app_state.cpp),
@@ -3563,14 +3584,25 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // geometry, the left-edge clip and the colour's provenance are at
 // marker_flag_border_px and kMarkerFlagBorder.
 //
-// OVERLAP IS SELECTED-OVER-UNSELECTED, THEN LATER-OVER-EARLIER IN STORE ORDER,
-// and there is NO OTHER OCCLUSION MANAGEMENT AT ALL — no elision, no run
-// arbitration. That is the whole model the marker-text lane's resolver used to
-// stand in for, and it is deliberately the simplest thing that can be true: a
-// later marker's box covers an earlier one's tail, and the user pans or zooms
-// to read it. THE SELECTION LIFT (architect 2026-09-25) exists so a selected
-// flag's cue is never covered by an unselected neighbour; the painter's two
-// passes are its one owner (render_flags' declaration).
+// AND ONE CLOSING COLUMN AT THE RUN'S RIGHT (architect 2026-09-25): every
+// marker's run — the flag box alone, or the flag box and its bound cells —
+// ends on ONE border column past its RIGHTMOST box, in that box's own
+// face.border, so a run is bordered one column each side. Its INTERIOR seams
+// stay single: between the flag box and the lower cell, and between the two
+// cells, the one column is the next cell's own left seam, never a closing
+// column beside it. The hit rect covers the closing column (its last column,
+// reading as the box it closes); the geometry is at marker_flag_border_px.
+//
+// OVERLAP IS LATER-OVER-EARLIER IN STORE ORDER and there is NO OTHER OCCLUSION
+// MANAGEMENT AT ALL — no elision, no z-lift for selection, no run arbitration.
+// That is the whole model the marker-text lane's resolver used to stand in for,
+// and it is deliberately the simplest thing that can be true: a later marker's
+// box covers an earlier one's tail, and the user pans or zooms to read it. The
+// closing column is what keeps that tail from blending into the later flag's
+// fill. (A SELECTION LIFT — selected flags painted in a second pass over
+// unselected ones — stood for one day, 2026-09-25, and was struck by the
+// architect as poor design; the closing column answers the blend it reached
+// for.)
 //
 // COLOR CLASSES, resolved in priority order. DISABLED WINS, then red, then the
 // default/selected pair:
@@ -3654,11 +3686,7 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted box in PAINT ORDER (so the hit walk reads it backwards to get the
-// topmost box) and `out_stems` one entry per ENABLED painted marker, in the
-// same order. THE PAINT ORDER IS TWO PASSES (architect 2026-09-25): every
-// unselected marker, then every marker in `selected_set`, each in store order,
-// so a selected flag paints over every unselected one and later wins among
-// either — the selection's cue must stay visible under dense flags. A derived
+// topmost box) and `out_stems` one entry per ENABLED painted marker. A derived
 // width cannot be recomputed without shaping, so the pixels' own pass is the
 // single owner of both — the same painter-stash contract the redesigned rows'
 // buttons already use. Either pointer may be null.
@@ -3744,7 +3772,10 @@ void render_flags(cairo_t* cr,
 //                   press is inside the window by construction). Every box
 //                   spans its 1px LEFT BORDER too (the flag's own for the
 //                   payload editor, the seam divider for the other two), so
-//                   its x is one column left of the fill and its w one wider.
+//                   its x is one column left of the fill and its w one wider
+//                   — and a field that is its run's LAST box (nothing rides
+//                   past it) spans the run's CLOSING column as well, one more
+//                   column on its right (2026-09-25, marker_flag_border_px).
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].
@@ -3763,7 +3794,8 @@ void render_flags(cairo_t* cr,
 //                   LOWER-bound field the upper cell, and the UPPER-bound
 //                   field nothing, it being the rightmost box there is.
 //                   Published as a FlagHitRect: the run's whole painted
-//                   extent, every seam divider included, keyed to the edited
+//                   extent, every seam divider and the upper cell's closing
+//                   column included (2026-09-25), keyed to the edited
 //                   marker and carrying the same three boundaries a resting
 //                   run publishes — each one collapsing onto the next where
 //                   its box is not in the run — so the pointer resolves WHICH
@@ -4052,11 +4084,13 @@ struct HistoryDiffFlag {
 //
 // IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes its own bit, so a
 // disable TOGGLE paints one dimmed half beside one full-strength half and the
-// direction of the toggle is readable off the flag itself. The two BORDER
+// direction of the toggle is readable off the flag itself. The THREE BORDER
 // COLUMNS follow from what each one belongs to — the box's own left border is the
 // LEFTMOST PAINTED HALF's face element (the live lane's anatomy: border outside
-// fill) and dims with that half, while the SEAM divider belongs to neither half
-// alone and dims only when BOTH are disabled.
+// fill) and dims with that half, the flag's CLOSING column at its right (the
+// live lane's run rule, architect 2026-09-25) is the RIGHTMOST PAINTED HALF's
+// and dims with that one, while the SEAM divider belongs to neither half
+// alone and dims only when BOTH are disabled. The hit rect covers all three.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
 // `selected` its OWN multi-selection (ordinals into the same list, 2026-08-05):
@@ -4077,10 +4111,6 @@ struct HistoryDiffFlag {
 // in no commit, so a diff flag carries no bound cells, and the view's focus is
 // its own diff-flag cycle's with nothing for AppState::addressed_cell to
 // address — the focus swap lifts the whole half, as it always has.
-//
-// THE LIVE LANE'S Z-ORDER (architect 2026-09-25): a LIT flag — the focus or a
-// member of `selected` — paints over every unlit one, later over earlier within
-// each, and both stashes publish in that paint order.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,

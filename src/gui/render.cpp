@@ -939,12 +939,13 @@ void render_trim_flags(cairo_t* cr,
 namespace {
 
 // Shared flag iteration used by render_flags and its phase-reset analogue.
-// Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — LATER
-// OVER EARLIER within a pass (row 5, 2026-08-01). The live columns' painter runs
-// it TWICE, unselected markers then selected ones, so a selected flag paints
-// over every unselected one (architect 2026-09-25; the rule is at
-// render_flag_boxes_impl's passes); the history lane does the same with its
-// lit flags. No ascending-x sort runs here: store order is already time order.
+// Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — which is
+// also the PAINT order, and therefore the occlusion order: LATER OVER EARLIER,
+// with no other occlusion management of any kind (row 5, 2026-08-01). The
+// ascending-x stable sort that used to run here is GONE with the z-order it
+// served: the old flags lifted selected shapes above unselected and tie-broke by
+// column, and both of those rules retired when selection became a colour swap
+// and the marker-text lane's arbitration was deleted.
 //
 // THE PAINT/HIT INVARIANT. `left_x` — the marker's painted pixel column — is
 // computed ONCE here and is the box's LEFT EDGE (the composite shows the stem
@@ -1356,6 +1357,11 @@ static constexpr int kFlagBoxRankNone = 3;
 // fill, then the token on the flag's own left pad. Aliased throughout, like
 // every box in this lane.
 //
+// `closes` ADDS THE RUN'S CLOSING COLUMN (architect 2026-09-25): one
+// `face.border` column just past the fill, painted iff this cell is the LAST
+// box of its marker's run, so a run ends on a border as it begins on one and
+// every interior seam stays the next box's own single left column.
+//
 // IT HAS TWO CALLERS AND THAT IS THE POINT: the cached flag pass paints the
 // resting cells with it, and the payload editor's own painter re-paints them
 // with it at the unrolled field's right edge (render_flag_editor_box), so a
@@ -1367,12 +1373,17 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                                   int fill_w, int border_w, int edge_h,
                                   int pad_l, double baseline,
                                   const text_shape::ShapedRun& run,
-                                  const FlagFace& face) {
+                                  const FlagFace& face, bool closes) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
     cairo_rectangle(cr, seam_x, lane.y, border_w, lane.h);
     cairo_fill(cr);
+    if (closes) {
+        cairo_rectangle(cr, seam_x + border_w + fill_w, lane.y, border_w,
+                        lane.h);
+        cairo_fill(cr);
+    }
     cairo_set_source_rgb(cr, face.fill.r, face.fill.g, face.fill.b);
     cairo_rectangle(cr, seam_x + border_w, lane.y, fill_w, lane.h);
     cairo_fill(cr);
@@ -1466,9 +1477,15 @@ void render_flag_boxes_impl(
     const double baseline = static_cast<double>(lane.y) +
                             static_cast<double>(marker_flag_baseline_px());
 
-    // ONE MARKER'S BOXES, PAINTED AND PUBLISHED — the body the two passes
-    // below share (the z-order rule is at them).
-    const auto paint_flag = [&](int i, double left_x) {
+    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
+                               viewport_start_sample, viewport_end_sample,
+                               warp_frame_map, drag_overlay,
+                               // `iteration_on` widens the bound by the iter
+                               // bracket's own glyphs, which the payload's
+                               // own worst case does not cover; the reasoning
+                               // is at the bound.
+                               marker_flag_max_width_px(iteration_on),
+        [&](int i, double left_x) {
             // THE LABEL LAMBDA COMPOSES THE PAINTED FORM ITSELF — each
             // column's own, and the cut (where there is one) is inside it.
             const std::string text = label_of(i);
@@ -1519,13 +1536,26 @@ void render_flag_boxes_impl(
             const int upper_w = paint_upper ? cl.upper_w : 0;
             const int cells_span_w = (paint_lower ? border_w + lower_w : 0) +
                                      (paint_upper ? border_w + upper_w : 0);
+            // THE RUN'S CLOSING COLUMN (architect 2026-09-25): one border
+            // column past the run's LAST box, so a short later flag's tail
+            // never blends into a long earlier one's. This pass paints it iff
+            // it paints the run's last box — no field stands on this marker —
+            // because under an open field the run's end is the editor's to
+            // paint (the field itself or its riding boxes), and a closing
+            // column here would double the field's own left seam into two.
+            const bool pass_closes = suppressed_rank == kFlagBoxRankNone;
+            const int  close_w     = pass_closes ? border_w : 0;
             // The lower cell's seam column and the upper cell's seam column —
-            // the two boundaries the hit rect publishes, each falling onto the
-            // next where its box is absent, whether it is absent at rest or
-            // standing in an open field.
+            // where each cell paints, and the two boundaries the hit rect
+            // publishes. An ABSENT box's boundary collapses onto the RECT'S
+            // RIGHT EDGE (`run_end`, the closing column included), whether it
+            // is absent at rest or standing in an open field: absent boxes are
+            // always the run's tail, so this is "onto the next" spelled once,
+            // and the closing column reads as the last box it closes.
             const int lower_x   = bx + bw;
             const int upper_x   = paint_lower ? lower_x + border_w + lower_w
                                               : lower_x;
+            const int run_end   = bx + bw + cells_span_w + close_w;
 
             // RED IS COMPUTED INDEPENDENTLY OF DISABLED, unlike the old
             // three-pair ladder where `red` tested `!dis` because disabled had
@@ -1633,9 +1663,11 @@ void render_flag_boxes_impl(
                 // covers an earlier one's tail from its BORDER, so two flags a
                 // box-width apart butt up as border-against-fill instead of
                 // fill-against-fill — which is the whole point of a border in
-                // this lane and is why painting order (selected over
-                // unselected, later over earlier; the two passes below) stays
-                // the entire occlusion model.
+                // this lane and is why later-over-earlier stays the entire
+                // occlusion model. AND THE RUN CLOSES ON ONE TOO (architect
+                // 2026-09-25): a short later flag standing over a long earlier
+                // one ends on its closing column, so the earlier tail emerging
+                // past it is ruled off rather than blending fill into fill.
                 cairo_save(cr);
                 cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
                 cairo_set_source_rgb(cr, face.border.r, face.border.g,
@@ -1648,6 +1680,17 @@ void render_flag_boxes_impl(
                 cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
                 cairo_rectangle(cr, bx, lane.y, bw, edge_h);
                 cairo_fill(cr);
+                // THE CLOSING COLUMN ON A CELL-LESS RUN: the flag box is the
+                // run's last box, so it closes on its own face's border. With
+                // cells the upper cell closes instead (paint_iter_bound_cell's
+                // `closes`), and the flag's right side is the lower cell's
+                // one-pixel seam.
+                if (pass_closes && !paint_lower) {
+                    cairo_set_source_rgb(cr, face.border.r, face.border.g,
+                                         face.border.b);
+                    cairo_rectangle(cr, bx + bw, lane.y, close_w, lane.h);
+                    cairo_fill(cr);
+                }
                 cairo_restore(cr);
 
                 // The label, on the run just measured — same font, same glyphs,
@@ -1675,7 +1718,7 @@ void render_flag_boxes_impl(
             if (paint_lower) {
                 const auto paint_cell = [&](int seam_x, int fill_w,
                                             const text_shape::ShapedRun& crun,
-                                            MarkerCell which) {
+                                            MarkerCell which, bool closes) {
                     paint_iter_bound_cell(
                         cr, lane, seam_x, fill_w, border_w, edge_h, pad_l,
                         baseline, crun,
@@ -1699,15 +1742,22 @@ void render_flag_boxes_impl(
                         // about the cells alone.
                         resolve_flag_face(dis || cells.follower, red,
                                           cell_selected(which),
-                                          column_face));
+                                          column_face),
+                        closes);
                 };
-                paint_cell(lower_x, lower_w, cl.lower_run, MarkerCell::Lower);
+                // The lower cell never closes a run this pass paints: with no
+                // field standing the upper cell follows it, and under the
+                // UPPER field the field abuts it on its own left seam.
+                paint_cell(lower_x, lower_w, cl.lower_run, MarkerCell::Lower,
+                           /*closes=*/false);
                 // The upper cell is the lower's own right-hand neighbour, so it
                 // paints iff nothing has taken it: the UPPER bound's field is
                 // the one thing that does, and then the run simply ends here.
+                // Painted, it is the run's last box and carries the closing
+                // column (pass_closes is true exactly then).
                 if (paint_upper)
                     paint_cell(upper_x, upper_w, cl.upper_run,
-                               MarkerCell::Upper);
+                               MarkerCell::Upper, pass_closes);
             }
 
             // THE SUPPRESSED BOX PUBLISHES NO HIT RECT EITHER (codex 2026-08-02,
@@ -1779,14 +1829,23 @@ void render_flag_boxes_impl(
                 // reads as the box the seam introduces. On a cell-less flag
                 // every boundary equals the rect's own right edge, so no point
                 // can fall past it.
+                //
+                // THE CLOSING COLUMN IS INSIDE THE RECT (2026-09-25), its last
+                // column, and reads as the box it closes: past the upper
+                // boundary on a run with cells (Upper), and under a cell-less
+                // flag's two boundaries, which sit at `run_end` past it
+                // (Payload). Under an open field the pass paints no closing
+                // column and `run_end` is the edited box's own seam, as before.
                 FlagHitRect r;
                 r.marker_index = i;
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
-                r.w = static_cast<double>(bw + border_w + cells_span_w);
+                r.w = static_cast<double>(run_end - (bx - border_w));
                 r.h = static_cast<double>(lane.h);
-                r.iter_lower_boundary_x = static_cast<double>(lower_x);
-                r.iter_upper_boundary_x = static_cast<double>(upper_x);
+                r.iter_lower_boundary_x =
+                    static_cast<double>(paint_lower ? lower_x : run_end);
+                r.iter_upper_boundary_x =
+                    static_cast<double>(paint_upper ? upper_x : run_end);
                 out_hit_rects->push_back(r);
             }
             if (out_stems && face.has_stem) {
@@ -1797,35 +1856,7 @@ void render_flag_boxes_impl(
                 out_stems->push_back(
                     MarkerStem{i, static_cast<double>(bx), face.stem});
             }
-        };
-
-    // THE Z-ORDER: SELECTED OVER UNSELECTED, LATER OVER EARLIER WITHIN EACH
-    // (architect 2026-09-25). Two passes over the one visible walk — every
-    // marker NOT in `selected_set` first, then every marker in it, each in
-    // store order — so a selection's cue (its brightened box and stem) is never
-    // covered by an unselected neighbour's tail under dense flags. The
-    // membership test runs BEFORE paint_flag, so each label is shaped exactly
-    // once; the walk itself is a cheap per-marker map. The hit rects and the
-    // stems publish inside paint_flag, so both stashes come out in PAINT ORDER
-    // and the hit walk's backward read (topmost_flag_rect) finds a selected box
-    // first with no rule of its own. A dragged flag is selected (the drag's
-    // select, marker-ui.md), so it rises with its pass; the edited marker's
-    // suppressed box is still the editor's to paint, above everything here.
-    for (const bool selected_pass : {false, true}) {
-        if (selected_pass && selected_set.empty()) break;
-        iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
-                                   viewport_start_sample, viewport_end_sample,
-                                   warp_frame_map, drag_overlay,
-                                   // `iteration_on` widens the bound by the
-                                   // iter bracket's own glyphs, which the
-                                   // payload's own worst case does not cover;
-                                   // the reasoning is at the bound.
-                                   marker_flag_max_width_px(iteration_on),
-            [&](int i, double left_x) {
-                if ((selected_set.count(i) > 0) != selected_pass) return;
-                paint_flag(i, left_x);
-            });
-    }
+        });
 
     cairo_restore(cr);
 }
@@ -2008,27 +2039,31 @@ void render_history_diff_flags(
     const double cull_width_px =
         widest_bytes * redesign_font_size_px() +
         2.0 * static_cast<double>(pad_l + pad_r) +
-        // TWO border columns since 2026-08-20: the box's own at its left, and
-        // the SEAM DIVIDER a changed pair now carries between its halves. A
-        // bound must never under-state, and the widest flag in a commit may be
-        // a pair.
-        2.0 * static_cast<double>(border_w);
+        // THREE border columns: the box's own at its left, the SEAM DIVIDER a
+        // changed pair carries between its halves (2026-08-20), and the
+        // flag's CLOSING column at its right (2026-09-25). A bound must never
+        // under-state (the left one merely over-admits by a column), and the
+        // widest flag in a commit may be a pair.
+        3.0 * static_cast<double>(border_w);
 
-    // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one: either
-    // lights the flag, and BOTH HALVES of a changed pair take their own class's
-    // selected pair together — a double flag is one item, so it lights as one.
-    // The two are ONE face by ruling (the declaration says why), so this is an
-    // OR rather than a ladder. It is also the z-order's membership (the passes
-    // below).
-    const auto lit = [&](int i) {
-        return (i == focus_index) || (selected.count(i) != 0);
-    };
-
-    // ONE DIFF FLAG, PAINTED AND PUBLISHED — the body the two passes below
-    // share.
-    const auto paint_flag = [&](int i, double left_x) {
+    iterate_visible_flags_impl(
+        top_strip_area, waveform_width, flags,
+        viewport_start_sample, viewport_end_sample,
+        warp_frame_map,
+        // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
+        // marker drag can be in flight while this pass runs — and a diff flag is
+        // not a marker in any store, so nothing could index it anyway.
+        /*drag_overlay=*/nullptr,
+        cull_width_px,
+        [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
-            const bool focused = lit(i);
+            // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
+            // either lights the flag, and BOTH HALVES of a changed pair take
+            // their own class's selected pair together — a double flag is one
+            // item, so it lights as one. The two are ONE face by ruling (the
+            // declaration says why), so this is an OR rather than a ladder.
+            const bool focused =
+                (i == focus_index) || (selected.count(i) != 0);
 
             text_shape::ShapedRun run_removed;
             text_shape::ShapedRun run_added;
@@ -2148,6 +2183,18 @@ void render_history_diff_flags(
                     ? mix_color(kMarkerFlagBorder, kRedesignContentGround,
                                 kMarkerDisabledMix)
                     : kMarkerFlagBorder;
+            // THE CLOSING COLUMN (architect 2026-09-25, the live lane's rule:
+            // every flag's run ends on one border column) is the RIGHTMOST
+            // PAINTED HALF's face element, so it dims with that half — the
+            // added one on a pair or an added-only flag, the removed one on a
+            // removed-only flag — the mirror of box_border's pick.
+            const bool right_half_disabled =
+                (w_added > 0) ? added_disabled : removed_disabled;
+            const GuiColor close_border =
+                right_half_disabled
+                    ? mix_color(kMarkerFlagBorder, kRedesignContentGround,
+                                kMarkerDisabledMix)
+                    : kMarkerFlagBorder;
 
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -2212,6 +2259,10 @@ void render_history_diff_flags(
                                 edge_h);
                 cairo_fill(cr);
             }
+            cairo_set_source_rgb(cr, close_border.r, close_border.g,
+                                 close_border.b);
+            cairo_rectangle(cr, bx + bw, lane.y, border_w, lane.h);
+            cairo_fill(cr);
             cairo_restore(cr);
 
             // THE LANE'S INK, not the redesign's: a diff flag wears this
@@ -2237,14 +2288,15 @@ void render_history_diff_flags(
             }
 
             if (out_hit_rects) {
-                // THE WHOLE BOX, BORDER INCLUDED, and a changed pair claims as
+                // THE WHOLE BOX, BOTH BORDERS INCLUDED (the left one and the
+                // closing one, 2026-09-25), and a changed pair claims as
                 // ONE rect — which is what makes the mode's focus click land on
                 // one item however wide it is painted.
                 FlagHitRect r;
                 r.marker_index = i;
                 r.x = static_cast<double>(bx - border_w);
                 r.y = static_cast<double>(lane.y);
-                r.w = static_cast<double>(bw + border_w);
+                r.w = static_cast<double>(bw + 2 * border_w);
                 r.h = static_cast<double>(lane.h);
                 // NO BOUND CELLS IN THIS MODE, so every
                 // boundary is the rect's own right edge and no point can fall
@@ -2293,30 +2345,7 @@ void render_history_diff_flags(
                                                   : kHistoryAddedFill)});
                 }
             }
-        };
-
-    // THE LIVE LANE'S Z-ORDER (architect 2026-09-25, render_flag_boxes_impl's
-    // passes): unlit flags first, then the lit ones — the focus and the mode's
-    // selection, the flags `v` reverts — each pass in the sorted frame order
-    // (HistoryDiffFlag's sort, waveform_cache.cpp), so a lit flag paints over
-    // every unlit one and the stash publishes in that paint order. The
-    // membership test runs before paint_flag, so each run is shaped once.
-    for (const bool lit_pass : {false, true}) {
-        iterate_visible_flags_impl(
-            top_strip_area, waveform_width, flags,
-            viewport_start_sample, viewport_end_sample,
-            warp_frame_map,
-            // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
-            // marker drag can be in flight while this pass runs — and a diff
-            // flag is not a marker in any store, so nothing could index it
-            // anyway.
-            /*drag_overlay=*/nullptr,
-            cull_width_px,
-            [&](int i, double left_x) {
-                if (lit(i) != lit_pass) return;
-                paint_flag(i, left_x);
-            });
-    }
+        });
 
     cairo_restore(cr);
 }
@@ -2707,6 +2736,21 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // same column the resting box's divider stands on. Both are "the border
     // outside the fill on its left"; only which seam it marks differs.
     const int left_border_w = border_w;
+    // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
+    // ends on ONE border column on its rightmost box)? Iff nothing rides past
+    // it — the UPPER field, the marker's last box by rank, or a payload field
+    // on a marker with no cells. Otherwise the last riding box closes (below)
+    // and the field's right side is the first riding cell's own one-pixel
+    // seam, never a closing column plus a seam. The answer is the riding
+    // run's own composer output (`ride_text`, read again below), so the two
+    // cannot disagree about which box ends the run.
+    const int  field_rank = flag_box_rank(field_cell);
+    const IterCellText ride_text =
+        field_rank >= flag_box_rank(MarkerCell::Upper) ? IterCellText{}
+        : phase ? phase_iter_cells(pmv, idx, iteration_on)
+                : warp_iter_cells(mv, idx, iteration_on);
+    const bool ride_cells    = ride_text.present;
+    const int  field_close_w = ride_cells ? 0 : border_w;
     if (ed.red) {
         face.fill  = kMarkerFlagFillRedSel;
         face.edge  = kMarkerFlagEdgeRedSel;
@@ -2759,6 +2803,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     cairo_set_source_rgb(cr, face.edge.r, face.edge.g, face.edge.b);
     cairo_rectangle(cr, bx, lane.y, box_w, edge_h);
     cairo_fill(cr);
+    // THE CLOSING COLUMN, when the field is the run's last box: the field's
+    // own face.border (the red flash's undamped one included — it is a state
+    // of this box), standing just past the fill, OUTSIDE the text viewport, so
+    // nothing the viewport or the view offset computed moves.
+    if (field_close_w > 0) {
+        cairo_set_source_rgb(cr, face.border.r, face.border.g, face.border.b);
+        cairo_rectangle(cr, bx + box_w, lane.y, field_close_w, lane.h);
+        cairo_fill(cr);
+    }
     cairo_restore(cr);
 
     // The caret / selection band: the box interior under the top edge. A text
@@ -2951,8 +3004,6 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // editor became both columns': the payload editor is warp-only by its
     // open gates, and `phase` already answered that question for the box
     // above.
-    const int  field_rank  = flag_box_rank(field_cell);
-    const bool ride_cells  = field_rank < flag_box_rank(MarkerCell::Upper);
     if (ride_cells) {
         // THE RUN'S SEAM COLUMNS ARE THE MARKER'S CLASS BORDER, never the
         // field's: `face` above may be the RED FLASH, which is a state of the
@@ -2963,16 +3014,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // it).
 
         // The cells, off the ONE composer and the ONE measurer the flag pass
-        // reads, so the re-paint cannot show a different token or a different
-        // width from the cell it stands in for. Nothing is shaped where no cell
-        // rides (the UPPER field), the measurer answering all zeroes on empty
-        // cells — and where the LOWER field stands it lays out one token that
-        // will not paint, the pair being one measurement, which is the same
-        // one-run cost the flag pass pays on that marker.
-        const IterCellText cells =
-            !ride_cells ? IterCellText{}
-            : phase     ? phase_iter_cells(pmv, idx, iteration_on)
-                        : warp_iter_cells(mv, idx, iteration_on);
+        // reads (`ride_text`, composed above), so the re-paint cannot show a
+        // different token or a different width from the cell it stands in
+        // for. Nothing is shaped where no cell rides (the UPPER field, or a
+        // marker with no cells), this branch not running — and where the
+        // LOWER field stands it lays out one token that will not paint, the
+        // pair being one measurement, which is the same one-run cost the flag
+        // pass pays on that marker.
+        const IterCellText& cells = ride_text;
         const IterCellLayout cl = measure_iter_cells(font, cells);
         // A TIE FOLLOWER'S RIDING CELLS GREY exactly as its resting ones do
         // (2026-09-19): they are the same boxes at a different x, off the same
@@ -3002,7 +3051,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 // 2026-09-21).
                 resolve_flag_face(cell_dis, red_class,
                                   cell_selected(MarkerCell::Lower),
-                                  column_face));
+                                  column_face),
+                // Never the run's last box: the upper cell rides after it on
+                // every kind that carries the lower.
+                /*closes=*/false);
             cursor_x += border_w + cl.lower_w;
         }
         const int upper_seam = cursor_x;
@@ -3013,13 +3065,17 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 // Its own column's hue, as the lower cell just above.
                 resolve_flag_face(cell_dis, red_class,
                                   cell_selected(MarkerCell::Upper),
-                                  column_face));
-            cursor_x += border_w + cl.upper_w;
+                                  column_face),
+                // THE RUN'S LAST BOX, so it closes the run (2026-09-25) —
+                // the resting run's own ending, at the field's edge.
+                /*closes=*/true);
+            cursor_x += border_w + cl.upper_w + border_w;
         }
 
         // THE RUN IS PUBLISHED AS A FLAG HIT RECT, keyed to the marker being
         // edited: its rect is the WHOLE re-painted run's painted extent, every
-        // seam divider included — the same paint-equals-claim rule the flag
+        // seam divider and the closing column included (the latter past the
+        // upper boundary, so it answers Upper, the box it closes) — the same paint-equals-claim rule the flag
         // rects take — and its two boundaries are the seam columns
         // accumulated above, so hit_test_flag_cell's walk answers
         // Upper or Lower over exactly the pixels that show one, and
@@ -3059,8 +3115,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // so a press on that column seats the caret at byte 0 — which agrees with
     // the resting cell, where the same column reads as that cell rather than
     // as the box left of it.
+    //
+    // A FIELD THAT CLOSES THE RUN PUBLISHES ITS CLOSING COLUMN TOO
+    // (2026-09-25), the box's last column: a press there seats the caret at
+    // the end through the same nearest-boundary search a press on the right
+    // pad takes, and the I-beam covers every column the field painted.
     out.box           = GuiRect{bx - left_border_w, lane.y,
-                                box_w + left_border_w, lane.h};
+                                box_w + left_border_w + field_close_w,
+                                lane.h};
     out.text_origin_x = text_origin_x;
     out.byte_x        = std::move(byte_x);
 }

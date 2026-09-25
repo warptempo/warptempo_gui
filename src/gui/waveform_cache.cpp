@@ -983,9 +983,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // frame otherwise, which would scatter the occlusion. The sort is STABLE, so
     // coincident entries keep the group order they were built in — changed, then
     // removed, then added — and the ADDED flag, the state the session actually
-    // holds, is the one on top. This is the order WITHIN each of the painter's
-    // two passes: a lit flag (the focus or the mode's selection) paints over
-    // every unlit one (architect 2026-09-25, render_history_diff_flags).
+    // holds, is the one on top.
     std::stable_sort(out.begin(), out.end(),
                      [](const HistoryDiffFlag& a, const HistoryDiffFlag& b) {
                          return a.time_frame < b.time_frame;
