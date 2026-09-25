@@ -1935,11 +1935,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // no-hover-under-touch consequence asks for, and the row-1 keep below
     // reads the remembered position exactly as it does for a mouse. The fire
     // sites are the touch edge inventory's, input_core.h.
-    // ONE OF THOSE FIRINGS IS THE SECOND-FINGER UPGRADE, whose end is the
-    // ABNORMAL one (codex round 19) — no release is delivered, so the three
-    // press ARMS this body drops are what stops a pinch dispatching whatever
-    // the held finger was resting on. The clears were already exactly right
-    // for it; only their load-bearingness grew.)
+    // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
+    // focus loss on a live pointer translation, hard_end_touch_stream), whose
+    // end is the ABNORMAL one (codex round 19, when the second-finger upgrade
+    // was its other producer — deleted 2026-09-25, a second contact on a live
+    // translation being ignored now) — no release is delivered, so the three
+    // press ARMS this body drops are what stops a system-taken touch
+    // dispatching whatever the finger was resting on. The clears were already
+    // exactly right for it; only their load-bearingness grew.)
     // The difference itself is the reason none of the clears may lean on "no
     // later event". Only
     // CAPABILITY LOSS ends that pointer stream outright — no motion and no
@@ -2271,8 +2274,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         //
         // This is the run loop's own deadline tick, the same expiry the
         // platform's two software deadlines ride — key repeat and the touch
-        // disambiguation window (maybe_fire_repeat / maybe_resolve_touch_window,
-        // input_core.cpp: GuiInputCore::tick) — and the chrome button
+        // window's region-hold beat, the one touch deadline left (the pan
+        // zone's window; the editor field's window has none)
+        // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp:
+        // GuiInputCore::tick) — and the chrome button
         // hold-repeat and the A/B audition's rests below; the cards are the
         // tick's FOURTH software deadline and, like the other three, schedule
         // nothing (kNotificationMs, gui_input.h; the model at notifications.h).
@@ -2910,7 +2915,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // stop body, and the natural-end branch below is then unreachable this
         // tick because that body lowers the scanner flag).
         // This is the run loop's own deadline tick, the same timerfd expiry the
-        // platform's key-repeat and touch-disambiguation deadlines ride
+        // platform's key-repeat and touch-window deadlines ride (the region
+        // hold's beat, the one touch deadline left)
         // (maybe_fire_repeat / maybe_resolve_touch_window, input_core.cpp)
         // and the same one the chrome button hold-repeat above and the
         // notification cards' clock at this body's head ride; the act
@@ -3240,8 +3246,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // as long as it is held, which is the intended reading: the user is
         // aiming.
         // The touch term is the platform's (touch_contact_active — any finger
-        // down), because nothing GUI-side is armed during the disambiguation
-        // window; the contract is at the touch state block, input_core.h.
+        // down), because nothing GUI-side is armed during a touch window (the
+        // waveform's region hold or the editor field's); the contract is at
+        // the touch state block, input_core.h.
         // THE LAMP IS READ LIVE (architect 2026-09-23, AppState::follow): lit
         // and not suspended for this play by a camera change
         // (AppState::follow_suspended), the play pages. THE A/B AUDITION IS

@@ -655,9 +655,9 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // catches up, the tick's live-total repair finds no total change under a
 // marker or trim drag (neither writes the live map) and stands down for the
 // value drag, the value drag clears itself before its commit's kick, the
-// marker drag clears itself before its commit's land, a touch pinch upgrade
-// ends the translation (and so disarms a pending press) before its first
-// zoom, and the marker press's acts — the select and the land, a direct
+// marker drag clears itself before its commit's land, a touch pinch begins
+// only from the pan zone's window (nothing delivered) or a single-finger nav
+// (no press), so no pending press stands beside its first zoom, and the marker press's acts — the select and the land, a direct
 // cursor write that scrolls nothing — run before its pending arms. THE
 // MARKER DRAG'S PLAYHEAD TOW WAS THE ONE EXCEPTION and is closed (architect
 // 2026-09-24): it rode move_playhead_to → reseat_playhead_to, whose

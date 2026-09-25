@@ -257,11 +257,15 @@ public:
     // and nothing else. ON ANDROID IT IS THE S PEN'S SIDE BUTTON (architect
     // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl,
     // hardware keyboards being out of scope there): the backend calls this
-    // with ctrl = the button held, carrying the other three bits through
-    // unchanged, BEFORE it delivers the touch or hover event that reported the
-    // button state, so the press, the motions and the settled hook's
-    // sync_nav_drag_mode all read the bit that event carried; it drops the bit
-    // at the pen's lift, cancel and hover exit. The door is the same one — an
+    // with ctrl = the button held — for what the pen owns alone, its hover or
+    // a gesture touch_owner_tool() reports as the pen's (an ignored pen
+    // passes released) — carrying the other three bits through unchanged,
+    // BEFORE it delivers the touch or hover event that reported the button
+    // state, so the press, the motions and the settled hook's
+    // sync_nav_drag_mode all read the bit that event carried; the pen's own
+    // lift is not sampled (its last leg keeps the stroke's bit), and the bit
+    // drops after that lift, at a cancel, a hover exit, a finger's first down
+    // and focus loss. The door is the same one — an
     // edge here means the same thing whoever produced it — and it owes the
     // touch machine ONE thing of its own: a ctrl edge under a live
     // single-finger nav is announced to the GUI as a nav frame (the exemption
@@ -321,9 +325,11 @@ public:
     // (GuiTouchTool, gui_input.h — the pen's three amendments are there):
     // Finger unless the backend can tell a pen, which only the Android backend
     // can (a STYLUS or ERASER tool type). The core remembers the FIRST
-    // contact's tool beside its id and reads it in exactly one place: the
+    // contact's tool beside its id and reads it in two places: the
     // second-down arms, where a pen on either side of the pair opens no
-    // two-finger navigation (the pen is never a pinch member). Every other
+    // two-finger navigation (the pen is never a pinch member), and
+    // touch_owner_tool() below, the backend's question of who owns the
+    // gesture its pen button would steer. Every other
     // answer of the machine — the zone, the window, the region hold, the
     // caret drag, the single-finger pan and its ctrl fork — is the finger's.
     void touch_down(int32_t id, double x, double y,
@@ -785,6 +791,23 @@ public:
     // song out from under a finger that is aiming or gesturing.
     bool touch_contact_active() const {
         return touch_phase_ != TouchPhase::Idle;
+    }
+
+    // THE TOOL OF THE CONTACT THAT OWNS THE LIVE GESTURE — the first
+    // contact's (touch_down's door) while a gesture has an owner (Pending,
+    // Pointer, Nav, Region, Caret); nullopt when none does: Idle, and Drain,
+    // where the owner has lifted and only ignored contacts remain. Portable
+    // (a fact of the machine, no platform word in it); the ONE consumer is
+    // the Android backend's pen-button sampling (on_motion_event,
+    // platform_android.cpp): THE PEN'S BARREL BUTTON IS THE CTRL BIT ONLY FOR
+    // A GESTURE THE PEN OWNS, or for its hover with nothing on the glass, so
+    // an ignored pen beside a finger never converts that finger's pan or
+    // pending window (touch.md, The Pen and the Pointer on Contact).
+    std::optional<GuiTouchTool> touch_owner_tool() const {
+        if (touch_phase_ == TouchPhase::Idle ||
+            touch_phase_ == TouchPhase::Drain)
+            return std::nullopt;
+        return touch_owner_tool_;
     }
 
     // Override the release-restore x for the active capture. The zoom bodies
@@ -1610,8 +1633,8 @@ private:
     // caret_update(x, y)).
     bool       touch_caret_frame_dirty_  = false;
     // The FIRST contact's tool (touch_down's door), captured beside its id
-    // and read at the second-down arms alone: a pen on either side of a pair
-    // opens no two-finger navigation.
+    // and read at the second-down arms (a pen on either side of a pair
+    // opens no two-finger navigation) and by touch_owner_tool().
     GuiTouchTool touch_owner_tool_ = GuiTouchTool::Finger;
     // The logical left's third source (see the OR-edge model above).
     bool       touch_left_held_          = false;

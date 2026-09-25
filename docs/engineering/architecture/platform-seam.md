@@ -501,13 +501,18 @@ drag coordinates floor instead of truncating.
   the Wayland backend never overrides); the BARREL BUTTON
   (`AMOTION_EVENT_BUTTON_STYLUS_PRIMARY`, `BUTTON_SECONDARY` accepted beside
   it) is the CTRL BIT through `set_modifiers` — this backend its second
-  producer, set before the event's delivery, dropped at the pen's lift, a
-  cancel, a hover exit and focus loss, the `BUTTON_PRESS` / `BUTTON_RELEASE`
+  producer, set before the event's delivery and ONLY FOR WHAT THE PEN OWNS
+  (its hover, or a gesture whose owner `GuiInputCore::touch_owner_tool`
+  reports as the pen — an ignored pen beside a finger passes "released"),
+  left unsampled on the pen's own lift (the final leg keeps the stroke's last
+  bit) and on a cancel, and dropped after the pen's lift, at a cancel
+  (unconditionally, by the backend's `pen_ctrl_` record), a hover exit, a
+  finger's first down and focus loss, the `BUTTON_PRESS` / `BUTTON_RELEASE`
   actions carrying the mid-stroke edges; and the HOVER actions translate to
   `pointer_enter` / `pointer_motion` / `pointer_leave` with a `pointer_frame`
   each (`pen_hovering_` the one owner; hovers are dropped while any touch
-  contact is down and a pen tip-down ends a standing hover, so the doors never
-  overlap), which is what runs the hover walk and the tooltip dwell under a
+  contact is down and ANY first down, pen or finger, ends a standing hover, so
+  the doors never overlap), which is what runs the hover walk and the tooltip dwell under a
   hovering pen. A probe line rides the milestone build — one stderr line per
   non-finger motion event, `pen: action= source= tool= buttons= x= y=`, read
   through logcat — and is struck once the architect has verified the pen.

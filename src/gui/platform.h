@@ -36,9 +36,11 @@
 // ITS TOUCH WINDOW OR A POINTER CAPTURE, and that is by construction rather
 // than by a cancel road: a reopen happens from a key press or a button lift
 // on the Open project picker, a modal — no pointer gesture is live, no capture can
-// stand (a capture is the nav drag's, refused under a modal), the touch
-// disambiguation window has resolved (it is what delivered the press), and
-// the key that committed is a session key the repeat probe never arms. The
+// stand (a capture is the nav drag's, refused under a modal), a finger that
+// committed opened no touch window (the picker lies off the pan zone and
+// outside any editor field, so its down was the pointer on contact — the
+// only touch windows left are the waveform's region hold and the editor
+// field's), and the key that committed is a session key the repeat probe never arms. The
 // next set's first configure is redelivered explicitly (redeliver_geometry),
 // since the window will not send one for a size that did not change.
 #ifdef __ANDROID__

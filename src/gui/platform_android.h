@@ -522,12 +522,20 @@ private:
     bool window_activated_ = false;
     // THE S PEN IS HOVERING AS THE POINTER (2026-09-25): true between the
     // pen's translated HOVER_ENTER (the core's pointer_enter) and the edge
-    // that ends it — HOVER_EXIT, the pen's own tip-down, or focus loss, each
-    // delivering the core's pointer_leave. What makes the doors sequence
-    // sanely is that one owner: a hover never overlaps a touch the core is
-    // translating (on_motion_event's hover arm), so the tip-down's
-    // synthesized entry motion never meets a pointer already "in".
+    // that ends it — HOVER_EXIT, ANY first contact down (the pen's tip or a
+    // finger), or focus loss, each delivering the core's pointer_leave. What
+    // makes the doors sequence sanely is that one owner: a hover never
+    // overlaps a touch the core is translating (on_motion_event's hover and
+    // down arms), so a first down's synthesized entry motion never meets a
+    // pointer already "in".
     bool pen_hovering_ = false;
+    // THE STANDING CTRL BIT WAS SET BY THE PEN'S BUTTON (set_pen_ctrl's
+    // record): true from a sampled pen event reporting the button, while the
+    // pen owns what it would steer, until the pen's lift, a cancel, a hover
+    // exit, a finger's first down or focus loss clears it. The clears read
+    // this record rather than the clearing event's own stylus metadata, so a
+    // cancel that no longer enumerates the pen still drops the bit.
+    bool pen_ctrl_ = false;
 
     // THE FIRST on_resize_ FIRE IS OWED RATHER THAN MADE. init() adopts a
     // window that already exists (android_main waits for it), which is BEFORE
@@ -702,8 +710,9 @@ private:
     void on_motion_event(struct AInputEvent* event);
     // THE PEN'S SIDE BUTTON THROUGH THE MODIFIER DOOR — the ctrl bit set to
     // `held`, shift and alt carried through unchanged, super false (this
-    // backend's constant); a no-op when the bit already stands. The door's
-    // second producer (the contract at GuiInputCore::set_modifiers).
+    // backend's constant); a no-op when the bit already stands, and a
+    // release is a no-op unless the pen set the bit (pen_ctrl_ above). The
+    // door's second producer (the contract at GuiInputCore::set_modifiers).
     void set_pen_ctrl(bool held);
     // END A PEN HOVER — the core's pointer_leave and its frame, iff one
     // stands (pen_hovering_ above).

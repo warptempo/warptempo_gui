@@ -781,9 +781,12 @@ struct UndoHistory {
 // half: a finger has no modifier, so the hold is the finger's ONLY route to a
 // sweep.
 //
-// The SHIFT-exact PRESS on the NAVIGATION SURFACE — the WHOLE waveform, the
-// RULER lane, and the MARKER lane's empty stretches (a shift press on a FLAG
-// stays the range click) — does its press-time work (deselect-all, playhead
+// The SHIFT-exact PRESS on the NAVIGATION SURFACE — the WHOLE waveform and
+// nothing else since 2026-09-25 (the RULER lane and the MARKER lane's empty
+// stretches, members until then, are PLACEMENT LANES: a shift press there
+// arms the placement pending, never this drag — pointer-hit-testing.md's
+// placement-lanes section; a shift press on a FLAG stays the range click) —
+// does its press-time work (deselect-all, playhead
 // placement, live-playback reseek — it never SELECTS a marker) and arms this
 // drag; motion past the shared press-becomes-drag threshold
 // (drag_moved_threshold_px()) writes the trim from the press frame to the pointer
@@ -3749,7 +3752,7 @@ inline int double_click_slack_px() {
 // one.
 //
 // It rides NO SCALE, deliberately: a duration is not a length, so gui_scale has
-// nothing to say about it (the same rule the drag-slop and disambiguation
+// nothing to say about it (the same rule the drag-slop and region-hold
 // constants carry for their own reason — they model the hand, not the pixels).
 //
 // The beat is DELIBERATELY LONG relative to a click. A shifted act is the rarer
@@ -9476,13 +9479,16 @@ GuiRect top_ruler_row_area(const AppState& a);
 // THE TWO LANES ARE SEPARATE INPUT SURFACES, and they answer differently: the
 // TRIM BAR carries its own gestures (endcap / bridge drags, the ctrl and
 // ctrl+shift bound-set clicks, the span-framing double-click), while the RULER
-// is a member of the NAVIGATION SURFACE since 2026-08-12's eighth glass ruling
-// — plain drag is the pending click / grab-pan, a motionless plain click the
-// deferred playhead placement, SHIFT the one region former, CTRL that same
-// drag's live zoom phase (2026-08-14's one-model ruling; it was the dual-axis
-// strip drag for two days). (Its own dedicated strip-drag entry and the ruler-scoped region
+// is a PLACEMENT LANE since 2026-09-25 (point_on_placement_lanes,
+// input_pointer.cpp) — a plain or shift press arms the placement pending
+// (arm_placement_press), a motionless click places the playhead, every drag
+// does nothing and a ctrl press is a consumed nothing. (From 2026-08-12's
+// eighth glass ruling until then it was a member of the NAVIGATION SURFACE —
+// the pending click / grab-pan, SHIFT the region former, CTRL the drag's
+// live zoom phase — and the dual-axis strip drag for two days before
+// 2026-08-14's one-model ruling. Its own dedicated strip-drag entry and the ruler-scoped region
 // former it briefly carried are both gone: the entry was deleted for good
-// earlier that day, and the former lived half a day before the ruling folded
+// early on 2026-08-12, and the former lived half a day before the ruling folded
 // the ruler into the one vocabulary. top_trim_surface_area — the trim surface
 // arc's merged trim-bar + ruler input band — lived between these accessors for
 // one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
@@ -11318,8 +11324,9 @@ void remap_marker_indices_after_reorder(AppState& app,
 // millisecond time bases — the press-driven double-click detection (strip-row /
 // marker, input_pointer.cpp), the tooltip's hover dwell (main.cpp) and the A/B
 // audition's rests (GuiAbAudition::fire_if_due) — the same CLOCK_MONOTONIC the
-// platform's own deadlines (key repeat, the touch disambiguation window) are
-// stamped on, so the run loop samples them all against one clock. Body in
+// platform's own deadlines (key repeat, the touch window's region-hold beat —
+// the pan zone's window, the one touch window with a deadline since
+// 2026-09-25, the editor field's carrying none) are stamped on, so the run loop samples them all against one clock. Body in
 // app_state.cpp so no TU copies its own clock reader.
 int64_t monotonic_ms();
 

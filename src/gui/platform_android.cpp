@@ -1774,12 +1774,38 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // pens of the S Pen's lineage reported the barrel button that way before
     // STYLUS_PRIMARY existed and a one-build probe should not bet on which
     // this firmware sends (the probe line shows which one arrives). Read only
-    // on events that carry the pen, so a finger's event never speaks for it;
-    // the bit is dropped at the pen's lift, a cancel and a hover exit below.
-    if (pen_present) {
+    // on events that carry the pen, so a finger's event never speaks for it.
+    //
+    // THE BUTTON STEERS ONLY WHAT THE PEN OWNS: the pen's hover (nothing on
+    // the glass) or a gesture whose owning contact is the pen
+    // (GuiInputCore::touch_owner_tool, asked before this event's delivery).
+    // While a FINGER owns the gesture — or the owner has lifted and only
+    // ignored contacts drain — the pen is an ignored contact and its button
+    // reaches the door as released, so it never converts the finger's pan
+    // to a zoom nor makes the finger's pending window cross as one. Nothing
+    // pen-set can be standing to drop there: a finger becomes the owner only
+    // at a first down, and that down drops the hover's Ctrl before its own
+    // delivery (the DOWN arm below); every later pen event under that finger
+    // passes "released". Two actions are NOT sampled: the pen's OWN lift,
+    // whose final leg runs under the Ctrl bit the stroke last had and whose
+    // clear follows the lift (so a firmware reporting buttons=0 on the up
+    // cannot flip the last leg from zoom to pan), and a cancel, which clears
+    // unconditionally. The bit is otherwise dropped at a hover exit and focus
+    // loss.
+    const bool pen_own_lift =
+        (masked == AMOTION_EVENT_ACTION_UP ||
+         masked == AMOTION_EVENT_ACTION_POINTER_UP) &&
+        index < count && is_pen(index);
+    if (pen_present && !pen_own_lift &&
+        masked != AMOTION_EVENT_ACTION_CANCEL) {
         const int32_t buttons = AMotionEvent_getButtonState(event);
-        set_pen_ctrl((buttons & (AMOTION_EVENT_BUTTON_STYLUS_PRIMARY |
-                                 AMOTION_EVENT_BUTTON_SECONDARY)) != 0);
+        const bool held = (buttons & (AMOTION_EVENT_BUTTON_STYLUS_PRIMARY |
+                                      AMOTION_EVENT_BUTTON_SECONDARY)) != 0;
+        const std::optional<GuiTouchTool> owner = input_.touch_owner_tool();
+        const bool pen_steers =
+            !input_.touch_contact_active() ||
+            (owner && *owner == GuiTouchTool::Pen);
+        set_pen_ctrl(held && pen_steers);
     }
 
     switch (masked) {
@@ -1799,8 +1825,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // position and drag whatever that contact holds, so hovers are
             // dropped then. THE SEQUENCE WITH THE TIP is therefore always
             // enter .. leave, then the touch: the platform sends HOVER_EXIT
-            // before the tip's DOWN, and the DOWN below ends a hover that
-            // somehow still stands, so the touch translation's synthesized
+            // before the tip's DOWN, and ANY first down below — the pen's or
+            // a finger's — ends a hover that still stands, so the touch
+            // translation's synthesized
             // entry motion never meets a pointer already in and its lift's
             // translation end takes the leave arm (no mouse is resting); the
             // pen's lift back into hover is a fresh HOVER_ENTER. The EXIT
@@ -1823,7 +1850,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 
         case AMOTION_EVENT_ACTION_BUTTON_PRESS:
         case AMOTION_EVENT_ACTION_BUTTON_RELEASE:
-            // A MID-STROKE BUTTON EDGE. The bit itself was set above; that
+            // A MID-STROKE BUTTON EDGE. The bit itself was set above (as
+            // released when the pen owns nothing it could steer); that
             // is the whole of it — the door delivers the staged motion under
             // the old bit and announces the edge to a live single-finger nav
             // itself, so there is no position to hand over and no frame owed.
@@ -1831,10 +1859,23 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 
         case AMOTION_EVENT_ACTION_DOWN:
         case AMOTION_EVENT_ACTION_POINTER_DOWN:
-            // A PEN'S TIP-DOWN ENDS ITS HOVER FIRST (the hover arm's
-            // sequencing), so the touch below is the only pointer the core
-            // is translating.
-            if (index < count && is_pen(index)) end_pen_hover();
+            // ANY FIRST DOWN ENDS A STANDING PEN HOVER FIRST, the pen's tip
+            // or a finger (the hover arm's sequencing): HOVER NEVER OVERLAPS A
+            // TRANSLATED CONTACT, so the touch below is the only pointer the
+            // core is translating, its synthesized entry motion never meets a
+            // pointer already in, and its lift's translation end takes the
+            // leave arm rather than restoring the stale hover point. A hover
+            // stands only while nothing is on the glass (hover motion is
+            // dropped under a contact), so ending it here unconditionally is
+            // ending it at the first down. WHEN THE FIRST DOWN IS A FINGER,
+            // the hover's Ctrl goes with it before the finger's delivery: the
+            // finger owns this gesture and the pen's button steers only what
+            // the pen owns (the sampling above). A pen's first down keeps the
+            // bit its own DOWN just reported.
+            if (!input_.touch_contact_active()) {
+                end_pen_hover();
+                if (index < count && !is_pen(index)) set_pen_ctrl(false);
+            }
             if (index < count) {
                 // EVERY AMotionEvent CARRIES EVERY LIVE POINTER'S CURRENT
                 // POSITION, not only the one its action names, and the fingers
@@ -1895,7 +1936,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 }
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
                 // THE PEN'S LIFT DROPS THE CTRL BIT, after the lift's own
-                // delivery (the release read the bit its press did). A hover
+                // delivery: this event was not sampled (the sampling above),
+                // so the final leg and the release ran under the bit the
+                // stroke last had, whatever buttons the up reports. A hover
                 // that follows reports the button afresh.
                 if (is_pen(index)) {
                     input_.touch_frame();
@@ -1907,10 +1950,12 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 
         case AMOTION_EVENT_ACTION_CANCEL:
             // The window system claims the touches. One contract with
-            // capability loss, and the core owns it whole; the pen's Ctrl
-            // bit goes with them.
+            // capability loss, and the core owns it whole; a pen-set Ctrl
+            // bit goes with them UNCONDITIONALLY — the clear reads the
+            // backend's own record (pen_ctrl_), not whether this cancel
+            // still enumerates a stylus, and the event was not sampled.
             input_.touch_cancel();
-            if (pen_present) set_pen_ctrl(false);
+            set_pen_ctrl(false);
             return;   // a cancel closes its own batch; no frame is owed
 
         default:
@@ -1926,6 +1971,11 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
 }
 
 void GuiPlatform::set_pen_ctrl(bool held) {
+    // A release clears only a Ctrl the pen set (pen_ctrl_); a press always
+    // brings the modeled bit to held.
+    const bool was_pen_set = pen_ctrl_;
+    pen_ctrl_ = held;
+    if (!held && !was_pen_set) return;
     const GuiInputState mods = input_.current_mods();
     if (mods.ctrl == held) return;
     input_.set_modifiers(held, mods.shift, mods.alt, /*super=*/false);

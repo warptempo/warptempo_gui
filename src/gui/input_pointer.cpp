@@ -2733,9 +2733,12 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // clause's twin and the same hole one tenant over: the keyboard paints
     // over the waveform's lower part and `wheel_context` answers 1 there (the
     // band sits inside waveform_area and the wheel carries no keyboard term),
-    // so two thumbs landing on keys inside the disambiguation window became a
-    // Nav pinch and zoomed the waveform BEHIND the keyboard, about a column
-    // the user cannot see. The pan zone already yields under this same rect
+    // so two thumbs landing on keys inside the disambiguation window (a window
+    // opened everywhere then) became a Nav pinch and zoomed the waveform
+    // BEHIND the keyboard, about a column the user cannot see. Since
+    // 2026-09-25 a pinch begins only from the pan zone's window, which yields
+    // under the keyboard, so what this clause answers now is a pinch whose
+    // centroid travels over the keys. The pan zone already yields under this same rect
     // (touch_point_in_pan_zone's second clause) — this is the two-finger half
     // of that answer, and it asks the same two owners, so the two cannot
     // disagree. A key is not a navigation surface at any finger count.
@@ -7125,8 +7128,9 @@ void GuiInputHandler::finalize_active_drags() {
     // THE PENDINGS DISARM AND COMMIT NOTHING, which is not a cancel: there is
     // no release here (the button is still held), and a force-end is not a
     // click — the same rule the arms above state for their own unmoved
-    // presses, and the same one the touch layer's ABNORMAL end (the
-    // motionless-hold upgrade) delivers by leaving the button unheld. A pending
+    // presses, and the same one the touch layer's ABNORMAL end (a hard end —
+    // cancel, capability or focus loss — on a live pointer translation,
+    // hard_end_touch_stream) delivers by leaving the button unheld. A pending
     // otherwise resolves only by the threshold crossing or a real release /
     // button loss.
     //
@@ -8701,10 +8705,11 @@ bool GuiInputHandler::handle_history_mode_press(
 // same claim runs the mode's ctrl body instead (2026-09-17, the fork at the
 // claim).
 // The router resolves a flag only since
-// 2026-08-12 (an empty lane stretch is the
-// navigation surface's pending click now — the eighth glass ruling — whose
-// deferred land clears the focus through the same pair clearer and then
-// PLACES the playhead, where this body's out-of-range arm lands nothing);
+// 2026-08-12 (an empty lane stretch arms the PLACEMENT pending now —
+// arm_placement_press, 2026-09-25; the navigation surface's pending click
+// from the eighth glass ruling until then — whose deferred land clears the
+// focus through the same pair clearer and then PLACES the playhead, where
+// this body's out-of-range arm lands nothing);
 // out-of-range tolerance kept, answering clear-and-land-nothing — and it is what
 // makes an armed index that the walk somehow outran harmless.
 //
@@ -8715,8 +8720,8 @@ bool GuiInputHandler::handle_history_mode_press(
 //
 // IT LANDS THROUGH THE MOVEMENT OWNER (land_playhead_on_source_frame). The
 // out-of-range arm (`hit` < 0, tolerance the router cannot produce) lands
-// nothing; the empty-lane click the router DOES produce goes to the navigation
-// surface's own act, which places the playhead there. (It hid the trim region
+// nothing; the empty-lane click the router DOES produce goes to the placement
+// pending's act (run_nav_click_act), which places the playhead there. (It hid the trim region
 // overlay from 2026-08-06 until the resting overlay was deleted on
 // 2026-09-22.)
 // The rest of the minimalism STANDS: no store selection, no live focus, no
@@ -9356,10 +9361,14 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // press, so what its lift still owes is the KEY-UP — and the core's repeat
     // arm dies on that stable code and on nothing else this edge can reach, so
     // a key whose lift never came would repeat forever. The producer is real
-    // and is the touch stream's own: the SECOND-FINGER UPGRADE delivers no
-    // button release at all (the fork is at GuiInputCore::end_touch_left_hold),
-    // only this unheld motion — so a second finger landing while a letter is
-    // held is exactly the case, and typing on glass is where it happens.
+    // and is the touch stream's own: the TOUCH HARD END (a cancel, capability
+    // or focus loss on a live pointer translation, hard_end_touch_stream)
+    // delivers no button release at all (the fork is at
+    // GuiInputCore::end_touch_left_hold), only this unheld motion — so a
+    // system-taken touch while a letter is held is exactly the case, and
+    // typing on glass is where it happens. (The second-finger upgrade was
+    // its other producer until 2026-09-25, when a second contact on a live
+    // translation came to be ignored.)
     // Running the ordinary release body is the right end for it: that body is
     // the key-up plus the un-press damage, and neither depends on where the
     // finger was.
@@ -10023,10 +10032,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {
             // A LOST BUTTON COMMITS NOTHING and simply disarms — the standing
             // rule for every lift-act surface, the same answer the force-end
-            // finalizer gives, and the way the TOUCH layer's ABNORMAL end (the
-            // motionless-hold upgrade) reaches this state for free: it delivers
-            // a motion with the button unheld precisely so an unmoved press
-            // commits nothing.
+            // finalizer gives, and the way the TOUCH layer's ABNORMAL end (a
+            // hard end — cancel, capability or focus loss — on a live pointer
+            // translation, hard_end_touch_stream) reaches this state for
+            // free: it delivers a motion with the button unheld precisely so
+            // an unmoved press commits nothing.
             app.pending_click = PendingClickAct{};
             return;
         }
@@ -10153,10 +10163,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         if (!mods.primary_button_held) {
             // A LOST BUTTON DISARMS AND SEEDS NOTHING — it is not a clean
             // click sequence. The CLICK is not taken back: it committed at the
-            // press (2026-08-17), and the touch layer's ABNORMAL end (the
-            // motionless-hold upgrade reaching here with the button unheld)
-            // therefore no longer un-commits a flag press as it did under the
-            // one-day lift model — the recorded cost of press-time acting,
+            // press (2026-08-17), and the touch layer's ABNORMAL end (a hard
+            // end — cancel, capability or focus loss — on a live pointer
+            // translation, hard_end_touch_stream, reaching here with the
+            // button unheld) therefore no longer un-commits a flag press as
+            // it did under the one-day lift model — the recorded cost of press-time acting,
             // with undo as the mitigation, exactly the 2026-07-29 accepted
             // answer for this shape.
             app.pending_marker_press = PendingMarkerPress{};
