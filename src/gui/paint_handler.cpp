@@ -5191,10 +5191,10 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // over whichever ground — kWaveformCanvas, or a kWaveformRegionCanvas
     // recolor — the pass before this one left. The one later pass that touches
     // those pixels is paint_region_ink, the very next call in on_redraw, which
-    // rewrites each opaque plate pixel in its ink's lifted colour
-    // (kWaveformRegionInk, kWaveformRegionGhostInk) inside the REGION's
-    // column span alone; outside that span, and on every frame where no region
-    // stands, the blitted pixels are final. The plate SURFACE is never rewritten
+    // rewrites each opaque plate pixel as its own colour lifted by the region's
+    // step (region_lift, render.h) inside the REGION's column span alone;
+    // outside that span, and on every frame where no region stands, the
+    // blitted pixels are final. The plate SURFACE is never rewritten
     // either way — both passes recolor at paint time.
     //
     // The out-of-trim dim — the same second-masked-pass mechanism applied to the
@@ -5272,7 +5272,7 @@ GuiPaintHandler::region_columns(const PlateViewportBasis& basis) const {
 // over the same span after the blit (architect 2026-08-18), so the highlight
 // reads as one lit region rather than as a lit background behind unlit content.
 // That is still no wash — it writes OPAQUE lifted colours over the plate's own
-// binary-alpha pixels, keyed by each pixel's ink, the mechanism the recolor
+// binary-alpha pixels, each lifted from its own colour, the mechanism the recolor
 // model admits, where a translucent wash painted over the plate is the form it
 // rejects.
 // Session-only, nothing persisted; not part of the plate/flag caches — a direct
@@ -5320,24 +5320,25 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // immediately AFTER paint_waveform_plate — the pair with paint_region_ground
 // above, one highlight in two passes with the blit between them.
 //
-// AN OPAQUE RECOLOUR KEYED BY THE PIXEL'S WORD, never a translucent wash over
-// the plate — the wash is the retired form the opaque recolor model rejects.
-// The plate carries TWO inks since the magnification's ghost (architect
-// 2026-09-24: kWaveformInk, and kWaveformGhostInk behind it while the lamp is
-// lit), so one colour masked through the alpha can no longer lift it; each
-// pixel takes the lift of ITS OWN ink instead. The pass reads the plate's
-// ARGB32 words directly inside (the region's column span) INTERSECT (the
-// content band) INTERSECT (the frame's damage clip), and for each plate pixel
-// carrying the ink's word writes kWaveformRegionInk into the window surface,
-// for each carrying the ghost's word kWaveformRegionGhostInk; a transparent
-// plate pixel is left alone, so the kWaveformRegionCanvas ground the previous
-// pass laid down still shows through the gaps unchanged. The alpha is still
-// BINARY (the antialiased plate is deleted;
+// AN OPAQUE RECOLOUR KEYED BY NOTHING BUT THE PIXEL'S ALPHA, lifting each
+// colour by the theme's step — never a translucent wash over the plate, the
+// retired form the opaque recolor model rejects. The plate carries a
+// continuum of colours since the magnification ghost's shade (architect
+// 2026-09-24: kWaveformInk, and behind it while the lamp is lit a per-column
+// shade between the ink and kWaveformGhostInk — render_waveform's
+// declaration), so no key of known words can lift it; each pixel is lifted
+// from ITS OWN colour instead. The pass reads the plate's ARGB32 words
+// directly inside (the region's column span) INTERSECT (the content band)
+// INTERSECT (the frame's damage clip), and writes every OPAQUE plate pixel
+// (alpha byte 0xFF) into the window surface as region_lift of its word
+// (render.h: +18 / +18 / +20 per channel, saturating, the doubled Breeze step
+// documented at kWaveformRegionCanvas) — so the ink lands on
+// kWaveformRegionInk exactly, which a static_assert at region_lift pins. A
+// transparent plate pixel is left alone, so the kWaveformRegionCanvas ground
+// the previous pass laid down still shows through the gaps unchanged. The
+// alpha is still BINARY (the antialiased plate is deleted;
 // docs/engineering/waveform_antialiasing_retired.md), so no pixel is ever
-// partly one colour. A plate word that is neither ink would be left as the
-// blit put it; the writer stores no other word today. The words are built by
-// the writer's own owner (argb32_opaque_word, render.h), so the key is bit for
-// bit what render_waveform stored.
+// partly one colour and an opaque word is the colour itself.
 //
 // THE DAMAGE CLIP IS HONOURED EXPLICITLY: a direct pixel pass bypasses cairo's
 // clip, and outside the frame's damage the window buffer holds the previous
@@ -5422,11 +5423,6 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
     const int plate_w      = cairo_image_surface_get_width(plate);
     const int plate_h      = cairo_image_surface_get_height(plate);
 
-    const uint32_t ink_word          = argb32_opaque_word(kWaveformInk);
-    const uint32_t ghost_word        = argb32_opaque_word(kWaveformGhostInk);
-    const uint32_t region_ink_word   = argb32_opaque_word(kWaveformRegionInk);
-    const uint32_t region_ghost_word = argb32_opaque_word(kWaveformRegionGhostInk);
-
     for (int k = 0; k < clip->num_rectangles; ++k) {
         const cairo_rectangle_t& r = clip->rectangles[k];
         // Window-pixel bounds, clamped to the window surface AND to the plate's
@@ -5447,8 +5443,7 @@ void GuiPaintHandler::paint_region_ink(cairo_t* cr, const GuiRect& area) {
                 tgt_data + static_cast<size_t>(y) * tgt_stride);
             for (int x = wx0; x < wx1; ++x) {
                 const uint32_t w = src[x - area.x];
-                if (w == ink_word)        dst[x] = region_ink_word;
-                else if (w == ghost_word) dst[x] = region_ghost_word;
+                if ((w >> 24) == 0xFFu) dst[x] = region_lift(w);
             }
         }
         cairo_surface_mark_dirty_rectangle(target, wx0, wy0,

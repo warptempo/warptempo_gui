@@ -4779,7 +4779,8 @@ struct AppState {
     // not carried by `'`, and touched by no restore, view switch or lock.
     // LIT, the magnified picture — the continuous gain derived from the
     // source (GuiAudio::gain_curve: the leveler, then the expander) — is
-    // painted BEHIND the raw one as a ghost in kWaveformGhostInk, in both
+    // painted BEHIND the raw one as a ghost whose shade reads the passage's
+    // loudness (the ink, toward kWaveformGhostInk when quiet), in both
     // audio views (architect 2026-09-24; the rule is at render_waveform's
     // declaration); DARK, the raw picture alone. THE BIT IS THE ANSWER, read
     // by waveform_magnified (warp_frame_map_view.h) and by the lamp's face,
