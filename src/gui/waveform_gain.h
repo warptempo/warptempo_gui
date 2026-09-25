@@ -51,9 +51,10 @@
 //   never replaces the raw one. Both are flat colours, the WaveformPalette's
 //   ghost ink and lit ink (render.h, tunable for a tuning phase, architect
 //   2026-09-25); the gain decides the ghost's height and never its colour,
-//   the ghost divided by the palette's flat reduction while the raw bar
-//   keeps its true height (architect 2026-09-25), so the raw bar covers the
-//   ghost wherever the gain here is at or under the reduction.
+//   and the ghost and the raw bar each take the palette's own flat level
+//   on top (architect 2026-09-25, the background's and the foreground's),
+//   so the raw bar covers the ghost wherever the gain here is at or under
+//   the separation between the two levels.
 //   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints
 //   its ghost flat.

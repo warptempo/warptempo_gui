@@ -1,7 +1,7 @@
 #pragma once
 
 #include "failure.h"
-#include "render.h"    // GuiColor, the three waveform inks' and the ghost reduction's defaults
+#include "render.h"    // GuiColor, the three waveform inks' and the two levels' defaults
 
 #include <cstdint>
 #include <expected>
@@ -11,7 +11,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Ten keys live here and nowhere else:
+// piece (architect 2026-08-27). Eleven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -33,18 +33,22 @@
 //                            the magnified ghost's ink, painted first, under
 //                            the raw bar — the three for a TUNING PHASE
 //                            (below), the grammar at is_waveform_colour
-//   waveform_ghost_reduction=<x>
-//                            the ghost's flat REDUCTION (a divisor) with the
-//                            lamp lit, a number in [1, 16] spelled with at
-//                            least two decimals (`1.68`) — the tuning phase's
-//                            fourth key, the grammar at
-//                            is_waveform_ghost_reduction
+//   waveform_magnified_gain_db=<dB>
+//                            the FOREGROUND's level with the lamp lit — the
+//                            lit raw bar's flat gain in decibels, a signed
+//                            number in [-24, 24] spelled with at least two
+//                            decimals (`0.00`)
+//   waveform_ghost_gain_db=<dB>
+//                            the BACKGROUND's level with the lamp lit — the
+//                            ghost's flat gain in decibels, the same grammar
+//                            (`-6.02`) — the tuning phase's fourth and fifth
+//                            keys, the grammar at is_waveform_level_db
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
 // they left 2026-09-24, and the three colour keys stand in their place since
-// 2026-09-25 with the ghost reduction after them the same day, below);
+// 2026-09-25 with the two levels after them the same day, below);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -101,18 +105,26 @@
 // templates stamp the same three defaults (kWaveformInkDefault,
 // kWaveformMagnifiedInkDefault, kWaveformGhostInkDefault, render.h). A config
 // lacking any of them is missing-key fatal, no migration.
-// A FOURTH TUNING KEY JOINED THEM THE SAME DAY (architect 2026-09-25, from
-// measurement): `waveform_ghost_reduction`, after `waveform_ghost_ink`, the
-// flat divisor the lit plate's ghost takes so the tuttis' raw bars cover it
-// (the rule at render_waveform's declaration). It arrived as
-// `waveform_magnified_gain`, a core gain multiplying the lit raw bar, and
-// moved to the ghost as this reduction the same day after the architect's
-// eye read the enlarged raw bar as overblown; a config still carrying
-// `waveform_magnified_gain` is unknown-key fatal, no migration (this file's
-// standing rule). Same terms — no in-app road, read once into the
-// WaveformPalette, both templates stamping 1.68
-// (kWaveformGhostReductionDefault, render.h, where the measured table is
-// recorded), struck and hard-coded when the phase closes.
+// TWO LEVEL KEYS JOINED THEM THE SAME DAY (architect 2026-09-25, from
+// measurement and the eye): `waveform_magnified_gain_db` and
+// `waveform_ghost_gain_db`, in that order after `waveform_ghost_ink`, the
+// lit plate's FOREGROUND (the raw bar, beside `waveform_magnified_ink`) and
+// BACKGROUND (the ghost, beside `waveform_ghost_ink`), each a flat level in
+// decibels (the rule at render_waveform's declaration). THE FOURTH KEY TOOK
+// THREE SPELLINGS IN ONE DAY: it arrived as `waveform_magnified_gain`, a core
+// gain multiplying the lit raw bar; moved to the ghost as
+// `waveform_ghost_reduction`, a divisor, after the architect's eye read the
+// enlarged raw bar as overblown; and became this pair in decibels once the
+// architect settled on a reduction of 2.0 and wanted both bars levelled
+// independently — the foreground and background are two pictures tuned by
+// eye, the ratio between them covering the tuttis and the background's own
+// level filling the lane. A config still carrying either earlier key is
+// unknown-key fatal, no migration (this file's standing rule). Same terms —
+// no in-app road, read once into the WaveformPalette (converted there to
+// amplitude scales, db_to_scale, render.h), both templates stamping 0.00 and
+// -6.02 (kWaveformMagnifiedGainDbDefault, kWaveformGhostGainDbDefault,
+// render.h, where the measured table is recorded), struck and hard-coded
+// when the phase closes.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -126,7 +138,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the ten keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eleven keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -140,7 +152,7 @@
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
 // max_waveform_height, projects_repo, projects_path, last_project, sync_path,
 // waveform_ink, waveform_magnified_ink, waveform_ghost_ink,
-// waveform_ghost_reduction) and it is what
+// waveform_magnified_gain_db, waveform_ghost_gain_db) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -166,13 +178,13 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
-// writes — it is the program's own — and the four waveform tuning keys (the
-// three colours and the ghost reduction) have none either, being the tuning phase's
-// hand-edited surface (with the app quit, the R-6 rule above).
+// writes — it is the program's own — and the five waveform tuning keys (the
+// three colours and the two levels) have none either, being the tuning
+// phase's hand-edited surface (with the app quit, the R-6 rule above).
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// ten.
+// eleven.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -189,10 +201,11 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
-    GuiColor    waveform_ink             = kWaveformInkDefault;
-    GuiColor    waveform_magnified_ink   = kWaveformMagnifiedInkDefault;
-    GuiColor    waveform_ghost_ink       = kWaveformGhostInkDefault;
-    double      waveform_ghost_reduction = kWaveformGhostReductionDefault;
+    GuiColor    waveform_ink               = kWaveformInkDefault;
+    GuiColor    waveform_magnified_ink     = kWaveformMagnifiedInkDefault;
+    GuiColor    waveform_ghost_ink         = kWaveformGhostInkDefault;
+    double      waveform_magnified_gain_db = kWaveformMagnifiedGainDbDefault;
+    double      waveform_ghost_gain_db     = kWaveformGhostGainDbDefault;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -298,39 +311,45 @@ GuiColor parse_waveform_colour(std::string_view v);
 // so the round trip is byte-exact. The config writer's alone.
 std::string format_waveform_colour(GuiColor c);
 
-// THE waveform_ghost_reduction RANGE — the ONE owner (architect 2026-09-25,
-// the tuning phase's fourth key): [1, 16], the leveler's own clamp
-// [kGainMin, kGainMax] (waveform_gain.cpp). 1 is "no reduction", the ghost at
-// the leveler's full picture; the floor also forbids a reduction that would
-// be a gain — under 1 the divisor would enlarge the ghost past the leveled,
-// expanded picture it exists to show. 16 is the leveler's cap: at it the
-// ghost's scale (gain times the expander's multiplier, neither above its own
-// cap, over the reduction) is at most 1, so the raw bar covers every ghost
-// and a larger reduction would change nothing but erase what is already
-// hidden. The constants are file-local to waveform_gain.cpp, so the numbers
-// are spelled here with that as their reason. Asked by the config reader
-// alone (the key has no editor).
-inline constexpr bool is_waveform_ghost_reduction(double v) {
-    return v >= 1.0 && v <= 16.0;
+// THE WAVEFORM LEVEL RANGE — the ONE owner for BOTH level keys,
+// `waveform_magnified_gain_db` and `waveform_ghost_gain_db` (architect
+// 2026-09-25, the tuning phase's fourth and fifth keys): [-24, 24] dB, the
+// leveler's own cap kGainMax = 16 (waveform_gain.cpp) either way, 24 dB being
+// 20 log10 16 (24.08) to the whole decibel. At +24 on the foreground the raw
+// bar stands level with the tallest ghost the leveler can draw (the gain at
+// its cap, the expander's multiplier at its own, 1); at -24 on the background
+// the ghost's scale is at most that cap over 16, about 1, so the raw bar
+// covers it; past either end the lit plate shows nothing new, so the one
+// symmetric bracket serves both bars. The constant is file-local to waveform_gain.cpp,
+// so the numbers are spelled here with that as their reason. Asked by the
+// config reader alone (the keys have no editor).
+inline constexpr bool is_waveform_level_db(double v) {
+    return v >= -24.0 && v <= 24.0;
 }
 
-// The ghost reduction's reason, spelled once for the config reader's
-// `bad_value` line (its one reader).
-inline constexpr const char* kWaveformGhostReductionGrammarReason =
-    "must be a number in [1.00, 16.00] in canonical spelling";
+// The level keys' reason, spelled once for the config reader's `bad_value`
+// line (its one reader, both keys).
+inline constexpr const char* kWaveformLevelDbGrammarReason =
+    "must be a signed number of decibels in [-24.00, 24.00] in canonical "
+    "spelling";
 
-// THE ONE SERIALIZER for the ghost reduction: the settings' own
-// bracketed-double road, format_value_double at min 2 decimals
-// (value_format.h) — `1.68`, `1.00`, `16.00`. The config writer's alone.
-std::string format_waveform_ghost_reduction(double v);
+// THE ONE SERIALIZER for both level keys: the MAGNITUDE through the settings'
+// own bracketed-double road, format_value_double at min 2 decimals
+// (value_format.h), with a leading '-' re-attached when the value is below
+// zero — `0.00`, `-6.02`, `24.00`, `-6.021`. Zero of either sign spells
+// `0.00`, never `-0.00`. The config writer's alone.
+std::string format_waveform_level_db(double v);
 
-// THE ONE PARSER: parse_value_double's strictness (no sign, no exponent, no
-// inf/nan, the whole field), then ONE CANONICAL SPELLING — the text must be
-// exactly what format_waveform_ghost_reduction writes for the value it names,
-// so `1.6800`, `1.7` and `01.68` refuse, as the sidecar's `scale` does at min
-// 4 — then the range owner above. Returns true and sets `out` on success,
-// leaving it untouched on failure.
-bool parse_waveform_ghost_reduction(std::string_view s, double& out);
+// THE ONE PARSER for both level keys. The value road (parse_value_double,
+// value_format.h) refuses any sign — no authored value is negative — and it
+// is frozen, so THE SIGN IS HANDLED HERE: one leading '-' is stripped and the
+// rest parsed as a magnitude with that road's strictness (no second sign, no
+// '+', no exponent, no inf/nan, the whole field); then ONE CANONICAL SPELLING
+// — the text must be exactly what format_waveform_level_db writes for the
+// value it names, so `-6.0`, `6`, `-6.020` and `-0.00` refuse (zero is
+// `0.00`) — then the range owner above. Returns true and sets `out` on
+// success, leaving it untouched on failure.
+bool parse_waveform_level_db(std::string_view s, double& out);
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -575,7 +594,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
 // sync_path, a blank last_project, the three waveform colour defaults and
-// the ghost reduction's 1.68), so a first run on either device lands a file that is
+// the two levels' 0.00 and -6.02), so a first run on either device lands a
+// file that is
 // already right for it and the user edits
 // from there rather than from a wrong guess. A missing parent directory is
 // created.

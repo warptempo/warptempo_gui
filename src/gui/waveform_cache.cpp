@@ -109,15 +109,16 @@ void render_waveform_to_cache_surface(
     // render.h). The lamp dark, the raw bar alone in `ink` and the ghost's
     // colour unread; lit, each column paints its ghost bar first in
     // `ghost_ink` and its raw bar over it in `magnified_ink`, both flat, the
-    // ghost divided by the palette's GHOST REDUCTION `ghost_reduction` (the
-    // device config's `waveform_ghost_reduction`, default 1.68, architect
-    // 2026-09-25; the order and the reduction's rule are at render_waveform's
-    // declaration) and the raw bar at its true height. Both channels take the
-    // same pair and the same reduction. THE PALETTE IS READ HERE, ON THE
-    // WORKER, WITH NO JOB FIELD: it is
+    // raw bar at the palette's FOREGROUND scale `magnified_scale` and the
+    // ghost at its BACKGROUND scale `ghost_scale` (the device config's
+    // `waveform_magnified_gain_db` and `waveform_ghost_gain_db`, defaults
+    // 0.00 and -6.02 dB, converted once at startup, architect 2026-09-25; the
+    // order and the two levels' rule are at render_waveform's declaration).
+    // Both channels take the same pair of inks and the same pair of scales.
+    // THE PALETTE IS READ HERE, ON THE WORKER, WITH NO JOB FIELD: it is
     // installed once at startup before the first plate job and never mutated
     // (the contract at waveform_palette, render.h), so nothing can tear it and
-    // the plate fingerprint needs no colour or reduction term.
+    // the plate fingerprint needs no colour or level term.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
     // state. The curve it names is the audio object's own, immutable once
@@ -129,10 +130,12 @@ void render_waveform_to_cache_surface(
     const WaveformPalette& p = waveform_palette();
     const GuiColor ink = magnified ? p.magnified_ink : p.ink;
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, ink, p.ghost_ink, gain, p.ghost_reduction,
+                    basis, ink, p.ghost_ink, gain,
+                    p.magnified_scale, p.ghost_scale,
                     warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, ink, p.ghost_ink, gain, p.ghost_reduction,
+                    basis, ink, p.ghost_ink, gain,
+                    p.magnified_scale, p.ghost_scale,
                     warp_frame_map_or_null);
 }
 

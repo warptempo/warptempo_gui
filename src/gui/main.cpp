@@ -3417,18 +3417,22 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE WAVEFORM PALETTE, the tuning phase's three inks and the lit ghost's
-    // reduction (architect 2026-09-25; the device config's `waveform_ink`,
-    // `waveform_magnified_ink`, `waveform_ghost_ink` and
-    // `waveform_ghost_reduction`): installed ONCE here, before the first project
-    // loads and so before the first plate job, and never again — the keys
-    // have no in-app writer, a retune is a config edit and a relaunch. That
-    // is what lets the waveform worker read it with no job field (the
-    // contract at waveform_palette, render.h).
-    set_waveform_palette(WaveformPalette{device_config.waveform_ink,
-                                         device_config.waveform_magnified_ink,
-                                         device_config.waveform_ghost_ink,
-                                         device_config.waveform_ghost_reduction});
+    // THE WAVEFORM PALETTE, the tuning phase's three inks and the lit plate's
+    // two levels (architect 2026-09-25; the device config's `waveform_ink`,
+    // `waveform_magnified_ink`, `waveform_ghost_ink`,
+    // `waveform_magnified_gain_db` and `waveform_ghost_gain_db`): installed
+    // ONCE here, before the first project loads and so before the first plate
+    // job, and never again — the keys have no in-app writer, a retune is a
+    // config edit and a relaunch. That is what lets the waveform worker read
+    // it with no job field (the contract at waveform_palette, render.h). The
+    // two levels are converted from decibels to amplitude scales HERE, once
+    // (db_to_scale), so the painter does no pow per column.
+    set_waveform_palette(WaveformPalette{
+        device_config.waveform_ink,
+        device_config.waveform_magnified_ink,
+        device_config.waveform_ghost_ink,
+        db_to_scale(device_config.waveform_magnified_gain_db),
+        db_to_scale(device_config.waveform_ghost_gain_db)});
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

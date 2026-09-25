@@ -1092,47 +1092,62 @@ inline constexpr GuiColor kWaveformMagnifiedInkDefault = hex(0x1C816B);  // (28,
 // and did not rule it in as the ground).
 inline constexpr GuiColor kWaveformGhostInkDefault = hex(0x17594B);  // (23, 89, 75)
 
-// THE LIT PLATE'S GHOST REDUCTION (architect 2026-09-25) — the tuning phase's
-// fourth value, the device config's `waveform_ghost_reduction`, and like the
-// three inks hard-coded again when the phase closes. With the magnification
-// lamp lit the GHOST's scale is DIVIDED by this one flat number before its
-// clamp, while the raw bar stays at its true height in both lamp states:
-// where the leveler's gain is at or under the reduction the ghost is hidden
-// entirely behind the raw bar, and beyond it the ghost stands out by the
-// ratio gain / reduction (the rule is at render_waveform's declaration). The
-// dark plate never reads it.
+// THE LIT PLATE'S TWO LEVELS (architect 2026-09-25) — the tuning phase's
+// fourth and fifth values, the device config's `waveform_magnified_gain_db`
+// (the FOREGROUND, the lit raw bar, paired with the magnified ink) and
+// `waveform_ghost_gain_db` (the BACKGROUND, the ghost, paired with the ghost
+// ink), and like the three inks hard-coded again when the phase closes. Each
+// is a flat level in DECIBELS, converted ONCE at startup to an amplitude
+// scale 10^(dB / 20) (db_to_scale, below; the WaveformPalette carries the
+// scales, so the painter does no pow per column): with the magnification
+// lamp lit the raw tips take the foreground's scale and the ghost's take the
+// leveler x expander x the background's, each before its one clamp (the rule
+// is at render_waveform's declaration). The dark plate never reads either.
+// WHY TWO INDEPENDENT LEVELS: the foreground and the background are two
+// pictures and the architect tunes each by eye — THE SEPARATION between them
+// (foreground dB minus background dB) is what covers the tuttis, the ghost
+// hidden wherever the leveler's gain is at or under it; the background's own
+// level is what fills the lane.
 //
-// THE DEFAULT 1.68 (4.5 dB, 2^0.75) WAS MEASURED AS A CORE GAIN ON THE RAW BAR
-// AND MOVED TO THE GHOST THE SAME DAY. The fringe geometry is the RATIO
-// between the ghost and the raw bar, so the number carries over as a divisor
-// with its hidden and fringe columns unchanged. The measurement: the
-// product's leveler re-derived in numpy on the three K550 movements
-// (tmp/gain_hist.py, 2026-09-25), counting the ghost standing 1-1.5x beside
-// the raw bar as the FRINGE zone —
-//     reduction       ghost hidden (I/II/III)  fringe left
-//     /1.41 (3 dB)    33 / 9 / 12 %            17 / 10 / 39 %
-//     /1.58 (4 dB)    44 / 13 / 41 %           8.4 / 7.8 / 11 %
-//     /1.68 (4.5 dB)  46 / 14 / 47 %           6.7 / 7.5 / 6.9 %
-//     /1.78 (5 dB)    48 / 15 / 48 %           5.5 / 7.1 / 6.0 %
-//     /2.00 (6 dB)    50 / 18 / 50 %           4.7 / 6.4 / 5.3 %
-// (at 1 nothing is hidden and the fringe is 40 / 12 / 29 %). The Menuetto's
-// tuttis sit at 3-4 dB, which rules out 3 dB; from 4.5 dB the loud mode is
-// covered in all three and the 5-7 % left are the fades. Some fringing is
-// accepted — the goal is to cover most of it, not all. THE RAW BAR NEVER
-// CLIPS NOW (it is the raw picture, peaks already in range), so the clipping
-// criterion the number was first chosen by no longer binds; the reduction
-// only lowers the ghost's own clipping (0.12 / 0.42 / 0.14 % of columns at
-// 1, 0.00 % at 2). THE COST IS THE GHOST'S FILL: the typical
-// leveled column peak, p50 / p90, sits at -8.8 / -4.6 dB under the lane edge
-// unreduced and at -13.3 / -9.1 dB at 1.68 — seen by the architect and
-// accepted.
+// THE SEPARATION WAS MEASURED BEFORE IT WAS SPELLED IN DECIBELS. The product's
+// leveler re-derived in numpy on the three K550 movements (tmp/gain_hist.py,
+// 2026-09-25), counting the ghost standing 0-3.5 dB (1-1.5x) beside the raw
+// bar as the FRINGE zone —
+//     separation   ghost hidden (I/II/III)  fringe left
+//     3.0 dB       33 / 9 / 12 %            17 / 10 / 39 %
+//     4.0 dB       44 / 13 / 41 %           8.4 / 7.8 / 11 %
+//     4.5 dB       46 / 14 / 47 %           6.7 / 7.5 / 6.9 %
+//     5.0 dB       48 / 15 / 48 %           5.5 / 7.1 / 6.0 %
+//     6.0 dB       50 / 18 / 50 %           4.7 / 6.4 / 5.3 %
+// (at 0 dB nothing is hidden and the fringe is 40 / 12 / 29 %). The
+// Menuetto's tuttis sit at 3-4 dB, which rules out 3 dB; from 4.5 dB the loud
+// mode is covered in all three and what is left are the fades. Some fringing
+// is accepted — the goal is to cover most of it, not all. The number first
+// ran as a core gain on the raw bar (x1.68, 4.5 dB), whose clipping was the
+// criterion then; the raw bar at 0 dB never clips (its peaks already rest in
+// range), so that column is struck and a lowered background only lowers the
+// ghost's own clipping (0.12 / 0.42 / 0.14 % of columns at 0 dB, 0.00 % at
+// -6). THE ARCHITECT SETTLED ON 6.02 dB (a reduction of 2.0, on the laptop,
+// 2026-09-25), spelled as the foreground at 0.00 and the background at -6.02
+// (20 log10 2 = 6.0206, to two decimals). THE COST IS THE GHOST'S FILL: the
+// typical leveled column peak, p50 / p90, sits at -8.8 / -4.6 dB under the
+// lane edge at a 0 dB background and at -14.8 / -10.6 dB at -6.02 — the
+// background's level is the knob that buys it back.
 //
-// WHY THE GHOST AND NOT THE RAW BAR (architect 2026-09-25, on the laptop
-// after eyeballing the core gain): "Looks good around 1.68, but it should
-// apply -1.68 to the background — the foreground is overblown when the gain
-// is applied there; the background has plenty of volume to work with." The
-// raw bar enlarged read as overblown; the ghost has the volume to give.
-inline constexpr double kWaveformGhostReductionDefault = 1.68;
+// WITH THE TUTTIS COVERED THE RESIDUAL FRINGE LIVES IN THE CRESCENDOS INTO
+// THEM — the zone where the leveler's gain passes down through the
+// separation. That is a property of the piece and not of the number: the
+// 40th's approaches are short, and Jupiter's long quiet approaches fringe
+// less. No further number is owed to it.
+//
+// THE KEY'S EARLIER SPELLINGS, the same day: a core gain on the raw bar
+// (`waveform_magnified_gain`, x1.68) that read as overblown; then a divisor
+// on the ghost (`waveform_ghost_reduction`, /1.68 by default) — "the
+// background has plenty of volume to work with" — which the architect's
+// tuning took to /2.0; and then this pair, so both bars are levelled
+// independently and in decibels.
+inline constexpr double kWaveformMagnifiedGainDbDefault = 0.0;
+inline constexpr double kWaveformGhostGainDbDefault     = -6.02;
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -2087,25 +2102,34 @@ inline int marker_lane_h_px() {
 void set_max_waveform_height_px(int authored_px);
 int  waveform_max_h_px();
 
-// THE WAVEFORM PALETTE — the plate's three inks and the lit ghost's
-// reduction for the tuning phase (architect 2026-09-25; the four defaults and
+// A LEVEL IN DECIBELS AS AN AMPLITUDE SCALE, 10^(dB / 20): 0 dB is exactly
+// 1.0 (std::pow(10, 0)), so a 0 dB level multiplies nothing. The palette's
+// one conversion, asked where the palette is built (gui_main's install and
+// the members' defaults below), never per column.
+inline double db_to_scale(double db) { return std::pow(10.0, db / 20.0); }
+
+// THE WAVEFORM PALETTE — the plate's three inks and the lit plate's two
+// levels for the tuning phase (architect 2026-09-25; the five defaults and
 // the phase's terms are at row 6's palette block): `ink` paints the plate with
 // the magnification lamp dark, `magnified_ink` the raw bar with the lamp lit,
-// `ghost_ink` the magnified ghost behind that raw bar, and `ghost_reduction`
-// is the flat divisor that ghost takes. The member defaults are the
-// four constants, so a process that never installs one paints the defaults.
+// `ghost_ink` the magnified ghost behind that raw bar; `magnified_scale` is
+// the flat amplitude scale that lit raw bar takes and `ghost_scale` the one
+// the ghost takes on top of the leveler and the expander — the device
+// config's two dB levels, converted once (db_to_scale). The member defaults
+// are the five constants (the levels converted), so a process that never
+// installs one paints the defaults.
 // When the phase closes this struct is struck and the chosen values are
 // constexpr again — the palette rule is the destination.
 //
 // INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's three
-// colours and the ghost reduction through set_waveform_palette at startup, beside
+// colours and two levels through set_waveform_palette at startup, beside
 // set_gui_scale_percent and before the first project loads — so before the
 // first plate job — and nothing calls it again (the keys have no in-app
 // writer; a retune is a config edit and a relaunch). THAT IS WHY THE WAVEFORM
 // WORKER READS IT DIRECTLY, with no job field, and why the plate fingerprint
 // carries no colour term: a value that cannot change under a running job
-// needs no snapshot and no key — the ghost reduction likewise, no job field
-// and no fingerprint term. (g_gui_scale_percent is the contrast: the
+// needs no snapshot and no key — the two scales likewise, no job field and
+// no fingerprint term. (g_gui_scale_percent is the contrast: the
 // settings editor mutates it live, so the job snapshots the geometry it
 // derives — waveform_worker.h's note.) waveform_palette() is the one reader,
 // render_waveform_to_cache_surface (waveform_cache.cpp).
@@ -2113,7 +2137,8 @@ struct WaveformPalette {
     GuiColor ink             = kWaveformInkDefault;
     GuiColor magnified_ink   = kWaveformMagnifiedInkDefault;
     GuiColor ghost_ink       = kWaveformGhostInkDefault;
-    double   ghost_reduction = kWaveformGhostReductionDefault;
+    double   magnified_scale = db_to_scale(kWaveformMagnifiedGainDbDefault);
+    double   ghost_scale     = db_to_scale(kWaveformGhostGainDbDefault);
 };
 void set_waveform_palette(const WaveformPalette& palette);
 const WaveformPalette& waveform_palette();
@@ -2934,13 +2959,13 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // RAW PICTURE (architect 2026-09-24): the lit lamp no longer replaces the raw
 // picture, it paints the magnified one behind it. Every column takes ONE peak
 // read and draws TWO bars from it: first the GHOST — the raw min/max times
-// the column's scale (the gain below times the expander's multiplier,
-// divided by `ghost_reduction`, below), CLAMPED to [-1, 1] before they become
-// rows — in `ghost_color`, then the RAW bar (scale 1) in `color` written over
-// it. The writer replace-writes opaque words, so where the two overlap the
-// raw bar wins. NULL (the dark lamp) draws the raw bar alone, byte for byte
-// the plate it always drew, and `ghost_color` and `ghost_reduction` are then
-// unread. Nothing else in this painter moves (the
+// the column's scale (the gain below times the expander's multiplier times
+// `bg_scale`, below), CLAMPED to [-1, 1] before they become rows — in
+// `ghost_color`, then the RAW bar (scale `fg_scale`, below) in `color`
+// written over it. The writer replace-writes opaque words, so where the two
+// overlap the raw bar wins. NULL (the dark lamp) draws the raw bar alone at
+// scale 1, byte for byte the plate it always drew, and `ghost_color`,
+// `fg_scale` and `bg_scale` are then unread. Nothing else in this painter moves (the
 // column grid, the >=1px floor — both bars keep it — the carried-endpoint
 // chain and the aliased-only writer are untouched). A loud passage's ghost
 // clips flat at the lane's edges while the raw bar still shows its true
@@ -2967,21 +2992,23 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // `waveform_magnified_ink` and `waveform_ghost_ink`), the architect preferring
 // to tune two flat colours by eye to reading a shade.
 //
-// THE LIT GHOST TAKES A REDUCTION (architect 2026-09-25): with the lamp lit
-// the ghost's tips are raw x gain x multiplier / `ghost_reduction`, the
-// division before the one clamp, and the raw bar keeps scale 1 — its true
-// height in both lamp states, so the lit picture is the raw one over a
-// reduced ghost. The fringe it answers is the ghost standing 1-1.5x beside
-// the raw bar. It is the ghost that gives way and not the raw bar that
-// grows: the same number first ran as a flat core gain on the raw tips (the
-// same day), and the architect's eye read that raw bar as overblown, while
-// the ghost has the volume to work with. One FLAT divisor, so the ghost keeps
-// its shape. Where the leveler's gain at the column is at or under the
-// reduction the ghost is covered entirely (a tutti shows the raw picture
+// THE LIT PLATE'S TWO BARS TAKE TWO LEVELS (architect 2026-09-25): with the
+// lamp lit the raw tips are raw x `fg_scale` (the FOREGROUND) and the ghost's
+// raw x gain x multiplier x `bg_scale` (the BACKGROUND), each before its one
+// clamp — the palette's two scales, the device config's two dB levels
+// converted once at startup. At the defaults (0.00 and -6.02 dB) the raw bar
+// is the raw picture at its true height, byte for byte the lit raw bar that
+// took no scale, over a ghost at half the leveler's picture. The fringe the
+// pair answers is the ghost standing 1-1.5x beside the raw bar: where the
+// leveler's gain at the column is at or under the SEPARATION (fg_scale over
+// bg_scale) the ghost is covered entirely (a tutti shows the raw picture
 // alone, in the magnified ink); beyond it the ghost stands out by the ratio
-// g / reduction. The default, 1.68, and its measured table are at
-// kWaveformGhostReductionDefault (render.h's row-6 block); the value is the
-// palette's `ghost_reduction`, tunable for the phase.
+// g x bg_scale / fg_scale. Two FLAT scales, so each bar keeps its shape. The
+// defaults, their measured table and the key's earlier spellings (a core
+// gain on the raw bar, then a divisor on the ghost, the same day) are at
+// kWaveformMagnifiedGainDbDefault / kWaveformGhostGainDbDefault (render.h's
+// row-6 block); the values are the palette's `magnified_scale` and
+// `ghost_scale`, tunable for the phase.
 //
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
 // column's [s0, s1), the pyramid level and the one read. THE GHOST IS A
@@ -2990,9 +3017,9 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // material at working zoom) has its ghost pushed outward, with a gap between
 // it and the raw bar. Intended — that is what a true magnification looks
 // like. THE EXPANDER IS UNCAPPED, so where a column's ghost scale (gain times
-// multiplier over the reduction) falls under 1 — the leveler's gain at or
-// under the reduction, or an expander dip — the ghost sits inside the raw bar
-// and the raw paints over it: in the overlay the expander's dips never go
+// multiplier times bg_scale) falls under fg_scale — the leveler's gain at or
+// under the separation, or an expander dip — the ghost sits inside the raw
+// bar and the raw paints over it: in the overlay the expander's dips never go
 // below the raw picture. Accepted; that is the hairline region. THE COST is
 // one extra row fill per column — the read, the
 // map walk and the gain lookup are shared; no second pyramid, no second
@@ -3064,7 +3091,8 @@ void render_waveform(cairo_surface_t* dest,
                      GuiColor color,
                      GuiColor ghost_color,
                      const WaveformGainCurve* gain_or_null,
-                     double ghost_reduction,
+                     double fg_scale,
+                     double bg_scale,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`

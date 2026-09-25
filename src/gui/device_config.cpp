@@ -19,11 +19,13 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (TEN keys since the fourth
-// tuning key joined 2026-09-25 after the colour keys — arriving as the raw
-// bar's core gain `waveform_magnified_gain` and moving the same day to the
-// ghost as `waveform_ghost_reduction`; nine from the three waveform colour keys' arrival earlier that day for a
-// tuning phase, after sync_path where the picture keys had stood; six from
+// set the shared scanner enforces after the loop (ELEVEN keys since the
+// fourth tuning key became the two level keys 2026-09-25 — the foreground's
+// `waveform_magnified_gain_db` and the background's `waveform_ghost_gain_db`,
+// in decibels; ten from that key's arrival earlier the same day after the
+// colour keys, as the raw bar's core gain `waveform_magnified_gain` and then
+// the ghost's `waveform_ghost_reduction`; nine from the three waveform colour
+// keys' arrival earlier that day for a tuning phase, after sync_path where the picture keys had stood; six from
 // when the eleven
 // waveform picture keys — the `waveform_gain_*` tunables appended 2026-09-23,
 // the `waveform_expander_*` ones 2026-09-24, as many as seventeen in all —
@@ -37,7 +39,8 @@ namespace {
 // last_project, sync_path — the sixth placed right after gui_scale
 // (architect 2026-09-13), and the three colour keys after sync_path in the
 // painter's own order: the dark plate's ink, the lit raw bar's, the ghost's,
-// with the lit ghost's reduction after them (architect 2026-09-25). The
+// with the lit plate's two levels after them, the foreground's then the
+// background's (architect 2026-09-25). The
 // scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
@@ -55,7 +58,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform_ink",
     "waveform_magnified_ink",
     "waveform_ghost_ink",
-    "waveform_ghost_reduction",
+    "waveform_magnified_gain_db",
+    "waveform_ghost_gain_db",
 };
 
 } // namespace
@@ -96,18 +100,27 @@ std::string format_waveform_colour(GuiColor c) {
     return std::string(buf);
 }
 
-std::string format_waveform_ghost_reduction(double v) {
-    return format_value_double(v, 2);
+std::string format_waveform_level_db(double v) {
+    // The magnitude through the value road (which spells no sign), the sign
+    // re-attached below zero. std::fabs, not a negation, so a negative zero
+    // spells `0.00` as the reader demands.
+    const std::string mag = format_value_double(std::fabs(v), 2);
+    return v < 0.0 ? "-" + mag : mag;
 }
 
-bool parse_waveform_ghost_reduction(std::string_view s, double& out) {
+bool parse_waveform_level_db(std::string_view s, double& out) {
     // The sidecar `scale` key's shape (validate_engine_setting,
-    // engine_settings_io.cpp) at this key's min 2: the strict parse, the
-    // round trip back to the bytes read, then the range owner.
-    double v = 0.0;
-    if (!parse_value_double(s, v)) return false;
-    if (format_waveform_ghost_reduction(v) != s) return false;
-    if (!is_waveform_ghost_reduction(v)) return false;
+    // engine_settings_io.cpp) at min 2, with the sign handled here because
+    // parse_value_double refuses one: strip ONE leading '-', the strict
+    // magnitude parse (a second sign refuses there), the round trip back to
+    // the bytes read — which refuses `-0.00` (the writer spells zero `0.00`)
+    // and every non-canonical spelling — then the range owner.
+    const bool negative = !s.empty() && s.front() == '-';
+    double mag = 0.0;
+    if (!parse_value_double(negative ? s.substr(1) : s, mag)) return false;
+    const double v = negative ? -mag : mag;
+    if (format_waveform_level_db(v) != s) return false;
+    if (!is_waveform_level_db(v)) return false;
     out = v;
     return true;
 }
@@ -164,10 +177,12 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_waveform_colour(cfg.waveform_magnified_ink);
         } else if (k == "waveform_ghost_ink") {
             s += format_waveform_colour(cfg.waveform_ghost_ink);
-        } else if (k == "waveform_ghost_reduction") {
-            // The ghost reduction through its one serializer, the canonical
-            // min-2-decimal spelling the reader demands back.
-            s += format_waveform_ghost_reduction(cfg.waveform_ghost_reduction);
+        } else if (k == "waveform_magnified_gain_db") {
+            // The two levels through their one serializer, the canonical
+            // signed min-2-decimal spelling the reader demands back.
+            s += format_waveform_level_db(cfg.waveform_magnified_gain_db);
+        } else if (k == "waveform_ghost_gain_db") {
+            s += format_waveform_level_db(cfg.waveform_ghost_gain_db);
         }
         s += '\n';
     }
@@ -277,16 +292,19 @@ std::expected<DeviceConfig, std::string> read_device_config(
             else                                      out.waveform_ghost_ink = c;
             return {};
         }
-        if (key == "waveform_ghost_reduction") {
-            // One canonical spelling and the range, both through the one
-            // parser in the header (the settings' bracketed-double road, then
-            // is_waveform_ghost_reduction).
+        if (key == "waveform_magnified_gain_db" ||
+            key == "waveform_ghost_gain_db") {
+            // One canonical signed spelling and the range, both through the
+            // one parser in the header (the sign stripped, the settings'
+            // bracketed-double road on the magnitude, then
+            // is_waveform_level_db). The two are one shape and differ only in
+            // the member.
             double v = 0.0;
-            if (!parse_waveform_ghost_reduction(value, v)) {
-                return bad_value(ln, key, value,
-                                 kWaveformGhostReductionGrammarReason);
+            if (!parse_waveform_level_db(value, v)) {
+                return bad_value(ln, key, value, kWaveformLevelDbGrammarReason);
             }
-            out.waveform_ghost_reduction = v;
+            if (key == "waveform_magnified_gain_db") out.waveform_magnified_gain_db = v;
+            else                                     out.waveform_ghost_gain_db = v;
             return {};
         }
         return warptempo_parse::prefix_line_error(

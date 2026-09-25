@@ -4782,9 +4782,9 @@ struct AppState {
     // painted BEHIND the raw one as a flat ghost, in both audio views
     // (architect 2026-09-24; flat again 2026-09-25, the inks the
     // WaveformPalette's — the rule is at render_waveform's declaration),
-    // the ghost divided by the palette's flat reduction and the raw bar over
-    // it at its true height (architect 2026-09-25); DARK, the raw picture
-    // alone. THE BIT IS THE ANSWER, read
+    // the ghost and the raw bar over it each at the palette's own flat level
+    // (architect 2026-09-25, the background's and the foreground's); DARK,
+    // the raw picture alone. THE BIT IS THE ANSWER, read
     // by waveform_magnified (warp_frame_map_view.h) and by the lamp's face,
     // and by nothing else — it reaches no authoring, no red cue, no render
     // and no sidecar. Its one writer is
