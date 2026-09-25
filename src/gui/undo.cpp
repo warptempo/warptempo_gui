@@ -1142,10 +1142,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 }
                 // The restored singleton needs no cue work here: its flag
                 // BRIGHTENS from the restored membership and the top-strip /
-                // full-waveform invalidates below repaint it. Stems do not
-                // enter it at all — they are class-colored and always on,
-                // selection playing no part — so there is nothing to stamp
-                // or pin.
+                // full-waveform invalidates below repaint it. Its stem, which
+                // wears the flag's bright fill while selected, needs none
+                // either: the flag cache's selection fingerprint misses, its
+                // rebuild damages the strip with the waveform (selection.cpp's
+                // record), and the invalidates below cover the same rows.
             }
         } else if (sel_size >= 2) {
             // GROUP: LAND the playhead on the restore's FOCUS (architect

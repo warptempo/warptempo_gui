@@ -3359,7 +3359,11 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // pointer IS, so a held button keeps its hint running exactly as a hovered
     // one does, and losing the arm by sliding off is the same motion that
     // re-keys the dwell onto whatever is under the pointer now.
-    arm_tooltip_dwell({AppState::RedesignTooltip::Surface::Dialog, hit});
+    // THE OWNER IS STAMPED WITH THE STASH THE HIT WAS READ FROM (its owner
+    // tag and session), so the dwell belongs to this painted surface alone
+    // and dies with it (the rule is at AppState::RedesignTooltip).
+    arm_tooltip_dwell({AppState::RedesignTooltip::Surface::Dialog, hit,
+                       app.modal_dialog.owner, app.modal_dialog.session});
 }
 
 // THE ARM'S HARD END — the pointer-leave / capability-loss hook (main.cpp),
@@ -7385,7 +7389,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // buttons took tooltips): this walk answers for the ROSTER's index space
     // only, IN EVERY STATE, so with no roster button to stamp it hides a
     // standing ROSTER owner, hides a DIALOG owner whose surface is gone, and
-    // leaves a DIALOG owner whose surface stands — the modal's own walk
+    // leaves a DIALOG owner whose surface stands and still wears the stash
+    // that armed it — the modal's own walk
     // (update_modal_dialog_hover) owns that surface's dwell, arming it and
     // hiding it when the pointer leaves every dialog button. The roster hide
     // is a backstop for a dwell caught by a dialog's open rather than the
@@ -7394,13 +7399,29 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // that walk, re-derived by grep 2026-09-25: the prompt and the editor
     // dialogs (the veil's two terms) and the folder overlay's three owners
     // (the player, the picker, the stats panel — folder_overlay_stands). The
-    // test reads the LIVE surfaces, never the painted stash, so the frame a
-    // dialog closes on is the frame this walk takes its dwell back, whatever
-    // road closed it — the two that carry no input event of their own to hide
-    // with (a modal button dispatched by a KEY RELEASE after the pointer
-    // re-armed the dwell mid-hold, and the history prefetch's failure
-    // cancelling the load-in-place prompt from a worker) included; a
-    // stash-based test would leave the last hint floating for one more paint.
+    // liveness test reads the LIVE surfaces, never the painted stash, so the
+    // frame a dialog closes on is the frame this walk takes its dwell back,
+    // whatever road closed it — the two that carry no input event of their
+    // own to hide with (a modal button dispatched by a KEY RELEASE after the
+    // pointer re-armed the dwell mid-hold, and the history prefetch's failure
+    // cancelling the load-in-place prompt from a worker) included.
+    // AND THE OWNER MUST STILL NAME THE STASH THAT ARMED IT: a Dialog owner
+    // whose stamp (AppState::RedesignTooltip) differs from the live stash's
+    // owner and session is hidden too. Liveness alone cannot see a surface
+    // REPLACED under the pointer, and exactly one such road exists: the
+    // load-in-place prompt standing over the render player, closed by a key
+    // release after the pointer re-armed the dwell on one of its buttons —
+    // the player stays live, so without the stamp the dwell would ripen into
+    // the PLAYER's button at the same index, a hint beside a pointer not on
+    // it. The picker cannot host a prompt (open_project_commit runs
+    // close_picker before request_close, and request_close takes the player,
+    // the picker and the stats panel down before it asks anything) and the
+    // stats panel raises none of its own (Ctrl+Q's fall-through and
+    // File → Quit reach that same request_close). THE STASH LAGS THE CLOSE BY
+    // ONE PAINT: the frame that repaints the player's row republishes the
+    // stash, paint_shift_tooltip refuses the mismatch on that same frame, and
+    // this walk's hide lands on the tick after it — ahead of the dwell's
+    // kTooltipDelayMs, so no hint of the wrong surface is ever painted.
     // Under the veil `hovered_tip` is -1 by construction (the veil and the
     // no-dwell rule above), so the veil needs no branch of its own: it was
     // this same rule written twice until 2026-09-25. Under the FOLDER
@@ -7411,11 +7432,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // dwell on the motion that armed it and on every tick. The default
     // Owner{} is {Roster, -1}, so hiding it is the helper's existing no-op.
     if (hovered_tip < 0) {
+        const AppState::RedesignTooltip::Owner& o = app.redesign_tooltip.owner;
         const bool dialog_surface_live =
             modal_veil || folder_overlay_stands(app);
-        if (app.redesign_tooltip.owner.surface ==
-                AppState::RedesignTooltip::Surface::Roster ||
-            !dialog_surface_live) {
+        const bool stash_is_owners =
+            o.dialog_owner == app.modal_dialog.owner &&
+            o.dialog_session == app.modal_dialog.session;
+        if (o.surface == AppState::RedesignTooltip::Surface::Roster ||
+            !dialog_surface_live || !stash_is_owners) {
             hide_shift_tooltip();
         }
         return;

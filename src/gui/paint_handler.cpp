@@ -4051,6 +4051,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
             owner.index >= static_cast<int>(dlg.buttons.size())) {
             return;
         }
+        // ONLY THE STASH THAT ARMED THE DWELL: an owner stamped by another
+        // surface (the load-in-place prompt, closed back onto the render
+        // player's row under the pointer) would read a different button at the
+        // same index. This frame's stash is already published above, so the
+        // refusal lands on the very frame the replacement is drawn; the roster
+        // walk's tail hides the owner on the next tick (the rule is at
+        // AppState::RedesignTooltip).
+        if (owner.dialog_owner != dlg.owner ||
+            owner.dialog_session != dlg.session) {
+            return;
+        }
         const AppState::ModalDialogButton& b =
             dlg.buttons[static_cast<size_t>(owner.index)];
         if (b.tooltip.empty()) return;

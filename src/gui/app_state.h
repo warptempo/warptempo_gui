@@ -6620,11 +6620,23 @@ struct AppState {
     // is not a hover walk: it stamps the dwell from the press's own clock so
     // the hint arrives as the shift hold's beat is crossed, and it asks the
     // roster walk's own refusals before it does.
+    //
+    // A DIALOG OWNER CARRIES THE STASH THAT ARMED IT: `dialog_owner` and
+    // `dialog_session` are the modal stash's owner tag and session
+    // (ModalDialogGeometry) at arm time, stamped by update_modal_dialog_hover;
+    // a Roster owner carries None / 0. A Dialog index names a button of ONE
+    // painted surface, so the pair is what lets the roster walk's tail and
+    // paint_shift_tooltip refuse a dwell whose surface has been replaced by
+    // another under the same pointer (a prompt closing back onto the render
+    // player's row). The defaulted == compares them too, so a stash change
+    // under a standing index is a new arrival with a fresh dwell.
     struct RedesignTooltip {
         enum class Surface { Roster, Dialog };
         struct Owner {
-            Surface surface = Surface::Roster;
-            int     index   = -1;
+            Surface          surface        = Surface::Roster;
+            int              index          = -1;
+            ModalDialogOwner dialog_owner   = ModalDialogOwner::None;
+            uint64_t         dialog_session = 0;
             bool operator==(const Owner&) const = default;
         };
         int64_t hover_ms = 0;
@@ -8710,7 +8722,8 @@ struct AppState {
 //   apply_touch_nav_update — the two-finger navigation body's refusal: the
 //     band takes no pan and no pinch under any content (input_pointer.cpp)
 //   recompute_redesign_button_hover — the roster walk's tail: a DIALOG
-//     tooltip owner survives while a dialog surface is live (input_pointer.cpp)
+//     tooltip owner survives while a dialog surface is live and the stash
+//     that armed it stands (input_pointer.cpp)
 //   wheel_context — the wheel context (input_handler.cpp)
 //   dropdown_item_enabled — every item greys but Synchronize and Quit
 //     (input_key_dispatch.cpp)
