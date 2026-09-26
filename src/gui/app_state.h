@@ -11018,8 +11018,8 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
 // THE PAINTED-EDGE TERM (architect 2026-09-26, strictly as painted): a
 // singleton whose landing would paint past the last column at this zoom
 // (source_frame_off_right_edge, warp_frame_map_view.h — the song's last
-// half-column, which no viewport paints) refuses too, so the Right button
-// greys there beside the wall. It is the one term of the set that CARDS on
+// half-column when the song fills the window, which no viewport paints)
+// refuses too, so the Right button greys there beside the wall. It is the one term of the set that CARDS on
 // the keyboard road (kMarkerNudgeOffEdgeCard, notifications.h): the wall is a
 // benign refusal already at its state, while this press would move the
 // marker somewhere it could not be seen. MarkerNudgeVerdict names which term

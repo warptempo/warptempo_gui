@@ -5119,7 +5119,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // either edge shows the head's nearer half there. The case that needs it
     // is the right edge: a frame in the song's last half-column rounds to grid
     // point wave_w, one past the last column — End's landing at the whole-song
-    // zoom always, and at the right wall at some zooms — and the head's left
+    // zoom in the ordinary case (a file short enough that the fit saturates at
+    // kMinZoom occupies less than the window and its last frame paints
+    // inside), and at the right wall at some zooms — and the head's left
     // half at the edge keeps that playhead on screen at its true point rather
     // than vanishing or being pulled inward. The marker-lane STEM stays gated
     // to [0, wave_w): a column past the last has no pixel of its own.

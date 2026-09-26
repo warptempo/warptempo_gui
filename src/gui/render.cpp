@@ -974,15 +974,22 @@ void iterate_visible_flags_impl(
     // the real width, which is not known until the label is shaped; the caller
     // supplies it (see cull_width_px above).
     //
-    // THE RIGHT BOUND IS EXCLUSIVE, like every other viewport-end compare in
-    // this tree. `ms == viewport_end_sample` maps to left_x == waveform_width —
-    // the first column of the INERT RIGHT GUTTER that a non-multiple-of-16
-    // window leaves beside the effective waveform width. At 1920 there is no
-    // gutter and the box simply fell off the surface, but at a gutter width the
-    // flag painted there AND published a clickable hit rect there, so a marker
-    // sitting exactly on the displayed end was visible and selectable outside
-    // every grid-aligned surface. "At or past the right edge shows nothing" is
-    // the stated rule; this is it spelled.
+    // THE RIGHT BOUND IS THE ROUNDED COLUMN (Sol review of 8cf604ce, finding
+    // 1): a flag whose painted column is >= waveform_width emits NOTHING — no
+    // box, no hit rect, no stem — because the half-head rule leaves nothing
+    // but the playhead's ruler head at grid point w (paint_ruler_row). The
+    // sample compare below is only a prefilter (it keeps the int cast
+    // bounded); it is not the cull, because a marker in the displayed span's
+    // last half-column (ms < viewport_end_sample) still ROUNDS to column w.
+    // At 1920 that column is off the surface, but a non-multiple-of-16 window
+    // leaves a residual ≤ 15 px gutter beside the effective waveform width
+    // (the surface is full-strip width), where such a flag used to paint AND
+    // publish a clickable hit rect and stem while source_frame_off_right_edge
+    // (warp_frame_map_view.h), which refuses authoring by the same rounded
+    // column, called it off the edge. The column is displayed_column_at's —
+    // the predicate's own rounding over the same q (the displayed span over
+    // the plate width recovers q exactly, viewport_end_sample) — so the
+    // painter and the refusal cannot disagree on one basis.
     const double cull_lo = static_cast<double>(viewport_start_sample) -
                            cull_width_px * samples_per_pixel;
     const double cull_hi = static_cast<double>(viewport_end_sample);
@@ -995,13 +1002,13 @@ void iterate_visible_flags_impl(
         const double ms =
             frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < cull_lo) continue;
-        if (ms >= cull_hi) continue;   // exclusive — see the cull note above
+        if (ms >= cull_hi) continue;   // prefilter — see the cull note above
 
-        const double x_raw =
-            (ms - static_cast<double>(viewport_start_sample)) /
-            samples_per_pixel;
+        const int col = displayed_column_at(
+            ms, static_cast<double>(viewport_start_sample), samples_per_pixel);
+        if (col >= waveform_width) continue;   // the cull — the note above
         const double left_x =
-            static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
+            static_cast<double>(top_strip_area.x) + static_cast<double>(col);
 
         emit(static_cast<int>(i), left_x);
     }

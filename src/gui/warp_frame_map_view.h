@@ -379,7 +379,9 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // nearbyint((displayed - vp_start) / spp), rounded once to the integer column.
 // One owner for the one rounding — the trim-bound column, the region span, the
 // phase-reset overlay's left edge, the strip-drag anchor stem, the undo
-// restore's visibility test and painted_column_of_source_frame_on_basis's tail
+// restore's visibility test, the flag iterator (iterate_visible_flags_impl,
+// render.cpp, whose right cull is this column >= w) and
+// painted_column_of_source_frame_on_basis's tail
 // all place through this exact expression, and used to spell it independently,
 // tied together only by "matching region_columns"-style prose. PURE ARITHMETIC,
 // NO BASIS CHOICE INSIDE: the caller supplies its own vp_start/spp (plate
@@ -389,9 +391,7 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 //
 // THE UNROUNDED SIBLINGS ARE A DIFFERENT CONCEPT AND STAY SEPARATE:
 // playhead_pixel_x / scanner_pixel_x (main.cpp) and the strip drag's fractional
-// anchor_col want the SUB-PIXEL position, not a column, and the flag painter
-// (iterate_visible_flags_impl, render.cpp) keeps its nearbyint in the double
-// pixel domain (its left_x feeds shaped-text placement, never an int).
+// anchor_col want the SUB-PIXEL position, not a column.
 //
 // THE ONE INT64 SIBLING IS ALSO EXEMPT AND COUNTED (2026-08-22):
 // playhead_pixel_step_landing (viewport.cpp) spells this same recovery expression
@@ -490,7 +490,10 @@ int painted_column_of_source_frame_on_basis(
 // paint). Frame->column is nearest-grid-point, so a frame in the domain's
 // last half-column rounds to grid point w, one past the last column (w − 1),
 // and AT THE RIGHT WALL the view cannot pan further: at the current zoom no
-// viewport paints it (End's landing at the whole-song zoom always does this).
+// viewport paints it (End's landing at the whole-song zoom does this in the
+// ordinary case; a file short enough that the whole-song fit saturates at
+// kMinZoom occupies less than the window, so its last frame paints inside and
+// is correctly not refused).
 // Mid-song the same rounding is ordinary culling — the camera pages one
 // column and the item is in view — so the test is asked of THE RIGHT-WALL
 // VIEWPORT, max_viewport_start_grid (main.cpp, the one right-wall owner), the
