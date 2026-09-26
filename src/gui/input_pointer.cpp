@@ -1270,6 +1270,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   blocked for the hours between),
 //   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
+//   and THE BOTTOM ROW'S LEFT / RIGHT since 2026-09-26 (bare Left / Right, the
+//   mode's own playhead step; their own arm greys them over a focused diff
+//   flag and at the wall, horizontal_arrow_step_actionable),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
 //   and the same free answer). Those three plus Revert are the roster's
 //   RESTING-DISABLED family — four of them, joined by the WALK LAMP on

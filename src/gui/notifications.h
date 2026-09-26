@@ -436,6 +436,18 @@ inline constexpr const char* kMarkerNudgeOffEdgeCard =
 inline constexpr const char* kMarkerDropOffEdgeCard =
     "The marker would sit past the edge at this zoom";
 
+// THE `h` VIEW'S ARROW REFUSAL (architect 2026-09-26), the marker lane's
+// sentence in the history view: with a diff flag focused (or selected) bare
+// Left / Right would be the live nudge's press, and the view authors nothing,
+// so the press refuses on this card — the T+W refusal's shape ("Markers are
+// moved in source view", on_key's marker-lane branch) over the mode's own
+// focus. ONE RAISER, handle_history_mode_key's Left / Right arm
+// (input_key_dispatch.cpp); the Left / Right buttons grey on the same term
+// (horizontal_arrow_step_actionable's `h` arm, app_state.h), so a lift never
+// reaches it.
+inline constexpr const char* kHistoryViewMovesNoMarkersCard =
+    "The history view moves no markers";
+
 // AN APPENDED REASON IS LOWERCASE (architect 2026-09-01, the capitalization
 // sweep; the rule is stated once in messaging.md's card section, over the one
 // statement of the product's text rules at paint_handler.cpp's menu-row

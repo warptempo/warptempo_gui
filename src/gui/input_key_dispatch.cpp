@@ -1860,7 +1860,11 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     by this predicate: it steps the mode's own diff-flag cycle, so it does
 //     not grey in the view. CTRL+SHIFT+TAB, the march over
 //     that same cycle (2026-08-18), is the tab row's shifted press since
-//     2026-09-14, the tabs never greying.
+//     2026-09-14, the tabs never greying;
+//   * BARE Left / BARE Right — the bottom row's LEFT and RIGHT arrows, the
+//     playhead step (2026-09-26), answered LIVE by this predicate and greyed
+//     by their own arm (horizontal_arrow_step_actionable's `h` arm: a diff
+//     flag focused, or the wall).
 // Which leaves BARE `h` — the history button's own chord, and the one shape
 // here bound outside the mode at all.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
@@ -1918,8 +1922,19 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // `u` or `g` binds nothing anywhere in the product, so strict modifier
     // validation leaves each the consumed nothing it already was and these
     // claims add no shape.
+    //
+    // BARE LEFT / RIGHT ARE THE PLAYHEAD STEP (architect 2026-09-26, the
+    // symmetry with T+W), BARE ONLY as they bind outside: the horizontal
+    // ladder is retired and Ctrl / Shift spell nothing on them, so a modified
+    // arrow falls past this claim to the allowlist, which admits no arrow and
+    // answers the unbound chord with the silence chord_is_bound gives it.
+    // CLAIMED RATHER THAN ADMITTED because on_key's marker-lane branch reads
+    // the LIVE selection, and a live selection may stand in the view: an
+    // admitted arrow would reach it and nudge a live marker. The mode's arm
+    // decides the lane over the diff flags instead.
     return key == GuiKeys::H || key == GuiKeys::U || key == GuiKeys::G ||
-           key == GuiKeys::Home || key == GuiKeys::End || key == GuiKeys::C;
+           key == GuiKeys::Home || key == GuiKeys::End || key == GuiKeys::C ||
+           key == GuiKeys::Left || key == GuiKeys::Right;
 }
 
 // THE DIFF-FLAG CYCLE'S ONE ACT — the mode's Tab, factored out because the
@@ -2244,8 +2259,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // THE ARMS BELOW ARE THE MODE'S OWN RE-EXPRESSIONS of three live commands
-    // (architect 2026-08-05). Each is the live arm's gesture read against the
+    // THE ARMS BELOW ARE THE MODE'S OWN RE-EXPRESSIONS of the live commands
+    // (architect 2026-08-05 for the Tab family, Home / End and `c`; 2026-09-26
+    // for Left / Right). Each is the live arm's gesture read against the
     // mode's own data — the diff-flag list and the mode's own focus — never the
     // live-marker machinery, which navigates by markers the lane is not showing.
     // THEY KEEP THE LIVE ARMS' PLAYBACK REGIME: a keyboard command that
@@ -2386,6 +2402,37 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // byte-identical to the hand-spelled one.
         viewport.move_playhead_to(
             playhead_skip_landing_frame(app, audio, key == GuiKeys::End));
+        return true;
+    }
+
+    // BARE LEFT / RIGHT — THE PLAYHEAD STEP, T+W'S OWN LANE SPLIT OVER THE
+    // MODE'S FOCUS (architect 2026-09-26). With NO diff flag focused (or
+    // selected — history_mode_revert_subject_standing, the pair
+    // clear_history_mode_focus tests and the mode arm of
+    // playhead_end_jump_actionable reads as the live selection's analog) the
+    // press is the live waveform lane's step, the SAME BODY
+    // (run_waveform_lane_playhead_step): one step in the active column's unit
+    // (a painted column on W, a hop on P), the camera the hold posture's
+    // (nudge_camera — `c`, the diff-flag walk's centring and the march arm it
+    // in here), the hold kept across the step, the key repeating as live.
+    // That body's live-selection clear is skipped in the view: the live
+    // selection is the live world's and the view writes none of it, and the
+    // mode's own pair is empty by this very branch, so the step clears
+    // nothing.
+    // With a diff flag focused the press is the MARKER LANE's, and the view
+    // authors nothing, so it refuses on a card — the shape of on_key's T+W
+    // refusal ("Markers are moved in source view"), which likewise stops
+    // nothing. The Left / Right buttons grey on the same term
+    // (horizontal_arrow_step_actionable's `h` arm, app_state.h), so a lift
+    // never reaches the card.
+    if (key == GuiKeys::Left || key == GuiKeys::Right) {
+        if (history_mode_revert_subject_standing(app.history_mode)) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kHistoryViewMovesNoMarkersCard);
+            return true;
+        }
+        run_waveform_lane_playhead_step(horizontal_arrow_step(
+            key == GuiKeys::Left ? -1 : +1, app.active_markers_view));
         return true;
     }
 
@@ -2715,20 +2762,25 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // 2026-08-18), bare `,` and
 // `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the DIFF-FLAG CYCLE),
 // bare Home / End (the ABSOLUTE ends of the song,
-// not the trim bounds) and bare `c` (working zoom centered on the mode's own
-// focus). Four of those families joined on 2026-08-05, and they are claimed
-// rather than admitted for one reason: each is a MODE-LOCAL re-expression,
+// not the trim bounds), bare `c` (working zoom centered on the mode's own
+// focus) and bare Left / Right (the PLAYHEAD STEP, 2026-09-26, refused on a
+// card while a diff flag is focused). Four of those families joined on
+// 2026-08-05, and they are claimed rather than admitted for one reason: each is a MODE-LOCAL re-expression,
 // reading the diff-flag list, the mode's focus or the reading bit instead of the
 // live stores and the live tab band the ordinary arms would reach. That
 // function's declaration comment carries the membership; this gate never sees
 // any of it.
 //
-// WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: the PLAYHEAD
-// steps (they move the cursor, and in the marker lane the very same press nudges
-// a marker), `f` (a session-state toggle), `o`, and CTRL+SHIFT+TAB, the
-// paired-tab march (out here from the start, claimed above as the walk cycle's
-// reverse from 2026-08-07, and back on this list since 2026-08-18 — the march
-// still never runs in here, by this gate dropping it again).
+// WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: `f` (a
+// session-state toggle) and `o`. (THE PLAYHEAD STEPS were on this list until
+// 2026-09-26, because in the marker lane the very same press nudges a marker;
+// the architect then gave the view T+W's step, and bare Left / Right are
+// CLAIMED one line above rather than admitted here for exactly that reason —
+// an admitted arrow would reach on_key's marker-lane branch, which reads the
+// live selection, while the mode's arm decides the lane over its own diff
+// flags. CTRL+SHIFT+TAB, the paired-tab march, stood here for the hours of
+// 2026-08-18 before the mode claimed it as its own march — the account is at
+// this gate's Ctrl+Tab admission below.)
 //
 // AND BOTH RENDER CHORDS ARE OUT since 2026-08-08 (architect), Ctrl+Alt+R having
 // joined its shifted twin here when the checkpoint act moved onto Ctrl+S: a
@@ -9063,13 +9115,16 @@ void GuiInputHandler::run_playhead_end_jump(bool forward) {
 // the recorded exception keyed on the column and never on the subject. The
 // landing owner forks on the unit (playhead_arrow_step_landing, app_state.h);
 // everything below — the stop, the clear, the camera — is the same for
-// both. ONE CALLER since 2026-09-23, handle_plain_bare_keys' Left / Right
-// case below (on_key's Ctrl+Left / Ctrl+Right arm was the second from
-// 2026-09-22, deleted with the chord); it stays extracted because the stop,
-// the stale-focus clear, the step and the camera read as one act.
+// both. TWO CALLERS: handle_plain_bare_keys' Left / Right case below, and
+// since 2026-09-26 the `h` view's own Left / Right arm
+// (handle_history_mode_key), the history view stepping the playhead like
+// T+W. (On_key's Ctrl+Left / Ctrl+Right arm was a caller from 2026-09-22,
+// deleted with the chord.) It stays extracted because the stop, the
+// stale-focus clear, the step and the camera read as one act.
 //
-// IT IS REACHED ONLY WITH AN EMPTY SELECTION, because on_key's marker-lane
-// branch claims the press first and returns.
+// LIVE IT IS REACHED ONLY WITH AN EMPTY SELECTION, because on_key's
+// marker-lane branch claims the press first and returns; in the `h` view only
+// with no diff flag focused or selected, the mode's arm refusing otherwise.
 void GuiInputHandler::run_waveform_lane_playhead_step(
     HorizontalArrowStep step) {
     // THE CAMERA IS THE HOLD POSTURE'S, read BEFORE the act, and the posture
@@ -9088,8 +9143,15 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // their own playback regimes (the position nudges stop in their prologue,
     // while the W+target refusal stops nothing at all), which is
     // exactly why on_key routes before reaching this body.
+    // IN THE `h` VIEW THE CLEAR IS SKIPPED (architect 2026-09-26): the live
+    // selection belongs to the live world and the view writes none of it —
+    // it may stand under the view untouched, and the mode's Left / Right
+    // claim is what keeps it from being nudged — while the mode's own pair
+    // (focus and selection) is empty by the arm's refusal, so there is
+    // nothing of the view's to clear either.
     playback_lifecycle.stop_playback_if_playing();
-    if (!app.selected_markers.empty() || app.last_selected_marker != -1) {
+    if (!app.history_mode.active &&
+        (!app.selected_markers.empty() || app.last_selected_marker != -1)) {
         selection.clear_selection();
         viewport.invalidate_waveform_area();
     }

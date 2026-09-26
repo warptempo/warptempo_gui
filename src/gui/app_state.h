@@ -11113,11 +11113,28 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // redesign_button_ctrl_admits both refuse them, app_state.h), so the twin
 // rule has no second variant to ask about, and each face is exact by
 // construction rather than by a proof.
+// (Declared here for the `h` arm below; defined with the mode's revert
+// predicates, further down.)
+inline bool history_mode_revert_subject_standing(
+        const AppState::HistoryMode& mode);
 inline bool horizontal_arrow_step_actionable(const AppState& app,
                                              const GuiAudio& audio,
                                              int direction) {
     const HorizontalArrowStep step =
         horizontal_arrow_step(direction, app.active_markers_view);
+    // THE `h` VIEW'S ARM (architect 2026-09-26): the view steps the playhead
+    // like T+W, its lane decided by the MODE'S focus rather than the live
+    // selection (a live selection may stand under the view and is never
+    // nudged there) — with a diff flag focused or selected the press refuses
+    // (kHistoryViewMovesNoMarkersCard, handle_history_mode_key's Left / Right
+    // arm, which reads this same term), and with none it is the waveform
+    // lane's step, lit on the live walls below. The live marker lane's
+    // branch is skipped whole while the view stands.
+    if (app.history_mode.active)
+        return !history_mode_revert_subject_standing(app.history_mode) &&
+               (transport_session_live(app) ||
+                playhead_arrow_step_landing(app, audio, step) !=
+                    app.playhead_cursor_sample);
     if (marker_selection_standing(app))
         return active_column_authoring_allowed(app) &&
                marker_nudge_actionable(app, audio, step);
@@ -14827,14 +14844,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // WHAT THE ROW GREYS, re-derived 2026-09-23 with the walk group's
         // change. IN THE `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
-        // PLAY/STOP button (Space is consumed there), THE FOUR CARDINAL ARROWS
-        // (bare Up/Down/Left/Right are neither the mode's vocabulary nor on
-        // its allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
+        // PLAY/STOP button (Space is consumed there), UP / DOWN
+        // (bare Up/Down are neither the mode's vocabulary nor on its
+        // allowlist), THE FOUR MARKER VERBS, COPY VALUE and THE EDIT
         // FLAG BUTTON (bare `j` and
         // bare Return are consumed in there like the
-        // verbs' own chords) — ELEVEN of the fifteen. ADD TO SELECTION
+        // verbs' own chords) — NINE of the fifteen. ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
-        // now. The two SKIPS and
+        // now. LEFT / RIGHT are the mode's own playhead step since 2026-09-26
+        // and grey on their own arm below (a diff flag focused, or a wall).
+        // The two SKIPS and
         // THE WALK stay lit, being the mode's own
         // absolute jumps and its diff-flag cycle (the tab row's shifted press
         // carries the march that composes that cycle with a round trip
@@ -14999,14 +15018,16 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // THEY ARE PAINTED IN THE `h` VIEW SINCE 2026-08-18 — the cluster swap
         // that replaced them with the history companions went when those four
-        // returned to the icon row — AND THEY WEAR THE DEAD FACE IN THERE,
-        // which is the DERIVED partition's answer and nothing hand-listed:
-        // bare Up / Down / Left / Right are neither the mode's own vocabulary
+        // returned to the icon row — AND UP / DOWN WEAR THE DEAD FACE IN
+        // THERE, which is the DERIVED partition's answer and nothing
+        // hand-listed: bare Up / Down are neither the mode's own vocabulary
         // (history_mode_owns_key) nor on its allowlist
-        // (history_mode_key_blocked), so the view consumes all four and greys
+        // (history_mode_key_blocked), so the view consumes both and greys
         // them exactly as it greys every other button whose act it consumes.
-        // The answer comes from the line at the top of this body, which the
-        // arrows fall under like everything else.
+        // LEFT / RIGHT ARE THE MODE'S OWN since 2026-09-26 (the playhead step,
+        // T+W's symmetry): the partition answers them LIVE, and their arm
+        // below greys them on horizontal_arrow_step_actionable's `h` arm — a
+        // diff flag focused or selected, or the step's wall.
         //
         // THE TWO SKIPS GREY WHERE THE JUMP WOULD CHANGE NOTHING (2026-08-30,
         // at the second switch): the one owner playhead_end_jump_actionable
@@ -15044,9 +15065,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // read here for the face; the refusal-reason tooltip it once also fed
         // died with the whole class 2026-09-12) and only the read-only half is
         // the tab's bare bit.
+        // THE `h` VIEW SKIPS THE LOCK'S LANE TERM (2026-09-26): the view's
+        // Left / Right are its own vocabulary, dispatched above the read-only
+        // gate, and a live selection standing under the view is never
+        // nudged there — the mode's lane is its diff-flag focus, which
+        // horizontal_arrow_step_actionable's `h` arm reads.
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
-            if (active_view_state(a).read_only &&
+            if (!a.history_mode.active && active_view_state(a).read_only &&
                 !horizontal_arrow_step_lock_admits(a))
                 return false;
             if (iteration_lock_greys(a, b)) return false;

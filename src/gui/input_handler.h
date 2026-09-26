@@ -552,8 +552,9 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 //     (the WALK toggle over the two sources, the icon row's WALK LAMP's chord
 //     since 2026-08-18 — a radio pair's until the 2026-09-04 collapse, and
 //     Ctrl+Tab / Ctrl+Shift+Tab over row 3's repurposed tabs before that), bare
-//     Home / End and
-//     bare `c`. The definition carries the
+//     Home / End, bare `c` and bare Left / Right (the playhead step,
+//     2026-09-26, the marker lane's press refused over a focused diff
+//     flag). The definition carries the
 //     derivation. handle_history_mode_key consumes exactly these,
 //     one line ABOVE the allowlist, which is why a face derivation has to ask
 //     this first.
@@ -2649,8 +2650,10 @@ private:
     // gui_input.h) — one painted column, or ONE HOP on the phase-reset
     // column; the camera is the hold posture's (nudge_camera, app_state.h),
     // read and kept by the body. Reached only with an empty selection: the
-    // marker-lane branch claims the press first. The full contract is at the
-    // definition.
+    // marker-lane branch claims the press first. The `h` view's Left / Right
+    // arm (handle_history_mode_key) is the second caller since 2026-09-26,
+    // reached with no diff flag focused and clearing no live selection. The
+    // full contract is at the definition.
     void run_waveform_lane_playhead_step(HorizontalArrowStep step);
 
     // Bare-key (no-modifier) dispatch: playhead move / zoom / center /
@@ -4336,8 +4339,7 @@ private:
     //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
     //     the toggle, the walk, the diff-flag cycle, the march that composes
     //     that cycle with a round trip through the other tab, the absolute
-    //     Home/End and
-    //     `c` — and returns true when it consumed the press. The membership is
+    //     Home/End, `c` and the Left / Right playhead step — and returns true when it consumed the press. The membership is
     //     re-derived at history_mode_owns_key; its position in on_key IS its
     //     entry-gate list. Its cycle is a member of its own
     //     (cycle_history_diff_flag_focus) because the march composes it too.
