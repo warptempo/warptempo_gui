@@ -1192,7 +1192,10 @@ struct GuiInputHandler {
     // answered here as THE NAVIGATION SURFACE through its one geometry owner
     // (point_on_nav_surface, input_pointer.cpp), which is literally the
     // predicate the press router reads: the WHOLE waveform, both halves and
-    // every view. A finger landing anywhere in the top strip — a flag, the
+    // every view, stopping at its edge — a finger in the permanent right
+    // gutter resolves to the pointer, where the press router's gutter gate
+    // leaves it inert (a flag painted there answers; architect 2026-09-26).
+    // A finger landing anywhere in the top strip — a flag, the
     // ruler, the marker lane's empty stretch — resolves to the POINTER, so a
     // quick flag drag is the immediate marker drag and a lane tap places
     // while a lane drag does nothing (the placement pending, the mouse's own
@@ -1925,7 +1928,7 @@ struct GuiInputHandler {
     // presses that used to arm it are the pending pan now, and the one-day
     // RULER arm with its deferred dissolve is deleted). `anchor_col` is the
     // press column (waveform-relative, in range — every caller has just seated
-    // the playhead at it and refused the gutter), from which THE ARM ITSELF
+    // the playhead at it and refused a column past the waveform), from which THE ARM ITSELF
     // authors the fixed end of every trim pair the sweep writes:
     // RegionDragState::anchor_source_frame through sweep_trim_frame_at_column,
     // the sweep's one column->trim route, beside the active-domain frame the
@@ -2000,9 +2003,11 @@ struct GuiInputHandler {
     // presses, and
     // the touch region begin's MODE arm (its live arm rides the shift
     // former's own body).
-    // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
-    // [0, area.w)) seats nothing and returns -1, a value no seated frame can
-    // take (the clamp's floor is 0). `was_playing` / `playhead_at_entry` are
+    // `click_rel_x` is x - waveform_area.x; a column past the waveform
+    // (click_rel_x outside [0, area.w) — no press arms in the inert gutter,
+    // so only a window shrink under a held press can deliver one) seats
+    // nothing and returns -1, a value no seated frame can take (the clamp's
+    // floor is 0). `was_playing` / `playhead_at_entry` are
     // the caller's readings from AHEAD of its own acts — the formers
     // capture at their press/begin entry, the deferred click act reads at the
     // release
@@ -2026,9 +2031,9 @@ struct GuiInputHandler {
     // the marker selection, run the body above, and arm the sweep. THE ARM
     // RAISES NOTHING since 2026-08-21: the overlay's one raise sits inside
     // apply_region_drag_motion's accepted-write branch, so a motionless shift
-    // press shows nothing at all. The clear runs ahead of
-    // the body's gutter return, so an inert-gutter click still deselects but
-    // seats no playhead and arms no drag. (The plain presses that shared this
+    // press shows nothing at all. Neither call site arms in the permanent
+    // right gutter (inert, architect 2026-09-26), so the body's column return
+    // is defensive here. (The plain presses that shared this
     // body left it 2026-08-12 for the pending pan — the eighth glass ruling.)
     void place_playhead_and_arm_region(int click_rel_x, int x, int y,
                                        bool was_playing,
@@ -3479,8 +3484,10 @@ private:
     // Ableton model): the press arms only the pending click, a held press does
     // nothing further, and a drag past the threshold replaces the act with the
     // pan, so each click pays AT MOST one stop quiescence fence and a stopped
-    // session's launch pays none. A gutter/invalid column
-    // (outside [0, area.w)) is a silent no-op (no launch position). Touches
+    // session's launch pays none. A column past the waveform
+    // (outside [0, area.w) — never armed in the inert gutter, left only by a
+    // window shrink under a held press) is a silent no-op (no launch
+    // position). Touches
     // NOTHING else — no selection, region, cursor, follow, or double-click seed.
     // THAT is what makes it the REGION'S PREVIEW GESTURE (architect 2026-07-30,
     // Q2): clicking inside a SHOWN trim region overlay auditions from the
@@ -3563,7 +3570,11 @@ private:
     // - Arrow: everything else — the button rows, the gap band, the RULER and
     //   the MARKER lane's empty stretches (PLACEMENT SURFACES since
     //   2026-09-25: a motionless click places and no drag arms, and a click
-    //   carries no cue), and every
+    //   carries no cue), THE PERMANENT RIGHT GUTTER off a painted flag
+    //   (inert, architect 2026-09-26: the navigation surface, the trim
+    //   bar's cap hits and the ctrl clicks' decider all stop at the
+    //   waveform's edge, so every arm above answers false there and a flag
+    //   painted in the gutter keeps its own TrimResize), and every
     //   modified press with no claim (SHIFT deliberately unnamed: it is the
     //   region former, which carries no cue — the deferred placement's own
     //   model; ALT unnamed because its one pointer binding is the WHEEL's

@@ -605,8 +605,10 @@ GuiRect waveform_area(const AppState& a) {
     // THAN IT HAS COLUMNS: grid point w — where the song's last half-column
     // rounds — paints in the gutter, the ruler head drawn whole there, the
     // stems, the scanner and a flag anchored on it beside it (flags may run
-    // off the window). The gutter is otherwise inert: no press in it lands a
-    // frame. Measured: 1920 @ 100 % -> 1904 (a 16 px gutter), the tablet's
+    // off the window). THE GUTTER IS OTHERWISE INERT (architect 2026-09-26):
+    // no press, drag, sweep, zoom, touch start, wheel or click that begins in
+    // it acts — only a flag painted there answers, exactly as painted
+    // (point_on_waveform_columns below is the one x test). Measured: 1920 @ 100 % -> 1904 (a 16 px gutter), the tablet's
     // 2304 @ 225 % -> 2272 (32 px), 1366 @ 100 % -> 1344 (22 px).
     //
     // The step is 16 = 1600/gcd(44100,1600), the strictest step among
@@ -681,6 +683,27 @@ GuiRect waveform_area(const AppState& a) {
     // on the window, so no term can deepen an overflow.)
     const int h_avail = h - top_h - bot_h;
     return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
+}
+
+// THE WAVEFORM'S COLUMN EXTENT, [area.x, area.x + area.w) — THE ONE X TEST
+// THAT MAKES THE PERMANENT RIGHT GUTTER INERT (architect 2026-09-26). The
+// gutter [area.x + area.w, window width) paints grid point w's verticals and
+// any flag anchored there, and nothing else in it answers the pointer: a
+// gesture that STARTS there — a plain press (pan, placement, scrub), a shift
+// sweep, a ctrl zoom, a trim-bar press, a lane click or double-click, a touch
+// pan / region hold / pinch, a wheel detent — does nothing. A painted flag is
+// the one exception, reached through the flag hit test ahead of every reader
+// of this predicate. A gesture that started on the waveform and travels over
+// the gutter is untouched: only where a gesture starts is tested. Readers, by
+// grep 2026-09-26: point_on_nav_surface and point_in_placement_lanes (the two
+// surface owners, input_pointer.cpp), the live press router's and the `h`
+// press router's gutter gates, wheel_context's gutter answer
+// (input_handler.cpp). The trim bar's two hits keep their own edges, the
+// painted lane's: hit_test_trim_endcap clips its inflated caps to the
+// published lane and trim_bound_click_frame refuses a column past area.w.
+bool point_on_waveform_columns(const AppState& a, int x) {
+    const GuiRect area = waveform_area(a);
+    return x >= area.x && x < area.x + area.w;
 }
 
 // ONE shared layout contract for every strip lane — the single geometry owner.

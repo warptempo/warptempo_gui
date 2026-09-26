@@ -2388,10 +2388,13 @@ void GuiInputCore::relative_motion(double dx, double dy) {
     //     answers.
     //   * A POSITION THAT IS ALREADY OUTSIDE THE SPAN when the capture opens
     //     folds in on its very first event, in either direction. The one way
-    //     that happens is a pointer parked in the permanent right gutter
-    //     (waveform_area — at least the playhead head's widest half plus one,
-    //     at every window width). Recorded, not guarded: it is one event wide
-    //     and it lands the pointer somewhere legitimate.
+    //     that happens is a press on the waveform's last columns whose
+    //     threshold travel carries the pointer into the permanent right
+    //     gutter (waveform_area — at least the playhead head's widest half
+    //     plus one, at every window width) before the capture opens at the
+    //     crossing; a press IN the gutter arms nothing, the gutter being inert.
+    //     Recorded, not guarded: it is one event wide and it lands the
+    //     pointer somewhere legitimate.
     // THE WRAP IS FREE BECAUSE THE CURSOR IS HIDDEN: Wayland gives a client no
     // pointer-warp request at all, so a VISIBLE cursor could never be moved by
     // us — the only position we may ever state is the locked pointer's release

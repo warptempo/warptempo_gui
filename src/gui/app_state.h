@@ -9424,6 +9424,9 @@ inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
 int     top_strip_h(const AppState& a);
 int     bottom_strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
+// x inside the waveform's column extent [area.x, area.x + area.w); false in
+// the permanent right gutter (contract at the definition, main.cpp).
+bool    point_on_waveform_columns(const AppState& a, int x);
 GuiRect top_strip_area(const AppState& a);
 // One shared lane-rect helper for every strip lane (see the layout contract at
 // its definition in main.cpp). lane_from_window_edge indexes from the strip's
@@ -17246,7 +17249,8 @@ enum class TrimHit { None, Begin, End };
 // LEFT edge on it, the end cap's RIGHT edge on it — from trim_endcap_rect, the
 // ONE rect owner render_trim_flags fills through and publishes from. THE HIT
 // RECT IS THAT CAP INFLATED by kTrimEndcapGrabPx per side (a 2px cap is under
-// any pointing tolerance); it is the one place in this lane where the drawn
+// any pointing tolerance) and CLIPPED TO THE PAINTED LANE, so the inert
+// permanent right gutter grabs nothing (architect 2026-09-26); it is the one place in this lane where the drawn
 // and the grabbable rect differ, and it is why two caps at nearby columns can
 // overlap as targets at all (LEFTMOST WINS — the arbitration is at the
 // body). Tests both mouse_x and mouse_y, the y against the lane the caps were

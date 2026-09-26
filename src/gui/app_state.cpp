@@ -168,10 +168,22 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
         // rect exactly as painted so the target is centred on it; the widening
         // is the hit side's own term, because a 2px endcap is below any usable
         // pointing tolerance (the rationale is at trim_endcap_rect).
+        // AND THE INFLATED RECT STOPS AT THE LANE'S PAINTED EDGES
+        // (architect 2026-09-26): it is intersected with the published lane
+        // `h.lane` — the painter's own [lane_x, lane_x + wave_w) — so no x in
+        // the permanent right gutter grabs a cap (the gutter is inert; the bar
+        // never paints there), while the tolerance on the waveform side is
+        // unchanged. The bridge span below is clipped to the same width by
+        // its publication, so the two hits agree.
         GuiRect r = cap.rect;
         const int grab = trim_endcap_grab_px();
         r.x -= grab;
         r.w += 2 * grab;
+        const int lo = std::max(r.x, h.lane.x);
+        const int hi = std::min(r.x + r.w, h.lane.x + h.lane.w);
+        r.x = lo;
+        r.w = hi - lo;
+        if (r.w <= 0) return;
         endcaps[n++] = {cap.col_x, r, which};
     };
     add_endcap(h.begin, TrimHit::Begin);
@@ -204,7 +216,8 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
     // the interval is the bar's stretch between the two caps' inner edges as
     // render_trim_flags last DREW it — trim_bridge_gap over the painted
     // columns, already clipped to the lane's painted width, so the permanent
-    // right gutter answers false exactly as it paints no bar. Nothing here
+    // right gutter answers false exactly as it paints no bar (the endcap
+    // test above clips its inflated caps to the same lane). Nothing here
     // reads app.trim. Cold answers false — which is also the no-audio answer,
     // the trim pass painting only over loaded audio.
     const TrimBarHit& h = app.trim_bar_hit;

@@ -3278,8 +3278,9 @@ void GuiInputHandler::run_span_framing_command() {
 // THE STEPPED PAN: the samples_visible / kViewportPanStepDivisor stride through
 // the scroll_viewport funnel, whose clamp puts out the hold posture and
 // suspends a following play's paging,
-// over the waveform and the top strip alike (every context
-// id, one route; the two bools below say only "a wheel-live surface"). up =
+// over the waveform and the top strip alike (both context
+// ids, one route; the two bools below say only "a wheel-live surface"; the
+// permanent right gutter beside them is inert, on_wheel's ctx 6). up =
 // earlier, down = later. HISTORY OF THE SPELLING: plain from 2026-08-12 (the
 // eighth glass ruling moved the pan onto the bare form), on ALT from
 // 2026-08-27 while the plain wheel stepped the waveform magnification, and
@@ -3332,7 +3333,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // owns and discards nothing, so there is nothing for modality to protect.
     //
     // The wheel routes by area — the waveform and the top strip — plus the ONE
-    // row-wise carve-out below, the redesigned rows' inert band. BOTH
+    // row-wise carve-out below, the redesigned rows' inert band, and the
+    // permanent right gutter's inert column at the end (context 6). BOTH
     // take the same one route since 2026-08-12, and the wheel's one arm rides
     // it (the plain stepped pan, every modifier refused inside handle_wheel and
     // never here), so the context ids
@@ -3460,6 +3462,21 @@ int GuiInputHandler::wheel_context(int x, int y) const {
           rect_contains(app.flag_editor_box.box, x, y)) &&
         hit_test_flag(app, audio, x, y) >= 0)
         return 5;
+    // THE PERMANENT RIGHT GUTTER (context 6, architect 2026-09-26: the gutter
+    // is inert). Past the waveform's column extent, beside the waveform or
+    // the top strip's lanes, a detent does nothing — on_wheel swallows this
+    // id — while a flag painted there answered 5 above (the live lane only;
+    // an `h` diff flag has no wheel act of its own, its lane's pan being the
+    // lane's, so the gutter stays inert under it). It is a POSITIVE id rather
+    // than the inert bands' -1 for the touch road: apply_touch_nav_update
+    // refuses a frame on <= 0 at the centroid, and a finger pan or pinch that
+    // began on the waveform must carry across the gutter untouched — only
+    // where a gesture STARTS is gated (the pan zone, point_on_nav_surface).
+    // The platform's sub-detent remainder grown here is keyed to 6 and so
+    // cannot complete a detent anywhere else.
+    if (!point_on_waveform_columns(app, x) &&
+        (inside_top || (y >= area.y && y < area.y + area.h)))
+        return 6;
     if (inside_top) return 2;
     return 0;
 }
@@ -3528,6 +3545,9 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
         run_flag_cell_wheel(dir, count, x, y);
         return;
     }
+    // ctx 6 — THE PERMANENT RIGHT GUTTER (architect 2026-09-26): inert, every
+    // wheel swallowed (the id exists for the touch road; wheel_context).
+    if (ctx == 6) return;
     // ctx: 1 waveform, 2 the top strip. Both take
     // the same one-arm vocabulary — plain = the stepped pan, every modified
     // wheel a swallowed no-op (architect approval 2026-09-14). THE CONTEXT
