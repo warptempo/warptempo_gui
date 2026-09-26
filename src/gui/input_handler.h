@@ -514,12 +514,13 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
 // sync render). `margin` adds the EDGE MARGIN per side — kViewportEdgeMarginFraction
 // of the WINDOW, so the span fills 1 − 2 × margin of it (trim / group cases); the
-// whole-song case passes margin=false. The centering formula uses the UNROUNDED
-// visible width (spp_t * W) — grid quantization is owned downstream by
-// clamp_viewport_start, so NO painter-quantized pre-rounding is applied here
-// (only the final start is rounded). A floor-saturated span rests CENTERED rather
-// than left-aligned, and the unclamped case degenerates to the span's left edge
-// (unrounded spp_t * W == the margined span by the solve). Shared by
+// whole-song case passes margin=false. The fit level is fit_zoom_level's
+// ceil-to-sixteenths solve, and the centering formula uses the PAINTED window at
+// that level (W·q_t, q_t on the sixteenth-frame grid); only the final start is
+// rounded, the viewport grid being clamp_viewport_start's. A floor-saturated
+// span rests CENTERED rather than left-aligned, and the unclamped case
+// degenerates to the span's left edge (W·q_t covers the margined span, over it
+// by under a sixteenth of a frame per column). Shared by
 // run_span_framing_command (both arms) and the GROUP undo/redo restore's
 // cannot-fit arm (undo.cpp, on a false verdict from the landing owner
 // Viewport::land_subject, whose fit test guarantees that arm only ever zooms

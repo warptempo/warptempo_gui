@@ -283,8 +283,9 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
         app.viewport_start_sample = new_sample;
         viewport_changed = true;
     } else if (new_sample >= vp_end) {
-        const double spp = current_samples_per_pixel(app, audio);
-        const int64_t one_px = static_cast<int64_t>(std::nearbyint(spp));
+        const double q = painter_samples_per_pixel(app, audio,
+                                                   waveform_area(app));
+        const int64_t one_px = static_cast<int64_t>(std::nearbyint(q));
         app.viewport_start_sample =
             new_sample - (visible - std::max<int64_t>(one_px, 1));
         viewport_changed = true;
@@ -516,7 +517,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     // Split-playhead: during playback zoom tracks the audio under review
     // (scanner); otherwise tracks the cursor. The scanner is meaningful only
     // while active, so the ternary below takes the cursor at rest. At the
-    // effective ceiling samples_visible == total, so
+    // effective ceiling samples_visible >= total, so
     // clamp_viewport_start's visible >= total branch parks the start at 0
     // (whole song visible) without any mode test.
     const int64_t target = app.playhead_scanner_active
@@ -953,13 +954,16 @@ void Viewport::follow_scroll_if_needed() {
 //   * WHOLLY ON SCREEN (lo ≥ start and hi < start + visible, in painted
 //     samples): NOTHING MOVES, at every zoom;
 //   * CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
-//     visible window at the live zoom — the room the span framer's margin arm
-//     (frame_span_into_view, input_handler.cpp) leaves a span, taken in the
-//     framer's own unrounded domain (spp × W at the live level, its
-//     `visible_t`), which guarantees a range refused here solves to a level
-//     no finer than the current one there, so the caller's zoom-out never
-//     zooms in. RETURNS FALSE HAVING WRITTEN NOTHING: the zoom-out fit is the
-//     caller's;
+//     PAINTED window at the live zoom (samples_visible, W·q on the
+//     sixteenth-frame grid — the span the centring below places the subject
+//     in and the geometry fit_zoom_level solves in) — the room the span
+//     framer's margin arm (frame_span_into_view, input_handler.cpp) leaves a
+//     span. One geometry on both sides guarantees the caller's zoom-out never
+//     zooms in: a refused range's margined span exceeds W·q = W·n/16, so the
+//     framer's fit takes at least n + 1 sixteenths, above the live level's
+//     spp (within half a sixteenth of q); and an accepted range keeps the
+//     painted margin. RETURNS FALSE HAVING WRITTEN NOTHING: the zoom-out fit
+//     is the caller's;
 //   * OFF SCREEN AND FITS: CENTRED on its midpoint AT EVERY ZOOM, coarse
 //     included; never a page-in.
 // THE HOLD POSTURE (AppState::camera_hold) IS ARMED BY THE WALK'S CENTRING
@@ -1037,9 +1041,8 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
             centre = true;
             break;
     }
-    const double visible_t = samples_per_pixel_at(app.zoom_level, sr) *
-                             static_cast<double>(W);
-    const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) * visible_t;
+    const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) *
+                        static_cast<double>(visible);
     if (static_cast<double>(hi - lo) > room) return false;
     const int64_t old_vp = app.viewport_start_sample;
     app.viewport_start_sample = centre

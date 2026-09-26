@@ -113,8 +113,8 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 // keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
 // minimum. viewport_edge_margin_samples below is the two page-ins' one
 // conversion to samples (paged_in_viewport_start, viewport.cpp); the span
-// framer and the landing owner's fit test work in the unrounded double domain
-// and read the fraction themselves.
+// framer and the landing owner's fit test work in doubles over the painted
+// span (W·q) and read the fraction themselves.
 constexpr double kViewportEdgeMarginFraction = 0.05;
 
 // The edge margin in whole samples of a window `visible` samples wide,
@@ -11552,9 +11552,10 @@ bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
                                  int sample_rate);
-// The smallest level whose painted span (width·q, the sixteenth-frame grid)
-// covers `span_frames`, unclamped — the ceiling's solve and the span framer's
-// (the rule at its definition, main.cpp).
+// The canonical level whose painted span (width·q, the sixteenth-frame grid)
+// covers `span_frames`, unclamped: its spp equals the required step rounded up
+// to a sixteenth, n/16 with n = ceil(16·span/width), so its q is n/16 — the
+// ceiling's solve and the span framer's (the rule at its definition, main.cpp).
 double  fit_zoom_level(double span_frames, int width_px, int sample_rate);
 // Clamp a requested zoom level into the per-file window [kMinZoom, effective
 // per-file ceiling]. The single owner of the level-bounds pair, shared by the

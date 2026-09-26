@@ -3135,15 +3135,15 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
                           Viewport& viewport, int64_t lo, int64_t hi,
                           bool margin) {
     // The shared span framer (declared in input_handler.h). Computes the margined
-    // fit level exactly as the double-click always has, then ALWAYS derives the
-    // start by CENTERING the margined span in the window through the UNROUNDED
-    // visible width (spp_t * W) — grid quantization is owned downstream by
-    // clamp_viewport_start, so NO painter-quantized pre-rounding belongs here (see
-    // the centering block below). A span too small for kMinZoom to fill (the
-    // floor-saturated case) rests centered instead of left-aligned, and the
-    // unclamped case degenerates to the span's left edge (unrounded spp_t * W
-    // covers the margined span by the fit-level solve, past it by under a
-    // sixteenth of a frame per column). Ends at apply_zoom_to_start.
+    // fit level, then ALWAYS derives the start by CENTERING the margined span in
+    // the PAINTED window at that level (W·q_t, q_t the sixteenth-frame grid step
+    // — the span the waveform will show); the start itself is left unsnapped,
+    // clamp_viewport_start owning the viewport grid (see the centering block
+    // below). A span too small for kMinZoom to fill (the floor-saturated case)
+    // rests centered instead of left-aligned, and the unclamped case degenerates
+    // to the span's left edge (W·q_t covers the margined span by the fit-level
+    // solve, past it by under a sixteenth of a frame per column). Ends at
+    // apply_zoom_to_start.
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
@@ -3169,7 +3169,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     }
 
     // Fit level: effective_max_zoom_level's own solve (fit_zoom_level, main.cpp
-    // — the smallest level whose painted span W·q covers the span) with the
+    // — the canonical level whose painted span W·q covers the span) with the
     // span in place of total, clamped into [kMinZoom, per-file effective
     // ceiling]. A zoom-OUT ceiling and a zoom-IN floor, so framing a tiny span
     // may go deep (down to kMinZoom) while a span wider than the song
@@ -3181,22 +3181,25 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     const double ceiling = effective_max_zoom_level(W, total, sr);
     const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
 
-    // CENTER: place the margined span's midpoint at the window center, using the
-    // UNROUNDED visible width (spp_t * W) — grid quantization is owned downstream
-    // by clamp_viewport_start (the chokepoint), so no painter-quantized
-    // pre-rounding belongs here. Only the FINAL start is nearbyint'd. This keeps
-    // the promised single behavior change (the floor-saturated centering): in the
-    // ordinary UNCLAMPED fit spp_t * W is the margined span rounded UP to the
+    // CENTER: place the margined span's midpoint at the centre of the PAINTED
+    // window at the target level, visible_t = W·q_t (samples_visible's span at
+    // that level, the one geometry land_subject's fit test and centring read) —
+    // at the fit level and at every standard rate's whole level q_t is the
+    // level's spp itself, and a rate whose step is not a sixteenth centres on
+    // the window it will actually paint. Only the FINAL start is nearbyint'd;
+    // the viewport grid is clamp_viewport_start's (the chokepoint). In the
+    // ordinary UNCLAMPED fit W·q_t is the margined span rounded UP to the
     // sixteenth-frame grid (under W/16 frames over, fit_zoom_level), so
     // mid - visible_t/2 sits under W/32 frames left of flo — a column or two at
     // the deepest zoom and nothing at a coarse one, inside the edge margin
     // either way — and the start is nearbyint(flo) less that residue. The
-    // ceiling-saturated whole-song case (mid = total/2, spp_t * W >= total ->
-    // start <= 0) is then clamped to 0 by clamp_viewport_start's visible >=
-    // total branch as before.
+    // ceiling-saturated whole-song case (mid = total/2, W·q_t >= total ->
+    // start <= 0) is clamped to 0 by clamp_viewport_start's visible >= total
+    // branch.
     const double mid       = 0.5 * (flo + fhi);
-    const double visible_t = samples_per_pixel_at(target_level, sr) *
-                             static_cast<double>(W);
+    const double visible_t =
+        painter_quantized_spp(samples_per_pixel_at(target_level, sr)) *
+        static_cast<double>(W);
     const int64_t target_start =
         static_cast<int64_t>(std::nearbyint(mid - visible_t / 2.0));
 

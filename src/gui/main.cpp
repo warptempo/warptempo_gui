@@ -94,8 +94,9 @@ namespace {
 // continuous domain [kMinZoom, kMaxZoom] — no sentinel. Level 1 is the deepest
 // zoom-in (0.625 ms/px, 1.2 s); each whole step is exactly 2x the previous, so the integer
 // rungs reproduce the historical ladder (0.625, 1.25, 2.5, ...) bit-for-bit,
-// and the fit-equivalent level (full zoom-out, whole song visible) is just the
-// point on the same curve where spp * width == total.
+// and the fit-equivalent level (full zoom-out, whole song visible) is the
+// point on the same curve whose painted span width·q covers total
+// (fit_zoom_level).
 
 // playhead_half_px() (half-width of the column invalidated around a playhead
 // position) now lives in render.h as a single shared inline accessor,
@@ -934,29 +935,34 @@ std::pair<long long, long long> compute_trim_samples(
 double samples_per_pixel_at(double zoom_level, int sample_rate) {
     // One continuous domain, no sentinel: ms_per_px = kZoomBaseMsPerPx * 2^(level - 1).
     // Fully level-determined and domain-independent — at the per-file effective
-    // ceiling the exponent already yields spp = total/width (whole song
-    // visible) by construction, so there is no fit-file special case.
+    // ceiling the exponent already yields spp = ceil(16·total/width)/16, a
+    // painted span covering the whole song (fit_zoom_level), so there is no
+    // fit-file special case.
     assert(zoom_level >= kMinZoom && zoom_level <= kMaxZoom);
     return kZoomBaseMsPerPx * std::exp2(zoom_level - 1.0) *
            static_cast<double>(sample_rate) / 1000.0;
 }
 
 // THE FIT LEVEL for a span of `span_frames` on a strip `width_px` wide: the
-// SMALLEST level whose PAINTED span covers it, width·q >= span_frames, q the
-// sixteenth-frame grid step (painter_quantized_spp, warp_frame_map_view.h).
-// The exact solve of spp·width == span (1 + log2(span·1000 / (kZoomBaseMsPerPx
-// · sr · width))) would leave q to round to the NEAREST sixteenth, and half
-// the time below spp — a painted span up to width/32 frames SHORT of the
-// span, so a whole song would no longer fit its whole-song level. The solve
-// therefore takes the step ROUNDED UP to a whole sixteenth, n = ceil(16 ·
-// span / width), and returns the level whose spp is exactly n/16: its q is
-// n/16 (the level's spp lands within ULPs of it, far inside nearbyint's half
-// sixteenth), and width·n/16 >= span. The overshoot is under one sixteenth of
-// a frame per column — under width/16 frames of silence past the span's end,
-// which is under one column once a column holds more than width/16 frames
-// (any span longer than about five seconds at 1904 px). UNCLAMPED: the callers own
-// their bounds. Two readers: effective_max_zoom_level below and the span
-// framer (frame_span_into_view, input_handler.cpp).
+// CANONICAL level whose PAINTED span covers it, width·q >= span_frames, q the
+// sixteenth-frame grid step (painter_quantized_spp, warp_frame_map_view.h):
+// the level whose spp EQUALS the required step rounded UP to a whole
+// sixteenth, n/16 with n = ceil(16 · span / width). The exact solve of
+// spp·width == span (1 + log2(span·1000 / (kZoomBaseMsPerPx · sr · width)))
+// would leave q to round to the NEAREST sixteenth, and half the time below spp
+// — a painted span up to width/32 frames SHORT of the span, so a whole song
+// would no longer fit its whole-song level. The returned level's spp lands
+// within ULPs of n/16, at the CENTRE of q's rounding bin, far inside
+// nearbyint's half sixteenth either way, so its q is n/16 and width·n/16 >=
+// span. It is not the smallest covering level: every level down to the bin's
+// lower edge, spp (n − ½)/16, paints the same q and the same picture; the bin
+// centre is taken so no ULP of the log2/exp2 round trip can flip q. The
+// overshoot is under one sixteenth of a frame per column — under width/16
+// frames of silence past the span's end, which is under one column once a
+// column holds more than width/16 frames (any span longer than about five
+// seconds at 1904 px). UNCLAMPED: the callers own their bounds. Two readers:
+// effective_max_zoom_level below and the span framer (frame_span_into_view,
+// input_handler.cpp).
 double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
     const double sixteenths = std::ceil(
         span_frames * kPainterGridSubdivisions / static_cast<double>(width_px));
@@ -966,7 +972,7 @@ double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
 }
 
 // The per-file effective zoom-out ceiling: the fit level of the whole song
-// (fit_zoom_level above — the smallest level whose painted span width·q
+// (fit_zoom_level above — the canonical level whose painted span width·q
 // covers total_frames), clamped into [kMinZoom, kMaxZoom]; full zoom-out
 // rests here (whole-song-visible, Ableton behavior), where samples_visible >=
 // total_frames and clamp_viewport_start parks the start at 0. It moves with
