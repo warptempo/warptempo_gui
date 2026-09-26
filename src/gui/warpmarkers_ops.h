@@ -124,7 +124,9 @@ struct GuiWarpMarkersOps {
 
     void drop_marker(double time_frame, bool inherit,
                       int64_t tempo_cents, std::optional<double> scale);
-    void drop_copy_previous_at_playhead();
+    // Returns the off-edge refusal's sentence for the dispatcher to card
+    // (kMarkerDropOffEdgeCard; GuiOpRefusal above), else std::nullopt.
+    GuiOpRefusal drop_copy_previous_at_playhead();
     void delete_selected_marker();
     void toggle_inherits();
     void toggle_disabled();

@@ -3,7 +3,8 @@
 #include "audio.h"
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
-#include "notifications.h"      // kTabReadOnlyCard (the value steps' lock)
+#include "notifications.h"      // kTabReadOnlyCard (the value steps' lock),
+                                // the off-edge nudge and drop cards
 #include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
@@ -240,10 +241,17 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // ref is stepped over as the projection never held it). Every index the step
 // visits survives by construction (find_immediate_prior and the loop's own
 // survival test), so one OTHER surviving index at its frame makes the group.
-void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
-    if (audio.sample_rate() <= 0) return;
-    const int64_t src_frame =
-        active_domain_to_source_frame(app, audio, app.playhead_cursor_sample);
+//
+// THE PAINTED EDGE REFUSES WITH A CARD (architect 2026-09-26, strictly as
+// painted): a playhead in the song's last half-column — End at the whole-song
+// zoom — would author a marker no viewport paints at this zoom
+// (drop_at_playhead_off_edge, app_state.h), so the drop returns
+// kMarkerDropOffEdgeCard for its dispatcher to raise, ahead of any write.
+GuiOpRefusal GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
+    if (audio.sample_rate() <= 0) return std::nullopt;
+    if (drop_at_playhead_off_edge(app, audio))
+        return GuiOpRefusal{kMarkerDropOffEdgeCard};
+    const int64_t src_frame = drop_at_playhead_source_frame(app, audio);
     const double t = static_cast<double>(src_frame);
     const auto& mv = app.warpmarkers.markers();
     int                   prev_idx = find_immediate_prior(mv, t);
@@ -285,6 +293,7 @@ void GuiWarpMarkersOps::drop_copy_previous_at_playhead() {
         scale      = eff.scale;
     }
     drop_marker(t, /*inherit=*/false, base_cents, scale);
+    return std::nullopt;
 }
 
 // Deleting an owning marker lets downstream pass markers re-resolve to the
@@ -1690,11 +1699,17 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // gate's card already (the loading gate's, the dispatch's home-view card),
     // a belt against an invariant the selection layer keeps, or the wall, whose
     // silence is paired with a greyed button — the prologue's own declaration
-    // names each. `step` is passed for the wall term alone.
+    // names each — BUT ONE, the painted-edge term (2026-09-26), which the
+    // prologue reports and this twin cards. `step` is passed for the wall and
+    // edge terms alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::WarpNudge, synthesized_repeat, step);
-    if (!pro.ok) return std::nullopt;
+    // The one carded refusal of the set, the painted-edge term (the rule at
+    // marker_nudge_verdict's declaration, app_state.h).
+    if (!pro.ok)
+        return pro.off_edge ? GuiOpRefusal{kMarkerNudgeOffEdgeCard}
+                            : std::nullopt;
     const bool merge = pro.merge;
     const auto& mv = app.warpmarkers.markers();
     const int   f  = pro.focused;   // validated in [0, mv.size()) by the prologue
@@ -1734,6 +1749,13 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // and ahead of this landing — position_nudge_prologue.)
     if (committed_f == orig_f)
         return std::nullopt;
+    // THE PAINTED EDGE, for the 2+ press alone in practice: a singleton's
+    // off-edge landing refused in the prologue (marker_nudge_verdict), while a
+    // group press passes that term, collapses and lands, and meets it here —
+    // carded, as its face was lit (source_frame_off_right_edge,
+    // warp_frame_map_view.h).
+    if (source_frame_off_right_edge(app, audio, committed_f))
+        return GuiOpRefusal{kMarkerNudgeOffEdgeCard};
 
     std::vector<GuiWarpMarker> pre_state = app.warpmarkers.markers();
     // Identity hint (the diff matcher is identity-blind for a column-snapped move

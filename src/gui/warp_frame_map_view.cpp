@@ -236,6 +236,35 @@ int painted_column_of_source_frame_on_basis(
     return displayed_column_at(ms, vp_start, spp);
 }
 
+bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
+                                 int64_t source_frame) {
+    // The rule is at the declaration.
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0) return false;
+    const double q = painter_samples_per_pixel(app, audio, area);
+    if (q <= 0.0) return false;
+    const int col = painted_column_of_source_frame_on_basis(
+        app, audio, static_cast<double>(source_frame),
+        displayed_or_live_target_map(app, audio),
+        static_cast<double>(max_viewport_start_grid(app, audio)), q);
+    return col >= area.w;
+}
+
+int64_t drop_at_playhead_source_frame(const AppState& a,
+                                      const GuiAudio& audio) {
+    // The rule is at the declaration (app_state.h).
+    int64_t ph = a.playhead_cursor_sample;
+    if (a.active_markers_view == 'P')
+        ph = std::max<int64_t>(0, ph - kPhaseResetLeadInSamples);
+    return active_domain_to_source_frame(a, audio, ph);
+}
+
+bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio) {
+    // The rule is at the declaration (app_state.h).
+    return source_frame_off_right_edge(
+        a, audio, drop_at_playhead_source_frame(a, audio));
+}
+
 int64_t authored_frame_at_column_on_basis(
     const AppState& app, const GuiAudio& audio, int col,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,

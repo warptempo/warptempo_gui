@@ -30,7 +30,7 @@ PositionNudgePrologue position_nudge_prologue(
     Viewport& viewport, Undo& undo,
     GestureKind kind, bool synthesized_repeat, HorizontalArrowStep step) {
     PositionNudgePrologue r;
-    // EVERY REFUSAL HERE IS SILENT, AND EACH FOR ITS OWN REASON (re-derived
+    // EVERY REFUSAL HERE IS SILENT BUT ONE, AND EACH FOR ITS OWN REASON (re-derived
     // 2026-08-30 under the strictness ruling "a card for every silent
     // refusal" — none of these is one): the loading / empty-audio pair is the
     // on_key loading gate's card one level up; the empty selection is
@@ -42,7 +42,10 @@ PositionNudgePrologue position_nudge_prologue(
     // (validation_topology.md), so the reason channel this pair's callers use
     // (GuiOpRefusal, warpmarkers_ops.h) carries nothing from here — and
     // nothing from the WALL either since 2026-08-31, when that one-day card
-    // retired into a silence with a greyed button beside it.
+    // retired into a silence with a greyed button beside it. THE ONE THAT
+    // SPEAKS is the painted-edge term (2026-09-26, below): a landing past the
+    // last column at this zoom has a producer — a Right press on a marker in
+    // the song's last columns — and is no state the user can see.
     //
     // THE WHOLE REFUSAL SET IS ONE PREDICATE, AND IT IS THE FACE'S OWN
     // (2026-08-31, converting codex round A's MED finding): the seven guards
@@ -72,7 +75,16 @@ PositionNudgePrologue position_nudge_prologue(
     // predicate takes the step in its unit and the act hands it the one it is
     // about to commit — the same step the FACE hands it, both asking
     // horizontal_arrow_step for the active column (gui_input.h).
-    if (!marker_nudge_actionable(app, audio, step)) return r;
+    // THE PAINTED-EDGE TERM is the one refusal here that CARDS: the prologue
+    // reports it (r.off_edge) and the twins raise kMarkerNudgeOffEdgeCard
+    // through their reason channel (the rule at marker_nudge_verdict's
+    // declaration, app_state.h). The button greys on it, so only the keyboard
+    // reaches this with it standing.
+    const MarkerNudgeVerdict verdict = marker_nudge_verdict(app, audio, step);
+    if (verdict != MarkerNudgeVerdict::Acts) {
+        r.off_edge = verdict == MarkerNudgeVerdict::OffEdge;
+        return r;
+    }
     // The undo-coalescing verdict, now the FIRST thing past the refusals. It
     // reads the press's own repeat bit to pick its arm — a held key's
     // continuation presses carry synthesized_repeat and merge by identity, a
@@ -176,24 +188,35 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // full reasoning — why a 2+ selection stays lit, why the geometry guards are
 // terms, and why the step the face hands it is the press's own — is at the
 // declaration.
-bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
-                             HorizontalArrowStep step) {
-    if (a.loading || audio.total_frames() <= 0) return false;
-    if (!marker_selection_standing(a)) return false;
-    if (!marker_focus_standing(a)) return false;
-    if (audio.sample_rate() <= 0) return false;
-    if (current_samples_per_pixel(a, audio) <= 0.0) return false;
+MarkerNudgeVerdict marker_nudge_verdict(const AppState& a,
+                                        const GuiAudio& audio,
+                                        HorizontalArrowStep step) {
+    using V = MarkerNudgeVerdict;
+    if (a.loading || audio.total_frames() <= 0) return V::Refused;
+    if (!marker_selection_standing(a)) return V::Refused;
+    if (!marker_focus_standing(a)) return V::Refused;
+    if (audio.sample_rate() <= 0) return V::Refused;
+    if (current_samples_per_pixel(a, audio) <= 0.0) return V::Refused;
     const int f = a.last_selected_marker;
-    if (f >= active_marker_count(a)) return false;   // the focused-index belt
+    if (f >= active_marker_count(a)) return V::Refused;  // the focused-index belt
     // A GROUP PRESS COLLAPSES AND LANDS before any wall is consulted, so it
     // always changes the screen: horizontal movement is a focus act (the
     // doctrine at the head of position_nudge.h) and the collapse is the
     // press's own committed act, not a prelude to the step.
-    if (a.selected_markers.size() >= 2) return true;
+    if (a.selected_markers.size() >= 2) return V::Acts;
     // The active column's store through its one selector (app_state.h), which
     // answers each column's own frame.
-    const int64_t orig = active_marker_time_frame(a, f);
-    return position_nudge_landing(a, audio, orig, step) != orig;
+    const int64_t orig    = active_marker_time_frame(a, f);
+    const int64_t landing = position_nudge_landing(a, audio, orig, step);
+    if (landing == orig) return V::Refused;                  // the wall
+    // The painted-edge term (the rule at the declaration, app_state.h).
+    if (source_frame_off_right_edge(a, audio, landing)) return V::OffEdge;
+    return V::Acts;
+}
+
+bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
+                             HorizontalArrowStep step) {
+    return marker_nudge_verdict(a, audio, step) == MarkerNudgeVerdict::Acts;
 }
 
 void finish_position_nudge(

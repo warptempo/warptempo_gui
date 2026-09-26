@@ -38,7 +38,10 @@ struct GuiPhaseResetMarkersOps {
           target_render(target_render_) {}
 
     void drop_phase_reset_at_position(double time_frame);
-    void drop_phase_reset_lead_in_at_playhead();
+    // Returns the off-edge refusal's sentence for the dispatcher to card
+    // (kMarkerDropOffEdgeCard; GuiOpRefusal, warpmarkers_ops.h), else
+    // std::nullopt.
+    GuiOpRefusal drop_phase_reset_lead_in_at_playhead();
     void delete_selected_phase_reset();
     void toggle_phase_reset_disabled();
     // `synthesized_repeat` is the dispatching key event's platform repeat bit,

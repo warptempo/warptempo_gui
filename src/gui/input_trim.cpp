@@ -1105,8 +1105,8 @@ void GuiInputHandler::commit_trim_drag() {
 // can ask what this click would do without a second copy of the derivation: the
 // cue over the trim bar with ctrl held names the BEGIN bound only where the click
 // would actually set it, and falls to the Arrow on every refusal below — a
-// degenerate audio/geometry state, a column in the inert permanent right
-// gutter, and above all the strictly-inside guard, whose whole purpose is that a click landing on or past
+// degenerate audio/geometry state, and above all the
+// strictly-inside guard, whose whole purpose is that a click landing on or past
 // its partner does nothing. Returns the frame the click WOULD write, or nullopt.
 // Nothing here mutates: the caller below owns the stop, the write and the tail.
 //
@@ -1130,14 +1130,9 @@ std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
     // pixels show too.
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return std::nullopt;
-    // THE PERMANENT RIGHT GUTTER SETS NO BOUND (architect 2026-09-26, the
-    // gutter is inert): a column past the waveform's extent is refused here,
-    // where the cursor cue asks too, so the ctrl hover there wears the Arrow.
-    // The press router's gutter gate already consumes such a press; this
-    // refusal keeps the decider's answer true for the cue and for a press
-    // column a window shrink under a held press left past the edge.
-    const int col = mouse_x - area.x;
-    if (col < 0 || col >= area.w) return std::nullopt;
+    int col = mouse_x - area.x;
+    if (col < 0)         col = 0;
+    if (col >= area.w)   col = area.w - 1;
     const std::vector<WarpFrameMapSegment>& dmap =
         displayed_or_live_target_map(app, audio);
     int64_t frame = authored_frame_at_column_on_basis(
@@ -1157,8 +1152,7 @@ std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
 
 bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
     // EVERY REFUSAL IS THE DECIDER'S (trim_bound_click_frame above) — the
-    // degenerate audio/geometry states, the gutter column and the
-    // strictly-inside guard — so
+    // degenerate audio/geometry states and the strictly-inside guard — so
     // this function is exactly the act, and the cursor cue that asks the same
     // question cannot answer it differently.
     const std::optional<int64_t> decided = trim_bound_click_frame(is_begin,
@@ -1170,9 +1164,8 @@ bool GuiInputHandler::set_trim_bound_at_click(bool is_begin, int mouse_x) {
         // inside it would paint a stack while the pointer merely hovered the
         // bar. The sentence names the strictly-inside guard, which is the one
         // arm a press on a painted trim bar can reach — the decider's other
-        // refusals are degenerate audio and geometry states and a column past
-        // the waveform (the inert gutter, whose press the router consumes), in
-        // none of which is there a bar under the pointer to press.
+        // refusals are degenerate audio and geometry states, in which there
+        // is no bar under the pointer to press.
         notifications.notify(AppState::NotificationClass::Normal,
                              "A trim bound must stay inside its partner");
         return false;

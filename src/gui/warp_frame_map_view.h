@@ -484,6 +484,34 @@ int painted_column_of_source_frame_on_basis(
     const std::vector<WarpFrameMapSegment>& warp_frame_map,
     double vp_start, double spp);
 
+// WOULD A MARKER AT `source_frame` PAINT PAST THE LAST COLUMN AT THIS ZOOM —
+// the one owner of the off-edge authoring refusal (architect 2026-09-26,
+// strictly as painted: a marker may not be authored where it would not
+// paint). Frame->column is nearest-grid-point, so a frame in the domain's
+// last half-column rounds to grid point w, one past the last column (w − 1),
+// and AT THE RIGHT WALL the view cannot pan further: at the current zoom no
+// viewport paints it (End's landing at the whole-song zoom always does this).
+// Mid-song the same rounding is ordinary culling — the camera pages one
+// column and the item is in view — so the test is asked of THE RIGHT-WALL
+// VIEWPORT, max_viewport_start_grid (main.cpp, the one right-wall owner), the
+// rightmost start any camera can rest at and so the one that paints a late
+// frame furthest left: true iff the frame's painted column there, through
+// the painters' own placement (painted_column_of_source_frame_on_basis, the
+// displayed map, the live grid step q) is >= the waveform's width. It reads
+// the zoom and the frame, never the camera's current place. THE LEFT EDGE
+// NEEDS NO TWIN: the leftmost start is 0, where frame 0 is column 0 and every
+// authored frame is >= 0, so no frame paints left of column 0 at every
+// viewport. Degenerate geometry answers false (the callers' own geometry
+// belts refuse first). TWO ACTS READ IT: the position nudge's landing
+// (marker_nudge_verdict, position_nudge.cpp, and the twins' group arm) and
+// the drop at the playhead (drop_copy_previous_at_playhead and
+// drop_phase_reset_lead_in_at_playhead, the `s` / Shift+S roads). The load is
+// not one of them: whether a marker paints depends on the zoom, not on the
+// data, so a marker in the last half-column stays loadable (the two-category
+// rule) and is reachable by zooming in or by the Tab walk.
+bool source_frame_off_right_edge(const AppState& app, const GuiAudio& audio,
+                                 int64_t source_frame);
+
 // authored_frame_at_column_on_basis: the authored source-frame value of pixel
 // column `col` under the same coordinate system and the caller's basis — the
 // active-domain time is displayed_grid_position_at_column above at the

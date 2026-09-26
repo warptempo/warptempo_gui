@@ -1,6 +1,7 @@
 #include "phaseresetmarkers_ops.h"
 
 #include "audio.h"
+#include "notifications.h"  // kMarkerNudgeOffEdgeCard, kMarkerDropOffEdgeCard
 #include "position_nudge.h"  // the shared position-nudge flesh (prologue,
                                   // step, commit tail) + the movement doctrine
 #include "target_render.h"
@@ -230,13 +231,23 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // The body reuses drop_phase_reset_at_position, so the created reset takes the
 // full create path — the EOF wall, undo, the single-select and the playhead
 // seat — unchanged; only the seed frame is this body's.
-void GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
-    if (audio.sample_rate() <= 0) return;
+//
+// THE PAINTED EDGE REFUSES WITH A CARD (architect 2026-09-26, strictly as
+// painted; the warp drop's twin): a lead-in frame in the song's last
+// half-column would author a reset no viewport paints at this zoom
+// (drop_at_playhead_off_edge, app_state.h), so the body returns
+// kMarkerDropOffEdgeCard for its dispatcher to raise, ahead of any write.
+// The lead-in arithmetic itself lives in drop_at_playhead_source_frame
+// (warp_frame_map_view.cpp), the one frame the refusal and the drop share.
+GuiOpRefusal GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
+    if (audio.sample_rate() <= 0) return std::nullopt;
     assert(app.active_audio_view == 'T');
-    const int64_t ph = std::max<int64_t>(
-        0, app.playhead_cursor_sample - kPhaseResetLeadInSamples);
-    const int64_t src_frame = active_domain_to_source_frame(app, audio, ph);
+    assert(app.active_markers_view == 'P');
+    if (drop_at_playhead_off_edge(app, audio))
+        return GuiOpRefusal{kMarkerDropOffEdgeCard};
+    const int64_t src_frame = drop_at_playhead_source_frame(app, audio);
     drop_phase_reset_at_position(static_cast<double>(src_frame));
+    return std::nullopt;
 }
 
 // Delete every selected phase reset. No label/cascade rules — phase resets
@@ -364,11 +375,16 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // refusals say NOTHING, the warp twin's rule and for its reason
     // (GuiOpRefusal, warpmarkers_ops.h): each is an outer gate's card already,
     // a belt against a kept invariant, or the wall, silent beside its greyed
-    // button. `step` is passed for the wall term alone.
+    // button — but the painted-edge term, which cards as in the warp twin.
+    // `step` is passed for the wall and edge terms alone.
     const PositionNudgePrologue pro = position_nudge_prologue(
         app, audio, playback_lifecycle, selection, viewport, undo,
         GestureKind::PhaseResetNudge, synthesized_repeat, step);
-    if (!pro.ok) return std::nullopt;
+    // The one carded refusal of the set, the painted-edge term (the rule at
+    // marker_nudge_verdict's declaration, app_state.h).
+    if (!pro.ok)
+        return pro.off_edge ? GuiOpRefusal{kMarkerNudgeOffEdgeCard}
+                            : std::nullopt;
     const bool merge = pro.merge;
     // Phase resets carry no tempo, so there is no inherit/tempo analog to the warp
     // twin's value gestures — this column's only nudge is positional.
@@ -405,6 +421,10 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // verbatim — position_nudge_prologue.)
     if (committed_f == orig_f)
         return std::nullopt;
+    // THE PAINTED EDGE, the warp twin's arm verbatim (a group press past its
+    // collapse; a singleton refused in the prologue).
+    if (source_frame_off_right_edge(app, audio, committed_f))
+        return GuiOpRefusal{kMarkerNudgeOffEdgeCard};
     std::vector<GuiPhaseResetMarker> pre_state =
         app.phaseresetmarkers.markers();
     // Identity hint: the nudged reset in PRE-reorder snapshot coordinates (the

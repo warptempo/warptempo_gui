@@ -144,6 +144,9 @@ struct GuiTargetRender;
 // Result of the shared guard prologue.
 struct PositionNudgePrologue {
     bool ok      = false;  // false: the press refuses (silent, navigation-class)
+    bool off_edge = false; // !ok by the painted-edge term, which the twins
+                           // card (kMarkerNudgeOffEdgeCard, marker_nudge_
+                           // verdict's declaration, app_state.h)
     bool merge   = false;  // undo-coalesce verdict for this press
     int  focused = -1;     // app.last_selected_marker, validated against the
                            // active store by marker_nudge_actionable

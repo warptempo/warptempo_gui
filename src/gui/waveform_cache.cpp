@@ -1191,10 +1191,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // The width the flag column mapping divides the displayed span by — the same
     // denominator the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays full-strip width, so a flag
-    // anchored on grid point wave_w — the permanent right gutter's first
-    // column (waveform_area, main.cpp) — paints there and runs on toward the
-    // window's edge (the cull rule is at iterate_visible_flags_impl).
+    // verticals below them. The surface stays full-strip width; a
+    // non-multiple-of-16 window leaves the gutter columns unpainted.
     //
     // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
     // resize-window basis split). The numerator here is the DISPLAYED span

@@ -9424,9 +9424,6 @@ inline int64_t render_player_scrub_frame_at(const AppState& a, int x) {
 int     top_strip_h(const AppState& a);
 int     bottom_strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
-// x inside the waveform's column extent [area.x, area.x + area.w); false in
-// the permanent right gutter (contract at the definition, main.cpp).
-bool    point_on_waveform_columns(const AppState& a, int x);
 GuiRect top_strip_area(const AppState& a);
 // One shared lane-rect helper for every strip lane (see the layout contract at
 // its definition in main.cpp). lane_from_window_edge indexes from the strip's
@@ -9957,6 +9954,29 @@ inline bool center_command_lands_on_focus(const AppState& a) {
 inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
     return a.active_markers_view != 'P';
 }
+
+// THE AT-PLAYHEAD DROP'S AUTHORED FRAME in the ACTIVE column, one owner so the
+// drop bodies and the off-edge refusal below ask of the same frame: on the P
+// column the LEAD-IN — kPhaseResetLeadInSamples output samples before the
+// playhead, floored at 0, mapped to source (the derivation's prose home is at
+// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead) — and on the
+// W column the playhead's own source frame. Defined in
+// warp_frame_map_view.cpp. READERS: the two drop bodies
+// (drop_copy_previous_at_playhead, drop_phase_reset_lead_in_at_playhead) and
+// drop_at_playhead_off_edge below.
+int64_t drop_at_playhead_source_frame(const AppState& a,
+                                      const GuiAudio& audio);
+
+// WOULD THE AT-PLAYHEAD DROP AUTHOR A MARKER PAST THE LAST COLUMN AT THIS
+// ZOOM (architect 2026-09-26, strictly as painted) — the off-edge owner
+// (source_frame_off_right_edge, warp_frame_map_view.h) asked of the frame
+// above: End at the whole-song zoom, then `s`. THREE READERS: the two drop
+// bodies, which refuse on it with kMarkerDropOffEdgeCard (bare `s` in either
+// column and Shift+S's lead-in drop past its crossing), and the Drop marker
+// button's face (redesign_button_enabled), whose PLAIN form greys on it — so
+// the face greys where the plain drop would refuse and the crossing is not
+// live (T+P), and stays lit in S+W, where the shifted press still crosses.
+bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio);
 
 // THE TEMPO CENT STEP'S COLUMN GATE — Up / Down on the PAYLOAD author TEMPO,
 // and tempo
@@ -10995,6 +11015,23 @@ int64_t playhead_arrow_step_landing(const AppState& a, const GuiAudio& audio,
 // after the headroom clamp the landing equals the resting frame iff that
 // headroom is ZERO: a marker two frames from the end greys nothing (the step
 // lands ON the end), a marker AT the end greys.
+// THE PAINTED-EDGE TERM (architect 2026-09-26, strictly as painted): a
+// singleton whose landing would paint past the last column at this zoom
+// (source_frame_off_right_edge, warp_frame_map_view.h — the song's last
+// half-column, which no viewport paints) refuses too, so the Right button
+// greys there beside the wall. It is the one term of the set that CARDS on
+// the keyboard road (kMarkerNudgeOffEdgeCard, notifications.h): the wall is a
+// benign refusal already at its state, while this press would move the
+// marker somewhere it could not be seen. MarkerNudgeVerdict names which term
+// refused, so the prologue can card this one and stay silent on the rest;
+// marker_nudge_actionable is the face's boolean over it. A 2+ selection still
+// answers Acts (the collapse changes the screen); its focus's off-edge step
+// is refused, and carded, by the twins after the collapse
+// (nudge_selected_markers / nudge_selected_phase_resets).
+enum class MarkerNudgeVerdict { Acts, Refused, OffEdge };
+MarkerNudgeVerdict marker_nudge_verdict(const AppState& a,
+                                        const GuiAudio& audio,
+                                        HorizontalArrowStep step);
 bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
                              HorizontalArrowStep step);
 
@@ -11555,9 +11592,9 @@ bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
                                  int sample_rate);
-// The canonical level whose painted span (width·q, the sixteenth-frame grid)
-// covers `span_frames`, unclamped: its spp equals the required step rounded up
-// to a sixteenth, n/16 with n = ceil(16·span/width), so its q is n/16 — the
+// The covering level: the one whose painted span (width·q, the sixteenth-frame
+// grid) covers `span_frames`, unclamped — a covering question, so a ceiling,
+// n = ceil(16·span/width), the level's spp n/16 and so its q n/16 — the
 // ceiling's solve and the span framer's (the rule at its definition, main.cpp).
 double  fit_zoom_level(double span_frames, int width_px, int sample_rate);
 // Clamp a requested zoom level into the per-file window [kMinZoom, effective
@@ -14500,7 +14537,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // be reflected here by hand; that is the accepted cost of the two
         // classes the walk cannot see.
         //
-        // THE DROP NEVER GREYS PAST THE LOCK (architect 2026-08-30, the S+P
+        // THE DROP NEVER GREYS PAST THE LOCK ON THE HOME-VIEW REFUSAL
+        // (architect 2026-08-30, the S+P
         // opening's own consequence — no face edit was needed, the twin
         // rule's arm inverting by the predicate alone): bare `s` refuses
         // only in T+W (active_column_authoring_allowed — the P column drops
@@ -14519,10 +14557,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // early returns are a bad sample rate and the past-EOF wall, a
         // coincident frame being the resolver's and the red flag's business —
         // so the sentence is deleted rather than inherited, 2026-09-02.)
+        // THE PLAIN FORM ALSO REFUSES PAST THE PAINTED EDGE (architect
+        // 2026-09-26, drop_at_playhead_off_edge): in T+P, where the crossing
+        // is not live, the face greys there; in S+W the shifted press still
+        // crosses, so the face stays lit and the plain lift reaches the
+        // drop's own card.
         case RedesignButton::IconMarkerDrop:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
-                   (active_column_authoring_allowed(a) ||
+                   ((active_column_authoring_allowed(a) &&
+                     !drop_at_playhead_off_edge(a, audio)) ||
                     phase_reset_drop_crossing_actionable(a));
         // DELETE AND DISABLE GREY ON THEIR ARMS' OWN REFUSAL (2026-08-30): an
         // empty selection — the one refusal left in every column and every
@@ -17249,8 +17293,7 @@ enum class TrimHit { None, Begin, End };
 // LEFT edge on it, the end cap's RIGHT edge on it — from trim_endcap_rect, the
 // ONE rect owner render_trim_flags fills through and publishes from. THE HIT
 // RECT IS THAT CAP INFLATED by kTrimEndcapGrabPx per side (a 2px cap is under
-// any pointing tolerance) and CLIPPED TO THE PAINTED LANE, so the inert
-// permanent right gutter grabs nothing (architect 2026-09-26); it is the one place in this lane where the drawn
+// any pointing tolerance); it is the one place in this lane where the drawn
 // and the grabbable rect differ, and it is why two caps at nearby columns can
 // overlap as targets at all (LEFTMOST WINS — the arbitration is at the
 // body). Tests both mouse_x and mouse_y, the y against the lane the caps were
@@ -17275,7 +17318,7 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 // live trim pass last DREW — trim_bridge_gap (render.h, the one owner the
 // painter's midpoint mark also fits against) over the painted bound columns,
 // clipped by the painter to its own effective width, so the grabbable bridge
-// is the drawn one and the permanent right gutter neither
+// is the drawn one and the inert non-multiple-of-16 right gutter neither
 // paints the bar nor answers true here. Nothing is re-derived on the store's
 // pair.
 //

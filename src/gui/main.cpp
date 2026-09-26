@@ -596,20 +596,10 @@ GuiRect waveform_area(const AppState& a) {
     // marker lane with no second expression of the vertical rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
-    // Effective waveform width: THE PERMANENT RIGHT GUTTER (architect
-    // 2026-09-26) — the largest multiple of the grid step not exceeding the
-    // window width LESS the gutter's minimum, at every resolution. The
-    // minimum is the playhead head's widest half-width at the device scale
-    // plus one (playhead_head_half_px(0, gui_scale_factor()) + 1: 10 px at
-    // 100 %, 21 at 225 %), so the waveform has ONE MORE PAINTABLE GRID POINT
-    // THAN IT HAS COLUMNS: grid point w — where the song's last half-column
-    // rounds — paints in the gutter, the ruler head drawn whole there, the
-    // stems, the scanner and a flag anchored on it beside it (flags may run
-    // off the window). THE GUTTER IS OTHERWISE INERT (architect 2026-09-26):
-    // no press, drag, sweep, zoom, touch start, wheel or click that begins in
-    // it acts — only a flag painted there answers, exactly as painted
-    // (point_on_waveform_columns below is the one x test). Measured: 1920 @ 100 % -> 1904 (a 16 px gutter), the tablet's
-    // 2304 @ 225 % -> 2272 (32 px), 1366 @ 100 % -> 1344 (22 px).
+    // Effective waveform width: the largest multiple of the grid step not
+    // exceeding the window width, leaving a <=15 px inert right gutter. A
+    // gutter appears only at a non-multiple-of-16 width (never at
+    // 1920/2304/2560/3840).
     //
     // The step is 16 = 1600/gcd(44100,1600), the strictest step among
     // standard sample rates (every standard rate's step divides 16): every
@@ -620,10 +610,7 @@ GuiRect waveform_area(const AppState& a) {
     // fractional — the right wall, the viewport grid and the visible span
     // stay integral — and at whole levels q is the logical spp exactly.
     constexpr int kGridStepPx = 16;
-    const int min_gutter = playhead_head_half_px(0, gui_scale_factor()) + 1;
-    const int avail_w    = w - min_gutter;
-    const int effective_w =
-        avail_w > 0 ? avail_w - (avail_w % kGridStepPx) : 0;
+    const int effective_w = w - (w % kGridStepPx);
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
     //
@@ -683,27 +670,6 @@ GuiRect waveform_area(const AppState& a) {
     // on the window, so no term can deepen an overflow.)
     const int h_avail = h - top_h - bot_h;
     return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
-}
-
-// THE WAVEFORM'S COLUMN EXTENT, [area.x, area.x + area.w) — THE ONE X TEST
-// THAT MAKES THE PERMANENT RIGHT GUTTER INERT (architect 2026-09-26). The
-// gutter [area.x + area.w, window width) paints grid point w's verticals and
-// any flag anchored there, and nothing else in it answers the pointer: a
-// gesture that STARTS there — a plain press (pan, placement, scrub), a shift
-// sweep, a ctrl zoom, a trim-bar press, a lane click or double-click, a touch
-// pan / region hold / pinch, a wheel detent — does nothing. A painted flag is
-// the one exception, reached through the flag hit test ahead of every reader
-// of this predicate. A gesture that started on the waveform and travels over
-// the gutter is untouched: only where a gesture starts is tested. Readers, by
-// grep 2026-09-26: point_on_nav_surface and point_in_placement_lanes (the two
-// surface owners, input_pointer.cpp), the live press router's and the `h`
-// press router's gutter gates, wheel_context's gutter answer
-// (input_handler.cpp). The trim bar's two hits keep their own edges, the
-// painted lane's: hit_test_trim_endcap clips its inflated caps to the
-// published lane and trim_bound_click_frame refuses a column past area.w.
-bool point_on_waveform_columns(const AppState& a, int x) {
-    const GuiRect area = waveform_area(a);
-    return x >= area.x && x < area.x + area.w;
 }
 
 // ONE shared layout contract for every strip lane — the single geometry owner.
@@ -966,26 +932,30 @@ double samples_per_pixel_at(double zoom_level, int sample_rate) {
            static_cast<double>(sample_rate) / 1000.0;
 }
 
-// THE FIT LEVEL for a span of `span_frames` on a strip `width_px` wide: the
-// CANONICAL level whose PAINTED span covers it, width·q >= span_frames, q the
-// sixteenth-frame grid step (painter_quantized_spp, warp_frame_map_view.h):
-// the level whose spp EQUALS the required step rounded UP to a whole
-// sixteenth, n/16 with n = ceil(16 · span / width). The exact solve of
-// spp·width == span (1 + log2(span·1000 / (kZoomBaseMsPerPx · sr · width)))
-// would leave q to round to the NEAREST sixteenth, and half the time below spp
-// — a painted span up to width/32 frames SHORT of the span, so a whole song
-// would no longer fit its whole-song level. The returned level's spp lands
-// within ULPs of n/16, at the CENTRE of q's rounding bin, far inside
-// nearbyint's half sixteenth either way, so its q is n/16 and width·n/16 >=
-// span. It is not the smallest covering level: every level down to the bin's
-// lower edge, spp (n − ½)/16, paints the same q and the same picture; the bin
-// centre is taken so no ULP of the log2/exp2 round trip can flip q. The
-// overshoot is under one sixteenth of a frame per column — under width/16
-// frames of silence past the span's end, which is under one column once a
-// column holds more than width/16 frames (any span longer than about five
-// seconds at 1904 px). UNCLAMPED: the callers own their bounds. Two readers:
-// effective_max_zoom_level below and the span framer (frame_span_into_view,
-// input_handler.cpp).
+// THE FIT LEVEL for a span of `span_frames` on a strip `width_px` wide. It
+// answers a COVERING question — which sixteenth-frame grid step q
+// (painter_quantized_spp, warp_frame_map_view.h) lets the strip's width_px
+// columns CONTAIN the span, width·q >= span_frames — and a covering question
+// on a lattice is a ceiling: n = ceil(16 · span / width), the smallest whole
+// count of sixteenths per column that covers. The level returned is the one
+// whose spp is n/16 itself; the grid step's own nearbyint then finds n/16
+// already on the lattice (the level's spp lands within ULPs of it, at the
+// centre of q's rounding bin, so no ULP of the log2/exp2 round trip can flip
+// q), and width·n/16 >= span. GRIDS ROUND TO NEAREST, COVERING ROUNDS UP —
+// the project's rounding rule, not a patch: the exact solve of spp·width ==
+// span would leave q to round to the NEAREST sixteenth, half the time below
+// spp — a painted span up to width/32 frames SHORT of the span, so a whole
+// song would not fit its whole-song level (whole_song_visible and
+// clamp_viewport_start's visible >= total branch would fail, the whole-song
+// view panning one column). The overshoot is under one sixteenth of a frame
+// per column — under width/16 frames of silence past the span's end, which is
+// under one column once a column holds more than width/16 frames (any span
+// longer than about five seconds at 1920 px). UNCLAMPED: the callers own
+// their bounds. Two readers: effective_max_zoom_level below (the whole song)
+// and the span framer frame_span_into_view (input_handler.cpp), whose own two
+// callers are the trim-bar double-click (run_span_framing_command,
+// input_handler.cpp) and the group undo/redo restore that cannot fit
+// (undo.cpp).
 double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
     const double sixteenths = std::ceil(
         span_frames * kPainterGridSubdivisions / static_cast<double>(width_px));
@@ -995,8 +965,8 @@ double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
 }
 
 // The per-file effective zoom-out ceiling: the fit level of the whole song
-// (fit_zoom_level above — the canonical level whose painted span width·q
-// covers total_frames), clamped into [kMinZoom, kMaxZoom]; full zoom-out
+// (fit_zoom_level above — the level whose painted span width·q covers
+// total_frames), clamped into [kMinZoom, kMaxZoom]; full zoom-out
 // rests here (whole-song-visible, Ableton behavior), where samples_visible >=
 // total_frames and clamp_viewport_start parks the start at 0. It moves with
 // the waveform's width (the whole-song state follows it, ViewState::
@@ -1079,12 +1049,14 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // strictly increasing at numeric zoom (q >> 1), so starting at
     // floor(max_start/q) and stepping up finds it in O(1). Resting here shows
     // under one column of inert padding past EOF (get_peak_range clamps
-    // past-EOF reads to silence), and a frame in the song's last half-column
-    // rounds to grid point w, which paints in the permanent right gutter
-    // (waveform_area) — so the end playhead and an end marker stay on screen
-    // at the wall. `visible` is the painted span w·q (samples_visible), a
-    // whole number of frames. The flush-right viewport is a true
-    // grid point — unlike the off-grid max_start it replaces, this keeps
+    // past-EOF reads to silence). `visible` is the painted span w·q
+    // (samples_visible), a whole number of frames. A frame in the song's last
+    // half-column still rounds to grid point w, one past the last column, so
+    // at the wall it is off the edge: the playhead shows only its ruler
+    // head's left half there (the half-head rule, paint_ruler_row), and no
+    // position nudge or drop at the playhead authors a marker there
+    // (source_frame_off_right_edge, warp_frame_map_view.h, which reads this
+    // wall). The flush-right viewport is a true grid point — unlike the off-grid max_start it replaces, this keeps
     // exact-grid marker commits and pixel anchoring simultaneously valid at
     // maximum scroll.
     //
@@ -1244,14 +1216,11 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). The half-width is playhead_half_px()'s
 // to own — render.h states its authored value, its provenance, and the recorded
-// mismatch against the wider head. The rect reaches ONE COLUMN PAST THE
-// WAVEFORM: grid point area.w, the permanent right gutter's first column
-// (waveform_area), is a paintable playhead column, so its line owes damage
-// there like any other.
+// mismatch against the wider head.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - playhead_half_px());
-    const int x1 = std::min(area.x + area.w + 1, col + playhead_half_px() + 1);
+    const int x1 = std::min(area.x + area.w, col + playhead_half_px() + 1);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's stem inside the waveform AND
