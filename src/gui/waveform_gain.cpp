@@ -55,13 +55,15 @@ constexpr double kStepSeconds = 0.1;
 constexpr double kSilentGain = 8.0;
 
 // --- the constants' reasons --------------------------------------------------
-// The nine picture values are HARD-CODED (architect: every project shares one
-// frame of reference, so they are set once and left; a retune is a
+// The eleven picture values are HARD-CODED (architect: every project shares
+// one frame of reference, so they are set once and left; a retune is a
 // recompile, by design — waveform_gain.h). The leveler's five and the
 // expander's two were device-config keys, `waveform_gain_*` and
 // `waveform_expander_*`, for a tuning phase closed 2026-09-24; the
 // compressor's two were `waveform_compressor_threshold_db` and
-// `waveform_compressor_ratio`, the phase closed 2026-09-25.
+// `waveform_compressor_ratio`, the phase closed 2026-09-25; the core shade's
+// two breakpoints were never keys (the two endpoint blends they map onto
+// are, for a tuning phase — render.h's row-6 block).
 //
 // kWindowSeconds 3.0: the EBU short-term loudness length, chosen by
 // eye (architect 2026-09-23) for the contrast it gives and for the earlier
@@ -164,6 +166,22 @@ constexpr double kCompressorThresholdDb = -24.0;
 constexpr double kCompressorRatio = 2.0;
 static_assert(kCompressorRatio >= 1.0, "the compressor never expands");
 
+// THE CORE SHADE'S TWO BREAKPOINTS (waveform_gain.h owns the stage),
+// architect 2026-09-25, on the gap between the bars in dB (20 log10(g / c)):
+// the shade parameter u runs linearly in dB from 0 at kCoreShadeLoudGapDb to
+// 1 at kCoreShadeQuietGapDb, clamped outside. They are the gap's measured
+// spread, so the shade spends its whole travel over the material and saturates
+// only in its outer tails: over the three K550 movements (the product's
+// leveler and compressor re-derived, 2026-09-25) the gap's p5 is
+// 5.4 / 6.0 / 6.3 dB and its p95 18.6 / 21.7 / 21.4 dB.
+//
+// kCoreShadeLoudGapDb 6: the tuttis' gap, the gap's p5 rounded.
+constexpr double kCoreShadeLoudGapDb = 6.0;
+
+// kCoreShadeQuietGapDb 20: the quiet passages' gap, the gap's p95 rounded.
+constexpr double kCoreShadeQuietGapDb = 20.0;
+static_assert(kCoreShadeQuietGapDb > kCoreShadeLoudGapDb, "the shade's span is positive");
+
 // THE CURVE (waveform_gain.h, THE EXPANDER): the reduction in dB, >= 0 and
 // uncapped, for a column whose leveled peak reads `x` dB — 0 at or above the
 // threshold, (ratio - 1) dB per dB under it. `x` may be minus infinity (a
@@ -171,6 +189,14 @@ static_assert(kCompressorRatio >= 1.0, "the compressor never expands");
 double expander_reduction_db(double x) {
     if (x >= kExpanderThresholdDb) return 0.0;
     return (kExpanderRatio - 1.0) * (kExpanderThresholdDb - x);
+}
+
+// THE SHADE CURVE (waveform_gain.h, THE CORE SHADE): u in [0, 1], linear in
+// dB between the two breakpoints, clamped outside.
+double core_shade_for_gap_db(double gap_db) {
+    return std::clamp((gap_db - kCoreShadeLoudGapDb) /
+                          (kCoreShadeQuietGapDb - kCoreShadeLoudGapDb),
+                      0.0, 1.0);
 }
 
 // Reads the column pass's two arrays in place; they outlive it (the
@@ -270,11 +296,15 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     out.hop_frames = st * col;
     out.gain.resize(measured.size());
     out.inner_scale.resize(measured.size());
+    out.core_shade.resize(measured.size());
     if (known.empty()) {
         // No window is audible anywhere: x8 flat, and the compressor, having
-        // no L over any threshold, reduces nothing.
-        std::fill(out.gain.begin(), out.gain.end(), std::clamp(kSilentGain, kGainMin, kGainMax));
+        // no L over any threshold, reduces nothing; the shade follows from
+        // that g and c as everywhere.
+        const double g = std::clamp(kSilentGain, kGainMin, kGainMax);
+        std::fill(out.gain.begin(), out.gain.end(), g);
         std::fill(out.inner_scale.begin(), out.inner_scale.end(), 1.0);
+        std::fill(out.core_shade.begin(), out.core_shade.end(), core_shade_for_gap_db(20 * std::log10(g)));
     } else {
         // THE COMPRESSOR'S SLOPE (waveform_gain.h): (1 - 1/R) dB of reduction
         // per dB of L over the threshold; 0 at R = 1, the identity.
@@ -313,6 +343,10 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
                 level > kCompressorThresholdDb ? slope * (level - kCompressorThresholdDb)
                                                : 0.0;
             out.inner_scale[k] = std::pow(10.0, -reduction / 20);
+            // THE CORE SHADE on the gap between the bars, 20 log10(g / c):
+            // c is 10^(-reduction / 20), so the gap is the clamped gain's dB
+            // plus the reduction, exactly.
+            out.core_shade[k] = core_shade_for_gap_db(20 * std::log10(out.gain[k]) + reduction);
         }
     }
 
@@ -336,30 +370,37 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     return out;
 }
 
-double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame) {
-    const std::vector<double>& g = curve.gain;
-    if (g.empty() || curve.hop_frames <= 0) return 1.0;
-    if (frame <= 0) return g.front();
-    const int64_t k = frame / curve.hop_frames;
-    if (k >= static_cast<int64_t>(g.size()) - 1) return g.back();
-    const double a = g[static_cast<size_t>(k)];
-    const double b = g[static_cast<size_t>(k) + 1];
-    const double t = static_cast<double>(frame - k * curve.hop_frames) /
-                     static_cast<double>(curve.hop_frames);
+namespace {
+
+// THE PER-HOP READ shared by the three per-hop arrays: linear between the two
+// nearest hops, the first and last value held beyond the ends, 1.0 for an
+// empty array. (The shade's empty-curve 1.0 is never read: the painter asks
+// only a derived curve, and a derived curve is empty only for a zero-frame
+// source, which has no column to paint.)
+double per_hop_at(const std::vector<double>& v, int64_t hop_frames, int64_t frame) {
+    if (v.empty() || hop_frames <= 0) return 1.0;
+    if (frame <= 0) return v.front();
+    const int64_t k = frame / hop_frames;
+    if (k >= static_cast<int64_t>(v.size()) - 1) return v.back();
+    const double a = v[static_cast<size_t>(k)];
+    const double b = v[static_cast<size_t>(k) + 1];
+    const double t = static_cast<double>(frame - k * hop_frames) /
+                     static_cast<double>(hop_frames);
     return a + (b - a) * t;
 }
 
+}  // namespace
+
+double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame) {
+    return per_hop_at(curve.gain, curve.hop_frames, frame);
+}
+
 double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame) {
-    const std::vector<double>& c = curve.inner_scale;
-    if (c.empty() || curve.hop_frames <= 0) return 1.0;
-    if (frame <= 0) return c.front();
-    const int64_t k = frame / curve.hop_frames;
-    if (k >= static_cast<int64_t>(c.size()) - 1) return c.back();
-    const double a = c[static_cast<size_t>(k)];
-    const double b = c[static_cast<size_t>(k) + 1];
-    const double t = static_cast<double>(frame - k * curve.hop_frames) /
-                     static_cast<double>(curve.hop_frames);
-    return a + (b - a) * t;
+    return per_hop_at(curve.inner_scale, curve.hop_frames, frame);
+}
+
+double waveform_core_shade_at(const WaveformGainCurve& curve, int64_t frame) {
+    return per_hop_at(curve.core_shade, curve.hop_frames, frame);
 }
 
 float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1) {

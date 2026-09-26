@@ -5,7 +5,6 @@
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -18,17 +17,18 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SEVEN keys since
-// 2026-09-25, when `fg_color` arrived after sync_path for the core ink's
-// tuning phase; six from the same day's departure of the inner compressor's
-// two tuning keys, hard-coded in waveform_gain.cpp; the fuller count's
-// succession —
+// set the shared scanner enforces after the loop (EIGHT keys since
+// 2026-09-25, when `fg_blend_loud` and `fg_blend_quiet` replaced `fg_color`
+// after sync_path for the core shade's tuning phase; seven with `fg_color`
+// that afternoon, six from the same day's departure of the inner
+// compressor's two tuning keys, hard-coded in waveform_gain.cpp; the fuller
+// count's succession —
 // two, five, four, five, six, as many as seventeen with the waveform
 // picture's tunables of 2026-09-23/24, six, as many as eleven and then eight
 // on 2026-09-25 — is the header's record and git's). THE ORDER IS THE
 // ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
 // projects_repo, projects_path, last_project, sync_path — the sixth placed
-// right after gui_scale (architect 2026-09-13), and `fg_color` after
+// right after gui_scale (architect 2026-09-13), and the two blend keys after
 // sync_path (architect 2026-09-25). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
@@ -43,7 +43,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
-    "fg_color",
+    "fg_blend_loud",
+    "fg_blend_quiet",
 };
 
 } // namespace
@@ -60,27 +61,9 @@ std::string format_max_waveform_height(int authored_px) {
     return std::string(buf);
 }
 
-GuiColor parse_waveform_colour(std::string_view v) {
-    // The grammar has admitted exactly `#` and six lower-case hex digits, so
-    // every digit maps and the value fits 24 bits.
-    uint32_t rgb = 0;
-    for (size_t i = 1; i < v.size(); ++i) {
-        const char c = v[i];
-        const uint32_t d = (c >= '0' && c <= '9')
-                               ? static_cast<uint32_t>(c - '0')
-                               : static_cast<uint32_t>(c - 'a' + 10);
-        rgb = (rgb << 4) | d;
-    }
-    return hex(rgb);
-}
-
-std::string format_waveform_colour(GuiColor c) {
-    const auto byte = [](double ch) {
-        return static_cast<unsigned>(std::nearbyint(ch * 255.0));
-    };
-    char buf[16];
-    std::snprintf(buf, sizeof(buf), "#%02x%02x%02x",
-                  byte(c.r), byte(c.g), byte(c.b));
+std::string format_core_blend_percent(int percent) {
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%d", percent);
     return std::string(buf);
 }
 
@@ -128,10 +111,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
-        } else if (k == "fg_color") {
-            // Through the one serializer, which writes the canonical
-            // lower-case spelling the reader demands.
-            s += format_waveform_colour(cfg.fg_color);
+        } else if (k == "fg_blend_loud") {
+            s += format_core_blend_percent(cfg.fg_blend_loud);
+        } else if (k == "fg_blend_quiet") {
+            s += format_core_blend_percent(cfg.fg_blend_quiet);
         }
         s += '\n';
     }
@@ -227,14 +210,16 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.sync_path = value;
             return {};
         }
-        if (key == "fg_color") {
-            // `#` and six lower-case hex digits, one canonical spelling,
-            // through the one grammar owner in the header; then the one
-            // parser.
-            if (!is_waveform_colour(value)) {
-                return bad_value(ln, key, value, kWaveformColourGrammarReason);
+        if (key == "fg_blend_loud" || key == "fg_blend_quiet") {
+            // The scale's road: plain digits through parse_authored_frame,
+            // then the RANGE through the one owner in the header. Neither key
+            // constrains the other: loud over quiet inverts the shade.
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) || !is_core_blend_percent(v)) {
+                return bad_value(ln, key, value, kCoreBlendGrammarReason);
             }
-            out.fg_color = parse_waveform_colour(value);
+            (key == "fg_blend_loud" ? out.fg_blend_loud : out.fg_blend_quiet) =
+                static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

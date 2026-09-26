@@ -55,7 +55,7 @@ public:
     // BACKEND is born with, stamped into
     // `$XDG_CONFIG_HOME/warptempo_gui/config` on the first launch that finds no
     // file there and never consulted again (device_config.h owns the file, its
-    // schema and its seven keys). It is a PLATFORM FACT and lives on the seam for
+    // schema and its eight keys). It is a PLATFORM FACT and lives on the seam for
     // exactly that reason: the scale a panel wants and where on THIS device the
     // projects live are
     // answers only the backend has, and routing them through here is what keeps
