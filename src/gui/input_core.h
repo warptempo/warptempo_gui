@@ -255,8 +255,10 @@ public:
     // that gate structurally dead rather than removed.
     // TWO PRODUCERS, one per backend. On Wayland it is wl_keyboard.modifiers
     // and nothing else. ON ANDROID IT IS THE S PEN'S SIDE BUTTON (architect
-    // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl,
-    // hardware keyboards being out of scope there): the backend calls this
+    // 2026-09-25: the pen's button IS the Ctrl bit — the glass's only Ctrl
+    // modifier, hardware keyboards being out of scope there, bare `k`'s
+    // sticky ctrl being a lamp the flag press reads and not this bit): the
+    // backend calls this
     // with ctrl = the button held — for what the pen owns alone, its hover or
     // a gesture touch_owner_tool() reports as the pen's (an ignored pen
     // passes released) — carrying the other three bits through unchanged,

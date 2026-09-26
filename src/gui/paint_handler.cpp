@@ -1272,14 +1272,14 @@ constexpr double kTooltipPadXPx      = 5.0;
 
 // THE TOOLTIP'S TEXT lives with the roster, not here
 // (redesign_button_tooltip, app_state.h, owns both the membership and the text;
-// its MODIFIER line is static_asserted against redesign_button_shift_admits and
-// redesign_button_ctrl_admits, so the hint cannot appear where a modified press
-// does nothing).
+// its MODIFIER line is static_asserted against redesign_button_shift_admits,
+// redesign_button_ctrl_admits and redesign_button_ctrl_shift_admits, so the
+// hint cannot appear where a modified press does nothing).
 //
 // EVERY BUTTON BUT ROW 1'S HAS ONE (architect 2026-07-31, stated as the ROW's
 // property at the table): the one-line form is the whole story for most, and the
 // buttons that admit a modifier add the hint line below it (the membership is
-// those two predicates, app_state.h, never a count restated here) — Render only
+// those predicates, app_state.h, never a count restated here) — Render only
 // while iteration mode is OFF, where its shift press has a twin to reach.
 // (The TEXT and its membership live at redesign_button_tooltip, app_state.h —
 // beside the roster, because the pointer side reads the same table.)

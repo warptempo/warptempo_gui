@@ -886,8 +886,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              lamp, which is what keeps the two locks
     //                              from ever standing together
     //   - Space (no mods)        → playback toggle
-    //   - Left/Right (bare or    → playhead step, and ONLY with an
-    //     Ctrl)                    EMPTY selection (the waveform lane): with one
+    //   - Left/Right (bare)      → playhead step, and ONLY with an
+    //                              EMPTY selection (the waveform lane): with one
     //                              the same press also carries the marker — the
     //                              marker-lane position nudge — which
     //                              is authoring and drops here
@@ -898,7 +898,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     (no mods)                stepped-pan step. Pure navigation, same
     //                              family as the playhead-step and Home/End
     //                              entries.
-    //   - =/- (no mods)          → zoom in/out
     //   - 0 (no mods)            → full zoom-out stamping the view, then the
     //                              restore of that view in the audio view it
     //                              was stamped in; a silent no-op with
@@ -2722,22 +2721,20 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
                                          MarkerLandingFrame frame) {
     // THE WALK REFUSES WHOLE AT A WALL (architect 2026-08-30, the strictness
     // ruling), and the test is THE STEP OWNER'S — marker_walk_step
-    // (app_state.h), whose `marker` field marker_walk_actionable is the one-bit
-    // face of and the walk button wears. A step with
-    // nothing ahead writes NOTHING: no select, no playhead land, no recentre.
-    // It used to fall through to the jump below, which — with a focus standing
-    // — re-landed the playhead on that same focus and recentred on it, so a
-    // GREYED button sat over a key that moved the cursor; the face and the act
-    // ask one question now, so they cannot disagree. THE Ctrl+Shift+Tab MARCH
+    // (app_state.h), whose `marker` field is -1 where the step would land
+    // nothing. A step with nothing ahead writes NOTHING: no select, no
+    // playhead land, no recentre. THE Ctrl+Shift+Tab MARCH
     // takes this answer at each of its two cycles (its tab switches and its
     // two `c`s are their own acts and still run); it reads nothing back, the
     // step being this body's own business since the march stopped walking
     // cells.
     //
-    // THE REFUSAL IS SILENT (architect 2026-08-31, superseding the 2026-08-30
-    // card): a benign one-dimensional refusal already at its state says
-    // nothing — one glance at the marker lane shows the focus is at its end —
-    // and the greyed Walk button is the standing cue.
+    // THE REFUSAL IS SILENT (architect 2026-08-31): a benign
+    // one-dimensional refusal already at its state says nothing — one glance
+    // at the marker lane shows the focus is at its end. The Walk button stays
+    // lit there (its ctrl form, the tab switch, always acts — the twin rule
+    // at redesign_button_enabled), so its plain or shifted lift at the wall
+    // reaches this same silence.
     const MarkerWalkStep step = marker_walk_step(app, audio, forward);
     if (step.marker < 0) return;
 

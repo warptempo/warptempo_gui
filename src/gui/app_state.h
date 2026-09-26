@@ -1999,9 +1999,13 @@ enum class RedesignButton {
     // shift-click and its kChromeShiftHoldMs long press dispatch Ctrl+Shift+Tab
     // through on_key, the shifted form of the tabs' own Ctrl+Tab, so the
     // shift-admission rule places the march here (redesign_button_shift_admits).
-    // It is the chord's ONE pointer road since the bottom row's Walk Both Tabs
-    // button was deleted the same day for standing apart from the button whose
-    // chord it shifts. Only the OTHER tab ever takes the press: the selected
+    // The bottom row's Walk Both Tabs button was deleted the same day for
+    // standing apart from the button whose chord it shifts. THE CHORD HAS A
+    // SECOND POINTER ROAD since 2026-09-26, the walk button's ctrl-shift press
+    // (a modified press spells its button's own key, and the walk's is Tab —
+    // redesign_button_ctrl_shift_admits), as Ctrl+Tab has the walk's
+    // ctrl-click: a consequence of the grammar, not a second listing. Only
+    // the OTHER tab ever takes the press: the selected
     // tab is a radio (a press on it is a consumed nothing, shifted or not) and
     // has no hover zone (redesign_button_hover_zone), so it carries no tooltip
     // and advertises no second line. SINCE THE MARCH BECAME A ROUND TRIP
@@ -2538,10 +2542,11 @@ enum class RedesignButton {
     //
     // UP / DOWN ADMIT BOTH MODIFIERS since 2026-08-31 (architect, R12 — THE
     // STEP LADDER): a CTRL-click steps THREE units and a SHIFT-click TEN on
-    // the addressed cell's own unit (shift the long stride since 2026-09-21). They are the roster's only dual-modifier
-    // buttons and the one-modifier rule's one exception, the two admissions
-    // being two RUNGS OF ONE LADDER rather than two acts, so their single
-    // second tooltip line names both. A HELD MODIFIED PRESS REPEATS ITS OWN
+    // the addressed cell's own unit (shift the long stride since 2026-09-21).
+    // They are one of the two-modifier rule's two shapes (the walk, which
+    // admits the pair, is the other — redesign_button_ctrl_shift_admits), the
+    // two admissions being two RUNGS OF ONE LADDER rather than two acts, the
+    // pair refused, so their single second tooltip line names both. A HELD MODIFIED PRESS REPEATS ITS OWN
     // STEP (the burst carries the arm's modifiers), while the SHIFT LONG PRESS
     // cannot reach them — a held repeat outranks the long-press shift, the
     // principle at ToolbarChord::repeats (input_pointer.cpp) — so the shift
@@ -2790,11 +2795,18 @@ enum class RedesignButton {
     // press is bare Tab, the next marker, and its shift-click and long press
     // are Shift+Tab, the previous one — A SHIFT-MODIFIED FORM NEVER HAS ITS
     // OWN BUTTON, IT RIDES THE PLAIN ONE (redesign_button_shift_admits, whose
-    // static_assert binds the tooltip's second line to the admission). It
-    // greys only where neither direction would act, the twin rule. Its
-    // landing's camera is the landing owner's walk (Viewport::land_subject,
-    // LandingKind::Walk): centred at the working zoom or finer, on screen or
-    // not; coarser, nothing on screen and paged in off screen.
+    // static_assert binds the tooltip's second line to the admission). IT
+    // ADMITS CTRL AND THE PAIR (architect 2026-09-26): a modified press
+    // spells the button's own key under those modifiers, so its ctrl-click is
+    // Ctrl+Tab, the other tab, and its ctrl-shift press Ctrl+Shift+Tab, the
+    // paired march (redesign_button_ctrl_admits /
+    // redesign_button_ctrl_shift_admits) — on glass the S Pen's side button
+    // with a tap and with a long press. The tab switch acting in every state,
+    // the twin rule leaves its face lit wherever the roster is
+    // (redesign_button_enabled, the tabs' arm). Its bare landing's camera is
+    // the landing owner's walk (Viewport::land_subject, LandingKind::Walk):
+    // centred at the working zoom or finer, on screen or not; coarser,
+    // nothing on screen and paged in off screen.
     //
     // (THE LEAST-MOVEMENT WALK, a second button seated here on the Alt
     // forms of the walk, stood from 2026-09-22 until it was deleted
@@ -2804,8 +2816,9 @@ enum class RedesignButton {
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
     // shift-admission rule: the chord is Ctrl+Tab's shifted form, and
     // Ctrl+Tab's buttons are the tab row's, so the march is the OTHER TAB's
-    // shift-click and long press now — the record is at TabA above. The key
-    // is untouched in every state. Its glyph, boost, left with it.)
+    // shift-click and long press — the record is at TabA above — and, since
+    // this button admits ctrl, its own ctrl-shift press. The key is untouched
+    // in every state. Its glyph, boost, left with it.)
     //
     // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
     // the reason is mechanical rather than a preference: EVERY double-click
@@ -2815,11 +2828,11 @@ enum class RedesignButton {
     // would mean delaying EVERY single click by the double-click window, which
     // is exactly what the act-at-lift work exists to avoid.
     //
-    // The `h` view's DERIVED partition needs no hand entry for it: BOTH
-    // CHORDS ARE THE MODE'S OWN VOCABULARY in there (history_mode_owns_key
-    // answers for each), so it stays lit and steps the diff-flag cycle.
-    // Outside the view it greys on the walk's own landing in both directions
-    // (marker_walk_actionable, at redesign_button_enabled).
+    // The `h` view's DERIVED partition needs no hand entry for it: its bare
+    // chord is the mode's own vocabulary in there (history_mode_owns_key), so
+    // it stays lit, its plain and shifted forms step the diff-flag cycle, its
+    // ctrl form switches the tab and its ctrl-shift form is the diff-flag
+    // march.
     TransportWalk,
     // (THE HOLD-COLUMN NUDGES — Ctrl+Left and Ctrl+Right, the Left / Right
     // step with the held-column camera, wearing Breeze's snap-nodes-midpoint
@@ -5238,7 +5251,8 @@ struct AppState {
     // stands and the cells stay the pointer's. What the pair buys is the
     // pointer road onto a multi-marker selection under a lit lamp: several
     // markers ctrl-clicked on their flag boxes, and on glass this lamp is the
-    // only ctrl there is. The other direction stopped being a refusal on
+    // fingertip's road to ctrl, the S Pen's side button the other (touch.md).
+    // The other direction stopped being a refusal on
     // 2026-09-12 — bare `i`'s ON edge calls selection_consumed and puts this
     // lamp out, the mode being a use case that ends the selecting — so the
     // pair now stands lit together and neither road cards for it.
@@ -6489,11 +6503,13 @@ struct AppState {
     // release's own rule): a button that admits a modifier must see the one
     // held when the user PRESSED, and a modifier tapped or dropped mid-hold
     // changes nothing. EACH ADMISSION IS THE ROSTER'S — the shift-admitting
-    // set and the ctrl-admitting one (redesign_button_ctrl_admits: the two
-    // SKIPS, whose ctrl-click is Ctrl+Home / Ctrl+End, and the Up / Down step
-    // ladder's Ctrl rung) — asked at the press by the band
-    // claims' modifier gate and again at the lift's chord build, so a carried
-    // bit can only ever reach a button that spells something with it.
+    // set, the ctrl-admitting one (redesign_button_ctrl_admits: the two
+    // SKIPS, whose ctrl-click is Ctrl+Home / Ctrl+End, the Up / Down step
+    // ladder's Ctrl rung and the WALK's Ctrl+Tab) and the pair's
+    // (redesign_button_ctrl_shift_admits: the walk's Ctrl+Shift+Tab) — asked
+    // at the press by the band claims' modifier gate and again at the lift's
+    // chord build, so a carried bit, or the carried pair, can only ever reach
+    // a button that spells something with it.
     //
     // THE RULE'S SCOPE (architect-accepted 2026-08-14, stated here at the
     // rule's own site because the navigation drag now reads ctrl LIVE):
@@ -12027,12 +12043,13 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // 2026-09-14: the march is refused under the lock for a reason of
         // SHAPE — its own tab switch clears the selection and re-seats the
         // payload, so its second step could never walk the bound cells
-        // honestly. The march's pointer road is the OTHER TAB's shifted press
-        // now, and the tab is NOT a member: its plain press is Ctrl+Tab, live
-        // under the lock, so under the twin rule the button stays lit and the
-        // shifted lift reaches the key's own refusal and its card.)
-        // The walk button is NOT a member: bare Tab and Shift+Tab step the
-        // cells, which is the mode's own surface.
+        // honestly. The march's pointer roads are the OTHER TAB's shifted
+        // press and the walk button's ctrl-shift press, and neither button is
+        // a member: the tab's plain press is Ctrl+Tab, live under the lock,
+        // and the walk's plain and shifted presses step the cells, the mode's
+        // own surface, while its ctrl form is that same Ctrl+Tab — so under
+        // the twin rule both stay lit and the march's lift reaches the key's
+        // own refusal and its card.)
         // EVERY MEMBER ABOVE GREYS OUTRIGHT, whatever cell is addressed: the
         // gate refuses their chords ahead of its bound-axis admission
         // (iteration_lock_key_blocked), so a Lower or Upper cell buys them
@@ -12338,35 +12355,13 @@ struct MarkerWalkStep {
 MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                                 bool forward);
 
-// WOULD A MARKER-WALK STEP THIS WAY ACT? The step owner's answer in one
-// bit. TWO READERS, and that is the point of it: the walk button's disabled
-// face (asked in both directions, the twin rule), and the ACT's own leading gate since 2026-08-30
-// (GuiInputHandler::cycle_marker_focus, where the refusal's card and its
-// rationale sit) — a walk with nothing ahead writes nothing at all now, so the
-// greyed button and the dead key agree. Its count-only form (an empty store
-// alone, 2026-08-30 morning) was the audit's false premise: with no focus the
-// cycle seeds from the playhead and can land, while a full store can still
-// land nothing. (The paired march asks nothing of this owner: its round trip
-// acts whatever the two stores hold — each half's `c` centres whether or not
-// its step moved — and its pointer road is the other tab's shifted press,
-// whose face is the tab's own.)
-//
-// IT READS THE STEP RATHER THAN THE LANDING since 2026-09-10, and the widening
-// is the point: a Shift+Tab standing on the FIRST marker's upper cell acts —
-// it steps to that same marker's lower cell — where the landing owner alone
-// would answer "nothing behind me" and grey the button over a live key.
-inline bool marker_walk_actionable(const AppState& a, const GuiAudio& audio,
-                                   bool forward) {
-    return marker_walk_step(a, audio, forward).marker >= 0;
-}
-
 // THE `h` VIEW'S DIFF-FLAG CYCLE, ITS STOP — the index a bare Tab (forward)
 // or Shift+Tab (back) would focus in history_mode.flags, or -1 where the press
-// is a silent consumed no-op. ONE OWNER, TWO READERS (architect 2026-09-24):
-// the act (GuiInputHandler::cycle_history_diff_flag_focus, input_key_
-// dispatch.cpp), which lands on the answer, and the Walk button's face inside
-// the view (redesign_button_enabled), which asks it in both directions, so the
-// face reads the cycle the key walks there and not the live store.
+// is a silent consumed no-op. ONE OWNER, ONE READER: the act
+// (GuiInputHandler::cycle_history_diff_flag_focus, input_key_dispatch.cpp),
+// which lands on the answer. The Walk button's face does not ask it: its
+// ctrl form, the tab switch, keeps it lit wherever the roster is
+// (redesign_button_enabled, the tabs' arm).
 //
 // AN EMPTY LIST AND THE NO-WRAP WALLS answer -1: forward from the last flag,
 // back from the first.
@@ -14381,8 +14376,21 @@ inline bool redesign_button_enabled(const AppState& a,
         // the CHORD's own refusals answer, the radio flag making a press on
         // the lit half a consumed nothing, and the `h` view greys neither
         // (row 3 is the A/B tabs in every state).
+        //
+        // THE WALK JOINS THEM UNDER THE TWIN RULE (architect 2026-09-26): its
+        // ctrl-click is Ctrl+Tab, the same tab switch, whose arm
+        // (handle_tab_switch_keys) has no refusal in any state the roster is
+        // live in — the iteration lock admits it, the `h` view admits it, a
+        // locked tab admits it. A button with a live modified twin greys
+        // only when every variant would change nothing, so the walk's face
+        // greys only where the head gates above grey every button; the bare
+        // and shifted walks, and the march under the lock, answer at their
+        // own arms when pressed, a plain lift at the cycle's end being the
+        // key's silent refusal (cycle_marker_focus, and the `h` view's
+        // cycle_history_diff_flag_focus).
         case RedesignButton::TabA:
         case RedesignButton::TabB:
+        case RedesignButton::TransportWalk:
             // Their own return: falling into the zoom group's first arm handed
             // them Full Zoom Out's fork, and row 3 paints no disabled face, so
             // a live-looking tab dropped its click (architect 2026-09-24).
@@ -15149,35 +15157,6 @@ inline bool redesign_button_enabled(const AppState& a,
                 return false;
             break;
         }
-        // THE WALK (2026-08-15's always-on policy until 2026-08-30): the `h`
-        // view's derived partition admits it, both of its chords being the
-        // mode's OWN vocabulary in there, and IN THE VIEW IT GREYS ON THE
-        // DIFF-FLAG CYCLE the chords run (architect 2026-09-24:
-        // history_diff_cycle_target, the act's own stop, in both directions —
-        // an empty diff, or a focus or playhead with nothing on either side).
-        // It read the live store there until then, so the face could grey
-        // over a Tab that walked the diff flags, or stay lit over one at the
-        // cycle's end. OUTSIDE THE VIEW IT GREYS on the cycle's own landing
-        // (marker_walk_actionable over marker_walk_landing, planner decision
-        // 59 — an empty store, an all-disabled store, no enabled marker past
-        // the playhead this way; the morning's count-only face was the
-        // audit's false premise) — IN BOTH DIRECTIONS since the pair merged
-        // into one button (2026-09-22): the plain press walks forward and the
-        // shifted one back, so under the twin rule the face stays lit while
-        // either would act, and a plain lift whose own direction is walled
-        // reaches the key's silent refusal. (WALK BOTH TABS, the group's
-        // third until 2026-09-14, greyed on the iteration lock alone; the
-        // march is the tab row's shifted press now, whose face is the tabs'
-        // never-grey arm; the least-movement walk, which shared this arm from
-        // 2026-09-22, was deleted 2026-09-23.)
-        case RedesignButton::TransportWalk:
-            if (a.history_mode.active)
-                return history_diff_cycle_target(a, audio, true) >= 0 ||
-                       history_diff_cycle_target(a, audio, false) >= 0;
-            if (!marker_walk_actionable(a, audio, /*forward=*/true) &&
-                !marker_walk_actionable(a, audio, /*forward=*/false))
-                return false;
-            break;
         // COPY VALUE (2026-08-29) is the VERB GROUP'S ONE MEMBER OUTSIDE THE
         // READ-ONLY ARM: both of its chords — bare `j`, the clipboard write,
         // and Shift+`j`, the two `c` frames around a tab switch, a select and
@@ -15934,9 +15913,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // (THE TWO VERTICAL ARROWS JOINED 2026-08-31 with the STEP LADDER — R12,
 // Shift+Up / Shift+Down = a TEN-unit step on the addressed cell since
 // 2026-09-21, a three until the architect made shift the long stride — and
-// they are this set's ONLY MEMBERS THAT ALSO ADMIT CTRL, the three-unit step
-// (redesign_button_ctrl_admits below, whose one-modifier-per-button walk
-// narrowed for them). Their one second tooltip line names both. LEFT AND
+// they ALSO ADMIT CTRL, the three-unit step (redesign_button_ctrl_admits
+// below, whose two-modifier walk names them the step ladder; the walk is the
+// set's other member admitting both). Their one second tooltip line names
+// both. LEFT AND
 // RIGHT JOINED WITH THEM AND LEFT 2026-09-21, when the architect retired the
 // horizontal ladder on every column (placement is graphical, the tempo
 // numeric): Shift+Left / Shift+Right bind nothing, so a shift-click there is
@@ -15970,10 +15950,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // refusal card, the tab staying lit because its plain Ctrl+Tab is live there
 // (the twin rule). Only the OTHER tab takes the press — the selected one is a
 // radio and its press, shifted or not, is a consumed nothing — and the long
-// press is the tablet's one road to the march. The march is a round trip
-// since 2026-09-26 and ends on the tab it started from; its road stays the
-// other tab's shifted press by ruling, recorded at the tab row's
-// kToolbarChords entry, input_pointer.cpp.)
+// press is the tablet's fingertip road to the march (the S Pen's side
+// button held through a long press on the walk is its pen road since
+// 2026-09-26). The march is a round trip since 2026-09-26 and ends on the tab
+// it started from; the other tab's shifted press stays one of its roads by
+// ruling, recorded at the tab row's kToolbarChords entry, input_pointer.cpp,
+// and the walk's ctrl-shift press is the other.)
 // (FLATTEN JOINED 2026-09-19 with Ctrl+Shift+F: its plain act clears a
 // marker's deviation terms and its shifted twin collapses them to one, the
 // drop's and the copy's rule once more — a shift-enabled gesture whose bare
@@ -15995,6 +15977,8 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // button, it rides the plain one. The plain press is bare Tab and the shifted
 // press Shift+Tab, the reverse walk — the drop's and the copy's rule once
 // more — and the long press reaches it on glass, the button not repeating.
+// It admits CTRL too since 2026-09-26 (redesign_button_ctrl_admits below):
+// Ctrl+Tab and, with shift, Ctrl+Shift+Tab, its key's own modified forms.
 // The least-movement walk, which admitted shift beside it from 2026-09-22,
 // was deleted 2026-09-23.)
 // (FULL ZOOM OUT JOINED 2026-09-22 with Shift+0, RESET TRIM (architect: `0`
@@ -16026,71 +16010,95 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportDown;
 }
 
-// THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two SKIPS
-// and the two VERTICAL ARROWS. The SKIPS dispatch bare Home / End, and the
-// act their modified press owes is the WHOLE-PIECE jump, whose keyboard
-// spelling is CTRL+Home / CTRL+End (architect 2026-09-26): the jump ignores
-// the trim window, a different axis from anything shift means elsewhere on
-// the roster. The VERTICAL ARROWS' ctrl-click (R12, 2026-08-31) is the step
-// ladder's THREE-unit rung (since 2026-09-21; the ten before shift became
-// the long stride) and dispatches Ctrl+Up / Ctrl+Down. Each button spells
-// the keyboard's own modifier and translates nothing, the same shape a
-// shift-click dispatches a shifted chord.
+// THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two SKIPS,
+// the two VERTICAL ARROWS and THE WALK. The SKIPS dispatch bare Home / End,
+// and the act their modified press owes is the WHOLE-PIECE jump, whose
+// keyboard spelling is CTRL+Home / CTRL+End (architect 2026-09-26): the jump
+// ignores the trim window, a different axis from anything shift means
+// elsewhere on the roster. The VERTICAL ARROWS' ctrl-click (R12, 2026-08-31)
+// is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
+// shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
+// WALK'S ctrl-click (architect 2026-09-26) dispatches Ctrl+Tab, the one-shot
+// tab switch, and its ctrl-shift press Ctrl+Shift+Tab, the paired march
+// (redesign_button_ctrl_shift_admits below).
+//
+// A MODIFIED PRESS SPELLS ITS BUTTON'S OWN KEY UNDER THOSE MODIFIERS, AND
+// TRANSLATES NOTHING (architect 2026-09-26) — the roster's grammar, the same
+// shape a shift-click dispatches a shifted chord. The walk's key is Tab, so
+// Ctrl+Tab and Ctrl+Shift+Tab are its modified forms whatever else carries
+// them. The two TABS keep their roads (the other tab's press is Ctrl+Tab, its
+// shifted press the march; PCManFM-Qt's tabs), so those two chords have TWO
+// POINTER ROADS each: a consequence of the grammar, not a second listing, and
+// the menu rule (a command with an icon-row road is not also in the menu) is
+// untouched.
 //
 // ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (touch.md): held on a chrome
 // button it carries the ctrl bit into the press like a held Ctrl key, so the
-// skips' whole-piece jump and the arrows' three-step are reachable on the
-// tablet with the pen. The SHIFT LONG PRESS — glass's held shift — never
-// reaches ctrl: the skips admit no shift, so the hold stays off them BY
-// CONSTRUCTION and a held skip gives the ordinary trim-bound jump just as a
-// tap does, and on the arrows a held repeat outranks the long-press shift
-// (ToolbarChord::repeats, input_pointer.cpp).
-//
-// ONE MODIFIER PER BUTTON is the rule, on the reasoning that a button carries
-// ONE second tooltip line and so can honestly advertise one modified act and
-// no more. THE STEP LADDER is its one exception: the vertical arrows carry a
-// TEN-unit step on shift AND a THREE-unit step on ctrl — one ladder, three
-// rungs, and splitting it across two buttons is not available — so their one
-// second line names BOTH acts in one sentence, which is what the line can
-// honestly do when the two acts are the same act at two sizes. The walk
-// below holds the narrowed rule: a button may admit both modifiers ONLY if it
-// is Up or Down (Left and Right admitted both from 2026-08-31 until the
-// horizontal ladder's retirement on 2026-09-21, and admit neither now).
+// skips' whole-piece jump, the arrows' three-step and the walk's tab switch
+// are reachable on the tablet with the pen. The SHIFT LONG PRESS — glass's
+// held shift — COMPOSES WITH THAT CARRIED CTRL ONLY WHERE THE PAIR IS
+// ADMITTED: the pen's button held through a long press on the walk is its
+// ctrl-shift press, the march (the lift's hold-as-shift term,
+// finish_chrome_press_release). It reaches no other ctrl: the skips admit no
+// shift, so the hold stays off them BY CONSTRUCTION and a held skip gives the
+// ordinary trim-bound jump just as a tap does, and on the arrows a held
+// repeat outranks the long-press shift (ToolbarChord::repeats,
+// input_pointer.cpp).
 //
 // TWO READERS, both in input_pointer.cpp: the band claims' MODIFIER GATE, which
-// admits a ctrl press only where this says so and leaves it the strict consumed
-// no-op it is everywhere else, and the lift's CHORD BUILD, which moves the
-// carried bit into the dispatched chord (the hold-repeat's arm and fire build
-// the same chord). CTRL+SHIFT together spell no roster chord on any button and
-// are refused at that gate, so the build never sees the pair.
+// admits a ctrl press only where this says so (and a ctrl+shift press only
+// where redesign_button_ctrl_shift_admits does) and leaves it the strict
+// consumed no-op it is everywhere else, and the lift's CHORD BUILD, which
+// moves the carried bit into the dispatched chord (the hold-repeat's arm and
+// fire build the same chord).
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
     return b == RedesignButton::TransportSkipBack ||
            b == RedesignButton::TransportSkipForward ||
+           b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
-// THE ONE-MODIFIER RULE, WALKED RATHER THAN LISTED (2026-08-31): a hand
-// list of names would stay true of every name listed and go false of the
-// roster the day a button joined both sets. So the walk states the
-// narrowed rule itself: a button carries ONE second tooltip line, so it admits
-// ONE modifier — unless it is one of the two VERTICAL arrows, whose two
-// admissions are two RUNGS OF ONE LADDER and whose single line names both
-// (Left / Right admit neither since 2026-09-21, the horizontal ladder retired).
-constexpr bool redesign_button_dual_modifier_is_the_step_ladder() {
+// THE CTRL+SHIFT-ADMITTING BUTTONS — THE WALK ALONE (architect 2026-09-26):
+// its ctrl-shift press is its own key under both modifiers, Ctrl+Shift+Tab,
+// the paired march. Everywhere else ctrl+shift together spell no roster chord
+// (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home and the rest
+// are unbound on the keyboard too), so the band claims' modifier gate refuses
+// the pair on every other button and the lift's chord build never sees it
+// there. A button in this set admits each modifier alone as well (the assert
+// below): the pair is the conjunction of two admissions, never a third act
+// standing apart from them.
+inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
+    return b == RedesignButton::TransportWalk;
+}
+// THE TWO-MODIFIER RULE, WALKED RATHER THAN LISTED (2026-08-31; restated
+// 2026-09-26): a hand list of names would stay true of every name listed and
+// go false of the roster the day a button joined both sets. A button carries
+// ONE second tooltip line, and a button that admits BOTH modifiers is one of
+// two shapes whose single line can name all its forms honestly: THE STEP
+// LADDER (the vertical arrows, whose two admissions are two RUNGS OF ONE
+// LADDER, the pair refused — Ctrl+Shift+Up binds nothing), or A BUTTON THAT
+// ADMITS THE PAIR (the walk, whose line names its key's three modified forms,
+// each spelled on the key). Left / Right admit neither since 2026-09-21, the
+// horizontal ladder retired. The walk states the pair's implication too: a
+// pair admission without both single admissions fails here.
+constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
-        if (!(redesign_button_ctrl_admits(b) &&
-              redesign_button_shift_admits(b)))
-            continue;
-        if (b != RedesignButton::TransportUp &&
-            b != RedesignButton::TransportDown)
-            return false;
+        const bool both = redesign_button_ctrl_admits(b) &&
+                          redesign_button_shift_admits(b);
+        const bool pair = redesign_button_ctrl_shift_admits(b);
+        if (pair && !both) return false;
+        if (!both) continue;
+        const bool ladder = b == RedesignButton::TransportUp ||
+                            b == RedesignButton::TransportDown;
+        if (ladder == pair) return false;
     }
     return true;
 }
-static_assert(redesign_button_dual_modifier_is_the_step_ladder(),
-    "a button admits one modifier: its one second tooltip line names one act "
-    "— Up and Down excepted, whose line names both rungs of the step ladder");
+static_assert(redesign_button_dual_modifier_is_ladder_or_pair(),
+    "a button admitting both modifiers is the step ladder (Up / Down, the "
+    "pair refused) or admits the pair (the walk), and a pair admission "
+    "implies both single ones");
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportRight) &&
                   !redesign_button_ctrl_admits(RedesignButton::TransportLeft) &&
@@ -16106,6 +16114,12 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportSkipBack) &
     "the two skips admit Ctrl (Ctrl+Home / Ctrl+End, the whole-piece jump) "
     "and no Shift, so the long press stays off the act and a held skip is "
     "the trim-bound jump (chord_is_bound, gui_input.h)");
+static_assert(redesign_button_shift_admits(RedesignButton::TransportWalk) &&
+                  redesign_button_ctrl_admits(RedesignButton::TransportWalk) &&
+                  redesign_button_ctrl_shift_admits(RedesignButton::TransportWalk),
+    "the walk admits Shift (Shift+Tab, the previous marker), Ctrl (Ctrl+Tab, "
+    "the other tab) and the pair (Ctrl+Shift+Tab, the paired march): its "
+    "key's three modified forms");
 
 // THE HOVER TOOLTIP'S TEXT — name and chord, kdenlive's pattern, one row per
 // button that has one. It sits with the roster (rather than with the chord
@@ -16612,12 +16626,23 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // got it deleted hours later — so the names outlived the surface they
         // were matched to, and are kept because they are the act's words.
         // THE WALK IS ONE BUTTON since 2026-09-22 and ADMITS SHIFT: the
-        // plain press is Tab and the shifted one Shift+Tab, so the second
-        // line names the reverse walk, this table's rule for second lines
-        // (the act and the modifier, not a key).
+        // plain press is Tab and the shifted one Shift+Tab. It ADMITS CTRL
+        // AND THE PAIR since 2026-09-26 (architect): a modified press spells
+        // the button's own key, so ctrl is Ctrl+Tab, the other tab, and
+        // ctrl+shift Ctrl+Shift+Tab, the paired march. The one second line
+        // names all three forms in one sentence, this table's rule for
+        // second lines (the act and the modifier, not a key), in Up / Down's
+        // shape; "walk both tabs" is the tabs' own words for the march. The
+        // stateful overload has no arm for it and the line never drops: the
+        // ctrl form switches the tab in every state the button is live in,
+        // so a modified press always does something the plain one does not.
+        // In the `h` view the plain and shifted forms walk the diff flags
+        // and "the previous marker" names the reverse step there as it does
+        // outside.
         case RedesignButton::TransportWalk:
             return {"Next Marker (Tab)",
-                    "Press Shift for the previous marker."};
+                    "Press Shift for the previous marker, Ctrl for the other "
+                    "tab, Ctrl+Shift to walk both tabs."};
         // THE FOUR ARROWS DROP THE ACCELERATOR, the table's one such family:
         // the key IS the direction, so "Left (Left)" would name the same word
         // twice — the hint keeps the direction alone (one word, which the
@@ -16626,8 +16651,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // by id and carries no order of its own.)
         //
         // UP / DOWN'S SECOND LINE NAMES BOTH RUNGS OF THE STEP LADDER
-        // (2026-08-31, R12) and is the table's ONE two-act line, which is what
-        // their exception to the one-modifier rule buys: shift is a
+        // (2026-08-31, R12), the ladder being one of the two-modifier rule's
+        // two shapes (the walk's three-form line above is the other): shift is a
         // ten-unit step and ctrl a three on the addressed cell's own unit
         // (swapped 2026-09-21, shift the long stride), so
         // the line says "step" and lets the button's own name supply the
@@ -17214,10 +17239,11 @@ inline RedesignTooltipText redesign_button_tooltip(
 // Checked at compile time so the tables cannot drift: a button that gains a
 // shifted or a ctrl chord without gaining the line (or the reverse) fails to
 // build here. The two admissions are ORed because a button carries ONE second
-// line — for every button but Up and Down that line names the one modifier
-// that acts, and the walk at redesign_button_ctrl_admits is what holds those
-// two to being the only exception (their line names both rungs of the step
-// ladder).
+// line — for most buttons that line names the one modifier that acts, and
+// the walk at redesign_button_ctrl_shift_admits is what holds the buttons
+// admitting both to the two shapes whose one line names every form (Up and
+// Down's names both rungs of the step ladder, the walk's its key's three
+// modified forms).
 //
 // IT HOLDS ON THE CONSTANT TABLE, the state-free truth. THE STATEFUL OVERLOAD
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
@@ -17249,7 +17275,8 @@ constexpr bool redesign_button_modifier_hint_agrees() {
         const RedesignButton b = static_cast<RedesignButton>(i);
         const bool line2 = redesign_button_tooltip(b).line2 != nullptr;
         const bool admits = redesign_button_shift_admits(b) ||
-                            redesign_button_ctrl_admits(b);
+                            redesign_button_ctrl_admits(b) ||
+                            redesign_button_ctrl_shift_admits(b);
         if (line2 != admits) return false;
     }
     return true;

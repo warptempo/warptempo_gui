@@ -663,7 +663,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // left this delta and the IconAddToSelection button left iteration_lock_greys
 // with it. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
 // multi-marker selection under the lamp wants: several markers ctrl-clicked on
-// their flag boxes, and on glass this lamp is the only ctrl there is. Bare
+// their flag boxes, and on glass this lamp is the fingertip's road to ctrl,
+// the S Pen's side button the other (touch.md). Bare
 // `i`'s ON edge still PUTS ADD TO SELECTION OUT (architect 2026-09-12, its own
 // arm calling selection_consumed — raising the cells is an act that ends a
 // selecting pass), which is a use case ending rather than a refusal, so
@@ -1868,7 +1869,9 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     by this predicate: it steps the mode's own diff-flag cycle, so it does
 //     not grey in the view. CTRL+SHIFT+TAB, the march over
 //     that same cycle (2026-08-18), is the tab row's shifted press since
-//     2026-09-14, the tabs never greying;
+//     2026-09-14 and the walk button's ctrl-shift press since 2026-09-26,
+//     neither greying (Ctrl+Tab, their plain and ctrl presses, acting in
+//     every state);
 //   * BARE Left / BARE Right — the bottom row's LEFT and RIGHT arrows, the
 //     playhead step (2026-09-26), answered LIVE by this predicate and greyed
 //     by their own arm (horizontal_arrow_step_actionable's `h` arm: a diff
@@ -8269,7 +8272,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (run_marker_click_act, input_pointer.cpp), a bound cell's plain press is
     // a plain press with both lamps lit, and the two stand together — which is
     // what a pointer road onto a multi-marker selection under the lamp needs,
-    // this lamp being the only ctrl glass has. Bare `i`'s ON edge still puts
+    // this lamp being glass's fingertip road to ctrl (the S Pen's side button
+    // is the other). Bare `i`'s ON edge still puts
     // THIS lamp out (architect 2026-09-12), a use case ending rather than a
     // refusal.
     // THE VALUE DRAG IS NO GATE EITHER: its posture (the view's since
@@ -9020,9 +9024,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // IT NEVER MEETS A BOUND CELL, because it never runs while grid iterations
     // is lit (architect 2026-09-10): the march is one of delta (a)'s members
     // at the authoring lock's keyboard gate, refused on
-    // kIterationLockCard (iteration_lock_key_blocked, above) — the other
-    // tab's shifted press, the march's pointer road since 2026-09-14,
-    // dispatching this chord and meeting the same card. The
+    // kIterationLockCard (iteration_lock_key_blocked, above) — the march's
+    // two pointer roads, the other tab's shifted press and the walk button's
+    // ctrl-shift press, dispatching this chord and meeting the same card. The
     // reason is this arm's own
     // middle — switch_active_tab_view_to CLEARS THE SELECTION and re-seats the
     // payload (Selection::seat_focus), so a second step through the purple
