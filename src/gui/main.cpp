@@ -758,7 +758,8 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // left float's three menu buttons and the right float's view bar, its
 // content whole), at the window's top since 2026-09-09 (the vertical rule;
 // it sat on the tab row with gap 1 above it 2026-09-03..09). Lane 1 is the
-// ICON row (the twenty-three view/mode/action buttons since Follow's return
+// ICON row (the twenty-one view/mode/action buttons since the stepped zoom
+// buttons' removal 2026-09-25, twenty-three from Follow's return
 // on the evening of 2026-09-23, twenty-two for the hours of that day it was
 // deleted, twenty-three from Zoom In and Zoom
 // Out's restoration later on 2026-09-22, twenty-one from the Show trim region

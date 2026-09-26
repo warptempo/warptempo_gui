@@ -77,8 +77,7 @@ enum class Icon {
     // save chord; the WORDS moved off the button whole when row 2's labeled
     // faces died at the 2026-08-12 relayout — the glyph swap says it now.
     VcsCommit,           // Save, in the history view and while publishing
-    // Row 4, the icon row. (An earlier ZoomOut / ZoomIn transcription lived
-    // here 2026-08-01..08-02; today's pair is with the zoom four below.)
+    // Row 4, the icon row.
     //
     // (THE TWO VIEW LAMPS' FACES — document-import and chronometer-start,
     // architect-picked 2026-08-11 off a rendered candidate sheet for the four
@@ -120,18 +119,13 @@ enum class Icon {
     // region button's glyph from 2026-08-16 and left with that button on
     // 2026-09-22 — enumerator, def and asset together, and the interpreter's
     // stroked arm with it, the file having been that arm's last producer.)
-    // THE ZOOM FOUR (architect-picked 2026-08-12, the grand relayout's
-    // roster commit — the icon row's viewport-class group, which Zoom In
-    // leads since 2026-09-22). Breeze's own magnifier family, one
-    // construction four ways: the bare magnifier with a plus (zoom in), a
-    // minus (zoom out), the fit frame (full zoom out — bare `0`'s whole-song
-    // arm) and the 1:1 original (working-zoom center, bare `c`). The plus and
-    // minus magnifiers left with the Zoom In / Zoom Out buttons on 2026-09-14
-    // and came back with them on 2026-09-22 (architect: the tablet's pen has
-    // no pinch) — enumerators, defs and assets together, re-transcribed from
-    // the same files.
-    ZoomIn,              // Zoom in (bare `=`)
-    ZoomOut,             // Zoom out (bare `-`)
+    // THE ZOOM PAIR (architect-picked 2026-08-12, the grand relayout's
+    // roster commit — the icon row's viewport-class group, which Full zoom
+    // out leads). Breeze's own magnifier family: the fit frame (full zoom out
+    // — bare `0`'s whole-song arm) and the 1:1 original (working-zoom center,
+    // bare `c`). The plus and minus magnifiers left with the Zoom In / Zoom
+    // Out buttons on 2026-09-25 (architect: zoom is on every surface) —
+    // enumerators, defs and assets together.
     ZoomFitBest,         // Full zoom out / overview (bare `0`)
     ZoomOriginal,        // Working-zoom center (bare `c`)
     // ZOOM-IN-Y, the vertical magnifier (the ruler on its dial beside a
@@ -450,9 +444,11 @@ enum class Icon {
 // Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
 // to the enumerator count above; a mismatch only costs that icon its latch (the
 // latch is bounds-checked), never correctness.
-// 50 SINCE THE FOLLOW LAMP CAME BACK (architect 2026-09-23, evening),
-// re-counted off the enumerators above: go-jump returned with the button
-// that wears it. It was 49 from the follow lamp's and the hold-column nudges'
+// 48 SINCE THE STEPPED ZOOM BUTTONS' REMOVAL (architect 2026-09-25),
+// re-counted off the enumerators above: zoom-in and zoom-out left with the
+// Zoom In / Zoom Out buttons that wore them. It was 50 from the follow lamp's
+// return (2026-09-23, evening): go-jump returned with the button that wears
+// it. It was 49 from the follow lamp's and the hold-column nudges'
 // deletion earlier that day: go-jump and the two turns of snap-nodes-midpoint
 // left with the three buttons that wore them. It was 52 from the hold-column nudges' glyph change earlier that day, when
 // go-previous-context and go-next-context left and the two turns of
@@ -486,7 +482,7 @@ enum class Icon {
 // leaving restates this number. It held at 50 through 2026-09-24's swap,
 // when zoom-in-y replaced zoom-out-y on the Waveform Magnification lamp at
 // its reversal, one glyph out and one in.
-inline constexpr int kIconCount = 50;
+inline constexpr int kIconCount = 48;
 
 // Draw `icon` with its viewBox mapped onto the square (x, y, size_px, size_px),
 // filling each of its paths in that path's OWN color (the colors are the SVGs'

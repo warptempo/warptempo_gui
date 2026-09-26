@@ -783,10 +783,6 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // until the magnification level markers column's deletion 2026-09-23;
         // the lamp was on bare `]` for its first hours, then on bare `[`.)
         case GuiKeys::Grave: return bare;
-        // The zoom step, bare alone (deleted 2026-09-14, restored 2026-09-22
-        // — the tablet's pen has no pinch). The ctrl and shift forms bind
-        // nothing.
-        case GuiKeys::Equal: case GuiKeys::Minus: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it
@@ -906,6 +902,10 @@ static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                                   GuiInputState{true, false, false}, false),
               "bare `0` is full zoom out and Shift+0 is Reset Trim; no other "
               "decoration of `0` binds");
+static_assert(!chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Minus, GuiInputState{}, false),
+              "`=` and `-` are unbound: the stepped zoom and its buttons were "
+              "removed 2026-09-25, zoom being on every surface");
 static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Backslash,
                                   GuiInputState{true, false, false}, false),

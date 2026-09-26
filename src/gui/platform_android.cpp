@@ -493,10 +493,10 @@ GuiPlatform::~GuiPlatform() {
 // glass 2026-08-27: it is the scale that reproduces the retired rig's 1024
 // logical pixels on this 249 PPI panel (2304/2.25 = 1024), which is the layout
 // the whole redesign was drawn against — every icon in the row fits, where the
-// fit ceiling is 282 % (the icon row's walk is 816 authored px; the
+// fit ceiling is 307 % (the icon row's walk is 748 authored px; the
 // arithmetic is at paint_icon_row, paint_handler.cpp, and its succession in
 // git history) and anything past it crops the rightmost history icons. 225
-// CLEARS IT BY 208 LOGICAL PX.
+// CLEARS IT BY 276 LOGICAL PX.
 // 250 was tried as the TEMPLATE for one afternoon on 2026-08-27 for the
 // finger's sake — a
 // marker flag has to be tappable without the second tap of a double-tap landing

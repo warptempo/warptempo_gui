@@ -1705,30 +1705,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE ZOOM STEP ON BARE `=` AND BARE `-`: `=` steps the horizontal ZOOM
-    // in and `-` out, one level per press (Viewport::zoom_in / zoom_out,
-    // ABOUT THE VIEWPORT'S CENTRE through apply_zoom_step, never the playhead
-    // — architect 2026-09-22). DELETED 2026-09-14
-    // for Ctrl+drag and the pinch, RESTORED 2026-09-22 (architect): the
-    // tablet's pen has no pinch — the panel refuses a second finger while the
-    // pen is down — so the zoom needed a road a single contact can press.
-    // BOTH SPELLINGS ARE EXACT, no shift, ctrl or alt: Shift+=, Ctrl+= /
-    // Ctrl+- and the keypad KP_Add / KP_Subtract bind nothing, one spelling
-    // per act. Each is a SILENT consumed no-op at its wall — `=` at the floor,
-    // `-` at the per-file ceiling, the benign one-dimensional refusal — and its
-    // button greys there (zoom_in_step_actionable / zoom_out_step_actionable,
-    // the acts' own leading returns).
-    //
-    // A HELD STEPPING KEY WALKS THE ZOOM at the platform's repeat rate (both
-    // spellings are repeat_eligible); the zoom is a camera act with no history,
-    // so a burst pushes no undo entries to merge.
-    if (key == GuiKeys::Equal && !shift && !ctrl && !alt) {
-        viewport.zoom_in(); return;
-    }
-    if (key == GuiKeys::Minus && !shift && !ctrl && !alt) {
-        viewport.zoom_out(); return;
-    }
-
     // Bare 0 is A TOGGLE (run_overview_command — architect 2026-09-23): full
     // zoom out stamping the view it leaves, then the restore of that zoom
     // level, playhead and viewport start, no centring, in the audio view the
@@ -3059,7 +3035,7 @@ void GuiInputHandler::run_overview_command() {
     // it writes neither the selection nor the playhead, stops nothing (the
     // pure-viewport-move class of the keyboard stop rule,
     // stop_playback_if_playing's declaration), and a selection's span survives
-    // it as it survives `=` / `-`.
+    // it as it survives every zoom gesture.
     //
     // SECOND PRESS (RestoreView, overview_recall_restorable: the whole-song
     // state standing in the audio view the stamp was taken in): RESTORE THE
@@ -3299,7 +3275,8 @@ void GuiInputHandler::run_span_framing_command() {
 // FORM DELETED. CTRL+WHEEL, the zoom step since 2026-08-12, WAS DELETED THE
 // SAME DAY, and the Viewport's coalesced zoom-steps body with it (its one
 // caller): the zoom gestures are the ctrl-DRAG's zoom phase and the pinch,
-// its keys bare `=` / `-` (the step, restored 2026-09-22), `0` and `c`.
+// its keys `0` and `c` (the stepped zoom on bare `=` / `-` was removed
+// 2026-09-25: zoom is on every surface).
 //
 // Every OTHER combination is a swallowed no-op (strict modifier validation):
 // ctrl, alt, shift and every mixed chord alike. Pure viewport move otherwise:

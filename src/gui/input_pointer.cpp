@@ -248,22 +248,18 @@ constexpr ToolbarChord kToolbarChords[] = {
     // reads a mismatch here as the layout's truth; that truth is the
     // painter's kIconRowButtons, with each group's leader at
     // redesign_button_opens_icon_group (app_state.h).
-    // THE ZOOM FOUR (2026-08-12, the grand relayout): four momentary
+    // THE ZOOM PAIR (2026-08-12, the grand relayout): two momentary
     // navigation chords, the commands' pointer home, no radio, click face like
-    // the rest of the row. All four stay LIVE in the `h` view — `=`, `-` and
-    // `0` are on the mode's allowlist and `c` is its own vocabulary — which
-    // the derived partition answers with nothing hand-listed. THE STEPPING
-    // PAIR (bare `=` / `-`) WAS DELETED 2026-09-14 AND RESTORED 2026-09-22
-    // (architect): the tablet's pen has no pinch, so these two buttons are the
-    // pen's zoom in and out. ONE ADMITS A MODIFIER, SHIFT
+    // the rest of the row. Both stay LIVE in the `h` view — `0` is on the
+    // mode's allowlist and `c` is its own vocabulary — which the derived
+    // partition answers with nothing hand-listed. THE STEPPED ZOOM BUTTONS
+    // (bare `=` / `-`) WERE REMOVED 2026-09-25 (architect): zoom is on every
+    // surface — the Ctrl+drag on the waveform, the two-finger pinch, the S
+    // Pen's button-held drag. ONE ADMITS A MODIFIER, SHIFT
     // (redesign_button_shift_admits): Full zoom out since 2026-09-22, its
-    // shift-click or long press dispatching Shift+0, RESET TRIM; the other
-    // three are refused a modified click at the band gate. NONE REPEATS: the `repeats` column is unset on
-    // all four rows (the keys repeat).
-    {RedesignButton::IconZoomIn,
-     GuiKeys::Equal,  false, false, false, false, true},                            // bare =
-    {RedesignButton::IconZoomOut,
-     GuiKeys::Minus,  false, false, false, false, true},                            // bare -
+    // shift-click or long press dispatching Shift+0, RESET TRIM; Center is
+    // refused a modified click at the band gate. NEITHER REPEATS: the
+    // `repeats` column is unset on both rows.
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false, false, true}, // bare 0
     {RedesignButton::IconZoomOriginal, GuiKeys::C,      false, false, false, false, true}, // bare c
     // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
@@ -971,7 +967,7 @@ bool point_on_nav_surface(const AppState& app, int x, int y) {
 // item_viewport_basis's integer vp_start_frame and its spp, the span the
 // displayed items were painted on, so a click converts its column against the
 // picture ON SCREEN and never against the live viewport a viewport-dispatched
-// worker job in flight at the press (a wheel pan or a zoom step, then a quick
+// worker job in flight at the press (a wheel pan or a zoom gesture, then a quick
 // click) has already moved ahead of the pixels. The integer start is the
 // grid's own input, the shape trim_mouse_x_to_active_frame takes on the same
 // basis. Cold, the basis is the live viewport by its own contract. This is
@@ -1236,9 +1232,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   to, and greyed rather than relabelled in either case; it was RENDER's chord
 //   and RENDER's face until 2026-08-08, when the act moved onto the save it
 //   begins with),
-//   THE ZOOM FOUR since the 2026-08-12 relayout (bare `=`, bare `-` and
-//   bare `0` are the allowlist's own zoom admissions and bare `c`
-//   is the mode's vocabulary — pure navigation, live with nothing hand-listed),
+//   THE ZOOM PAIR since the 2026-08-12 relayout (bare `0` is the
+//   allowlist's own zoom admission and bare `c` is the mode's vocabulary —
+//   pure navigation, live with nothing hand-listed),
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
 //   the timeline state on the Local one since 2026-08-08, and live on both:

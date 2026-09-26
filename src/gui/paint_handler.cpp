@@ -995,7 +995,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // joined the zoom group, dissolving two separator-led groups into it; the
     // KEEP-CENTERED LAMP (2026-08-31, R11) lands beside Follow at that group's
     // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
-    // carries the current count — TWENTY-THREE in FIVE.)
+    // carries the current count — TWENTY-ONE in FIVE.)
     // THE ZOOM GROUP OPENS HERE, on the separator the TRIM GROUP held from
     // 2026-08-11 — the scissors opened it then, the Show trim region button
     // filled it on 2026-08-16, the scissors were deleted on 2026-08-18, and on
@@ -1014,17 +1014,16 @@ constexpr IconRowDef kIconRowButtons[] = {
     // plus the group's leader in redesign_button_opens_icon_group
     // (app_state.h) and the roster enum's own order, which the three keep in
     // step. No count, no gap and no width follows a swap.
-    // THE ZOOM FOUR (2026-08-12, the grand relayout — the architect's live
-    // placement, "the rest in the icon row, after the trim"): zoom in (bare
-    // `=`), zoom out (bare `-`), full zoom out (bare `0`, Shift+0 Reset Trim
-    // on its shift press) and working-zoom center (bare `c`), the commands'
-    // pointer home (the Navigation dropdown that duplicated them was deleted
-    // 2026-08-15; the record is at kFilePopupItems, app_state.h). The
-    // stepping pair was deleted 2026-09-14 and RESTORED 2026-09-22 (architect:
-    // the tablet's pen has no pinch), two boxes and two 2px gaps back on the
-    // walk in front of Full zoom out and no separator moving.
-    {RedesignButton::IconZoomIn,       icons::Icon::ZoomIn},
-    {RedesignButton::IconZoomOut,      icons::Icon::ZoomOut},
+    // THE ZOOM PAIR (2026-08-12, the grand relayout — the architect's live
+    // placement, "the rest in the icon row, after the trim"): full zoom out
+    // (bare `0`, Shift+0 Reset Trim on its shift press) and working-zoom
+    // center (bare `c`), the commands' pointer home (the Navigation dropdown
+    // that duplicated them was deleted 2026-08-15; the record is at
+    // kFilePopupItems, app_state.h). The stepped zoom buttons in front of
+    // them and their keys `=` / `-` were removed 2026-09-25 (architect: zoom
+    // is on every surface — the Ctrl+drag, the pinch, the S Pen's
+    // button-held drag), two boxes and two 2px gaps off the walk and no
+    // separator moving.
     {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
     {RedesignButton::IconZoomOriginal, icons::Icon::ZoomOriginal},
     // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
@@ -2711,15 +2710,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // bar paints and the selected tab opens into, the three surfaces being
     // one value by measurement — under a 1px border-bottom across the window
     // width LESS ONE BORDER-THICKNESS AT EACH END (the inset below),
-    // separator-divided groups of 32x32 buttons — TWENTY-THREE members
+    // separator-divided groups of 32x32 buttons — TWENTY-ONE members
     // in FIVE groups (the width math below is the count's
     // one statement), RE-COUNTED off the roster enum and the
     // divider owner rather than adjusted: the toolbar four (Save / Undo /
     // Redo / Render, the deleted row 2's, leading the row), THE ZOOM
     // GROUP — the VIEWPORT CLASS whole since the
-    // architect's 2026-08-27 merge: the zoom four (2026-08-12; the stepping
-    // pair out 2026-09-14 and back 2026-09-22) leading since the Show trim
-    // region button that led it was deleted on 2026-09-22, THE
+    // architect's 2026-08-27 merge: the zoom pair (2026-08-12; the stepped
+    // zoom buttons in front of it removed 2026-09-25) leading since the Show
+    // trim region button that led it was deleted on 2026-09-22, THE
     // WAVEFORM MAGNIFICATION LAMP behind them (2026-09-22), FOLLOW (in from
     // the dissolved mass-marker group on 2026-08-27; out for the hours of
     // 2026-09-23) and THE RESTRICT UNDO TO CURRENT VIEW LAMP closing the group
@@ -2736,7 +2735,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // IN PLACE at the tail.
     //
     // NOTHING HERE IS EVER HIDDEN (architect 2026-08-14, "no more
-    // hiding/showing icons in top icon row"): all twenty-three paint on every
+    // hiding/showing icons in top icon row"): all twenty-one paint on every
     // frame and what a mode refuses wears the DEAD FACE. The mode-collapsing
     // roster of 2026-08-12 — which skipped members and published zero rects for
     // them, over the four history mode-companions at rest and the wholly
@@ -2751,33 +2750,34 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE WIDTH MATH at 100%, RE-DERIVED from the roster after each move (8px
     // lead-in + 32px boxes + 2px gaps + 4+1+4 separator slots; the count of
     // drawn separators is groups minus one, and the count of gaps is buttons
-    // minus groups): TWENTY-THREE MEMBERS IN FIVE GROUPS since the evening
-    // of 2026-09-23, when FOLLOW came back to the zoom group (one box and one
-    // gap onto the walk, no separator):
-    //   8 + 23·32 + (23−5)·2 + (5−1)·9 = 8 + 736 + 36 + 36 = 816px,
+    // minus groups): TWENTY-ONE MEMBERS IN FIVE GROUPS since 2026-09-25,
+    // when the stepped zoom buttons left the zoom group (two boxes and two
+    // gaps off the walk, no separator):
+    //   8 + 21·32 + (21−5)·2 + (5−1)·9 = 8 + 672 + 32 + 36 = 748px,
     // IN EVERY STATE — the row has one width, inside the `h` view as
-    // outside it. Add the 8px trailing pad and the row's ink ends at 824.
+    // outside it. Add the 8px trailing pad and the row's ink ends at 756.
     //
-    // THE TABLET FIT CEILING IS 282 (re-derived 2026-09-23 at Follow's
-    // return), and it is taken off THE PAINTED WALK, not off
-    // 816·factor: every element above is its own scaled_px, rounded on its
-    // own, so the walk's device width is 8s + 23·[32s] + 18·[2s] +
-    // 4·(2·[4s] + [1s]) with each bracket a banker's rounding. At 282 that is
-    // 23 + 23·90 + 18·6 + 4·(22 + 3) = 2301 of 2304, and at 283 it is 2324
-    // (the box rounds up to 91). The unrounded product agrees here
-    // (816·2.82 = 2301.1, 816·2.83 = 2309.3). (Counting the trailing pad the
-    // ceiling is 279 — 2299 at 279, the pad being ground, not ink, so the
-    // icons themselves are the thing measured.) The tablet's first-run 225
-    // paints the walk 1826 device px wide, clearing the panel by 478 — 208 of
-    // its 1024 logical px at that scale, 816 authored. The laptop clears it
-    // outright at 824 of 1920. The row's width succession is in git
-    // history; a roster move restates these numbers.
+    // THE TABLET FIT CEILING IS 307 (re-derived 2026-09-25 at the stepped
+    // zoom buttons' removal), and it is taken off THE PAINTED WALK, not off
+    // 748·factor: every element above is its own scaled_px, rounded on its
+    // own, so the walk's device width is 8s + 21·[32s] + 16·[2s] +
+    // 4·(2·[4s] + [1s]) with each bracket a banker's rounding. At 307 that is
+    // 25 + 21·98 + 16·6 + 4·(24 + 3) = 2287 of 2304, and at 308 it is 2308
+    // (the box rounds up to 99). THE UNROUNDED PRODUCT DISAGREES HERE
+    // (748·3.08 = 2303.8 would fit), which is why the walk is the measure.
+    // (Counting the trailing pad the ceiling is 304 — 2289 at 304, the pad
+    // being ground, not ink, so the icons themselves are the thing measured.)
+    // The tablet's first-run 225 paints the walk 1674 device px wide,
+    // clearing the panel by 630 — 276 of its 1024 logical px at that scale,
+    // 748 authored. The laptop clears it outright at 756 of 1920. The row's
+    // width succession is in git history; a roster move restates these
+    // numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // 34px and a NEW GROUP costs 41, which at the tablet's 225% paint as 76
     // and 92 device px (the box's 72 and the gap's 4.5 rounding to 4; the
-    // separator's 9 + 2 + 9 ahead of the leader's box) — room for SIX more
-    // members at 225% (1826 + 6·76 = 2282 of 2304), a seventh cropping
+    // separator's 9 + 2 + 9 ahead of the leader's box) — room for EIGHT more
+    // members at 225% (1674 + 8·76 = 2282 of 2304), a ninth cropping
     // (2358).
     //
     // NO FOCUS SWAP HERE: this ground already IS the unfocused shade row 1

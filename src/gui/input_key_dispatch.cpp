@@ -365,11 +365,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
          !ctrl && !shift && !alt);
-    // THE ZOOM STEP PAIR IS BARE `=` / BARE `-` (restored 2026-09-22 with
-    // its buttons). Pure navigation, which is why the lock admits it.
-    const bool is_zoom_symbol =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) &&
-         !ctrl && !shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
     // RESTRICT UNDO TO CURRENT VIEW, bare `z` (2026-09-04): a posture — the
@@ -592,7 +587,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
              is_home_end || is_page_updown ||
-             is_zoom_symbol || is_zero ||
+             is_zero ||
              is_restrict_undo || is_waveform_magnification ||
              is_center || is_follow ||
              is_view_selector ||
@@ -2823,10 +2818,6 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
-    // THE ZOOM STEP PAIR IS BARE `=` / BARE `-` (restored 2026-09-22): pure
-    // navigation, live in the view as `0` is.
-    const bool is_zoom_symbol =
-        ((key == GuiKeys::Equal || key == GuiKeys::Minus) && bare);
     const bool is_zero  = (key == GuiKeys::Digit0 && bare);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) && bare);
@@ -3004,7 +2995,7 @@ bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
     // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    return !(is_zoom_symbol || is_zero || is_page_updown ||
+    return !(is_zero || is_page_updown ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_ctrl_q || is_open_project || is_revert_project ||
@@ -4256,8 +4247,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // the lane split is decided per fire at dispatch, so the
     // arrows repeat as one family — and since 2026-08-31 they repeat on their
     // shifted and ctrl spellings too, which the arm below this one owns),
-    // bare PageUp/PageDown, bare Equal/Minus (the horizontal ZOOM step,
-    // restored 2026-09-22),
+    // bare PageUp/PageDown,
     // THE WALK'S BARE COMMA/PERIOD (2026-08-07 — the `h` history view's
     // older/newer step, a continuous step gesture like the arrows and held for
     // the same reason, to walk quickly; in GLOBAL dispatch it is bound only
@@ -4288,7 +4278,6 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // Home/End and Delete is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
-         key == GuiKeys::Equal || key == GuiKeys::Minus ||
          key == GuiKeys::Comma || key == GuiKeys::Period))
         return true;
     // THE FOUR ARROWS REPEAT IN EVERY FORM THEY BIND (architect 2026-08-31,
@@ -4347,15 +4336,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // silent at the dispatch arm (input_handler.cpp).
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
-    // THE ZOOM STEP'S KEYS REPEAT THROUGH THE BARE TERM ABOVE: stepping the
-    // zoom is a continuous step gesture, and a held key walking it is how a
-    // passage is brought to the span the eye wants in one press-and-hold. THE
-    // TWO ZOOM ICON-ROW BUTTONS DO NOT REPEAT and never ask this: they carry
-    // no `repeats` in kToolbarChords (input_pointer.cpp), the chrome hold's
-    // whole membership, so a held zoom button is one step at its lift.
-    //
-    // CTRL+= / CTRL+- AND CTRL+0 ARE DELIBERATELY ABSENT because they bind
-    // nothing at all — and an unbound chord has no repeat to ask about.
+    // `=` / `-` AND CTRL+0 ARE DELIBERATELY ABSENT because they bind
+    // nothing at all (the stepped zoom was removed 2026-09-25: zoom is on
+    // every surface) — and an unbound chord has no repeat to ask about.
     return false;
 }
 
