@@ -308,11 +308,13 @@ void render_waveform(cairo_surface_t* dest,
     //
     // THE PREMULTIPLIED WORDS, each built once per call through the one word
     // owner (argb32_opaque_word, render.h — its byte-order and rounding
-    // contract lives there), from the row-6 constants: the plate's ink, worn
-    // by the dark lamp's raw bar and the lit lamp's outer, and the core's,
-    // worn by the lit lamp's inner (built always, written only when lit).
+    // contract lives there): the plate's ink (the row-6 constant), worn by
+    // the dark lamp's raw bar and the lit lamp's outer, and the core's, worn
+    // by the lit lamp's inner (built always, written only when lit) — the
+    // `fg_color` key's for a tuning phase, installed once at startup
+    // (waveform_core_ink, render.h).
     const uint32_t ink_word  = argb32_opaque_word(kWaveformInk);
-    const uint32_t core_word = argb32_opaque_word(kWaveformCoreInk);
+    const uint32_t core_word = argb32_opaque_word(waveform_core_ink());
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -2341,6 +2343,17 @@ namespace {
 } // namespace
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
+
+namespace {
+    // The lit plate's core ink for the tuning phase — the device config's
+    // `fg_color`, installed once by gui_main at startup and never mutated
+    // after (the contract, and why the worker reads it with no snapshot, is
+    // at the declaration, render.h). It starts at the phase's default.
+    GuiColor g_waveform_core_ink = kWaveformCoreInkDefault;
+} // namespace
+
+void            set_waveform_core_ink(GuiColor ink) { g_waveform_core_ink = ink; }
+const GuiColor& waveform_core_ink() { return g_waveform_core_ink; }
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;

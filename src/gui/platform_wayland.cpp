@@ -714,6 +714,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
+    // THE LIT PLATE'S CORE INK, the tuning phase's default (architect
+    // 2026-09-25; the phase's terms at render.h's row-6 palette block), the
+    // same on both templates: #1b9e84.
+    cfg.fg_color      = kWaveformCoreInkDefault;
     return cfg;
 }
 

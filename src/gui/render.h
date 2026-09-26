@@ -103,9 +103,13 @@ struct TrimRange {
 // constant here and in the redesign blocks below is constexpr, there are no
 // user-settable colors, nothing is read from ~/.config, and a retune is a
 // recompile. Every painted surface in the product takes its value from one of
-// these constants, WITH NO EXCEPTION: the waveform's three inks were
-// device-config keys for one day's tuning phase (2026-09-25) and are
-// constexpr again at row 6 below, on the values the architect closed it on.
+// these constants, WITH ONE STANDING EXCEPTION, TEMPORARY BY RULING: the lit
+// plate's CORE ink is the device config's `fg_color` for a tuning phase
+// (architect 2026-09-25) and reaches the painter through the startup-installed
+// waveform_core_ink(); kWaveformCoreInkDefault at row 6 below is its default,
+// and the ink returns to this rule when the phase closes. (The waveform's
+// three inks of the morning were device-config keys for one day's earlier
+// tuning phase, 2026-09-25, closed by eye the same day.)
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -1057,18 +1061,26 @@ inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 // the outer — the rule is at render_waveform's declaration). For one day,
 // 2026-09-25, the inks were the device config's `waveform_ink`,
 // `waveform_magnified_ink` and `waveform_ghost_ink`, a tuning phase the
-// architect closed by eye (device_config.h keeps the record); the palette
-// rule — every colour a constexpr, the palette header — holds with no
-// exception. The values are his to move by eye.
+// architect closed by eye (device_config.h keeps the record). THE CORE INK
+// IS TUNABLE AGAIN FOR A SECOND TUNING PHASE (architect 2026-09-25, "we'll
+// remove it once we settle"): it is the device config's `fg_color`, read
+// once at startup into the process-wide core ink (waveform_core_ink(), beside
+// the gui-scale state below), the palette header's one exception; the
+// constant below is THE PHASE'S DEFAULT, the value both first-run templates
+// stamp and the painter wears until gui_main installs the config's. When the
+// phase closes the key is struck and the chosen value is constexpr here
+// again. The plate's ink is not in the phase.
 //
 // THE PLATE'S INK: row 6's crop sample. The lit OUTER bar wears it too: the
 // architect had seen the levelled bar alone in it and wanted it as the
 // picture (2026-09-25, "ink flips").
 inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 
-// THE CORE INK: the lit plate's INNER bar, written over the outer, so the
-// reading is a bright levelled bar with a LIGHTER core carved into it whose
-// relative thickness is the loudness.
+// THE CORE INK'S DEFAULT (the `fg_color` key's, the tuning phase above): the
+// lit plate's INNER bar, written over the outer, so the reading is a bright
+// levelled bar with a LIGHTER core carved into it whose relative thickness is
+// the loudness. The architect is choosing the tuned value along the same
+// blend by eye, from kWaveformInk #1c816b to kdenlive's teal #1abc9c.
 //
 // DERIVED, NOT SAMPLED (architect 2026-09-25, by eye against rendered
 // mockups at blends of kWaveformInk toward kdenlive's teal marker category
@@ -1104,7 +1116,7 @@ inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 // the levelled bar at -2 dB, the two device levels, "a parallel-compression
 // trick" whose ~4 dB separation covered the tuttis and left a fringe in the
 // crescendos); the compressor flipped the inks and struck the levels.
-inline constexpr GuiColor kWaveformCoreInk = hex(0x1B9E84);  // (27, 158, 132)
+inline constexpr GuiColor kWaveformCoreInkDefault = hex(0x1B9E84);  // (27, 158, 132)
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1513,6 +1525,25 @@ void   set_gui_scale_percent(int percent);
 // dimension is a coincidence. Nothing paints through this: every painted
 // dimension goes on reading gui_scale_factor / scaled_px.
 int    gui_scale_percent();
+
+// THE LIT PLATE'S CORE INK, the tuning phase's one tunable colour (architect
+// 2026-09-25; the device config's `fg_color`, the phase's terms at row 6's
+// palette block). The value starts at kWaveformCoreInkDefault, so a process
+// that never installs one paints the default.
+//
+// INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's value
+// through set_waveform_core_ink at startup, beside set_gui_scale_percent and
+// before the first project loads — so before the first plate job — and
+// nothing calls it again (the key has no in-app writer; a retune is a config
+// edit and a relaunch). THAT IS WHY THE WAVEFORM WORKER READS IT DIRECTLY,
+// with no job field, and why the plate fingerprint carries no colour term: a
+// value that cannot change within a process needs no snapshot and no key,
+// and the plate cache lives no longer than the process. (g_gui_scale_percent
+// is the contrast: the settings editor mutates it live.) waveform_core_ink()
+// is the one reader, render_waveform (render.cpp). When the phase closes both
+// are struck and the painter reads a constexpr again.
+void            set_waveform_core_ink(GuiColor ink);
+const GuiColor& waveform_core_ink();
 
 // Scale factor s = gui_scale / 100. Exactly 1.0 at the default, and as low as
 // 0.5 since the setting's grammar floor came down to 50 (architect 2026-08-10).
@@ -2880,9 +2911,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // before the first CPU write and marked dirty after the last, so later cairo
 // use sees the pixels.
 //
-// THE INKS ARE THE ROW-6 CONSTANTS, READ HERE rather than passed: the plate
-// paints in kWaveformInk with the lamp dark, and lit the outer in
-// kWaveformInk with the inner in kWaveformCoreInk over it — it
+// THE INKS ARE READ HERE rather than passed: the plate paints in
+// kWaveformInk with the lamp dark, and lit the outer in kWaveformInk with the
+// inner in the core ink over it (waveform_core_ink(), the `fg_color` key's for
+// a tuning phase, installed once at startup) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
@@ -2900,7 +2932,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 //
 //   OUTER (painted first) = raw x g x E, in kWaveformInk — the levelled,
 //                           expanded bar;
-//   INNER (painted over)  = raw x c x E, in kWaveformCoreInk — the source's
+//   INNER (painted over)  = raw x c x E, in the core ink — the source's
 //                           bar DOWNWARD-COMPRESSED.
 //
 // g is the leveler's gain at the column's centre source frame

@@ -1,15 +1,17 @@
 #pragma once
 
 #include "failure.h"
+#include "render.h"    // GuiColor and kWaveformCoreInkDefault, fg_color's default
 
 #include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -23,11 +25,15 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
+//   fg_color=#rrggbb         the lit waveform plate's CORE ink, the inner bar
+//                            painted over the outer — for a TUNING PHASE
+//                            (below), the grammar at is_waveform_colour
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
-// the last of them left 2026-09-25, below);
+// the last of them left 2026-09-25, below; `fg_color` stands after sync_path
+// since 2026-09-25, where they had stood);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -74,8 +80,22 @@
 // tuning phase: `waveform_ink`, `waveform_magnified_ink` and
 // `waveform_ghost_ink` carried the plate's three inks until the architect
 // closed the phase by eye, and the chosen values are constexpr in render.h
-// again (two since the compressor flipped them: kWaveformInk, kWaveformCoreInk). A
+// again (two since the compressor flipped them: kWaveformInk and the core
+// ink, whose own tuning phase is `fg_color`, below). A
 // config still carrying one is unknown-key fatal, no migration.
+// THE CORE INK'S KEY ARRIVED 2026-09-25 (architect, "we'll remove it once we
+// settle"), A SECOND TUNING PHASE: the lit plate's core ink left the binary
+// as `fg_color`, after sync_path, so a retune is a config edit and a
+// relaunch while the architect chooses a value by eye along the blend from
+// kWaveformInk #1c816b to kdenlive's teal #1abc9c. When the phase closes the
+// key is struck and the chosen value is constexpr again (render.h's palette
+// rule is the destination). Like the colour keys before it it has NO IN-APP
+// ROAD — not in the settings editor, not a Settings dropdown row — and is
+// read ONCE, at startup, into the process-wide core ink
+// (set_waveform_core_ink, render.h), which nothing mutates after; every
+// in-app commit carries it through verbatim from the live struct. Both
+// templates stamp kWaveformCoreInkDefault (#1b9e84). A config lacking it is
+// missing-key fatal, no migration.
 // THE TWO LEVEL KEYS CAME AND WENT 2026-09-25 (architect):
 // `waveform_magnification_foreground_db` and
 // `waveform_magnification_background_db` (earlier the same day
@@ -103,7 +123,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -115,8 +135,8 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// max_waveform_height, projects_repo, projects_path, last_project, sync_path)
-// and it is what
+// max_waveform_height, projects_repo, projects_path, last_project, sync_path,
+// fg_color) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -142,11 +162,13 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
-// writes — it is the program's own.
+// writes — it is the program's own — and `fg_color` has none either, being
+// the tuning phase's hand-edited surface (with the app quit, the R-6 rule
+// above).
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// six.
+// seven.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -163,6 +185,7 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
+    GuiColor    fg_color = kWaveformCoreInkDefault;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -235,6 +258,37 @@ inline constexpr const char* kGuiScaleGrammarReason =
     "must be an integer in [50, 350] in canonical spelling";
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
+
+// THE WAVEFORM COLOUR GRAMMAR — the ONE owner for `fg_color` (architect
+// 2026-09-25, the core ink's tuning phase): exactly seven characters, `#`
+// then six LOWER-CASE hex digits, `#1b9e84`. One canonical spelling, as each
+// numeric key has one: `#1B9E84`, `1b9e84`, `#1b9` and `#1b9e84ff` all
+// refuse, because format_waveform_colour writes lower case and nothing else,
+// and a file this program wrote must read back byte for byte. No alpha — the
+// palette is opaque (render.h).
+inline constexpr bool is_waveform_colour(std::string_view v) {
+    if (v.size() != 7 || v[0] != '#') return false;
+    for (size_t i = 1; i < 7; ++i) {
+        const char c = v[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
+    }
+    return true;
+}
+
+// The colour key's reason, spelled once for the config reader's `bad_value`
+// line (its one reader — the key has no editor).
+inline constexpr const char* kWaveformColourGrammarReason =
+    "must be '#' and six lower-case hex digits";
+
+// THE ONE PARSER for the colour key's value: a value is_waveform_colour
+// admits, as the GuiColor hex() builds from it (each channel n/255 exactly).
+// Asked by the config reader alone, after the grammar.
+GuiColor parse_waveform_colour(std::string_view v);
+
+// THE ONE SERIALIZER: `#rrggbb`, lower case, each channel rounded to a byte
+// with std::nearbyint — exact for every colour parse_waveform_colour builds,
+// so the round trip is byte-exact. The config writer's alone.
+std::string format_waveform_colour(GuiColor c);
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -455,7 +509,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
+// THREE CALL SITES CARRY THE SIX KEY COMMITS (`fg_color` has none: every
+// write carries it verbatim from the live struct), and this is their inventory
 // (re-greped 2026-09-13 with the sixth key):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves four keys —
@@ -476,7 +531,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path and a blank last_project),
+// sync_path, a blank last_project and fg_color's kWaveformCoreInkDefault,
+// #1b9e84),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits

@@ -102,8 +102,11 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the inks are constexpr (kWaveformInk, kWaveformCoreInk,
-    // render.h), read by render_waveform itself. The lamp dark, the raw bar
+    // ROW 6: the plate's ink is constexpr (kWaveformInk, render.h) and the
+    // core's is the `fg_color` key's for a tuning phase (waveform_core_ink,
+    // render.h), both read by render_waveform itself. THE CORE INK NEEDS NO
+    // FINGERPRINT TERM: it is installed once at startup and never mutated, so
+    // every plate this process caches was painted in the one value. The lamp dark, the raw bar
     // alone in the plate's ink; lit, each column paints its OUTER bar (the
     // levelled, expanded one) in the plate's ink and its INNER bar (the
     // compressed, expanded one) over it in the core's — the rule is at
