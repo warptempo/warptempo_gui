@@ -149,6 +149,11 @@ void Selection::seat_focus(int idx) {
     app.addressed_cell       = MarkerCell::Payload;
 }
 
+// The contract is at the declaration (and the rule at AppState::camera_hold).
+void Selection::drop_hold_on_group() {
+    if (app.selected_markers.size() >= 2) app.camera_hold = false;
+}
+
 void Selection::set_single_selection(int idx) {
     const std::optional<int64_t> old_subject = phase_overlay_subject();
     // Any non-range selection change dissolves the shift-range anchor (its
@@ -184,6 +189,7 @@ void Selection::replace_selection(std::set<int> members, int focus) {
     app.shift_range_anchor = -1;
     app.selected_markers   = std::move(members);
     seat_focus(app.selected_markers.count(focus) ? focus : -1);
+    drop_hold_on_group();
     viewport.invalidate_top_strip();
     damage_overlay_on_subject_change(old_subject);
 }
@@ -273,6 +279,7 @@ bool Selection::toggle_selection_membership(int idx) {
         if (app.last_selected_marker == idx) repair_last_selected();
         added = false;
     }
+    drop_hold_on_group();
     viewport.invalidate_top_strip();
     // (When repair_last_selected fired above it double-fires its own overlay
     // damage, a benign damage-union.)
@@ -347,6 +354,7 @@ void Selection::select_range_from_anchor(int idx) {
     app.selected_markers.clear();
     for (int i = lo; i <= hi; ++i) app.selected_markers.insert(i);
     seat_focus(idx);
+    drop_hold_on_group();
     viewport.invalidate_top_strip();
     damage_overlay_on_subject_change(old_subject);
 }
@@ -371,6 +379,7 @@ void Selection::sanitize_selection_after_restore(int n) {
     if (!app.selected_markers.count(app.last_selected_marker)) {
         seat_focus(-1);
     }
+    drop_hold_on_group();
     // Pruning the focused reset out of range erases its overlay (subject ->
     // none). The sole caller (undo/redo restore) full-repaints the waveform, so
     // this is normally redundant; it stays as the structural owner so a

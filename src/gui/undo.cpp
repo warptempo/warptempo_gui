@@ -1165,7 +1165,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             // stopped above (land's scanner-inactive premise).
             // THE HOLD IS DROPPED here, explicitly (the rule above): a group
             // framing is not a hold, and an on-screen range moves no camera,
-            // so the chokepoint would not put it out.
+            // so the chokepoint would not put it out. The selection owner's
+            // replace already did (a group selection has no hold,
+            // Selection::drop_hold_on_group); this line states the arm's own
+            // rule where its camera is decided.
             app.camera_hold = false;
             land_playhead_on_marker(app, viewport.audio, viewport,
                                     *app.selected_markers.begin());

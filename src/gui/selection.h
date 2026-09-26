@@ -103,6 +103,18 @@ struct Selection {
     // the top strip.
     void seat_focus(int idx);
 
+    // A GROUP SELECTION HAS NO HOLD (architect 2026-09-26): the one clear of
+    // AppState::camera_hold this layer owns, run at the tail of every mutator
+    // that can leave two or more members — replace_selection,
+    // toggle_selection_membership, select_range_from_anchor's range arm and
+    // sanitize_selection_after_restore — and a no-op below two. The other
+    // three (set_single_selection, clear_selection, collapse_to_focused, and
+    // cycle_selection through the first) leave at most one member and never
+    // call it. It lives here rather than at the lands because a group can
+    // form with the playhead standing still (a shift or ctrl click on a
+    // coincident flag), and a land that moves nothing keeps the hold.
+    void drop_hold_on_group();
+
     // Damage the waveform when the overlay subject changed across a mutation.
     // `old_subject` is captured BEFORE the mutation via phase_overlay_subject();
     // a no-op when the subject is unchanged (the common case). This is the

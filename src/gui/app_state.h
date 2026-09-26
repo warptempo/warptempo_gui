@@ -4712,7 +4712,16 @@ struct AppState {
     //     the marker under the playhead (Enter, the flag double-click, a
     //     bound cell, `m`) keeps the hold, and so do a marker click, a Tab
     //     step or a collapse landing on that marker; move_playhead_to clears
-    //     at every call. The reseat and translate
+    //     at every call. AND BY A GROUP (architect 2026-09-26): A GROUP
+    //     SELECTION HAS NO HOLD, so the selection owner clears the bit
+    //     whenever a live selection write leaves two or more members, however
+    //     the group formed — a shift or ctrl click on a flag coincident with
+    //     the playhead lands nothing and would otherwise keep it
+    //     (Selection::drop_hold_on_group, whose declaration lists the
+    //     mutators that call it). The clear governs selection writes only:
+    //     bare `c` (run_center_key_command) reads no selection and still arms
+    //     over a standing group, and the `h` view's diff-flag selection is
+    //     the mode's own set, outside this owner. The reseat and translate
     //     entries are not movements and do not clear as owners; a camera
     //     change their clamp makes (the reseat's edge-align scrolling to an
     //     offscreen cursor, a shrunken domain's wall) is a camera change like
