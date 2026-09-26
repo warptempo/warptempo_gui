@@ -549,13 +549,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE LIT PLATE'S TWO LEVELS, the values the architect closed the
-    // tuning phase on (2026-09-25; the record at render.h's row-6 palette
-    // block), the same on both templates: 2.00 dB and -2.00 dB.
-    cfg.waveform_magnification_foreground_db =
-        kWaveformMagnificationForegroundDbDefault;
-    cfg.waveform_magnification_background_db =
-        kWaveformMagnificationBackgroundDbDefault;
+    // THE INNER COMPRESSOR'S TWO NUMBERS, the tuning phase's starting point
+    // (architect 2026-09-25; the criterion at waveform_gain.h), the same on
+    // both templates: a threshold of -24.00 dBFS and a ratio of 2.00.
+    cfg.waveform_compressor.threshold_db = kWaveformCompressorThresholdDbDefault;
+    cfg.waveform_compressor.ratio        = kWaveformCompressorRatioDefault;
     return cfg;
 }
 

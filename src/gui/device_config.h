@@ -1,7 +1,7 @@
 #pragma once
 
 #include "failure.h"
-#include "render.h"    // the two waveform levels' defaults
+#include "waveform_gain.h"   // WaveformCompressorParams and its defaults
 
 #include <cstdint>
 #include <expected>
@@ -26,22 +26,21 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
-//   waveform_magnification_foreground_db=<dB>
-//                            the FOREGROUND's level with the magnification
-//                            lamp lit — the source's own bar's flat gain in
-//                            decibels, a signed number in [-24, 24] spelled
-//                            with at least two decimals (`2.00`), or `-inf`:
-//                            that layer not painted
-//   waveform_magnification_background_db=<dB>
-//                            the BACKGROUND's level with the lamp lit — the
-//                            levelled, expanded copy behind the foreground,
-//                            the same grammar (`-2.00`, or `-inf`), the
-//                            grammar at is_waveform_level_db
+//   waveform_compressor_threshold_db=<dBFS>
+//                            the lit plate's inner-bar compressor's
+//                            Threshold on the window loudness L, a signed
+//                            number in [-60, 0] spelled with at least two
+//                            decimals (`-24.00`), the grammar at
+//                            is_waveform_compressor_threshold_db
+//   waveform_compressor_ratio=<ratio>
+//                            its Ratio, a number in [1, 100] spelled with at
+//                            least two decimals (`2.00`), 1.00 the identity,
+//                            the grammar at is_waveform_compressor_ratio
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
-// they left 2026-09-24, and the two levels stand in their place since
+// they left 2026-09-24, and the compressor's two stand in their place since
 // 2026-09-25, below);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -89,29 +88,28 @@
 // tuning phase: `waveform_ink`, `waveform_magnified_ink` and
 // `waveform_ghost_ink` carried the plate's three inks until the architect
 // closed the phase by eye, and the chosen values are constexpr in render.h
-// again (kWaveformInk, kWaveformForegroundInk, kWaveformBackgroundInk). A
+// again (two since the compressor flipped them: kWaveformInk, kWaveformCoreInk). A
 // config still carrying one is unknown-key fatal, no migration.
-// THE TWO LEVEL KEYS STAYED (architect 2026-09-25), the one per-device
-// picture knob: `waveform_magnification_foreground_db` and
-// `waveform_magnification_background_db`, after `sync_path`, the lit
-// plate's FOREGROUND (the source's own bar) and BACKGROUND (the levelled,
-// expanded copy behind it — "ghost" was its word until the close), each a
-// flat level in decibels or `-inf` for that layer not painted (the rule at
-// render_waveform's declaration). The key took several spellings the same
-// day — `waveform_magnified_gain` (a core gain on the foreground),
-// `waveform_ghost_reduction` (a divisor on the background), then the pair
-// `waveform_magnified_gain_db` / `waveform_ghost_gain_db`, renamed at the
-// close because "magnified" named the wrong bar; a config still carrying any
-// of them is unknown-key fatal, no migration (this file's standing rule).
-// They have NO IN-APP ROAD — not in the settings editor, not a Settings
-// dropdown row — and are read ONCE, at startup, into the process-wide
-// WaveformMagnificationLevels (render.h, converted there to amplitude scales
-// by waveform_level_scale), which nothing mutates after; every in-app commit
-// carries them through verbatim from the live struct. Both templates stamp
-// the values the architect closed the phase on, 2.00 and -2.00
-// (kWaveformMagnificationForegroundDbDefault,
-// kWaveformMagnificationBackgroundDbDefault, render.h, where the measured
-// table is recorded).
+// THE TWO LEVEL KEYS CAME AND WENT 2026-09-25 (architect):
+// `waveform_magnification_foreground_db` and
+// `waveform_magnification_background_db` (earlier the same day
+// `waveform_magnified_gain`, `waveform_ghost_reduction`,
+// `waveform_magnified_gain_db` and `waveform_ghost_gain_db`) set the lit
+// plate's two bars' flat levels, `-inf` leaving a bar out; the inner
+// compressor put both bars at 0 dB by construction and they are struck. A
+// config still carrying any of them is unknown-key fatal, no migration.
+// THE COMPRESSOR'S TWO KEYS TOOK THEIR PLACE (architect 2026-09-25), after
+// `sync_path`, for a tuning phase — the road the leveler's and the
+// expander's numbers walked, hard-coded at the close:
+// `waveform_compressor_threshold_db` and `waveform_compressor_ratio`, the
+// inner bar's Threshold and Ratio (the stage is waveform_gain.h's). They
+// have NO IN-APP ROAD — not in the settings editor, not a Settings dropdown
+// row — and are read ONCE, at startup, with the rest of the file into the
+// live struct, which nothing writes for them after; each load hands them to
+// its gain derivation (GuiAudio::load) and every in-app commit carries them
+// through verbatim. Both templates stamp -24.00 and 2.00
+// (kWaveformCompressorThresholdDbDefault, kWaveformCompressorRatioDefault,
+// waveform_gain.h, where the criterion is recorded).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -138,8 +136,7 @@
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
 // max_waveform_height, projects_repo, projects_path, last_project, sync_path,
-// waveform_magnification_foreground_db,
-// waveform_magnification_background_db) and it is what
+// waveform_compressor_threshold_db, waveform_compressor_ratio) and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -165,7 +162,7 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
-// writes — it is the program's own — and the two waveform level keys have
+// writes — it is the program's own — and the two compressor keys have
 // none either, being hand-edited (with the app quit, the R-6 rule above).
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
@@ -187,12 +184,9 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
-    // A level's `-inf` is stored as -std::numeric_limits<double>::infinity()
-    // (parse_waveform_level_db), the one non-finite value either admits.
-    double      waveform_magnification_foreground_db =
-        kWaveformMagnificationForegroundDbDefault;
-    double      waveform_magnification_background_db =
-        kWaveformMagnificationBackgroundDbDefault;
+    // `waveform_compressor_threshold_db` and `waveform_compressor_ratio`,
+    // in that order, as the struct the derivation takes.
+    WaveformCompressorParams waveform_compressor;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -266,61 +260,59 @@ inline constexpr const char* kGuiScaleGrammarReason =
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
 
-// THE WAVEFORM LEVEL LITERAL FOR "THAT LAYER NOT PAINTED" — exactly these
-// four bytes, the one canonical spelling (architect 2026-09-25): with the
-// magnification lamp lit, a foreground at `-inf` shows the background alone,
-// a background at `-inf` the foreground alone, and both at `-inf` an empty
-// lit plate (admitted: it is what the two rules compose to; the dark lamp
-// paints the raw bar as ever). Stored as the negative infinity; the parser
-// recognises it ahead of the number road and the serializer spells it back.
-inline constexpr std::string_view kWaveformLevelNotPainted = "-inf";
-
-// THE WAVEFORM LEVEL RANGE — the ONE owner for BOTH level keys,
-// `waveform_magnification_foreground_db` and
-// `waveform_magnification_background_db` (architect 2026-09-25): [-24, 24]
-// dB, the leveler's own cap kGainMax = 16 (waveform_gain.cpp) either way,
-// 24 dB being 20 log10 16 (24.08) to the whole decibel. At +24 on the
-// foreground the source's bar stands level with the tallest background the
-// leveler can draw (the gain at its cap, the expander's multiplier at its
-// own, 1); at -24 on the background its scale is at most that cap over 16,
-// about 1, so the foreground covers it; past either end the lit plate shows
-// nothing new, so the one symmetric bracket serves both bars. BESIDE THE
-// BRACKET, the negative infinity — the `-inf` literal above, that layer not
-// painted. The constant is file-local to waveform_gain.cpp,
-// so the numbers are spelled here with that as their reason. Asked by the
-// config reader alone (the keys have no editor).
-inline constexpr bool is_waveform_level_db(double v) {
-    if (v == -std::numeric_limits<double>::infinity()) return true;
-    return v >= -24.0 && v <= 24.0;
+// THE COMPRESSOR THRESHOLD RANGE — the ONE owner for
+// `waveform_compressor_threshold_db` (architect 2026-09-25): [-60, 0] dBFS on
+// the window loudness L. 0 is the digital ceiling no window's RMS exceeds
+// (a threshold there compresses nothing); -60 lies under the leveler's own
+// -50 dB column gate, so every audible window is over it. Asked by the
+// config reader alone (the key has no editor).
+inline constexpr bool is_waveform_compressor_threshold_db(double v) {
+    return v >= -60.0 && v <= 0.0;
 }
 
-// The level keys' reason, spelled once for the config reader's `bad_value`
-// line (its one reader, both keys).
-inline constexpr const char* kWaveformLevelDbGrammarReason =
-    "must be a signed number of decibels in [-24.00, 24.00] in canonical "
-    "spelling, or -inf";
+// THE COMPRESSOR RATIO RANGE — the ONE owner for `waveform_compressor_ratio`
+// (architect 2026-09-25): [1, 100]. 1.00 is the identity, admitted as the
+// off switch; 100 stands in for infinity rather than spelling it (at 100:1
+// the reduction is 0.99 dB per dB over the threshold). Asked by the config
+// reader alone.
+inline constexpr bool is_waveform_compressor_ratio(double v) {
+    return v >= 1.0 && v <= 100.0;
+}
 
-// THE ONE SERIALIZER for both level keys: the MAGNITUDE through the settings'
+// The two keys' reasons, spelled once for the config reader's `bad_value`
+// line (the one reader of each).
+inline constexpr const char* kWaveformCompressorThresholdDbGrammarReason =
+    "must be a signed number of decibels in [-60.00, 0.00] in canonical "
+    "spelling";
+inline constexpr const char* kWaveformCompressorRatioGrammarReason =
+    "must be a number in [1.00, 100.00] in canonical spelling";
+
+// THE ONE SERIALIZER for the threshold: the MAGNITUDE through the settings'
 // own bracketed-double road, format_value_double at min 2 decimals
 // (value_format.h), with a leading '-' re-attached when the value is below
-// zero — `0.00`, `-2.00`, `24.00`, `-6.021` — and the negative infinity
-// spelled `-inf` (kWaveformLevelNotPainted). Zero of either sign spells
-// `0.00`, never `-0.00`. The config writer's alone.
-std::string format_waveform_level_db(double v);
+// zero — `0.00`, `-24.00`, `-6.021`. Zero of either sign spells `0.00`,
+// never `-0.00`. The config writer's alone.
+std::string format_waveform_compressor_threshold_db(double v);
 
-// THE ONE PARSER for both level keys. FIRST THE LITERAL: exactly `-inf`
-// (kWaveformLevelNotPainted) is the negative infinity, and every other
-// spelling of an infinity — `inf`, `+inf`, `-INF`, `-Inf`, `-infinity` —
-// falls to the number road below and refuses there. The value road (parse_value_double,
+// THE ONE PARSER for the threshold. The value road (parse_value_double,
 // value_format.h) refuses any sign — no authored value is negative — and it
 // is frozen, so THE SIGN IS HANDLED HERE: one leading '-' is stripped and the
 // rest parsed as a magnitude with that road's strictness (no second sign, no
 // '+', no exponent, no inf/nan, the whole field); then ONE CANONICAL SPELLING
-// — the text must be exactly what format_waveform_level_db writes for the
-// value it names, so `-6.0`, `6`, `-6.020` and `-0.00` refuse (zero is
-// `0.00`) — then the range owner above. Returns true and sets `out` on
-// success, leaving it untouched on failure.
-bool parse_waveform_level_db(std::string_view s, double& out);
+// — the text must be exactly what format_waveform_compressor_threshold_db
+// writes for the value it names, so `-24.0`, `-24`, `-24.000` and `-0.00`
+// refuse (zero is `0.00`) — then the range owner above. Returns true and sets
+// `out` on success, leaving it untouched on failure.
+bool parse_waveform_compressor_threshold_db(std::string_view s, double& out);
+
+// THE ONE SERIALIZER for the ratio: format_value_double at min 2 decimals,
+// no sign (the range admits none). The config writer's alone.
+std::string format_waveform_compressor_ratio(double v);
+
+// THE ONE PARSER for the ratio: parse_value_double's strict magnitude (no
+// sign at all), the canonical round trip through the serializer above
+// (`2`, `2.0` and `2.000` refuse), then the range owner.
+bool parse_waveform_compressor_ratio(std::string_view s, double& out);
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -541,7 +533,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS (the two waveform level keys
+// THREE CALL SITES CARRY THE SIX KEY COMMITS (the two compressor keys
 // have none: every write carries them verbatim from the live struct),
 // and this is their inventory
 // (re-greped 2026-09-13 with the sixth key):
@@ -564,8 +556,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path, a blank last_project and the two waveform levels' 2.00 and
-// -2.00), so a first run on either device lands a
+// sync_path, a blank last_project and the compressor's -24.00 and 2.00),
+// so a first run on either device lands a
 // file that is
 // already right for it and the user edits
 // from there rather than from a wrong guess. A missing parent directory is

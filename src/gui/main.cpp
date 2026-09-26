@@ -3420,19 +3420,12 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE LIT PLATE'S TWO LEVELS (architect 2026-09-25; the device config's
-    // `waveform_magnification_foreground_db` and
-    // `waveform_magnification_background_db`): installed ONCE here, before
-    // the first project loads and so before the first plate job, and never
-    // again — the keys have no in-app writer, a change is a config edit and a
-    // relaunch. That is what lets the waveform worker read them with no job
-    // field (the contract at waveform_magnification_levels, render.h). The
-    // two are converted from decibels HERE, once (waveform_level_scale), so
-    // the painter does no pow per column: a finite level becomes its
-    // amplitude scale, `-inf` becomes nullopt, that layer not painted.
-    set_waveform_magnification_levels(WaveformMagnificationLevels{
-        waveform_level_scale(device_config.waveform_magnification_foreground_db),
-        waveform_level_scale(device_config.waveform_magnification_background_db)});
+    // THE INNER COMPRESSOR'S TWO NUMBERS (the device config's
+    // `waveform_compressor_threshold_db` and `waveform_compressor_ratio`,
+    // architect 2026-09-25) install nothing here: they are inputs to each
+    // load's gain derivation, read from this struct by the loader
+    // (GuiFileLoader::load_file into GuiAudio::load), and nothing writes
+    // them after this read.
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

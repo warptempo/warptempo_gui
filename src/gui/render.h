@@ -1050,109 +1050,42 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 // file itself; the record is at the palette header.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 
-// THE WAVEFORM'S THREE INKS (architect 2026-09-25): the plate's ink with the
-// magnification lamp dark, and with the lamp lit the FOREGROUND's ink (the
-// source's own bar) and the BACKGROUND's ink (the levelled, expanded copy
-// painted behind it). For one day, 2026-09-25, the three were the device
-// config's `waveform_ink`, `waveform_magnified_ink` and `waveform_ghost_ink`,
-// a tuning phase read once at startup; the architect closed the phase by eye
-// on the laptop on the values below, the keys are struck (device_config.h
-// keeps the record) and the palette rule — every colour a constexpr, the
-// palette header — holds again with no exception.
+// THE WAVEFORM'S TWO INKS (architect 2026-09-25): the plate's ink, worn by
+// the raw bar with the magnification lamp dark and by the OUTER bar (the
+// levelled, expanded one) with it lit, and the CORE ink, worn by the lit
+// plate's INNER bar (the source's bar through the compressor, carved into
+// the outer — the rule is at render_waveform's declaration). For one day,
+// 2026-09-25, the inks were the device config's `waveform_ink`,
+// `waveform_magnified_ink` and `waveform_ghost_ink`, a tuning phase the
+// architect closed by eye (device_config.h keeps the record); the palette
+// rule — every colour a constexpr, the palette header — holds with no
+// exception. The values are his to move by eye.
 //
-// THE PLATE'S INK, the lamp dark: row 6's crop sample.
+// THE PLATE'S INK: row 6's crop sample. The lit OUTER bar wears it too: the
+// architect had seen the levelled bar alone in it and wanted it as the
+// picture (2026-09-25, "ink flips").
 inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 
-// THE FOREGROUND'S INK, the lamp lit: the source's own bar, written over the
-// background. The plate's ink itself; a colour of its own because the bar
-// over a background could have wanted a different value than the bar alone,
-// and the tuning phase found that it does not.
-inline constexpr GuiColor kWaveformForegroundInk = hex(0x1C816B);  // (28, 129, 107)
-
-// THE BACKGROUND'S INK (architect 2026-09-24; one flat colour since
-// 2026-09-25): the lit magnification lamp paints each column's
-// levelled-and-expanded bar BEHIND the foreground in this one colour (the
-// rule is at render_waveform's declaration), faint enough that the source's
-// picture stands over it and the background does not read as a second figure.
+// THE CORE INK: the lit plate's INNER bar, written over the outer, so the
+// reading is a bright levelled bar with a dark core whose relative thickness
+// is the loudness.
 //
 // DERIVED, NOT SAMPLED: the kWaveformCanvas : kWaveformInk 1:1 blend of the
 // two sampled row-6 constants, each channel rounded with std::nearbyint (the
 // halves are exact here):
 //     ((18, 49, 43) + (28, 129, 107)) / 2 = (23, 89, 75) = #17594b
-// Two sampled inks were tried first on 2026-09-24 and both are superseded:
-// the lower-channel #1f8b4c of the architect's kdenlive screenshot read as a
-// second figure, and that screenshot's new canvas #135647 fringed at small
-// boosts, a thin rim beside the foreground that read as antialiasing. The
-// canvas STAYS kWaveformCanvas #12312b (the architect observed kdenlive's new
-// canvas and did not rule it in as the ground).
+// Two sampled inks were tried first on 2026-09-24 for the bar behind the
+// source's and both are superseded: the lower-channel #1f8b4c of the
+// architect's kdenlive screenshot read as a second figure, and that
+// screenshot's new canvas #135647 fringed at small boosts. The canvas STAYS
+// kWaveformCanvas #12312b.
 //
-// WORN ONLY BESIDE A PAINTED FOREGROUND (architect 2026-09-25): with the
-// foreground's level at `-inf` the background is the lit plate's one bar and
-// paints in kWaveformForegroundInk instead (render_waveform, where the
-// background's word is chosen).
-inline constexpr GuiColor kWaveformBackgroundInk = hex(0x17594B);  // (23, 89, 75)
-
-// THE LIT PLATE'S TWO LEVELS (architect 2026-09-25) — the defaults of the
-// device config's `waveform_magnification_foreground_db` (the FOREGROUND, the
-// source's own bar) and `waveform_magnification_background_db` (the
-// BACKGROUND, the levelled copy behind it), the one per-device picture knob
-// that outlived the tuning phase; both first-run templates stamp these. Each
-// is a flat level in DECIBELS, converted ONCE at startup to an amplitude
-// scale 10^(dB / 20) (waveform_level_scale, below; the installed
-// WaveformMagnificationLevels carry the scales, so the painter does no pow
-// per column), or `-inf`, that layer NOT PAINTED: with the magnification
-// lamp lit the foreground's tips take the foreground's scale and the
-// background's take the leveler x expander x the background's, each before
-// its one clamp (the rule is at render_waveform's declaration). The dark
-// plate never reads either.
-// WHY TWO INDEPENDENT LEVELS: the foreground and the background are two
-// pictures and the architect tunes each by eye — THE SEPARATION between them
-// (foreground dB minus background dB) is what covers the tuttis, the
-// background hidden wherever the leveler's gain is at or under it; the
-// background's own level is what fills the lane.
-//
-// THE SEPARATION WAS MEASURED BEFORE IT WAS SPELLED IN DECIBELS. The product's
-// leveler re-derived in numpy on the three K550 movements (tmp/gain_hist.py,
-// 2026-09-25), counting the background standing 0-3.5 dB (1-1.5x) beside the
-// foreground as the FRINGE zone —
-//     separation   background hidden (I/II/III)  fringe left
-//     3.0 dB       33 / 9 / 12 %                 17 / 10 / 39 %
-//     4.0 dB       44 / 13 / 41 %                8.4 / 7.8 / 11 %
-//     4.5 dB       46 / 14 / 47 %                6.7 / 7.5 / 6.9 %
-//     5.0 dB       48 / 15 / 48 %                5.5 / 7.1 / 6.0 %
-//     6.0 dB       50 / 18 / 50 %                4.7 / 6.4 / 5.3 %
-// (at 0 dB nothing is hidden and the fringe is 40 / 12 / 29 %). The
-// Menuetto's tuttis sit at 3-4 dB, which rules out 3 dB; from 4.5 dB the loud
-// mode is covered in all three and what is left are the fades. Some fringing
-// is accepted — the goal is to cover most of it, not all. The number first
-// ran as a core gain on the foreground (x1.68, 4.5 dB); a lowered background
-// only lowers its own clipping (0.12 / 0.42 / 0.14 % of columns at 0 dB,
-// 0.00 % at -6). The phase then stood at 0.00 / -6.02 (a reduction of 2.0),
-// whose cost was the background's fill: the typical leveled column peak,
-// p50 / p90, sat at -8.8 / -4.6 dB under the lane edge at a 0 dB background
-// and at -14.8 / -10.6 dB at -6.02.
-//
-// THE ARCHITECT CLOSED THE PHASE AT +2.00 / -2.00 (2026-09-25, by eye on the
-// laptop). +2 dB on the foreground is "just at the threshold": +3 clips the
-// source on 0.10 % of the 40th's audible columns against 0.01 % at +2 (peak
-// -0.5 dBFS). The separation of about 4 dB covers the tuttis in all three
-// K550 movements (the background hidden on 44 / 13 / 41 % of hops, the
-// fringe zone 8.4 / 7.8 / 11.0 %) — less fringes everywhere, more pushes the
-// fringe into the anticipation of the tutti — and the residual fringe sits
-// mostly at a tutti's fade-out, the least distracting place (the fade-out :
-// crescendo split is 50-60 : 40-50 at every separation, a property of the
-// piece and not of the number; no further number is owed to it). In his
-// words, "a parallel-compression trick": squash heavily, blend until the
-// compressed picture pokes out only in the quiet parts.
-//
-// THE KEY'S EARLIER SPELLINGS, the same day: a core gain on the foreground
-// (`waveform_magnified_gain`, x1.68) that read as overblown; a divisor on the
-// background (`waveform_ghost_reduction`, /1.68 by default) that the tuning
-// took to /2.0; the pair `waveform_magnified_gain_db` /
-// `waveform_ghost_gain_db`; and this pair, renamed with the vocabulary at the
-// close ("ghost" was the background's word until 2026-09-25).
-inline constexpr double kWaveformMagnificationForegroundDbDefault = 2.0;
-inline constexpr double kWaveformMagnificationBackgroundDbDefault = -2.0;
+// A SUPERSEDED RECORD (2026-09-24 to 2026-09-25): this ink was the faint
+// BACKGROUND behind a bright FOREGROUND (the raw bar at a flat +2 dB over
+// the levelled bar at -2 dB, the two device levels, "a parallel-compression
+// trick" whose ~4 dB separation covered the tuttis and left a fringe in the
+// crescendos); the compressor flipped the inks and struck the levels.
+inline constexpr GuiColor kWaveformCoreInk = hex(0x17594B);  // (23, 89, 75)
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -2107,60 +2040,6 @@ inline int marker_lane_h_px() {
 void set_max_waveform_height_px(int authored_px);
 int  waveform_max_h_px();
 
-// A LEVEL IN DECIBELS AS AN AMPLITUDE SCALE, 10^(dB / 20): 0 dB is exactly
-// 1.0 (std::pow(10, 0)), so a 0 dB level multiplies nothing. For FINITE
-// input only: a level key's `-inf` (that layer not painted) never reaches it,
-// waveform_level_scale below answering it first. Asked where the levels are
-// built (gui_main's install and the members' defaults below), never per
-// column.
-inline double db_to_scale(double db) { return std::pow(10.0, db / 20.0); }
-
-// A LEVEL KEY'S VALUE AS "PAINTED OR NOT, AND THE SCALE": `-inf` (the device
-// config's one spelling of "leave that layer out", stored as the negative
-// infinity) is nullopt, every other value its amplitude scale through
-// db_to_scale. NOT PAINTED IS NOT A ZERO SCALE: the painter's integer-row
-// floor writes a one-row hairline for any sub-pixel interval
-// (render_waveform), so a zero scale would still draw a line; the painter
-// skips the bar instead.
-inline std::optional<double> waveform_level_scale(double db) {
-    if (std::isinf(db) && db < 0.0) return std::nullopt;
-    return db_to_scale(db);
-}
-
-// THE LIT PLATE'S TWO LEVELS (architect 2026-09-25; the defaults, their
-// measurement and the closed tuning phase are at row 6's palette block):
-// `foreground` is the flat amplitude scale the source's own bar takes with
-// the magnification lamp lit, `background` the one the levelled copy behind
-// it takes on top of the leveler and the expander — the device config's
-// `waveform_magnification_foreground_db` and
-// `waveform_magnification_background_db`, converted once
-// (waveform_level_scale); nullopt is a level of `-inf`, THAT LAYER NOT
-// PAINTED. The member defaults are the two default levels converted, so a
-// process that never installs one paints the defaults. The three inks are
-// not here: they are constexpr (kWaveformInk, kWaveformForegroundInk,
-// kWaveformBackgroundInk), read by render_waveform itself.
-//
-// INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's two
-// levels through set_waveform_magnification_levels at startup, beside
-// set_gui_scale_percent and before the first project loads — so before the
-// first plate job — and nothing calls it again (the keys have no in-app
-// writer; a change is a config edit and a relaunch). THAT IS WHY THE
-// WAVEFORM WORKER READS IT DIRECTLY, with no job field, and why the plate
-// fingerprint carries no level term: a value that cannot change under a
-// running job needs no snapshot and no key. (g_gui_scale_percent is the
-// contrast: the settings editor mutates it live, so the job snapshots the
-// geometry it derives — waveform_worker.h's note.)
-// waveform_magnification_levels() is the one reader,
-// render_waveform_to_cache_surface (waveform_cache.cpp).
-struct WaveformMagnificationLevels {
-    std::optional<double> foreground =
-        waveform_level_scale(kWaveformMagnificationForegroundDbDefault);
-    std::optional<double> background =
-        waveform_level_scale(kWaveformMagnificationBackgroundDbDefault);
-};
-void set_waveform_magnification_levels(const WaveformMagnificationLevels& levels);
-const WaveformMagnificationLevels& waveform_magnification_levels();
-
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B): the transport three on the left with the monospace
@@ -2969,9 +2848,9 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
 // context. ONE COMPOSITING RULE, where there were two: every write REPLACES.
 // The caller cleared every column this call regenerates and each column is
-// written by its foreground bar, after its background bar when the lamp is
-// lit (the foreground overwriting the background where they overlap is the
-// magnification rule's order), so
+// written by its one bar with the lamp dark, and lit by its outer bar and
+// then its inner bar over it (the inner overwriting the outer where they
+// overlap is the magnification rule's order), so
 // replacing is correct and idempotent — the max-compositing that the segments needed (they wrote into an
 // already-rendered neighbour) went with them.
 //
@@ -2982,9 +2861,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // use sees the pixels.
 //
 // THE INKS ARE THE ROW-6 CONSTANTS, READ HERE rather than passed: the plate
-// paints in kWaveformInk with the lamp dark, and lit in
-// kWaveformForegroundInk over kWaveformBackgroundInk (the background alone in
-// kWaveformForegroundInk when the foreground's level is `-inf`, below) — it
+// paints in kWaveformInk with the lamp dark, and lit the outer in
+// kWaveformInk with the inner in kWaveformCoreInk over it — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
@@ -2995,94 +2873,61 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // opaque plate pixel inside the region's column span as its own colour lifted
 // by the region's step (region_lift), leaving the plate itself untouched.
 //
-// THE VISUAL MAGNIFICATION is `gain_or_null`, and it is A BACKGROUND BEHIND
-// THE SOURCE'S PICTURE (architect 2026-09-24; "ghost" was its word until
-// 2026-09-25): the lit lamp no longer replaces the raw picture, it paints
-// the magnified one behind it. Every column takes ONE peak read and draws
-// TWO bars from it: first the BACKGROUND — the raw min/max times the
-// column's scale (the gain below times the expander's multiplier times
-// `background_scale`, below), CLAMPED to [-1, 1] before they become rows —
-// in kWaveformBackgroundInk, then the FOREGROUND, the source's own bar
-// (scale `foreground_scale`, below), in kWaveformForegroundInk written over
-// it. The writer replace-writes opaque words, so where the two overlap the
-// foreground wins. NULL (the dark lamp) draws the raw bar alone in
-// kWaveformInk at scale 1, byte for byte the plate it always drew, and
-// `foreground_scale` and `background_scale` are then unread. Nothing else in
-// this painter moves (the column grid, the >=1px floor — both bars keep it —
-// the carried-endpoint chain and the aliased-only writer are untouched). A
-// loud passage's background clips flat at the lane's edges while the
-// foreground still shows its true height inside it: the background exists
-// to make a quiet passage's onsets readable, and the source's picture is
-// present unless its level is `-inf` (below).
+// THE VISUAL MAGNIFICATION is `gain_or_null`, and the lit plate is TWO BARS
+// per column from ONE peak read, both through the expander, the outer
+// through the leveler and the inner through the compressor (architect
+// 2026-09-25):
 //
-// THE BACKGROUND IS ONE FLAT COLOUR (architect 2026-09-25), and the
-// foreground over it another. A SUPERSEDED RECORD, 2026-09-24 to 2026-09-25:
-// for one day the background wore a per-column SHADE, blended from the ink
-// toward the faint #17594b by the LEVELER'S GAIN alone at the column's
-// centre frame, t = clamp(log2(g) - 1, 0, 1) — the ink up to one doubling,
-// the faint end from two, linear in doublings between. The knees were the
-// old magnification ladder's x2 (a tutti's boost) and x4 (a quiet passage's
-// first level), and the shade read the gain, not the scale, because the
-// expander's per-column multiplier would have flickered it inside a valley.
-// Measured on the three K550 movements (the leveler re-derived in numpy),
-// the per-hop gain is BIMODAL — the hops at 0-6 / 6-12 / 12-24 dB were
-// 50 / 13 / 37 % in the 40th's first movement and the Menuetto and
-// 18 / 12 / 70 % in the Andante — so the knees fell at the modes' edges and
-// few columns took a middle shade. STRUCK 2026-09-25 after the architect's
-// eye on the laptop, who preferred tuning two flat colours by eye to reading
-// a shade; the tuning closed the same day on the row-6 constants.
+//   OUTER (painted first) = raw x g x E, in kWaveformInk — the levelled,
+//                           expanded bar;
+//   INNER (painted over)  = raw x c x E, in kWaveformCoreInk — the source's
+//                           bar DOWNWARD-COMPRESSED.
 //
-// THE LIT PLATE'S TWO BARS TAKE TWO LEVELS (architect 2026-09-25): with the
-// lamp lit the foreground's tips are raw x `foreground_scale` and the
-// background's raw x gain x multiplier x `background_scale`, each before its
-// one clamp — the installed WaveformMagnificationLevels, the device config's
-// two dB levels converted once at startup. The fringe the pair answers is
-// the background standing 1-1.5x beside the foreground: where the leveler's
-// gain at the column is at or under the SEPARATION (foreground_scale over
-// background_scale) the background is covered entirely (a tutti shows the
-// source's picture alone, in the foreground's ink); beyond it the background
-// stands out by the ratio g x background_scale / foreground_scale. Two FLAT
-// scales, so each bar keeps its shape. The defaults (+2.00 and -2.00 dB),
-// their measured table and the key's earlier spellings are at
-// kWaveformMagnificationForegroundDbDefault /
-// kWaveformMagnificationBackgroundDbDefault (render.h's row-6 block).
-// A SCALE THAT IS nullopt IS A LEVEL OF `-inf`, AND THAT BAR IS NOT DRAWN —
-// never scaled by zero, which the >=1px floor would still paint as a one-row
-// hairline: the foreground at `-inf` shows the background alone, the
-// background at `-inf` the foreground alone, both an empty lit plate. The
-// dark lamp reads neither.
-// THE LONE BACKGROUND WEARS THE FOREGROUND'S INK (architect 2026-09-25):
-// with the foreground at `-inf` the background bar paints in
-// kWaveformForegroundInk, not kWaveformBackgroundInk — the fainter ink is
-// the background's only while a foreground stands over it. Its geometry is
-// unchanged (raw x gain x multiplier x `background_scale`, the one clamp).
-// The ink follows `foreground_scale` alone, the installed levels, set once
-// at startup and never mutated (waveform_magnification_levels, above), so
-// the plate fingerprint owes it no term.
+// g is the leveler's gain at the column's centre source frame
+// (waveform_gain_at), c the compressor's scale there (waveform_inner_scale_at,
+// the inner bar's stage on the window loudness L — waveform_gain.h owns
+// both), and E the expander's largest multiplier over the working columns
+// the column spans (waveform_expander_multiplier_over) — ON BOTH BARS, so the
+// gap between them is g / c, a pure function of L, and the inner never
+// stands out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
+// they become rows, and each keeps the >=1px floor. The writer
+// replace-writes opaque words, so where the two overlap the inner wins: the
+// reading is a bright levelled bar with a dark core carved into it whose
+// relative thickness is the loudness — at or under the compressor's
+// threshold the core is the raw bar (x E), over it thinner by its ratio.
+// NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,
+// byte for byte the plate it always drew. Nothing else in this painter moves
+// (the column grid, the >=1px floor, the carried-endpoint chain and the
+// aliased-only writer are untouched). A loud passage's outer clips flat at
+// the lane's edges while the inner still shows its compressed height inside
+// it.
+//
+// SUPERSEDED RECORDS: the lit plate's bar behind the source's wore a
+// per-column SHADE by the leveler's gain for one day (2026-09-24, struck
+// 2026-09-25: the architect preferred flat colours to reading a shade), and
+// for one day more (2026-09-25) the two bars took two flat device levels,
+// the raw bar at +2 dB in the bright ink over the levelled bar at -2 dB in
+// the faint one, `-inf` leaving a bar out — struck with the compressor, both
+// bars at 0 dB by construction (the record of the keys is at
+// device_config.h).
 //
 // THE ALIGNMENT IS EXACT BY CONSTRUCTION: the two bars share the lattice, the
-// column's [s0, s1), the pyramid level and the one read. THE BACKGROUND IS A
+// column's [s0, s1), the pyramid level and the one read. THE OUTER IS A
 // DILATION ABOUT THE CENTRE ROW, NOT AN OUTLINE: a column straddling zero has
-// its background containing the foreground; a column wholly on one side of
-// zero (low material at working zoom) has its background pushed outward,
-// with a gap between it and the foreground. Intended — that is what a true
-// magnification looks like. THE EXPANDER IS UNCAPPED, so where a column's
-// background scale (gain times multiplier times background_scale) falls
-// under foreground_scale — the leveler's gain at or under the separation, or
-// an expander dip — the background sits inside the foreground and the
-// foreground paints over it: in the overlay the expander's dips never go
-// below the source's picture. Accepted; that is the hairline region. THE
-// COST is one extra row fill per column — the read, the
-// map walk and the gain lookup are shared; no second pyramid, no second
-// plate, no new cache field and no fingerprint change
-// (waveform_gain_fingerprint already flips with the lamp, and the levels
-// never move after startup).
+// its outer containing the inner; a column wholly on one side of zero (low
+// material at working zoom) has its outer pushed outward, with a gap between
+// it and the inner. Intended — that is what a true magnification looks like.
+// THE COST is one extra row fill and one scale lookup per column — the read,
+// the map walk and the gain lookup are shared; no second pyramid, no second
+// plate and no new cache field (waveform_gain_fingerprint flips with the
+// lamp and carries the compressor's two numbers).
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).
 // A COLUMN TAKES THE GAIN AT ITS CENTRE SOURCE FRAME, (s0 + s1) / 2 — one
 // evaluation per plate column (waveform_gain_at, linear between the curve's
-// hops). s0 and s1 are the same integers the peak read takes, pure functions
+// hops), and the compressor's scale takes the same centre frame
+// (waveform_inner_scale_at, linear in scale likewise). s0 and s1 are the same integers the peak read takes, pure functions
 // of the GLOBAL column index (the authoring lattice below) in both views —
 // target view maps the column through the warp map to its source span first —
 // so the lookup is pan-invariant by construction and nothing forks on the
@@ -3113,7 +2958,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // the stage): a plate column spanning source frames [s0, s1) takes the
 // LARGEST multiplier — the smallest reduction — over the working columns the
 // span covers (waveform_expander_multiplier_over, a plain loop, no pow), and
-// both tips take raw x gain x multiplier before the one clamp. At working
+// both tips of BOTH lit bars take it beside the bar's own scale (the gain on
+// the outer, the compressor's on the inner) before each bar's one clamp. At working
 // zoom that is the column's own reduction; coarser, it is the one choice
 // under which a bar is never shorter than any member's own expanded bar, so
 // an onset is never dimmed by the dip before it at any zoom. It applies
@@ -3140,8 +2986,6 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
-                     std::optional<double> foreground_scale,
-                     std::optional<double> background_scale,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`

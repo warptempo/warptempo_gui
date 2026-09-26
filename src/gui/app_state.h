@@ -4826,13 +4826,12 @@ struct AppState {
     // in no settings vocabulary, never serialized, never in the undo domain,
     // not carried by `'`, and touched by no restore, view switch or lock.
     // LIT, the magnified picture — the continuous gain derived from the
-    // source (GuiAudio::gain_curve: the leveler, then the expander) — is
-    // painted BEHIND the source's own one as a flat BACKGROUND, in both
-    // audio views (architect 2026-09-24; flat again 2026-09-25, the inks
+    // source (GuiAudio::gain_curve: the leveler, the expander and the
+    // compressor) — is two flat bars per column, in both audio views: the
+    // levelled, expanded OUTER in the plate's ink and the compressed,
+    // expanded INNER over it in the core's (architect 2026-09-25, the inks
     // render.h's row-6 constants — the rule is at render_waveform's
-    // declaration), the background and the FOREGROUND over it each at its
-    // own flat level (the device config's two magnification levels,
-    // architect 2026-09-25); DARK, the raw picture alone. THE BIT IS THE
+    // declaration); DARK, the raw picture alone. THE BIT IS THE
     // ANSWER, read
     // by waveform_magnified (warp_frame_map_view.h) and by the lamp's face,
     // and by nothing else — it reaches no authoring, no red cue, no render

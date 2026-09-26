@@ -186,8 +186,6 @@ void render_waveform(cairo_surface_t* dest,
                      int channel,
                      const WaveformBasis& basis,
                      const WaveformGainCurve* gain_or_null,
-                     std::optional<double> foreground_scale,
-                     std::optional<double> background_scale,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     if (!dest) return;
     if (area.w <= 0 || area.h <= 2) return;
@@ -263,15 +261,12 @@ void render_waveform(cairo_surface_t* dest,
     const double half_h   = area.h * 0.5;
 
     // THE VISUAL MAGNIFICATION, a function of source time: each column's
-    // BACKGROUND scale is the derived curve's gain at the column's centre
-    // source frame times the expander's multiplier over the column's working
-    // columns times the background's level; the foreground drawn over it
-    // takes the foreground's level with the lamp lit and 1.0 with it dark,
-    // where this is the identity. The contract (the background's order, the
-    // two levels and their `-inf`, the
-    // coarse-zoom centre rule and the expander's smallest-reduction rule) is
-    // at this function's declaration; the arithmetic is one multiply and ONE
-    // clamp at the tip mapping below.
+    // OUTER scale is the derived curve's gain at the column's centre source
+    // frame, its INNER scale the compressor's scale at the same frame, and
+    // both take the expander's multiplier over the column's working columns.
+    // The contract (the two bars' order and inks, the coarse-zoom centre rule
+    // and the expander's smallest-reduction rule) is at this function's
+    // declaration; the arithmetic is one multiply and ONE clamp per tip.
     // IT SCALES PIXELS ONLY — nothing this function touches is audio.
     const auto magnified_tip = [](double raw, double scale) {
         double v = raw * scale;
@@ -283,8 +278,8 @@ void render_waveform(cairo_surface_t* dest,
     // Each column is written straight into the plate's pixel words, and a
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
     // filled inclusively with the opaque ink word (with the lamp lit, the
-    // magnified background bar goes down first in the background's word and
-    // the foreground over it — the rule is at this function's declaration).
+    // outer bar goes down first in the plate's word and the inner over it in
+    // the core's — the rule is at this function's declaration).
     // There is no
     // interior/edge split, no fractional coverage, and no inter-column
     // connectivity of any kind — a spike stands alone, exactly as in a classic
@@ -313,25 +308,11 @@ void render_waveform(cairo_surface_t* dest,
     //
     // THE PREMULTIPLIED WORDS, each built once per call through the one word
     // owner (argb32_opaque_word, render.h — its byte-order and rounding
-    // contract lives there), from the row-6 constants: the front bar's ink —
-    // kWaveformInk dark, kWaveformForegroundInk lit — and the background's
-    // (built always, written only when the lamp is lit and its level is
-    // painted). All flat (architect 2026-09-25). THE BACKGROUND WEARS THE
-    // FOREGROUND'S INK WHEN THE FOREGROUND IS NOT PAINTED (architect
-    // 2026-09-25): a foreground level of `-inf` (nullopt) paints the
-    // background alone, in kWaveformForegroundInk; a painted foreground keeps
-    // it in kWaveformBackgroundInk. The choice reads the installed levels,
-    // set once at startup and never mutated (waveform_magnification_levels,
-    // render.h), so it owes the plate fingerprint no term.
-    const uint32_t front_word =
-        argb32_opaque_word(gain_or_null ? kWaveformForegroundInk : kWaveformInk);
-    const uint32_t background_word = argb32_opaque_word(
-        foreground_scale ? kWaveformBackgroundInk : kWaveformForegroundInk);
-    // The front bar: lit, the foreground at its level, or no bar at all when
-    // that level is `-inf` (nullopt); dark, the raw bar at the identity, the
-    // two levels unread (the declaration's contract).
-    const std::optional<double> front_scale =
-        gain_or_null ? foreground_scale : std::optional<double>(1.0);
+    // contract lives there), from the row-6 constants: the plate's ink, worn
+    // by the dark lamp's raw bar and the lit lamp's outer, and the core's,
+    // worn by the lit lamp's inner (built always, written only when lit).
+    const uint32_t ink_word  = argb32_opaque_word(kWaveformInk);
+    const uint32_t core_word = argb32_opaque_word(kWaveformCoreInk);
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -353,9 +334,9 @@ void render_waveform(cairo_surface_t* dest,
     // Write one pixel word, REPLACING what is there. Row/column bounds are
     // established by the bar writer below; this is its single store site.
     // Replace is unambiguously correct now: the caller cleared every column this
-    // call regenerates, and each column is written once by its front bar —
-    // after its background bar when the lamp is lit, which the foreground
-    // overwrites where they overlap, the order the magnification rule wants
+    // call regenerates, and each column is written once by its one bar with
+    // the lamp dark, and lit by its outer bar and then its inner, which
+    // overwrites the outer where they overlap, the order the magnification rule wants
     // (the max-compositing the tip segments needed went with them).
     const auto put = [&](int x, int y, uint32_t word) {
         auto* px = reinterpret_cast<uint32_t*>(
@@ -425,7 +406,7 @@ void render_waveform(cairo_surface_t* dest,
         // function, and it holds for both bars. The regime split (thin vs tall)
         // went with the tip segments: there is one rendering for every column
         // now, however small its interval. One writer for both bars, so the
-        // background and the foreground cannot disagree about the geometry.
+        // outer and the inner cannot disagree about the geometry.
         const auto fill_bar = [&](double tip_min, double tip_max, uint32_t word) {
             if (x < col_lo || x >= col_hi) return;
             double yt = y_center - tip_max * half_h;
@@ -443,40 +424,34 @@ void render_waveform(cairo_surface_t* dest,
             for (int y = r0; y <= r1; ++y) put(x, y, word);
         };
 
-        // THE BACKGROUND FIRST, when the lamp is lit and its level is painted:
-        // the column's raw extremes times the curve's gain at the column's
-        // centre source frame and the expander's largest multiplier over the
-        // working columns [s0, s1) spans, times the BACKGROUND'S LEVEL (the
-        // installed flat scale, architect 2026-09-25 — at its default
-        // -2.00 dB, 4 dB under the foreground's, the tuttis' foreground
-        // covers it), clamped to the sample domain [-1, 1] BEFORE they
-        // become rows.
-        // The clamp is what makes a magnified forte clip flat against the
-        // lane's edges instead of running off into row arithmetic. A PICTURE
-        // gain: the samples themselves are untouched, here and everywhere.
-        // Its colour is the one flat background word. A level of `-inf`
-        // (nullopt) SKIPS THE BAR — never a zero scale, which the >=1px floor
-        // would still paint as a hairline.
-        if (gain_or_null && background_scale) {
-            const double g = waveform_gain_at(*gain_or_null, (s0 + s1) / 2);
-            const double scale =
-                g * static_cast<double>(waveform_expander_multiplier_over(
-                        *gain_or_null, s0, s1)) * *background_scale;
-            fill_bar(magnified_tip(mm.first, scale),
-                     magnified_tip(mm.second, scale), background_word);
-        }
-        // THE FRONT BAR, over the background. Lit, the FOREGROUND at its
-        // level, one flat multiplier through the same clamp, so the source's
-        // picture keeps its shape and covers the background wherever the
-        // leveler's gain is at or under the separation (the rule is at this
-        // function's declaration) — or no bar at all at `-inf`. Dark, the raw
-        // bar at scale 1.0, where the clamp is a no-op (raw peaks already
-        // rest in range), so the dark plate is the plate this writer always
-        // drew. Replace-writes: where the two bars overlap the foreground
-        // wins.
-        if (front_scale) {
-            fill_bar(magnified_tip(mm.first, *front_scale),
-                     magnified_tip(mm.second, *front_scale), front_word);
+        // LIT: THE OUTER FIRST, the column's raw extremes times the curve's
+        // gain at the column's centre source frame and the expander's largest
+        // multiplier over the working columns [s0, s1) spans, in the plate's
+        // ink; THEN THE INNER over it, the same extremes times the
+        // compressor's scale at the same frame and the same multiplier, in
+        // the core's ink. Each is clamped to the sample domain [-1, 1] BEFORE
+        // it becomes rows: the clamp is what makes a magnified forte clip
+        // flat against the lane's edges instead of running off into row
+        // arithmetic (the inner's scale is at most 1, so its clamp is a
+        // no-op kept for the one shape). A PICTURE gain: the samples
+        // themselves are untouched, here and everywhere. Replace-writes:
+        // where the two overlap the inner wins.
+        // DARK: the raw bar at scale 1.0, where the clamp is a no-op (raw
+        // peaks already rest in range), so the dark plate is the plate this
+        // writer always drew.
+        if (gain_or_null) {
+            const int64_t centre = (s0 + s1) / 2;
+            const double e = static_cast<double>(
+                waveform_expander_multiplier_over(*gain_or_null, s0, s1));
+            const double outer = waveform_gain_at(*gain_or_null, centre) * e;
+            const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
+            fill_bar(magnified_tip(mm.first, outer),
+                     magnified_tip(mm.second, outer), ink_word);
+            fill_bar(magnified_tip(mm.first, inner),
+                     magnified_tip(mm.second, inner), core_word);
+        } else {
+            fill_bar(magnified_tip(mm.first, 1.0),
+                     magnified_tip(mm.second, 1.0), ink_word);
         }
 
         g_prev = g1;
@@ -2369,24 +2344,6 @@ void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
-}
-
-namespace {
-    // The lit plate's two levels — the device config's
-    // `waveform_magnification_foreground_db` and
-    // `waveform_magnification_background_db` as scales, installed once by
-    // gui_main at startup and never mutated after (the contract, and why the
-    // worker reads it with no snapshot, is at the declaration, render.h). The
-    // member defaults are the row-6 defaults converted.
-    WaveformMagnificationLevels g_waveform_magnification_levels;
-} // namespace
-
-void set_waveform_magnification_levels(
-        const WaveformMagnificationLevels& levels) {
-    g_waveform_magnification_levels = levels;
-}
-const WaveformMagnificationLevels& waveform_magnification_levels() {
-    return g_waveform_magnification_levels;
 }
 
 namespace {

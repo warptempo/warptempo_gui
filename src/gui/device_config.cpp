@@ -20,17 +20,17 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (EIGHT keys since the
-// tuning phase closed 2026-09-25: the three waveform colour keys that
-// arrived that morning were struck, the values constexpr again in render.h,
-// and the two level keys kept under their final names; the fuller count's
+// set the shared scanner enforces after the loop (EIGHT keys since
+// 2026-09-25: the three waveform colour keys that arrived that morning were
+// struck, the values constexpr again in render.h, and the two level keys
+// gave way to the inner compressor's two tuning keys; the fuller count's
 // succession — two, five, four, five, six, as many as seventeen with the
 // waveform picture's tunables of 2026-09-23/24, six, then as many as eleven
 // on 2026-09-25 — is the header's record and git's). THE ORDER IS THE
 // ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
 // projects_repo, projects_path, last_project, sync_path — the sixth placed
-// right after gui_scale (architect 2026-09-13), and the lit plate's two
-// levels after sync_path, the foreground's then the background's (architect
+// right after gui_scale (architect 2026-09-13), and the inner compressor's
+// two after sync_path, the threshold's then the ratio's (architect
 // 2026-09-25). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
@@ -45,8 +45,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "sync_path",
-    "waveform_magnification_foreground_db",
-    "waveform_magnification_background_db",
+    "waveform_compressor_threshold_db",
+    "waveform_compressor_ratio",
 };
 
 } // namespace
@@ -63,38 +63,42 @@ std::string format_max_waveform_height(int authored_px) {
     return std::string(buf);
 }
 
-std::string format_waveform_level_db(double v) {
-    // `-inf` first, the one spelling of "that layer not painted" (the value
-    // road has no spelling for an infinity). Then the magnitude through the
-    // value road (which spells no sign), the sign re-attached below zero.
-    // std::fabs, not a negation, so a negative zero spells `0.00` as the
-    // reader demands.
-    if (std::isinf(v) && v < 0.0) return std::string(kWaveformLevelNotPainted);
+std::string format_waveform_compressor_threshold_db(double v) {
+    // The magnitude through the value road (which spells no sign), the sign
+    // re-attached below zero. std::fabs, not a negation, so a negative zero
+    // spells `0.00` as the reader demands.
     const std::string mag = format_value_double(std::fabs(v), 2);
     return v < 0.0 ? "-" + mag : mag;
 }
 
-bool parse_waveform_level_db(std::string_view s, double& out) {
+bool parse_waveform_compressor_threshold_db(std::string_view s, double& out) {
     // The sidecar `scale` key's shape (validate_engine_setting,
     // engine_settings_io.cpp) at min 2, with the sign handled here because
     // parse_value_double refuses one: strip ONE leading '-', the strict
     // magnitude parse (a second sign refuses there), the round trip back to
     // the bytes read — which refuses `-0.00` (the writer spells zero `0.00`)
-    // and every non-canonical spelling — then the range owner. THE `-inf`
-    // LITERAL IS RECOGNISED FIRST, whole and byte-exact, ahead of the number
-    // road (which refuses letters as it refuses the sign): `inf`, `+inf`,
-    // `-INF`, `-Inf` and `-infinity` all fall through to that road and refuse
-    // there.
-    if (s == kWaveformLevelNotPainted) {
-        out = -std::numeric_limits<double>::infinity();
-        return true;
-    }
+    // and every non-canonical spelling — then the range owner.
     const bool negative = !s.empty() && s.front() == '-';
     double mag = 0.0;
     if (!parse_value_double(negative ? s.substr(1) : s, mag)) return false;
     const double v = negative ? -mag : mag;
-    if (format_waveform_level_db(v) != s) return false;
-    if (!is_waveform_level_db(v)) return false;
+    if (format_waveform_compressor_threshold_db(v) != s) return false;
+    if (!is_waveform_compressor_threshold_db(v)) return false;
+    out = v;
+    return true;
+}
+
+std::string format_waveform_compressor_ratio(double v) {
+    return format_value_double(v, 2);
+}
+
+bool parse_waveform_compressor_ratio(std::string_view s, double& out) {
+    // The strict magnitude parse (no sign at all), the canonical round trip,
+    // then the range owner.
+    double v = 0.0;
+    if (!parse_value_double(s, v)) return false;
+    if (format_waveform_compressor_ratio(v) != s) return false;
+    if (!is_waveform_compressor_ratio(v)) return false;
     out = v;
     return true;
 }
@@ -143,15 +147,13 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // reader accepted it as empty or as an absolute path, and nothing
             // in the program rewrites it.
             s += cfg.sync_path;
-        } else if (k == "waveform_magnification_foreground_db") {
-            // The two levels through their one serializer, the canonical
-            // signed min-2-decimal spelling, or `-inf`, the reader demands
-            // back.
-            s += format_waveform_level_db(
-                cfg.waveform_magnification_foreground_db);
-        } else if (k == "waveform_magnification_background_db") {
-            s += format_waveform_level_db(
-                cfg.waveform_magnification_background_db);
+        } else if (k == "waveform_compressor_threshold_db") {
+            // The compressor's two through their serializers, the canonical
+            // min-2-decimal spellings the reader demands back.
+            s += format_waveform_compressor_threshold_db(
+                cfg.waveform_compressor.threshold_db);
+        } else if (k == "waveform_compressor_ratio") {
+            s += format_waveform_compressor_ratio(cfg.waveform_compressor.ratio);
         }
         s += '\n';
     }
@@ -247,21 +249,28 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.sync_path = value;
             return {};
         }
-        if (key == "waveform_magnification_foreground_db" ||
-            key == "waveform_magnification_background_db") {
-            // One canonical signed spelling and the range, or the `-inf`
-            // literal, all through the one parser in the header (the literal
-            // first, then the sign stripped, the settings' bracketed-double
-            // road on the magnitude, then is_waveform_level_db). The two are
-            // one shape and differ only in the member.
+        if (key == "waveform_compressor_threshold_db") {
+            // One canonical signed spelling and the range, through the one
+            // parser in the header (the sign stripped, the settings'
+            // bracketed-double road on the magnitude, the round trip, then
+            // is_waveform_compressor_threshold_db).
             double v = 0.0;
-            if (!parse_waveform_level_db(value, v)) {
-                return bad_value(ln, key, value, kWaveformLevelDbGrammarReason);
+            if (!parse_waveform_compressor_threshold_db(value, v)) {
+                return bad_value(ln, key, value,
+                                 kWaveformCompressorThresholdDbGrammarReason);
             }
-            if (key == "waveform_magnification_foreground_db")
-                out.waveform_magnification_foreground_db = v;
-            else
-                out.waveform_magnification_background_db = v;
+            out.waveform_compressor.threshold_db = v;
+            return {};
+        }
+        if (key == "waveform_compressor_ratio") {
+            // One canonical unsigned spelling and the range, through the one
+            // parser in the header.
+            double v = 0.0;
+            if (!parse_waveform_compressor_ratio(value, v)) {
+                return bad_value(ln, key, value,
+                                 kWaveformCompressorRatioGrammarReason);
+            }
+            out.waveform_compressor.ratio = v;
             return {};
         }
         return warptempo_parse::prefix_line_error(

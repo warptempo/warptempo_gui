@@ -45,19 +45,16 @@
 //   names what it deliberately is not).
 //
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
-//   clamps the pair to [-1, 1] (render_waveform); nothing else. The product
-//   is THE BACKGROUND BAR (architect 2026-09-24): the lit lamp paints it
-//   BEHIND the column's FOREGROUND, the source's own bar, so the magnified
-//   picture never replaces the raw one. Both are flat colours, render.h's
-//   kWaveformBackgroundInk and kWaveformForegroundInk (architect
-//   2026-09-25); the gain decides the background's height and never its
-//   colour, and the background and the foreground each take their own flat
-//   level on top (the device config's two magnification levels, architect
-//   2026-09-25), so the foreground covers the background wherever the gain
-//   here is at or under the separation between the two levels.
+//   the expander's multiplier and clamps the pair to [-1, 1]
+//   (render_waveform): THE OUTER BAR, the levelled, expanded one, painted in
+//   the plate's own bright ink (render.h's kWaveformInk). Over it the lit
+//   lamp paints THE INNER BAR, the source's own bar through the same
+//   expander and THE COMPRESSOR below instead of the gain, in the darker
+//   core ink (kWaveformCoreInk) — both bars from ONE peak read (architect
+//   2026-09-25). The gain decides the outer's height and never a colour.
 //   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints
-//   its background flat.
+//   its outer flat.
 //
 // WHY THE MEASURE CHANGED (architect 2026-09-24). THE PEAK LEVELER
 // (2026-09-23 to 2026-09-24, a superseded record): L was the MAXIMUM of the
@@ -92,8 +89,15 @@
 // sample-peak clip, right for a picture). Ruled out 2026-09-24 with the
 // expander's arrival: A CLIPPER as a make-up stage (the leveler's own sparing
 // clip is the right kind — about 0.1 % of columns); A DOWNWARD COMPRESSOR
-// WITH MAKE-UP (measured: it flattened the swell before an onset from 4.0 to
-// 1.9 dB, the opposite of the relief wanted); LOOKAHEAD and A NONZERO ATTACK
+// WITH MAKE-UP ON THE MAGNIFIED BAR, a per-column stage (measured: it
+// flattened the swell before an onset from 4.0 to 1.9 dB, the opposite of
+// the relief wanted) — the ruling stands for the OUTER bar; THE COMPRESSOR
+// below (2026-09-25) is a different stage, slow on the window's L, on the
+// INNER bar alone, with no make-up, and reopens nothing else here: smoothing,
+// hysteresis, a second window and a gained second pyramid stay out (the
+// inner is one more per-hop multiplier on the ONE peak read, as the expander
+// is one more per-column one), and the upward compressor's per-oscillation
+// fault cannot arise, c reading L and never the column; LOOKAHEAD and A NONZERO ATTACK
 // in the expander; HYSTERESIS; a separate envelope window (Hold and Release
 // were the envelope; since their deletion the expander has none). Ruled out
 // the same day by the architect's eye on the 40th, each set to zero and
@@ -144,7 +148,9 @@
 //   THE PAINTER'S RULE: a plate column takes the LARGEST multiplier — the
 //   SMALLEST reduction — over the working columns its source span covers
 //   (waveform_expander_multiplier_over), and multiplies it into both tips
-//   beside the gain before the one clamp. At working zoom that is the
+//   of BOTH lit bars — beside the gain on the outer, beside the compressor
+//   on the inner (architect 2026-09-25: both stages on both bars) — before
+//   each bar's one clamp. At working zoom that is the
 //   column's own. Coarser, the bar is the raw min/max of every member, so
 //   the member carrying the extreme is not known without a second pyramid;
 //   the smallest reduction is the one choice under which the coarse bar is
@@ -161,13 +167,55 @@
 //   leveler's 4.0 dB median at 2:1; NOTHING inside a note or between its
 //   articulations is expanded.
 //
+// THE COMPRESSOR (architect 2026-09-25): the INNER bar's reduction, a
+// DOWNWARD COMPRESSOR on the leveler's own window loudness L — the same
+// per-hop measure the gain comes from, "RMS type, slow" — in the expander's
+// Pro-C vocabulary, TWO NUMBERS, the Threshold T (dBFS, on L) and the Ratio
+// R (WaveformCompressorParams, below). At or under T no reduction, the inner
+// being the raw bar (x the expander), the quiet parts exactly as the source;
+// over it (1 - 1/R) dB of reduction per dB of L over T, and
+// c = 10^(-reduction / 20), in (0, 1]. No make-up, no knee, no attack,
+// release or hold, no envelope of its own: L already is the envelope (the
+// 3 s window, the 0.1 s hop, the half-window ramps).
+//
+//   DERIVED FROM THE UNCLAMPED L, never from the gain: above the target the
+//   gain is clamped to x1 and L is no longer readable from it. A hop whose
+//   window is too quiet to measure takes the L of the NEARER audible hop, as
+//   its gain does (one picked L feeds both), and an all-silent song takes
+//   c = 1 everywhere beside its x8.
+//
+//   STORED PER HOP beside `gain` (WaveformGainCurve::inner_scale), linear IN
+//   SCALE between hops (waveform_inner_scale_at, the sibling of
+//   waveform_gain_at). THE PAINTER'S INNER BAR is raw x c x the expander's
+//   multiplier, the one clamp, the >=1px floor; with the expander on BOTH
+//   bars the gap between them is g / c, a pure function of L, so the inner
+//   never stands out of the outer. The reading is a bright levelled bar with
+//   a dark core carved into it whose relative thickness is the loudness.
+//
+//   THE CRITERION: the gap between the inner and the outer >= 4.5 dB at the
+//   loudest 5 % of hops, the quiet parts untouched, monotone by
+//   construction. The defaults, T -24 dBFS and R 2, are the gentlest ratio
+//   that holds it in all three K550 movements with margin (gap at L's p95
+//   5.4 / 6.0 / 6.4 dB; tmp/inner_comp.py, 2026-09-25).
+//
+// THE LIT PLATE'S TWO LEVELS (a SUPERSEDED RECORD, 2026-09-25, one day):
+// before the compressor the inner was the raw bar at a flat +2 dB and the
+// outer the levelled bar at a flat -2 dB, two device keys; the outer's peak
+// sits at the lane edge in every window, so it carried no dynamics, and the
+// ~4 dB separation hid it in the tuttis and left a fringe in the crescendos.
+// Both bars are at 0 dB by construction now and the two keys are struck
+// (device_config.h keeps the record).
+//
 // THE SEVEN VALUES ARE HARD-CODED (architect 2026-09-24): the leveler's five
 // and the expander's two are constexpr constants in waveform_gain.cpp, each
 // with its reason, beside the hop, the gain floor and the column. They were
 // the device config's `waveform_gain_*` (2026-09-23) and `waveform_expander_*`
 // (2026-09-24) keys for a tuning phase; the phase is closed because every
 // project should share ONE FRAME OF REFERENCE — the values are set once and
-// left, and a retune is a recompile, by design. THE PRINCIPLE FOR ANY RETUNE:
+// left, and a retune is a recompile, by design. THE COMPRESSOR'S TWO ARE IN
+// THEIR TUNING PHASE (architect 2026-09-25): the device config's
+// `waveform_compressor_threshold_db` and `waveform_compressor_ratio`, walking
+// the same road — hard-coded here at the close. THE PRINCIPLE FOR ANY RETUNE:
 // every number is FORCED by a criterion and never tuned to one spot — a free
 // constant carries its reason, a derived one its derivation — and a passage
 // the rule gets wrong is answered by the magnification lamp (dark, the raw
@@ -176,24 +224,44 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
+// THE COMPRESSOR'S TWO NUMBERS (THE COMPRESSOR above), the device config's
+// `waveform_compressor_threshold_db` and `waveform_compressor_ratio` during
+// their tuning phase: read once at startup with the config, which nothing
+// mutates after (the keys have no in-app writer), and handed to each load's
+// derivation. The grammars (the threshold in [-60, 0] dBFS, the ratio in
+// [1, 100], 1 the identity) are device_config.h's.
+inline constexpr double kWaveformCompressorThresholdDbDefault = -24.0;
+inline constexpr double kWaveformCompressorRatioDefault       = 2.0;
+struct WaveformCompressorParams {
+    double threshold_db = kWaveformCompressorThresholdDbDefault;  // T, dBFS on L
+    double ratio        = kWaveformCompressorRatioDefault;        // R, >= 1
+};
+
 // The picture's continuous magnification, derived from the source once per
 // load (off the load path — GuiAudio::gain_curve).
 struct WaveformGainCurve {
     int64_t             hop_frames = 0;  // source frames between consecutive gains; gain[k] sits at frame k * hop_frames
     std::vector<double> gain;            // per hop, each in [kGainMin, kGainMax]; empty for a zero-frame source
+    std::vector<double> inner_scale;     // THE COMPRESSOR, per hop beside `gain`, each in (0, 1]
     int64_t             column_frames = 0;    // the working column's width in source frames; column k is [k * column_frames, (k + 1) * column_frames)
     std::vector<float>  expander_multiplier;  // THE EXPANDER, per working column, each in [0, 1]; empty is the identity
 };
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
-// floats) — the decoded source buffer as GuiAudio holds it. A zero-frame
-// input returns the empty curve.
+// floats) — the decoded source buffer as GuiAudio holds it. `compressor` is
+// the inner bar's two numbers. A zero-frame input returns the empty curve.
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate);
+                                       int sample_rate,
+                                       const WaveformCompressorParams& compressor);
 
 // The gain at one source frame: linear between the two nearest hops, the
 // first and last hop's gain held beyond the ends. 1.0 for an empty curve.
 double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
+
+// THE COMPRESSOR'S SCALE at one source frame, the sibling of
+// waveform_gain_at over `inner_scale`: linear in scale between the two
+// nearest hops, the ends held. 1.0 for an empty curve.
+double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 
 // THE PAINTER'S EXPANDER RULE for a plate column spanning source frames
 // [s0, s1): the LARGEST multiplier (the smallest reduction) over the working
@@ -203,14 +271,17 @@ double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (8 since the expander's Range, Knee, Hold and Release were
-// deleted and the seven values hard-coded, 2026-09-24; 7 was the downward
+// the rule above (9 since the compressor joined as the inner bar's stage,
+// 2026-09-25; 8 was the expander's Range, Knee, Hold and Release deleted and
+// the seven values hard-coded, 2026-09-24; 7 was the downward
 // expander joining after the leveler, the same day; 6 was the short-term loudness measure replacing the window's
 // peak and the upward compressor's deletion, the same day; 5 was the
 // upward compressor's threshold, knee and range, 4 the fixed percentile and
 // the ratio alone, 3 the restored leveler, 2 the expander on L's). The seven
-// constants are part of the rule, so a change to any of them bumps it too.
+// constants are part of the rule, so a change to any of them bumps it too;
+// the compressor's two numbers ride the fingerprint beside it
+// (waveform_gain_fingerprint, warp_frame_map_view.h) while they are keys.
 // Nothing derived from the gain outlives the process — the curve is derived
 // at every load (the `.peaks` sidecar carries no curve) and the plates live
 // in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 8;
+inline constexpr uint64_t kWaveformGainVersion = 9;

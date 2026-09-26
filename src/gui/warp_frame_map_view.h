@@ -181,7 +181,8 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 
 // WHETHER THE WAVEFORM PICTURE IS MAGNIFIED, AND THE ONE GAIN GATE. The gain
 // itself is the continuous curve derived from the source at load — the
-// short-term loudness leveler, then the downward expander (GuiAudio::gain_curve,
+// short-term loudness leveler, the downward expander and the inner bar's
+// compressor (GuiAudio::gain_curve,
 // derive_waveform_gain in waveform_gain.h, which owns the rule); this answers
 // only whether a plate applies it, one term (architect 2026-09-24):
 //
@@ -201,9 +202,9 @@ const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(
 // the audio and the A/B tabs carry — both tabs always show the same picture,
 // the curve being a function of the one source. The drawing excluded is a
 // plotted curve, a tint over the picture or a colour read from the gain: the
-// background's per-column shade, which read the leveler's gain for one day,
-// is struck (architect 2026-09-25, render_waveform) and the background is one
-// flat colour again.
+// lit plate's per-column shade, which read the leveler's gain for one day,
+// is struck (architect 2026-09-25, render_waveform) and both lit bars are
+// flat colours.
 //
 // NO MODE TERM — the `h` view follows the lamp as it stood when the view was
 // entered (the lamp is dead there by its allowlist), its plate being the live
@@ -227,11 +228,14 @@ bool waveform_magnified(const AppState& app);
 // lamp can always be put out.
 bool waveform_magnification_toggle_actionable(const GuiAudio& audio);
 
-// THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
-// (kWaveformGainVersion) while the picture is magnified, 0 while it is flat —
-// the curve being a pure function of the one immutable source and the
-// rule's hard-coded constants (waveform_gain.cpp), the version alone names it (nothing derived from the gain is
-// persisted across launches; the record is at kWaveformGainVersion). ONE PLACE, so the picture caches' existing hash keys
+// THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity while the
+// picture is magnified, 0 while it is flat — the curve being a pure function
+// of the one immutable source, the rule's hard-coded constants
+// (waveform_gain.cpp) and the compressor's two numbers, the field is
+// kWaveformGainVersion hashed with those two (the live device config's
+// `waveform_compressor`, which nothing writes after startup; nothing derived
+// from the gain is persisted across launches, the record is at
+// kWaveformGainVersion). ONE PLACE, so the picture caches' existing hash keys
 // re-render on every flip with no per-caller code: the plate fingerprint
 // carries it beside the viewport geometry, and the lamp's one setter kicks
 // when it moved. Its one live input is the lamp: an S/T switch leaves it as

@@ -102,37 +102,25 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the inks are constexpr (kWaveformInk, kWaveformForegroundInk,
-    // kWaveformBackgroundInk, render.h), read by render_waveform itself. The
-    // lamp dark, the raw bar alone in the plate's ink; lit, each column
-    // paints its BACKGROUND bar first and its FOREGROUND bar over it, both
-    // flat, the foreground at the installed foreground level and the
-    // background at the background level (the device config's
-    // `waveform_magnification_foreground_db` and
-    // `waveform_magnification_background_db`, defaults 2.00 and -2.00 dB,
-    // converted once at startup; a level of `-inf` is nullopt and that bar is
-    // not painted — the order and the two levels' rule are at
-    // render_waveform's declaration). Both channels take the same pair of
-    // levels.
-    // THE LEVELS ARE READ HERE, ON THE WORKER, WITH NO JOB FIELD: they are
-    // installed once at startup before the first plate job and never mutated
-    // (the contract at waveform_magnification_levels, render.h), so nothing
-    // can tear them and the plate fingerprint needs no level term.
+    // ROW 6: the inks are constexpr (kWaveformInk, kWaveformCoreInk,
+    // render.h), read by render_waveform itself. The lamp dark, the raw bar
+    // alone in the plate's ink; lit, each column paints its OUTER bar (the
+    // levelled, expanded one) in the plate's ink and its INNER bar (the
+    // compressed, expanded one) over it in the core's — the rule is at
+    // render_waveform's declaration. Every scale the lit plate reads is on
+    // the curve itself, so nothing else is read here.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,
     // for the same reason the inset does: the worker must read no live GUI
     // state. The curve it names is the audio object's own, immutable once
     // ready (GuiAudio::gain_curve; a magnified job exists only after the lamp
-    // was lit, which requires the curve to be ready). Both channels take the one curve, as they
-    // take the levels. It scales the PICTURE only — this whole function
+    // was lit, which requires the curve to be ready). Both channels take the one curve.
+    // It scales the PICTURE only — this whole function
     // writes pixels.
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
-    const WaveformMagnificationLevels& levels = waveform_magnification_levels();
     render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, gain, levels.foreground, levels.background,
-                    warp_frame_map_or_null);
+                    basis, gain, warp_frame_map_or_null);
     render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, gain, levels.foreground, levels.background,
-                    warp_frame_map_or_null);
+                    basis, gain, warp_frame_map_or_null);
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------

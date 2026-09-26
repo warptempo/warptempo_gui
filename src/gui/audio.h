@@ -45,7 +45,10 @@ public:
     // The picture's gain curve (gain_curve below) is NOT part of the load:
     // load() starts its derivation on a thread of its own once the samples are
     // published and returns without waiting for it (gain_curve_ready below).
-    bool load(const std::string& path, const ProgressCallback& on_progress);
+    // `compressor` is the device config's two compressor numbers, handed to
+    // that derivation by value (waveform_gain.h owns the stage).
+    bool load(const std::string& path, const WaveformCompressorParams& compressor,
+              const ProgressCallback& on_progress);
 
     int64_t total_frames()    const { return total_frames_; }
     uint64_t source_load_size()  const { return load_identity_size_; }

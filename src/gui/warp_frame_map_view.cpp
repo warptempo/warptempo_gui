@@ -177,7 +177,22 @@ bool waveform_magnification_toggle_actionable(const GuiAudio& audio) {
 }
 
 uint64_t waveform_gain_fingerprint(const AppState& app) {
-    return waveform_magnified(app) ? kWaveformGainVersion : 0;
+    if (!waveform_magnified(app)) return 0;
+    // The version and the compressor's two numbers' bit patterns, folded
+    // through the splitmix64 finalizer so every bit of each moves the whole
+    // word; a fold landing on 0 (the flat picture's field) takes the version
+    // alone. The rule is at the declaration.
+    const auto mix = [](uint64_t h, uint64_t v) {
+        uint64_t z = h ^ (v + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2));
+        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+        z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+        return z ^ (z >> 31);
+    };
+    const WaveformCompressorParams& c = app.device_config->waveform_compressor;
+    uint64_t h = kWaveformGainVersion;
+    h = mix(h, std::bit_cast<uint64_t>(c.threshold_db));
+    h = mix(h, std::bit_cast<uint64_t>(c.ratio));
+    return h != 0 ? h : kWaveformGainVersion;
 }
 
 const PhaseResetRedFlagCache& phase_reset_red_flag_set_cached(

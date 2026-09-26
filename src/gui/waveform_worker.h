@@ -57,8 +57,9 @@ struct WaveformJob {
     int       inset_px         = 0;
 
     // THE WAVEFORM'S GAIN FIELD (waveform_gain_fingerprint,
-    // warp_frame_map_view.h, which owns the gate): the derivation's version
-    // while the picture is magnified, 0 while it is flat. It is the job's
+    // warp_frame_map_view.h, which owns the gate): the derivation's identity
+    // (its version hashed with the compressor's two numbers) while the
+    // picture is magnified, 0 while it is flat. It is the job's
     // WHOLE gain input — the curve itself lives on the audio object beside the
     // peaks pyramid (GuiAudio::gain_curve), immutable once its derivation is
     // ready, so the worker reads it through `audio` below with no owned

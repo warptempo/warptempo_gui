@@ -559,7 +559,8 @@ bool write_cache_to_disk(const std::string& source_path,
 
 } // namespace
 
-bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress) {
+bool GuiAudio::load(const std::string& path, const WaveformCompressorParams& compressor,
+                    const ProgressCallback& on_progress) {
     auto info = audio_probe(path);
     if (!info) {
         std::fprintf(stderr,
@@ -615,16 +616,18 @@ bool GuiAudio::load(const std::string& path, const ProgressCallback& on_progress
         // published (the rules, the join and the happens-before chain are at
         // GuiAudio::GainDerivation, audio.h). Replacing gain_ joins any
         // earlier derivation first. The thread holds its own reference to the
-        // immutable samples and writes the new state's curve and flag alone.
+        // immutable samples and its own copy of the compressor's two numbers,
+        // and writes the new state's curve and flag alone.
         // Sources are stereo here by the loader's refusal, which is the layout
         // the derivation reads.
         gain_ = std::make_unique<GainDerivation>();
         GainDerivation* const state = gain_.get();
         state->thread = std::thread(
             [state, samples = samples_, frames = next_total_frames,
-             rate = next_sample_rate]() {
+             rate = next_sample_rate, compressor]() {
                 const auto g0 = std::chrono::steady_clock::now();
-                state->curve = derive_waveform_gain(samples->data(), frames, rate);
+                state->curve = derive_waveform_gain(samples->data(), frames, rate,
+                                                    compressor);
                 const double ms = std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - g0).count();
                 std::fprintf(stderr, "warptempo_gui: gain_derive=%.1f ms\n", ms);

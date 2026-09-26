@@ -5335,7 +5335,7 @@ void GuiPaintHandler::paint_region_ground(cairo_t* cr, const GuiRect& area) {
 // colour by the theme's step — never a translucent wash over the plate, the
 // retired form the opaque recolor model rejects. The plate's inks are
 // render.h's row-6 constants — kWaveformInk dark, and with the magnification
-// lamp lit kWaveformForegroundInk over kWaveformBackgroundInk — yet the pass
+// lamp lit kWaveformCoreInk over kWaveformInk — yet the pass
 // keys on no known word and pins no lifted constant; each pixel is lifted
 // from ITS OWN colour, so the rule holds whatever inks the plate wears. The pass reads the
 // plate's ARGB32 words directly inside (the region's column span) INTERSECT

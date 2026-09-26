@@ -59,6 +59,9 @@ constexpr double kSilentGain = 8.0;
 // shares one frame of reference, so they are set once and left; a retune is a
 // recompile, by design — waveform_gain.h). Until then they were device-config
 // keys, `waveform_gain_*` and `waveform_expander_*`, for a tuning phase.
+// The compressor's two numbers are not here: they are in their own tuning
+// phase and arrive as the derivation's WaveformCompressorParams (the stage and
+// the defaults are waveform_gain.h's).
 //
 // kWindowSeconds 3.0: the EBU short-term loudness length, chosen by
 // eye (architect 2026-09-23) for the contrast it gives and for the earlier
@@ -184,7 +187,8 @@ private:
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate) {
+                                       int sample_rate,
+                                       const WaveformCompressorParams& compressor) {
     if (total_frames <= 0) return {};
 
     const int64_t col = working_zoom_column_frames(sample_rate);
@@ -219,57 +223,67 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
 
     const Analysis an(peaks, mean_squares, gate, kMinFraction);
 
-    // THE MEASURE at the analysis hop, then THE GAIN per hop,
-    // g = 10^((target - L) / 20): the window's loudness brought to the target.
-    std::vector<double> coarse;
+    // THE MEASURE at the analysis hop: each hop's L, or nothing where too
+    // little of its window is audible.
+    std::vector<std::optional<double>> measured;
+    std::vector<int64_t> known;
     {
         const int64_t hw = static_cast<int64_t>(kWindowSeconds * cps / 2);
-        std::vector<std::optional<double>> raw;
-        std::vector<int64_t> known;
         for (int64_t i = 0; i < n; i += st) {
-            const std::optional<double> level = an.short_term_loudness(i - hw, i + hw);
-            raw.push_back(level ? std::optional<double>(
-                                      std::pow(10.0, (kTargetDb - *level) / 20))
-                                : std::nullopt);
-            if (raw.back()) known.push_back(static_cast<int64_t>(raw.size()) - 1);
-        }
-        coarse.resize(raw.size());
-        if (known.empty()) {
-            std::fill(coarse.begin(), coarse.end(), kSilentGain);
-        } else {
-            // A silent point takes the NEARER known point, the earlier on a tie
-            // (the retained detector's rule) — its L, and so its gain. The
-            // experiment's reference script interpolated between the known hops
-            // instead; the difference is intentional and visible only on
-            // gated-but-nonzero material, true silence painting nothing at any
-            // gain.
-            for (size_t k = 0; k < raw.size(); ++k) {
-                if (raw[k]) { coarse[k] = *raw[k]; continue; }
-                const int64_t kk = static_cast<int64_t>(k);
-                const size_t j = static_cast<size_t>(
-                    std::lower_bound(known.begin(), known.end(), kk) - known.begin());
-                int64_t pick;
-                if (j == 0) {
-                    pick = known[0];
-                } else if (j == known.size()) {
-                    pick = known[j - 1];
-                } else {
-                    const int64_t before = known[j - 1];
-                    const int64_t after  = known[j];
-                    pick = (after - kk < kk - before) ? after : before;
-                }
-                coarse[k] = *raw[static_cast<size_t>(pick)];
-            }
+            measured.push_back(an.short_term_loudness(i - hw, i + hw));
+            if (measured.back()) known.push_back(static_cast<int64_t>(measured.size()) - 1);
         }
     }
 
-    // THE CLAMP to [kGainMin, kGainMax]: never attenuated, never past the cap.
-    // Nothing else.
     WaveformGainCurve out;
     out.hop_frames = st * col;
-    out.gain.resize(coarse.size());
-    for (size_t k = 0; k < coarse.size(); ++k)
-        out.gain[k] = std::clamp(coarse[k], kGainMin, kGainMax);
+    out.gain.resize(measured.size());
+    out.inner_scale.resize(measured.size());
+    if (known.empty()) {
+        // No window is audible anywhere: x8 flat, and the compressor, having
+        // no L over any threshold, reduces nothing.
+        std::fill(out.gain.begin(), out.gain.end(), std::clamp(kSilentGain, kGainMin, kGainMax));
+        std::fill(out.inner_scale.begin(), out.inner_scale.end(), 1.0);
+    } else {
+        // THE COMPRESSOR'S SLOPE (waveform_gain.h): (1 - 1/R) dB of reduction
+        // per dB of L over the threshold; 0 at R = 1, the identity.
+        const double slope = 1.0 - 1.0 / compressor.ratio;
+        for (size_t k = 0; k < measured.size(); ++k) {
+            // A silent point takes the NEARER known point's L, the earlier on
+            // a tie (the retained detector's rule) — and so its gain AND its
+            // compressor scale, both read from the one picked L. The
+            // experiment's reference script interpolated between the known
+            // hops instead; the difference is intentional and visible only on
+            // gated-but-nonzero material, true silence painting nothing at any
+            // gain.
+            size_t pick = k;
+            if (!measured[k]) {
+                const int64_t kk = static_cast<int64_t>(k);
+                const size_t j = static_cast<size_t>(
+                    std::lower_bound(known.begin(), known.end(), kk) - known.begin());
+                if (j == 0) {
+                    pick = static_cast<size_t>(known[0]);
+                } else if (j == known.size()) {
+                    pick = static_cast<size_t>(known[j - 1]);
+                } else {
+                    const int64_t before = known[j - 1];
+                    const int64_t after  = known[j];
+                    pick = static_cast<size_t>((after - kk < kk - before) ? after : before);
+                }
+            }
+            const double level = *measured[pick];
+            // THE GAIN, g = 10^((target - L) / 20), then THE CLAMP to
+            // [kGainMin, kGainMax]: never attenuated, never past the cap.
+            out.gain[k] = std::clamp(std::pow(10.0, (kTargetDb - level) / 20),
+                                     kGainMin, kGainMax);
+            // THE COMPRESSOR on the UNCLAMPED L (waveform_gain.h): nothing at
+            // or under the threshold (10^0 is exactly 1), the slope over it.
+            const double reduction =
+                level > compressor.threshold_db ? slope * (level - compressor.threshold_db)
+                                                : 0.0;
+            out.inner_scale[k] = std::pow(10.0, -reduction / 20);
+        }
+    }
 
     // THE EXPANDER, after the leveler (waveform_gain.h owns the stage): a
     // static curve on each working column's leveled peak in dB, no state
@@ -299,6 +313,19 @@ double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame) {
     if (k >= static_cast<int64_t>(g.size()) - 1) return g.back();
     const double a = g[static_cast<size_t>(k)];
     const double b = g[static_cast<size_t>(k) + 1];
+    const double t = static_cast<double>(frame - k * curve.hop_frames) /
+                     static_cast<double>(curve.hop_frames);
+    return a + (b - a) * t;
+}
+
+double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame) {
+    const std::vector<double>& c = curve.inner_scale;
+    if (c.empty() || curve.hop_frames <= 0) return 1.0;
+    if (frame <= 0) return c.front();
+    const int64_t k = frame / curve.hop_frames;
+    if (k >= static_cast<int64_t>(c.size()) - 1) return c.back();
+    const double a = c[static_cast<size_t>(k)];
+    const double b = c[static_cast<size_t>(k) + 1];
     const double t = static_cast<double>(frame - k * curve.hop_frames) /
                      static_cast<double>(curve.hop_frames);
     return a + (b - a) * t;
