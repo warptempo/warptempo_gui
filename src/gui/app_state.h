@@ -4706,7 +4706,13 @@ struct AppState {
     //     playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
     //     land_playhead_on_source_frame) — play-then-stop leaves the hold
-    //     standing, a moved playhead does not. The reseat and translate
+    //     standing, a moved playhead does not. THE TWO LANDS CLEAR ONLY WHEN
+    //     THEY MOVE THE CURSOR (architect 2026-09-26): a land onto the sample
+    //     the playhead already holds keeps the bit, so an editor opened on
+    //     the marker under the playhead (Enter, the flag double-click, a
+    //     bound cell, `m`) keeps the hold, and so do a marker click, a Tab
+    //     step or a collapse landing on that marker; move_playhead_to clears
+    //     at every call. The reseat and translate
     //     entries are not movements and do not clear as owners; a camera
     //     change their clamp makes (the reseat's edge-align scrolling to an
     //     offscreen cursor, a shrunken domain's wall) is a camera change like

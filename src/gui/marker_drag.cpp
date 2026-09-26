@@ -352,10 +352,12 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // LIVE map, and a map job in flight at the press would put the cursor a
     // column off the flag it rides). THE MOVEMENT'S TWO CLEARS — the A/B
     // audition's end and the hold's — ran at the press, on the click act's
-    // land_playhead_on_marker (only a plain press arms the drag), and nothing
-    // can re-arm either under the drag-modal gate, so the translation's
-    // want of them changes nothing; no predictor resync is owed with no play
-    // in flight.
+    // land_playhead_on_marker (only a plain press arms the drag), the hold's
+    // only if that land moved the cursor: a press on the marker under the
+    // playhead keeps it until the release, where commit_drag's
+    // move_playhead_to clears it at every call. Nothing can re-arm either
+    // under the drag-modal gate, so the translation's want of them changes
+    // nothing; no predictor resync is owed with no play in flight.
     const bool source_domain = active_display_context(app, audio).domain ==
         GuiDisplayDomain::Source;
     int64_t sample;

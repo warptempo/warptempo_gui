@@ -1557,12 +1557,18 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     // complete clearing-owner inventory is at GuiAuditionSequence
     // (app_state.h).
     clear_audition_sequence(app);
-    // AND THE HOLD POSTURE GOES OUT ON THE SAME MOVEMENT, for the same reason
-    // and above the same return: one of its three movement-owner clears (the
-    // rule and its two exemptions — the nudge's and the undo/redo restore's —
-    // are at AppState::camera_hold).
-    app.camera_hold = false;
+    // AND THE HOLD POSTURE GOES OUT WHEN THE LAND MOVES THE PLAYHEAD
+    // (architect 2026-09-26): one of its three movement-owner clears (the rule
+    // and its two exemptions — the nudge's and the undo/redo restore's — are
+    // at AppState::camera_hold). Unlike the audition's end it is gated on the
+    // seat's own outcome, read after the frame half's clamp and idempotence
+    // return: a land onto the sample the cursor already holds (an editor
+    // opening on the marker under the playhead — Enter, the flag
+    // double-click, a bound cell, `m`) leaves the column the centring asked
+    // for where it stood, so the hold stands.
+    const int64_t sample_before = app.playhead_cursor_sample;
     reseat_playhead_on_marker(app, audio, viewport, hit);
+    if (app.playhead_cursor_sample != sample_before) app.camera_hold = false;
 }
 
 // THE MARKER RESEAT — the same store lookup and the same write with NO
@@ -1599,10 +1605,12 @@ void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                    Viewport& viewport, int64_t src_frame) {
     // The A/B audition's end, this entry point's half of it — the argument is
     // at the marker form above, the inventory at GuiAuditionSequence. The
-    // hold posture's clear likewise (AppState::camera_hold).
+    // hold posture's clear too, but only when the seat moves the cursor
+    // (AppState::camera_hold).
     clear_audition_sequence(app);
-    app.camera_hold = false;
+    const int64_t sample_before = app.playhead_cursor_sample;
     seat_playhead_on_source_frame(app, audio, viewport, src_frame);
+    if (app.playhead_cursor_sample != sample_before) app.camera_hold = false;
 }
 
 // The write itself, shared by the two above. Its own two decisions:
@@ -1615,6 +1623,8 @@ static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
     // playhead already holds writes the same value and moves no pixel, so
     // there is nothing to damage. It decides nothing about the audition — its
     // end is the LAND's, one level up, and runs above this return either way.
+    // The hold's clear is the land's too, one level up, and reads this
+    // return's outcome: a land that returns here keeps camera_hold.
     // Compared AFTER the clamp, because the clamp is what decides where the land
     // actually seats.
     if (sample == app.playhead_cursor_sample) return;

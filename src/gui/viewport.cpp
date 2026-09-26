@@ -212,7 +212,10 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // A PLAYHEAD MOVEMENT ALSO PUTS OUT THE HOLD POSTURE (architect 2026-09-23):
 // the column an explicit centring asked to keep belonged to the subject where
 // it stood, so a movement is one of the posture's three movement-owner clears,
-// the two lands being the others. The two exemptions are the nudge, which
+// the two lands being the others — this owner at every call, the lands only
+// when they change the cursor (architect 2026-09-26: a land onto the sample
+// already held is no movement of the posture's subject). The two exemptions
+// are the nudge, which
 // keeps the bit across its whole act, and the undo/redo singleton restore
 // under the hold, which holds the column after its land and re-arms the bit;
 // the rule is at AppState::camera_hold.
@@ -354,9 +357,11 @@ void Viewport::reseat_playhead_to(int64_t new_sample) {
 //     for the drag's life and catches up at the release (commit_drag's land,
 //     after the freeze lifts). The tow is the ride of a movement already
 //     taken, not a movement of its own: the press's click act landed the
-//     playhead (land_playhead_on_marker, the audition's end and the hold's)
-//     and nothing can re-arm either under the drag-modal gate (the argument
-//     is at the site).
+//     playhead (land_playhead_on_marker, the audition's end, and the hold's
+//     when the press moved the cursor; a press on the marker under the
+//     playhead leaves the hold to commit_drag's move_playhead_to, which
+//     clears it at every release) and nothing can re-arm either under the
+//     drag-modal gate (the argument is at the site).
 // The live-domain clamp is the shared ruling (clamp_playhead_to_live_domain);
 // the viewport's own domain wall is re-derived through clamp_viewport_start
 // because the restore's swap may have shortened the domain under a standing

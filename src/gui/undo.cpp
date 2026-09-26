@@ -1061,8 +1061,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     (Viewport::hold_subject_column_after_nudge — the nudge's own body,
     //     clamped to the waveform's edge columns, the zoom never written) IN
     //     PLACE OF the landing owner, and the bit is RE-ARMED after it, as the
-    //     nudge's dispatch keeps it: the land (a movement owner) and the
-    //     hold's own camera write (the chokepoint) each put it out. The column
+    //     nudge's dispatch keeps it: the land (a movement owner, when it
+    //     moves the cursor) and the hold's own camera write (the chokepoint)
+    //     each put it out. The column
     //     is the one AS PAINTED (strictly as painted, architect 2026-09-24):
     //     the cursor's pre-restore frame on the item basis, both read at this
     //     body's head. A restore that moved no cursor moves no camera and
@@ -1113,7 +1114,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             const bool in_range = (t >= 0 && t < active_marker_count(app));
             if (in_range) {
                 // LAND: two-step placement basis, direct cursor write, NO viewport
-                // move, through the movement owner, which puts the hold out;
+                // move, through the movement owner, which puts the hold out
+                // when it moves the cursor;
                 // the camera is read before it through the nudge's one owner
                 // of the fork (nudge_camera, app_state.h — the rule above).
                 // Playback is already stopped above, so land's
