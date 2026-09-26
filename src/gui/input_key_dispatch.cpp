@@ -356,12 +356,14 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
          !ctrl && !alt && !shift &&
          horizontal_arrow_step_lock_admits(app));
-    // BARE HOME / END, the trim-bound jump: pure navigation — it moves the
-    // cursor, stops an audition and clears a selection, and writes no store
-    // at all. Every modified form binds nothing and stays refused.
+    // HOME / END IN BOTH FORMS — bare (the trim-bound jump) and CTRL (the
+    // whole-piece jump, architect 2026-09-26). Both are pure navigation: they
+    // move the cursor, stop an audition and clear a selection, and write no
+    // store at all, so the ctrl shape is admitted on exactly the reason the
+    // bare one is. Shift and alt forms bind nothing and stay refused.
     const bool is_home_end =
         ((key == GuiKeys::Home || key == GuiKeys::End) &&
-         !ctrl && !shift && !alt);
+         !shift && !alt);
     const bool is_page_updown =
         ((key == GuiKeys::PageUp || key == GuiKeys::PageDown) &&
          !ctrl && !shift && !alt);
@@ -1797,10 +1799,14 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //   * Ctrl+Shift+Tab       — the PAIRED MARCH (2026-08-18), the diff-flag cycle
 //     composed with a round trip through the other tab (2026-09-26): the tab
 //     switch, the mode's Tab act and its `c`, the switch home and its `c`;
-//   * bare Home / End      — the ABSOLUTE ends of the song;
-//   * bare `c`             — working zoom, centered on the mode's own focus.
+//   * bare Home / End and Ctrl+Home / Ctrl+End — the ABSOLUTE ends of the
+//     song, both forms (the ctrl pair's whole-piece jump is what a jump
+//     already means in here, architect 2026-09-26);
+//   * bare `c`             — working zoom, centered on the mode's own focus;
+//   * bare Left / Right    — the playhead step (2026-09-26).
 // NO ALT SHAPE (the Alt Tab family, 2026-09-22, was deleted 2026-09-23) and
-// THE MARCH THE ONE CTRL SHAPE (2026-08-18). Ctrl+Tab was the walk cycle's
+// TWO CTRL SHAPES, the march (2026-08-18) and Ctrl+Home / Ctrl+End
+// (2026-09-26). Ctrl+Tab was the walk cycle's
 // forward direction from 2026-08-05 and left with the walk selector; the
 // allowlist admits it as an ordinary A/B switch now. Returns true when the
 // press was consumed.
@@ -1853,6 +1859,8 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     that family on exactly the same terms and shares that arm;
 //   * BARE Home / BARE End — the bottom row's two SKIP buttons since
 //     2026-08-11, and this paragraph claimed the opposite until 2026-08-15;
+//     CTRL+HOME / CTRL+END are the same two buttons' ctrl press (architect
+//     2026-09-26), claimed above beside the march;
 //   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
 //     relayout, likewise;
 //   * BARE Tab (with its shifted form, the walk button's shift press) — the
@@ -1872,7 +1880,7 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // least-movement walk's Alt Tab shapes, claimed from 2026-09-22, were
     // deleted 2026-09-23 when the walk's camera became the audio view's).
     if (mods.alt) return false;
-    // THE ONE CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
+    // THE FIRST CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
     // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
     // are available [in the view], and ctrl+shift+tab is just short for
     // 'tab, ctrl+tab, tab'" (a round trip through the other tab since
@@ -1888,6 +1896,15 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // IsoLeftTab arm — because the live arm binds that one shape too; the mode
     // mirrors what it composes rather than widening it.
     if (mods.ctrl && mods.shift && key == GuiKeys::Tab) return true;
+    // THE OTHER CTRL SHAPE (architect 2026-09-26): CTRL+HOME / CTRL+END, the
+    // WHOLE-PIECE jump. It is claimed here so the chord means the SAME thing in
+    // every state — in this view the bare pair already jumps to the piece's own
+    // ends, so the ctrl form lands on exactly the same frames and the arm below
+    // needs no shape of its own. Claimed rather than left to the allowlist
+    // because that is how the bare pair already answers, both for the key and
+    // for the roster face derived from this predicate.
+    if (mods.ctrl && !mods.shift &&
+        (key == GuiKeys::Home || key == GuiKeys::End)) return true;
     // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stays as a REFUSAL
     // rather than being deleted: every shape below it is BARE (or
     // shift-carrying, on Tab and the walk), so a ctrl press falling past this
@@ -2368,6 +2385,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // frame, trimmed window or not, so an End that stopped at a trim bound would
     // hide the flags past it. With a full trim window the two answers coincide
     // (trim_window_is_full), so the difference shows only under a set trim.
+    // BOTH SHAPES LAND HERE, bare and CTRL (history_mode_owns_key claims the
+    // ctrl pair, architect 2026-09-26): outside the view ctrl is what asks for
+    // the piece's ends, and in here that is what a jump already means, so the
+    // chord means one thing in every state and this arm needs no fork.
     if (key == GuiKeys::Home || key == GuiKeys::End) {
         // A JUMP THAT WOULD CHANGE NOTHING IS SILENT here too (architect
         // 2026-08-31, the live body's rule): a benign one-dimensional
@@ -2376,7 +2397,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // the diff-flag focus this body clears and the piece's-ends landing
         // its mode bit already selects, so the refusal is exactly "no write
         // below would move anything".
-        if (!playhead_end_jump_actionable(app, audio, key == GuiKeys::End)) {
+        if (!playhead_end_jump_actionable(app, audio, key == GuiKeys::End,
+                                          /*whole_piece=*/false)) {
             return true;
         }
         playback_lifecycle.stop_playback_if_playing();
@@ -2393,15 +2415,17 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // timeline runs to in either view, and it is the same total the
         // full-window trim range resolves to. THE ARITHMETIC LIVES AT THE
         // SHARED OWNER since 2026-08-15 (playhead_skip_landing_frame,
-        // viewport.cpp), whose piece's-ends arm this mode bit selects, so
-        // nothing is duplicated: one spelling for every jump in the product.
-        // The bottom row's two SKIP buttons grey in this view through
+        // viewport.cpp), whose whole-piece arm this mode bit already selects —
+        // which is why `whole_piece` is passed FALSE here and nothing is
+        // duplicated: one spelling for every jump in the product. The bottom
+        // row's two SKIP buttons grey in this view through
         // playhead_end_jump_actionable, whose `h` arm reads this same
-        // landing and the mode's diff-flag clear. The owner's clamp is idempotent on
-        // a value move_playhead_to would clamp anyway, so this jump is
-        // byte-identical to the hand-spelled one.
+        // landing and the mode's diff-flag clear. The owner's clamp is
+        // idempotent on a value move_playhead_to would clamp anyway, so this
+        // jump is byte-identical to the hand-spelled one.
         viewport.move_playhead_to(
-            playhead_skip_landing_frame(app, audio, key == GuiKeys::End));
+            playhead_skip_landing_frame(app, audio, key == GuiKeys::End,
+                                        /*whole_piece=*/false));
         return true;
     }
 
@@ -2761,7 +2785,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // (the CUMULATIVE READING's toggle, 2026-08-08), bare `g` (the WALK's toggle,
 // 2026-08-18), bare `,` and
 // `.` (the walk), bare Tab / Shift+Tab / IsoLeftTab (the DIFF-FLAG CYCLE),
-// bare Home / End (the ABSOLUTE ends of the song,
+// bare Home / End and Ctrl+Home / Ctrl+End (the ABSOLUTE ends of the song,
 // not the trim bounds), bare `c` (working zoom centered on the mode's own
 // focus) and bare Left / Right (the PLAYHEAD STEP, 2026-09-26, refused on a
 // card while a diff flag is focused). Four of those families joined on
@@ -4341,8 +4365,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // to flap. Every
     // letter, toggle, opener, other Ctrl / Ctrl+Alt chord, Space in BOTH of
     // its forms (bare, and Shift+Space the A/B audition — a held one would
-    // only meet the running-sequence refusal, so no repeat is owed), bare
-    // Home/End and Delete is one-shot.
+    // only meet the running-sequence refusal, so no repeat is owed), Home/End
+    // in BOTH of its forms (bare and the ctrl whole-piece jump), and Delete
+    // is one-shot.
     if (!mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::PageUp || key == GuiKeys::PageDown ||
          key == GuiKeys::Comma || key == GuiKeys::Period))
@@ -9049,9 +9074,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 
 // Bare-key (no-modifier) dispatch. See the declaration for the binding list;
 // the caller gates on no modifiers held.
-// THE Home / End JUMP, one body for bare Home and bare End, so the three
-// unconditional acts are spelled once and the two landings differ only in the
-// direction handed to the arithmetic owner.
+// THE Home / End JUMP, one body for four arms — bare Home, bare End and their
+// two CTRL forms — so the three unconditional acts are spelled once and the
+// landings differ only in the flags handed to the arithmetic owner.
 //
 // IT IS A ROUTE OUT OF THE MARKER LANE: the playhead is leaving the focused flag
 // for a spot nothing marks, so the selection must go with it — the lane rule's
@@ -9066,10 +9091,11 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // silently discarding the jump.
 //
 // THE LANDING FRAME COMES FROM THE SHARED OWNER since 2026-08-15
-// (playhead_skip_landing_frame, viewport.cpp), whose trim arm this body reaches
-// (Viewport::trim_range's own bounds; the piece's-ends arm is the `h` view's,
-// which never reaches this body). The landing comes back pre-clamped, and the
-// clamp is idempotent on what move_playhead_to would clamp anyway.
+// (playhead_skip_landing_frame, viewport.cpp), whose two arms this body selects
+// between with `whole_piece`: FALSE takes Viewport::trim_range's own bounds (the
+// bare pair), TRUE forces the piece's ends whatever the trim is (the ctrl pair,
+// architect 2026-09-26). Both come back pre-clamped, and the clamp is idempotent
+// on what move_playhead_to would clamp anyway.
 //
 // THE STEPS STILL RUN UNGATED past the head refusal: the audition stop and
 // the lane exit's selection clear are unconditional wherever the body runs,
@@ -9086,8 +9112,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // are one decision — the full record is at the skips' case in
 // redesign_button_enabled. (The refusal CARDED for one day, 2026-08-30 to
 // 2026-08-31, when the one-dimensional rule silenced it; the grey stayed.)
-void GuiInputHandler::run_playhead_end_jump(bool forward) {
-    // A JUMP THAT WOULD CHANGE NOTHING IS SILENT (architect 2026-08-31,
+void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
+    // A FORM THAT WOULD CHANGE NOTHING IS SILENT (architect 2026-08-31,
     // superseding the 2026-08-30 card): a benign one-dimensional refusal
     // already at its state says nothing — the playhead is one mark in one
     // place, and the glance that asks "did it move?" is the same glance that
@@ -9095,7 +9121,7 @@ void GuiInputHandler::run_playhead_end_jump(bool forward) {
     // terms are exactly this body's writes — the stop, the clear and the
     // landing — so past this return at least one act
     // below does real work or the jump moves.
-    if (!playhead_end_jump_actionable(app, audio, forward)) {
+    if (!playhead_end_jump_actionable(app, audio, forward, whole_piece)) {
         return;
     }
     playback_lifecycle.stop_playback_if_playing();
@@ -9104,7 +9130,7 @@ void GuiInputHandler::run_playhead_end_jump(bool forward) {
         viewport.invalidate_waveform_area();
     }
     viewport.move_playhead_to(
-        playhead_skip_landing_frame(app, audio, forward));
+        playhead_skip_landing_frame(app, audio, forward, whole_piece));
 }
 
 // THE WAVEFORM-LANE PLAYHEAD STEP, one act owner (architect 2026-08-31, R12,
@@ -9317,14 +9343,14 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         run_center_key_command();
         break;
     case GuiKeys::Home:
-        // The trim-begin jump. The body is shared with End
-        // (run_playhead_end_jump, above this dispatch).
-        run_playhead_end_jump(/*forward=*/false);
+        // The trim-begin jump. The body is shared with End and with the two
+        // CTRL forms (run_playhead_end_jump, above this dispatch).
+        run_playhead_end_jump(/*forward=*/false, /*whole_piece=*/false);
         break;
     case GuiKeys::End:
         // The owner's `forward` arm, which is trim_range's END minus one — the
         // last frame INSIDE the window.
-        run_playhead_end_jump(/*forward=*/true);
+        run_playhead_end_jump(/*forward=*/true, /*whole_piece=*/false);
         break;
     default:
         // THE UNBOUND BARE KEY IS SILENT (architect 2026-08-30, the

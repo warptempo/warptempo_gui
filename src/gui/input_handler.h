@@ -2665,21 +2665,24 @@ private:
     void handle_plain_bare_keys(GuiKey key);
 
     // THE Home / End JUMP, one body for every live route that spells it. A
-    // jump that would change NOTHING — no live transport to stop, no selection
+    // form that would change NOTHING — no live transport to stop, no selection
     // to clear, a landing the cursor already rests on
     // (playhead_end_jump_actionable, the acts' one owner) — refuses silently
     // at the head; past that, its three acts are UNCONDITIONAL and
     // deliberately not gated on the jump moving anything: stop a live
     // audition, clear the marker selection (the marker lane's exit — the rule
-    // is at land_playhead_on_marker, input_pointer.cpp) and land on the trim
-    // bound through Viewport::move_playhead_to, the movement owner. `forward`
-    // picks End over Home (playhead_skip_landing_frame, app_state.h, owns the
-    // landing). TWO CALLERS: the bare Home and End arms, which the bottom
-    // row's skip buttons dispatch. The `h` history view's own pair is NOT one
-    // of them — it clears the MODE's diff-flag focus where these clear the
-    // live selection, so it spells its own body and shares only the landing
-    // owner, which its mode bit sends down the piece's-ends arm.
-    void run_playhead_end_jump(bool forward);
+    // is at land_playhead_on_marker, input_pointer.cpp) and land through
+    // Viewport::move_playhead_to, the movement owner. `forward` picks End over
+    // Home; `whole_piece` asks the landing owner for the piece's own ends
+    // instead of the trim bounds, which is what the CTRL forms pass
+    // (playhead_skip_landing_frame, app_state.h, states the two arms). FOUR
+    // CALLERS: the bare Home and End arms and their two CTRL arms, which the
+    // bottom row's skip buttons dispatch on a plain and a ctrl press. The `h`
+    // history view's own pair is NOT one of them — it clears the MODE's
+    // diff-flag focus where these clear the live selection, so it spells its
+    // own body and shares only the landing owner, which its mode bit already
+    // sends down the piece's-ends arm.
+    void run_playhead_end_jump(bool forward, bool whole_piece);
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
     // the commit-title editor, the bpm bracket editor, and (architect
