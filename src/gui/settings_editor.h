@@ -27,10 +27,8 @@ struct GuiInputHandler;
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect, the four-tier review's R-22) projects_path and
 // sync_path, which had been hand-edited only, and since 2026-09-13
-// max_waveform_height (the config's other three keys have no editor:
-// last_project is the program's own, and the two compressor keys,
-// waveform_compressor_threshold_db and waveform_compressor_ratio, are
-// hand-edited; `audio_player`, once
+// max_waveform_height (the config's sixth key, last_project, is the
+// program's own and has no editor; `audio_player`, once
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:

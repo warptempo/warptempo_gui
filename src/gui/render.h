@@ -2939,7 +2939,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // THE COST is one extra row fill and one scale lookup per column — the read,
 // the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
-// lamp and carries the compressor's two numbers).
+// lamp).
 //
 // THE GAIN IS A FUNCTION OF SOURCE TIME: the continuous curve derived from the
 // source at load (WaveformGainCurve, waveform_gain.h, which owns the rule).

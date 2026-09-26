@@ -172,7 +172,8 @@
 // DOWNWARD COMPRESSOR on the leveler's own window loudness L — the same
 // per-hop measure the gain comes from, "RMS type, slow" — in the expander's
 // Pro-C vocabulary, TWO NUMBERS, the Threshold T (dBFS, on L) and the Ratio
-// R (WaveformCompressorParams, below). At or under T no reduction, the inner
+// R (kCompressorThresholdDb -24 dBFS, kCompressorRatio 2, waveform_gain.cpp).
+// At or under T no reduction, the inner
 // being the raw bar (x the expander), the quiet parts exactly as the source;
 // over it (1 - 1/R) dB of reduction per dB of L over T, and
 // c = 10^(-reduction / 20), in (0, 1]. No make-up, no knee, no attack,
@@ -196,9 +197,10 @@
 //
 //   THE CRITERION: the gap between the inner and the outer >= 4.5 dB at the
 //   loudest 5 % of hops, the quiet parts untouched, monotone by
-//   construction. The defaults, T -24 dBFS and R 2, are the gentlest ratio
-//   that holds it in all three K550 movements with margin (gap at L's p95
-//   5.4 / 6.0 / 6.4 dB; tmp/inner_comp.py, 2026-09-25).
+//   construction. T -24 dBFS and R 2 are the gentlest ratio that holds it in
+//   all three K550 movements with margin (the measured map is at the two
+//   constants, waveform_gain.cpp), and the architect settled them by eye
+//   (2026-09-25).
 //
 // THE LIT PLATE'S TWO LEVELS (a SUPERSEDED RECORD, 2026-09-25, one day):
 // before the compressor the inner was the raw bar at a flat +2 dB and the
@@ -208,16 +210,16 @@
 // Both bars are at 0 dB by construction now and the two keys are struck
 // (device_config.h keeps the record).
 //
-// THE SEVEN VALUES ARE HARD-CODED (architect 2026-09-24): the leveler's five
-// and the expander's two are constexpr constants in waveform_gain.cpp, each
+// THE NINE VALUES ARE HARD-CODED: the leveler's five, the expander's two and
+// the compressor's two are constexpr constants in waveform_gain.cpp, each
 // with its reason, beside the hop, the gain floor and the column. They were
-// the device config's `waveform_gain_*` (2026-09-23) and `waveform_expander_*`
-// (2026-09-24) keys for a tuning phase; the phase is closed because every
-// project should share ONE FRAME OF REFERENCE — the values are set once and
-// left, and a retune is a recompile, by design. THE COMPRESSOR'S TWO ARE IN
-// THEIR TUNING PHASE (architect 2026-09-25): the device config's
-// `waveform_compressor_threshold_db` and `waveform_compressor_ratio`, walking
-// the same road — hard-coded here at the close. THE PRINCIPLE FOR ANY RETUNE:
+// device config keys for a tuning phase — `waveform_gain_*` (2026-09-23) and
+// `waveform_expander_*` (2026-09-24), closed 2026-09-24, and
+// `waveform_compressor_threshold_db` / `waveform_compressor_ratio`,
+// hard-coded, the phase closed 2026-09-25 (architect, by eye on the laptop).
+// The phases are closed because every project should share ONE FRAME OF
+// REFERENCE — the values are set once and left, and a retune is a
+// recompile, by design. THE PRINCIPLE FOR ANY RETUNE:
 // every number is FORCED by a criterion and never tuned to one spot — a free
 // constant carries its reason, a derived one its derivation — and a passage
 // the rule gets wrong is answered by the magnification lamp (dark, the raw
@@ -225,19 +227,6 @@
 //
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
-
-// THE COMPRESSOR'S TWO NUMBERS (THE COMPRESSOR above), the device config's
-// `waveform_compressor_threshold_db` and `waveform_compressor_ratio` during
-// their tuning phase: read once at startup with the config, which nothing
-// mutates after (the keys have no in-app writer), and handed to each load's
-// derivation. The grammars (the threshold in [-60, 0] dBFS, the ratio in
-// [1, 100], 1 the identity) are device_config.h's.
-inline constexpr double kWaveformCompressorThresholdDbDefault = -24.0;
-inline constexpr double kWaveformCompressorRatioDefault       = 2.0;
-struct WaveformCompressorParams {
-    double threshold_db = kWaveformCompressorThresholdDbDefault;  // T, dBFS on L
-    double ratio        = kWaveformCompressorRatioDefault;        // R, >= 1
-};
 
 // The picture's continuous magnification, derived from the source once per
 // load (off the load path — GuiAudio::gain_curve).
@@ -250,11 +239,10 @@ struct WaveformGainCurve {
 };
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
-// floats) — the decoded source buffer as GuiAudio holds it. `compressor` is
-// the inner bar's two numbers. A zero-frame input returns the empty curve.
+// floats) — the decoded source buffer as GuiAudio holds it. A zero-frame
+// input returns the empty curve.
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate,
-                                       const WaveformCompressorParams& compressor);
+                                       int sample_rate);
 
 // The gain at one source frame: linear between the two nearest hops, the
 // first and last hop's gain held beyond the ends. 1.0 for an empty curve.
@@ -273,17 +261,18 @@ double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (9 since the compressor joined as the inner bar's stage,
-// 2026-09-25; 8 was the expander's Range, Knee, Hold and Release deleted and
-// the seven values hard-coded, 2026-09-24; 7 was the downward
-// expander joining after the leveler, the same day; 6 was the short-term loudness measure replacing the window's
-// peak and the upward compressor's deletion, the same day; 5 was the
+// the rule above (10 since the compressor's two numbers were hard-coded,
+// 2026-09-25 — the same numbers, but the fingerprint's formula changed from
+// the version hashed with the two keys back to the version alone; 9 was the
+// compressor joining as the inner bar's stage, the same day; 8 was the
+// expander's Range, Knee, Hold and Release deleted and the seven values
+// hard-coded, 2026-09-24; 7 was the downward expander joining after the
+// leveler, the same day; 6 was the short-term loudness measure replacing the
+// window's peak and the upward compressor's deletion, the same day; 5 was the
 // upward compressor's threshold, knee and range, 4 the fixed percentile and
-// the ratio alone, 3 the restored leveler, 2 the expander on L's). The seven
-// constants are part of the rule, so a change to any of them bumps it too;
-// the compressor's two numbers ride the fingerprint beside it
-// (waveform_gain_fingerprint, warp_frame_map_view.h) while they are keys.
+// the ratio alone, 3 the restored leveler, 2 the expander on L's). The nine
+// constants are part of the rule, so a change to any of them bumps it too.
 // Nothing derived from the gain outlives the process — the curve is derived
 // at every load (the `.peaks` sidecar carries no curve) and the plates live
 // in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 9;
+inline constexpr uint64_t kWaveformGainVersion = 10;

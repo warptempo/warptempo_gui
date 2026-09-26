@@ -273,11 +273,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project) {
     // observed until the load completes; the queued event is then read when
     // run() resumes and the deferred quit is honored on completion. An urgent
     // abort is pkill / the compositor's force-close.
-    // THE COMPRESSOR'S TWO NUMBERS ARE THE LIVE DEVICE CONFIG'S
-    // (AppState::device_config, gui_main's one struct, read once at startup
-    // and never written for these keys): a reopen or a Revert takes the
-    // values read then, so a retune of the file is a relaunch.
-    const bool ok = next.load(path, app.device_config->waveform_compressor, [&](float) {
+    const bool ok = next.load(path, [&](float) {
         // Pump the event loop so the compositor stays responsive across a
         // multi-frame load.
         gui.drain_events();

@@ -55,13 +55,13 @@ constexpr double kStepSeconds = 0.1;
 constexpr double kSilentGain = 8.0;
 
 // --- the constants' reasons --------------------------------------------------
-// The seven picture values, HARD-CODED 2026-09-24 (architect: every project
-// shares one frame of reference, so they are set once and left; a retune is a
-// recompile, by design — waveform_gain.h). Until then they were device-config
-// keys, `waveform_gain_*` and `waveform_expander_*`, for a tuning phase.
-// The compressor's two numbers are not here: they are in their own tuning
-// phase and arrive as the derivation's WaveformCompressorParams (the stage and
-// the defaults are waveform_gain.h's).
+// The nine picture values are HARD-CODED (architect: every project shares one
+// frame of reference, so they are set once and left; a retune is a
+// recompile, by design — waveform_gain.h). The leveler's five and the
+// expander's two were device-config keys, `waveform_gain_*` and
+// `waveform_expander_*`, for a tuning phase closed 2026-09-24; the
+// compressor's two were `waveform_compressor_threshold_db` and
+// `waveform_compressor_ratio`, the phase closed 2026-09-25.
 //
 // kWindowSeconds 3.0: the EBU short-term loudness length, chosen by
 // eye (architect 2026-09-23) for the contrast it gives and for the earlier
@@ -132,6 +132,38 @@ constexpr double kExpanderThresholdDb = -8.0;
 constexpr double kExpanderRatio = 2.0;
 static_assert(kExpanderRatio > 1.0, "the expander reduces under the threshold");
 
+// THE COMPRESSOR'S TWO (waveform_gain.h owns the stage), architect
+// 2026-09-25, settled by eye on the laptop at the close of their tuning phase,
+// on the leveler's own window loudness L in dBFS. THE CRITERION: the gap
+// between the inner and the outer bar >= 4.5 dB at the loudest 5 % of hops,
+// the quiet parts untouched. The measured map (the product's leveler and
+// expander re-derived over the three K550 movements, 2026-09-25; the inner's
+// height in lane halves at L's p5 / p25 / p50 / p75 / p95, movement I):
+//
+//   T -20 R 4   gap at p95 4.7 / 5.0 / 5.2 dB   .07 .11 .21 .38 .39
+//   T -22 R 3              5.6 / 6.0 / 6.3      .07 .11 .18 .34 .35
+//   T -24 R 2              5.4 / 6.0 / 6.4      .07 .11 .17 .33 .36
+//   T -26 R 2              6.4 / 7.0 / 7.4      .07 .11 .15 .30 .32
+//   T -26 R 3              8.3 / 8.7 / 9.0      .07 .11 .13 .25 .26
+//
+// and the pairings T -20 with R <= 3 and T -22 with R 2 break the criterion
+// (the outer's fringe returns in the crescendos). In this material the
+// leveler never clamps to x1 (L's p95 is -14.8 / -16.1 / -16.7 dBFS), so the
+// stage works over L in [-35, -15].
+//
+// kCompressorThresholdDb -24: with the ratio below, the threshold that holds
+// the criterion in all three movements with margin (the smallest gap on any
+// open column 4.1 / 4.5 / 4.8 dB, at the crescendo just over T), the inner
+// reading pp 0.07, piano 0.11 and a tutti a third of the lane — a monotone
+// five-fold span.
+constexpr double kCompressorThresholdDb = -24.0;
+
+// kCompressorRatio 2: the gentlest ratio that holds the criterion at that
+// threshold; a steeper one shrinks the tuttis ("tiny" at -26 / 3). At least 1
+// by construction: 1 would be the identity.
+constexpr double kCompressorRatio = 2.0;
+static_assert(kCompressorRatio >= 1.0, "the compressor never expands");
+
 // THE CURVE (waveform_gain.h, THE EXPANDER): the reduction in dB, >= 0 and
 // uncapped, for a column whose leveled peak reads `x` dB — 0 at or above the
 // threshold, (ratio - 1) dB per dB under it. `x` may be minus infinity (a
@@ -187,8 +219,7 @@ private:
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
-                                       int sample_rate,
-                                       const WaveformCompressorParams& compressor) {
+                                       int sample_rate) {
     if (total_frames <= 0) return {};
 
     const int64_t col = working_zoom_column_frames(sample_rate);
@@ -247,7 +278,7 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
     } else {
         // THE COMPRESSOR'S SLOPE (waveform_gain.h): (1 - 1/R) dB of reduction
         // per dB of L over the threshold; 0 at R = 1, the identity.
-        const double slope = 1.0 - 1.0 / compressor.ratio;
+        const double slope = 1.0 - 1.0 / kCompressorRatio;
         for (size_t k = 0; k < measured.size(); ++k) {
             // A silent point takes the NEARER known point's L, the earlier on
             // a tie (the retained detector's rule) — and so its gain AND its
@@ -279,8 +310,8 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
             // THE COMPRESSOR on the UNCLAMPED L (waveform_gain.h): nothing at
             // or under the threshold (10^0 is exactly 1), the slope over it.
             const double reduction =
-                level > compressor.threshold_db ? slope * (level - compressor.threshold_db)
-                                                : 0.0;
+                level > kCompressorThresholdDb ? slope * (level - kCompressorThresholdDb)
+                                               : 0.0;
             out.inner_scale[k] = std::pow(10.0, -reduction / 20);
         }
     }

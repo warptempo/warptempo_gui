@@ -1,18 +1,15 @@
 #pragma once
 
 #include "failure.h"
-#include "waveform_gain.h"   // WaveformCompressorParams and its defaults
 
 #include <cstdint>
 #include <expected>
 #include <filesystem>
-#include <limits>
 #include <optional>
 #include <string>
-#include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eight keys live here and nowhere else:
+// piece (architect 2026-08-27). Six keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 350]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -26,22 +23,11 @@
 //   sync_path=<path>         the ABSOLUTE folder Synchronize to external
 //                            storage mirrors this project into, or EMPTY for
 //                            "not set up on this device" (external_sync.h)
-//   waveform_compressor_threshold_db=<dBFS>
-//                            the lit plate's inner-bar compressor's
-//                            Threshold on the window loudness L, a signed
-//                            number in [-60, 0] spelled with at least two
-//                            decimals (`-24.00`), the grammar at
-//                            is_waveform_compressor_threshold_db
-//   waveform_compressor_ratio=<ratio>
-//                            its Ratio, a number in [1, 100] spelled with at
-//                            least two decimals (`2.00`), 1.00 the identity,
-//                            the grammar at is_waveform_compressor_ratio
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30, given
 // with the fifth key; the sixth, 2026-09-13, placed right after gui_scale;
 // the waveform picture's keys stood after sync_path from 2026-09-23 until
-// they left 2026-09-24, and the compressor's two stand in their place since
-// 2026-09-25, below);
+// the last of them left 2026-09-25, below);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -98,18 +84,12 @@
 // plate's two bars' flat levels, `-inf` leaving a bar out; the inner
 // compressor put both bars at 0 dB by construction and they are struck. A
 // config still carrying any of them is unknown-key fatal, no migration.
-// THE COMPRESSOR'S TWO KEYS TOOK THEIR PLACE (architect 2026-09-25), after
-// `sync_path`, for a tuning phase — the road the leveler's and the
-// expander's numbers walked, hard-coded at the close:
-// `waveform_compressor_threshold_db` and `waveform_compressor_ratio`, the
-// inner bar's Threshold and Ratio (the stage is waveform_gain.h's). They
-// have NO IN-APP ROAD — not in the settings editor, not a Settings dropdown
-// row — and are read ONCE, at startup, with the rest of the file into the
-// live struct, which nothing writes for them after; each load hands them to
-// its gain derivation (GuiAudio::load) and every in-app commit carries them
-// through verbatim. Both templates stamp -24.00 and 2.00
-// (kWaveformCompressorThresholdDbDefault, kWaveformCompressorRatioDefault,
-// waveform_gain.h, where the criterion is recorded).
+// THE COMPRESSOR'S TWO KEYS CAME AND WENT 2026-09-25 (architect):
+// `waveform_compressor_threshold_db` and `waveform_compressor_ratio` carried
+// the lit plate's inner-bar compressor for a tuning phase the same day, and
+// the architect closed it by eye on -24.00 and 2.00, now constexpr in
+// waveform_gain.cpp. A config still carrying either is unknown-key fatal, no
+// migration.
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -123,7 +103,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eight keys
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six keys
 // and each of them exactly once, every key REQUIRED, one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -135,8 +115,8 @@
 //
 // ORDER IS THE WRITER'S, NOT THE READER'S — the sidecar's own posture again.
 // The key list in device_config.cpp is the EMITTED order (gui_scale,
-// max_waveform_height, projects_repo, projects_path, last_project, sync_path,
-// waveform_compressor_threshold_db, waveform_compressor_ratio) and it is what
+// max_waveform_height, projects_repo, projects_path, last_project, sync_path)
+// and it is what
 // every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
 // file still loads. That costs nothing and buys the sidecar's symmetry: there,
@@ -162,12 +142,11 @@
 // and it is ordinary Linux behaviour for a program-written config; the in-app
 // road is the sanctioned one now and the hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
-// writes — it is the program's own — and the two compressor keys have
-// none either, being hand-edited (with the app quit, the R-6 rule above).
+// writes — it is the program's own.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks: every key is required, so a successful read always assigns all
-// eight.
+// six.
 //
 // TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet" and `sync_path` empty is
@@ -184,9 +163,6 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     std::string sync_path;
-    // `waveform_compressor_threshold_db` and `waveform_compressor_ratio`,
-    // in that order, as the struct the derivation takes.
-    WaveformCompressorParams waveform_compressor;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -259,60 +235,6 @@ inline constexpr const char* kGuiScaleGrammarReason =
     "must be an integer in [50, 350] in canonical spelling";
 inline constexpr const char* kMaxWaveformHeightGrammarReason =
     "must be an integer in [0, 9999] in canonical spelling";
-
-// THE COMPRESSOR THRESHOLD RANGE — the ONE owner for
-// `waveform_compressor_threshold_db` (architect 2026-09-25): [-60, 0] dBFS on
-// the window loudness L. 0 is the digital ceiling no window's RMS exceeds
-// (a threshold there compresses nothing); -60 lies under the leveler's own
-// -50 dB column gate, so every audible window is over it. Asked by the
-// config reader alone (the key has no editor).
-inline constexpr bool is_waveform_compressor_threshold_db(double v) {
-    return v >= -60.0 && v <= 0.0;
-}
-
-// THE COMPRESSOR RATIO RANGE — the ONE owner for `waveform_compressor_ratio`
-// (architect 2026-09-25): [1, 100]. 1.00 is the identity, admitted as the
-// off switch; 100 stands in for infinity rather than spelling it (at 100:1
-// the reduction is 0.99 dB per dB over the threshold). Asked by the config
-// reader alone.
-inline constexpr bool is_waveform_compressor_ratio(double v) {
-    return v >= 1.0 && v <= 100.0;
-}
-
-// The two keys' reasons, spelled once for the config reader's `bad_value`
-// line (the one reader of each).
-inline constexpr const char* kWaveformCompressorThresholdDbGrammarReason =
-    "must be a signed number of decibels in [-60.00, 0.00] in canonical "
-    "spelling";
-inline constexpr const char* kWaveformCompressorRatioGrammarReason =
-    "must be a number in [1.00, 100.00] in canonical spelling";
-
-// THE ONE SERIALIZER for the threshold: the MAGNITUDE through the settings'
-// own bracketed-double road, format_value_double at min 2 decimals
-// (value_format.h), with a leading '-' re-attached when the value is below
-// zero — `0.00`, `-24.00`, `-6.021`. Zero of either sign spells `0.00`,
-// never `-0.00`. The config writer's alone.
-std::string format_waveform_compressor_threshold_db(double v);
-
-// THE ONE PARSER for the threshold. The value road (parse_value_double,
-// value_format.h) refuses any sign — no authored value is negative — and it
-// is frozen, so THE SIGN IS HANDLED HERE: one leading '-' is stripped and the
-// rest parsed as a magnitude with that road's strictness (no second sign, no
-// '+', no exponent, no inf/nan, the whole field); then ONE CANONICAL SPELLING
-// — the text must be exactly what format_waveform_compressor_threshold_db
-// writes for the value it names, so `-24.0`, `-24`, `-24.000` and `-0.00`
-// refuse (zero is `0.00`) — then the range owner above. Returns true and sets
-// `out` on success, leaving it untouched on failure.
-bool parse_waveform_compressor_threshold_db(std::string_view s, double& out);
-
-// THE ONE SERIALIZER for the ratio: format_value_double at min 2 decimals,
-// no sign (the range admits none). The config writer's alone.
-std::string format_waveform_compressor_ratio(double v);
-
-// THE ONE PARSER for the ratio: parse_value_double's strict magnitude (no
-// sign at all), the canonical round trip through the serializer above
-// (`2`, `2.0` and `2.000` refuse), then the range owner.
-bool parse_waveform_compressor_ratio(std::string_view s, double& out);
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -533,9 +455,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS (the two compressor keys
-// have none: every write carries them verbatim from the live struct),
-// and this is their inventory
+// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
 // (re-greped 2026-09-13 with the sixth key):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves four keys —
@@ -556,7 +476,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 100 % and the clone's `projects/`, the tablet
 // 225 % and its external files dir's `projects/`;
 // both stamp a max_waveform_height of 500, kDefaultProjectsRepo, a blank
-// sync_path, a blank last_project and the compressor's -24.00 and 2.00),
+// sync_path and a blank last_project),
 // so a first run on either device lands a
 // file that is
 // already right for it and the user edits

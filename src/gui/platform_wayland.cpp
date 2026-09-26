@@ -714,11 +714,6 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // file by hand with the app quit — like the projects path above it.
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE INNER COMPRESSOR'S TWO NUMBERS, the tuning phase's starting point
-    // (architect 2026-09-25; the criterion at waveform_gain.h), the same on
-    // both templates: a threshold of -24.00 dBFS and a ratio of 2.00.
-    cfg.waveform_compressor.threshold_db = kWaveformCompressorThresholdDbDefault;
-    cfg.waveform_compressor.ratio        = kWaveformCompressorRatioDefault;
     return cfg;
 }
 

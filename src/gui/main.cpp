@@ -3374,7 +3374,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its eight keys describe the MACHINE, not the piece, so they live in
+    // Its six keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
@@ -3420,12 +3420,6 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE INNER COMPRESSOR'S TWO NUMBERS (the device config's
-    // `waveform_compressor_threshold_db` and `waveform_compressor_ratio`,
-    // architect 2026-09-25) install nothing here: they are inputs to each
-    // load's gain derivation, read from this struct by the loader
-    // (GuiFileLoader::load_file into GuiAudio::load), and nothing writes
-    // them after this read.
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

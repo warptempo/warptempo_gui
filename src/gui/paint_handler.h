@@ -167,8 +167,7 @@ struct WaveformCache {
     // what the job takes.)
     int       fp_inset_px = -1;
     // THE GAIN FIELD the live pixels were rendered under — the derived
-    // curve's identity (its version hashed with the compressor's two
-    // numbers) where the picture is magnified, 0 where the gate answers
+    // curve's version where the picture is magnified, 0 where the gate answers
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
     // rule). A FINGERPRINT FIELD in its own right, keyed directly like the
     // inset: the gain is an input to the tip mapping alone, so nothing else

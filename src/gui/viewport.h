@@ -155,9 +155,7 @@ struct Viewport {
     //  - THE PLATE'S OWN GAIN. The gain is the continuous curve derived from
     //    the source at load (GuiAudio::gain_curve), and the plate's gain
     //    field (waveform_gain_fingerprint, warp_frame_map_view.h) has ONE
-    //    LIVE INPUT, re-grepped 2026-09-25: the MAGNIFICATION LAMP (the
-    //    compressor's two numbers it also hashes are read once at startup
-    //    and never written after, so they move nothing live), whose one
+    //    LIVE INPUT, re-grepped 2026-09-25: the MAGNIFICATION LAMP, whose one
     //    setter (GuiInputHandler::set_show_waveform_magnification, the one
     //    caller of kick_waveform_sync_if_gain_changed) takes the before/after
     //    kick below. The S/T flip leaves the gain field as it stands (the
