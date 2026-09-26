@@ -1067,34 +1067,44 @@ inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 
 // THE CORE INK: the lit plate's INNER bar, written over the outer, so the
-// reading is a bright levelled bar with a LIGHTER teal core carved into it
-// whose relative thickness is the loudness.
+// reading is a bright levelled bar with a LIGHTER core carved into it whose
+// relative thickness is the loudness.
 //
-// SAMPLED, NOT DERIVED (architect 2026-09-25, chosen by eye against rendered
-// mockups — the five options were the darker 1:1 blend, the ink mirrored
-// away from the canvas, a blend toward Breeze white, this teal, and a blend
-// toward Breeze focus blue): kdenlive's own teal marker category, category 3,
-// #1abc9c — the same sampled byte kHistoryAddedFill already carries as the
-// `h` view's green diff class (row_5_lane_3_marker_green crops, above); two
-// facts that agree, each its own constant per the palette's hard-coded rule,
-// not one fact referenced twice. The darker core read oddly, and the outer
-// bar, where the detail lives, keeps kWaveformInk untouched — only the inner
-// reads lighter now.
+// DERIVED, NOT SAMPLED (architect 2026-09-25, by eye against rendered
+// mockups at blends of kWaveformInk toward kdenlive's teal marker category
+// #1abc9c from 20% to 100%): the full teal was "a little bright", and having
+// lived with it at full brightness made returning to the unmagnified plate
+// seem dull; 50% reads as "less tiring on long sessions" and is this
+// constant's value. The arithmetic is the 1:1 average of kWaveformInk
+// (28, 129, 107) and #1abc9c (26, 188, 156), each channel
+// std::nearbyint-rounded (default mode, round-to-nearest with ties to even):
+//     R: (28 + 26) / 2   = 27.0  -> 27
+//     G: (129 + 188) / 2 = 158.5 -> 158 (a tie: 158 is even, 159 is odd)
+//     B: (107 + 156) / 2 = 131.5 -> 132 (a tie: 131 is odd, 132 is even)
+//     (27, 158, 132) = #1b9e84
 //
-// SUPERSEDED THE SAME DAY: the core's first ink was #17594b, the
-// kWaveformCanvas : kWaveformInk 1:1 blend (DERIVED, not sampled), which read
-// as a dark core. Before that, on 2026-09-24, two sampled inks were tried for
-// the bar behind the source's and both were superseded: the lower-channel
-// #1f8b4c of the architect's kdenlive screenshot read as a second figure, and
-// that screenshot's new canvas #135647 fringed at small boosts. The canvas
-// STAYS kWaveformCanvas #12312b.
+// SUPERSEDED THE SAME DAY, both by this 50% blend: the core's first ink was
+// #17594b, the kWaveformCanvas : kWaveformInk 1:1 blend (DERIVED, not
+// sampled), which read as a dark core; between that and this value the core
+// wore the full, undiluted teal #1abc9c (26, 188, 156) — kdenlive's own teal
+// marker category, category 3, the same sampled byte kHistoryAddedFill
+// already carries as the `h` view's green diff class
+// (row_5_lane_3_marker_green crops, above), chosen by eye against rendered
+// mockups over four other options (the darker 1:1 blend, the ink mirrored
+// away from the canvas, a blend toward Breeze white, a blend toward Breeze
+// focus blue) before the diluted blend above superseded it in turn. Before
+// either, on 2026-09-24, two sampled inks were tried for the bar behind the
+// source's and both were superseded: the lower-channel #1f8b4c of the
+// architect's kdenlive screenshot read as a second figure, and that
+// screenshot's new canvas #135647 fringed at small boosts. The canvas STAYS
+// kWaveformCanvas #12312b.
 //
 // A SUPERSEDED RECORD (2026-09-24 to 2026-09-25): this ink was the faint
 // BACKGROUND behind a bright FOREGROUND (the raw bar at a flat +2 dB over
 // the levelled bar at -2 dB, the two device levels, "a parallel-compression
 // trick" whose ~4 dB separation covered the tuttis and left a fringe in the
 // crescendos); the compressor flipped the inks and struck the levels.
-inline constexpr GuiColor kWaveformCoreInk = hex(0x1ABC9C);  // (26, 188, 156)
+inline constexpr GuiColor kWaveformCoreInk = hex(0x1B9E84);  // (27, 158, 132)
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -2901,7 +2911,7 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // stands out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
-// reading is a bright levelled bar with a LIGHTER teal core carved into it
+// reading is a bright levelled bar with a LIGHTER core carved into it
 // whose relative thickness is the loudness — at or under the compressor's
 // threshold the core is the raw bar (x E), over it thinner by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,

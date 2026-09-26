@@ -50,7 +50,7 @@
 //   the plate's own bright ink (render.h's kWaveformInk). Over it the lit
 //   lamp paints THE INNER BAR, the source's own bar through the same
 //   expander and THE COMPRESSOR below instead of the gain, in the lighter
-//   teal core ink (kWaveformCoreInk) — both bars from ONE peak read
+//   core ink (kWaveformCoreInk) — both bars from ONE peak read
 //   (architect 2026-09-25). The gain decides the outer's height and never a
 //   colour.
 //   The clamp is a sample-peak clip, which is right for a
@@ -191,7 +191,7 @@
 //   multiplier, the one clamp, the >=1px floor; with the expander on BOTH
 //   bars the gap between them is g / c, a pure function of L, so the inner
 //   never stands out of the outer. The reading is a bright levelled bar with
-//   a lighter teal core carved into it whose relative thickness is the
+//   a lighter core carved into it whose relative thickness is the
 //   loudness.
 //
 //   THE CRITERION: the gap between the inner and the outer >= 4.5 dB at the
