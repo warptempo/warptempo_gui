@@ -417,10 +417,13 @@ inline constexpr const char* kTrimFallbackCard =
     "Trim window too small to render; rendering untrimmed";
 
 // THE OFF-EDGE MARKER'S TWO SENTENCES (architect 2026-09-26, strictly as
-// painted: a marker may not be authored where it would not paint). One owner
-// decides the refusal, source_frame_off_right_edge (warp_frame_map_view.h —
-// a frame in the song's last half-column when the song fills the window,
-// which no viewport paints at this zoom); each act says it in its own verb.
+// painted: a marker may not be authored where its column would not paint).
+// One owner decides the refusal, source_frame_off_right_edge
+// (warp_frame_map_view.h — a frame in the song's last half-column when the
+// song fills the window, whose column no viewport paints at this zoom: a
+// marker there shows its flag's left border alone on the last column, no
+// stem, and a border is not the marker's column); each act says it in its
+// own verb.
 // The NUDGE's is raised by the two nudge twins through their reason channel
 // (the singleton's on the keyboard alone, its Right button greying there; a
 // group's after its collapse); the

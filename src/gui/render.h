@@ -2241,6 +2241,17 @@ inline int marker_flag_edge_h_px() {
 // stem, and the column alignment is the authored fact where the border is
 // decoration.
 //
+// AT THE LAST COLUMN THE BORDER IS WHAT SHOWS (architect 2026-09-26). The
+// marker lane is clipped to the waveform's columns [0, w) — every flag box,
+// flag-editor box and hit rect (clip_to_waveform_columns, render.cpp) — and
+// the flag iterator admits a flag whose box, THIS BORDER INCLUDED, reaches
+// into those columns. So a marker at grid point w (one past the last column)
+// paints this border ALONE on the last column(s), [w - border, w): one column
+// at gui_scale 100, two at 225. No fill, no text and no stem (the stem is
+// gated to [0, w)); its hit rect is that strip, so the border is clickable
+// as painted; and its open editor paints the very same columns, the field's
+// border standing where the resting flag's does.
+//
 // THE RUN CLOSES WITH ONE MORE SUCH COLUMN ON ITS RIGHT (architect 2026-09-25,
 // reversing "the box has no right border", which stood from 2026-08-02): a
 // short later flag standing over a long earlier one let the earlier tail run
@@ -2250,8 +2261,8 @@ inline int marker_flag_edge_h_px() {
 // under a marker-lane editor — in that box's own face.border, and it is inside
 // the published rect. Interior seams stay ONE column: the flag box's right
 // side against the lower cell is that cell's own left seam, never a closing
-// column plus a seam. It needs no right-edge clip rule either: past the
-// window's right edge it falls off like the fill it follows.
+// column plus a seam. It needs no clip rule of its own: past the waveform's
+// last column it is cut off like the fill it follows.
 inline constexpr int kMarkerFlagBorderPx = 1;
 inline int marker_flag_border_px() {
     return scaled_px(kMarkerFlagBorderPx, 1);
@@ -2322,7 +2333,8 @@ inline constexpr size_t kIterCellGlyphs = 5;
 
 // An UPPER BOUND on a flag box's painted width, used only to decide how far
 // LEFT of the viewport a marker may sit and still reach into it (flags run
-// rightward, so the left cull needs a width and the right cull does not). No
+// rightward, so the left cull needs a width and the right cull only the left
+// border's reach, which the iterator reads itself). No
 // ASCII glyph in a sans face advances more than one em, so glyphs * em + the
 // two pads bounds every box the truncation can produce. A bound, not a size:
 // nothing is laid out against it.
@@ -2637,7 +2649,11 @@ inline int playhead_half_px() {
 // marker's frame column (marker_flag_border_px), and the run's closing right
 // column included where the producer painted one (2026-09-25) — because this
 // stash has always been the painted extent and a click on the border is a
-// click on the flag.
+// click on the flag. IT IS CLIPPED TO THE WAVEFORM'S COLUMNS [0, w) as the
+// pixels are (architect 2026-09-26, clip_hit_rect_to_waveform_columns,
+// render.cpp): a flag cut off at the last column claims its visible part, and
+// a marker at grid point w claims its left-border strip alone; the two cell
+// boundaries stay where the painter put them.
 //
 // IT SPANS THE TWO ITERATION BOUND CELLS TOO where they
 // paint: each is the flag continued, so all of it is ordinary flag surface for
@@ -3746,7 +3762,12 @@ struct FlagEditorBox {
 // monospace face dies at this surface with the lane placement owner
 // (lane_text_left_x) that used to put it here.
 //
-// AT A WINDOW EDGE THE BOX IS CUT OFF AND NOTHING MOVES (architect 2026-09-06,
+// AT THE WAVEFORM'S EDGE THE BOX IS CUT OFF AND NOTHING MOVES — the clip is
+// the waveform's columns [0, w), the resting flag's own (architect
+// 2026-09-26: nothing of the field paints in the leftover strip beside w, and
+// a marker at grid point w shows its left border alone, on the columns its
+// resting flag's border shows on; the published box and riding rect are
+// clipped with the pixels) — (architect 2026-09-06,
 // on the clamp this paragraph used to describe: "leave its position truthful,
 // don't clamp it, don't do anything"). The box used to slide left to stay
 // fully on-window, its width capped at the lane so that it always could; both

@@ -380,7 +380,8 @@ inline double displayed_grid_position_at_column(int64_t viewport_start,
 // One owner for the one rounding — the trim-bound column, the region span, the
 // phase-reset overlay's left edge, the strip-drag anchor stem, the undo
 // restore's visibility test, the flag iterator (iterate_visible_flags_impl,
-// render.cpp, whose right cull is this column >= w) and
+// render.cpp, whose right cull is this column minus the flag's left border
+// >= w) and
 // painted_column_of_source_frame_on_basis's tail
 // all place through this exact expression, and used to spell it independently,
 // tied together only by "matching region_columns"-style prose. PURE ARITHMETIC,
@@ -486,8 +487,13 @@ int painted_column_of_source_frame_on_basis(
 
 // WOULD A MARKER AT `source_frame` PAINT PAST THE LAST COLUMN AT THIS ZOOM —
 // the one owner of the off-edge authoring refusal (architect 2026-09-26,
-// strictly as painted: a marker may not be authored where it would not
-// paint). Frame->column is nearest-grid-point, so a frame in the domain's
+// strictly as painted: a marker may not be authored where its column would
+// not paint). Such a marker is not invisible — its flag's LEFT BORDER stands
+// outside the fill on the column's left, so at grid point w it shows that
+// border alone on the last column(s) (the flag iterator's cull and the lane's
+// clip to [0, w), render.cpp) — but it has no stem and no column of its own,
+// and a border is not the marker's column, so this refusal stands. Frame->column
+// is nearest-grid-point, so a frame in the domain's
 // last half-column rounds to grid point w, one past the last column (w − 1),
 // and AT THE RIGHT WALL the view cannot pan further: at the current zoom no
 // viewport paints it (End's landing at the whole-song zoom does this in the

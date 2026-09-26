@@ -922,6 +922,37 @@ void render_trim_flags(cairo_t* cr,
 
 namespace {
 
+// THE WAVEFORM'S COLUMNS ARE THE MARKER LANE'S CLIP (architect 2026-09-26):
+// every flag box, every flag-editor box and every hit rect either publishes
+// is confined to window x in [x0, x0 + w) — the columns the waveform paints —
+// so a non-multiple-of-16 window's leftover strip beside w carries nothing of
+// a flag, and a flag running past the last column is cut off at it exactly as
+// at a multiple-of-16 window's own edge. These two are the one spelling of
+// that clip: the paint clip each painter sets before it draws (vertically the
+// band it paints in, unchanged) and the hit rect's matching trim, so the claim
+// is the painted rect clipped the same way — strictly as painted. A rect the
+// clip empties publishes nothing (the callers test the answer).
+void clip_to_waveform_columns(cairo_t* cr, int x0, int w, int band_y,
+                              int band_h) {
+    cairo_rectangle(cr, static_cast<double>(x0), static_cast<double>(band_y),
+                    static_cast<double>(w > 0 ? w : 0),
+                    static_cast<double>(band_h));
+    cairo_clip(cr);
+}
+// Trims r's horizontal extent to [x0, x0 + w); true iff anything is left. The
+// two cell boundaries are left where the painter put them: a boundary past
+// the clip simply has no visible pixel beside it, and one left of it reads as
+// the box the visible part belongs to, which is what the walk
+// (hit_test_flag_cell) needs.
+bool clip_hit_rect_to_waveform_columns(FlagHitRect& r, int x0, int w) {
+    const double lo = std::max(r.x, static_cast<double>(x0));
+    const double hi = std::min(r.x + r.w, static_cast<double>(x0 + w));
+    if (hi <= lo) return false;
+    r.x = lo;
+    r.w = hi - lo;
+    return true;
+}
+
 // Shared flag iteration used by render_flags and its phase-reset analogue.
 // Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — which is
 // also the PAINT order, and therefore the occlusion order: LATER OVER EARLIER,
@@ -969,30 +1000,39 @@ void iterate_visible_flags_impl(
 
     // THE CULL IS ASYMMETRIC BECAUSE THE BOX IS. A flag opens at its column and
     // runs RIGHTWARD, so a marker to the LEFT of the viewport can still reach
-    // into it (by up to a full box width) while a marker AT OR PAST the right
-    // edge can show nothing at all. The left margin is a width BOUND rather than
-    // the real width, which is not known until the label is shaped; the caller
-    // supplies it (see cull_width_px above).
+    // into it (by up to a full box width) while a marker right of the last
+    // column can reach in by its LEFT BORDER alone. The left margin is a width
+    // BOUND rather than the real width, which is not known until the label is
+    // shaped; the caller supplies it (see cull_width_px above).
     //
-    // THE RIGHT BOUND IS THE ROUNDED COLUMN (Sol review of 8cf604ce, finding
-    // 1): a flag whose painted column is >= waveform_width emits NOTHING — no
-    // box, no hit rect, no stem — because the half-head rule leaves nothing
-    // but the playhead's ruler head at grid point w (paint_ruler_row). The
-    // sample compare below is only a prefilter (it keeps the int cast
-    // bounded); it is not the cull, because a marker in the displayed span's
-    // last half-column (ms < viewport_end_sample) still ROUNDS to column w.
-    // At 1920 that column is off the surface, but a non-multiple-of-16 window
-    // leaves a residual ≤ 15 px gutter beside the effective waveform width
-    // (the surface is full-strip width), where such a flag used to paint AND
-    // publish a clickable hit rect and stem while source_frame_off_right_edge
-    // (warp_frame_map_view.h), which refuses authoring by the same rounded
-    // column, called it off the edge. The column is displayed_column_at's —
-    // the predicate's own rounding over the same q (the displayed span over
-    // the plate width recovers q exactly, viewport_end_sample) — so the
-    // painter and the refusal cannot disagree on one basis.
+    // THE RIGHT CULL IS THE PAINTED EXTENT (architect 2026-09-26): a flag is
+    // admitted iff its box, LEFT BORDER INCLUDED, intersects the waveform's
+    // columns [0, w) — col - border_w < w, the border standing outside the
+    // fill on the column's left (marker_flag_border_px, render.h). So a marker
+    // at grid point w (one past the last column w - 1: the song's last
+    // half-column at the right wall, or a marker just past the viewport's end
+    // mid-song) is admitted and paints its left border ALONE, on the last
+    // column(s) — every caller clips its paint and its hit rect to [0, w), so
+    // the fill, the text and the cells fall outside and nothing paints in the
+    // leftover strip a non-multiple-of-16 window leaves beside w. Its STEM is
+    // not published (the callers gate the stem stash to [0, w): a column past
+    // the last has no pixel of its own), and source_frame_off_right_edge
+    // (warp_frame_map_view.h) still refuses AUTHORING there — a border is not
+    // the marker's column. A marker whose border would stand at or past w is
+    // culled (at gui_scale 100, one border column, that is w + 1 and beyond;
+    // a wider border admits as many columns more as it reaches back). The
+    // column is displayed_column_at's — the refusal's own rounding over the
+    // same q (the displayed span over the plate width recovers q exactly,
+    // viewport_end_sample) — so the painter and the refusal cannot disagree
+    // on one basis. The sample compare below is only a PREFILTER (it keeps
+    // the int cast bounded), set one column wider than the border's reach so
+    // it never drops a marker the column test would admit.
+    const int border_w = marker_flag_border_px();
     const double cull_lo = static_cast<double>(viewport_start_sample) -
                            cull_width_px * samples_per_pixel;
-    const double cull_hi = static_cast<double>(viewport_end_sample);
+    const double cull_hi =
+        static_cast<double>(viewport_end_sample) +
+        static_cast<double>(border_w + 1) * samples_per_pixel;
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
         const double eff_time = drag_overlay
@@ -1006,7 +1046,8 @@ void iterate_visible_flags_impl(
 
         const int col = displayed_column_at(
             ms, static_cast<double>(viewport_start_sample), samples_per_pixel);
-        if (col >= waveform_width) continue;   // the cull — the note above
+        // The cull — the note above: the border's first column is col - border_w.
+        if (col - border_w >= waveform_width) continue;
         const double left_x =
             static_cast<double>(top_strip_area.x) + static_cast<double>(col);
 
@@ -1451,6 +1492,12 @@ void render_flag_boxes_impl(
     if (lane.h <= 0) return;
 
     cairo_save(cr);
+    // THE PASS PAINTS INSIDE THE WAVEFORM'S COLUMNS (clip_to_waveform_columns
+    // above, architect 2026-09-26): a box running past the last column is cut
+    // off there, and a marker at grid point w shows its left border alone on
+    // the last column(s). Released by the pass's closing restore.
+    clip_to_waveform_columns(cr, top_strip_area.x, waveform_width,
+                             top_strip_area.y, top_strip_area.h);
     // THE REDESIGN'S SANS FACE, set ONCE for the whole pass: every label is
     // shaped and painted at this one size on this one scaled font, which is the
     // text_shape precondition (shape with the font you paint with). Nothing
@@ -1837,9 +1884,20 @@ void render_flag_boxes_impl(
                     static_cast<double>(paint_lower ? lower_x : run_end);
                 r.iter_upper_boundary_x =
                     static_cast<double>(paint_upper ? upper_x : run_end);
-                out_hit_rects->push_back(r);
+                // CLIPPED AS THE PIXELS ARE (the pass's clip above): a box
+                // cut off at the last column claims its visible part, and a
+                // marker at grid point w claims its border strip alone.
+                if (clip_hit_rect_to_waveform_columns(r, top_strip_area.x,
+                                                      waveform_width))
+                    out_hit_rects->push_back(r);
             }
-            if (out_stems && face.has_stem) {
+            // THE STEM STASH IS GATED TO [0, w): a marker at grid point w is
+            // admitted for its border (the iterator's cull) but its column has
+            // no pixel of its own, so it publishes no stem — the stem painter
+            // and the playhead's suppression decider read only real columns.
+            const bool stem_on_columns =
+                bx - top_strip_area.x < waveform_width;
+            if (out_stems && face.has_stem && stem_on_columns) {
                 // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
                 // marker's own frame column, unchanged by the border standing
                 // to its left (the architect's explicit clause, spelled at
@@ -1996,6 +2054,10 @@ void render_history_diff_flags(
     if (lane.h <= 0) return;
 
     cairo_save(cr);
+    // The waveform's columns are this pass's clip too, the live lane's rule
+    // (clip_to_waveform_columns, architect 2026-09-26).
+    clip_to_waveform_columns(cr, top_strip_area.x, waveform_width,
+                             top_strip_area.y, top_strip_area.h);
     // The redesign's one sans face, set once for the pass — the text_shape
     // precondition (shape with the font you paint with), exactly as
     // render_flag_boxes_impl sets it, through the one face owner (gui_font.h).
@@ -2298,9 +2360,13 @@ void render_history_diff_flags(
                 // `h`-refused arrows nothing to step.
                 r.iter_lower_boundary_x = r.x + r.w;
                 r.iter_upper_boundary_x = r.x + r.w;
-                out_hit_rects->push_back(r);
+                // Clipped as the pixels are, the live lane's rule.
+                if (clip_hit_rect_to_waveform_columns(r, top_strip_area.x,
+                                                      waveform_width))
+                    out_hit_rects->push_back(r);
             }
-            if (out_stems) {
+            // The stem stash stays gated to [0, w), the live lane's rule.
+            if (out_stems && bx - top_strip_area.x < waveform_width) {
                 // THE STEM READS THE CLASS AND THE FOCUS SWAP — the live
                 // lane's rule (architect 2026-09-23: the stem follows the
                 // selection bit as the fill does), and here the class is "does
@@ -2524,15 +2590,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const int caret_px = scaled_px(1.0, 1);
 
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
-    // THE BOX IS ITS TWO PADS AND ITS RUN, AND NOTHING BOUNDS IT — not the
-    // lane, not the window. The LANE-WIDTH CAP that stood here went with the
-    // position clamp below (architect 2026-09-06): it was a WIDTH rule kept
-    // for a POSITION rule's sake — a box no wider than the lane can always be
-    // slid fully on-window — and with the field standing wherever its own box
-    // stands, a field wider than the window simply runs off the edge, which is
-    // the same truthful answer the cap existed to avoid giving. Nothing else
-    // read it: the text viewport, the view offset and the riding run all
-    // derive from `box_w` rather than from the lane.
+    // THE BOX IS ITS TWO PADS AND ITS RUN, AND NO WIDTH RULE BOUNDS IT — not
+    // the lane, not the window. The LANE-WIDTH CAP that stood here went with
+    // the position clamp below (architect 2026-09-06): it was a WIDTH rule
+    // kept for a POSITION rule's sake — a box no wider than the lane can
+    // always be slid fully on-window — and with the field standing wherever
+    // its own box stands, a field wider than the waveform simply runs off its
+    // last column and is cut off there (the clip below), which is the same
+    // truthful answer the cap existed to avoid giving. Nothing else read it:
+    // the text viewport, the view offset and the riding run all derive from
+    // `box_w` rather than from the lane.
     const int box_w = pad_l + run_w + pad_r;
 
     const std::vector<WarpFrameMapSegment>& map =
@@ -2542,6 +2609,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         app, audio, static_cast<double>(marker_frame),
         map, basis.vp_start, basis.spp);
     const GuiRect area = waveform_area(app);
+    // THE WAVEFORM'S COLUMNS ARE THIS BOX'S CLIP (architect 2026-09-26, the
+    // flag pass's own rule — clip_to_waveform_columns): the width is the one
+    // the column above was mapped against (the item basis, which is the
+    // cached flag pass's plate width), so the open editor is cut off at
+    // exactly the column its resting flag is, and a marker at grid point w
+    // shows the same left border alone whether it rests or is being edited.
+    // It holds for everything this painter draws — the box, its text, the
+    // caret and the riding cells — until the closing restore.
+    const int clip_w = basis.area_w > 0 ? basis.area_w : area.w;
+    clip_to_waveform_columns(cr, area.x, clip_w, lane.y, lane.h);
 
     // ITERATION MODE ADDS THE TWO BOUND CELLS TO THE COMMITTED FLAG, so the
     // anchors below must ask under the same verdict the flag pass paints
@@ -2590,15 +2667,21 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // field no longer stood in its own box's slot — the two things the model
     // promises. So the field opens where its box IS and stays there.
     //
-    // THE WINDOW IS THE CLIP AND IT NEEDS NO CALL: this lane spans the window
-    // (strip_row_rect anchors every lane at x 0 with the window's own width),
-    // and this painter draws straight onto the window surface, so a box past
-    // either edge falls off it exactly as a cached flag box does off the
-    // strip-width surface the flag pass paints into. A field cut off at an
-    // edge is READ BY PANNING THE VIEWPORT: the marker-lane editors are
-    // pointer- and wheel-transparent, so the wheel and the grab-pan work while
-    // one stands and the field travels with its marker, which is the same
-    // answer the row gives for a flag box that is half off the edge at rest.
+    // THE WAVEFORM'S COLUMNS ARE THE CLIP (architect 2026-09-26, set where
+    // `area` is read above, superseding "the window is the clip"): a box past
+    // the left edge falls off at column 0 and a box past the last column is
+    // cut off at it, exactly as the cached flag pass clips its resting boxes,
+    // so nothing of the field paints in the leftover strip a non-multiple-of-16
+    // window leaves beside the waveform. A field cut off at an edge is READ BY
+    // PANNING THE VIEWPORT: the marker-lane editors are pointer- and
+    // wheel-transparent, so the wheel and the grab-pan work while one stands
+    // and the field travels with its marker, which is the same answer the row
+    // gives for a flag box that is half off the edge at rest. THE LEFT BORDER
+    // SITS WHERE THE RESTING FLAG'S DOES — `bx - border_w`, outside the fill
+    // on the column's left, on the same column mapping — so opening the
+    // editor on a marker at grid point w changes no pixel of the border it
+    // shows there (at gui_scale 100 the one column w - 1; at 225 the two
+    // columns w - 2 and w - 1).
     const int bx = area.x + col + anchor_off;
 
     // The text VIEWPORT inside the box: the band the run is clipped to, and the
@@ -2758,8 +2841,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //
     // The border sits OUTSIDE the fill like the flag's, so nothing the text
     // viewport or the view offset computed above moves: box_w, view_x0 and
-    // view_x1 are all fill-relative, and at the window's left edge this column
-    // simply falls off the surface exactly as a flag's does. Its COLOUR comes
+    // view_x1 are all fill-relative, and at the waveform's left edge this
+    // column is clipped away exactly as a flag's is — while at its right edge,
+    // for a marker at grid point w, it is the one thing that shows, on the
+    // columns the resting flag's border shows on. Its COLOUR comes
     // off the resolved face, so a DISABLED marker's open editor carries the
     // damped border its idle flag carries — the editor opens on any store index
     // (enter_top_flag_edit), disabled included, so this is a live path and not a
@@ -3071,6 +3156,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             r.h                     = static_cast<double>(lane.h);
             r.iter_lower_boundary_x = static_cast<double>(lower_seam);
             r.iter_upper_boundary_x = static_cast<double>(upper_seam);
+            // Clipped as the pixels are; a run wholly past the last column
+            // publishes the cold rect, which contains no point.
+            if (!clip_hit_rect_to_waveform_columns(r, area.x, clip_w))
+                r = FlagHitRect{};
             // EVERY CASE IS ONE EXPRESSION, the accumulator having already
             // done the collapsing: under a bound field the boundaries of the
             // boxes that stayed behind sit at the run's own left edge, so no
@@ -3094,9 +3183,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // (2026-09-25), the box's last column: a press there seats the caret at
     // the end through the same nearest-boundary search a press on the right
     // pad takes, and the I-beam covers every column the field painted.
-    out.box           = GuiRect{bx - left_border_w, lane.y,
-                                box_w + left_border_w + field_close_w,
-                                lane.h};
+    //
+    // AND IT IS CLIPPED TO THE WAVEFORM'S COLUMNS as its pixels are (the clip
+    // above): a field cut off at the last column claims its visible part, a
+    // marker at grid point w claims its border strip alone, and a field wholly
+    // past the edge publishes an empty box, which contains no point.
+    {
+        const int x_lo = std::max(bx - left_border_w, area.x);
+        const int x_hi = std::min(bx + box_w + field_close_w, area.x + clip_w);
+        out.box = GuiRect{x_lo, lane.y, std::max(x_hi - x_lo, 0), lane.h};
+    }
     out.text_origin_x = text_origin_x;
     out.byte_x        = std::move(byte_x);
 }

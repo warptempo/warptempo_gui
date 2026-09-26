@@ -1053,7 +1053,8 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // (samples_visible), a whole number of frames. A frame in the song's last
     // half-column still rounds to grid point w, one past the last column, so
     // at the wall it is off the edge: the playhead shows only its ruler
-    // head's left half there (the half-head rule, paint_ruler_row), and no
+    // head's left half there (the half-head rule, paint_ruler_row), a marker
+    // only its flag's left border (the flag iterator's cull, render.cpp), and no
     // position nudge or drop at the playhead authors a marker there
     // (source_frame_off_right_edge, warp_frame_map_view.h, which reads this
     // wall). The flush-right viewport is a true grid point — unlike the off-grid max_start it replaces, this keeps

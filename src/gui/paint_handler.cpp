@@ -5124,7 +5124,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // inside), and at the right wall at some zooms — and the head's left
     // half at the edge keeps that playhead on screen at its true point rather
     // than vanishing or being pulled inward. The marker-lane STEM stays gated
-    // to [0, wave_w): a column past the last has no pixel of its own.
+    // to [0, wave_w): a column past the last has no pixel of its own. A MARKER
+    // there shows the same edge its own way (architect 2026-09-26): its flag's
+    // left border alone on the last column(s), no stem — the flag iterator's
+    // cull and the lane's clip to the waveform's columns, render.cpp.
     {
         const double cursor_px = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp);
