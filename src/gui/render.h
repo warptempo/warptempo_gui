@@ -3645,10 +3645,16 @@ void render_flags(cairo_t* cr,
 //                   smallest box there is, whichever kind it belongs to.
 //                   NEVER CLAMPED ON-WINDOW, ON ANY KIND, AT EITHER EDGE
 //                   (architect 2026-09-06): the field opens at its own box's
-//                   seam wherever that seam is and the WINDOW cuts it off,
-//                   like every other box in this lane — so `box` may reach
-//                   past a window edge, which costs its consumers nothing (a
-//                   press is inside the window by construction). Every box
+//                   seam wherever that seam is and the WAVEFORM'S EDGE cuts it
+//                   off, like every other box in this lane: the logical field
+//                   (its seam, its width, `text_origin_x`, `byte_x`) is
+//                   unclipped and may reach past either edge, while `box`, the
+//                   published claim, is the painted box CLIPPED TO THE
+//                   WAVEFORM'S COLUMNS [x0, x0 + w) as its pixels are
+//                   (architect 2026-09-26, clip_to_waveform_columns) — a field
+//                   cut off at the last column claims its visible part, a
+//                   marker at grid point w its border strip alone, and a field
+//                   wholly past the edge an empty box. Every box
 //                   spans its 1px LEFT BORDER too (the flag's own for the
 //                   payload editor, the seam divider for the other two), so
 //                   its x is one column left of the fill and its w one wider

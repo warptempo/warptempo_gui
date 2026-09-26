@@ -6031,9 +6031,11 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     const double y0 = static_cast<double>(area.y);
     const double y1 = static_cast<double>(area.y + area.h);
     for (const MarkerStem& stem : app.marker_stems) {
-        // Column-gate exactly like render_playhead's line does, so a stem whose
-        // flag hangs into view from the left (the boxes run rightward) never
-        // leaks its column into the chrome beside the waveform.
+        // Column-gate exactly like render_playhead's line does. The producers
+        // already publish only columns in [0, w) (stem_column_on_waveform,
+        // render.cpp); this restates that gate against the area this painter
+        // is handed, so no entry can leak its column into the chrome beside
+        // the waveform.
         const double col = stem.x - static_cast<double>(area.x);
         if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
         const double x_px = static_cast<double>(area.x) + col + 0.5;

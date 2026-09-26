@@ -952,6 +952,18 @@ bool clip_hit_rect_to_waveform_columns(FlagHitRect& r, int x0, int w) {
     r.w = hi - lo;
     return true;
 }
+// THE STEM STASH IS GATED TO THE WAVEFORM'S COLUMNS [0, w), both edges: the
+// flag iterator admits a marker whose flag reaches into [0, w) from either
+// side — one left of column 0 whose right-running box hangs into view, one at
+// grid point w for its border alone — but only a marker whose own column is a
+// real waveform column publishes a stem. The stem painter and the playhead's
+// suppression decider (playhead_stem_suppressed) read only real columns, so an
+// off-surface entry can neither paint nor hide a coincident playhead's stem.
+// `col` is the marker's column relative to x0. The one spelling for both lane
+// producers (render_flag_boxes_impl, render_history_diff_flags).
+bool stem_column_on_waveform(int col, int w) {
+    return col >= 0 && col < w;
+}
 
 // Shared flag iteration used by render_flags and its phase-reset analogue.
 // Invokes `emit(i, left_x)` for EVERY visible marker IN STORE ORDER — which is
@@ -1015,8 +1027,9 @@ void iterate_visible_flags_impl(
     // column(s) — every caller clips its paint and its hit rect to [0, w), so
     // the fill, the text and the cells fall outside and nothing paints in the
     // leftover strip a non-multiple-of-16 window leaves beside w. Its STEM is
-    // not published (the callers gate the stem stash to [0, w): a column past
-    // the last has no pixel of its own), and source_frame_off_right_edge
+    // not published (the callers gate the stem stash to [0, w) at both edges,
+    // stem_column_on_waveform: a column past the last, or left of the first,
+    // has no pixel of its own), and source_frame_off_right_edge
     // (warp_frame_map_view.h) still refuses AUTHORING there — a border is not
     // the marker's column. A marker whose border would stand at or past w is
     // culled (at gui_scale 100, one border column, that is w + 1 and beyond;
@@ -1891,13 +1904,11 @@ void render_flag_boxes_impl(
                                                       waveform_width))
                     out_hit_rects->push_back(r);
             }
-            // THE STEM STASH IS GATED TO [0, w): a marker at grid point w is
-            // admitted for its border (the iterator's cull) but its column has
-            // no pixel of its own, so it publishes no stem — the stem painter
-            // and the playhead's suppression decider read only real columns.
-            const bool stem_on_columns =
-                bx - top_strip_area.x < waveform_width;
-            if (out_stems && face.has_stem && stem_on_columns) {
+            // The stem stash is gated to [0, w), both edges
+            // (stem_column_on_waveform).
+            if (out_stems && face.has_stem &&
+                stem_column_on_waveform(bx - top_strip_area.x,
+                                        waveform_width)) {
                 // THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN — bx, the
                 // marker's own frame column, unchanged by the border standing
                 // to its left (the architect's explicit clause, spelled at
@@ -2365,8 +2376,10 @@ void render_history_diff_flags(
                                                       waveform_width))
                     out_hit_rects->push_back(r);
             }
-            // The stem stash stays gated to [0, w), the live lane's rule.
-            if (out_stems && bx - top_strip_area.x < waveform_width) {
+            // The stem stash stays gated to [0, w), both edges, the live
+            // lane's rule (stem_column_on_waveform).
+            if (out_stems && stem_column_on_waveform(bx - top_strip_area.x,
+                                                     waveform_width)) {
                 // THE STEM READS THE CLASS AND THE FOCUS SWAP — the live
                 // lane's rule (architect 2026-09-23: the stem follows the
                 // selection bit as the fill does), and here the class is "does

@@ -5704,7 +5704,9 @@ struct AppState {
     // `flag_hit_rects` is in PAINT order (store order), so hit_test_flag walks
     // it BACKWARDS: last painted = topmost = what a click grabs. `marker_stems`
     // carries one entry per DRAWN stem, which on the two LIVE columns means one
-    // per ENABLED marker — a disabled marker has no stem ever, expressed as an
+    // per ENABLED marker whose column is a waveform column in [0, w) (the
+    // producers' gate, stem_column_on_waveform in render.cpp; a flag hanging
+    // into view from past either edge publishes no stem) — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
     // per diff flag, that lane's classes all stemming. Since the stems-inert
     // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its two
