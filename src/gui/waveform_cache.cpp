@@ -1191,8 +1191,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // The width the flag column mapping divides the displayed span by — the same
     // denominator the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays full-strip width; a
-    // non-multiple-of-16 window leaves the gutter columns unpainted.
+    // verticals below them. The surface stays full-strip width, so a flag
+    // anchored on grid point wave_w — the permanent right gutter's first
+    // column (waveform_area, main.cpp) — paints there and runs on toward the
+    // window's edge (the cull rule is at iterate_visible_flags_impl).
     //
     // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
     // resize-window basis split). The numerator here is the DISPLAYED span
@@ -1205,9 +1207,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // 1:1 at its own scale, never stretched, so an overlay that wants to sit on
     // its ink must use the width that ink was rendered at. Both bases are now
     // the one expression, and the fingerprint still catches every width change
-    // transitively: fp_vp_end = vp_start + nearbyint(spp·w) and the effective
-    // width moves in steps of 16 at spp >= 27.5 frames/px, so no width change
-    // can leave the displayed span untouched.
+    // transitively: fp_vp_end = vp_start + w·q (viewport_end_sample) and the
+    // effective width moves in steps of 16 at q >= 27.5 frames/px, so no width
+    // change can leave the displayed span untouched.
     //
     // The live-width fallback mirrors plate_viewport_basis's own cold arm: the
     // fp_rendered gate above makes it unreachable in practice (a plate that has

@@ -5112,11 +5112,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // The whole object is the RESTING CURSOR'S: the `h` view, the render
     // player and the audition reach it through this one block, and the scanner
     // keeps its bare waveform line (paint_scanner).
+    //
+    // IT PAINTS AT EVERY PAINTABLE GRID POINT, [0, wave_w] (architect
+    // 2026-09-26): grid point wave_w — where a frame in the song's last
+    // half-column rounds, End's landing among them at most zooms — lies in the
+    // permanent right gutter (waveform_area, main.cpp), which is sized to the
+    // head's widest half plus one, so the head there is drawn WHOLE inside the
+    // window, its stem beside it on the gutter's first column. The ruler and
+    // marker lanes are window-wide, so nothing clips it.
     {
         const double cursor_px = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp);
         const int col = static_cast<int>(std::nearbyint(cursor_px));
-        if (col >= 0 && col < wave_w) {
+        if (col >= 0 && col <= wave_w) {
             const double s   = gui_scale_factor();
             // THE ROW COUNT NEEDS NO FLOOR: 12 authored rows reach 6 at the
             // schema's own bottom (gui_scale 50), and only a factor below 1/24
@@ -5240,7 +5248,7 @@ GuiPaintHandler::plate_viewport_basis() const {
     b.spp = wf_cache.fp_area_w > 0
         ? static_cast<double>(wf_cache.fp_vp_end - wf_cache.fp_vp_start) /
           static_cast<double>(wf_cache.fp_area_w)
-        : current_samples_per_pixel(app, audio);
+        : painter_samples_per_pixel(app, audio, waveform_area(app));
     b.vp_start = static_cast<double>(wf_cache.fp_vp_start);
     return b;
 }
@@ -6010,9 +6018,13 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does, so a stem whose
         // flag hangs into view from the left (the boxes run rightward) never
-        // leaks its column into the chrome beside the waveform.
+        // leaks its column into the chrome beside the waveform. The gate
+        // admits GRID POINT w, the permanent right gutter's first column
+        // (architect 2026-09-26, waveform_area): the waveform has one more
+        // paintable grid point than columns, so a marker in the song's last
+        // half-column stands its stem there, beside its flag.
         const double col = stem.x - static_cast<double>(area.x);
-        if (col < 0.0 || col >= static_cast<double>(area.w)) continue;
+        if (col < 0.0 || col > static_cast<double>(area.w)) continue;
         const double x_px = static_cast<double>(area.x) + col + 0.5;
         const GuiColor c = (stem.marker_index == flash_idx) ? kMarkerStemRed
                                                             : stem.color;
@@ -8776,10 +8788,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
     // bounds this to the exposed rect, so the full-rect fill costs nothing off
-    // the damage. The rect is the EFFECTIVE-width waveform_area, so the <=15px
-    // inert right gutter at a non-multiple-of-16 window stays chrome — it is
-    // outside every grid-aligned surface and no waveform pixel ever paints there
-    // (no gutter exists at 1920/2560/3840).
+    // the damage. The rect is the EFFECTIVE-width waveform_area, so the
+    // permanent right gutter stays chrome: no plate, region or trim pixel
+    // paints there, only the verticals standing on grid point w — the
+    // playhead, the scanner and a marker stem in the song's last half-column
+    // (the rule at waveform_area, main.cpp).
     {
         const GuiRect canvas = waveform_area(app);
         // AND NOT UNDER THE ON-SCREEN KEYBOARD. The painted rect's one owner is
@@ -8888,10 +8901,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // a path's rectangles. The passes that own pixels in BOTH lanes
             // (the trim bar, the cursor's head and stem) keep their strip half
             // whole and lose only what the band covers.
+            // The waveform rectangle takes ONE MORE COLUMN than the area: grid
+            // point w, the permanent right gutter's first column
+            // (waveform_area, main.cpp), is where the playhead, the scanner
+            // and a marker stem in the song's last half-column paint.
             cairo_save(cr);
             cairo_rectangle(cr, top_strip.x, top_strip.y, top_strip.w,
                             top_strip.h);
-            cairo_rectangle(cr, wave_paint.x, wave_paint.y, wave_paint.w,
+            cairo_rectangle(cr, wave_paint.x, wave_paint.y, wave_paint.w + 1,
                             wave_paint.h);
             cairo_clip(cr);
         }

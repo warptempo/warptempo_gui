@@ -3141,8 +3141,9 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // clamp_viewport_start, so NO painter-quantized pre-rounding belongs here (see
     // the centering block below). A span too small for kMinZoom to fill (the
     // floor-saturated case) rests centered instead of left-aligned, and the
-    // unclamped case degenerates to the span's left edge (unrounded spp_t * W ==
-    // the margined span by the fit-level solve). Ends at apply_zoom_to_start.
+    // unclamped case degenerates to the span's left edge (unrounded spp_t * W
+    // covers the margined span by the fit-level solve, past it by under a
+    // sixteenth of a frame per column). Ends at apply_zoom_to_start.
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
@@ -3167,15 +3168,16 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
         fhi += m;
     }
 
-    // Fit level: effective_max_zoom_level's formula with the span in place of
-    // total, clamped into [kMinZoom, per-file effective ceiling]. A zoom-OUT
-    // ceiling and a zoom-IN floor, so framing a tiny span may go deep (down to
-    // kMinZoom) while a span wider than the song saturates at whole-song-visible.
+    // Fit level: effective_max_zoom_level's own solve (fit_zoom_level, main.cpp
+    // — the smallest level whose painted span W·q covers the span) with the
+    // span in place of total, clamped into [kMinZoom, per-file effective
+    // ceiling]. A zoom-OUT ceiling and a zoom-IN floor, so framing a tiny span
+    // may go deep (down to kMinZoom) while a span wider than the song
+    // saturates at whole-song-visible — and the whole song's span solves to
+    // the ceiling itself.
     double span = fhi - flo;
     if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
-    const double raw_level = 1.0 + std::log2(
-        span * 1000.0 /
-        (kZoomBaseMsPerPx * static_cast<double>(sr) * static_cast<double>(W)));
+    const double raw_level = fit_zoom_level(span, W, sr);
     const double ceiling = effective_max_zoom_level(W, total, sr);
     const double target_level = std::clamp(raw_level, kMinZoom, ceiling);
 
@@ -3184,13 +3186,14 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
     // by clamp_viewport_start (the chokepoint), so no painter-quantized
     // pre-rounding belongs here. Only the FINAL start is nearbyint'd. This keeps
     // the promised single behavior change (the floor-saturated centering): in the
-    // ordinary UNCLAMPED fit spp_t * W equals the margined span in exact reals, so
-    // mid - span/2 == flo and the start degenerates to nearbyint(flo) identically
-    // (pre-rounding the width could shift it a frame, which clamp_viewport_start
-    // then amplifies to a whole grid step). The residual is ULP-level exp2/log2
-    // round-trip noise, material only within an ULP of a .5 rounding boundary. The
-    // ceiling-saturated whole-song case (mid = total/2, spp_t * W ~= total ->
-    // start ~= 0) is then wall-clamped to 0 by clamp_viewport_start as before.
+    // ordinary UNCLAMPED fit spp_t * W is the margined span rounded UP to the
+    // sixteenth-frame grid (under W/16 frames over, fit_zoom_level), so
+    // mid - visible_t/2 sits under W/32 frames left of flo — a column or two at
+    // the deepest zoom and nothing at a coarse one, inside the edge margin
+    // either way — and the start is nearbyint(flo) less that residue. The
+    // ceiling-saturated whole-song case (mid = total/2, spp_t * W >= total ->
+    // start <= 0) is then clamped to 0 by clamp_viewport_start's visible >=
+    // total branch as before.
     const double mid       = 0.5 * (flo + fhi);
     const double visible_t = samples_per_pixel_at(target_level, sr) *
                              static_cast<double>(W);

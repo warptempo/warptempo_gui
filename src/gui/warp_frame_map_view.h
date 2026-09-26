@@ -273,26 +273,43 @@ int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio
 // again.)
 
 // The stem painters' samples-per-pixel and the single source of truth for the
-// on-screen column grid: the visible span nearbyint-quantized to whole samples
-// (matching the vp_end the waveform cache carries, vp_start +
-// nearbyint(spp * area.w)) divided back over the strip width. The viewport
-// snap in clamp_viewport_start (main.cpp) and the plate's dispatch take their
-// `q` from here, and the pixel-anchoring pair below and the click placement
-// (architect 2026-09-24) take the item basis's spp, which is this same
-// quantization of the span the flags were built against, so the viewport grid and the marker grid are one
-// grid at any window width (not just multiples of 8). Returns 0.0 on
-// degenerate geometry (no strip width / no zoom).
+// on-screen column grid: the live level's spp on the sixteenth-frame grid
+// (painter_quantized_spp below), so the visible span w·q is a whole number of
+// frames and matches the vp_end the waveform cache carries
+// (viewport_end_sample). The viewport snap in clamp_viewport_start (main.cpp)
+// and the plate's dispatch take their `q` from here, and the pixel-anchoring
+// pair below and the click placement (architect 2026-09-24) take the item
+// basis's spp, which is this same q recovered from the span the flags were
+// built against, so the viewport grid and the marker grid are one grid — and,
+// the quantization being width-free, one grid at every window width. Returns
+// 0.0 on degenerate geometry (no strip width / no zoom).
 struct GuiRect;
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area);
 
 // THE QUANTIZATION ITSELF, for a samples-per-pixel the caller already holds:
-// nearbyint(spp * w) / w, 0.0 on degenerate geometry. painter_samples_per_pixel
-// is this at the LIVE level.
-inline double painter_quantized_spp(double spp, int w) {
-    if (w <= 0 || !(spp > 0.0)) return 0.0;
-    return std::nearbyint(spp * static_cast<double>(w)) /
-           static_cast<double>(w);
+// THE SIXTEENTH-FRAME GRID (architect 2026-09-26), q = nearbyint(spp * 16) / 16,
+// 0.0 on a non-positive spp. painter_samples_per_pixel is this at the LIVE
+// level. IT IS WIDTH-FREE, so at every zoom level, whole or fractional (every
+// rest a Ctrl-drag, pinch or pen zoom leaves), every device and window size
+// share one grid: the same click, drop, nudge and flag drag land on the same
+// frame on the laptop, the tablet and any hand resize.
+//
+// WHY 16 — the waveform width rule's own reason (waveform_area, main.cpp):
+// 16 = 1600 / gcd(44100, 1600), the strictest step among the standard rates,
+// so every standard rate's whole-level spp (kZoomBaseMsPerPx·2^(L−1)·sr/1000,
+// i.e. sr/1600·2^(L−1)) is EXACT in sixteenths — at a WHOLE level, the working
+// zoom included, q is the logical spp itself — and every waveform width is a
+// multiple of 16, so w·q is a WHOLE number of frames at every level: the right
+// wall, the viewport grid and the visible span stay integral. A rate whose
+// step is not a sixteenth rounds it to the nearest sixteenth, invisibly
+// (a 1/32-frame residue per column) and still width-free. Idempotent: a q
+// passed back in returns itself.
+inline constexpr double kPainterGridSubdivisions = 16.0;
+inline double painter_quantized_spp(double spp) {
+    if (!(spp > 0.0)) return 0.0;
+    return std::nearbyint(spp * kPainterGridSubdivisions) /
+           kPainterGridSubdivisions;
 }
 
 // THE VIEWPORT GRID'S k-TH POINT at painter step q: nearbyint(k * q) — the
@@ -303,13 +320,17 @@ inline int64_t viewport_grid_point(int64_t k, double q) {
 }
 
 // Viewport-END sample for a strip `w` px wide at samples-per-pixel `spp`:
-// vp_start + nearbyint(spp * w), the painter-quantized right anchor the plate,
-// the flag/trim hit tests, and the trim column math all derive their upper
-// bound from. One owner so every viewport-END derivation rounds the span
-// identically (the twin of painter_samples_per_pixel's forward direction).
+// vp_start + w·q, q the painter quantization of `spp` (painter_quantized_spp,
+// so a caller may pass the logical spp or q itself), the painter-quantized
+// right anchor the plate, the flag/trim hit tests, and the trim column math
+// all derive their upper bound from. w·q is a whole number of frames at every
+// multiple-of-16 width (the reason is at painter_quantized_spp); the
+// nearbyint only restates it as an integer. One owner so every viewport-END
+// derivation rounds the span identically, and so (vp_end − vp_start) / w
+// recovers q exactly — the item and plate bases' spp.
 inline int64_t viewport_end_sample(int64_t vp_start, double spp, int w) {
-    return vp_start +
-        static_cast<int64_t>(std::nearbyint(spp * static_cast<double>(w)));
+    return vp_start + static_cast<int64_t>(std::nearbyint(
+        painter_quantized_spp(spp) * static_cast<double>(w)));
 }
 
 // THE ONE COLUMN->FRAME LANDING for a grid-snapped viewport: the exact
@@ -443,9 +464,9 @@ inline int strip_anchor_stem_column(double displayed, double vp_start,
 // caller's basis, computed with the painters' own math (the marker-stem
 // overlay paint_marker_stems): nearbyint the frame; in the TargetLive domain
 // forward-map it through `warp_frame_map` and nearbyint the map output; then
-// divide by the basis's samples-per-pixel (`spp` — the visible span
-// nearbyint-quantized to whole samples over the strip width, the painters'
-// own) from its viewport start (`vp_start`) and round with the painters'
+// divide by the basis's samples-per-pixel (`spp` — the painted span over the
+// strip width, which is the sixteenth-frame q exactly, the painters' own)
+// from its viewport start (`vp_start`) and round with the painters'
 // std::nearbyint through displayed_column_at. `warp_frame_map` is the map the
 // item is painted through — the DISPLAYED map at every caller. Ignored in the
 // Source domain; an empty map in a mapped domain falls back to identity,

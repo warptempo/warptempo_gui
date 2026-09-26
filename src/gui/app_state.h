@@ -11552,6 +11552,10 @@ bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
 double  effective_max_zoom_level(int waveform_width_px,
                                  int64_t total_frames,
                                  int sample_rate);
+// The smallest level whose painted span (width·q, the sixteenth-frame grid)
+// covers `span_frames`, unclamped — the ceiling's solve and the span framer's
+// (the rule at its definition, main.cpp).
+double  fit_zoom_level(double span_frames, int width_px, int sample_rate);
 // Clamp a requested zoom level into the per-file window [kMinZoom, effective
 // per-file ceiling]. The single owner of the level-bounds pair, shared by the
 // clamp_viewport_start chokepoint and the appliers' pre-clamps. A no-op
@@ -17266,7 +17270,7 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y);
 // live trim pass last DREW — trim_bridge_gap (render.h, the one owner the
 // painter's midpoint mark also fits against) over the painted bound columns,
 // clipped by the painter to its own effective width, so the grabbable bridge
-// is the drawn one and the inert non-multiple-of-16 right gutter neither
+// is the drawn one and the permanent right gutter neither
 // paints the bar nor answers true here. Nothing is re-derived on the store's
 // pair.
 //

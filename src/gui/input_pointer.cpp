@@ -938,11 +938,11 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 // ctrl+drag = the zoom.
 //
 // The waveform BAND spans the FULL WINDOW WIDTH (top.w), not the effective
-// width: the <=15 px inert right gutter counts as waveform by the user's
-// lights, so a press there arms the pan and its click act deselects while
-// seating nothing (the gutter is 0 px at 1920/2560/3840, so it only matters
-// off-deployment). The TRIM BAR, the lanes and the flexible GAP band are
-// outside it.
+// width: the permanent right gutter (waveform_area — 16 px on the laptop's
+// 1920 at 100 %, 32 px on the tablet's 2304 at 225 %) counts as waveform by
+// the user's lights, so a press there arms the pan and its click act
+// deselects while seating nothing — no column of the gutter lands a frame.
+// The TRIM BAR, the lanes and the flexible GAP band are outside it.
 //
 // FIVE READERS, re-derived by grep 2026-09-25: the press router's SHIFT sweep
 // claim, its CTRL zoom claim, the pointer cursor map's Pan/Zoom zone, the `h`
@@ -2355,18 +2355,16 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
 // tail sees everything.
 // THE TWO CLAMPS COMPOSE, and the cost is bounded and correct: the platform
 // pins into the WINDOW and this pins into the WAVEFORM, whose rect starts at
-// x 0 and is the window width floored to a multiple of 16 — so the only span
-// where they disagree is the inert right gutter, at most 15 px, and a pointer
-// parked out there honestly has no waveform column of its own. The column
-// therefore holds at the last one until the pointer comes back onto the
-// waveform, which is what a projection of a real position means.
+// x 0 and stops short of the permanent right gutter (waveform_area) — so the
+// only span where they disagree is that gutter, and a pointer parked out
+// there honestly has no waveform column of its own. The column therefore
+// holds at the last one until the pointer comes back onto the waveform, which
+// is what a projection of a real position means.
 // SO THE STEM AND THE CURSOR RESTORE CAN DIFFER BY THAT GUTTER — the stem
 // clamps into the WAVEFORM and the restore into the WINDOW — and NOTHING
 // PROMISES THEY AGREE: the stem is simply where the cursor was, not a
 // prediction of where it will go, so this is a difference and not an
-// inconsistency. It is ZERO PIXELS at any window width that is a multiple of
-// 16, which is every width either host runs (1920 and 1024, and 2560/3840
-// besides), so it is reachable only under a hand resize to an odd width. It is
+// inconsistency. It is
 // NOT to be engineered around, and in particular the restore path takes no
 // waveform clamp: the gutter is a real place on the window even though it is
 // not a place on the waveform, and a pan-only release must be able to put the
@@ -2429,7 +2427,7 @@ void GuiInputHandler::tell_capture_wrap_span() const {
 // consumer.
 double GuiInputHandler::nav_stem_column_x() const {
     const GuiRect wf_area = waveform_area(app);
-    const double  spp     = current_samples_per_pixel(app, audio);
+    const double  spp     = painter_samples_per_pixel(app, audio, wf_area);
     const double  col =
         spp > 0.0 ? (app.scroll_drag.anchor_sample -
                      static_cast<double>(app.viewport_start_sample)) / spp
@@ -2470,7 +2468,8 @@ void GuiInputHandler::sync_nav_drag_mode(GuiInputState mods) {
         // cannot disagree.
         sd.anchor_sample = static_cast<double>(app.viewport_start_sample) +
                            nav_notional_col() *
-                               current_samples_per_pixel(app, audio);
+                               painter_samples_per_pixel(
+                                   app, audio, waveform_area(app));
         // The restore X is NOT stamped here: the stem override exists to land
         // the released cursor on a stem the edge-rebind has pinned, and the
         // zoom phase's own applies set it. Until one runs, the notional
@@ -2648,7 +2647,7 @@ double GuiInputHandler::nav_drag_zoom_level(double dx) const {
 double GuiInputHandler::rebind_zoom_pivot_into_waveform(
         double& anchor_sample) const {
     const GuiRect wf_area = waveform_area(app);
-    const double  spp     = current_samples_per_pixel(app, audio);
+    const double  spp     = painter_samples_per_pixel(app, audio, wf_area);
     const double  vp      = static_cast<double>(app.viewport_start_sample);
     double anchor_col = (anchor_sample - vp) / spp;
     const double clamped_col = clamp_col_into_waveform(wf_area, anchor_col);
@@ -2778,7 +2777,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     const int64_t total   = live_total_frames(app, audio);
     if (W <= 0.0 || total <= 0) return;
 
-    const double spp_old = current_samples_per_pixel(app, audio);
+    const double spp_old = painter_samples_per_pixel(app, audio, wf_area);
     const double vp      = static_cast<double>(app.viewport_start_sample);
 
     // THE SEAT — TAKEN THE MOMENT THE PINCH REGISTERS, NOT WHEN THE FINGER GAP
@@ -5542,15 +5541,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
     // The waveform BAND spans the full window width (top.w), not the effective
-    // width (area.w): the <=15 px inert right gutter counts as a waveform click
-    // by the user's lights, so a plain press there still reaches the waveform
-    // branch and arms the pending click like any other — a gutter PAN works
-    // from any column, and the motionless release's act degenerates per half:
-    // the upper half's placement clears the selection and seats nothing (no
-    // column exists), and the lower half's scrub returns silently (no launch
-    // position exists, and a scrub act touches no selection anyway). The
-    // gutter is 0 px at the deployment widths
-    // (1920/2560/3840 are multiples of 16), so this only matters off-deployment.
+    // width (area.w): the permanent right gutter (waveform_area) counts as a
+    // waveform click by the user's lights, so a plain press there still
+    // reaches the waveform branch and arms the pending click like any other —
+    // a gutter PAN works from any column, and the motionless release's act
+    // degenerates per half: the upper half's placement clears the selection
+    // and seats nothing (no column exists), and the lower half's scrub returns
+    // silently (no launch position exists, and a scrub act touches no
+    // selection anyway). The gutter paints grid point w's verticals but lands
+    // no frame.
     const bool inside_waveform =
         x >= area.x && x < top.x + top.w &&
         y >= area.y && y < area.y + area.h;
@@ -6497,7 +6496,8 @@ void GuiInputHandler::arm_nav_zoom_press(int x, int y) {
     // press, so that position is the press point.
     app.scroll_drag.anchor_sample =
         static_cast<double>(app.viewport_start_sample) +
-        nav_notional_col() * current_samples_per_pixel(app, audio);
+        nav_notional_col() *
+            painter_samples_per_pixel(app, audio, waveform_area(app));
     viewport.invalidate_waveform_area();
 }
 
@@ -9994,7 +9994,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             apply_nav_zoom_at(mouse_x, mouse_y, /*final_event=*/false);
             return;
         }
-        const double spp = current_samples_per_pixel(app, audio);
+        const double spp =
+            painter_samples_per_pixel(app, audio, waveform_area(app));
         const int    dx  = mouse_x - sd.last_x;
         sd.last_x = mouse_x;
         const int64_t delta =

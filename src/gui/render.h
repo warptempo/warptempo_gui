@@ -2695,7 +2695,7 @@ struct FlagHitRect {
 // added to it — the waveform area rect is unchanged, so no lane or column
 // arithmetic moves, and the CONTENT band shrinks by those rows at each end
 // (waveform_content_rect below). Top and bottom only; the area's sides are the
-// window edges (and the inert right gutter), which need no rule.
+// window edges (and the permanent right gutter), which need no rule.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 
@@ -2994,8 +2994,11 @@ void render_waveform(cairo_surface_t* dest,
 // Draws a thin 1px vertical LINE across `area` at column `playhead_pixel_x`
 // (offset from area.x, float for subpixel centering), in one solid `color` end
 // to end, painted straight over whatever it crosses — waveform ink included.
-// No-op if outside; the line is column-gated only, so it never leaks into an
-// adjacent region.
+// No-op outside the paintable grid points [0, area.w] — grid point area.w,
+// one past the last column, lies in the permanent right gutter
+// (waveform_area, main.cpp) and paints there, so the caller's cairo target
+// must not clip to `area` alone; the line is column-gated only, so it never
+// leaks into an adjacent region.
 //
 // THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
 // `draw_triangle` flag and a `triangle_lane` rect for an inverted-triangle
@@ -3066,24 +3069,28 @@ void render_strip_anchor_stem(cairo_t* cr,
 // and the trim painter later joined the same basis when it went live.)
 //
 // The x_raw denominator is the PAINTERS' quantized-span form
-// (vp_end - vp_start)/wave_w, NOT current_samples_per_pixel. The two are
-// identical at integer zoom rungs on multiple-of-16 widths and differ by
-// <~0.02 px at a fractional zoom rest; adopting it at the hit sites too (they
+// (vp_end - vp_start)/wave_w — the sixteenth-frame q exactly
+// (viewport_end_sample) — NOT current_samples_per_pixel. The two are
+// identical at whole zoom levels and differ by under a thirty-second of a
+// frame per column at a fractional zoom rest; adopting it at the hit sites too (they
 // formerly divided by spp) was the one deliberate byte change of the collapse
 // and ALIGNED paint and hit exactly — the point of unifying them, and what the
 // published stash now carries for free.
 //
 // EOF-WALL CLAMP (the one copy, formerly installed at three sites at once):
-// `col` clamps col_raw into the visible column range [0, wave_w-1]. The
-// inclusive END wall T-1 at full zoom-out rounds to column wave_w (one past the
-// surface); left unclamped, the right-edge-anchored end CAP loses its
-// bound-edge pixel to the lane clip. Clamping lands the wall on the last
-// visible column so the cap stays fully visible on the bar's end.
+// `col` clamps col_raw into the waveform's column range [0, wave_w-1]. The
+// inclusive END wall T-1 at full zoom-out rounds to column wave_w — grid point
+// w, in the permanent right gutter, where the playhead and a marker stem at
+// that frame paint, but where the TRIM LANE does not: the bar is a span and
+// stays clipped to the waveform's width like the region. Left unclamped, the
+// right-edge-anchored end CAP would lose its bound-edge pixel to that clip.
+// Clamping lands the wall on the last waveform column so the cap stays fully
+// visible and joined to the bar's end.
 // Begin/frame-0 already maps to column 0, unaffected.
 // The bridge interval (trim_bridge_gap) reads an OFFSCREEN bound's SIDE (below)
 // to pick a side-specific flush sentinel past the visible edge, and the painter
 // clips its DRAWN extent to the effective width [0, wave_w) so the bar's runs
-// stop flush at the edge (the inert gutter never paints; col_raw is the
+// stop flush at the edge (the bar never paints in the gutter; col_raw is the
 // sentinel input, not the drawn position).
 // Which side of the viewport an OFFSCREEN bound lies on — meaningful only when
 // !in_viewport. Derived from the SAME unrounded ms compare that sets in_viewport,
@@ -3139,7 +3146,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // offscreen-flush and empty semantics past the visible edge; it is NOT a drawn
 // interval. The painter clamps it to the visible range ONCE: it intersects it
 // with the effective width [0, wave_w) before asking whether the midpoint tile
-// fits, and publishes that same clipped interval as the bridge's hit span. So the inert non-multiple-of-16 gutter [wave_w, strip_w) neither
+// fits, and publishes that same clipped interval as the bridge's hit span. So the permanent right gutter [wave_w, strip_w) neither
 // paints nor hits. The sentinels earn their strictness here: an offscreen edge
 // lands STRICTLY past the visible range (never at col 0 or col wave_w-1), so a
 // window running off the view yields a flush interior rather than a spurious
@@ -3279,8 +3286,8 @@ struct TrimBarHit {
 // hit take the band as one value and cannot drift; nothing in here re-derives
 // the lane's y from the row heights above it. `trim_bar` gives the
 // lane's x/y/h; `waveform_area` is read for its `.w` ALONE — both the
-// column-mapping denominator and the lane's effective width, so the inert
-// non-multiple-of-16 gutter is outside the clip and never paints.
+// column-mapping denominator and the lane's effective width, so the
+// permanent right gutter is outside the clip and the bar never paints there.
 // `top_strip_area` is now a validity guard only: nothing in this lane measures
 // from the strip's own bottom any more.
 //

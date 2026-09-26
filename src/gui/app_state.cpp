@@ -203,10 +203,10 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH, the endcap test's twin (AppState::trim_bar_hit):
     // the interval is the bar's stretch between the two caps' inner edges as
     // render_trim_flags last DREW it — trim_bridge_gap over the painted
-    // columns, already clipped to the lane's painted width, so the inert
-    // non-multiple-of-16 right gutter answers false exactly as it paints no
-    // bar. Nothing here reads app.trim. Cold answers false — which is also
-    // the no-audio answer, the trim pass painting only over loaded audio.
+    // columns, already clipped to the lane's painted width, so the permanent
+    // right gutter answers false exactly as it paints no bar. Nothing here
+    // reads app.trim. Cold answers false — which is also the no-audio answer,
+    // the trim pass painting only over loaded audio.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return false;
     // The TRIM BAR LANE ONLY — the band the bar and its endcaps were painted

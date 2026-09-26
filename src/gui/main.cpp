@@ -595,21 +595,32 @@ GuiRect waveform_area(const AppState& a) {
     // marker lane with no second expression of the vertical rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
-    // Effective waveform width: the largest multiple of the grid step not
-    // exceeding the window width, leaving a <=15 px inert right gutter. The
-    // step is 16 = 1600/gcd(44100,1600), the strictest step among standard
-    // sample rates (every standard rate's step divides 16), so at a
-    // multiple-of-16 width logical_spp·W is integral at every INTEGER zoom
-    // rung and painter samples-per-pixel equals the logical spp exactly there
-    // — the grid the pixel-anchored commits and the migration tool both
-    // target. A fractional rung (the continuous strip-drag zoom) has no such
-    // integral guarantee; painter_samples_per_pixel rides its own
-    // nearbyint(spp·W)/W quantization instead, so the authoring-grid
-    // bit-exactness claim above is scoped to the integer rungs, notably the
-    // working zoom. A gutter appears only at a non-multiple-of-16 width
-    // (never at 1920/2560/3840).
+    // Effective waveform width: THE PERMANENT RIGHT GUTTER (architect
+    // 2026-09-26) — the largest multiple of the grid step not exceeding the
+    // window width LESS the gutter's minimum, at every resolution. The
+    // minimum is the playhead head's widest half-width at the device scale
+    // plus one (playhead_head_half_px(0, gui_scale_factor()) + 1: 10 px at
+    // 100 %, 21 at 225 %), so the waveform has ONE MORE PAINTABLE GRID POINT
+    // THAN IT HAS COLUMNS: grid point w — where the song's last half-column
+    // rounds — paints in the gutter, the ruler head drawn whole there, the
+    // stems, the scanner and a flag anchored on it beside it (flags may run
+    // off the window). The gutter is otherwise inert: no press in it lands a
+    // frame. Measured: 1920 @ 100 % -> 1904 (a 16 px gutter), the tablet's
+    // 2304 @ 225 % -> 2272 (32 px), 1366 @ 100 % -> 1344 (22 px).
+    //
+    // The step is 16 = 1600/gcd(44100,1600), the strictest step among
+    // standard sample rates (every standard rate's step divides 16): every
+    // standard rate's samples-per-pixel at a WHOLE zoom level is exact in
+    // sixteenths of a frame, and the painter grid is quantized to sixteenths
+    // (painter_quantized_spp, warp_frame_map_view.h), so at a multiple-of-16
+    // width W·q is a WHOLE number of frames at every level, whole or
+    // fractional — the right wall, the viewport grid and the visible span
+    // stay integral — and at whole levels q is the logical spp exactly.
     constexpr int kGridStepPx = 16;
-    const int effective_w = w - (w % kGridStepPx);
+    const int min_gutter = playhead_head_half_px(0, gui_scale_factor()) + 1;
+    const int avail_w    = w - min_gutter;
+    const int effective_w =
+        avail_w > 0 ? avail_w - (avail_w % kGridStepPx) : 0;
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, and it is a SILENT-WRONG guard
     // in the ruled sense: no stderr, no refusal, no clamp of anybody's settings.
     //
@@ -930,26 +941,49 @@ double samples_per_pixel_at(double zoom_level, int sample_rate) {
            static_cast<double>(sample_rate) / 1000.0;
 }
 
-// The per-file effective zoom-out ceiling: the continuous level at which
-// samples_visible == total_frames, clamped into [kMinZoom, kMaxZoom].
-// samples_visible(L) = kZoomBaseMsPerPx * 2^(L-1) * sr/1000 * width == total
-// solves to fit_level = 1 + log2(total * 1000 / (kZoomBaseMsPerPx * sr *
-// width)); full zoom-out
-// rests here (whole-song-visible, Ableton behavior). A degenerate tiny file
-// (fit_level < kMinZoom) collapses the range to the floor — clamp_viewport_start's
-// visible >= total branch owns that start = 0 display. Because kMaxZoom is
-// derived from audio_io's structural source caps (see settings_file.h), fit_level
-// is below kMaxZoom for every loadable file, so the clamp's upper edge is never
-// the binding one in practice.
+// THE FIT LEVEL for a span of `span_frames` on a strip `width_px` wide: the
+// SMALLEST level whose PAINTED span covers it, width·q >= span_frames, q the
+// sixteenth-frame grid step (painter_quantized_spp, warp_frame_map_view.h).
+// The exact solve of spp·width == span (1 + log2(span·1000 / (kZoomBaseMsPerPx
+// · sr · width))) would leave q to round to the NEAREST sixteenth, and half
+// the time below spp — a painted span up to width/32 frames SHORT of the
+// span, so a whole song would no longer fit its whole-song level. The solve
+// therefore takes the step ROUNDED UP to a whole sixteenth, n = ceil(16 ·
+// span / width), and returns the level whose spp is exactly n/16: its q is
+// n/16 (the level's spp lands within ULPs of it, far inside nearbyint's half
+// sixteenth), and width·n/16 >= span. The overshoot is under one sixteenth of
+// a frame per column — under width/16 frames of silence past the span's end,
+// which is under one column once a column holds more than width/16 frames
+// (any span longer than about five seconds at 1904 px). UNCLAMPED: the callers own
+// their bounds. Two readers: effective_max_zoom_level below and the span
+// framer (frame_span_into_view, input_handler.cpp).
+double fit_zoom_level(double span_frames, int width_px, int sample_rate) {
+    const double sixteenths = std::ceil(
+        span_frames * kPainterGridSubdivisions / static_cast<double>(width_px));
+    return 1.0 + std::log2(
+        sixteenths / kPainterGridSubdivisions * 1000.0 /
+        (kZoomBaseMsPerPx * static_cast<double>(sample_rate)));
+}
+
+// The per-file effective zoom-out ceiling: the fit level of the whole song
+// (fit_zoom_level above — the smallest level whose painted span width·q
+// covers total_frames), clamped into [kMinZoom, kMaxZoom]; full zoom-out
+// rests here (whole-song-visible, Ableton behavior), where samples_visible >=
+// total_frames and clamp_viewport_start parks the start at 0. It moves with
+// the waveform's width (the whole-song state follows it, ViewState::
+// whole_song_visible). A degenerate tiny file (fit_level < kMinZoom) collapses
+// the range to the floor — clamp_viewport_start's visible >= total branch owns
+// that start = 0 display. Because kMaxZoom is derived from audio_io's
+// structural source caps (see settings_file.h), fit_level is below kMaxZoom
+// for every loadable file, so the clamp's upper edge is never the binding one
+// in practice.
 double effective_max_zoom_level(int waveform_width_px,
                                 int64_t total_frames,
                                 int sample_rate) {
     if (waveform_width_px <= 0 || total_frames <= 0 || sample_rate <= 0)
         return kMinZoom;  // degenerate: collapse to the floor
-    const double fit = 1.0 + std::log2(
-        static_cast<double>(total_frames) * 1000.0 /
-        (kZoomBaseMsPerPx * static_cast<double>(sample_rate) *
-         static_cast<double>(waveform_width_px)));
+    const double fit = fit_zoom_level(static_cast<double>(total_frames),
+                                      waveform_width_px, sample_rate);
     return std::clamp(fit, kMinZoom, kMaxZoom);
 }
 
@@ -979,8 +1013,13 @@ int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     // spp no longer needs the total, but dropping the evaluation would move the
     // cache-rebuild/diagnostic timing — deliberately kept identical.
     (void)live_total_frames(a, audio);
+    // THE PAINTED SPAN, w·q on the sixteenth-frame grid — a whole number of
+    // frames at every level (painter_quantized_spp) — so the keep-visible
+    // tests, the centring, the right wall and the whole-song test all measure
+    // the span the waveform actually shows.
     const double spp = samples_per_pixel_at(a.zoom_level, audio.sample_rate());
-    return static_cast<int64_t>(std::nearbyint(spp * area.w));
+    return static_cast<int64_t>(std::nearbyint(
+        painter_quantized_spp(spp) * static_cast<double>(area.w)));
 }
 
 double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
@@ -1010,8 +1049,12 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // >= max_start (= total - visible). Grid points viewport_grid_point(k, q) are
     // strictly increasing at numeric zoom (q >> 1), so starting at
     // floor(max_start/q) and stepping up finds it in O(1). Resting here shows
-    // <1 px of inert padding past EOF (subsumed in the last column; get_peak_range
-    // clamps past-EOF reads to silence), so the flush-right viewport is a true
+    // under one column of inert padding past EOF (get_peak_range clamps
+    // past-EOF reads to silence), and a frame in the song's last half-column
+    // rounds to grid point w, which paints in the permanent right gutter
+    // (waveform_area) — so the end playhead and an end marker stay on screen
+    // at the wall. `visible` is the painted span w·q (samples_visible), a
+    // whole number of frames. The flush-right viewport is a true
     // grid point — unlike the off-grid max_start it replaces, this keeps
     // exact-grid marker commits and pixel anchoring simultaneously valid at
     // maximum scroll.
@@ -1172,11 +1215,14 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). The half-width is playhead_half_px()'s
 // to own — render.h states its authored value, its provenance, and the recorded
-// mismatch against the wider head.
+// mismatch against the wider head. The rect reaches ONE COLUMN PAST THE
+// WAVEFORM: grid point area.w, the permanent right gutter's first column
+// (waveform_area), is a paintable playhead column, so its line owes damage
+// there like any other.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - playhead_half_px());
-    const int x1 = std::min(area.x + area.w, col + playhead_half_px() + 1);
+    const int x1 = std::min(area.x + area.w + 1, col + playhead_half_px() + 1);
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's stem inside the waveform AND

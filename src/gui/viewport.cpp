@@ -471,8 +471,9 @@ void Viewport::move_playhead_by_arrow_step(HorizontalArrowStep step) {
     // means the same sample whatever pan or zoom preceded it (finer adjustment
     // is a deeper zoom's job). The spp is the PAINTER-quantized q rather than
     // the logical one for the same reason the click placement's item basis
-    // carries that quantization: it is the grid actually drawn (under the multiple-of-16 width contract the two
-    // agree, but the painted grid is the principled input).
+    // carries that quantization: it is the grid actually drawn (at a whole
+    // level the two agree exactly; at a fractional rest q is the logical spp
+    // rounded to the sixteenth-frame grid, painter_quantized_spp).
     // The recovery nearbyint is the column direction and is this walk's own; the
     // landing is the shared owner's. move_playhead_to still owns the walls, and
     // a playhead parked off-lattice re-snaps onto it at its first step. THE
@@ -564,13 +565,17 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     app.zoom_level = new_zoom_level;
 
     // Place the song anchor at anchor_x: pick the viewport start that paints
-    // anchor_sample at that column, at the new level. current_samples_per_pixel
-    // reads the level just assigned, so this is spp(new_level); for a pure pan
+    // anchor_sample at that column, at the new level — on the PAINTED grid, the
+    // step the columns are drawn at (painter_samples_per_pixel, the
+    // sixteenth-frame q), which every caller's anchor was also seated and
+    // rebound on, so the pivot stays under its own column rather than
+    // drifting by the q-vs-spp residue across the width. It reads the level
+    // just assigned, so this is q(new_level); for a pure pan
     // (level unchanged) it reproduces the caller's post-pan viewport exactly,
     // recovered by nearbyint. At the effective ceiling the anchor cannot pin a
     // column (the whole song is visible); clamp_viewport_start's visible >= total
     // branch parks the start at 0 and the drag is inert.
-    const double spp = current_samples_per_pixel(app, audio);
+    const double spp = painter_samples_per_pixel(app, audio, waveform_area(app));
     app.viewport_start_sample = static_cast<int64_t>(std::nearbyint(
         anchor_sample - anchor_x * spp));
     clamp_viewport_start(app, audio);

@@ -467,15 +467,11 @@ void render_playhead(cairo_t* cr,
                      double  playhead_pixel_x,
                      GuiColor color) {
     if (area.w <= 0 || area.h <= 0) return;
-    // Allow partial render at file start / end: a playhead whose column has
-    // clipped just past the area edge still gets here, and the column gate
-    // below decides whether any pixel lands. This keeps the playhead's visual
-    // center aligned with its true frame position rather than snapping it
-    // inward at the rightmost samples. The bound is the column's own reach
-    // (playhead_half_px), unchanged by the triangle's retirement — the cull is
-    // stated in the same half-width the invalidation uses.
+    // A coarse cull in the column's own reach (playhead_half_px, the
+    // half-width the narrow invalidation uses); the column gate below decides
+    // whether any pixel lands.
     if (playhead_pixel_x < -static_cast<double>(playhead_half_px())) return;
-    if (playhead_pixel_x > static_cast<double>(area.w - 1 + playhead_half_px())) return;
+    if (playhead_pixel_x > static_cast<double>(area.w + playhead_half_px())) return;
 
     // THE COLUMN IS THE NEAREST LATTICE POINT WHILE THE PLATE'S BAR IN IT IS A
     // CELL, AND THE HALF-COLUMN BIAS THAT LEAVES IS ACCEPTED (architect
@@ -497,12 +493,17 @@ void render_playhead(cairo_t* cr,
     const double x_px = area.x + col + 0.5;
 
     cairo_save(cr);
-    // The 1px vertical line paints whenever its column is onscreen (it is
-    // column-gated only, so it never leaks into an adjacent region).
+    // The 1px vertical line paints whenever its column is a paintable grid
+    // point: [0, w], GRID POINT w INCLUDED (architect 2026-09-26) — it lies in
+    // the permanent right gutter (waveform_area, main.cpp), which exists so a
+    // frame in the song's last half-column, rounding one past the last
+    // column, still paints at its true point rather than vanishing or being
+    // pulled inward. Column-gated otherwise, so it never leaks into an
+    // adjacent region.
     // ONE SOLID LINE, straight over whatever it crosses — waveform ink included.
     // A saturated stem over the dark ink reads without any cut, so there is no
     // two-tone overdraw here (see the declaration for the retirement).
-    if (col >= 0.0 && col < static_cast<double>(area.w)) {
+    if (col >= 0.0 && col <= static_cast<double>(area.w)) {
         cairo_set_source_rgb(cr, color.r, color.g, color.b);
         cairo_set_line_width(cr, 1.0);
         cairo_move_to(cr, x_px, area.y);
@@ -559,7 +560,8 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
              : (at_or_past_left ? TrimBoundSide::OffRight
                                 : TrimBoundSide::OffLeft);
     // The painters' quantized-span denominator: (vp_end - vp_start)/wave_w,
-    // where vp_end itself was derived via nearbyint(spp*wave_w).
+    // where vp_end itself was derived as vp_start + wave_w·q
+    // (viewport_end_sample), so this is q exactly.
     const double span = static_cast<double>(vp_end - vp_start);
     const double samples_per_pixel = span / static_cast<double>(wave_w);
     // The one rounding, on the caller's UNIFIED displayed basis (this file's
@@ -959,32 +961,31 @@ void iterate_visible_flags_impl(
                                             viewport_start_sample);
     // Map columns against the EFFECTIVE waveform width, not the strip's own
     // full width, so a flag shares the marker stem's samples-per-pixel and
-    // stays column-aligned with it at every window width (they diverge only
-    // when the two widths differ — a non-multiple-of-16 window; at
-    // 1920/2560/3840 they are equal and this is a no-op).
+    // stays column-aligned with it at every window width (the two widths
+    // always differ, by the permanent right gutter, waveform_area).
     const double samples_per_pixel =
         span / static_cast<double>(waveform_width);
     if (samples_per_pixel <= 0.0) return;
 
     // THE CULL IS ASYMMETRIC BECAUSE THE BOX IS. A flag opens at its column and
     // runs RIGHTWARD, so a marker to the LEFT of the viewport can still reach
-    // into it (by up to a full box width) while a marker AT OR PAST the right
-    // edge can show nothing at all. The left margin is a width BOUND rather than
+    // into it (by up to a full box width) while a marker PAST the right edge
+    // can show nothing at all. The left margin is a width BOUND rather than
     // the real width, which is not known until the label is shaped; the caller
     // supplies it (see cull_width_px above).
     //
-    // THE RIGHT BOUND IS EXCLUSIVE, like every other viewport-end compare in
-    // this tree. `ms == viewport_end_sample` maps to left_x == waveform_width —
-    // the first column of the INERT RIGHT GUTTER that a non-multiple-of-16
-    // window leaves beside the effective waveform width. At 1920 there is no
-    // gutter and the box simply fell off the surface, but at a gutter width the
-    // flag painted there AND published a clickable hit rect there, so a marker
-    // sitting exactly on the displayed end was visible and selectable outside
-    // every grid-aligned surface. "At or past the right edge shows nothing" is
-    // the stated rule; this is it spelled.
+    // THE RIGHT BOUND IS THE ROUNDED COLUMN, AND GRID POINT w PAINTS
+    // (architect 2026-09-26, the permanent right gutter — waveform_area,
+    // main.cpp): the waveform has one more paintable grid point than it has
+    // columns, so a marker whose column rounds to waveform_width — the song's
+    // last half-column at the right wall, or any frame within half a column
+    // past the displayed end — paints its flag from the gutter's first column
+    // (running off the window if it must), publishes its hit rect there
+    // exactly as painted, and publishes its stem there, the same column the
+    // playhead at that frame paints on. A marker whose column rounds PAST
+    // waveform_width is culled: it has no grid point on screen.
     const double cull_lo = static_cast<double>(viewport_start_sample) -
                            cull_width_px * samples_per_pixel;
-    const double cull_hi = static_cast<double>(viewport_end_sample);
     for (size_t i = 0; i < markers.size(); ++i) {
         const auto& m = markers[i];
         const double eff_time = drag_overlay
@@ -994,13 +995,13 @@ void iterate_visible_flags_impl(
         const double ms =
             frame_to_paint_sample(eff_time, warp_frame_map);
         if (ms < cull_lo) continue;
-        if (ms >= cull_hi) continue;   // exclusive — see the cull note above
 
         const double x_raw =
             (ms - static_cast<double>(viewport_start_sample)) /
             samples_per_pixel;
-        const double left_x =
-            static_cast<double>(top_strip_area.x) + std::nearbyint(x_raw);
+        const double col = std::nearbyint(x_raw);
+        if (col > static_cast<double>(waveform_width)) continue;
+        const double left_x = static_cast<double>(top_strip_area.x) + col;
 
         emit(static_cast<int>(i), left_x);
     }

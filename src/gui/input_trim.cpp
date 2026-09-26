@@ -507,11 +507,12 @@ void GuiInputHandler::handle_trim_maximize() {
 //
 // THE COLUMN IS A WAVEFORM COLUMN whatever surface the press came from: `rel` is
 // measured off waveform_area's x and clamped to its width for the 10 px bar's
-// endcaps and bridge, the bar standing directly over the waveform's own span. So the basis is the WAVEFORM-width
-// painter q — the grid actually drawn (under the multiple-of-16 effective-width
-// contract it equals the logical spp, but the painted grid is the principled
-// one). `rel` is already a whole column out of an integer mouse_x, so there is
-// no column rounding to do here; the landing's single rounding is the owner's.
+// endcaps and bridge, the bar standing directly over the waveform's own span.
+// So the basis is the painter q — the grid actually drawn (at a whole level it
+// equals the logical spp; at a fractional rest it is that spp on the
+// sixteenth-frame grid, painter_quantized_spp). `rel` is already a whole
+// column out of an integer mouse_x, so there is no column rounding to do
+// here; the landing's single rounding is the owner's.
 //
 // THE VIEWPORT IS THE ITEM BASIS (architect 2026-09-24, strictly as painted):
 // item_viewport_basis's vp_start and spp — the span the trim pass drew the bar
