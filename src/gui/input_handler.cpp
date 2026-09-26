@@ -2364,11 +2364,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
         // The twins' reason channel, raised here where a press is known to
-        // have happened (GuiOpRefusal, warpmarkers_ops.h). Both return
-        // std::nullopt today — the prologue's refusals are belts or an outer
-        // gate's card, and the wall went silent on 2026-08-31 — and the arm
-        // stays because the channel is the cluster's contract, not this
-        // gesture's private arrangement.
+        // have happened (GuiOpRefusal, warpmarkers_ops.h). Since 8cf604ce
+        // both twins carry ONE payload through it, kMarkerNudgeOffEdgeCard
+        // (notifications.h), for the painted-edge refusal
+        // (source_frame_off_right_edge — a landing past the last painted
+        // column at this zoom) and std::nullopt otherwise — the rest of the
+        // prologue's refusals are belts or an outer gate's card, and the
+        // wall went silent on 2026-08-31 — and the arm stays because the
+        // channel is the cluster's contract, not this gesture's private
+        // arrangement.
         // Past the gate the column is W (in source view) or P — one twin per
         // column, each the same body over its own store.
         const auto refusal =
