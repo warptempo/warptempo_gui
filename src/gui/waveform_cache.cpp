@@ -102,15 +102,12 @@ void render_waveform_to_cache_surface(
     const GuiRect ch1{0, split_row, cache_area.w, ch_h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
-    // ROW 6: the plate's ink is constexpr (kWaveformInk, render.h) and the
-    // lit plate's two flat inks are the `fg_color` / `bg_color` keys' for a
-    // tuning phase (waveform_lit_inks, render.h), all read by render_waveform
-    // itself. THE LIT INKS NEED NO FINGERPRINT TERM: they are installed once
-    // at startup and never mutated, so every plate this process caches was
-    // painted in the one pair. The lamp dark, the raw bar alone in the
-    // plate's ink; lit, each column paints its OUTER bar (the levelled,
-    // expanded one) in the background ink and its INNER bar (the compressed,
-    // expanded one) over it in the foreground ink — the rule is at
+    // ROW 6: the plate's inks are constexpr (kWaveformInk and
+    // kWaveformForegroundInk, render.h), read by render_waveform itself, so
+    // they need no fingerprint term: a retune is a recompile. The lamp dark,
+    // the raw bar alone in the plate's ink; lit, each column paints its OUTER
+    // bar (the levelled, expanded one) in the plate's ink and its INNER bar
+    // (the compressed, expanded one) over it in the foreground ink — the rule is at
     // render_waveform's declaration. Every scale the lit plate reads is on
     // the curve itself, so nothing else is read here.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,

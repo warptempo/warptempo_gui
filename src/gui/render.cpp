@@ -309,14 +309,11 @@ void render_waveform(cairo_surface_t* dest,
     // THE PREMULTIPLIED WORDS, each built once per call through the one word
     // owner (argb32_opaque_word, render.h — its byte-order and rounding
     // contract lives there): the plate's ink (the row-6 constant), worn by
-    // the dark lamp's raw bar, and the lit lamp's two flat inks, the
-    // BACKGROUND worn by the outer and the FOREGROUND by the inner (built
-    // always, written only when lit) — the tuning phase's `bg_color` /
-    // `fg_color`, installed once at startup (waveform_lit_inks, render.h).
-    const WaveformLitInks& lit = waveform_lit_inks();
+    // the dark lamp's raw bar and the lit lamp's outer, and the foreground
+    // (kWaveformForegroundInk) worn by the lit lamp's inner (built always,
+    // written only when lit).
     const uint32_t ink_word = argb32_opaque_word(kWaveformInk);
-    const uint32_t bg_word  = argb32_opaque_word(lit.background);
-    const uint32_t fg_word  = argb32_opaque_word(lit.foreground);
+    const uint32_t fg_word  = argb32_opaque_word(kWaveformForegroundInk);
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -450,7 +447,7 @@ void render_waveform(cairo_surface_t* dest,
             const double outer = waveform_gain_at(*gain_or_null, centre) * e;
             const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
             fill_bar(magnified_tip(mm.first, outer),
-                     magnified_tip(mm.second, outer), bg_word);
+                     magnified_tip(mm.second, outer), ink_word);
             fill_bar(magnified_tip(mm.first, inner),
                      magnified_tip(mm.second, inner), fg_word);
         } else {
@@ -2346,18 +2343,6 @@ namespace {
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
 
-namespace {
-    // The lit plate's two flat inks for the tuning phase — the device
-    // config's `fg_color` / `bg_color`, installed once by gui_main at startup
-    // and never mutated after (the contract, and why the worker reads them
-    // with no snapshot, is at the declaration, render.h). They start at the
-    // phase's defaults.
-    WaveformLitInks g_waveform_lit_inks{kWaveformForegroundInkDefault,
-                                        kWaveformBackgroundInkDefault};
-} // namespace
-
-void set_waveform_lit_inks(const WaveformLitInks& inks) { g_waveform_lit_inks = inks; }
-const WaveformLitInks& waveform_lit_inks() { return g_waveform_lit_inks; }
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;

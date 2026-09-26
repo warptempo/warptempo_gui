@@ -3375,7 +3375,7 @@ int gui_main(const char* argument) {
     // is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
-    // Its eight keys describe the MACHINE, not the piece, so they live in
+    // Its six keys describe the MACHINE, not the piece, so they live in
     // `$XDG_CONFIG_HOME/warptempo_gui/config` rather than in a source's
     // `.settings` (the file, its schema and its strictness are
     // device_config.h's). A first run on either device stamps the BACKEND's
@@ -3421,15 +3421,6 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE LIT PLATE'S TWO FLAT INKS, the tuning phase's `fg_color` /
-    // `bg_color` (architect 2026-09-26): installed ONCE here, before the
-    // first project loads and so before the first plate job, and never again
-    // — the keys have no in-app writer, a retune is a config edit and a
-    // relaunch. That is what lets the waveform worker read them with no job
-    // field and the plate fingerprint carry no colour term (the contract at
-    // waveform_lit_inks, render.h).
-    set_waveform_lit_inks(WaveformLitInks{device_config.fg_color,
-                                          device_config.bg_color});
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

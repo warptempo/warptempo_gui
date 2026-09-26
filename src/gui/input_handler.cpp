@@ -4182,8 +4182,8 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // failure point (GuiFailure, failure.h), this site prints the diagnostic
     // and cards the display. It goes through THE LIVE CONFIG
     // (AppState::device_config, the loop's one struct): the file holds
-    // eight keys and is rewritten whole, and that struct is the one place
-    // all eight are live at once, across every reopen (the ownership rule is at
+    // six keys and is rewritten whole, and that struct is the one place
+    // all six are live at once, across every reopen (the ownership rule is at
     // write_device_config, device_config.h).
     app.gui_scale = percent;
     app.device_config->gui_scale = percent;

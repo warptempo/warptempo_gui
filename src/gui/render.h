@@ -103,16 +103,9 @@ struct TrimRange {
 // constant here and in the redesign blocks below is constexpr, there are no
 // user-settable colors, nothing is read from ~/.config, and a retune is a
 // recompile. Every painted surface in the product takes its value from one of
-// these constants, WITH ONE STANDING EXCEPTION, TEMPORARY BY RULING: the lit
-// plate's two flat inks — the FOREGROUND (the inner bar, the source's own)
-// and the BACKGROUND (the outer, levelled bar behind it) — are the device
-// config's `fg_color` / `bg_color` for a tuning phase (architect 2026-09-26),
-// reaching the painter through the startup-installed waveform_lit_inks();
-// the defaults at row 6 below are what both first-run templates stamp, and
-// the inks return to this rule as constants when the phase closes. (The
-// waveform's three inks were device-config keys for one day's earlier tuning
-// phase, 2026-09-25, closed by eye the same day; the short record of the
-// core's inks since is at row 6.)
+// these constants, WITH NO EXCEPTION: the waveform's inks were device-config
+// keys for short tuning phases (2026-09-25/26) and are constexpr at row 6
+// below, on the values the architect closed them on by eye.
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -1060,47 +1053,33 @@ inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 // THE WAVEFORM'S INKS. With the magnification lamp dark the plate is the raw
 // bar alone in kWaveformInk, row 6's crop sample. With it lit the plate is
 // two bars in TWO FLAT INKS (architect 2026-09-26; the rule is at
-// render_waveform's declaration): the FOREGROUND, worn by the INNER bar —
-// the source's own bar through the compressor, painted over — and the
-// BACKGROUND, worn by the OUTER bar — the levelled, expanded one, painted
-// first, behind. The source's bar wears the plate's own ink and the
-// levelled bar behind it a darker one.
+// render_waveform's declaration): the OUTER bar — the levelled, expanded
+// one, painted first, behind — in kWaveformInk, the plate's own ink, and the
+// INNER bar — the source's own bar through the compressor, painted over — in
+// kWaveformForegroundInk, a lighter, teal-leaning ink. The source's bar is
+// the one the eye reads for detail, so it is the one that stands forward.
 //
-// THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink.
+// THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink and the lit
+// plate's background.
 inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 
-// THE LIT INKS ARE TUNABLE FOR A TUNING PHASE (architect 2026-09-26): the
-// device config's `fg_color` (the foreground) and `bg_color` (the
-// background), `#rrggbb`, read once at startup into the process-wide pair
-// (waveform_lit_inks(), beside the gui-scale state below), the palette
-// header's one exception. The two constants below are THE PHASE'S DEFAULTS,
-// the values both first-run templates stamp and the painter wears until
-// gui_main installs the config's. When the phase closes the keys are struck
-// and the chosen values are constants here.
-//
-// THE FOREGROUND'S DEFAULT is the plate's ink itself: the source's bar in
-// "the same colour as the waveform when only one waveform is on screen".
-inline constexpr GuiColor kWaveformForegroundInkDefault = kWaveformInk;  // #1c816b
+// THE LIT PLATE'S FOREGROUND, the inner bar's ink (architect 2026-09-26,
+// closing the tuning phase by eye): DERIVED, not sampled — the 1:1 blend of
+// kWaveformInk (28, 129, 107) and kdenlive's teal marker category #1abc9c
+// (26, 188, 156), the same sampled byte kHistoryAddedFill carries, each
+// channel through std::nearbyint (round half to even): (27, 158.5 -> 158,
+// 131.5 -> 132). The full teal read "a little bright" and dulled the
+// unmagnified plate beside it; the half blend is "less tiring on long
+// sessions".
+inline constexpr GuiColor kWaveformForegroundInk = hex(0x1B9E84);  // (27, 158, 132)
 
-// THE BACKGROUND'S DEFAULT: the 1:1 blend of kWaveformCanvas and
-// kWaveformInk — DERIVED, not sampled: ((18, 49, 43) + (28, 129, 107)) / 2 =
-// (23, 89, 75), every half exact.
-inline constexpr GuiColor kWaveformBackgroundInkDefault = hex(0x17594B);  // (23, 89, 75)
-
-// A SUPERSEDED RECORD. THE CORE SHADE BY THE BAR GAP (2026-09-25, one commit)
-// IS STRUCK — "it doesn't work" (architect 2026-09-26): the inner bar's ink
-// was a per-column point on a blend from kWaveformInk toward kdenlive's teal
-// #1abc9c, linear in dB of the gap g / c, its two endpoint blends the
-// device keys `fg_blend_loud` / `fg_blend_quiet`. A per-column shade on
-// either bar is ruled out again; both lit inks are flat. Before it, the same
-// day, the core's one flat ink went #17594b, the full teal #1abc9c ("a little
-// bright"), #1b9e84 (the 1:1 average, "less tiring on long sessions"), then
-// that value as the one-ink device key `fg_color` for an afternoon — the
-// outer bar in kWaveformInk under them all. Before those, on 2026-09-24, the
-// raw bar stood at a flat +2 dB over the levelled bar at -2 dB, and two
-// sampled inks for the bar behind were tried and superseded (#1f8b4c read as
-// a second figure; #135647 fringed at small boosts). The canvas STAYS
-// kWaveformCanvas #12312b.
+// A SUPERSEDED RECORD of the lit inks' tuning (2026-09-24..26): the bar
+// behind wore #1f8b4c, then #135647, then a per-column shade by the leveler's
+// gain, then #17594b (the canvas:ink 1:1 blend); the core wore #17594b,
+// #1abc9c, #1b9e84, then a per-column blend toward #1abc9c by the bar gap
+// (struck: "it doesn't work"); the device keys `fg_color`, `fg_blend_loud` /
+// `fg_blend_quiet` and `fg_color` / `bg_color` carried them in turn and are
+// struck (device_config.h). The canvas STAYS kWaveformCanvas #12312b.
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1144,7 +1123,7 @@ inline constexpr GuiColor kWaveformRegionCanvas = hex(0x24433F);  // (36, 67, 63
 // derivation and not a measurement, so the step (region_lift's) and
 // kWaveformRegionCanvas above are the two to move if the highlight wants to be
 // stronger or weaker, and they are the whole of what the region path has to
-// tune. The ground is not in the palette's tuning phase: only the inks are.
+// tune.
 
 // THE AREA'S BORDER: 2px of pure black at the top and the bottom, full window
 // width. Both rows of row_6_waveform_border.png are (0,0,0), and the full crop's
@@ -1509,32 +1488,6 @@ void   set_gui_scale_percent(int percent);
 // dimension is a coincidence. Nothing paints through this: every painted
 // dimension goes on reading gui_scale_factor / scaled_px.
 int    gui_scale_percent();
-
-// THE LIT PLATE'S TWO FLAT INKS, the tuning phase's two tunable colours
-// (architect 2026-09-26; the device config's `fg_color` / `bg_color`, the
-// phase's terms at row 6's palette block): the FOREGROUND worn by the inner
-// bar and the BACKGROUND worn by the outer. The pair starts at
-// kWaveformForegroundInkDefault / kWaveformBackgroundInkDefault, so a
-// process that never installs one paints the defaults.
-struct WaveformLitInks {
-    GuiColor foreground;   // the inner bar, painted over
-    GuiColor background;   // the outer bar, painted first
-};
-
-// INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's pair
-// through set_waveform_lit_inks at startup, beside set_gui_scale_percent and
-// before the first project loads — so before the first plate job — and
-// nothing calls it again (the keys have no in-app writer; a retune is a
-// config edit and a relaunch). THAT IS WHY THE WAVEFORM WORKER READS IT
-// DIRECTLY, with no job field, and why the plate fingerprint carries no
-// colour term: a value that cannot change within a process needs no
-// snapshot and no key, and the plate cache lives no longer than the
-// process. (g_gui_scale_percent is the contrast: the settings editor mutates
-// it live.) waveform_lit_inks() is the one reader, render_waveform
-// (render.cpp), once per call. When the phase closes both are struck and the
-// painter reads constants again.
-void                   set_waveform_lit_inks(const WaveformLitInks& inks);
-const WaveformLitInks& waveform_lit_inks();
 
 // Scale factor s = gui_scale / 100. Exactly 1.0 at the default, and as low as
 // 0.5 since the setting's grammar floor came down to 50 (architect 2026-08-10).
@@ -2903,10 +2856,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // use sees the pixels.
 //
 // THE INKS ARE READ HERE rather than passed: the plate paints in
-// kWaveformInk with the lamp dark, and lit the outer in the BACKGROUND ink
-// with the inner over it in the FOREGROUND ink, two flat colours
-// (waveform_lit_inks(), the tuning phase's `bg_color` / `fg_color`,
-// installed once at startup) — it
+// kWaveformInk with the lamp dark, and lit the outer in kWaveformInk with
+// the inner over it in kWaveformForegroundInk, two flat constants — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
@@ -2922,9 +2873,9 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // through the leveler and the inner through the compressor (architect
 // 2026-09-25):
 //
-//   OUTER (painted first) = raw x g x E, in the BACKGROUND ink — the
+//   OUTER (painted first) = raw x g x E, in kWaveformInk — the
 //                           levelled, expanded bar;
-//   INNER (painted over)  = raw x c x E, in the FOREGROUND ink — the
+//   INNER (painted over)  = raw x c x E, in kWaveformForegroundInk — the
 //                           source's bar DOWNWARD-COMPRESSED.
 //
 // g is the leveler's gain at the column's centre source frame
@@ -2936,8 +2887,9 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // stands out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
-// reading is the source's bar in the plate's own ink (at the defaults) over a
-// DARKER levelled bar behind it, the core's relative thickness the loudness — at or under the compressor's
+// reading is the source's bar in the lighter foreground ink over the
+// levelled bar in the plate's own ink behind it, the core's relative
+// thickness the loudness — at or under the compressor's
 // threshold the core is the raw bar (x E), over it thinner by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,
 // byte for byte the plate it always drew. Nothing else in this painter moves
