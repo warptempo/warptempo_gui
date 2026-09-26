@@ -94,7 +94,7 @@ constexpr int64_t kViewportPanStepDivisor = 10;
 //     and at a PageIn launch: an offscreen target lands the margin in from
 //     the LEFT edge;
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
-//     audio views, the paired march, the undo/redo restore): its fit test
+//     audio views, the undo/redo restore): its fit test
 //     asks whether the range is at most 1 − 2 × margin of the window at the
 //     live zoom (else its one caller that can meet the verdict, the group
 //     restore, zooms out through the framer's margin arm below), and the
@@ -2004,8 +2004,11 @@ enum class RedesignButton {
     // chord it shifts. Only the OTHER tab ever takes the press: the selected
     // tab is a radio (a press on it is a consumed nothing, shifted or not) and
     // has no hover zone (redesign_button_hover_zone), so it carries no tooltip
-    // and advertises no second line — and the march lands on the other tab
-    // anyway, which is what the button names.
+    // and advertises no second line. SINCE THE MARCH BECAME A ROUND TRIP
+    // (architect 2026-09-26) the press ends on THIS tab, the one already
+    // selected, having stepped and centred the other one unseen; the road
+    // stays on the other tab by ruling (the record is at the tab row's
+    // kToolbarChords entry, input_pointer.cpp).
     TabA, TabB,
     // Row 4, the icon row, in painted order: the toolbar four (the deleted
     // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
@@ -4612,7 +4615,7 @@ struct AppState {
     // apply_zoom_change, apply_strip_drag_zoom, apply_zoom_to_start,
     // scroll_viewport, center_viewport_on_playhead,
     // hold_subject_column_after_nudge, follow_scroll_if_needed and
-    // land_subject (the walk's, the march's and the undo restore's camera,
+    // land_subject (the walk's and the undo restore's camera,
     // the restore also reaching frame_span_into_view, undo.cpp, and its
     // singleton under the hold hold_subject_column_after_nudge in its place); the S/T flip's
     // viewport translation (input_handler.cpp); the settings editor's viewport commit
@@ -4651,11 +4654,12 @@ struct AppState {
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
     //   * SET by the EXPLICIT CENTRING ACTS and nothing else: bare `c` (live
-    //     and in the `h` view; run_center_key_command), Shift+J (its closing
+    //     and in the `h` view; run_center_key_command), the paired march
+    //     Ctrl+Shift+Tab (live and `h`; each of its two steps runs
+    //     run_center_key_command, 2026-09-26), Shift+J (its closing
     //     `c`), and THE WALK'S CENTRING BY THE LANDING OWNER
     //     (Viewport::land_subject's LandingKind::Walk at the working zoom or
-    //     finer, on screen or not: the Tab walk in both audio views and each
-    //     step of the paired march Ctrl+Shift+Tab, live and `h`). A centring
+    //     finer, on screen or not: the Tab walk in both audio views). A centring
     //     act that cannot centre (a wall) still arms: the bit means "hold the
     //     column the subject is in", not "the subject is at the centre".
     //     WHY SO FEW (architect 2026-09-24): an automatic arm on arrival at
@@ -12247,9 +12251,10 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
 // greyed button and the dead key agree. Its count-only form (an empty store
 // alone, 2026-08-30 morning) was the audit's false premise: with no focus the
 // cycle seeds from the playhead and can land, while a full store can still
-// land nothing. (The paired march asks nothing of this owner: its tab switch
-// acts whatever the two stores hold, and its pointer road is the other tab's
-// shifted press, whose face is the tab's own.)
+// land nothing. (The paired march asks nothing of this owner: its round trip
+// acts whatever the two stores hold — each half's `c` centres whether or not
+// its step moved — and its pointer road is the other tab's shifted press,
+// whose face is the tab's own.)
 //
 // IT READS THE STEP RATHER THAN THE LANDING since 2026-09-10, and the widening
 // is the point: a Shift+Tab standing on the FIRST marker's upper cell acts —
@@ -12323,17 +12328,19 @@ inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
 // the landing (architect 2026-09-04). TWO KINDS:
 //   * `Center` recenters the viewport on the landing AT THE STANDING ZOOM
 //     (Viewport::center_viewport_on_playhead) — bare `c`'s own jump, which
-//     then writes the working zoom and centres again behind it;
+//     then writes the working zoom and centres again behind it, and each
+//     step of the paired march, live and in the `h` view, which runs `c`'s
+//     own act behind it (2026-09-26);
 //   * `Land` hands the landing to THE LANDING OWNER'S WALK
 //     (Viewport::land_subject, LandingKind::Walk, architect 2026-09-24): at
 //     the working zoom or finer the landing is centred, on screen or not,
 //     arming the hold posture; coarser, an on-screen landing moves nothing
 //     and an off-screen one is paged in the edge margin from the left edge;
-//     the zoom never written — THE TAB WALK'S IN BOTH AUDIO VIEWS AND EACH
-//     STEP OF THE PAIRED MARCH, live and in the `h` view.
-// (`NoFrame`, which wrote no camera so the march's `c` behind each step could
-// frame alone, went 2026-09-23 with the landing owner; the cameras ruled out
-// for the walk are recorded at the owner's definition, viewport.cpp.)
+//     the zoom never written — THE TAB WALK'S IN BOTH AUDIO VIEWS, live and
+//     in the `h` view.
+// (`NoFrame`, which wrote no camera, went 2026-09-23 with the landing owner;
+// the cameras ruled out for the walk are recorded at the owner's definition,
+// viewport.cpp.)
 //
 // The type exists so that framing cannot be inherited. It is a REQUIRED
 // argument of GuiInputHandler::cycle_marker_focus,
@@ -14765,7 +14772,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // now. The two SKIPS and
         // THE WALK stay lit, being the mode's own
         // absolute jumps and its diff-flag cycle (the tab row's shifted press
-        // carries the march that composes that cycle with the A/B switch, the
+        // carries the march that composes that cycle with a round trip
+        // through the other tab, the
         // tabs being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
@@ -15840,7 +15848,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // refusal card, the tab staying lit because its plain Ctrl+Tab is live there
 // (the twin rule). Only the OTHER tab takes the press — the selected one is a
 // radio and its press, shifted or not, is a consumed nothing — and the long
-// press is the tablet's one road to the march.)
+// press is the tablet's one road to the march. The march is a round trip
+// since 2026-09-26 and ends on the tab it started from; its road stays the
+// other tab's shifted press by ruling, recorded at the tab row's
+// kToolbarChords entry, input_pointer.cpp.)
 // (FLATTEN JOINED 2026-09-19 with Ctrl+Shift+F: its plain act clears a
 // marker's deviation terms and its shifted twin collapses them to one, the
 // drop's and the copy's rule once more — a shift-enabled gesture whose bare
@@ -16113,8 +16124,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // the march in the standing mode, the diff-flag march in the `h` view,
         // the iteration lock's card under a lit lamp. Only the OTHER tab ever
         // shows this, the selected tab having no hover zone (redesign_button_-
-        // hover_zone), so "both tabs" is always read from the tab the march
-        // ends on.
+        // hover_zone); the march is a round trip since 2026-09-26 and ends on
+        // the selected tab, which "both tabs" says without naming a tab.
         case RedesignButton::TabA:       return {"Tab A (Ctrl+Tab)",
                                                  "Press Shift to walk both tabs."};
         case RedesignButton::TabB:       return {"Tab B (Ctrl+Tab)",
@@ -17108,8 +17119,8 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // the distinction is load-bearing for the hint: the tabs carry a tooltip
 // (their act's name and, since 2026-09-14, the shift line naming the paired
 // march), and the zone is what keeps it — and the press — off the SELECTED
-// tab, so only the other tab, the one a press or a march lands on, ever shows
-// it.
+// tab, so only the other tab, the one a plain press lands on and the march's
+// round trip passes through, ever shows it.
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
     if (a.dropdown.open()) return false;
     // THE TAB TERM READS THE PAINTED SELECTED BIT (architect 2026-09-24,

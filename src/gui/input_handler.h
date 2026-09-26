@@ -2502,15 +2502,19 @@ private:
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
     // about the camera beyond what `frame` states and reads no preference of
-    // its own — follow never gated it. The three Tab arms and the two steps
-    // of the Ctrl+Shift+Tab paired march pass MarkerLandingFrame::Land, the
-    // landing owner's walk (Viewport::land_subject, LandingKind::Walk):
-    // centred at the working zoom or finer, on screen or not; coarser,
-    // nothing on screen and paged in off screen; the zoom never written.
+    // its own — follow never gated it. The three Tab arms pass
+    // MarkerLandingFrame::Land, the landing owner's walk
+    // (Viewport::land_subject, LandingKind::Walk): centred at the working
+    // zoom or finer, on screen or not; coarser, nothing on screen and paged
+    // in off screen; the zoom never written. The two steps of the
+    // Ctrl+Shift+Tab paired march pass MarkerLandingFrame::Center, `c`'s own
+    // statement, each running bare `c`'s act behind it (2026-09-26: the
+    // march writes the working zoom).
     // The parameter carries no default precisely so a future caller
     // cannot inherit any answer by saying nothing.
     // The WHOLE Tab family comes through here: the three bare chords and the
-    // Ctrl+Shift+Tab lockstep march, which calls this once per tab.
+    // Ctrl+Shift+Tab lockstep march, which calls this once per tab (the
+    // other tab first, then home).
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
     // this rule, over its own list (handle_history_mode_key).
@@ -2539,8 +2543,9 @@ private:
     // MarkerLandingFrame::Land handing the landing to the landing owner
     // (Viewport::land_subject), whose answers are at its definition.
     // The zoom belongs to the caller too, and the callers differ in it: `c`
-    // sets the working zoom right after this returns, the Tab family sets
-    // nothing (2026-08-05, at every level since 2026-09-22).
+    // sets the working zoom right after this returns, the Tab walk sets
+    // nothing (2026-08-05, at every level since 2026-09-22), and each step of
+    // the paired march runs `c`'s act right after its walk step (2026-09-26).
     // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
@@ -2627,7 +2632,9 @@ private:
     // refused); the decision is phase_reset_paste_refusal.
     bool card_phase_reset_paste_refusal();
 
-    // Tab-key family: Ctrl+Tab / Ctrl+Shift+Tab switch A/B tabs; Tab /
+    // Tab-key family: Ctrl+Tab switches A/B tabs; Ctrl+Shift+Tab is the
+    // paired march, a round trip through the other tab that steps and
+    // centres both (bare `c`'s act) and ends on the tab it started; Tab /
     // Shift+Tab / IsoLeftTab cycle marker focus with the landing owner's
     // camera (Viewport::land_subject). No Alt spelling of Tab binds. Returns true
     // if key+mods matched one (on_key then returns), false otherwise.
@@ -4327,11 +4334,12 @@ private:
     // membership.
     //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
     //     the toggle, the walk, the diff-flag cycle, the march that composes
-    //     that cycle with the A/B switch, the absolute Home/End and
+    //     that cycle with a round trip through the other tab, the absolute
+    //     Home/End and
     //     `c` — and returns true when it consumed the press. The membership is
     //     re-derived at history_mode_owns_key; its position in on_key IS its
     //     entry-gate list. Its cycle is a member of its own
-    //     (cycle_history_diff_flag_focus) because the march composes it twice.
+    //     (cycle_history_diff_flag_focus) because the march composes it too.
     //   * history_mode_key_blocked is the allowlist gate, read_only_key_-
     //     blocked's shape: true when the press is not admitted while the mode
     //     stands. The redesigned buttons and the File menu's one item reach it
@@ -4453,10 +4461,12 @@ private:
     // The mode's Tab act, one step over the viewed checkpoint's diff flags in
     // the given direction, treating the camera as the REQUIRED `frame` says
     // (MarkerLandingFrame, app_state.h — the live walk's own type). Two
-    // callers, both in handle_history_mode_key: its Tab arm and its
-    // Ctrl+Shift+Tab march, each stating MarkerLandingFrame::Land, the landing
-    // owner's walk (Viewport::land_subject, LandingKind::Walk), exactly as the live
-    // walk and march do. Every walk rule it obeys is stated at those arms.
+    // callers, both in handle_history_mode_key: its Tab arm, stating
+    // MarkerLandingFrame::Land, the landing owner's walk
+    // (Viewport::land_subject, LandingKind::Walk), exactly as the live walk
+    // does; and its Ctrl+Shift+Tab march, stating MarkerLandingFrame::Center
+    // with the mode's `c` behind it, exactly as the live march does. Every
+    // walk rule it obeys is stated at those arms.
     void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);
     void open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();

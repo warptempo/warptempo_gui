@@ -915,7 +915,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus, the landing's camera
     //                              the landing owner's (Viewport::land_subject)
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
-    //   - Ctrl+Shift+Tab         → march paired tabs in lockstep
+    //   - Ctrl+Shift+Tab         → march paired tabs in lockstep, a round
+    //                              trip ending on the starting tab
     //   - Esc                    → the render/batch cancel (and the editor /
     //                              prompt closes), then the whole notification
     //                              stack if none of those is standing — the
@@ -2085,9 +2086,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs;
-    // Tab / Shift+Tab / IsoLeftTab cycle marker focus. The walk and each march
-    // step land through the landing owner's walk (Viewport::land_subject,
+    // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs
+    // (a round trip, each step centred by bare `c`'s act, the working zoom
+    // written); Tab / Shift+Tab / IsoLeftTab cycle marker focus, landing
+    // through the landing owner's walk (Viewport::land_subject,
     // LandingKind::Walk), which reads the zoom and never writes it.
     if (handle_tab_switch_keys(key, mods)) return;
 
@@ -2689,9 +2691,10 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // — re-landed the playhead on that same focus and recentred on it, so a
     // GREYED button sat over a key that moved the cursor; the face and the act
     // ask one question now, so they cannot disagree. THE Ctrl+Shift+Tab MARCH
-    // takes this answer at each of its two cycles (the tab switch between them
-    // is its own act and still runs); it reads nothing back, the step being
-    // this body's own business since the march stopped walking cells.
+    // takes this answer at each of its two cycles (its tab switches and its
+    // two `c`s are their own acts and still run); it reads nothing back, the
+    // step being this body's own business since the march stopped walking
+    // cells.
     //
     // THE REFUSAL IS SILENT (architect 2026-08-31, superseding the 2026-08-30
     // card): a benign one-dimensional refusal already at its state says
@@ -2742,10 +2745,11 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // THIS BODY DOES NOT DECIDE THE FRAMING and asks no preference of its own
     // (architect 2026-09-04). The walk moves focus and lands the playhead; the
     // camera is its caller's statement, forwarded untouched: the three Tab
-    // arms and both steps of the Ctrl+Shift+Tab paired march state
-    // MarkerLandingFrame::Land, the landing owner's walk
+    // arms state MarkerLandingFrame::Land, the landing owner's walk
     // (Viewport::land_subject, LandingKind::Walk, architect 2026-09-24),
-    // which reads the zoom and never writes it.
+    // which reads the zoom and never writes it; both steps of the
+    // Ctrl+Shift+Tab paired march state Center and run bare `c`'s act behind
+    // it (2026-09-26).
     // Putting a policy read in here is what once made the march inherit
     // one, which is the shape the required parameter exists to prevent:
     // framing cannot be acquired by saying nothing. `c` remains the direct
@@ -2820,9 +2824,10 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 
     // Center the viewport on the focused marker at the current zoom. THE ZOOM
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
-    // working zoom right after this returns, the Tab family sets nothing
+    // working zoom right after this returns, the Tab walk sets nothing
     // (architect 2026-08-05, "no zoom on Tab", at every level since
-    // 2026-09-22) — so this tail frames the stop at whatever level it was
+    // 2026-09-22), and the paired march's steps run `c`'s act behind this
+    // (2026-09-26) — so this tail frames the stop at whatever level it was
     // called at, and only `c`'s zoom write re-centres after it. Follow does
     // not gate it either (architect 2026-07-19, reversing the earlier
     // follow-only rule).
@@ -2847,11 +2852,12 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // paged in the edge margin from the left edge. A single marker always
     // fits, so the owner's cannot-fit verdict is dropped.
     //
-    // WHO PASSES WHAT, re-grepped 2026-09-24: `c` (run_center_command) states
+    // WHO PASSES WHAT, re-grepped 2026-09-26: `c` (run_center_command) states
     // Center; cycle_marker_focus forwards Land from the three live Tab arms
-    // and the two steps of the Ctrl+Shift+Tab paired march. Shift+`j` and the
-    // A/B audition reach the camera through run_center_command by name and
-    // so take its Center with it.
+    // and Center from the two steps of the Ctrl+Shift+Tab paired march, each
+    // followed by `c`'s own act. Shift+`j` and the A/B audition reach the
+    // camera through run_center_command by name and so take its Center with
+    // it.
     switch (frame) {
         case MarkerLandingFrame::Center:
             viewport.center_viewport_on_playhead();
@@ -2868,12 +2874,13 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
 void GuiInputHandler::run_center_command() {
     // THE BARE `c` COMMAND, WHOLE — the working zoom centered on the playhead,
     // with a focused stop re-landed under it first — and THE ONE PLACE THE MODE
-    // FORK LIVES. THREE CALLERS, re-grepped 2026-09-23: the centre keys' act
+    // FORK LIVES. THREE CALLERS, re-grepped 2026-09-26: the centre keys' act
     // run_center_key_command (since 2026-09-23 the one road of the live `c`
     // key arm in handle_plain_bare_keys, the history mode's own `c` arm in
     // handle_history_mode_key — which must claim the key to keep it off the
     // mode's allowlist — and the writer of the hold posture a centring key
-    // arms), since 2026-08-28 the A/B audition's
+    // arms; since 2026-09-26 also run by both steps of the Ctrl+Shift+Tab
+    // paired march, live and `h`), since 2026-08-28 the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame (the rule and the ordering it owes the audition's sequence are at
@@ -2885,9 +2892,9 @@ void GuiInputHandler::run_center_command() {
     // act, after the single-select, so the focused arm below centers on
     // exactly the marker the jump named.
     //
-    // (THE Ctrl+Shift+Tab PAIRED MARCH, live and `h`, called this twice, behind
-    // each step, from 2026-09-14 until 2026-09-23, when its steps took the
-    // landing owner and the march stopped writing the zoom.)
+    // (THE Ctrl+Shift+Tab PAIRED MARCH, live and `h`, reaches this through
+    // run_center_key_command behind each of its two steps, the round trip of
+    // 2026-09-26.)
     //
     // (`0` WAS A CALLER too until 2026-09-23: at a full zoom out it had not
     // produced it ran this command. That arm was deleted the same day — such

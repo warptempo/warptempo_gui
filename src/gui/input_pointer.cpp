@@ -223,6 +223,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // shift-click or long press on the OTHER tab ORs shift into this row's
     // ctrl and dispatches Ctrl+Shift+Tab, the paired march — the selected
     // tab's press being the radio's consumed nothing either way.
+    // THE ROAD STAYS HERE THOUGH THE MARCH NO LONGER LANDS HERE (architect
+    // 2026-09-26): the march is a round trip since that day and ends on the
+    // tab it started from, so a shifted press on the other tab leaves the
+    // user on THIS one. He kept the road for the rule that a shift-modified
+    // command takes the button of its unmodified form — Ctrl+Tab is held by
+    // the tabs — and because the alternatives (both tabs always switching, or
+    // both tabs meaning Ctrl+Tab) go against how tabs work in PCManFM-Qt.
     // (The row carried two MORE slots for one day, 2026-08-07..08, when it was
     // the (walk source, reading) product; they never dispatched — the mode's
     // band claim owned the row then — and they went with the reading, which is
@@ -1257,7 +1264,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   for free and step the DIFF-FLAG cycle forward and back — WITH THE GROUP'S
 //   THIRD SINCE 2026-08-18 (Ctrl+Shift+Tab, the mode's own vocabulary too now:
 //   it marches the pair over that same diff-flag cycle, "tab, ctrl+tab, tab"
-//   read against the lane in here; it ran the reverse WALK-SOURCE cycle from
+//   read against the lane in here, a round trip through the other tab since
+//   2026-09-26; it ran the reverse WALK-SOURCE cycle from
 //   2026-08-07 until the walk moved to the icon row's own radio pair, and was
 //   blocked for the hours between),
 //   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button on the same terms

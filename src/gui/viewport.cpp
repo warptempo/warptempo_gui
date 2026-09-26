@@ -932,7 +932,8 @@ void Viewport::follow_scroll_if_needed() {
 // zoom-derived picture did during a zoom gesture (the rule at nudge_camera's
 // neighbour, app_state.h). THE ZOOM IS NEVER WRITTEN HERE.
 //
-// WALK — the Tab walk and the march's steps, always a single frame:
+// WALK — the Tab walk, always a single frame (the paired march's steps came
+// here until 2026-09-26, when each took bare `c`'s act instead):
 //   * AT THE WORKING ZOOM OR FINER (app.zoom_level <= kWorkingZoomLevel; 2.0
 //     exactly is "at working", anything above is coarse) the subject is
 //     CENTRED, ON SCREEN OR NOT, the centring body's own placement: the walk
@@ -996,16 +997,16 @@ void Viewport::follow_scroll_if_needed() {
 // ITS READERS, re-grepped 2026-09-25:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
 //     (input_handler.cpp — bare Tab / Shift+Tab / IsoLeftTab through
-//     cycle_marker_focus, and both steps of the live Ctrl+Shift+Tab march),
-//     and cycle_history_diff_flag_focus's Land arm (input_key_dispatch.cpp —
-//     the `h` view's Tab and both steps of its march); each lands the cursor
+//     cycle_marker_focus), and cycle_history_diff_flag_focus's Land arm
+//     (input_key_dispatch.cpp — the `h` view's Tab); each lands the cursor
 //     it has just seated (lo == hi), so the verdict is dropped;
 //   * RESTORE: restore_history_entry's singleton arm (undo.cpp) on the cursor
 //     just landed, WITH THE HOLD DARK only (under it the arm holds the
 //     column instead, 2026-09-25), and its group arm on the restored
 //     markers' [earliest, latest] extent — THE ONE CALLER THAT CAN MEET THE FALSE VERDICT, which
 //     runs the span framer's margin arm on it.
-// NOT READERS, by ruling: bare `c`, Shift+J and the A/B audition, which
+// NOT READERS, by ruling: bare `c`, the paired march (live and `h`, each step
+// running `c`'s act, 2026-09-26), Shift+J and the A/B audition, which
 // centre unconditionally (center_viewport_on_playhead after the working
 // zoom); follow's page-in during playback (follow_scroll_if_needed, which
 // reads the scanner and keeps follow's suspension its own); the nudge's

@@ -1795,8 +1795,8 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     IsoLeftTab exactly as the live cycle is, its landing's camera the
 //     landing owner's exactly as the live walk's is (Viewport::land_subject);
 //   * Ctrl+Shift+Tab       — the PAIRED MARCH (2026-08-18), the diff-flag cycle
-//     composed with the A/B switch: the mode's Tab act, the tab switch, the
-//     mode's Tab act again;
+//     composed with a round trip through the other tab (2026-09-26): the tab
+//     switch, the mode's Tab act and its `c`, the switch home and its `c`;
 //   * bare Home / End      — the ABSOLUTE ends of the song;
 //   * bare `c`             — working zoom, centered on the mode's own focus.
 // NO ALT SHAPE (the Alt Tab family, 2026-09-22, was deleted 2026-09-23) and
@@ -1871,7 +1871,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // THE ONE CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
     // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
     // are available [in the view], and ctrl+shift+tab is just short for
-    // 'tab, ctrl+tab, tab'" — so the chord means one thing everywhere and only
+    // 'tab, ctrl+tab, tab'" (a round trip through the other tab since
+    // 2026-09-26, each step centred by `c`, live and here alike) — so the
+    // chord means one thing everywhere and only
     // what "Tab" DENOTES changes with the context: live markers outside, the
     // viewed checkpoint's diff flags in here. Claimed rather than left to the
     // allowlist because that is how the marker-walk group's other two members
@@ -1921,7 +1923,7 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 }
 
 // THE DIFF-FLAG CYCLE'S ONE ACT — the mode's Tab, factored out because the
-// mode's Ctrl+Shift+Tab march composes it twice (2026-08-18). Two callers, both
+// mode's Ctrl+Shift+Tab march composes it too (2026-08-18). Two callers, both
 // in handle_history_mode_key below: its Tab arm and its march arm. Every rule
 // the cycle carries — the no-wrap walls, the empty-list nothing, the
 // focus-replaces-selection rest, the landing and its damage — is stated at the
@@ -1957,15 +1959,17 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker),
     // and THE LIVE FAMILY'S LANDING IS MIRRORED ARM FOR ARM (architect
     // 2026-09-16; "navigation commands that can be symmetric in the history
-    // view should be", 2026-09-22): the mode's Tab arm and both steps of its
-    // march state Land, the landing owner's walk (Viewport::land_subject,
+    // view should be", 2026-09-22): the mode's Tab arm states Land, the
+    // landing owner's walk (Viewport::land_subject,
     // LandingKind::Walk, architect 2026-09-24) over the cursor just seated —
     // at the working zoom or finer it centres the flag, on screen or not
     // (arming the hold posture); coarser, an on-screen flag moves nothing and
     // an off-screen one is paged in; the zoom is never written. A single
     // flag always fits, so the owner's cannot-fit verdict is dropped. The
-    // Center arm has no caller in the view (its `c` is run_center_command's
-    // mode arm) and centres at the standing zoom, as the live jump's does.
+    // Center arm is the march's step (2026-09-26), the live march's own
+    // statement, and centres at the standing zoom, as the live jump's does;
+    // the march runs the mode's `c` (run_center_command's mode arm) behind
+    // it, which writes the working zoom and centres again.
     switch (frame) {
         case MarkerLandingFrame::Center:
             viewport.center_viewport_on_playhead();
@@ -2291,31 +2295,42 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // CTRL+SHIFT+TAB RANKS ABOVE IT and must: the test below reads the KEY
     // alone, so the march's own Tab would fall into a backward step here.
     if (mods.ctrl && mods.shift && key == GuiKeys::Tab) {
-        // THE PAIRED MARCH, MODE-LOCAL (architect 2026-08-18): "ctrl+shift+tab
-        // is just short for 'tab, ctrl+tab, tab'", so it is built as exactly
-        // that composition over the view's own vocabulary — the mode's Tab act,
-        // the A/B switch, the mode's Tab act again — EACH STEP LANDING THROUGH
-        // THE LANDING OWNER'S WALK exactly as the live march's does
-        // (MarkerLandingFrame::Land, Viewport::land_subject, LandingKind::Walk), and
-        // writing no zoom. (From 2026-09-14 to 2026-09-23 each step stated
-        // NoFrame and ran plain `c` behind it.)
+        // THE PAIRED MARCH, MODE-LOCAL — THE LIVE MARCH'S ROUND TRIP over the
+        // view's own vocabulary (architect 2026-09-26; the chord first came
+        // in here 2026-08-18): switch to the other tab, step, centre with the
+        // mode's `c`; switch home, centre with the mode's `c`. The user ends
+        // on the tab he started from and never sees the other one — the whole
+        // act is one key dispatch and nothing in it commits a frame (the rule
+        // and the saved-band mechanics are at the live march,
+        // handle_tab_switch_keys).
         //
-        // WHAT IT LEAVES BEHIND is the march's own shape: the mode's focus is
-        // ONE index over one diff-flag list (the two tabs share both marker
-        // stores, so the list is the same on either side), and each step lands
-        // THE THEN-ACTIVE TAB's playhead and camera, the switch saving the
-        // first tab's viewport into its band before the second step runs. So
-        // the leaving tab is parked on one flag and the arriving tab on the
-        // next, each in its own window — which is what makes a march a march.
+        // THE CENTRING IS THE MODE'S `c` EXACTLY (run_center_key_command, whose
+        // mode arm in run_center_command re-lands the playhead on the focused
+        // diff flag, writes the working zoom and centres, and whose tail arms
+        // the hold posture) — the live march's own call, the fork being
+        // inside it.
         //
-        // THE SWITCH IS THE ALLOWLIST'S OWN Ctrl+Tab, spelled here rather than
-        // dispatched: the same active_views call and the same target-render
-        // trigger the live march ends on, so the two compositions differ in the
-        // cycle they name and nothing else.
-        cycle_history_diff_flag_focus(true, MarkerLandingFrame::Land);
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_history_diff_flag_focus(true, MarkerLandingFrame::Land);
-        target_render.trigger();
+        // ONE STEP, NOT TWO, and that is the honest re-expression of "advance
+        // one marker next in both tabs": the mode's focus is ONE index over
+        // one diff-flag list, shared by both tabs (the tabs share both marker
+        // stores, so the list is the same on either side, and the tab switch
+        // leaves the index standing). The other tab's step moves that shared
+        // focus to the next flag; a second step at home would move it again
+        // and put the visible tab two flags on, past the one the other tab
+        // stands on. So the home half is the mode's `c` alone, which lands
+        // the home tab's playhead on the same focused flag — both tabs end on
+        // one flag, which is lockstep. A step that refuses at the last flag
+        // (the cycle's silent wall) leaves the focus where it stood, and both
+        // `c`s centre on it, as a bare `c` would.
+        //
+        // No preview trigger, the live march's reason (the round trip ends on
+        // the tab it started from); the view has no playback in any case.
+        const char home = app.active_tab_view;
+        active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
+        cycle_history_diff_flag_focus(true, MarkerLandingFrame::Center);
+        run_center_key_command();
+        active_views.switch_active_tab_view_to(home);
+        run_center_key_command();
         return true;
     }
     // THE STEP'S CAMERA IS THE LIVE WALK'S OWN ANSWER (architect 2026-09-16,
@@ -8879,31 +8894,51 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // Ctrl+Shift+Tab: advance both tabs' marker focus and end on the
-    // opposite tab. Composes bare Tab and Ctrl+Tab so the user can
-    // march paired tabs forward in lockstep with one chord.
+    // Ctrl+Shift+Tab — THE PAIRED MARCH, A ROUND TRIP (architect 2026-09-26):
+    // advance both tabs' marker focus one step in lockstep and END ON THE TAB
+    // IT STARTED FROM. "If I'm in tab B and I hit Ctrl+Shift+Tab, I should
+    // advance one marker next in both tabs and then end up in tab B. So
+    // basically I should not see tab A at all." Showing the other tab is the
+    // A/B audition's business (Shift+Space, GuiAbAudition), which switches to
+    // it to play a portion and back; the march walks the pair in lockstep,
+    // and alternating the tab in view was only ever a consequence of the
+    // audition not existing yet.
     //
-    // EACH STEP LANDS THROUGH THE LANDING OWNER'S WALK (architect
-    // 2026-09-24): the walk step states MarkerLandingFrame::Land exactly as
-    // bare Tab does, so at the working zoom or finer the landing is centred,
-    // on screen or not — arming the hold posture — and coarser an on-screen
-    // landing moves nothing and an off-screen one is paged in
-    // (Viewport::land_subject, LandingKind::Walk). THE MARCH WRITES NO ZOOM: it is bare
-    // Tab and Ctrl+Tab composed, and the Tab walk changes no zoom at any
-    // level. (From 2026-09-14 to 2026-09-23 each step stated NoFrame and ran
-    // plain `c` behind it, snapping both tabs to the working zoom.) The `h`
-    // view's march (handle_history_mode_key) is this composition over its
-    // own cycle.
+    // THE ORDER: switch to the OTHER tab, step its focus one marker forward
+    // and centre it as bare `c` does; switch HOME, step its focus and centre
+    // it the same way. The visible tab's own step is the last camera write.
+    // Each tab steps from its OWN focus: the switch clears the selection and
+    // the coincidence auto-select re-seats whatever marker stands under that
+    // tab's parked cursor, so two tabs resting on one marker both advance to
+    // the next.
     //
-    // BOTH STEPS LAND BECAUSE THE VIEWPORT IS SAVED BETWEEN THEM, and that is
-    // the whole point of a paired march: switch_active_tab_view_to pushes the
-    // live viewport / zoom / playhead into the LEAVING tab's band
-    // (refresh_active_tab_view_from_app) before pulling the target tab's, so
-    // the first step's landing is not a camera about to be thrown away — it
-    // persists into tab A's saved viewport and is what tab A restores on the
-    // way back, each step landing in its own tab's band. Landing once at the
-    // end would silently leave tab A framed away from its new focus. Do not
-    // collapse these two into one.
+    // EACH STEP CENTRES THROUGH `c`'s OWN ACT (run_center_key_command): the
+    // working zoom, centred on the focused marker, the playhead on it, the
+    // hold posture armed. THE MARCH WRITES THE ZOOM — the working zoom, on
+    // both tabs — where the bare Tab walk (below) still writes none and lands
+    // through the landing owner's walk. The step states
+    // MarkerLandingFrame::Center, `c`'s own statement to the jump, so the
+    // step itself frames nothing `c` does not immediately re-frame. A step
+    // that refuses at a wall (cycle_marker_focus's silent refusal) leaves that
+    // tab's focus where it stood, and its `c` still centres on it, as a bare
+    // `c` would.
+    //
+    // THE USER NEVER SEES THE OTHER TAB: the whole act runs inside this one
+    // key dispatch, and nothing in it commits a frame — each switch's and
+    // each zoom's synchronous rebuild (kick_waveform_sync) renders into the
+    // off-screen plate cache and posts damage, and the compositor gets one
+    // paint after the dispatch returns, of the home tab. The other tab's
+    // centred band persists: switch_active_tab_view_to pushes the live
+    // viewport / zoom / playhead into the LEAVING tab's band
+    // (refresh_active_tab_view_from_app) before pulling the entering one's, so
+    // the switch home saves the other tab's landing, and that tab restores it
+    // at the next Ctrl+Tab. Do not collapse the two steps into one.
+    //
+    // NO PREVIEW TRIGGER: Ctrl+Tab's target_render.trigger() re-dispatches the
+    // preview for the ENTERING tab's trim, and the round trip enters the tab
+    // whose trim the preview is already bound to, the audition's own reason
+    // for switching without it (ab_audition.h). The playback stop is the
+    // switch's own (switch_active_tab_view_to).
     //
     // IT NEVER MEETS A BOUND CELL, because it never runs while grid iterations
     // is lit (architect 2026-09-10): the march is one of delta (a)'s members
@@ -8920,10 +8955,13 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // lamp dark marker_walk_step has no cell arm to take, and with it lit this
     // arm is unreachable.
     if (ctrl && shift && !alt && key == GuiKeys::Tab) {
-        cycle_marker_focus(true, MarkerLandingFrame::Land);
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
-        cycle_marker_focus(true, MarkerLandingFrame::Land);
-        target_render.trigger();
+        const char home = app.active_tab_view;
+        active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
+        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        run_center_key_command();
+        active_views.switch_active_tab_view_to(home);
+        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        run_center_key_command();
         return true;
     }
 

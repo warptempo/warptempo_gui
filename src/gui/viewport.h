@@ -14,9 +14,10 @@ class GuiPlayback;
 // SUBJECT (architect 2026-09-24). A REQUIRED argument with no default, the
 // same discipline as MarkerLandingFrame (app_state.h), so a new caller cannot
 // compile without saying which answers it means:
-//   * `Walk` — the Tab walk in both audio views, live and `h`, and each step
-//     of the paired march: centred at the working zoom or finer whether on
-//     screen or not; coarser, nothing on screen and paged in off screen;
+//   * `Walk` — the Tab walk in both audio views, live and `h`: centred at
+//     the working zoom or finer whether on screen or not; coarser, nothing
+//     on screen and paged in off screen (the paired march does not come
+//     here: each of its steps centres through bare `c`'s own act, 2026-09-26);
 //   * `Restore` — the undo / redo restore: nothing wholly on screen, and an
 //     off-screen subject that fits centred at every zoom.
 // The full answers, the hold rule and the ruled-out cameras are at the
