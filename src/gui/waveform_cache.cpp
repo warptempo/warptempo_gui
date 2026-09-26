@@ -103,16 +103,14 @@ void render_waveform_to_cache_surface(
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     // ROW 6: the plate's ink is constexpr (kWaveformInk, render.h) and the
-    // core's is a per-column shade on the core ramp (waveform_core_ramp,
-    // render.h), both read by render_waveform itself. THE CORE RAMP NEEDS NO
-    // FINGERPRINT TERM: its two endpoint blends, the `fg_blend_loud` /
-    // `fg_blend_quiet` keys of a tuning phase, are installed once at startup
-    // and never mutated, so every plate this process caches was painted on
-    // the one ramp; the shade itself is on the curve, named by
-    // kWaveformGainVersion in the gain field. The lamp dark, the raw bar
-    // alone in the plate's ink; lit, each column paints its OUTER bar (the
-    // levelled, expanded one) in the plate's ink and its INNER bar (the
-    // compressed, expanded one) over it in the core ink at its shade — the rule is at
+    // lit plate's two flat inks are the `fg_color` / `bg_color` keys' for a
+    // tuning phase (waveform_lit_inks, render.h), all read by render_waveform
+    // itself. THE LIT INKS NEED NO FINGERPRINT TERM: they are installed once
+    // at startup and never mutated, so every plate this process caches was
+    // painted in the one pair. The lamp dark, the raw bar alone in the
+    // plate's ink; lit, each column paints its OUTER bar (the levelled,
+    // expanded one) in the background ink and its INNER bar (the compressed,
+    // expanded one) over it in the foreground ink — the rule is at
     // render_waveform's declaration. Every scale the lit plate reads is on
     // the curve itself, so nothing else is read here.
     // THE GAIN rides in as one bit from the job snapshot beside the geometry,

@@ -46,14 +46,13 @@
 //
 //   THE PAINTER multiplies each plate column's raw min/max by its gain and
 //   the expander's multiplier and clamps the pair to [-1, 1]
-//   (render_waveform): THE OUTER BAR, the levelled, expanded one, painted in
-//   the plate's own bright ink (render.h's kWaveformInk). Over it the lit
-//   lamp paints THE INNER BAR, the source's own bar through the same
-//   expander and THE COMPRESSOR below instead of the gain, in the lighter
-//   core ink, whose brightness follows the gap between the two bars (THE
-//   CORE SHADE below) — both bars from ONE peak read
-//   (architect 2026-09-25). The gain decides the outer's height and, through
-//   that gap, the core's shade; the outer's colour never moves.
+//   (render_waveform): THE OUTER BAR, the levelled, expanded one, painted
+//   first in the flat BACKGROUND ink. Over it the lit lamp paints THE INNER
+//   BAR, the source's own bar through the same expander and THE COMPRESSOR
+//   below instead of the gain, in the flat FOREGROUND ink — both bars from
+//   ONE peak read (architect 2026-09-25), the two inks render.h's row-6
+//   block's (architect 2026-09-26). The gain decides the outer's height and
+//   never a colour.
 //   The clamp is a sample-peak clip, which is right for a
 //   picture: a transient-rich window whose peaks overshoot the edge paints
 //   its outer flat.
@@ -109,14 +108,14 @@
 // THE HOLD (it extended the body of a sustained note, and onsets, not
 // sustained notes, are what the picture is for); THE RELEASE (its fade
 // steadied the body after every crest). With Hold and Release gone the attack
-// and lookahead rulings have nothing left to rule on. A PER-COLUMN SHADE BY
-// THE LEVELER'S GAIN on the old BACKGROUND bar (2026-09-24, struck
-// 2026-09-25) and DRAWING THE GAIN AS A TINT or a plotted curve stay out:
-// each was a second reading laid over the picture and fighting it. THE CORE
-// SHADE below (architect 2026-09-25) is not that and reopens neither: it is a
-// shade ON THE CORE, driven by the same gap that sets the core's thickness,
-// so it reinforces the one reading the picture already carries; the shade on
-// the background stays ruled out.
+// and lookahead rulings have nothing left to rule on. A PER-COLUMN SHADE ON
+// EITHER BAR is out, and with it DRAWING THE GAIN AS A TINT or a plotted
+// curve: the shade by the leveler's gain on the old BACKGROUND bar
+// (2026-09-24, struck 2026-09-25) was a second reading laid over the picture
+// and fighting it, and THE CORE SHADE BY THE BAR GAP (2026-09-25, one
+// commit: the inner's ink a per-hop blend toward kdenlive's teal, linear in
+// dB of g / c between 6 and 20 dB, a third per-hop array) IS STRUCK — "it
+// doesn't work" (architect 2026-09-26). Both lit inks are flat.
 //
 // A centred window's loudness rises as a loud entry's energy fills it, so the
 // quiet before a loud entry ramps down over roughly the last half-window
@@ -199,9 +198,8 @@
 //   waveform_gain_at). THE PAINTER'S INNER BAR is raw x c x the expander's
 //   multiplier, the one clamp, the >=1px floor; with the expander on BOTH
 //   bars the gap between them is g / c, a pure function of L, so the inner
-//   never stands out of the outer. The reading is a bright levelled bar with
-//   a lighter core carved into it whose relative thickness is the
-//   loudness.
+//   never stands out of the outer. The reading is the source's bar over a
+//   levelled bar behind it, the core's relative thickness the loudness.
 //
 //   THE CRITERION: the gap between the inner and the outer >= 4.5 dB at the
 //   loudest 5 % of hops, the quiet parts untouched, monotone by
@@ -209,33 +207,6 @@
 //   all three K550 movements with margin (the measured map is at the two
 //   constants, waveform_gain.cpp), and the architect settled them by eye
 //   (2026-09-25).
-//
-// THE CORE SHADE (architect 2026-09-25): the INNER bar's ink brightens as the
-// gap between the bars widens — "the bigger the discrepancy, the brighter the
-// color should be" — because the quieter the passage, the smaller the core
-// stands against the outer, and by eye the tuttis wanted about a quarter of
-// the blend toward kdenlive's teal and the quiet parts about three quarters.
-//
-//   THE GAP in dB, 20 log10(g / c): g the CLAMPED leveler gain the outer is
-//   actually painted at, c the compressor's scale (the expander is on both
-//   bars and cancels). With c = 10^(-reduction / 20) that is 20 log10(g)
-//   plus the compressor's reduction, a pure function of L like the gap
-//   itself.
-//
-//   THE SHADE PARAMETER u = clamp((gap - 6) / (20 - 6), 0, 1), LINEAR IN
-//   DECIBELS — the stage is spelled in dB, and linear in the ratio would
-//   spend the change at the quiet end. The breakpoints 6 dB and 20 dB are
-//   hard-coded (kCoreShadeLoudGapDb, kCoreShadeQuietGapDb, waveform_gain.cpp,
-//   with the measured spread they come from).
-//
-//   STORED PER HOP beside `gain` and `inner_scale`
-//   (WaveformGainCurve::core_shade), from the same picked L (a silent hop's
-//   nearer audible one; an all-silent song from its x8 and c = 1), linear IN
-//   u between hops (waveform_core_shade_at, the third sibling). The painter
-//   reads u at the column's centre source frame, as it reads g and c, and
-//   maps it onto the ink between two endpoint blends (render.h's row-6 block
-//   owns the colour arithmetic and the two tuning keys); the log is here and
-//   the painter does no pow or log.
 //
 // THE LIT PLATE'S TWO LEVELS (a SUPERSEDED RECORD, 2026-09-25, one day):
 // before the compressor the inner was the raw bar at a flat +2 dB and the
@@ -245,10 +216,10 @@
 // Both bars are at 0 dB by construction now and the two keys are struck
 // (device_config.h keeps the record).
 //
-// THE ELEVEN VALUES ARE HARD-CODED: the leveler's five, the expander's two,
-// the compressor's two and the core shade's two breakpoints are constexpr
-// constants in waveform_gain.cpp, each with its reason, beside the hop, the
-// gain floor and the column. They were
+// THE NINE VALUES ARE HARD-CODED: the leveler's five, the expander's two
+// and the compressor's two are constexpr constants in waveform_gain.cpp,
+// each with its reason, beside the hop, the gain floor and the column. They
+// were
 // device config keys for a tuning phase — `waveform_gain_*` (2026-09-23) and
 // `waveform_expander_*` (2026-09-24), closed 2026-09-24, and
 // `waveform_compressor_threshold_db` / `waveform_compressor_ratio`,
@@ -270,7 +241,6 @@ struct WaveformGainCurve {
     int64_t             hop_frames = 0;  // source frames between consecutive gains; gain[k] sits at frame k * hop_frames
     std::vector<double> gain;            // per hop, each in [kGainMin, kGainMax]; empty for a zero-frame source
     std::vector<double> inner_scale;     // THE COMPRESSOR, per hop beside `gain`, each in (0, 1]
-    std::vector<double> core_shade;      // THE CORE SHADE's u, per hop beside `gain`, each in [0, 1]
     int64_t             column_frames = 0;    // the working column's width in source frames; column k is [k * column_frames, (k + 1) * column_frames)
     std::vector<float>  expander_multiplier;  // THE EXPANDER, per working column, each in [0, 1]; empty is the identity
 };
@@ -290,11 +260,6 @@ double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 // nearest hops, the ends held. 1.0 for an empty curve.
 double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 
-// THE CORE SHADE's u at one source frame, the third sibling over
-// `core_shade`: linear in u between the two nearest hops, the ends held. 1.0
-// for an empty curve (never painted: only a zero-frame source derives one).
-double waveform_core_shade_at(const WaveformGainCurve& curve, int64_t frame);
-
 // THE PAINTER'S EXPANDER RULE for a plate column spanning source frames
 // [s0, s1): the LARGEST multiplier (the smallest reduction) over the working
 // columns s0 / column_frames through (s1 - 1) / column_frames, both clamped
@@ -303,8 +268,9 @@ double waveform_core_shade_at(const WaveformGainCurve& curve, int64_t frame);
 float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (11 since the core shade joined as a third per-hop array,
-// 2026-09-25; 10 was the compressor's two numbers hard-coded, the same day —
+// the rule above (12 since the core shade's third per-hop array was struck,
+// 2026-09-26; 11 was the core shade joining, 2026-09-25; 10 was the
+// compressor's two numbers hard-coded, the same day —
 // the same numbers, but the fingerprint's formula changed from
 // the version hashed with the two keys back to the version alone; 9 was the
 // compressor joining as the inner bar's stage, the same day; 8 was the
@@ -313,9 +279,9 @@ float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t 
 // leveler, the same day; 6 was the short-term loudness measure replacing the
 // window's peak and the upward compressor's deletion, the same day; 5 was the
 // upward compressor's threshold, knee and range, 4 the fixed percentile and
-// the ratio alone, 3 the restored leveler, 2 the expander on L's). The eleven
+// the ratio alone, 3 the restored leveler, 2 the expander on L's). The nine
 // constants are part of the rule, so a change to any of them bumps it too.
 // Nothing derived from the gain outlives the process — the curve is derived
 // at every load (the `.peaks` sidecar carries no curve) and the plates live
 // in memory only.
-inline constexpr uint64_t kWaveformGainVersion = 11;
+inline constexpr uint64_t kWaveformGainVersion = 12;

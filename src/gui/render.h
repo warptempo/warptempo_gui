@@ -104,15 +104,15 @@ struct TrimRange {
 // user-settable colors, nothing is read from ~/.config, and a retune is a
 // recompile. Every painted surface in the product takes its value from one of
 // these constants, WITH ONE STANDING EXCEPTION, TEMPORARY BY RULING: the lit
-// plate's CORE ink is a blend between two constants, kWaveformInk and
-// kWaveformCoreTeal at row 6 below, whose two endpoint fractions are the
-// device config's `fg_blend_loud` / `fg_blend_quiet` for a tuning phase
-// (architect 2026-09-25), reaching the painter through the startup-installed
-// waveform_core_ramp(); the fractions return to this rule as constants when
-// the phase closes. (The waveform's three inks of the morning were
-// device-config keys for one day's earlier tuning phase, 2026-09-25, closed
-// by eye the same day, and the core's one ink was `fg_color` for an afternoon
-// after it.)
+// plate's two flat inks — the FOREGROUND (the inner bar, the source's own)
+// and the BACKGROUND (the outer, levelled bar behind it) — are the device
+// config's `fg_color` / `bg_color` for a tuning phase (architect 2026-09-26),
+// reaching the painter through the startup-installed waveform_lit_inks();
+// the defaults at row 6 below are what both first-run templates stamp, and
+// the inks return to this rule as constants when the phase closes. (The
+// waveform's three inks were device-config keys for one day's earlier tuning
+// phase, 2026-09-25, closed by eye the same day; the short record of the
+// core's inks since is at row 6.)
 //
 // WHAT WAS HERE BEFORE, in one paragraph, because this file's shape is its
 // residue. The palette used to be 23 MUTABLE globals overwritten once at startup
@@ -1057,76 +1057,50 @@ inline constexpr double kMarkerDisabledLabelMix = 0.75;
 // file itself; the record is at the palette header.
 inline constexpr GuiColor kWaveformCanvas = hex(0x12312B);  // (18, 49, 43)
 
-// THE WAVEFORM'S INKS (architect 2026-09-25): the plate's ink, worn by the
-// raw bar with the magnification lamp dark and by the OUTER bar (the
-// levelled, expanded one) with it lit, and the CORE ink, worn by the lit
-// plate's INNER bar (the source's bar through the compressor, carved into
-// the outer — the rule is at render_waveform's declaration), which is not
-// one colour but a point on the blend from the plate's ink toward kdenlive's
-// teal, chosen per column by THE CORE SHADE (below). For one day,
-// 2026-09-25, the inks were the device config's `waveform_ink`,
-// `waveform_magnified_ink` and `waveform_ghost_ink`, a tuning phase the
-// architect closed by eye (device_config.h keeps the record), and for an
-// afternoon after it the core's one ink was the device key `fg_color`,
-// struck when the shade replaced it.
+// THE WAVEFORM'S INKS. With the magnification lamp dark the plate is the raw
+// bar alone in kWaveformInk, row 6's crop sample. With it lit the plate is
+// two bars in TWO FLAT INKS (architect 2026-09-26; the rule is at
+// render_waveform's declaration): the FOREGROUND, worn by the INNER bar —
+// the source's own bar through the compressor, painted over — and the
+// BACKGROUND, worn by the OUTER bar — the levelled, expanded one, painted
+// first, behind. The source's bar wears the plate's own ink and the
+// levelled bar behind it a darker one.
 //
-// THE PLATE'S INK: row 6's crop sample. The lit OUTER bar wears it too: the
-// architect had seen the levelled bar alone in it and wanted it as the
-// picture (2026-09-25, "ink flips"). It is also the core blend's 0 % end.
+// THE PLATE'S INK: row 6's crop sample, the dark lamp's one ink.
 inline constexpr GuiColor kWaveformInk = hex(0x1C816B);  // (28, 129, 107)
 
-// THE CORE BLEND'S 100 % END: kdenlive's teal marker category, category 3 —
-// SAMPLED, the same byte kHistoryAddedFill already carries as the `h` view's
-// green diff class (row_5_lane_3_marker_green crops, above), spelled again
-// here as its own constant because the two are two facts that agree (the
-// palette's rule: a retune of one is not a retune of the other).
-inline constexpr GuiColor kWaveformCoreTeal = hex(0x1ABC9C);  // (26, 188, 156)
-
-// THE CORE SHADE (architect 2026-09-25): "the bigger the discrepancy, the
-// brighter the color should be" — the quieter the passage, the smaller the
-// core stands against the outer, and by eye the tuttis wanted about 25 % of
-// the blend from kWaveformInk toward kWaveformCoreTeal and the quiet parts
-// about 75 %. Per plate column:
-//
-//   u     = the shade parameter in [0, 1] at the column's centre source frame
-//           (waveform_core_shade_at): linear in dB of the gap between the two
-//           bars, 0 at a 6 dB gap and 1 at a 20 dB one (waveform_gain.h owns
-//           the derivation and its two breakpoints);
-//   blend = loud + (quiet - loud) * u, the two ENDPOINT BLENDS as fractions;
-//   ink   = kWaveformInk + (kWaveformCoreTeal - kWaveformInk) * blend, per
-//           channel in sRGB byte space, std::nearbyint — the two endpoints
-//           share a hue, so the byte-space line stays on it.
-//
-// At the defaults the loud end is (27.5, 143.75, 119.25) -> #1c9077 (27.5 a
-// tie, to even 28), the middle #1b9e84 (the core's former one ink, the 1:1
-// average) and the quiet end (26.5, 173.25, 143.75) -> #1aad90 (26.5 to
-// even 26).
-//
-// THE TWO ENDPOINT BLENDS ARE TUNABLE FOR A TUNING PHASE (architect
-// 2026-09-25): the device config's `fg_blend_loud` and `fg_blend_quiet`,
-// integer percents in [0, 100], read once at startup into the process-wide
-// ramp (waveform_core_ramp(), beside the gui-scale state below), the palette
-// header's one exception; the two constants below are THE PHASE'S DEFAULTS,
+// THE LIT INKS ARE TUNABLE FOR A TUNING PHASE (architect 2026-09-26): the
+// device config's `fg_color` (the foreground) and `bg_color` (the
+// background), `#rrggbb`, read once at startup into the process-wide pair
+// (waveform_lit_inks(), beside the gui-scale state below), the palette
+// header's one exception. The two constants below are THE PHASE'S DEFAULTS,
 // the values both first-run templates stamp and the painter wears until
-// gui_main installs the config's. loud over quiet is admitted: the shade
-// simply inverts. When the phase closes the keys are struck and the chosen
-// fractions are constants here.
+// gui_main installs the config's. When the phase closes the keys are struck
+// and the chosen values are constants here.
 //
-// A SUPERSEDED RECORD: the core's one flat ink went #17594b (the canvas:ink
-// 1:1 blend, DERIVED, a dark core), then the full teal #1abc9c ("a little
-// bright", chosen by eye against rendered mockups over the darker blend, the
-// ink mirrored away from the canvas, a blend toward Breeze white and a blend
-// toward Breeze focus blue), then #1b9e84, the 1:1 average ("less tiring on
-// long sessions"), then the `fg_color` key — all 2026-09-25. Before them, on
-// 2026-09-24, this ink was the faint BACKGROUND behind a bright FOREGROUND
-// (the raw bar at a flat +2 dB over the levelled bar at -2 dB, "a
-// parallel-compression trick"), and two sampled inks were tried for the bar
-// behind the source's and superseded: the lower-channel #1f8b4c of the
-// architect's kdenlive screenshot read as a second figure, and that
-// screenshot's new canvas #135647 fringed at small boosts. The canvas STAYS
+// THE FOREGROUND'S DEFAULT is the plate's ink itself: the source's bar in
+// "the same colour as the waveform when only one waveform is on screen".
+inline constexpr GuiColor kWaveformForegroundInkDefault = kWaveformInk;  // #1c816b
+
+// THE BACKGROUND'S DEFAULT: the 1:1 blend of kWaveformCanvas and
+// kWaveformInk — DERIVED, not sampled: ((18, 49, 43) + (28, 129, 107)) / 2 =
+// (23, 89, 75), every half exact.
+inline constexpr GuiColor kWaveformBackgroundInkDefault = hex(0x17594B);  // (23, 89, 75)
+
+// A SUPERSEDED RECORD. THE CORE SHADE BY THE BAR GAP (2026-09-25, one commit)
+// IS STRUCK — "it doesn't work" (architect 2026-09-26): the inner bar's ink
+// was a per-column point on a blend from kWaveformInk toward kdenlive's teal
+// #1abc9c, linear in dB of the gap g / c, its two endpoint blends the
+// device keys `fg_blend_loud` / `fg_blend_quiet`. A per-column shade on
+// either bar is ruled out again; both lit inks are flat. Before it, the same
+// day, the core's one flat ink went #17594b, the full teal #1abc9c ("a little
+// bright"), #1b9e84 (the 1:1 average, "less tiring on long sessions"), then
+// that value as the one-ink device key `fg_color` for an afternoon — the
+// outer bar in kWaveformInk under them all. Before those, on 2026-09-24, the
+// raw bar stood at a flat +2 dB over the levelled bar at -2 dB, and two
+// sampled inks for the bar behind were tried and superseded (#1f8b4c read as
+// a second figure; #135647 fringed at small boosts). The canvas STAYS
 // kWaveformCanvas #12312b.
-inline constexpr int kWaveformCoreBlendLoudDefault  = 25;  // percent, the loudest passages' blend
-inline constexpr int kWaveformCoreBlendQuietDefault = 75;  // percent, the quietest passages' blend
 
 // THE REGION HIGHLIGHT, RE-DERIVED ON THE NEW GROUND (architect 2026-08-01: the
 // old value read GREY on the green canvas — "start over, don't just tune it;
@@ -1536,47 +1510,31 @@ void   set_gui_scale_percent(int percent);
 // dimension goes on reading gui_scale_factor / scaled_px.
 int    gui_scale_percent();
 
-// THE LIT PLATE'S CORE INK RAMP (the core shade, row 6's palette block): the
-// two endpoint inks' bytes and the two endpoint blends as fractions, so the
-// painter maps a shade parameter to a pixel word with a few multiplies and
-// three std::nearbyint and no pow or log. word_at(u) is THE ONE COLOUR RULE
-// for the core: blend = loud + (quiet - loud) * u, each channel
-// nearbyint(ink + (teal - ink) * blend), the opaque premultiplied ARGB32 word
-// (argb32_opaque_word's layout; at full alpha the word is the colour).
-struct WaveformCoreRamp {
-    double ink[3];    // kWaveformInk's bytes, the 0 % end
-    double teal[3];   // kWaveformCoreTeal's bytes, the 100 % end
-    double loud;      // the blend at u = 0, a fraction in [0, 1]
-    double quiet;     // the blend at u = 1, a fraction in [0, 1]
-    uint32_t word_at(double u) const {
-        const double blend = loud + (quiet - loud) * u;
-        const auto ch = [&](int i) {
-            return static_cast<uint32_t>(
-                std::nearbyint(ink[i] + (teal[i] - ink[i]) * blend));
-        };
-        return (UINT32_C(255) << 24) | (ch(0) << 16) | (ch(1) << 8) | ch(2);
-    }
+// THE LIT PLATE'S TWO FLAT INKS, the tuning phase's two tunable colours
+// (architect 2026-09-26; the device config's `fg_color` / `bg_color`, the
+// phase's terms at row 6's palette block): the FOREGROUND worn by the inner
+// bar and the BACKGROUND worn by the outer. The pair starts at
+// kWaveformForegroundInkDefault / kWaveformBackgroundInkDefault, so a
+// process that never installs one paints the defaults.
+struct WaveformLitInks {
+    GuiColor foreground;   // the inner bar, painted over
+    GuiColor background;   // the outer bar, painted first
 };
 
-// THE TUNING PHASE'S TWO ENDPOINT BLENDS (architect 2026-09-25; the device
-// config's `fg_blend_loud` / `fg_blend_quiet`, integer percents in [0, 100],
-// the phase's terms at row 6's palette block). The pair starts at the
-// phase's defaults, so a process that never installs one paints them.
-//
 // INSTALLED ONCE, NEVER MUTATED: gui_main installs the device config's pair
-// through set_waveform_core_blend at startup, beside set_gui_scale_percent
-// and before the first project loads — so before the first plate job — and
+// through set_waveform_lit_inks at startup, beside set_gui_scale_percent and
+// before the first project loads — so before the first plate job — and
 // nothing calls it again (the keys have no in-app writer; a retune is a
 // config edit and a relaunch). THAT IS WHY THE WAVEFORM WORKER READS IT
 // DIRECTLY, with no job field, and why the plate fingerprint carries no
 // colour term: a value that cannot change within a process needs no
 // snapshot and no key, and the plate cache lives no longer than the
 // process. (g_gui_scale_percent is the contrast: the settings editor mutates
-// it live.) waveform_core_ramp() is the one reader, render_waveform
+// it live.) waveform_lit_inks() is the one reader, render_waveform
 // (render.cpp), once per call. When the phase closes both are struck and the
-// ramp is built from constants.
-void             set_waveform_core_blend(int loud_percent, int quiet_percent);
-WaveformCoreRamp waveform_core_ramp();
+// painter reads constants again.
+void                   set_waveform_lit_inks(const WaveformLitInks& inks);
+const WaveformLitInks& waveform_lit_inks();
 
 // Scale factor s = gui_scale / 100. Exactly 1.0 at the default, and as low as
 // 0.5 since the setting's grammar floor came down to 50 (architect 2026-08-10).
@@ -2945,10 +2903,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // use sees the pixels.
 //
 // THE INKS ARE READ HERE rather than passed: the plate paints in
-// kWaveformInk with the lamp dark, and lit the outer in kWaveformInk with the
-// inner over it in the core ink the column's shade picks (THE CORE SHADE
-// below; the ramp waveform_core_ramp(), its endpoint blends the tuning
-// phase's two keys, installed once at startup) — it
+// kWaveformInk with the lamp dark, and lit the outer in the BACKGROUND ink
+// with the inner over it in the FOREGROUND ink, two flat colours
+// (waveform_lit_inks(), the tuning phase's `bg_color` / `fg_color`,
+// installed once at startup) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
 // spanning the window being the whole inside-the-window signal now. Its alpha
@@ -2964,10 +2922,10 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // through the leveler and the inner through the compressor (architect
 // 2026-09-25):
 //
-//   OUTER (painted first) = raw x g x E, in kWaveformInk — the levelled,
-//                           expanded bar;
-//   INNER (painted over)  = raw x c x E, in the core ink at the column's
-//                           shade — the source's bar DOWNWARD-COMPRESSED.
+//   OUTER (painted first) = raw x g x E, in the BACKGROUND ink — the
+//                           levelled, expanded bar;
+//   INNER (painted over)  = raw x c x E, in the FOREGROUND ink — the
+//                           source's bar DOWNWARD-COMPRESSED.
 //
 // g is the leveler's gain at the column's centre source frame
 // (waveform_gain_at), c the compressor's scale there (waveform_inner_scale_at,
@@ -2978,8 +2936,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // stands out of the outer. Each bar's tips are CLAMPED to [-1, 1] before
 // they become rows, and each keeps the >=1px floor. The writer
 // replace-writes opaque words, so where the two overlap the inner wins: the
-// reading is a bright levelled bar with a LIGHTER core carved into it
-// whose relative thickness is the loudness — at or under the compressor's
+// reading is the source's bar in the plate's own ink (at the defaults) over a
+// DARKER levelled bar behind it, the core's relative thickness the loudness — at or under the compressor's
 // threshold the core is the raw bar (x E), over it thinner by its ratio.
 // NULL (the dark lamp) draws the raw bar alone in kWaveformInk at scale 1,
 // byte for byte the plate it always drew. Nothing else in this painter moves
@@ -2988,23 +2946,11 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // the lane's edges while the inner still shows its compressed height inside
 // it.
 //
-// THE CORE SHADE (architect 2026-09-25): the inner bar's colour is not flat.
-// Each column reads u at its centre source frame (waveform_core_shade_at,
-// the third sibling beside g and c — linear in dB of the gap g / c between
-// the two bars, waveform_gain.h owning it) and paints the inner in
-// waveform_core_ramp().word_at(u): the wider the gap — the quieter the
-// passage, the smaller the core against the outer — the further the ink
-// toward kWaveformCoreTeal (row 6 owns the colour rule and the endpoints).
-// One interpolation and one word per column; no pow or log here. The outer
-// and the dark plate keep kWaveformInk.
-//
-// IT IS NOT THE RULED-OUT SHADE. The shade struck 2026-09-25 (below) and
-// "drawing the gain as a tint" were a per-column SHADE BY THE LEVELER'S GAIN
-// on the old BACKGROUND bar — a second reading laid over the picture,
-// fighting it. This is a shade ON THE CORE, driven by the same gap that sets
-// the core's thickness, so it reinforces the one reading the lit plate
-// carries (architect 2026-09-25). The shade on the background stays ruled
-// out.
+// BOTH LIT INKS ARE FLAT (architect 2026-09-26). THE CORE SHADE BY THE BAR
+// GAP (2026-09-25, one commit — the inner's ink a per-column blend toward
+// kdenlive's teal, linear in dB of g / c) IS STRUCK: "it doesn't work". A
+// per-column shade on either bar is ruled out again, as the shade by the
+// leveler's gain on the old background bar (below) was before it.
 //
 // SUPERSEDED RECORDS: the lit plate's bar behind the source's wore a
 // per-column SHADE by the leveler's gain for one day (2026-09-24, struck
@@ -3021,8 +2967,8 @@ inline constexpr uint32_t region_lift(uint32_t word) {
 // its outer containing the inner; a column wholly on one side of zero (low
 // material at working zoom) has its outer pushed outward, with a gap between
 // it and the inner. Intended — that is what a true magnification looks like.
-// THE COST is one extra row fill, two lookups (the scale and the shade) and
-// one core word per column — the read,
+// THE COST is one extra row fill and one lookup (the scale) per column — the
+// read,
 // the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
 // lamp).

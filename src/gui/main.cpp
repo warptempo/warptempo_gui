@@ -3421,15 +3421,15 @@ int gui_main(const char* argument) {
     // GuiInputHandler::apply_max_waveform_height). The one reader is
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
-    // THE LIT PLATE'S CORE SHADE, the tuning phase's two endpoint blends
-    // `fg_blend_loud` / `fg_blend_quiet` (architect 2026-09-25): installed
-    // ONCE here, before the first project loads and so before the first
-    // plate job, and never again — the keys have no in-app writer, a retune
-    // is a config edit and a relaunch. That is what lets the waveform worker
-    // read them with no job field and the plate fingerprint carry no colour
-    // term (the contract at waveform_core_ramp, render.h).
-    set_waveform_core_blend(device_config.fg_blend_loud,
-                            device_config.fg_blend_quiet);
+    // THE LIT PLATE'S TWO FLAT INKS, the tuning phase's `fg_color` /
+    // `bg_color` (architect 2026-09-26): installed ONCE here, before the
+    // first project loads and so before the first plate job, and never again
+    // — the keys have no in-app writer, a retune is a config edit and a
+    // relaunch. That is what lets the waveform worker read them with no job
+    // field and the plate fingerprint carry no colour term (the contract at
+    // waveform_lit_inks, render.h).
+    set_waveform_lit_inks(WaveformLitInks{device_config.fg_color,
+                                          device_config.bg_color});
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

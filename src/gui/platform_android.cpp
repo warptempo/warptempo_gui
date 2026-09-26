@@ -549,11 +549,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     // (device_config.h).
     cfg.sync_path     = "";
     cfg.last_project  = "";
-    // THE LIT PLATE'S CORE SHADE, the tuning phase's two endpoint blends
-    // (architect 2026-09-25; the phase's terms at render.h's row-6 palette
-    // block), the same on both templates: 25 and 75 percent.
-    cfg.fg_blend_loud  = kWaveformCoreBlendLoudDefault;
-    cfg.fg_blend_quiet = kWaveformCoreBlendQuietDefault;
+    // THE LIT PLATE'S TWO FLAT INKS, the tuning phase's defaults (architect
+    // 2026-09-26; the phase's terms at render.h's row-6 palette block), the
+    // same on both templates: #1c816b over #17594b.
+    cfg.fg_color      = kWaveformForegroundInkDefault;
+    cfg.bg_color      = kWaveformBackgroundInkDefault;
     return cfg;
 }
 

@@ -344,11 +344,10 @@ drag coordinates floor instead of truncating.
   `kDefaultProjectsRepo` and a
   blank `last_project` AND a blank `sync_path` — neither template guesses a
   destination for the mirror, a wrong guess aiming its creates, copies and
-  removals at a folder the user never named — and `fg_blend_loud=25` /
-  `fg_blend_quiet=75` (`kWaveformCoreBlendLoudDefault` /
-  `kWaveformCoreBlendQuietDefault`, the lit plate's core shade's two
-  endpoint blends for their tuning phase, architect 2026-09-25;
-  settings.md). (A key the template no longer
+  removals at a folder the user never named — and `fg_color=#1c816b` /
+  `bg_color=#17594b` (`kWaveformForegroundInkDefault` /
+  `kWaveformBackgroundInkDefault`, the lit plate's two flat inks for their
+  tuning phase, architect 2026-09-26; settings.md). (A key the template no longer
   stamps, `audio_player`, stood here until
   2026-08-28 — the laptop answered `audacious` and the tablet a blank, no
   spawnable player existing there — and retired whole with the in-app render
